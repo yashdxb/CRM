@@ -191,7 +191,14 @@ Acceptance criteria are written as testable statements (UI + API).
   - Validation errors display inline and do not erase other fields.
 
 15) Recently viewed lists in each module
-- Status: NOT STARTED
+- Status: DONE
+- Evidence:
+  - Shared service: `client/src/app/shared/services/recently-viewed.service.ts`
+  - Customers UI: `client/src/app/features/customers/pages/customers.page.html`
+  - Contacts UI: `client/src/app/features/contacts/pages/contacts.page.html`
+  - Leads UI: `client/src/app/features/leads/pages/leads.page.html`
+  - Opportunities UI: `client/src/app/features/opportunities/pages/opportunities.page.html`
+  - Activities UI: `client/src/app/features/activities/pages/activities.page.html`
 - Acceptance criteria:
   - Last 5-10 items viewed are visible per module.
   - Entries persist per user and update on view.
