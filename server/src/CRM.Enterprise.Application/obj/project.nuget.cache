@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "dgSpecHash": "GB0ZeJGh2Yk=",
+  "success": true,
+  "projectFilePath": "/Users/yasserahmed/Desktop/Development Projects/CRM-Enterprise/server/src/CRM.Enterprise.Application/CRM.Enterprise.Application.csproj",
+  "expectedPackageFiles": [
+    "/Users/yasserahmed/.nuget/packages/mediatr/11.1.0/mediatr.11.1.0.nupkg.sha512",
+    "/Users/yasserahmed/.nuget/packages/mediatr.contracts/1.0.1/mediatr.contracts.1.0.1.nupkg.sha512",
+    "/Users/yasserahmed/.nuget/packages/mediatr.extensions.microsoft.dependencyinjection/11.1.0/mediatr.extensions.microsoft.dependencyinjection.11.1.0.nupkg.sha512",
+    "/Users/yasserahmed/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/8.0.0/microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "/Users/yasserahmed/.nuget/packages/microsoft.netcore.app.ref/8.0.15/microsoft.netcore.app.ref.8.0.15.nupkg.sha512",
+    "/Users/yasserahmed/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.15/microsoft.aspnetcore.app.ref.8.0.15.nupkg.sha512"
+  ],
+  "logs": []
+}

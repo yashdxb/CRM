@@ -1,0 +1,144 @@
+<section class="workspace-settings">
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <div class="workspace-settings__banner">
+    <div>
+      <p class="workspace-settings__eyebrow">Workspace settings</p>
+      <h1>Control your tenant defaults</h1>
+      <p>Set the company name, time zone, and currency that shape every record in the CRM.</p>
+    </div>
+    <div class="workspace-settings__banner-actions">
+      <button type="button" pButton label="Back to users" icon="pi pi-arrow-left" class="p-button-outlined" routerLink="/app/settings"></button>
+      <button type="button" pButton label="Manage roles" icon="pi pi-shield" routerLink="/app/settings/roles"></button>
+    </div>
+  </div>
+
+  <article class="workspace-settings__panel">
+    <header>
+      <div>
+        <p class="eyebrow">Tenant defaults</p>
+        <h2>Workspace profile</h2>
+      </div>
+      <button type="button" pButton label="Reload" severity="secondary" [disabled]="loading()" (click)="loadSettings()"></button>
+    </header>
+
+    <ng-container *ngIf="!loading(); else loadingState">
+      <div class="workspace-settings__layout">
+        <form class="workspace-settings__form" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+          <div class="form-grid">
+            <label>
+              Company name
+              <input pInputText formControlName="name" placeholder="Acme CRM Workspace" />
+            </label>
+
+            <label>
+              Time zone
+              <p-select
+                [options]="timeZoneOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="timeZone"
+                placeholder="Select time zone"
+                styleClass="w-full"
+              ></p-select>
+            </label>
+
+            <label>
+              Currency
+              <p-select
+                [options]="currencyOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="currency"
+                placeholder="Select currency"
+                styleClass="w-full"
+              ></p-select>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Approval amount threshold
+              <p-inputNumber
+                formControlName="approvalAmountThreshold"
+                [min]="0"
+                placeholder="Leave empty to disable"
+                class="w-full"
+              ></p-inputNumber>
+              <small>Require approval when closing opportunities above this amount.</small>
+            </label>
+
+            <label>
+              Approver role
+              <input pInputText formControlName="approvalApproverRole" placeholder="Sales Manager" />
+              <small>Role required to approve high-value opportunities.</small>
+            </label>
+          </div>
+
+          <div class="dialog-actions">
+            <button type="submit" pButton label="Save settings" [loading]="saving()"></button>
+          </div>
+        </form>
+
+        <aside class="workspace-settings__summary">
+          <div class="summary-header">
+            <div>
+              <p class="eyebrow">Preview</p>
+              <h3>Workspace profile</h3>
+            </div>
+            <span class="summary-pill">Active</span>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-icon">
+              <i class="pi pi-building"></i>
+            </div>
+            <div>
+              <p class="summary-label">Workspace</p>
+              <p class="summary-value">{{ settingsForm.value.name || 'Untitled workspace' }}</p>
+            </div>
+          </div>
+
+          <div class="summary-grid">
+            <div class="summary-item">
+              <p class="summary-label">Default time zone</p>
+              <p class="summary-value">{{ settingsForm.value.timeZone || 'UTC' }}</p>
+            </div>
+            <div class="summary-item">
+              <p class="summary-label">Default currency</p>
+              <p class="summary-value">{{ settingsForm.value.currency || 'USD' }}</p>
+            </div>
+            <div class="summary-item">
+              <p class="summary-label">Approval threshold</p>
+              <p class="summary-value">
+                {{ settingsForm.value.approvalAmountThreshold ? (settingsForm.value.approvalAmountThreshold | number:'1.0-0') : 'Disabled' }}
+              </p>
+            </div>
+            <div class="summary-item">
+              <p class="summary-label">Approver role</p>
+              <p class="summary-value">{{ settingsForm.value.approvalApproverRole || 'Not set' }}</p>
+            </div>
+          </div>
+
+          <div class="summary-note">
+            <i class="pi pi-info-circle"></i>
+            <span>These defaults apply to new records and pipeline metrics.</span>
+          </div>
+        </aside>
+      </div>
+    </ng-container>
+
+    <ng-template #loadingState>
+      <div class="loading-blocks">
+        <p-skeleton height="42px" *ngFor="let _ of [0, 1, 2]"></p-skeleton>
+      </div>
+    </ng-template>
+  </article>
+
+  <div class="toast" *ngIf="toast() as alert" [ngClass]="'toast--' + alert.tone">
+    <span>{{ alert.message }}</span>
+    <button type="button" (click)="clearToast()" aria-label="Dismiss">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+</section>

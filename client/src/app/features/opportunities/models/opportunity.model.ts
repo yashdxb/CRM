@@ -1,0 +1,38 @@
+export type OpportunityStatus = 'Open' | 'Closed Won' | 'Closed Lost';
+
+export interface Opportunity {
+  id: string;
+  name: string;
+  account: string;
+  stage: string;
+  amount: number;
+  probability: number;
+  currency: string;
+  closeDate?: string;
+  ownerId?: string;
+  owner: string;
+  status: OpportunityStatus;
+  winLossReason?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc?: string | null;
+}
+
+export interface OpportunitySearchRequest {
+  search?: string;
+  stage?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface OpportunitySearchResponse {
+  items: Opportunity[];
+  total: number;
+}
+
+export interface OpportunityStageHistoryItem {
+  id: string;
+  stage: string;
+  changedAtUtc: string;
+  changedBy?: string | null;
+  notes?: string | null;
+}

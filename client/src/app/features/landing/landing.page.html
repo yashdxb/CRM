@@ -1,0 +1,160 @@
+<!-- Animated Background -->
+<div class="page-background landing-bg">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="landing-page">
+  <!-- Navigation -->
+  <nav class="nav-bar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <i class="pi pi-bolt"></i>
+      </div>
+      <span class="brand-name">CRM<span class="brand-accent">Enterprise</span></span>
+    </div>
+    <div class="nav-actions">
+      <a routerLink="/app/dashboard" class="nav-link">Live Demo</a>
+      <a routerLink="/login" class="btn-primary-glow">
+        <span>Get Started</span>
+        <i class="pi pi-arrow-right"></i>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-pulse"></span>
+        <i class="pi pi-sparkles"></i>
+        <span>AI-Powered CRM Platform</span>
+      </div>
+      
+      <h1 class="hero-title">
+        <span class="title-line">Transform Your</span>
+        <span class="title-gradient">Sales Pipeline</span>
+        <span class="title-line">With Intelligence</span>
+      </h1>
+      
+      <p class="hero-description">
+        Enterprise-grade CRM with AI-driven insights, predictive analytics, 
+        and zero-friction workflows. Close deals faster, not harder.
+      </p>
+      
+      <div class="hero-cta">
+        <a routerLink="/login" class="btn-hero-primary">
+          <i class="pi pi-play-circle"></i>
+          <span>Launch Workspace</span>
+        </a>
+        <a routerLink="/app/dashboard" class="btn-hero-secondary">
+          <i class="pi pi-desktop"></i>
+          <span>View Demo</span>
+        </a>
+      </div>
+
+      <!-- Stats Row -->
+      <div class="stats-row">
+        <div class="stat-item" *ngFor="let stat of stats">
+          <span class="stat-value">{{ stat.value }}</span>
+          <span class="stat-label">{{ stat.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero Visual -->
+    <div class="hero-visual">
+      <div class="visual-card main-card">
+        <div class="card-glow"></div>
+        <div class="card-header">
+          <div class="header-left">
+            <div class="ai-icon">
+              <i class="pi pi-sparkles"></i>
+            </div>
+            <div>
+              <span class="card-label">AI Insights</span>
+              <h3 class="card-title">Next Best Actions</h3>
+            </div>
+          </div>
+          <span class="live-badge">
+            <span class="live-dot"></span>
+            Live
+          </span>
+        </div>
+        <ul class="action-list">
+          <li class="action-item priority">
+            <div class="action-icon">
+              <i class="pi pi-bolt"></i>
+            </div>
+            <div class="action-content">
+              <span class="action-title">Unblock stalled deal</span>
+              <span class="action-desc">Contoso — 18 days idle, 72% win probability</span>
+            </div>
+            <span class="action-badge hot">Priority</span>
+          </li>
+          <li class="action-item">
+            <div class="action-icon success">
+              <i class="pi pi-check-circle"></i>
+            </div>
+            <div class="action-content">
+              <span class="action-title">Call prep ready</span>
+              <span class="action-desc">Acme: budget approved, timeline Q2</span>
+            </div>
+            <span class="action-badge ready">Ready</span>
+          </li>
+          <li class="action-item">
+            <div class="action-icon info">
+              <i class="pi pi-sparkles"></i>
+            </div>
+            <div class="action-content">
+              <span class="action-title">Auto-enrich lead</span>
+              <span class="action-desc">New signals: funding round + VP Sales</span>
+            </div>
+            <span class="action-badge action">Action</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Floating Elements -->
+      <div class="float-card card-pipeline">
+        <i class="pi pi-chart-line"></i>
+        <div>
+          <span class="float-value">$2.4M</span>
+          <span class="float-label">Pipeline</span>
+        </div>
+      </div>
+      <div class="float-card card-conversion">
+        <i class="pi pi-percentage"></i>
+        <div>
+          <span class="float-value">34%</span>
+          <span class="float-label">Conversion</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features-section">
+    <div class="section-header">
+      <span class="section-badge">Features</span>
+      <h2 class="section-title">Everything you need to close more deals</h2>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card" *ngFor="let item of highlights; let i = index">
+        <div class="feature-icon" [class.icon-1]="i === 0" [class.icon-2]="i === 1" [class.icon-3]="i === 2">
+          <i class="pi" [class.pi-sparkles]="i === 0" [class.pi-microphone]="i === 1" [class.pi-bolt]="i === 2"></i>
+        </div>
+        <h3 class="feature-title">{{ item.label }}</h3>
+        <p class="feature-desc">{{ item.value }}</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <p>© 2025 CRM Enterprise. Built with ❤️ for modern sales teams.</p>
+  </footer>
+</div>

@@ -1,0 +1,444 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container dashboard" *ngIf="summary(); else loading">
+  <div class="page-content">
+    <!-- PrimeNG Breadcrumb -->
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <!-- Hero Section with Greeting -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <span class="hero-greeting">{{ greeting }}</span>
+          <h1 class="page-title">Command Center</h1>
+          <p class="page-subtitle">Your CRM at a glance — track pipeline, monitor activities, and stay ahead of every deal.</p>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat-pill">
+            <i class="pi pi-building"></i>
+            <span><strong>{{ summary()?.totalCustomers || 0 }}</strong> accounts</span>
+          </div>
+          <div class="hero-stat-pill">
+            <i class="pi pi-bolt"></i>
+            <span><strong>{{ summary()?.tasksDueToday || 0 }}</strong> tasks today</span>
+          </div>
+          <div class="hero-stat-pill success" *ngIf="summary()?.overdueActivities === 0">
+            <i class="pi pi-check-circle"></i>
+            <span>All caught up!</span>
+          </div>
+          <div class="hero-stat-pill danger" *ngIf="(summary()?.overdueActivities || 0) > 0">
+            <i class="pi pi-exclamation-triangle"></i>
+            <span><strong>{{ summary()?.overdueActivities }}</strong> overdue</span>
+          </div>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-gradient btn-lg">
+          <i class="pi pi-plus"></i>
+          <span>Quick Add</span>
+        </button>
+        <button class="btn-glass">
+          <i class="pi pi-calendar"></i>
+          <span>Schedule</span>
+        </button>
+        <button class="btn-glass">
+          <i class="pi pi-download"></i>
+          <span>Export</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Key Metrics Row -->
+    <section class="metrics-dashboard">
+      <div class="metrics-header">
+        <h2 class="section-title">
+          <i class="pi pi-chart-bar"></i>
+          Performance Overview
+        </h2>
+        <div class="metrics-period">
+          <button class="period-btn active">Today</button>
+          <button class="period-btn">Week</button>
+          <button class="period-btn">Month</button>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <article class="metric-card featured" *ngIf="summary()">
+          <div class="metric-glow primary"></div>
+          <div class="metric-icon-large primary">
+            <i class="pi pi-dollar"></i>
+          </div>
+          <div class="metric-body">
+            <div class="metric-value-large">{{ totalPipelineValue() | currency:'USD':'symbol':'1.0-0' }}</div>
+            <div class="metric-label">Total Pipeline Value</div>
+            <div class="metric-trend up">
+              <i class="pi pi-trending-up"></i>
+              <span>+18% this quarter</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="metric-card" *ngFor="let metric of secondaryKpis(); let i = index">
+          <div class="metric-header">
+            <div class="metric-icon" [class]="metric.color">
+              <i class="pi" [class]="metric.icon"></i>
+            </div>
+            <div class="metric-trend" [class.up]="metric.trend > 0" [class.down]="metric.trend < 0">
+              <i class="pi" [class.pi-arrow-up]="metric.trend > 0" [class.pi-arrow-down]="metric.trend < 0"></i>
+              <span>{{ metric.trend > 0 ? '+' : '' }}{{ metric.trend }}%</span>
+            </div>
+          </div>
+          <div class="metric-value">
+            {{ metric.value | number:'1.0-1' }}
+          </div>
+          <div class="metric-label">{{ metric.label }}</div>
+          <div class="metric-bar">
+            <div class="metric-bar-fill" [class]="metric.color" [style.width.%]="metric.percentage"></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Charts Row -->
+    <section class="charts-row">
+      <article class="glass-card chart-card large">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="pi pi-chart-line"></i>
+            Revenue Trend
+          </h3>
+          <div class="chart-legend">
+            <span class="legend-item primary">
+              <span class="legend-dot"></span>
+              Revenue
+            </span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <p-chart type="line" [data]="revenueChartData" [options]="revenueChartOptions" height="280px"></p-chart>
+          </div>
+        </div>
+      </article>
+
+      <article class="glass-card chart-card">
+        <div class="card-header">
+          <h3 class="card-title">
+            <i class="pi pi-users"></i>
+            Customer Growth
+          </h3>
+        </div>
+        <div class="card-body">
+          <div class="chart-container">
+            <p-chart type="bar" [data]="customerGrowthData" [options]="customerGrowthOptions" height="280px"></p-chart>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Main Grid: Three Column Layout -->
+    <section class="dashboard-main-grid">
+      <!-- Left Column -->
+      <div class="main-column">
+        <!-- Pipeline Value Chart -->
+        <article class="glass-card pipeline-chart-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-filter"></i>
+              Pipeline by Stage
+            </h3>
+            <span class="card-badge">{{ totalPipelineValue() | currency:'USD':'symbol':'1.0-0' }}</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container medium">
+              <p-chart type="bar" [data]="pipelineChartData" [options]="pipelineChartOptions" height="220px"></p-chart>
+            </div>
+            <div class="pipeline-stats">
+              <div class="pipeline-stat" *ngFor="let stage of pipelineValue()">
+                <span class="stat-label">{{ stage.stage }}</span>
+                <span class="stat-value">{{ stage.count }} deals</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Recent Accounts -->
+        <article class="glass-card accounts-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-building"></i>
+              Recent Accounts
+            </h3>
+            <button class="btn-glass btn-sm">
+              View All <i class="pi pi-arrow-right"></i>
+            </button>
+          </div>
+          <div class="card-body" *ngIf="recentAccounts().length; else emptyAccounts">
+            <div class="accounts-list">
+              <div class="account-row" *ngFor="let account of recentAccounts(); let i = index">
+                <div class="account-rank">{{ i + 1 }}</div>
+                <div class="account-avatar"
+                     [class.lead]="account.status === 'Lead'"
+                     [class.prospect]="account.status === 'Prospect'"
+                     [class.customer]="account.status === 'Customer'">
+                  {{ account.name.charAt(0) }}
+                </div>
+                <div class="account-info">
+                  <div class="account-name">{{ account.name }}</div>
+                  <div class="account-meta">
+                    <span>{{ account.company }}</span>
+                    <span class="separator">•</span>
+                    <span>{{ account.owner }}</span>
+                  </div>
+                </div>
+                <div class="account-status">
+                  <span class="status-dot"
+                        [class.lead]="account.status === 'Lead'"
+                        [class.prospect]="account.status === 'Prospect'"
+                        [class.customer]="account.status === 'Customer'"></span>
+                  <span class="status-text">{{ account.status }}</span>
+                </div>
+                <button class="btn-icon-sm">
+                  <i class="pi pi-ellipsis-h"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Middle Column -->
+      <div class="middle-column">
+        <!-- Activity Breakdown Donut -->
+        <article class="glass-card donut-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-chart-pie"></i>
+              Activity Mix
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="donut-container">
+              <p-chart type="doughnut" [data]="activityDonutData" [options]="activityDonutOptions" height="200px"></p-chart>
+            </div>
+            <div class="activity-breakdown-list">
+              <div class="breakdown-item" *ngFor="let activity of activityBreakdown()">
+                <div class="breakdown-icon" [class]="getActivityColor(activity.type)">
+                  <i class="pi" [class]="getActivityIcon(activity.type)"></i>
+                </div>
+                <span class="breakdown-label">{{ activity.type }}s</span>
+                <span class="breakdown-count">{{ activity.count }}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Conversion Trend -->
+        <article class="glass-card conversion-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-percentage"></i>
+              Conversion Trend
+            </h3>
+            <span class="trend-badge up">
+              <i class="pi pi-arrow-up"></i>
+              +12%
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container small">
+              <p-chart type="line" [data]="conversionChartData" [options]="conversionChartOptions" height="160px"></p-chart>
+            </div>
+            <div class="conversion-summary">
+              <div class="summary-stat">
+                <span class="stat-value success">{{ summary()?.winRate }}%</span>
+                <span class="stat-label">Win Rate</span>
+              </div>
+              <div class="summary-stat">
+                <span class="stat-value">{{ summary()?.avgSalesCycle }}d</span>
+                <span class="stat-label">Avg Cycle</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Top Performers -->
+        <article class="glass-card performers-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-trophy"></i>
+              Top Performers
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="performers-list">
+              <div class="performer-row" *ngFor="let performer of topPerformers(); let i = index">
+                <div class="performer-rank" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">
+                  {{ i + 1 }}
+                </div>
+                <div class="performer-avatar">
+                  {{ performer.name.charAt(0) }}
+                </div>
+                <div class="performer-info">
+                  <div class="performer-name">{{ performer.name }}</div>
+                  <div class="performer-stats">
+                    <span>{{ performer.deals }} deals</span>
+                    <span class="separator">•</span>
+                    <span class="revenue">{{ performer.revenue | currency:'USD':'symbol':'1.0-0' }}</span>
+                  </div>
+                </div>
+                <div class="performer-badge" *ngIf="i === 0">
+                  <i class="pi pi-star-fill"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Right Column -->
+      <div class="side-column">
+        <!-- Activity Timeline -->
+        <article class="glass-card timeline-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-clock"></i>
+              Activity Timeline
+            </h3>
+            <div class="timeline-filter">
+              <button class="filter-btn active">All</button>
+              <button class="filter-btn">Calls</button>
+              <button class="filter-btn">Tasks</button>
+            </div>
+          </div>
+          <div class="card-body" *ngIf="upcomingActivities().length; else emptyActivities">
+            <div class="timeline">
+              <div class="timeline-item" *ngFor="let activity of upcomingActivities(); let last = last"
+                   [class.overdue]="activity.status === 'Overdue'">
+                <div class="timeline-marker"
+                     [class.call]="activity.type === 'Call'"
+                     [class.email]="activity.type === 'Email'"
+                     [class.meeting]="activity.type === 'Meeting'"
+                     [class.task]="activity.type === 'Task'">
+                  <i class="pi"
+                     [class.pi-phone]="activity.type === 'Call'"
+                     [class.pi-envelope]="activity.type === 'Email'"
+                     [class.pi-video]="activity.type === 'Meeting'"
+                     [class.pi-check-square]="activity.type === 'Task'"></i>
+                </div>
+                <div class="timeline-connector" *ngIf="!last"></div>
+                <div class="timeline-content">
+                  <div class="timeline-header">
+                    <span class="timeline-type">{{ activity.type }}</span>
+                    <span class="timeline-time" [class.overdue]="activity.status === 'Overdue'">
+                      {{ activity.dueDateUtc | date: 'MMM d, h:mm a' }}
+                    </span>
+                  </div>
+                  <div class="timeline-subject">{{ activity.subject }}</div>
+                  <div class="timeline-entity" *ngIf="activity.relatedEntityName">
+                    <i class="pi pi-link"></i>
+                    {{ activity.relatedEntityName }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Quick Stats -->
+        <article class="glass-card stats-card">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-heart"></i>
+              Business Health
+            </h3>
+          </div>
+          <div class="card-body">
+            <div class="health-meter">
+              <svg viewBox="0 0 120 120" class="circular-progress">
+                <circle cx="60" cy="60" r="54" class="progress-bg"></circle>
+                <circle cx="60" cy="60" r="54" class="progress-fill"
+                        [style.stroke-dasharray]="getHealthProgress()"></circle>
+              </svg>
+              <div class="health-value">
+                <span class="health-number">{{ activityStats().completion }}</span>
+                <span class="health-unit">%</span>
+              </div>
+            </div>
+            <div class="health-label">Tasks On Track</div>
+            <div class="health-breakdown">
+              <div class="breakdown-row">
+                <span class="breakdown-dot success"></span>
+                <span class="breakdown-text">Upcoming</span>
+                <span class="breakdown-value">{{ activityStats().upcoming }}</span>
+              </div>
+              <div class="breakdown-row">
+                <span class="breakdown-dot danger"></span>
+                <span class="breakdown-text">Overdue</span>
+                <span class="breakdown-value">{{ activityStats().overdue }}</span>
+              </div>
+            </div>
+            <div class="health-metrics">
+              <div class="health-metric">
+                <i class="pi pi-heart-fill"></i>
+                <div class="metric-content">
+                  <span class="metric-value">{{ summary()?.customerLifetimeValue | currency:'USD':'symbol':'1.0-0' }}</span>
+                  <span class="metric-label">Avg CLV</span>
+                </div>
+              </div>
+              <div class="health-metric">
+                <i class="pi pi-sync"></i>
+                <div class="metric-content">
+                  <span class="metric-value">{{ summary()?.churnRate }}%</span>
+                  <span class="metric-label">Churn Rate</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+</div>
+
+<ng-template #emptyAccounts>
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="pi pi-building"></i>
+    </div>
+    <h4>No recent accounts</h4>
+    <p>New accounts will appear here</p>
+  </div>
+</ng-template>
+
+<ng-template #emptyActivities>
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="pi pi-calendar"></i>
+    </div>
+    <h4>All clear!</h4>
+    <p>No upcoming activities scheduled</p>
+  </div>
+</ng-template>
+
+<ng-template #loading>
+  <div class="page-background">
+    <div class="animated-orb orb-1"></div>
+    <div class="animated-orb orb-2"></div>
+  </div>
+  <div class="page-container">
+    <div class="loading-state">
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+      </div>
+      <p>Loading your dashboard...</p>
+    </div>
+  </div>
+</ng-template>

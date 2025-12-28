@@ -1,0 +1,432 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content">
+    <!-- PrimeNG Breadcrumb -->
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <!-- Page Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <h1 class="page-title">
+          <i class="pi pi-calendar gradient-icon"></i>
+          Activities
+          <span class="title-count">{{ total() }}</span>
+        </h1>
+      </div>
+      <div class="header-right">
+        <div class="view-toggle">
+          <button class="toggle-btn" [class.active]="currentView() === 'table'" (click)="setView('table')" title="Table View">
+            <i class="pi pi-list"></i>
+          </button>
+          <button class="toggle-btn" [class.active]="currentView() === 'calendar'" (click)="setView('calendar')" title="Calendar View">
+            <i class="pi pi-calendar"></i>
+          </button>
+          <button class="toggle-btn" [class.active]="currentView() === 'tasks'" (click)="setView('tasks')" title="Tasks View">
+            <i class="pi pi-check-square"></i>
+          </button>
+        </div>
+        <button class="btn-icon" (click)="load()" title="Refresh">
+          <i class="pi pi-refresh"></i>
+        </button>
+        <button class="btn-primary" (click)="onCreate()">
+          <i class="pi pi-plus"></i>
+          <span>Add Activity</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Strip -->
+    <section class="kpi-strip">
+      <div class="kpi-card">
+        <div class="kpi-icon total">
+          <i class="pi pi-inbox"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ total() }}</span>
+          <span class="kpi-label">Total</span>
+        </div>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-card clickable" [class.active]="statusFilter === 'Upcoming'" (click)="onStatusChange('Upcoming')">
+        <div class="kpi-icon upcoming">
+          <i class="pi pi-clock"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ openActivitiesCount() }}</span>
+          <span class="kpi-label">Open</span>
+        </div>
+      </div>
+      <div class="kpi-card clickable" [class.active]="isDueTodayActive" (click)="toggleDueToday()">
+        <div class="kpi-icon duetoday">
+          <i class="pi pi-calendar-clock"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ dueTodayCount() }}</span>
+          <span class="kpi-label">Due Today</span>
+        </div>
+        <span class="kpi-badge info" *ngIf="dueTodayCount() > 0">!</span>
+      </div>
+      <div class="kpi-card clickable" [class.active]="overdueOnly()" (click)="toggleOverdue()">
+        <div class="kpi-icon overdue">
+          <i class="pi pi-exclamation-circle"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ overdueCount() }}</span>
+          <span class="kpi-label">Overdue</span>
+        </div>
+        <span class="kpi-badge danger" *ngIf="overdueCount() > 0">!</span>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-card clickable" [class.active]="statusFilter === 'Completed'" (click)="onStatusChange('Completed')">
+        <div class="kpi-icon completed">
+          <i class="pi pi-check-circle"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ completedCount() }}</span>
+          <span class="kpi-label">Done</span>
+        </div>
+        <span class="kpi-badge success" *ngIf="completionRate() > 0">{{ completionRate() }}%</span>
+      </div>
+    </section>
+
+    <!-- Toolbar -->
+    <section class="toolbar-section">
+      <div class="toolbar glass-card">
+        <div class="toolbar-left">
+          <div class="search-box">
+            <i class="pi pi-search"></i>
+            <input type="text" placeholder="Search activities..." [(ngModel)]="searchQuery" (ngModelChange)="onSearch($event)" />
+          </div>
+          <div class="filter-pills">
+            <button class="pill" [class.active]="typeFilter === 'all'" (click)="onTypeChange('all')">All</button>
+            <button class="pill" [class.active]="typeFilter === 'Call'" (click)="onTypeChange('Call')">
+              <i class="pi pi-phone"></i> Calls
+            </button>
+            <button class="pill" [class.active]="typeFilter === 'Email'" (click)="onTypeChange('Email')">
+              <i class="pi pi-envelope"></i> Emails
+            </button>
+            <button class="pill" [class.active]="typeFilter === 'Meeting'" (click)="onTypeChange('Meeting')">
+              <i class="pi pi-users"></i> Meetings
+            </button>
+            <button class="pill" [class.active]="typeFilter === 'Task'" (click)="onTypeChange('Task')">
+              <i class="pi pi-check-square"></i> Tasks
+            </button>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <p-select
+            [options]="ownerOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="activeOwnerFilter"
+            (ngModelChange)="onOwnerFilterChange($event)"
+            placeholder="All Owners"
+            styleClass="filter-select"
+          ></p-select>
+          <button class="pill toggle" [class.active]="myView()" (click)="toggleMine()">
+            <i class="pi pi-user"></i> Mine
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="recently-viewed glass-card" *ngIf="recentActivities().length">
+      <div class="recently-viewed__header">
+        <h3>Recently viewed</h3>
+        <span>{{ recentActivities().length }} recent</span>
+      </div>
+      <div class="recently-viewed__list">
+        <button class="recent-item" *ngFor="let item of recentActivities()" (click)="openRecent(item)">
+          <div class="recent-item__title">{{ item.title }}</div>
+          <div class="recent-item__meta">
+            {{ item.subtitle || 'Activity' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- Activities Table -->
+    <section class="table-section" *ngIf="currentView() === 'table'">
+      <div class="data-table-wrapper glass-card">
+        <ng-container *ngIf="!loading(); else loadingState">
+          <ng-container *ngIf="filteredActivities().length; else emptyState">
+            <div class="table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Subject</th>
+                    <th>Type</th>
+                    <th>Related To</th>
+                    <th>Priority</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Owner</th>
+                    <th class="actions-col">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of filteredActivities()" class="table-row" (click)="onEdit(row)">
+                    <td>
+                      <span class="subject-text">{{ row.subject }}</span>
+                    </td>
+                    <td>
+                      <span class="type-badge" [attr.data-type]="row.type">
+                        <i class="pi" 
+                           [class.pi-phone]="row.type === 'Call'"
+                           [class.pi-envelope]="row.type === 'Email'"
+                           [class.pi-users]="row.type === 'Meeting'"
+                           [class.pi-check-square]="row.type === 'Task'"></i>
+                        {{ row.type }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="related-info">
+                        <span class="related-type">{{ relationLabel(row.relatedEntityType) }}</span>
+                        <span class="related-name">{{ row.relatedEntityName || '—' }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="priority-chip" 
+                            [class.high]="row.priority === 'High'"
+                            [class.normal]="row.priority === 'Normal' || !row.priority"
+                            [class.low]="row.priority === 'Low'">
+                        {{ row.priority || 'Normal' }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="date-text">{{ row.dueDateUtc | date: 'MMM d, h:mm a' }}</span>
+                    </td>
+                    <td>
+                      <span class="status-chip"
+                            [class.upcoming]="row.status === 'Upcoming'"
+                            [class.completed]="row.status === 'Completed'"
+                            [class.overdue]="row.status === 'Overdue'">
+                        {{ row.status }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="owner-text">{{ row.ownerName || 'Unassigned' }}</span>
+                    </td>
+                    <td class="actions-col">
+                      <div class="row-actions">
+                        <button class="btn-icon-sm" (click)="$event.stopPropagation(); onEdit(row)" title="Edit">
+                          <i class="pi pi-pencil"></i>
+                        </button>
+                        <button class="btn-icon-sm danger" (click)="$event.stopPropagation(); onDelete(row)" title="Delete">
+                          <i class="pi pi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="pagination-bar">
+              <span class="pagination-info">
+                Showing {{ (pageIndex * rows) + 1 }}–{{ Math.min((pageIndex + 1) * rows, total()) }} of {{ total() }}
+              </span>
+              <p-paginator
+                [rows]="rows"
+                [totalRecords]="total()"
+                [first]="pageIndex * rows"
+                (onPageChange)="onPageChange($event)"
+                [showFirstLastIcon]="false"
+                [showPageLinks]="true"
+                [pageLinkSize]="5"
+              ></p-paginator>
+            </div>
+          </ng-container>
+        </ng-container>
+
+        <ng-template #loadingState>
+          <div class="loading-skeleton">
+            <div class="skeleton-row" *ngFor="let _ of [1,2,3,4,5]">
+              <div class="skeleton"></div>
+            </div>
+          </div>
+        </ng-template>
+
+        <ng-template #emptyState>
+          <div class="empty-state">
+            <div class="empty-icon">
+              <i class="pi pi-calendar"></i>
+            </div>
+            <h3 class="empty-title">No activities found</h3>
+            <p class="empty-text">Create your first activity to start tracking calls, emails, and meetings.</p>
+            <button class="btn-primary" (click)="onCreate()">
+              <i class="pi pi-plus"></i>
+              New Activity
+            </button>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+
+    <!-- Calendar + Tasks -->
+    <section class="calendar-section" *ngIf="currentView() === 'calendar'">
+      <div class="calendar-shell glass-card">
+        <header class="calendar-header">
+          <div>
+            <p class="eyebrow">Schedule</p>
+            <h2>{{ calendarMonthLabel() }}</h2>
+            <p class="muted">{{ selectedDateLabel() }}</p>
+          </div>
+          <div class="calendar-actions">
+            <button class="btn-icon" (click)="previousMonth()" title="Previous month">
+              <i class="pi pi-angle-left"></i>
+            </button>
+            <button class="btn-icon" (click)="goToToday()" title="Today">
+              <i class="pi pi-calendar"></i>
+            </button>
+            <button class="btn-icon" (click)="nextMonth()" title="Next month">
+              <i class="pi pi-angle-right"></i>
+            </button>
+          </div>
+        </header>
+        <div class="calendar-grid">
+          <div class="calendar-weekday" *ngFor="let day of weekdayLabels">{{ day }}</div>
+          <button
+            class="calendar-day"
+            *ngFor="let day of calendarDays()"
+            [class.is-outside]="!day.isCurrentMonth"
+            [class.is-today]="day.isToday"
+            [class.is-selected]="day.isSelected"
+            (click)="selectDate(day.date)"
+          >
+            <span class="day-number">{{ day.date.getDate() }}</span>
+            <span class="day-count" *ngIf="day.items.length">{{ day.items.length }}</span>
+          </button>
+        </div>
+      </div>
+
+      <aside class="calendar-panel">
+        <div class="panel-card">
+          <header>
+            <h3>Tasks for {{ selectedDateLabel() }}</h3>
+            <span class="pill">{{ selectedDayTasks().length }}</span>
+          </header>
+          <div class="task-list" *ngIf="selectedDayTasks().length; else noTasks">
+            <div class="task-item" *ngFor="let task of selectedDayTasks()">
+              <div>
+                <strong>{{ task.subject }}</strong>
+                <small>{{ task.status }}</small>
+              </div>
+              <span class="task-type">{{ task.type }}</span>
+            </div>
+          </div>
+          <ng-template #noTasks>
+            <p class="empty-text">No tasks scheduled for this day.</p>
+          </ng-template>
+        </div>
+
+        <div class="panel-card">
+          <header>
+            <h3>Open tasks</h3>
+            <span class="pill">{{ openTasks().length }}</span>
+          </header>
+          <div class="task-list" *ngIf="openTasksPreview().length; else noOpenTasks">
+            <div class="task-item" *ngFor="let task of openTasksPreview()">
+              <div>
+                <strong>{{ task.subject }}</strong>
+                <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
+              </div>
+              <span class="task-type">{{ task.type }}</span>
+            </div>
+          </div>
+          <ng-template #noOpenTasks>
+            <p class="empty-text">All caught up.</p>
+          </ng-template>
+        </div>
+      </aside>
+    </section>
+
+    <section class="tasks-section" *ngIf="currentView() === 'tasks'">
+      <div class="tasks-header glass-card">
+        <div>
+          <p class="eyebrow">Tasks</p>
+          <h2>Execution queue</h2>
+          <p class="muted">Focused list of open and completed tasks.</p>
+        </div>
+        <button class="btn-primary" (click)="onCreate()">
+          <i class="pi pi-plus"></i>
+          Add Task
+        </button>
+      </div>
+
+      <div class="tasks-grid">
+        <article class="tasks-column">
+          <header>
+            <span>Due today</span>
+            <strong>{{ tasksToday().length }}</strong>
+          </header>
+          <div class="task-card" *ngFor="let task of tasksToday()" (click)="onEdit(task)">
+            <div>
+              <strong>{{ task.subject }}</strong>
+              <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
+            </div>
+            <span class="status-tag status-tag--today">Today</span>
+          </div>
+          <p class="empty-text" *ngIf="!tasksToday().length">No tasks due today.</p>
+        </article>
+
+        <article class="tasks-column">
+          <header>
+            <span>Overdue</span>
+            <strong>{{ tasksOverdue().length }}</strong>
+          </header>
+          <div class="task-card" *ngFor="let task of tasksOverdue()" (click)="onEdit(task)">
+            <div>
+              <strong>{{ task.subject }}</strong>
+              <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
+            </div>
+            <span class="status-tag status-tag--overdue">Overdue</span>
+          </div>
+          <p class="empty-text" *ngIf="!tasksOverdue().length">Nothing overdue.</p>
+        </article>
+
+        <article class="tasks-column">
+          <header>
+            <span>Upcoming</span>
+            <strong>{{ tasksUpcoming().length }}</strong>
+          </header>
+          <div class="task-card" *ngFor="let task of tasksUpcoming()" (click)="onEdit(task)">
+            <div>
+              <strong>{{ task.subject }}</strong>
+              <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
+            </div>
+            <span class="status-tag status-tag--upcoming">Upcoming</span>
+          </div>
+          <p class="empty-text" *ngIf="!tasksUpcoming().length">No upcoming tasks.</p>
+        </article>
+
+        <article class="tasks-column tasks-column--completed">
+          <header>
+            <span>Completed</span>
+            <strong>{{ tasksCompleted().length }}</strong>
+          </header>
+          <div class="task-card" *ngFor="let task of tasksCompleted()" (click)="onEdit(task)">
+            <div>
+              <strong>{{ task.subject }}</strong>
+              <small>{{ task.completedDateUtc ? (task.completedDateUtc | date: 'MMM d, h:mm a') : 'Completed' }}</small>
+            </div>
+            <span class="status-tag status-tag--done">Done</span>
+          </div>
+          <p class="empty-text" *ngIf="!tasksCompleted().length">No completed tasks.</p>
+        </article>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- Mobile FAB -->
+<button class="fab" (click)="onCreate()">
+  <i class="pi pi-plus"></i>
+</button>

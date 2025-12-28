@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: crm-enterprise-sql
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "ChangeThisPassword!1"
+      MSSQL_PID: "Express"
+    ports:
+      - "1433:1433"
+    volumes:
+      - ./.containers/sqlserver/data:/var/opt/mssql/data
+      - ./.containers/sqlserver/log:/var/opt/mssql/log
+      - ./.containers/sqlserver/secrets:/var/opt/mssql/secrets
+    healthcheck:
+      test: [ "CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "ChangeThisPassword!1", "-Q", "SELECT 1", "-C" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s

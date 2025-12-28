@@ -1,0 +1,47 @@
+export type LeadStatus = 'New' | 'Qualified' | 'Converted' | 'Lost';
+export type LeadAssignmentStrategy = 'Manual' | 'RoundRobin' | 'Territory';
+
+export interface Lead {
+  id: string;
+  name: string;
+  company: string;
+  status: LeadStatus;
+  email?: string;
+  phone?: string;
+  ownerId?: string;
+  owner: string;
+  score: number;
+  createdAt: string;
+  source?: string;
+  territory?: string;
+  jobTitle?: string;
+}
+
+export interface LeadSearchRequest {
+  search?: string;
+  status?: LeadStatus;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface LeadSearchResponse {
+  items: Lead[];
+  total: number;
+}
+
+export interface LeadConversionRequest {
+  createAccount: boolean;
+  accountName?: string;
+  createContact: boolean;
+  createOpportunity: boolean;
+  opportunityName?: string;
+  amount?: number;
+  expectedCloseDate?: string;
+}
+
+export interface LeadConversionResponse {
+  leadId: string;
+  accountId?: string;
+  contactId?: string;
+  opportunityId?: string;
+}

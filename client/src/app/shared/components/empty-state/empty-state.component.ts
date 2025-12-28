@@ -1,0 +1,154 @@
+import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
+
+export type EmptyStateType = 
+  | 'no-data' 
+  | 'no-results' 
+  | 'error' 
+  | 'no-access' 
+  | 'empty-inbox' 
+  | 'success';
+
+@Component({
+  selector: 'app-empty-state',
+  standalone: true,
+  imports: [CommonModule, ButtonModule],
+  template: `
+    <div class="empty-state" [class]="'empty-state--' + type">
+      <div class="empty-state__illustration">
+        <ng-container [ngSwitch]="type">
+          <svg *ngSwitchCase="'no-data'" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="40" y="40" width="120" height="80" rx="8" fill="#E0E7FF"/>
+            <rect x="55" y="55" width="50" height="8" rx="4" fill="#A5B4FC"/>
+            <rect x="55" y="70" width="90" height="6" rx="3" fill="#C7D2FE"/>
+            <rect x="55" y="82" width="70" height="6" rx="3" fill="#C7D2FE"/>
+            <rect x="55" y="94" width="80" height="6" rx="3" fill="#C7D2FE"/>
+            <circle cx="150" cy="45" r="25" fill="#818CF8" opacity="0.3"/>
+            <path d="M145 45l5 5 10-10" stroke="#4F46E5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          
+          <svg *ngSwitchCase="'no-results'" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="100" cy="70" r="45" fill="#FEE2E2" stroke="#FECACA" stroke-width="2"/>
+            <circle cx="90" cy="65" r="20" fill="none" stroke="#F87171" stroke-width="4"/>
+            <line x1="105" y1="80" x2="125" y2="100" stroke="#F87171" stroke-width="4" stroke-linecap="round"/>
+            <path d="M85 62l10 6M85 68l10-6" stroke="#F87171" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+
+          <svg *ngSwitchCase="'error'" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="100" cy="80" r="50" fill="#FEE2E2"/>
+            <circle cx="100" cy="80" r="35" fill="#FECACA"/>
+            <path d="M100 55v30M100 95v5" stroke="#DC2626" stroke-width="6" stroke-linecap="round"/>
+          </svg>
+
+          <svg *ngSwitchCase="'no-access'" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="60" y="50" width="80" height="70" rx="8" fill="#FEF3C7"/>
+            <rect x="75" y="80" width="50" height="30" rx="4" fill="#FDE68A"/>
+            <circle cx="100" cy="70" r="15" fill="none" stroke="#F59E0B" stroke-width="4"/>
+            <path d="M90 70h20M100 60v20" stroke="#F59E0B" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+
+          <svg *ngSwitchCase="'empty-inbox'" viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="50" y="40" width="100" height="80" rx="8" fill="#ECFDF5"/>
+            <path d="M50 60l50 30 50-30" stroke="#34D399" stroke-width="3" fill="none"/>
+            <rect x="70" y="85" width="60" height="4" rx="2" fill="#A7F3D0"/>
+            <rect x="80" y="95" width="40" height="4" rx="2" fill="#A7F3D0"/>
+          </svg>
+
+          <svg *ngSwitchDefault viewBox="0 0 200 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="100" cy="80" r="50" fill="#E0E7FF"/>
+            <rect x="75" y="65" width="50" height="30" rx="4" fill="#A5B4FC"/>
+          </svg>
+        </ng-container>
+      </div>
+
+      <div class="empty-state__content">
+        <h3 class="empty-state__title">{{ title }}</h3>
+        <p class="empty-state__description">{{ description }}</p>
+      </div>
+
+      <div class="empty-state__actions" *ngIf="actionLabel || secondaryActionLabel">
+        <button 
+          *ngIf="actionLabel"
+          pButton 
+          [label]="actionLabel" 
+          [icon]="actionIcon"
+          (click)="onAction()"
+        ></button>
+        <button 
+          *ngIf="secondaryActionLabel"
+          pButton 
+          [label]="secondaryActionLabel" 
+          severity="secondary"
+          (click)="onSecondaryAction()"
+        ></button>
+      </div>
+    </div>
+  `,
+  styles: [`
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      text-align: center;
+      min-height: 300px;
+    }
+
+    .empty-state__illustration {
+      width: 180px;
+      height: 140px;
+      margin-bottom: 24px;
+    }
+
+    .empty-state__illustration svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .empty-state__content {
+      max-width: 400px;
+      margin-bottom: 24px;
+    }
+
+    .empty-state__title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-strong, #0f172a);
+      margin: 0 0 8px;
+    }
+
+    .empty-state__description {
+      font-size: 0.95rem;
+      color: var(--text-subtle, #64748b);
+      margin: 0;
+      line-height: 1.5;
+    }
+
+    .empty-state__actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  `]
+})
+export class EmptyStateComponent {
+  @Input() type: EmptyStateType = 'no-data';
+  @Input() title = 'No data yet';
+  @Input() description = 'Get started by creating your first item.';
+  @Input() actionLabel?: string;
+  @Input() actionIcon = 'pi pi-plus';
+  @Input() secondaryActionLabel?: string;
+  @Input() actionCallback?: () => void;
+  @Input() secondaryActionCallback?: () => void;
+
+  onAction(): void {
+    this.actionCallback?.();
+  }
+
+  onSecondaryAction(): void {
+    this.secondaryActionCallback?.();
+  }
+}

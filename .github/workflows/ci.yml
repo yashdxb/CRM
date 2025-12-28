@@ -9,9 +9,6 @@ jobs:
   server:
     name: Server Build & Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server/src
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,13 +19,19 @@ jobs:
           dotnet-version: "8.0.x"
 
       - name: Restore
+        if: ${{ hashFiles('server/src/CRM.Enterprise.sln') != '' }}
         run: dotnet restore CRM.Enterprise.sln
+        working-directory: server/src
 
       - name: Build
+        if: ${{ hashFiles('server/src/CRM.Enterprise.sln') != '' }}
         run: dotnet build CRM.Enterprise.sln --configuration Release --no-restore
+        working-directory: server/src
 
       - name: Test
+        if: ${{ hashFiles('server/src/CRM.Enterprise.sln') != '' }}
         run: dotnet test CRM.Enterprise.sln --configuration Release --no-build
+        working-directory: server/src
 
   client:
     name: Client Build & Test

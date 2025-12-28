@@ -1,0 +1,217 @@
+<section class="page-background">
+  <!-- Animated Background Orbs -->
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+
+  <!-- PrimeNG Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- Hero Section -->
+  <header class="page-hero">
+    <div class="hero-content">
+      <span class="hero-eyebrow">
+        <i class="pi pi-cog"></i>
+        Workspace controls
+      </span>
+      <h1 class="hero-title">Team & Access Management</h1>
+      <p class="hero-subtitle">
+        Manage teammates, control permissions, and keep sensitive data scoped to the right sellers
+      </p>
+    </div>
+    <div class="hero-actions">
+      <label class="toggle-wrapper">
+        <span>Show inactive</span>
+        <p-toggleSwitch [ngModel]="includeInactive()" (ngModelChange)="toggleIncludeInactive($event)"></p-toggleSwitch>
+      </label>
+      <button class="btn-gradient" routerLink="/app/settings/invite">
+        <i class="pi pi-user-plus"></i>
+        <span>Invite user</span>
+      </button>
+      <button class="btn-glass" routerLink="/app/settings/workspace">
+        <i class="pi pi-sliders-h"></i>
+        <span>Workspace settings</span>
+      </button>
+      <button class="btn-glass" routerLink="/app/settings/roles">
+        <i class="pi pi-shield"></i>
+        <span>Manage roles</span>
+      </button>
+      <button class="btn-glass" routerLink="/app/settings/lead-assignment">
+        <i class="pi pi-sitemap"></i>
+        <span>Lead assignment</span>
+      </button>
+      <button class="btn-glass" *ngIf="canManageTenants()" routerLink="/app/settings/tenants">
+        <i class="pi pi-building"></i>
+        <span>Manage tenants</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Metrics Dashboard -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-icon cyan">
+        <i class="pi pi-users"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-value">{{ totalUsers() }}</span>
+        <span class="metric-label">Total Users</span>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon purple">
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-value">{{ activeUsersCount() }}</span>
+        <span class="metric-label">Active</span>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon orange">
+        <i class="pi pi-ban"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-value">{{ inactiveUsersCount() }}</span>
+        <span class="metric-label">Inactive</span>
+      </div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon primary">
+        <i class="pi pi-id-card"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-value">{{ roles().length }}</span>
+        <span class="metric-label">Roles</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="settings-layout">
+    <!-- Users Table Panel -->
+    <div class="glass-card users-panel">
+      <div class="card-header">
+        <div class="header-left">
+          <span class="card-eyebrow">Team directory</span>
+          <h2 class="card-title">{{ filteredUsers().length }} teammates</h2>
+        </div>
+        <p class="card-subtitle">Manage permissions and access for your CRM team</p>
+      </div>
+
+      <ng-container *ngIf="!loadingUsers(); else usersLoading">
+        <div class="table-toolbar">
+          <div class="toolbar-search">
+            <i class="pi pi-search"></i>
+            <input
+              type="search"
+              [ngModel]="searchTerm()"
+              (ngModelChange)="onSearchChange($event)"
+              placeholder="Search by name or email"
+            />
+          </div>
+          <div class="toolbar-filters">
+            <p-select
+              [options]="roleFilterOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="roleFilter()"
+              (ngModelChange)="onRoleFilterChange($event)"
+              placeholder="All roles"
+              styleClass="filter-select"
+            ></p-select>
+            <p-select
+              [options]="statusFilterOptions"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="statusFilter()"
+              (ngModelChange)="onStatusFilterChange($event)"
+              placeholder="All statuses"
+              styleClass="filter-select"
+            ></p-select>
+            <button type="button" class="btn-glass small" (click)="resetFilters()">Reset</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Roles</th>
+                <th>Last Login</th>
+                <th>Status</th>
+                <th class="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of filteredUsers()" class="user-row" (click)="startEdit(user)">
+                <td>
+                  <div class="user-cell">
+                    <div class="user-avatar" [ngClass]="user.isActive ? 'avatar-active' : 'avatar-inactive'">
+                      {{ user.fullName.slice(0, 1) }}
+                    </div>
+                    <div class="user-info">
+                      <span class="user-name">{{ user.fullName }}</span>
+                      <span class="user-email">{{ user.email }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="role-badges">
+                    <span class="role-badge" *ngFor="let role of user.roles">{{ role }}</span>
+                  </div>
+                </td>
+                <td>
+                  <span *ngIf="user.lastLoginAtUtc; else neverLogged" class="login-date">
+                    {{ user.lastLoginAtUtc | date: 'MMM d, y • h:mm a' }}
+                  </span>
+                  <ng-template #neverLogged>
+                    <span class="login-never">Never logged in</span>
+                  </ng-template>
+                </td>
+                <td>
+                  <span class="status-badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-warning'">
+                    {{ user.isActive ? 'Active' : 'Inactive' }}
+                  </span>
+                </td>
+                <td class="text-right">
+                  <div class="action-buttons">
+                    <button type="button" class="action-btn" title="Edit user" aria-label="Edit user" (click)="$event.stopPropagation(); startEdit(user)">
+                      <i class="pi pi-pencil"></i>
+                    </button>
+                    <button type="button" class="action-btn" [title]="user.isActive ? 'Deactivate' : 'Activate'" [attr.aria-label]="user.isActive ? 'Deactivate user' : 'Activate user'" (click)="$event.stopPropagation(); toggleUserStatus(user)">
+                      <i [class]="user.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
+                    </button>
+                    <button type="button" class="action-btn" title="Reset password" aria-label="Reset password" (click)="$event.stopPropagation(); resetPassword(user)">
+                      <i class="pi pi-key"></i>
+                    </button>
+                    <button type="button" class="action-btn danger" title="Remove user" aria-label="Remove user" (click)="$event.stopPropagation(); deleteUser(user)">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+      <ng-template #usersLoading>
+        <div class="loading-skeleton">
+          <div class="skeleton-row" *ngFor="let _ of [0, 1, 2, 3, 4]"></div>
+        </div>
+      </ng-template>
+    </div>
+
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-notification" *ngIf="toast() as alert" [ngClass]="'toast--' + alert.tone">
+    <i [class]="alert.tone === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
+    <span>{{ alert.message }}</span>
+    <button type="button" class="toast-close" (click)="clearToast()" aria-label="Dismiss">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+</section>

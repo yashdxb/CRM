@@ -1,0 +1,902 @@
+import { Activity } from '../features/activities/models/activity.model';
+import { ActivitySearchRequest, ActivitySearchResponse } from '../features/activities/services/activity-data.service';
+import { Customer, CustomerSearchRequest, CustomerSearchResponse } from '../features/customers/models/customer.model';
+import { DashboardSummary } from '../features/dashboard/models/dashboard.model';
+import { PERMISSION_KEYS } from '../core/auth/permission.constants';
+import { Opportunity, OpportunitySearchRequest, OpportunitySearchResponse } from '../features/opportunities/models/opportunity.model';
+import { SaveOpportunityRequest } from '../features/opportunities/services/opportunity-data.service';
+import { UpdateWorkspaceSettingsRequest, WorkspaceSettings } from '../features/settings/models/workspace-settings.model';
+import {
+  PermissionDefinition,
+  RoleSummary,
+  UpsertRoleRequest,
+  UpsertUserRequest,
+  UserDetailResponse,
+  UserListItem,
+  UserSearchRequest,
+  UserSearchResponse
+} from '../features/settings/models/user-admin.model';
+
+const today = new Date();
+
+const addDays = (date: Date, days: number) => {
+  const copy = new Date(date);
+  copy.setDate(copy.getDate() + days);
+  return copy.toISOString();
+};
+
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+const ownerIds: Record<string, string> = {
+  'Yasser Ahmed': 'u-001',
+  'Mia Khalid': 'u-002',
+  'Leah Singh': 'u-003',
+  'Omar Ali': 'u-004',
+  'Priya Desai': 'u-005',
+  'Owen Miles': 'u-006',
+  'Marcus Vega': 'u-007',
+  'Sasha Reed': 'u-008'
+};
+
+const ownerIdFor = (name?: string) => (name ? ownerIds[name] : undefined);
+
+let mockWorkspaceSettings: WorkspaceSettings = {
+  id: 'tenant-default',
+  key: 'default',
+  name: 'CRM Enterprise',
+  timeZone: 'UTC',
+  currency: 'USD'
+};
+
+export const mockCustomers: Customer[] = [
+  {
+    id: 'c-001',
+    name: 'Aaliyah Patel',
+    company: 'Northwind Logistics',
+    email: 'aaliyah.patel@northwind.com',
+    phone: '555-0141',
+    address: 'Seattle, WA',
+    status: 'Lead',
+    owner: 'Yasser Ahmed',
+    createdAt: addDays(today, -20),
+    notes: ['Requested intro deck', 'Prefers morning calls']
+  },
+  {
+    id: 'c-002',
+    name: 'Jonas Berg',
+    company: 'Polar Manufacturing',
+    email: 'jonas.berg@polar.io',
+    phone: '555-2231',
+    address: 'Denver, CO',
+    status: 'Prospect',
+    owner: 'Mia Khalid',
+    createdAt: addDays(today, -15),
+    notes: ['Negotiating pricing tier']
+  },
+  {
+    id: 'c-003',
+    name: 'Sophia Kim',
+    company: 'Harbor Retail',
+    email: 'sophia.kim@harborretail.com',
+    phone: '555-9821',
+    address: 'Austin, TX',
+    status: 'Customer',
+    owner: 'Yasser Ahmed',
+    createdAt: addDays(today, -40),
+    notes: ['Live since last quarter']
+  },
+  {
+    id: 'c-004',
+    name: 'Mateo Rossi',
+    company: 'Alpine Energy',
+    email: 'mateo.rossi@alpineenergy.com',
+    phone: '555-0912',
+    address: 'San Jose, CA',
+    status: 'Prospect',
+    owner: 'Leah Singh',
+    createdAt: addDays(today, -12)
+  },
+  {
+    id: 'c-005',
+    name: 'Emily Carter',
+    company: 'Cobalt Systems',
+    email: 'emily.carter@cobalt.dev',
+    phone: '555-7621',
+    address: 'Chicago, IL',
+    status: 'Customer',
+    owner: 'Omar Ali',
+    createdAt: addDays(today, -60)
+  },
+  {
+    id: 'c-006',
+    name: 'Daniel Wu',
+    company: 'Evergreen Foods',
+    email: 'daniel.wu@evergreenfoods.com',
+    phone: '555-5521',
+    address: 'Portland, OR',
+    status: 'Lead',
+    owner: 'Mia Khalid',
+    createdAt: addDays(today, -5)
+  },
+  {
+    id: 'c-007',
+    name: 'Priya Desai',
+    company: 'UrbanGrid',
+    email: 'priya.desai@urbangrid.com',
+    phone: '555-8812',
+    address: 'New York, NY',
+    status: 'Customer',
+    owner: 'Yasser Ahmed',
+    createdAt: addDays(today, -25)
+  },
+  {
+    id: 'c-008',
+    name: 'Carlos Mendes',
+    company: 'Latitude Ventures',
+    email: 'carlos.mendes@latitude.vc',
+    phone: '555-1752',
+    address: 'Miami, FL',
+    status: 'Prospect',
+    owner: 'Leah Singh',
+    createdAt: addDays(today, -8)
+  },
+  {
+    id: 'c-009',
+    name: 'Hannah Fischer',
+    company: 'BluePeak Health',
+    email: 'hannah.fischer@bluepeakhealth.com',
+    phone: '555-4419',
+    address: 'Boston, MA',
+    status: 'Customer',
+    owner: 'Omar Ali',
+    createdAt: addDays(today, -75)
+  },
+  {
+    id: 'c-010',
+    name: 'Liam Murphy',
+    company: 'Cedar Analytics',
+    email: 'liam.murphy@cedaranalytics.com',
+    phone: '555-0042',
+    address: 'Dublin, OH',
+    status: 'Lead',
+    owner: 'Yasser Ahmed',
+    createdAt: addDays(today, -2)
+  }
+];
+
+export const mockActivities: Activity[] = [
+  {
+    id: 'a-001',
+    subject: 'Q1 success review',
+    type: 'Call',
+    priority: 'Normal',
+    dueDateUtc: addDays(today, 2),
+    status: 'Upcoming',
+    relatedEntityType: 'Account',
+    relatedEntityId: 'c-003',
+    relatedEntityName: 'Sophia Kim',
+    ownerName: 'Leah Singh',
+    ownerId: ownerIdFor('Leah Singh')
+  },
+  {
+    id: 'a-002',
+    subject: 'Renewal prep',
+    type: 'Meeting',
+    priority: 'High',
+    dueDateUtc: addDays(today, -1),
+    status: 'Overdue',
+    relatedEntityType: 'Account',
+    relatedEntityId: 'c-005',
+    relatedEntityName: 'Emily Carter',
+    ownerName: 'Owen Miles',
+    ownerId: ownerIdFor('Owen Miles')
+  },
+  {
+    id: 'a-003',
+    subject: 'Send pricing sheet',
+    type: 'Task',
+    dueDateUtc: addDays(today, 1),
+    status: 'Upcoming',
+    relatedEntityType: 'Account',
+    relatedEntityId: 'c-002',
+    relatedEntityName: 'Jonas Berg',
+    ownerName: 'Priya Desai',
+    ownerId: ownerIdFor('Priya Desai')
+  },
+  {
+    id: 'a-004',
+    subject: 'Adoption workshop',
+    type: 'Meeting',
+    priority: 'High',
+    dueDateUtc: addDays(today, 5),
+    status: 'Upcoming',
+    relatedEntityType: 'Account',
+    relatedEntityId: 'c-007',
+    relatedEntityName: 'Priya Desai',
+    ownerName: 'Marcus Vega',
+    ownerId: ownerIdFor('Marcus Vega')
+  },
+  {
+    id: 'a-005',
+    subject: 'Lead qualification',
+    type: 'Call',
+    dueDateUtc: addDays(today, 0),
+    status: 'Upcoming',
+    relatedEntityType: 'Account',
+    relatedEntityId: 'c-006',
+    relatedEntityName: 'Daniel Wu',
+    ownerName: 'Sasha Reed',
+    ownerId: ownerIdFor('Sasha Reed')
+  },
+  {
+    id: 'a-006',
+    subject: 'Invoice review',
+    type: 'Task',
+    dueDateUtc: addDays(today, -3),
+    completedDateUtc: addDays(today, -2),
+    status: 'Completed',
+    relatedEntityType: 'Account',
+    relatedEntityId: 'c-009',
+    relatedEntityName: 'Hannah Fischer',
+    ownerName: 'Yasser Ahmed',
+    ownerId: ownerIdFor('Yasser Ahmed')
+  },
+  {
+    id: 'a-007',
+    subject: 'Intro discovery',
+    type: 'Call',
+    dueDateUtc: addDays(today, 3),
+    status: 'Upcoming',
+    relatedEntityType: 'Account',
+    relatedEntityId: 'c-010',
+    relatedEntityName: 'Liam Murphy',
+    ownerName: 'Leah Singh',
+    ownerId: ownerIdFor('Leah Singh')
+  }
+];
+
+const mockOpportunities: Opportunity[] = [
+  {
+    id: 'opp-001',
+    name: 'Cedar Analytics Expansion',
+    account: 'Cedar Analytics',
+    stage: 'Proposal',
+    amount: 180000,
+    probability: 55,
+    currency: 'USD',
+    closeDate: addDays(today, 30),
+    owner: 'Yasser Ahmed',
+    status: 'Open',
+    createdAtUtc: addDays(today, -25),
+    updatedAtUtc: addDays(today, -5)
+  },
+  {
+    id: 'opp-002',
+    name: 'Evergreen Foods Renewal',
+    account: 'Evergreen Foods',
+    stage: 'Negotiation',
+    amount: 95000,
+    probability: 75,
+    currency: 'USD',
+    closeDate: addDays(today, 18),
+    owner: 'Mia Khalid',
+    status: 'Open',
+    createdAtUtc: addDays(today, -70),
+    updatedAtUtc: addDays(today, -45)
+  },
+  {
+    id: 'opp-003',
+    name: 'UrbanGrid Net-New',
+    account: 'UrbanGrid',
+    stage: 'Qualification',
+    amount: 64000,
+    probability: 35,
+    currency: 'USD',
+    closeDate: addDays(today, 45),
+    owner: 'Leah Singh',
+    status: 'Open',
+    createdAtUtc: addDays(today, -18),
+    updatedAtUtc: addDays(today, -8)
+  },
+  {
+    id: 'opp-004',
+    name: 'Polar Manufacturing Rollout',
+    account: 'Polar Manufacturing',
+    stage: 'Closed Won',
+    amount: 210000,
+    probability: 100,
+    currency: 'USD',
+    closeDate: addDays(today, -10),
+    owner: 'Omar Ali',
+    status: 'Closed Won',
+    createdAtUtc: addDays(today, -120),
+    updatedAtUtc: addDays(today, -10)
+  },
+  {
+    id: 'opp-005',
+    name: 'BluePeak Health Pilot',
+    account: 'BluePeak Health',
+    stage: 'Prospecting',
+    amount: 48000,
+    probability: 20,
+    currency: 'USD',
+    closeDate: addDays(today, 60),
+    owner: 'Priya Desai',
+    status: 'Open',
+    createdAtUtc: addDays(today, -10),
+    updatedAtUtc: addDays(today, -3)
+  },
+  {
+    id: 'opp-006',
+    name: 'Latitude Ventures Renewal',
+    account: 'Latitude Ventures',
+    stage: 'Closed Lost',
+    amount: 72000,
+    probability: 0,
+    currency: 'USD',
+    closeDate: addDays(today, -22),
+    owner: 'Yasser Ahmed',
+    status: 'Closed Lost',
+    winLossReason: 'Selected competitor',
+    createdAtUtc: addDays(today, -90),
+    updatedAtUtc: addDays(today, -22)
+  }
+];
+
+const paginate = <T>(items: T[], page = 1, pageSize = 10) => {
+  const start = (page - 1) * pageSize;
+  return items.slice(start, start + pageSize);
+};
+
+export function searchCustomers(query: CustomerSearchRequest): CustomerSearchResponse {
+  const searchTerm = (query.search ?? '').toLowerCase();
+  let result = [...mockCustomers];
+
+  if (query.status) {
+    result = result.filter((c) => c.status === query.status);
+  }
+
+  if (searchTerm) {
+    result = result.filter((c) =>
+      [c.name, c.company, c.email, c.phone].some((field) => field.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  const total = result.length;
+  const items = paginate(result, query.page ?? 1, query.pageSize ?? 10);
+
+  return { items, total };
+}
+
+export function searchActivities(query: ActivitySearchRequest): ActivitySearchResponse {
+  const searchTerm = (query.search ?? '').toLowerCase();
+  let result = [...mockActivities];
+
+  if (query.status) {
+    result = result.filter((a) => a.status === query.status);
+  }
+
+  if (query.type) {
+    result = result.filter((a) => a.type === query.type);
+  }
+
+  if (query.ownerId) {
+    result = result.filter((a) => a.ownerId === query.ownerId);
+  }
+
+  if (searchTerm) {
+    result = result.filter((a) =>
+      [
+        a.subject,
+        a.description,
+        a.relatedEntityName,
+        a.ownerName
+      ]
+        .filter(Boolean)
+        .some((value) => value!.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  const total = result.length;
+  const items = paginate(result, query.page ?? 1, query.pageSize ?? 10);
+  return { items, total };
+}
+
+const stageToStatus = (stage?: string): Opportunity['status'] => {
+  if (!stage) return 'Open';
+  if (stage.startsWith('Closed Won')) return 'Closed Won';
+  if (stage.startsWith('Closed Lost')) return 'Closed Lost';
+  return 'Open';
+};
+
+const findCustomerName = (accountId?: string) => {
+  if (!accountId) return undefined;
+  return mockCustomers.find((c) => c.id === accountId)?.name;
+};
+
+export function searchOpportunities(query: OpportunitySearchRequest): OpportunitySearchResponse {
+  const searchTerm = (query.search ?? '').toLowerCase();
+  let result = [...mockOpportunities];
+
+  if (query.stage) {
+    result = result.filter((opp) => opp.stage === query.stage);
+  }
+
+  if (searchTerm) {
+    result = result.filter((opp) =>
+      [opp.name, opp.account, opp.owner].some((value) => value.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  const total = result.length;
+  const items = paginate(result, query.page ?? 1, query.pageSize ?? 10);
+  return { items, total };
+}
+
+export function createOpportunity(payload: SaveOpportunityRequest): Opportunity {
+  const accountName = findCustomerName(payload.accountId) ?? 'Unassigned';
+  const stage = payload.stageName || 'Prospecting';
+  const status = stageToStatus(stage);
+  const record: Opportunity = {
+    id: `opp-${Math.random().toString(36).slice(2, 8)}`,
+    name: payload.name,
+    account: accountName,
+    stage,
+    amount: payload.amount ?? 0,
+    probability: payload.probability ?? 0,
+    currency: payload.currency || 'USD',
+    closeDate: payload.expectedCloseDate || addDays(today, 30),
+    owner: 'Yasser Ahmed',
+    status,
+    winLossReason: payload.winLossReason ?? undefined,
+    createdAtUtc: new Date().toISOString(),
+    updatedAtUtc: new Date().toISOString()
+  };
+  mockOpportunities.unshift(record);
+  return { ...record };
+}
+
+export function updateOpportunity(id: string, payload: SaveOpportunityRequest): Opportunity | null {
+  const target = mockOpportunities.find((opp) => opp.id === id);
+  if (!target) return null;
+
+  const stage = payload.stageName || target.stage;
+  target.name = payload.name ?? target.name;
+  target.account = findCustomerName(payload.accountId) ?? target.account;
+  target.stage = stage;
+  target.amount = payload.amount ?? target.amount;
+  target.probability = payload.probability ?? target.probability ?? 0;
+  target.currency = payload.currency || target.currency;
+  target.closeDate = payload.expectedCloseDate || target.closeDate;
+  target.status = stageToStatus(stage);
+  target.winLossReason = payload.winLossReason ?? target.winLossReason;
+  target.updatedAtUtc = new Date().toISOString();
+  return { ...target };
+}
+
+export function deleteOpportunity(id: string): boolean {
+  const countBefore = mockOpportunities.length;
+  const next = mockOpportunities.filter((opp) => opp.id !== id);
+  mockOpportunities.length = 0;
+  mockOpportunities.push(...next);
+  return next.length !== countBefore;
+}
+
+export function buildDashboardSummary(): DashboardSummary {
+  const leads = mockCustomers.filter((c) => c.status === 'Lead').length;
+  const prospects = mockCustomers.filter((c) => c.status === 'Prospect').length;
+  const activeCustomers = mockCustomers.filter((c) => c.status === 'Customer').length;
+
+  const upcomingActivities = mockActivities.filter((a) => a.status === 'Upcoming').length;
+  const overdueActivities = mockActivities.filter((a) => a.status === 'Overdue').length;
+  const tasksDueToday = mockActivities.filter((a) => {
+    if (a.status === 'Completed' || !a.dueDateUtc) {
+      return false;
+    }
+    return new Date(a.dueDateUtc).toDateString() === today.toDateString();
+  }).length;
+
+  const recentCustomers = [...mockCustomers]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 6);
+
+  const activitiesNextWeek = mockActivities
+    .filter((a) => {
+      if (!a.dueDateUtc) {
+        return false;
+      }
+      const due = new Date(a.dueDateUtc).getTime();
+      const diffDays = (due - today.getTime()) / (1000 * 60 * 60 * 24);
+      return diffDays <= 7 && diffDays >= -1;
+    })
+    .sort((a, b) => {
+      const aDue = a.dueDateUtc ? new Date(a.dueDateUtc).getTime() : 0;
+      const bDue = b.dueDateUtc ? new Date(b.dueDateUtc).getTime() : 0;
+      return aDue - bDue;
+    });
+
+  // Calculate activity breakdown
+  const activityTypes = ['Call', 'Email', 'Meeting', 'Task'];
+  const totalActivities = mockActivities.length;
+  const activityBreakdown = activityTypes.map(type => {
+    const count = mockActivities.filter(a => a.type === type).length;
+    return {
+      type,
+      count,
+      percentage: Math.round((count / totalActivities) * 100)
+    };
+  });
+
+  // Generate revenue by month (last 6 months)
+  const months = ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const revenueByMonth = months.map((label, i) => ({
+    label,
+    value: 85000 + Math.floor(Math.random() * 40000) + (i * 8000)
+  }));
+
+  // Customer growth trend
+  const customerGrowth = months.map((label, i) => ({
+    label,
+    value: 35 + (i * 8) + Math.floor(Math.random() * 5)
+  }));
+
+  // Pipeline stages with values
+  const pipelineValue = [
+    { stage: 'Qualification', count: leads, value: leads * 12500 },
+    { stage: 'Proposal', count: prospects, value: prospects * 28000 },
+    { stage: 'Negotiation', count: Math.floor(prospects * 0.6), value: Math.floor(prospects * 0.6) * 45000 },
+    { stage: 'Closed Won', count: activeCustomers, value: activeCustomers * 52000 }
+  ];
+  const pipelineValueTotal = pipelineValue.reduce((sum, stage) => sum + stage.value, 0);
+  const openOpportunities = mockOpportunities.filter((opp) => opp.status === 'Open').length;
+
+  // Conversion trend (weekly for past 6 weeks)
+  const weeks = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'];
+  const conversionTrend = weeks.map((label, i) => ({
+    label,
+    value: 18 + Math.floor(Math.random() * 12) + (i * 2)
+  }));
+
+  // Top performers
+  const topPerformers = [
+    { name: 'Yasser Ahmed', deals: 12, revenue: 285000 },
+    { name: 'Mia Khalid', deals: 9, revenue: 198000 },
+    { name: 'Leah Singh', deals: 8, revenue: 176000 },
+    { name: 'Omar Ali', deals: 7, revenue: 154000 }
+  ];
+
+  return {
+    totalCustomers: mockCustomers.length,
+    leads,
+    prospects,
+    activeCustomers,
+    openOpportunities,
+    pipelineValueTotal,
+    tasksDueToday,
+    upcomingActivities,
+    overdueActivities,
+    recentCustomers,
+    activitiesNextWeek,
+    
+    // Chart data
+    revenueByMonth,
+    customerGrowth,
+    activityBreakdown,
+    pipelineValue,
+    conversionTrend,
+    topPerformers,
+    
+    // Additional metrics
+    avgDealSize: 42500,
+    winRate: 34,
+    avgSalesCycle: 28,
+    monthlyRecurringRevenue: 125000,
+    customerLifetimeValue: 185000,
+    churnRate: 2.4
+  };
+}
+
+const permissionCatalog: PermissionDefinition[] = [
+  {
+    key: PERMISSION_KEYS.dashboard,
+    label: 'Dashboards',
+    description: 'Access real-time company and pipeline health dashboards.'
+  },
+  {
+    key: PERMISSION_KEYS.customers,
+    label: 'Customers',
+    description: 'Create, edit, and manage customer accounts.'
+  },
+  {
+    key: PERMISSION_KEYS.contacts,
+    label: 'Contacts',
+    description: 'Manage contact records tied to customers and leads.'
+  },
+  {
+    key: PERMISSION_KEYS.leads,
+    label: 'Leads',
+    description: 'Work every lead stage from prospecting through conversion.'
+  },
+  {
+    key: PERMISSION_KEYS.opportunities,
+    label: 'Opportunities',
+    description: 'Forecast, update, and close opportunities across pipelines.'
+  },
+  {
+    key: PERMISSION_KEYS.activities,
+    label: 'Activities',
+    description: 'Schedule, assign, and complete calls, meetings, and tasks.'
+  },
+  {
+    key: PERMISSION_KEYS.administration,
+    label: 'Administration',
+    description: 'Invite teammates, assign roles, and configure workspace guardrails.'
+  }
+];
+
+let mockRoles: RoleSummary[] = [
+  {
+    id: 'role-admin',
+    name: 'System Administrator',
+    description: 'Full access to every workspace capability.',
+    permissions: permissionCatalog.map((p) => p.key),
+    isSystem: true
+  },
+  {
+    id: 'role-sales',
+    name: 'Sales Manager',
+    description: 'Manages pipeline, customers, and activities.',
+    permissions: [
+      PERMISSION_KEYS.dashboard,
+      PERMISSION_KEYS.customers,
+      PERMISSION_KEYS.contacts,
+      PERMISSION_KEYS.leads,
+      PERMISSION_KEYS.opportunities,
+      PERMISSION_KEYS.activities
+    ],
+    isSystem: true
+  },
+  {
+    id: 'role-success',
+    name: 'Customer Success',
+    description: 'Keeps customers healthy and coordinates follow-ups.',
+    permissions: [PERMISSION_KEYS.dashboard, PERMISSION_KEYS.customers, PERMISSION_KEYS.activities],
+    isSystem: false
+  },
+  {
+    id: 'role-support',
+    name: 'Support Agent',
+    description: 'Limited read/write for customers and activities.',
+    permissions: [PERMISSION_KEYS.customers, PERMISSION_KEYS.activities],
+    isSystem: false
+  }
+];
+
+interface MockUserRecord {
+  id: string;
+  fullName: string;
+  email: string;
+  timeZone?: string | null;
+  locale?: string | null;
+  isActive: boolean;
+  createdAtUtc: string;
+  lastLoginAtUtc?: string | null;
+  roleIds: string[];
+}
+
+let mockUsers: MockUserRecord[] = [
+  {
+    id: 'user-001',
+    fullName: 'Yasser Ahmed',
+    email: 'yasser.ahmed@crm-enterprise.io',
+    timeZone: 'UTC',
+    locale: 'en-US',
+    isActive: true,
+    createdAtUtc: addDays(today, -180),
+    lastLoginAtUtc: addDays(today, -1),
+    roleIds: ['role-admin']
+  },
+  {
+    id: 'user-002',
+    fullName: 'Leah Singh',
+    email: 'leah.singh@crm-enterprise.io',
+    timeZone: 'America/New_York',
+    locale: 'en-US',
+    isActive: true,
+    createdAtUtc: addDays(today, -140),
+    lastLoginAtUtc: addDays(today, -4),
+    roleIds: ['role-sales']
+  },
+  {
+    id: 'user-003',
+    fullName: 'Omar Ali',
+    email: 'omar.ali@crm-enterprise.io',
+    timeZone: 'America/Chicago',
+    locale: 'en-US',
+    isActive: true,
+    createdAtUtc: addDays(today, -120),
+    lastLoginAtUtc: addDays(today, -2),
+    roleIds: ['role-success']
+  },
+  {
+    id: 'user-004',
+    fullName: 'Mia Khalid',
+    email: 'mia.khalid@crm-enterprise.io',
+    timeZone: 'America/Los_Angeles',
+    locale: 'en-US',
+    isActive: false,
+    createdAtUtc: addDays(today, -90),
+    lastLoginAtUtc: addDays(today, -50),
+    roleIds: ['role-support']
+  },
+  {
+    id: 'user-005',
+    fullName: 'Jonas Berg',
+    email: 'jonas.berg@crm-enterprise.io',
+    timeZone: 'Europe/London',
+    locale: 'en-GB',
+    isActive: true,
+    createdAtUtc: addDays(today, -70),
+    lastLoginAtUtc: addDays(today, -3),
+    roleIds: ['role-success']
+  }
+];
+
+const toUserDetail = (record: MockUserRecord): UserDetailResponse => ({
+  ...record,
+  roles: record.roleIds
+    .map((roleId) => mockRoles.find((role) => role.id === roleId)?.name)
+    .filter((name): name is string => Boolean(name))
+});
+
+const toUserListItem = (record: MockUserRecord): UserListItem => {
+  const detail = toUserDetail(record);
+  return {
+    id: detail.id,
+    fullName: detail.fullName,
+    email: detail.email,
+    roles: detail.roles,
+    isActive: detail.isActive,
+    createdAtUtc: detail.createdAtUtc,
+    lastLoginAtUtc: detail.lastLoginAtUtc
+  };
+};
+
+const paginateUsers = <T>(items: T[], page = 1, pageSize = 10) => {
+  const start = (page - 1) * pageSize;
+  return items.slice(start, start + pageSize);
+};
+
+export const getPermissionDefinitions = () => clone(permissionCatalog);
+
+export const listRoles = () => mockRoles.map((role) => ({ ...role, permissions: [...role.permissions] }));
+
+export const findRole = (id: string) => {
+  const role = mockRoles.find((r) => r.id === id);
+  return role ? { ...role, permissions: [...role.permissions] } : null;
+};
+
+export const getWorkspaceSettings = () => ({ ...mockWorkspaceSettings });
+
+export const updateWorkspaceSettings = (payload: UpdateWorkspaceSettingsRequest) => {
+  mockWorkspaceSettings = {
+    ...mockWorkspaceSettings,
+    name: payload.name,
+    timeZone: payload.timeZone,
+    currency: payload.currency
+  };
+  return { ...mockWorkspaceSettings };
+};
+
+export const createRole = (payload: UpsertRoleRequest): RoleSummary => {
+  const role: RoleSummary = {
+    id: `role-${Math.random().toString(36).slice(2, 8)}`,
+    name: payload.name,
+    description: payload.description ?? undefined,
+    permissions: [...payload.permissions],
+    isSystem: false
+  };
+  mockRoles = [...mockRoles, role];
+  return { ...role };
+};
+
+export const updateRole = (id: string, payload: UpsertRoleRequest): RoleSummary | null => {
+  const target = mockRoles.find((role) => role.id === id);
+  if (!target) {
+    return null;
+  }
+  target.name = payload.name;
+  target.description = payload.description ?? undefined;
+  target.permissions = [...payload.permissions];
+  return { ...target, permissions: [...target.permissions] };
+};
+
+export const deleteRole = (id: string): boolean => {
+  const role = mockRoles.find((r) => r.id === id);
+  if (!role || role.isSystem) {
+    return false;
+  }
+  mockRoles = mockRoles.filter((r) => r.id !== id);
+  mockUsers = mockUsers.map((user) => ({
+    ...user,
+    roleIds: user.roleIds.filter((roleId) => roleId !== id)
+  }));
+  return true;
+};
+
+export const searchUsers = (query: UserSearchRequest): UserSearchResponse => {
+  const page = query.page ?? 1;
+  const pageSize = query.pageSize ?? 50;
+  const searchTerm = (query.search ?? '').toLowerCase();
+
+  let result = [...mockUsers];
+
+  if (!query.includeInactive) {
+    result = result.filter((user) => user.isActive);
+  }
+
+  if (searchTerm) {
+    result = result.filter((user) =>
+      [user.fullName, user.email].some((value) => value.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  const total = result.length;
+  const items = paginateUsers(result, page, pageSize).map(toUserListItem);
+
+  return { items, total };
+};
+
+export const findUser = (id: string): UserDetailResponse | null => {
+  const record = mockUsers.find((user) => user.id === id);
+  return record ? toUserDetail(record) : null;
+};
+
+export const createUser = (payload: UpsertUserRequest): UserDetailResponse => {
+  const record: MockUserRecord = {
+    id: `user-${Math.random().toString(36).slice(2, 8)}`,
+    fullName: payload.fullName,
+    email: payload.email,
+    timeZone: payload.timeZone ?? 'UTC',
+    locale: payload.locale ?? 'en-US',
+    isActive: payload.isActive,
+    createdAtUtc: new Date().toISOString(),
+    lastLoginAtUtc: null,
+    roleIds: [...payload.roleIds]
+  };
+  mockUsers = [record, ...mockUsers];
+  return toUserDetail(record);
+};
+
+export const updateUser = (id: string, payload: UpsertUserRequest): UserDetailResponse | null => {
+  const record = mockUsers.find((user) => user.id === id);
+  if (!record) {
+    return null;
+  }
+  record.fullName = payload.fullName;
+  record.email = payload.email;
+  record.timeZone = payload.timeZone ?? record.timeZone;
+  record.locale = payload.locale ?? record.locale;
+  record.isActive = payload.isActive;
+  record.roleIds = [...payload.roleIds];
+  return toUserDetail(record);
+};
+
+export const setUserActiveStatus = (id: string, nextStatus: boolean): boolean => {
+  const record = mockUsers.find((user) => user.id === id);
+  if (!record) {
+    return false;
+  }
+  record.isActive = nextStatus;
+  if (nextStatus) {
+    record.lastLoginAtUtc = new Date().toISOString();
+  }
+  return true;
+};
+
+export const deleteUser = (id: string): boolean => {
+  const exists = mockUsers.some((user) => user.id === id);
+  mockUsers = mockUsers.filter((user) => user.id !== id);
+  return exists;
+};
+
+export const resetUserPassword = (_id: string): boolean => true;

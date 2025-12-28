@@ -1,0 +1,451 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content">
+    <!-- PrimeNG Breadcrumb -->
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <!-- Compact Header -->
+    <header class="page-header">
+      <div class="header-left">
+        <h1 class="page-title">
+          <i class="pi pi-users gradient-icon"></i>
+          Leads
+          <span class="title-count">{{ total() }}</span>
+        </h1>
+      </div>
+      <div class="header-right">
+        <div class="view-toggle">
+          <button class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View">
+            <i class="pi pi-list"></i>
+          </button>
+          <button class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Kanban View">
+            <i class="pi pi-objects-column"></i>
+          </button>
+        </div>
+        <button class="btn-icon" (click)="load()" title="Refresh">
+          <i class="pi pi-refresh"></i>
+        </button>
+        <button class="btn-primary" (click)="onCreate()">
+          <i class="pi pi-plus"></i>
+          <span>Add Lead</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Strip -->
+    <section class="kpi-strip">
+      <div class="kpi-card">
+        <div class="kpi-icon total">
+          <i class="pi pi-inbox"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ metrics().total }}</span>
+          <span class="kpi-label">Total Leads</span>
+        </div>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-card clickable" [class.active]="statusFilter === 'New'" (click)="onStatusChange('New')">
+        <div class="kpi-icon new">
+          <i class="pi pi-star"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ metrics().newLeads }}</span>
+          <span class="kpi-label">New</span>
+        </div>
+        <span class="kpi-percentage" *ngIf="metrics().total">{{ ((metrics().newLeads / metrics().total) * 100) | number:'1.0-0' }}%</span>
+      </div>
+      <div class="kpi-card clickable" [class.active]="statusFilter === 'Qualified'" (click)="onStatusChange('Qualified')">
+        <div class="kpi-icon qualified">
+          <i class="pi pi-check"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ metrics().qualified }}</span>
+          <span class="kpi-label">Qualified</span>
+        </div>
+        <span class="kpi-percentage" *ngIf="metrics().total">{{ ((metrics().qualified / metrics().total) * 100) | number:'1.0-0' }}%</span>
+      </div>
+      <div class="kpi-card clickable" [class.active]="statusFilter === 'Converted'" (click)="onStatusChange('Converted')">
+        <div class="kpi-icon converted">
+          <i class="pi pi-verified"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ metrics().converted }}</span>
+          <span class="kpi-label">Won</span>
+        </div>
+        <span class="kpi-badge success">{{ conversionRate() }}% rate</span>
+      </div>
+      <div class="kpi-card clickable" [class.active]="statusFilter === 'Lost'" (click)="onStatusChange('Lost')">
+        <div class="kpi-icon lost">
+          <i class="pi pi-times"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ metrics().lost }}</span>
+          <span class="kpi-label">Lost</span>
+        </div>
+      </div>
+      <div class="kpi-divider"></div>
+      <div class="kpi-card">
+        <div class="kpi-icon score">
+          <i class="pi pi-chart-bar"></i>
+        </div>
+        <div class="kpi-data">
+          <span class="kpi-value">{{ metrics().avgScore }}<small>%</small></span>
+          <span class="kpi-label">Avg Score</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Bar -->
+    <section class="action-bar glass-card">
+      <div class="search-box">
+        <i class="pi pi-search"></i>
+        <input 
+          type="text" 
+          placeholder="Search leads..." 
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearch($event)"
+        />
+        <kbd *ngIf="!searchTerm">⌘K</kbd>
+        <button class="clear-btn" *ngIf="searchTerm" (click)="searchTerm = ''; onSearch('')">
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+      
+      <div class="quick-filters">
+        <button class="filter-chip" [class.active]="statusFilter === 'all'" (click)="onStatusChange('all')">
+          All
+        </button>
+        <button class="filter-chip" *ngFor="let opt of filteredStatusOptions" 
+                [class.active]="statusFilter === opt.value"
+                (click)="onStatusChange(opt.value)">
+          <span class="chip-dot" [attr.data-status]="opt.value"></span>
+          {{ opt.label }}
+        </button>
+      </div>
+
+      <div class="action-right">
+        <div class="views-controls">
+          <p-select
+            [options]="viewOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="selectedViewId()"
+            (ngModelChange)="onSelectView($event)"
+            placeholder="Saved views"
+            styleClass="views-select"
+          ></p-select>
+          <input
+            type="text"
+            class="views-input"
+            placeholder="Name this view"
+            [(ngModel)]="viewName"
+          />
+          <button class="btn-ghost" (click)="onSaveView()">
+            <i class="pi pi-bookmark"></i>
+            Save
+          </button>
+          <button class="btn-ghost" [disabled]="!selectedViewId()" (click)="onDeleteView()">
+            <i class="pi pi-trash"></i>
+            Delete
+          </button>
+        </div>
+        <button class="btn-ghost" *ngIf="statusFilter !== 'all'" (click)="onStatusChange('all')">
+          <i class="pi pi-filter-slash"></i>
+          Clear Filter
+        </button>
+      </div>
+    </section>
+
+    <section class="recently-viewed" *ngIf="recentLeads().length">
+      <div class="recently-viewed__header">
+        <h3>Recently viewed</h3>
+        <span>{{ recentLeads().length }} recent</span>
+      </div>
+      <div class="recently-viewed__list">
+        <button class="recent-item" *ngFor="let item of recentLeads()" (click)="openRecent(item)">
+          <div class="recent-item__title">{{ item.title }}</div>
+          <div class="recent-item__meta">
+            {{ item.subtitle || 'Lead' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- Kanban View -->
+    <section class="kanban-board" *ngIf="viewMode === 'kanban'">
+      <div class="kanban-column" *ngFor="let status of ['New', 'Qualified', 'Converted', 'Lost']">
+        <div class="column-header" [attr.data-status]="status">
+          <span class="column-title">{{ status }}</span>
+          <span class="column-count">{{ getLeadsByStatus(status).length }}</span>
+        </div>
+        <div class="column-body">
+          <div class="lead-card" *ngFor="let lead of getLeadsByStatus(status)" (click)="onEdit(lead)">
+            <div class="lead-card-header">
+              <div class="lead-avatar" [attr.data-status]="lead.status">
+                {{ lead.name.charAt(0) }}
+              </div>
+              <div class="lead-meta">
+                <span class="lead-name">{{ lead.name }}</span>
+                <span class="lead-company">{{ lead.company }}</span>
+              </div>
+              <div class="lead-score" [class.high]="lead.score >= 70" [class.medium]="lead.score >= 40 && lead.score < 70" [class.low]="lead.score < 40">
+                {{ lead.score }}
+              </div>
+            </div>
+            <div class="lead-card-body">
+              <div class="lead-detail" *ngIf="lead.email">
+                <i class="pi pi-envelope"></i>
+                <span>{{ lead.email }}</span>
+              </div>
+              <div class="lead-detail" *ngIf="lead.phone">
+                <i class="pi pi-phone"></i>
+                <span>{{ lead.phone }}</span>
+              </div>
+            </div>
+            <div class="lead-card-footer">
+              <span class="lead-owner">
+                <i class="pi pi-user"></i>
+                {{ lead.owner }}
+              </span>
+              <div class="lead-actions">
+                <button class="mini-btn" (click)="$event.stopPropagation(); onEdit(lead)">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button class="mini-btn success" *ngIf="lead.status !== 'Converted'" (click)="$event.stopPropagation(); onConvert(lead)">
+                  <i class="pi pi-bolt"></i>
+                </button>
+                <button class="mini-btn danger" (click)="$event.stopPropagation(); onDelete(lead)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="column-empty" *ngIf="!getLeadsByStatus(status).length">
+            <i class="pi pi-inbox"></i>
+            <span>No {{ status.toLowerCase() }} leads</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table View -->
+    <section class="data-table-section glass-card" *ngIf="viewMode === 'table'">
+      <ng-container *ngIf="!loading(); else loadingState">
+        <ng-container *ngIf="leads().length; else emptyState">
+          <div class="table-container">
+            <table class="leads-table">
+              <thead>
+                <tr>
+                  <th class="th-checkbox">
+                    <input
+                      type="checkbox"
+                      class="checkbox"
+                      [checked]="selectedIds().length && selectedIds().length === leads().length"
+                      (change)="toggleSelectAll($event.target.checked)"
+                    />
+                  </th>
+                  <th class="th-lead">Lead</th>
+                  <th class="th-status">Status</th>
+                  <th class="th-contact">Contact</th>
+                  <th class="th-score">Score</th>
+                  <th class="th-owner">Owner</th>
+                  <th class="th-actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let lead of leads(); let i = index" class="table-row" [class.highlight]="i === 0">
+                  <td class="td-checkbox">
+                    <input
+                      type="checkbox"
+                      class="checkbox"
+                      [checked]="isSelected(lead.id)"
+                      (change)="toggleSelection(lead.id, $event.target.checked)"
+                    />
+                  </td>
+                  <td class="td-lead">
+                    <div class="lead-cell">
+                      <div class="avatar" [attr.data-status]="lead.status">
+                        {{ lead.name.charAt(0) }}
+                      </div>
+                      <div class="lead-info">
+                        <span class="name">{{ lead.name }}</span>
+                        <span class="company">{{ lead.company }}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="td-status">
+                    <p-select
+                      [options]="filteredStatusOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="lead.status"
+                      (ngModelChange)="onInlineStatusChange(lead, $event)"
+                      styleClass="inline-select"
+                    ></p-select>
+                  </td>
+                  <td class="td-contact">
+                    <div class="contact-cell">
+                      <a class="contact-link" *ngIf="lead.email" [href]="'mailto:' + lead.email">
+                        <i class="pi pi-envelope"></i>
+                        {{ lead.email }}
+                      </a>
+                      <span class="contact-secondary" *ngIf="lead.phone">{{ lead.phone }}</span>
+                    </div>
+                  </td>
+                  <td class="td-score">
+                    <div class="score-indicator">
+                      <div class="score-bar">
+                        <div class="score-fill" 
+                             [class.high]="lead.score >= 70" 
+                             [class.medium]="lead.score >= 40 && lead.score < 70" 
+                             [class.low]="lead.score < 40"
+                             [style.width.%]="lead.score"></div>
+                      </div>
+                      <span class="score-value">{{ lead.score }}</span>
+                    </div>
+                  </td>
+                  <td class="td-owner">
+                    <p-select
+                      [options]="ownerOptionsForAssign()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="lead.ownerId"
+                      (ngModelChange)="onInlineOwnerChange(lead, $event)"
+                      placeholder="Owner"
+                      styleClass="inline-select"
+                    ></p-select>
+                  </td>
+                  <td class="td-actions">
+                    <div class="row-actions">
+                      <button class="action-btn" (click)="onEdit(lead)" title="Edit">
+                        <i class="pi pi-pencil"></i>
+                      </button>
+                      <button class="action-btn success" *ngIf="lead.status !== 'Converted'" (click)="onConvert(lead)" title="Convert">
+                        <i class="pi pi-bolt"></i>
+                      </button>
+                      <button class="action-btn danger" (click)="onDelete(lead)" title="Delete">
+                        <i class="pi pi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-footer">
+            <div class="pagination-info">
+              Showing <strong>{{ (pageIndex * rows) + 1 }}</strong> to <strong>{{ Math.min((pageIndex + 1) * rows, total()) }}</strong> of <strong>{{ total() }}</strong>
+            </div>
+            <p-paginator
+              [rows]="rows"
+              [totalRecords]="total()"
+              [rowsPerPageOptions]="[10, 25, 50]"
+              [first]="pageIndex * rows"
+              (onPageChange)="onPageChange($event)"
+              styleClass="custom-paginator"
+            ></p-paginator>
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <ng-template #loadingState>
+        <div class="skeleton-table">
+          <div class="skeleton-row" *ngFor="let _ of [1,2,3,4,5,6,7,8]">
+            <div class="skeleton skeleton-checkbox"></div>
+            <div class="skeleton skeleton-avatar"></div>
+            <div class="skeleton skeleton-text long"></div>
+            <div class="skeleton skeleton-badge"></div>
+            <div class="skeleton skeleton-text medium"></div>
+            <div class="skeleton skeleton-bar"></div>
+            <div class="skeleton skeleton-text short"></div>
+            <div class="skeleton skeleton-actions"></div>
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template #emptyState>
+        <div class="empty-state">
+          <div class="empty-illustration">
+            <i class="pi pi-users"></i>
+          </div>
+          <h3>No leads yet</h3>
+          <p>Start building your pipeline by adding your first lead.</p>
+          <button class="btn-primary" (click)="onCreate()">
+            <i class="pi pi-plus"></i>
+            Add Lead
+          </button>
+        </div>
+      </ng-template>
+    </section>
+  </div>
+</div>
+
+<app-bulk-actions-bar
+  [actions]="bulkActions"
+  [selectedItems]="selectedIds()"
+  [totalCount]="leads().length"
+  (actionClicked)="onBulkAction($event)"
+  (clearSelection)="clearSelection()"
+  (selectAll)="selectAllFiltered()"
+></app-bulk-actions-bar>
+
+<p-dialog
+  header="Assign owner"
+  [(visible)]="assignDialogVisible"
+  [modal]="true"
+  [style]="{ width: '360px' }"
+>
+  <div class="bulk-assign">
+    <label>Owner</label>
+    <p-select
+      [options]="ownerOptionsForAssign()"
+      optionLabel="label"
+      optionValue="value"
+      [(ngModel)]="assignOwnerId"
+      placeholder="Select owner"
+      styleClass="w-full"
+    ></p-select>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="assignDialogVisible = false"></button>
+    <button pButton type="button" class="crm-button crm-button--primary" label="Assign" [disabled]="!assignOwnerId" (click)="confirmBulkAssign()"></button>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  header="Change status"
+  [(visible)]="statusDialogVisible"
+  [modal]="true"
+  [style]="{ width: '360px' }"
+>
+  <div class="bulk-assign">
+    <label>Status</label>
+    <p-select
+      [options]="filteredStatusOptions"
+      optionLabel="label"
+      optionValue="value"
+      [(ngModel)]="bulkStatus"
+      placeholder="Select status"
+      styleClass="w-full"
+    ></p-select>
+  </div>
+  <ng-template pTemplate="footer">
+    <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="statusDialogVisible = false"></button>
+    <button pButton type="button" class="crm-button crm-button--primary" label="Update" [disabled]="!bulkStatus" (click)="confirmBulkStatusUpdate()"></button>
+  </ng-template>
+</p-dialog>
+
+<div class="toast-notification" *ngIf="toast() as alert" [ngClass]="'toast--' + alert.tone">
+  <i [class]="alert.tone === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
+  <span>{{ alert.message }}</span>
+  <button type="button" class="toast-close" (click)="clearToast()" aria-label="Dismiss">
+    <i class="pi pi-times"></i>
+  </button>
+</div>

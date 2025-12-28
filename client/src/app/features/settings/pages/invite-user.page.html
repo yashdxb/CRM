@@ -1,0 +1,89 @@
+<section class="invite">
+  <!-- PrimeNG Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <header class="invite__hero">
+    <div>
+      <p class="invite__eyebrow">User provisioning</p>
+      <h1>Invite a teammate</h1>
+      <p>
+        Capture the essentials, issue a temporary password, and assign the right role so teammates land in the CRM ready to go on
+        their first login.
+      </p>
+    </div>
+    <div class="invite__actions">
+      <button type="button" pButton label="Back to directory" class="p-button-text" (click)="navigateBack()"></button>
+      <button type="button" pButton label="View team" icon="pi pi-users" routerLink="/app/settings"></button>
+    </div>
+  </header>
+
+  <article class="invite__card">
+    <header>
+      <div>
+        <p class="eyebrow">Access baseline</p>
+        <h2>Role-aligned invite</h2>
+      </div>
+      <span *ngIf="status() as banner" class="invite__status" [ngClass]="'invite__status--' + banner.tone">{{ banner.message }}</span>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="handleSubmit()" class="invite__form">
+      <div class="form-grid">
+        <label>
+          <span>Full name</span>
+          <input pInputText formControlName="fullName" placeholder="Jordan Patel" />
+        </label>
+        <label>
+          <span>Email</span>
+          <input pInputText formControlName="email" placeholder="user@example.com" />
+        </label>
+        <label>
+          <span>Time zone</span>
+          <p-select
+            formControlName="timeZone"
+            [options]="timezoneOptions"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+          ></p-select>
+        </label>
+        <label>
+          <span>Locale</span>
+          <p-select
+            formControlName="locale"
+            [options]="localeOptions"
+            optionLabel="label"
+            optionValue="value"
+            appendTo="body"
+          ></p-select>
+        </label>
+        <label class="full-row">
+          <span>Roles</span>
+          <p-multiSelect
+            formControlName="roleIds"
+            [options]="rolesAsOptions()"
+            optionLabel="label"
+            optionValue="value"
+            display="chip"
+            appendTo="body"
+            defaultLabel="Select roles"
+          ></p-multiSelect>
+        </label>
+        <label class="switch-row">
+          <span>Status</span>
+          <p-toggleSwitch formControlName="isActive"></p-toggleSwitch>
+        </label>
+        <label class="full-row">
+          <span>Temporary password</span>
+          <div class="password-field">
+            <input pInputText type="text" formControlName="temporaryPassword" placeholder="Optional" />
+            <button type="button" pButton label="Generate" (click)="generatePassword()"></button>
+          </div>
+          <small *ngIf="generatedPassword()">Share with the user: {{ generatedPassword() }}</small>
+        </label>
+      </div>
+      <div class="invite__cta">
+        <button type="submit" pButton label="Send invite" icon="pi pi-check" [disabled]="!canSubmit()"></button>
+      </div>
+    </form>
+  </article>
+</section>

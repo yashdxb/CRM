@@ -1,0 +1,9 @@
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace CRM.Enterprise.Application.Dashboard;
+
+public interface IDashboardReadService
+{
+    Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken cancellationToken);
+}

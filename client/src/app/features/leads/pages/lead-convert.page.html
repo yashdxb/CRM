@@ -1,0 +1,99 @@
+<div class="convert-page">
+  <header class="page-header">
+    <div class="header-content">
+      <a routerLink="/app/leads" class="back-link">
+        <i class="pi pi-arrow-left"></i>
+        <span>Back to leads</span>
+      </a>
+      <div class="header-title">
+        <h1>Convert lead</h1>
+        <p *ngIf="lead() as leadData">Turn {{ leadData.name }} into an account, contact, and opportunity.</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="convert-container">
+    <div class="glass-card" *ngIf="lead() as leadData">
+      <div class="lead-summary">
+        <div class="lead-avatar">{{ leadData.name.charAt(0) }}</div>
+        <div class="lead-meta">
+          <span class="lead-name">{{ leadData.name }}</span>
+          <span class="lead-company">{{ leadData.company }}</span>
+          <span class="lead-contact" *ngIf="leadData.email">{{ leadData.email }}</span>
+        </div>
+        <span class="status-pill" [attr.data-status]="leadData.status">{{ leadData.status }}</span>
+      </div>
+
+      <form class="convert-form" (ngSubmit)="onConvert()">
+        <section class="form-section">
+          <h2 class="section-title">
+            <i class="pi pi-building"></i>
+            Account
+          </h2>
+          <div class="form-grid">
+            <label class="checkbox-field">
+              <input type="checkbox" [(ngModel)]="form().createAccount" name="createAccount" />
+              <span>Create new account</span>
+            </label>
+            <div class="field" *ngIf="form().createAccount">
+              <label>Account name</label>
+              <input pInputText name="accountName" [(ngModel)]="form().accountName" class="w-full" />
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">
+            <i class="pi pi-id-card"></i>
+            Contact
+          </h2>
+          <div class="form-grid">
+            <label class="checkbox-field">
+              <input type="checkbox" [(ngModel)]="form().createContact" name="createContact" />
+              <span>Create contact from lead details</span>
+            </label>
+            <div class="field">
+              <label>Contact</label>
+              <div class="value-pill">
+                {{ leadData.name }} • {{ leadData.email || 'No email' }}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <h2 class="section-title">
+            <i class="pi pi-briefcase"></i>
+            Opportunity
+          </h2>
+          <div class="form-grid">
+            <label class="checkbox-field">
+              <input type="checkbox" [(ngModel)]="form().createOpportunity" name="createOpportunity" />
+              <span>Create opportunity</span>
+            </label>
+            <div class="field" *ngIf="form().createOpportunity">
+              <label>Opportunity name</label>
+              <input pInputText name="opportunityName" [(ngModel)]="form().opportunityName" class="w-full" />
+            </div>
+            <div class="field" *ngIf="form().createOpportunity">
+              <label>Amount</label>
+              <p-inputNumber name="amount" [(ngModel)]="form().amount" [min]="0" class="w-full"></p-inputNumber>
+            </div>
+            <div class="field" *ngIf="form().createOpportunity">
+              <label>Expected close date</label>
+              <input type="date" name="expectedCloseDate" [(ngModel)]="form().expectedCloseDate" class="w-full" />
+            </div>
+          </div>
+          <p class="hint" *ngIf="form().createOpportunity && !form().createAccount">
+            Create an account to attach the opportunity.
+          </p>
+        </section>
+
+        <footer class="form-actions">
+          <button type="button" pButton label="Cancel" class="crm-button crm-button--ghost" (click)="onCancel()"></button>
+          <button type="submit" pButton label="Convert lead" class="crm-button crm-button--primary" [disabled]="saving() || !canConvert()"></button>
+        </footer>
+      </form>
+    </div>
+  </main>
+</div>

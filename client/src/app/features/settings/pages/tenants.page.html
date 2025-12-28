@@ -1,0 +1,130 @@
+<section class="tenant-management">
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <div class="tenant-management__banner">
+    <div>
+      <p class="tenant-management__eyebrow">Super admin</p>
+      <h1>Tenant management</h1>
+      <p>Create new workspaces and keep the platform organized as you onboard new teams.</p>
+    </div>
+    <div class="tenant-management__banner-actions">
+      <button type="button" pButton label="Back to users" icon="pi pi-arrow-left" class="p-button-outlined" routerLink="/app/settings"></button>
+      <button type="button" pButton label="Workspace settings" icon="pi pi-sliders-h" routerLink="/app/settings/workspace"></button>
+    </div>
+  </div>
+
+  <article class="tenant-management__panel">
+    <header>
+      <div>
+        <p class="eyebrow">Platform tenants</p>
+        <h2>{{ totalTenants() }} workspaces</h2>
+      </div>
+      <button type="button" pButton label="Reload" severity="secondary" [disabled]="loading()" (click)="loadTenants()"></button>
+    </header>
+
+    <ng-container *ngIf="!loading(); else loadingState">
+      <div class="tenant-management__layout">
+        <form class="tenant-management__form" [formGroup]="tenantForm" (ngSubmit)="createTenant()">
+          <div class="form-grid">
+            <label>
+              Tenant key
+              <input pInputText formControlName="key" placeholder="acme" />
+              <small>Used for routing and API headers. Lowercase, no spaces.</small>
+            </label>
+            <label>
+              Workspace name
+              <input pInputText formControlName="name" placeholder="Acme Workspace" />
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Admin name
+              <input pInputText formControlName="adminName" placeholder="Acme Admin" />
+            </label>
+            <label>
+              Admin email
+              <input pInputText formControlName="adminEmail" placeholder="admin@acme.com" />
+            </label>
+            <label>
+              Admin password
+              <input pInputText type="password" formControlName="adminPassword" placeholder="Set a temporary password" />
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Time zone
+              <p-select
+                [options]="timeZoneOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="timeZone"
+                placeholder="Select time zone"
+                styleClass="w-full"
+              ></p-select>
+            </label>
+            <label>
+              Currency
+              <p-select
+                [options]="currencyOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="currency"
+                placeholder="Select currency"
+                styleClass="w-full"
+              ></p-select>
+            </label>
+          </div>
+
+          <div class="dialog-actions">
+            <button type="submit" pButton label="Create tenant" [loading]="saving()"></button>
+          </div>
+        </form>
+
+        <aside class="tenant-management__summary">
+          <div class="summary-header">
+            <div>
+              <p class="eyebrow">Tenant registry</p>
+              <h3>Active tenants</h3>
+            </div>
+            <span class="summary-pill">Live</span>
+          </div>
+
+          <div class="summary-card">
+            <div class="summary-icon">
+              <i class="pi pi-building"></i>
+            </div>
+            <div>
+              <p class="summary-label">Total tenants</p>
+              <p class="summary-value">{{ totalTenants() }}</p>
+            </div>
+          </div>
+
+          <div class="tenant-list">
+            <div class="tenant-list__item" *ngFor="let tenant of tenants()">
+              <div>
+                <p class="tenant-name">{{ tenant.name }}</p>
+                <p class="tenant-key">Key: {{ tenant.key }}</p>
+              </div>
+              <span class="tenant-date">Created {{ tenant.createdAtUtc | date:'MMM d, y' }}</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </ng-container>
+
+    <ng-template #loadingState>
+      <div class="loading-blocks">
+        <p-skeleton height="42px" *ngFor="let _ of [0, 1, 2]"></p-skeleton>
+      </div>
+    </ng-template>
+  </article>
+
+  <div class="toast" *ngIf="toast() as alert" [ngClass]="'toast--' + alert.tone">
+    <span>{{ alert.message }}</span>
+    <button type="button" (click)="clearToast()" aria-label="Dismiss">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+</section>
