@@ -2,6 +2,9 @@ import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { TableModule } from 'primeng/table';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { SelectModule } from 'primeng/select';
 
@@ -10,6 +13,7 @@ import { UserAdminDataService } from '../services/user-admin-data.service';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
 import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { AppToastService } from '../../../core/app-toast.service';
 
 @Component({
   selector: 'app-settings-page',
@@ -18,6 +22,9 @@ import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.u
     DatePipe,
     RouterLink,
     SelectModule,
+    ButtonModule,
+    InputTextModule,
+    TableModule,
     ToggleSwitchModule,
     NgClass,
     NgFor,
@@ -31,6 +38,7 @@ import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.u
 export class SettingsPage {
   private readonly dataService = inject(UserAdminDataService);
   private readonly router = inject(Router);
+  private readonly toastService = inject(AppToastService);
 
   protected readonly users = signal<UserListItem[]>([]);
   protected readonly totalUsers = signal(0);
@@ -41,7 +49,6 @@ export class SettingsPage {
   protected readonly includeInactive = signal(false);
   protected readonly loadingUsers = signal(true);
   protected readonly loadingRoles = signal(true);
-  protected readonly toast = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
   protected readonly roleFilterOptions = computed(() => [
     { label: 'All roles', value: 'all' },
     ...this.roles().map((role) => ({ label: role.name, value: role.name }))
@@ -77,12 +84,24 @@ export class SettingsPage {
 
   protected readonly canManageTenants = computed(() => {
     const context = readTokenContext();
-    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.tenants);
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.tenantsManage);
+  });
+  protected readonly canManageAdmin = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
+  });
+  protected readonly canManageLeads = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
   });
 
   private searchDebounceId: number | null = null;
 
   constructor() {
+    const toast = history.state?.toast as { tone: 'success' | 'error'; message: string } | undefined;
+    if (toast) {
+      this.toastService.show(toast.tone, toast.message, 3000);
+    }
     this.loadRoles();
     this.loadUsers();
   }
@@ -171,6 +190,10 @@ export class SettingsPage {
       });
   }
 
+  protected goToTenants() {
+    this.router.navigate(['/app/settings/tenants']);
+  }
+
   protected toggleUserStatus(user: UserListItem) {
     const request$ = user.isActive ? this.dataService.deactivate(user.id) : this.dataService.activate(user.id);
     request$.subscribe({
@@ -197,7 +220,7 @@ export class SettingsPage {
   }
 
   protected clearToast() {
-    this.toast.set(null);
+    this.toastService.clear();
   }
 
   private generatePasswordValue() {
@@ -215,7 +238,6 @@ export class SettingsPage {
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
-    this.toast.set({ tone, message });
-    setTimeout(() => this.clearToast(), 4000);
+    this.toastService.show(tone, message, 3000);
   }
 }

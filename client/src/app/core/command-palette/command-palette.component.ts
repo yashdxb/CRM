@@ -2,12 +2,14 @@ import { Component, inject, OnInit, OnDestroy, HostListener, ElementRef, ViewChi
 import { NgFor, NgIf, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { CommandPaletteService, CommandItem } from './command-palette.service';
 
 @Component({
   selector: 'app-command-palette',
   standalone: true,
-  imports: [NgFor, NgIf, NgClass, FormsModule],
+  imports: [NgFor, NgIf, NgClass, FormsModule, ButtonModule, InputTextModule],
   animations: [
     trigger('fadeIn', [
       transition(':enter', [
@@ -34,6 +36,7 @@ import { CommandPaletteService, CommandItem } from './command-palette.service';
         <div class="command-palette__header">
           <i class="pi pi-search"></i>
           <input
+            pInputText
             #searchInput
             type="text"
             class="command-palette__input"
@@ -50,8 +53,10 @@ import { CommandPaletteService, CommandItem } from './command-palette.service';
           <div class="command-palette__group" *ngIf="recentCommands().length > 0 && !commandService.searchQuery()">
             <div class="command-palette__group-label">Recent</div>
             <button
+              pButton
+              type="button"
               *ngFor="let cmd of recentCommands(); let i = index"
-              class="command-palette__item"
+              class="command-palette__item p-button-text"
               [ngClass]="{ 'command-palette__item--selected': commandService.selectedIndex() === i }"
               (click)="commandService.executeCommand(cmd)"
               (mouseenter)="onHover(i)"
@@ -68,8 +73,10 @@ import { CommandPaletteService, CommandItem } from './command-palette.service';
           <div class="command-palette__group" *ngIf="navigationCommands().length > 0">
             <div class="command-palette__group-label">{{ commandService.searchQuery() ? 'Results' : 'Navigation' }}</div>
             <button
+              pButton
+              type="button"
               *ngFor="let cmd of navigationCommands(); let i = index"
-              class="command-palette__item"
+              class="command-palette__item p-button-text"
               [ngClass]="{ 'command-palette__item--selected': commandService.selectedIndex() === recentOffset() + i }"
               (click)="commandService.executeCommand(cmd)"
               (mouseenter)="onHover(recentOffset() + i)"
@@ -86,8 +93,10 @@ import { CommandPaletteService, CommandItem } from './command-palette.service';
           <div class="command-palette__group" *ngIf="actionCommands().length > 0 && !commandService.searchQuery()">
             <div class="command-palette__group-label">Actions</div>
             <button
+              pButton
+              type="button"
               *ngFor="let cmd of actionCommands(); let i = index"
-              class="command-palette__item"
+              class="command-palette__item p-button-text"
               [ngClass]="{ 'command-palette__item--selected': commandService.selectedIndex() === navOffset() + i }"
               (click)="commandService.executeCommand(cmd)"
               (mouseenter)="onHover(navOffset() + i)"
@@ -150,7 +159,7 @@ import { CommandPaletteService, CommandItem } from './command-palette.service';
       font-size: 1.1rem;
     }
 
-    .command-palette__input {
+    .command-palette__input.p-inputtext {
       flex: 1;
       border: none;
       outline: none;
@@ -158,6 +167,7 @@ import { CommandPaletteService, CommandItem } from './command-palette.service';
       font-family: inherit;
       color: #0f172a;
       background: transparent;
+      box-shadow: none;
     }
 
     .command-palette__input::placeholder {
@@ -194,7 +204,7 @@ import { CommandPaletteService, CommandItem } from './command-palette.service';
       color: #94a3b8;
     }
 
-    .command-palette__item {
+    .command-palette__item.p-button {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -203,7 +213,6 @@ import { CommandPaletteService, CommandItem } from './command-palette.service';
       border: none;
       border-radius: 10px;
       background: transparent;
-      cursor: pointer;
       text-align: left;
       font-family: inherit;
       transition: background 0.1s ease;

@@ -48,12 +48,12 @@
       </div>
 
       <div class="hero-actions">
-        <button class="btn btn-primary btn-glow" (click)="onCreate()">
+        <button pButton type="button" class="btn btn-primary btn-glow" [disabled]="!canManage()" (click)="onCreate()">
           <i class="pi pi-user-plus"></i>
           <span>Add contact</span>
           <div class="btn-shine"></div>
         </button>
-        <button class="btn btn-secondary" (click)="load()">
+        <button pButton type="button" class="btn btn-secondary" (click)="load()">
           <i class="pi pi-refresh"></i>
           <span>Refresh</span>
         </button>
@@ -164,7 +164,7 @@
       </div>
 
       <div class="filter-group">
-        <p-select
+        <p-select appendTo="body"
           [options]="ownerOptions()"
           optionLabel="label"
           optionValue="value"
@@ -175,7 +175,7 @@
       </div>
 
       <div class="filter-group">
-        <p-select
+        <p-select appendTo="body"
           [options]="lifecycleOptions"
           optionLabel="label"
           optionValue="value"
@@ -186,7 +186,7 @@
       </div>
 
       <div class="filter-group">
-        <p-select
+        <p-select appendTo="body"
           [options]="accountFilterOptions()"
           optionLabel="label"
           optionValue="value"
@@ -200,7 +200,7 @@
     <div class="views-bar">
       <div class="views-select">
         <i class="pi pi-bookmark"></i>
-        <p-select
+        <p-select appendTo="body"
           [options]="viewOptions()"
           optionLabel="label"
           optionValue="value"
@@ -222,7 +222,7 @@
         <span>{{ recentContacts().length }} recent</span>
       </div>
       <div class="recently-viewed__list">
-        <button class="recent-item" *ngFor="let item of recentContacts()" (click)="openRecent(item)">
+        <button pButton type="button" class="recent-item" *ngFor="let item of recentContacts()" (click)="openRecent(item)">
           <div class="recent-item__title">{{ item.title }}</div>
           <div class="recent-item__meta">
             {{ item.subtitle || 'Contact' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
@@ -240,17 +240,17 @@
           <small>Showing {{ filteredContacts().length }} {{ filteredContacts().length === 1 ? 'contact' : 'contacts' }} with lifecycle + account context</small>
         </div>
         <div class="list-select">
-          <input
-            type="checkbox"
-            class="checkbox"
-            [checked]="selectedIds().length && selectedIds().length === filteredContacts().length"
-            (change)="toggleSelectAll($event.target.checked)"
-          />
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="selectedIds().length && selectedIds().length === filteredContacts().length"
+            (onChange)="toggleSelectAll($event.checked)"
+          ></p-checkbox>
           <span>Select all</span>
         </div>
         <div class="list-actions">
+          <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-upload" label="Import" [disabled]="!canManage()" (click)="openImport()"></button>
           <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-download" label="Export" (click)="onExport()"></button>
-          <button pButton type="button" class="crm-button crm-button--primary crm-button--sm" icon="pi pi-plus" label="Add contact" (click)="onCreate()"></button>
+          <button pButton type="button" class="crm-button crm-button--primary crm-button--sm" icon="pi pi-plus" label="Add contact" [disabled]="!canManage()" (click)="onCreate()"></button>
         </div>
       </header>
 
@@ -260,12 +260,11 @@
             <ng-template pTemplate="body" let-row>
               <tr>
                 <td class="select-cell">
-                  <input
-                    type="checkbox"
-                    class="checkbox"
-                    [checked]="isSelected(row.id)"
-                    (change)="toggleSelection(row.id, $event.target.checked)"
-                  />
+                  <p-checkbox
+                    [binary]="true"
+                    [ngModel]="isSelected(row.id)"
+                    (onChange)="toggleSelection(row.id, $event.checked)"
+                  ></p-checkbox>
                 </td>
                 <td class="contact-cell">
                   <div class="contact-cell__main">
@@ -286,7 +285,7 @@
                 <td>
                   <div class="cell">
                     <span class="cell-label">Lifecycle</span>
-                    <p-select
+                    <p-select appendTo="body"
                       [options]="lifecycleFormOptions"
                       optionLabel="label"
                       optionValue="value"
@@ -299,7 +298,7 @@
                 <td>
                   <div class="cell">
                     <span class="cell-label">Owner</span>
-                    <p-select
+                    <p-select appendTo="body"
                       [options]="ownerOptionsForAssign()"
                       optionLabel="label"
                       optionValue="value"
@@ -311,8 +310,8 @@
                   </div>
                 </td>
                 <td class="actions">
-                  <button pButton icon="pi pi-pencil" (click)="$event.stopPropagation(); onEdit(row)"></button>
-                  <button pButton icon="pi pi-trash" (click)="$event.stopPropagation(); onDelete(row)"></button>
+                  <button pButton icon="pi pi-pencil" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(row)"></button>
+                  <button pButton icon="pi pi-trash" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(row)"></button>
                 </td>
               </tr>
             </ng-template>
@@ -330,7 +329,7 @@
         <div class="empty-state">
           <i class="pi pi-user"></i>
           <p>No contacts match the current filters.</p>
-          <button pButton type="button" class="crm-button crm-button--text" label="Create contact" (click)="onCreate()"></button>
+          <button pButton type="button" class="crm-button crm-button--text" label="Create contact" [disabled]="!canManage()" (click)="onCreate()"></button>
         </div>
       </ng-template>
 
@@ -346,7 +345,7 @@
   </section>
 
   <app-bulk-actions-bar
-    [actions]="bulkActions"
+    [actions]="bulkActions()"
     [selectedItems]="selectedIds()"
     [totalCount]="filteredContacts().length"
     (actionClicked)="onBulkAction($event)"
@@ -362,7 +361,7 @@
   >
     <div class="bulk-assign">
       <label>Owner</label>
-      <p-select
+      <p-select appendTo="body"
         [options]="ownerOptionsForAssign()"
         optionLabel="label"
         optionValue="value"
@@ -373,7 +372,7 @@
     </div>
     <ng-template pTemplate="footer">
       <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="assignDialogVisible = false"></button>
-      <button pButton type="button" class="crm-button crm-button--primary" label="Assign" [disabled]="!assignOwnerId" (click)="confirmBulkAssign()"></button>
+      <button pButton type="button" class="crm-button crm-button--primary" label="Assign" [disabled]="!assignOwnerId || !canManage()" (click)="confirmBulkAssign()"></button>
     </ng-template>
   </p-dialog>
 
@@ -385,7 +384,7 @@
   >
     <div class="bulk-assign">
       <label>Lifecycle</label>
-      <p-select
+      <p-select appendTo="body"
         [options]="lifecycleFormOptions"
         optionLabel="label"
         optionValue="value"
@@ -396,7 +395,61 @@
     </div>
     <ng-template pTemplate="footer">
       <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="statusDialogVisible = false"></button>
-      <button pButton type="button" class="crm-button crm-button--primary" label="Update" [disabled]="!bulkStatus" (click)="confirmBulkStatusUpdate()"></button>
+      <button pButton type="button" class="crm-button crm-button--primary" label="Update" [disabled]="!bulkStatus || !canManage()" (click)="confirmBulkStatusUpdate()"></button>
     </ng-template>
   </p-dialog>
+
+  <p-dialog
+    header="Import contacts"
+    [(visible)]="importDialogVisible"
+    [modal]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '480px' }"
+    (onHide)="closeImport()"
+  >
+    <div class="import-dialog">
+      <p class="import-note">
+        Upload a CSV with headers. Required column: <strong>Name</strong> or <strong>FirstName</strong>.
+      </p>
+      <label class="import-upload">
+        <p-fileUpload
+          mode="basic"
+          name="file"
+          [auto]="false"
+          [customUpload]="true"
+          [showUploadButton]="false"
+          [showCancelButton]="false"
+          [chooseLabel]="importFile?.name || 'Choose CSV file'"
+          accept=".csv"
+          (onSelect)="onImportFileSelected($event)"
+        ></p-fileUpload>
+      </label>
+      <div class="import-actions">
+        <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="closeImport()"></button>
+        <button pButton type="button" class="crm-button crm-button--primary" [disabled]="!importFile || importing() || !canManage()" (click)="onImport()">
+          {{ importing() ? 'Importing...' : 'Import' }}
+        </button>
+      </div>
+      <div class="import-error" *ngIf="importError()">{{ importError() }}</div>
+      <div class="import-status" *ngIf="importJob() as job">
+        <span>Status: {{ importStatus()?.status || job.status }}</span>
+      </div>
+      <div class="import-result" *ngIf="importStatus() as result">
+        <div class="import-metrics">
+          <span>Rows: {{ result.total }}</span>
+          <span>Imported: {{ result.imported }}</span>
+          <span>Skipped: {{ result.skipped }}</span>
+        </div>
+        <div class="import-errors" *ngIf="result.errors.length">
+          <p>Errors (first 5):</p>
+          <ul>
+            <li *ngFor="let err of result.errors.slice(0, 5)">
+              Row {{ err.rowNumber }}: {{ err.message }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </p-dialog>
+
 </div>

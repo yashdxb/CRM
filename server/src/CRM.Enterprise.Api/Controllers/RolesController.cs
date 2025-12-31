@@ -13,11 +13,10 @@ namespace CRM.Enterprise.Api.Controllers;
 
 [ApiController]
 [Route("api/roles")]
-[Authorize(Policy = Permissions.Policies.AdministrationManage)]
+[Authorize(Policy = Permissions.Policies.AdministrationView)]
 public class RolesController : ControllerBase
 {
     private static readonly StringComparer NameComparer = StringComparer.OrdinalIgnoreCase;
-    private static readonly HashSet<string> PermissionKeys = new(Permissions.AllKeys, StringComparer.OrdinalIgnoreCase);
 
     private readonly CrmDbContext _dbContext;
 
@@ -48,18 +47,56 @@ public class RolesController : ControllerBase
     }
 
     [HttpGet("permissions")]
-    public ActionResult<IReadOnlyList<PermissionDefinitionResponse>> GetPermissionDefinitions()
+    public async Task<ActionResult<IReadOnlyList<PermissionDefinitionResponse>>> GetPermissionDefinitions(CancellationToken cancellationToken)
     {
-        var permissions = Permissions.Definitions
-            .Select(def => new PermissionDefinitionResponse(def.Key, def.Label, def.Description))
+        var catalog = await _dbContext.PermissionCatalogEntries
+            .ToListAsync(cancellationToken);
+        var definitions = Permissions.Definitions
+            .ToDictionary(definition => definition.Key, definition => definition, NameComparer);
+
+        var changed = false;
+        foreach (var definition in definitions.Values)
+        {
+            var entry = catalog.FirstOrDefault(item => NameComparer.Equals(item.Key, definition.Key));
+            if (entry is null)
+            {
+                catalog.Add(new PermissionCatalogEntry
+                {
+                    Id = Guid.NewGuid(),
+                    Key = definition.Key,
+                    Label = definition.Label,
+                    Description = definition.Description
+                });
+                changed = true;
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.Label) || string.IsNullOrWhiteSpace(entry.Description))
+            {
+                entry.Label = definition.Label;
+                entry.Description = definition.Description;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        var permissions = catalog
+            .OrderBy(entry => entry.Label)
+            .Select(entry => new PermissionDefinitionResponse(entry.Key, entry.Label, entry.Description))
             .ToList();
+
         return Ok(permissions);
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<ActionResult<RoleResponse>> CreateRole([FromBody] UpsertRoleRequest request, CancellationToken cancellationToken)
     {
-        var validationError = ValidateRoleRequest(request);
+        var validationError = await ValidateRoleRequestAsync(request, cancellationToken);
         if (validationError is not null)
         {
             return BadRequest(validationError);
@@ -95,9 +132,10 @@ public class RolesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<ActionResult<RoleResponse>> UpdateRole(Guid id, [FromBody] UpsertRoleRequest request, CancellationToken cancellationToken)
     {
-        var validationError = ValidateRoleRequest(request);
+        var validationError = await ValidateRoleRequestAsync(request, cancellationToken);
         if (validationError is not null)
         {
             return BadRequest(validationError);
@@ -136,6 +174,7 @@ public class RolesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<IActionResult> DeleteRole(Guid id, CancellationToken cancellationToken)
     {
         var role = await _dbContext.Roles.FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted, cancellationToken);
@@ -168,7 +207,7 @@ public class RolesController : ControllerBase
         return NoContent();
     }
 
-    private static string? ValidateRoleRequest(UpsertRoleRequest request)
+    private async Task<string?> ValidateRoleRequestAsync(UpsertRoleRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
         {
@@ -180,8 +219,13 @@ public class RolesController : ControllerBase
             return "Assign at least one permission.";
         }
 
+        var allowedKeys = await _dbContext.PermissionCatalogEntries
+            .AsNoTracking()
+            .Select(entry => entry.Key)
+            .ToListAsync(cancellationToken);
+        var allowedSet = new HashSet<string>(allowedKeys, NameComparer);
         var invalid = request.Permissions
-            .Where(permission => string.IsNullOrWhiteSpace(permission) || !PermissionKeys.Contains(permission))
+            .Where(permission => string.IsNullOrWhiteSpace(permission) || !allowedSet.Contains(permission))
             .ToList();
         if (invalid.Count > 0)
         {
@@ -199,8 +243,13 @@ public class RolesController : ControllerBase
 
     private async Task SyncRolePermissionsAsync(Guid roleId, IReadOnlyCollection<string> permissions, CancellationToken cancellationToken)
     {
+        var allowedKeys = await _dbContext.PermissionCatalogEntries
+            .AsNoTracking()
+            .Select(entry => entry.Key)
+            .ToListAsync(cancellationToken);
+        var allowedSet = new HashSet<string>(allowedKeys, NameComparer);
         var desired = permissions
-            ?.Where(permission => !string.IsNullOrWhiteSpace(permission) && PermissionKeys.Contains(permission))
+            ?.Where(permission => !string.IsNullOrWhiteSpace(permission) && allowedSet.Contains(permission))
             .Select(permission => permission.Trim())
             .ToHashSet(NameComparer) ?? new HashSet<string>(NameComparer);
 

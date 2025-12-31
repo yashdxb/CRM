@@ -463,8 +463,8 @@
   gap: var(--md-space-2);
 }
 
-.sidebar__theme-toggle,
-.sidebar__shortcuts {
+.sidebar__theme-toggle.p-button,
+.sidebar__shortcuts.p-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -474,18 +474,17 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.06);
   color: #94a3b8;
-  cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.sidebar__theme-toggle:hover,
-.sidebar__shortcuts:hover {
+.sidebar__theme-toggle.p-button:hover,
+.sidebar__shortcuts.p-button:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #e2e8f0;
 }
 
 /* Command palette button in topbar */
-.topbar__command-palette {
+.topbar__command-palette.p-button {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -495,12 +494,11 @@
   background: var(--surface-card);
   color: var(--text-subtle);
   font-size: 0.875rem;
-  cursor: pointer;
   transition: all 0.15s ease;
   min-width: 200px;
 }
 
-.topbar__command-palette:hover {
+.topbar__command-palette.p-button:hover {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }

@@ -1,6 +1,6 @@
-import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { DatePipe, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -9,6 +9,10 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 import { CreateTenantRequest, TenantSummary } from '../models/tenant-admin.model';
 import { TenantAdminDataService } from '../services/tenant-admin-data.service';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
+import { AppToastService } from '../../../core/app-toast.service';
+import { getTenantKey, setTenantKey } from '../../../core/tenant/tenant.utils';
 
 interface Option<T = string> {
   label: string;
@@ -24,9 +28,9 @@ interface Option<T = string> {
     SelectModule,
     SkeletonModule,
     DatePipe,
-    NgClass,
     NgFor,
     NgIf,
+    FormsModule,
     ReactiveFormsModule,
     RouterLink,
     BreadcrumbsComponent
@@ -37,11 +41,21 @@ interface Option<T = string> {
 export class TenantsPage {
   private readonly dataService = inject(TenantAdminDataService);
   private readonly fb = inject(FormBuilder);
+  private readonly toastService = inject(AppToastService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly tenants = signal<TenantSummary[]>([]);
-  protected readonly toast = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
+  protected readonly activeTenantKey = signal(getTenantKey());
+  protected readonly tenantOptions = computed(() =>
+    this.tenants().map((tenant) => ({
+      label: `${tenant.name} (${tenant.key})`,
+      value: tenant.key
+    }))
+  );
+  protected readonly canManageTenants = signal(
+    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.tenantsManage)
+  );
 
   protected readonly timeZoneOptions: Option[] = [
     { label: 'UTC', value: 'UTC' },
@@ -120,11 +134,23 @@ export class TenantsPage {
   }
 
   protected clearToast() {
-    this.toast.set(null);
+    this.toastService.clear();
+  }
+
+  protected applyActiveTenant() {
+    const key = this.activeTenantKey();
+    if (!key) {
+      return;
+    }
+
+    setTenantKey(key);
+    this.raiseToast('success', `Active tenant set to ${key}`);
+    if (typeof window !== 'undefined') {
+      setTimeout(() => window.location.reload(), 400);
+    }
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
-    this.toast.set({ tone, message });
-    setTimeout(() => this.clearToast(), 4000);
+    this.toastService.show(tone, message, 3000);
   }
 }

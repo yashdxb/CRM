@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Api.Controllers;
 
-[Authorize(Policy = Permissions.Policies.TenantsManage)]
+[Authorize(Policy = Permissions.Policies.TenantsView)]
 [ApiController]
 [Route("api/tenants")]
 public class TenantsController : ControllerBase
@@ -35,6 +35,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.Policies.TenantsManage)]
     public async Task<ActionResult<TenantSummaryResponse>> CreateTenant(
         [FromBody] CreateTenantRequest request,
         CancellationToken cancellationToken)

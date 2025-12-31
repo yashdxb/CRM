@@ -33,6 +33,7 @@ export class OpportunityDataService {
     let params = new HttpParams();
     if (request.search) params = params.set('search', request.search);
     if (request.stage) params = params.set('stage', request.stage);
+    if (request.accountId) params = params.set('accountId', request.accountId);
     if (request.page) params = params.set('page', request.page);
     if (request.pageSize) params = params.set('pageSize', request.pageSize);
 

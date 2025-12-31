@@ -51,10 +51,15 @@ public class DatabaseInitializer : IDatabaseInitializer
             new[]
             {
                 Permissions.Policies.DashboardView,
+                Permissions.Policies.CustomersView,
                 Permissions.Policies.CustomersManage,
+                Permissions.Policies.ContactsView,
                 Permissions.Policies.ContactsManage,
+                Permissions.Policies.LeadsView,
                 Permissions.Policies.LeadsManage,
+                Permissions.Policies.OpportunitiesView,
                 Permissions.Policies.OpportunitiesManage,
+                Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage
             }
         ),
@@ -64,10 +69,15 @@ public class DatabaseInitializer : IDatabaseInitializer
             new[]
             {
                 Permissions.Policies.DashboardView,
+                Permissions.Policies.CustomersView,
                 Permissions.Policies.CustomersManage,
+                Permissions.Policies.ContactsView,
                 Permissions.Policies.ContactsManage,
+                Permissions.Policies.LeadsView,
                 Permissions.Policies.LeadsManage,
+                Permissions.Policies.OpportunitiesView,
                 Permissions.Policies.OpportunitiesManage,
+                Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage
             }
         ),
@@ -77,7 +87,9 @@ public class DatabaseInitializer : IDatabaseInitializer
             new[]
             {
                 Permissions.Policies.DashboardView,
+                Permissions.Policies.LeadsView,
                 Permissions.Policies.LeadsManage,
+                Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage
             }
         ),
@@ -87,8 +99,11 @@ public class DatabaseInitializer : IDatabaseInitializer
             new[]
             {
                 Permissions.Policies.DashboardView,
+                Permissions.Policies.CustomersView,
                 Permissions.Policies.CustomersManage,
+                Permissions.Policies.ContactsView,
                 Permissions.Policies.ContactsManage,
+                Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage
             }
         ),
@@ -98,8 +113,11 @@ public class DatabaseInitializer : IDatabaseInitializer
             new[]
             {
                 Permissions.Policies.DashboardView,
+                Permissions.Policies.CustomersView,
                 Permissions.Policies.CustomersManage,
+                Permissions.Policies.ContactsView,
                 Permissions.Policies.ContactsManage,
+                Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage
             }
         )
@@ -111,18 +129,20 @@ public class DatabaseInitializer : IDatabaseInitializer
     {
         await _dbContext.Database.MigrateAsync(cancellationToken);
 
-        var tenant = await EnsureDefaultTenantAsync(cancellationToken);
-        _tenantProvider.SetTenant(tenant.Id, tenant.Key);
-        await BackfillTenantIdsAsync(tenant.Id, cancellationToken);
+        await SeedPermissionCatalogAsync(cancellationToken);
 
-        await SeedRolesAsync(cancellationToken);
-        await SeedUsersAsync(cancellationToken);
-        await SeedLeadStatusesAsync(cancellationToken);
-        await SeedLeadAssignmentRulesAsync(cancellationToken);
-        await SeedOpportunityStagesAsync(cancellationToken);
-        await SeedSampleDataAsync(cancellationToken);
+        var defaultTenant = await EnsureDefaultTenantAsync(cancellationToken);
+        var seedTenants = await EnsureSeedTenantsAsync(defaultTenant.Key, cancellationToken);
 
+        await BackfillTenantIdsAsync(defaultTenant.Id, cancellationToken);
+        await SeedTenantDataAsync(defaultTenant, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        foreach (var tenant in seedTenants)
+        {
+            await SeedTenantDataAsync(tenant, cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private async Task SeedRolesAsync(CancellationToken cancellationToken)
@@ -132,6 +152,33 @@ public class DatabaseInitializer : IDatabaseInitializer
             var role = await EnsureRoleAsync(name, description, cancellationToken);
             await SyncRolePermissionsAsync(role, permissions, cancellationToken);
         }
+    }
+
+    private async Task SeedPermissionCatalogAsync(CancellationToken cancellationToken)
+    {
+        var existingKeys = await _dbContext.PermissionCatalogEntries
+            .Select(entry => entry.Key)
+            .ToListAsync(cancellationToken);
+
+        var existingKeySet = new HashSet<string>(existingKeys, StringComparer.OrdinalIgnoreCase);
+        var entriesToAdd = Permissions.Definitions
+            .Where(definition => !existingKeySet.Contains(definition.Key))
+            .Select(definition => new PermissionCatalogEntry
+            {
+                Id = Guid.NewGuid(),
+                Key = definition.Key,
+                Label = definition.Label,
+                Description = definition.Description
+            })
+            .ToList();
+
+        if (entriesToAdd.Count == 0)
+        {
+            return;
+        }
+
+        _dbContext.PermissionCatalogEntries.AddRange(entriesToAdd);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SeedUsersAsync(CancellationToken cancellationToken)
@@ -352,6 +399,74 @@ public class DatabaseInitializer : IDatabaseInitializer
         return tenant;
     }
 
+    private async Task<IReadOnlyList<Tenant>> EnsureSeedTenantsAsync(string defaultKey, CancellationToken cancellationToken)
+    {
+        var seedKeys = _configuration.GetSection("Tenant:SeedKeys").Get<string[]>() ?? Array.Empty<string>();
+        if (seedKeys.Length == 0)
+        {
+            return Array.Empty<Tenant>();
+        }
+
+        var tenants = new List<Tenant>();
+        var added = false;
+        foreach (var rawKey in seedKeys)
+        {
+            var key = rawKey?.Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(key) || string.Equals(key, defaultKey, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var existing = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Key == key, cancellationToken);
+            if (existing is not null)
+            {
+                tenants.Add(existing);
+                continue;
+            }
+
+            var name = char.ToUpperInvariant(key[0]) + key[1..] + " Workspace";
+            var tenant = new Tenant
+            {
+                Key = key,
+                Name = name,
+                TimeZone = "UTC",
+                Currency = "USD",
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            _dbContext.Tenants.Add(tenant);
+            tenants.Add(tenant);
+            added = true;
+        }
+
+        if (added)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return tenants;
+    }
+
+    private async Task SeedTenantDataAsync(Tenant tenant, CancellationToken cancellationToken)
+    {
+        var originalTenantId = _tenantProvider.TenantId;
+        var originalTenantKey = _tenantProvider.TenantKey;
+
+        try
+        {
+            _tenantProvider.SetTenant(tenant.Id, tenant.Key);
+            await SeedRolesAsync(cancellationToken);
+            await SeedUsersAsync(cancellationToken);
+            await SeedLeadStatusesAsync(cancellationToken);
+            await SeedLeadAssignmentRulesAsync(cancellationToken);
+            await SeedOpportunityStagesAsync(cancellationToken);
+            await SeedSampleDataAsync(cancellationToken);
+        }
+        finally
+        {
+            _tenantProvider.SetTenant(originalTenantId, originalTenantKey);
+        }
+    }
+
     private async Task BackfillTenantIdsAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         if (tenantId == Guid.Empty)
@@ -472,14 +587,21 @@ public class DatabaseInitializer : IDatabaseInitializer
             return;
         }
 
+        var tenantId = _tenantProvider.TenantId;
         var roleIds = await _dbContext.Roles
-            .Where(r => roleSet.Contains(r.Name) && !r.IsDeleted)
+            .IgnoreQueryFilters()
+            .Where(r => roleSet.Contains(r.Name) && !r.IsDeleted && r.TenantId == tenantId)
             .Select(r => r.Id)
             .ToListAsync(cancellationToken);
 
         var existing = await _dbContext.UserRoles
-            .Where(ur => ur.UserId == user.Id)
+            .IgnoreQueryFilters()
+            .Where(ur => ur.UserId == user.Id && (ur.TenantId == tenantId || ur.TenantId == Guid.Empty))
             .ToListAsync(cancellationToken);
+        foreach (var link in existing.Where(ur => ur.TenantId == Guid.Empty))
+        {
+            link.TenantId = tenantId;
+        }
 
         var assigned = existing.Select(ur => ur.RoleId).ToHashSet();
         var staleLinks = existing.Where(ur => !roleIds.Contains(ur.RoleId)).ToList();
@@ -510,8 +632,18 @@ public class DatabaseInitializer : IDatabaseInitializer
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var existing = await _dbContext.RolePermissions
+            .IgnoreQueryFilters()
             .Where(rp => rp.RoleId == role.Id)
             .ToListAsync(cancellationToken);
+        var tenantId = _tenantProvider.TenantId;
+        foreach (var permission in existing.Where(rp => rp.TenantId != tenantId))
+        {
+            permission.TenantId = tenantId;
+        }
+        var local = _dbContext.RolePermissions.Local
+            .Where(rp => rp.RoleId == role.Id)
+            .Select(rp => rp.Permission)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         if (desired.Count == 0)
         {
@@ -534,6 +666,10 @@ public class DatabaseInitializer : IDatabaseInitializer
         foreach (var permission in desired)
         {
             var alreadyAssigned = existing.Any(rp => string.Equals(rp.Permission, permission, StringComparison.OrdinalIgnoreCase));
+            if (!alreadyAssigned && local.Contains(permission))
+            {
+                alreadyAssigned = true;
+            }
             if (!alreadyAssigned)
             {
                 _dbContext.RolePermissions.Add(new RolePermission
@@ -541,6 +677,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                     RoleId = role.Id,
                     Permission = permission
                 });
+                local.Add(permission);
             }
         }
     }

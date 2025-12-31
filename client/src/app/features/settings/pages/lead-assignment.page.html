@@ -14,7 +14,7 @@
         <h1>Lead Assignment Rules</h1>
         <p>Define how new leads are routed across your team.</p>
       </div>
-      <button class="btn-glass" routerLink="/app/settings/users">
+      <button pButton type="button" class="btn-glass" routerLink="/app/settings/users">
         <i class="pi pi-users"></i>
         Team users
       </button>
@@ -27,12 +27,12 @@
             <span class="eyebrow">Rules</span>
             <h2>{{ rules().length }} active configurations</h2>
           </div>
-          <button class="btn-ghost" (click)="resetForm()">New rule</button>
+          <button pButton type="button" class="btn-ghost" [disabled]="!canManageLeads()" (click)="resetForm()">New rule</button>
         </div>
 
         <div class="table-wrapper" *ngIf="!loading(); else loadingState">
-          <table class="rules-table" *ngIf="rules().length; else emptyState">
-            <thead>
+          <p-table class="rules-table" *ngIf="rules().length; else emptyState" [value]="rules()">
+            <ng-template pTemplate="header">
               <tr>
                 <th>Rule</th>
                 <th>Type</th>
@@ -41,9 +41,9 @@
                 <th>Status</th>
                 <th></th>
               </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let rule of rules()" (click)="startEdit(rule)">
+            </ng-template>
+            <ng-template pTemplate="body" let-rule>
+              <tr (click)="startEdit(rule)">
                 <td>
                   <div class="rule-name">{{ rule.name }}</div>
                   <div class="rule-sub" *ngIf="rule.lastAssignedUserName">Last: {{ rule.lastAssignedUserName }}</div>
@@ -55,16 +55,12 @@
                   <span class="status-pill" [class.active]="rule.isActive">{{ rule.isActive ? 'Active' : 'Paused' }}</span>
                 </td>
                 <td class="actions">
-                  <button class="icon-btn" (click)="$event.stopPropagation(); startEdit(rule)">
-                    <i class="pi pi-pencil"></i>
-                  </button>
-                  <button class="icon-btn danger" (click)="$event.stopPropagation(); deleteRule(rule)">
-                    <i class="pi pi-trash"></i>
-                  </button>
+                  <button pButton type="button" class="icon-btn" icon="pi pi-pencil" [disabled]="!canManageLeads()" (click)="$event.stopPropagation(); startEdit(rule)"></button>
+                  <button pButton type="button" class="icon-btn danger" icon="pi pi-trash" [disabled]="!canManageLeads()" (click)="$event.stopPropagation(); deleteRule(rule)"></button>
                 </td>
               </tr>
-            </tbody>
-          </table>
+            </ng-template>
+          </p-table>
         </div>
 
         <ng-template #emptyState>
@@ -96,7 +92,7 @@
           </div>
           <div class="field">
             <label>Type</label>
-            <p-select
+            <p-select appendTo="body"
               [options]="typeOptions"
               optionLabel="label"
               optionValue="value"
@@ -117,7 +113,7 @@
           </div>
           <div class="field" *ngIf="form().type === 'Territory'">
             <label>Assigned user</label>
-            <p-select
+            <p-select appendTo="body"
               [options]="ownerOptions()"
               optionLabel="label"
               optionValue="value"
@@ -134,13 +130,13 @@
             </p-select>
           </div>
           <label class="toggle-field">
-            <input type="checkbox" [(ngModel)]="form().isActive" name="isActive" />
+            <p-checkbox [binary]="true" [(ngModel)]="form().isActive" name="isActive"></p-checkbox>
             <span>Active</span>
           </label>
 
           <div class="form-actions">
-            <button type="button" class="btn-ghost" (click)="resetForm()">Reset</button>
-            <button type="submit" class="btn-primary" [disabled]="!canSave()">Save rule</button>
+            <button pButton type="button" class="btn-ghost" [disabled]="!canManageLeads()" (click)="resetForm()">Reset</button>
+            <button pButton type="submit" class="btn-primary" [disabled]="!canSave() || !canManageLeads()">Save rule</button>
           </div>
         </form>
       </div>

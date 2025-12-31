@@ -7,11 +7,14 @@ import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
 import { AuthService } from '../../core/auth/auth.service';
 import { Router } from '@angular/router';
+import { BreadcrumbsComponent } from '../../core/breadcrumbs';
+import { readTokenContext } from '../../core/auth/token.utils';
 
 @Component({
   selector: 'app-login-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CheckboxModule, NgIf],
+  imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CheckboxModule, NgIf, BreadcrumbsComponent,
+],
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss']
 })
@@ -43,10 +46,16 @@ export class LoginPage {
     this.error = null;
     this.loading = true;
     const { email, password } = this.form.value;
+    const normalizedEmail = String(email ?? '').trim().toLowerCase();
+    const normalizedPassword = String(password ?? '');
 
-    this.auth.login({ email, password }).subscribe({
+    this.auth.login({ email: normalizedEmail, password: normalizedPassword }).subscribe({
       next: () => {
         this.loading = false;
+        if (!readTokenContext()) {
+          this.error = 'Login failed to start a session. Please try again.';
+          return;
+        }
         const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo');
         const target = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/app/dashboard';
         this.router.navigateByUrl(target);

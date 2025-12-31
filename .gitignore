@@ -42,6 +42,10 @@ testem.log
 /typings
 __screenshots__/
 
+# .NET build output
+/server/**/bin
+/server/**/obj
+
 # System files
 .DS_Store
 Thumbs.db

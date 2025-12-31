@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { map } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   PermissionDefinition,
@@ -49,7 +50,22 @@ export class UserAdminDataService {
   }
 
   getPermissionCatalog() {
-    return this.http.get<PermissionDefinition[]>(`${this.baseUrl}/api/roles/permissions`);
+    return this.http
+      .get<PermissionDefinition[]>(`${this.baseUrl}/api/roles/permissions`)
+      .pipe(
+        map((definitions) =>
+          definitions.map((definition) => ({
+            key: definition.key ?? (definition as any).Key ?? '',
+            label:
+              definition.label ??
+              (definition as any).Label ??
+              definition.key ??
+              (definition as any).Key ??
+              '',
+            description: definition.description ?? (definition as any).Description ?? ''
+          }))
+        )
+      );
   }
 
   createRole(payload: UpsertRoleRequest) {

@@ -10,6 +10,7 @@ import { routes } from './app.routes';
 import { mockApiInterceptor } from './mocks/mock-api.interceptor';
 import { ThemeService } from './core/theme/theme.service';
 import { authTokenInterceptor } from './core/auth/auth-token.interceptor';
+import { initTenantFromHost } from './core/tenant/tenant.utils';
 
 const httpInterceptors = environment.useMockApi
   ? [mockApiInterceptor, authTokenInterceptor]
@@ -23,6 +24,11 @@ export const appConfig: ApplicationConfig = {
     provideAnimations(),
     providePrimeNG({ ripple: true, theme: { preset: Aura } }),
     httpProvider,
+    {
+      provide: APP_INITIALIZER,
+      multi: true,
+      useFactory: () => () => initTenantFromHost()
+    },
     {
       provide: APP_INITIALIZER,
       multi: true,

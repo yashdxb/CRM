@@ -11,7 +11,7 @@ using System.Security.Claims;
 
 namespace CRM.Enterprise.Api.Controllers;
 
-[Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+[Authorize(Policy = Permissions.Policies.OpportunitiesView)]
 [ApiController]
 [Route("api/opportunities")]
 public class OpportunitiesController : ControllerBase
@@ -29,6 +29,7 @@ public class OpportunitiesController : ControllerBase
     public async Task<ActionResult<OpportunitySearchResponse>> GetOpportunities(
         [FromQuery] string? search,
         [FromQuery] string? stage,
+        [FromQuery] Guid? accountId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
@@ -53,6 +54,11 @@ public class OpportunitiesController : ControllerBase
         if (!string.IsNullOrWhiteSpace(stage))
         {
             query = query.Where(o => o.Stage != null && o.Stage.Name == stage);
+        }
+
+        if (accountId.HasValue && accountId.Value != Guid.Empty)
+        {
+            query = query.Where(o => o.AccountId == accountId.Value);
         }
 
         var total = await query.CountAsync(cancellationToken);
@@ -163,6 +169,7 @@ public class OpportunitiesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<ActionResult<OpportunityListItem>> Create([FromBody] UpsertOpportunityRequest request, CancellationToken cancellationToken)
     {
         if (request.IsClosed && string.IsNullOrWhiteSpace(request.WinLossReason))
@@ -223,6 +230,7 @@ public class OpportunitiesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpsertOpportunityRequest request, CancellationToken cancellationToken)
     {
         var opp = await _dbContext.Opportunities.FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
@@ -267,6 +275,7 @@ public class OpportunitiesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var opp = await _dbContext.Opportunities.FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);

@@ -36,7 +36,7 @@ export interface LeadConversionRequest {
   createOpportunity: boolean;
   opportunityName?: string;
   amount?: number;
-  expectedCloseDate?: string;
+  expectedCloseDate?: string | Date;
 }
 
 export interface LeadConversionResponse {

@@ -1,4 +1,4 @@
-import { DecimalPipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { DecimalPipe, NgFor, NgIf } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -10,7 +10,10 @@ import { SkeletonModule } from 'primeng/skeleton';
 
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
 import { WorkspaceSettings } from '../models/workspace-settings.model';
+import { AppToastService } from '../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
 
 interface Option<T = string> {
   label: string;
@@ -26,7 +29,6 @@ interface Option<T = string> {
     InputNumberModule,
     SelectModule,
     DecimalPipe,
-    NgClass,
     NgFor,
     NgIf,
     ReactiveFormsModule,
@@ -39,11 +41,14 @@ interface Option<T = string> {
 })
 export class WorkspaceSettingsPage {
   private readonly settingsService = inject(WorkspaceSettingsService);
+  private readonly toastService = inject(AppToastService);
   private readonly fb = inject(FormBuilder);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
-  protected readonly toast = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
+  protected readonly canManageAdmin = signal(
+    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
+  );
 
   protected readonly timeZoneOptions: Option[] = [
     { label: 'UTC', value: 'UTC' },
@@ -126,11 +131,10 @@ export class WorkspaceSettingsPage {
   }
 
   protected clearToast() {
-    this.toast.set(null);
+    this.toastService.clear();
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
-    this.toast.set({ tone, message });
-    setTimeout(() => this.clearToast(), 4000);
+    this.toastService.show(tone, message, 3000);
   }
 }

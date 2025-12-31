@@ -59,10 +59,15 @@ public class AuthService : IAuthService
 
         var expiresAtUtc = DateTime.UtcNow.AddMinutes(_options.ExpiresMinutes);
         var token = CreateToken(user, roleNames, permissionKeys, expiresAtUtc);
+        var tenantKey = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == user.TenantId)
+            .Select(t => t.Key)
+            .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
         user.LastLoginAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new AuthResult(token, expiresAtUtc, user.Email, user.FullName, roleNames, permissionKeys);
+        return new AuthResult(token, expiresAtUtc, user.Email, user.FullName, roleNames, permissionKeys, tenantKey);
     }
 
     private string CreateToken(User user, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions, DateTime expiresAtUtc)

@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../../environments/environment';
+import { CsvImportJob } from '../../../shared/models/csv-import.model';
 import {
   Contact,
   ContactSearchRequest,
@@ -72,5 +73,11 @@ export class ContactDataService {
     return this.http.patch<void>(`${this.baseUrl}/api/contacts/${id}/lifecycle`, {
       status
     });
+  }
+
+  importCsv(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<CsvImportJob>(`${this.baseUrl}/api/contacts/import/queue`, formData);
   }
 }

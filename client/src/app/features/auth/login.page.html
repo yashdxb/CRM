@@ -1,3 +1,4 @@
+<app-breadcrumbs></app-breadcrumbs>
 <!-- Animated Background -->
 <div class="page-background login-bg">
   <div class="animated-orb orb-1"></div>
@@ -80,7 +81,7 @@
         <a class="forgot-link">Forgot password?</a>
       </div>
 
-      <button type="submit" class="btn-submit" [disabled]="loading">
+      <button pButton type="submit" class="btn-submit" [disabled]="loading">
         <span *ngIf="!loading">
           <i class="pi pi-sign-in"></i>
           Sign In

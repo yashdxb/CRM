@@ -53,7 +53,8 @@ public class DashboardController : ControllerBase
                 a.CompletedDateUtc,
                 a.Status,
                 null,
-                null))
+                null,
+                a.DueDateUtc ?? DateTime.UtcNow))
             .ToList();
 
         var response = new DashboardSummaryResponse(

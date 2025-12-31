@@ -1,0 +1,84 @@
+<section class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <header class="page-hero">
+    <div class="hero-content">
+      <span class="hero-eyebrow">
+        <i class="pi pi-bell"></i>
+        Notifications
+      </span>
+      <h1 class="hero-title">Notification preferences</h1>
+      <p class="hero-subtitle">
+        Tune your alerts so the team gets the right signal at the right time.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <button pButton type="button" class="crm-button crm-button--ghost" (click)="resetPreferences()">
+        Reset defaults
+      </button>
+    </div>
+  </header>
+
+  <div class="preferences-grid">
+    <div class="glass-card preference-panel">
+      <div class="panel-header">
+        <div>
+          <span class="panel-eyebrow">In-app alerts</span>
+          <h2>Inbox + toast notifications</h2>
+        </div>
+        <span class="panel-pill">Live</span>
+      </div>
+      <div class="panel-body">
+        <div class="preference-row" *ngFor="let option of options">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i [class]="option.icon"></i>
+            </div>
+            <div>
+              <div class="preference-title">{{ option.label }}</div>
+              <div class="preference-subtitle">{{ option.description }}</div>
+            </div>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="preferences().inApp[option.key]"
+            (ngModelChange)="toggle('inApp', option.key, $event)"
+          ></p-toggleSwitch>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card preference-panel muted">
+      <div class="panel-header">
+        <div>
+          <span class="panel-eyebrow">Email alerts</span>
+          <h2>Email notifications</h2>
+        </div>
+        <span class="panel-pill muted">Coming soon</span>
+      </div>
+      <div class="panel-body">
+        <div class="preference-row" *ngFor="let option of options">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i [class]="option.icon"></i>
+            </div>
+            <div>
+              <div class="preference-title">{{ option.label }}</div>
+              <div class="preference-subtitle">{{ option.description }}</div>
+            </div>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="preferences().email[option.key]"
+            [disabled]="true"
+          ></p-toggleSwitch>
+        </div>
+        <p class="panel-note" *ngIf="emailDisabled()">
+          Email delivery is part of Phase 2 integrations. Enablement will appear here once it ships.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>

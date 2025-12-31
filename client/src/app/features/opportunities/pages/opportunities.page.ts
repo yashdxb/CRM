@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -8,6 +8,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -33,6 +34,9 @@ import { Customer } from '../../customers/models/customer.model';
 import { SavedView, SavedViewsService } from '../../../shared/services/saved-views.service';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { RecentlyViewedItem, RecentlyViewedService } from '../../../shared/services/recently-viewed.service';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
+import { AppToastService } from '../../../core/app-toast.service';
 
 interface StageOption {
   label: string;
@@ -67,6 +71,7 @@ interface OpportunityViewFilters {
     InputNumberModule,
     SelectModule,
     ButtonModule,
+    CheckboxModule,
     DialogModule,
     TextareaModule,
     DatePickerModule,
@@ -111,6 +116,11 @@ export class OpportunitiesPage {
   protected readonly cardHistory = signal<Record<string, OpportunityStageHistoryItem[]>>({});
   protected readonly cardHistoryLoading = signal<Record<string, boolean>>({});
   protected readonly openHistoryCards = signal<Set<string>>(new Set());
+  private readonly toastService = inject(AppToastService);
+  protected readonly canManage = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesManage);
+  });
   protected readonly metrics = computed(() => {
     const rows = this.opportunities();
     const open = rows.filter((o) => o.status === 'Open').length;
@@ -282,16 +292,34 @@ export class OpportunitiesPage {
       ? this.opportunityData.update(this.editingId, payload).pipe(map(() => null))
       : this.opportunityData.create(payload).pipe(map(() => null));
 
-    request$.subscribe(() => {
-      this.dialogVisible = false;
-      this.load();
+    request$.subscribe({
+      next: () => {
+        this.dialogVisible = false;
+        this.load();
+        this.raiseToast('success', this.editingId ? 'Opportunity updated.' : 'Opportunity created.');
+      },
+      error: () => this.raiseToast('error', 'Unable to save opportunity.')
     });
   }
 
   protected onDelete(row: Opportunity) {
     const confirmed = confirm(`Delete opportunity ${row.name}?`);
     if (!confirmed) return;
-    this.opportunityData.delete(row.id).subscribe(() => this.load());
+    this.opportunityData.delete(row.id).subscribe({
+      next: () => {
+        this.load();
+        this.raiseToast('success', 'Opportunity deleted.');
+      },
+      error: () => this.raiseToast('error', 'Unable to delete opportunity.')
+    });
+  }
+
+  protected clearToast() {
+    this.toastService.clear();
+  }
+
+  private raiseToast(tone: 'success' | 'error', message: string) {
+    this.toastService.show(tone, message, 3000);
   }
 
   protected loadHistory(opportunityId: string) {

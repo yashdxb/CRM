@@ -1,6 +1,7 @@
 <section class="roles roles-form-page">
   <app-breadcrumbs></app-breadcrumbs>
 
+
   <div class="roles__banner">
     <div>
       <p class="roles__eyebrow">Role studio</p>
@@ -49,15 +50,31 @@
             </div>
           </div>
           <ng-container *ngIf="!loadingPermissions(); else permissionsLoading">
-            <div class="permission-grid">
-              <label class="permission-card" *ngFor="let permission of permissionCatalog()" [class.permission-card--checked]="permissionChecked(permission.key)">
-                <input type="checkbox" [checked]="permissionChecked(permission.key)" [disabled]="roleSaving()" (change)="handlePermissionToggleFromEvent(permission.key, $event)" />
-                <div>
-                  <span>{{ permission.label }}</span>
-                  <small>{{ permission.description }}</small>
-                </div>
-              </label>
+            <div class="permission-columns">
+              <span>Screen</span>
+              <span>Access</span>
             </div>
+            <p-listbox
+              formControlName="permissions"
+              [options]="permissionCatalog()"
+              optionLabel="label"
+              optionValue="key"
+              [multiple]="true"
+              [checkbox]="true"
+              [disabled]="roleSaving()"
+              [metaKeySelection]="false"
+              [listStyle]="{ 'max-height': 'none', 'height': 'auto' }"
+              styleClass="permission-listbox"
+            >
+              <ng-template let-permission pTemplate="item">
+                <div class="permission-item">
+                  <div class="permission-item__meta">
+                    <p class="permission-item__title">{{ permission.label }}</p>
+                    <p class="permission-item__desc">{{ permission.description }}</p>
+                  </div>
+                </div>
+              </ng-template>
+            </p-listbox>
           </ng-container>
           <ng-template #permissionsLoading>
             <div class="loading-blocks">
@@ -68,7 +85,7 @@
 
         <div class="dialog-actions">
           <button type="button" pButton label="Cancel" severity="secondary" [disabled]="roleSaving()" routerLink="/app/settings/roles"></button>
-          <button type="submit" pButton [label]="isEditMode() ? 'Update role' : 'Create role'" [loading]="roleSaving()"></button>
+          <button type="submit" pButton [label]="isEditMode() ? 'Update role' : 'Create role'" [loading]="roleSaving()" [disabled]="!canManageAdmin()"></button>
         </div>
       </form>
     </article>
@@ -104,10 +121,4 @@
     </aside>
   </section>
 
-  <div class="toast" *ngIf="toast() as alert" [ngClass]="'toast--' + alert.tone">
-    <span>{{ alert.message }}</span>
-    <button type="button" (click)="clearToast()" aria-label="Dismiss">
-      <i class="pi pi-times"></i>
-    </button>
-  </div>
 </section>

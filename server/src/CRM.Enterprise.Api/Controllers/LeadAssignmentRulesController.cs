@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Api.Controllers;
 
-[Authorize(Policy = Permissions.Policies.LeadsManage)]
+[Authorize(Policy = Permissions.Policies.LeadsView)]
 [ApiController]
 [Route("api/leads/assignment-rules")]
 public class LeadAssignmentRulesController : ControllerBase
@@ -53,6 +53,7 @@ public class LeadAssignmentRulesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<ActionResult<LeadAssignmentRuleDto>> Create([FromBody] UpsertLeadAssignmentRuleRequest request, CancellationToken cancellationToken)
     {
         var rule = new Domain.Entities.LeadAssignmentRule
@@ -81,6 +82,7 @@ public class LeadAssignmentRulesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpsertLeadAssignmentRuleRequest request, CancellationToken cancellationToken)
     {
         var rule = await _dbContext.LeadAssignmentRules.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
@@ -98,6 +100,7 @@ public class LeadAssignmentRulesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var rule = await _dbContext.LeadAssignmentRules.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Api.Controllers;
 
-[Authorize(Policy = Permissions.Policies.ActivitiesManage)]
+[Authorize(Policy = Permissions.Policies.ActivitiesView)]
 [ApiController]
 [Route("api/activities")]
 public class ActivitiesController : ControllerBase
@@ -94,7 +94,8 @@ public class ActivitiesController : ControllerBase
                 a.CompletedDateUtc,
                 a.Description,
                 a.Priority,
-                a.OwnerId
+                a.OwnerId,
+                a.CreatedAtUtc
             })
             .ToListAsync(cancellationToken);
 
@@ -166,7 +167,8 @@ public class ActivitiesController : ControllerBase
                     a.CompletedDateUtc,
                     ComputeStatus(a.DueDateUtc, a.CompletedDateUtc),
                     ownerIdValue,
-                    ownerName);
+                    ownerName,
+                    a.CreatedAtUtc);
             })
             .ToList();
 
@@ -174,6 +176,7 @@ public class ActivitiesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.Policies.ActivitiesManage)]
     public async Task<ActionResult<ActivityListItem>> Create([FromBody] UpsertActivityRequest request, CancellationToken cancellationToken)
     {
         var activity = new Activity
@@ -198,6 +201,7 @@ public class ActivitiesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.ActivitiesManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpsertActivityRequest request, CancellationToken cancellationToken)
     {
         var activity = await _dbContext.Activities.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
@@ -219,6 +223,7 @@ public class ActivitiesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.ActivitiesManage)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var activity = await _dbContext.Activities.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
@@ -306,7 +311,8 @@ public class ActivitiesController : ControllerBase
             activity.CompletedDateUtc,
             ComputeStatus(activity.DueDateUtc, activity.CompletedDateUtc),
             ownerId,
-            ownerName);
+            ownerName,
+            activity.CreatedAtUtc);
     }
 
     private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, CancellationToken cancellationToken)

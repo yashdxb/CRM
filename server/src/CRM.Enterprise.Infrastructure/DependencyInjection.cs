@@ -1,3 +1,4 @@
+using System;
 using CRM.Enterprise.Infrastructure.Auth;
 using CRM.Enterprise.Infrastructure.Dashboard;
 using CRM.Enterprise.Infrastructure.Tenants;
@@ -21,7 +22,8 @@ public static class DependencyInjection
             ?? throw new InvalidOperationException("Connection string 'SqlServer' was not found.");
 
         services.AddDbContext<CrmDbContext>(options =>
-            options.UseSqlServer(connectionString));
+            options.UseSqlServer(connectionString, sql =>
+                sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(2), null)));
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
         services.AddScoped<ITenantProvider, TenantProvider>();

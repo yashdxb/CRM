@@ -30,9 +30,14 @@ export interface BulkAction {
   template: `
     <div class="bulk-actions-bar" *ngIf="selectedCount() > 0" [@slideUp]>
       <div class="bulk-actions-bar__info">
-        <button class="bulk-actions-bar__close" (click)="onClearSelection()" pTooltip="Clear selection">
-          <i class="pi pi-times"></i>
-        </button>
+        <button
+          pButton
+          type="button"
+          icon="pi pi-times"
+          class="bulk-actions-bar__close p-button-text"
+          (click)="onClearSelection()"
+          pTooltip="Clear selection"
+        ></button>
         <span class="bulk-actions-bar__count">
           <strong>{{ selectedCount() }}</strong> {{ selectedCount() === 1 ? 'item' : 'items' }} selected
         </span>
@@ -52,9 +57,13 @@ export interface BulkAction {
       </div>
 
       <div class="bulk-actions-bar__select-all" *ngIf="totalCount && totalCount > selectedCount()">
-        <button class="bulk-actions-bar__link" (click)="onSelectAll()">
-          Select all {{ totalCount }} items
-        </button>
+        <button
+          pButton
+          type="button"
+          class="bulk-actions-bar__link p-button-text"
+          [label]="'Select all ' + totalCount + ' items'"
+          (click)="onSelectAll()"
+        ></button>
       </div>
     </div>
   `,
@@ -81,21 +90,16 @@ export interface BulkAction {
       gap: 12px;
     }
 
-    .bulk-actions-bar__close {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .bulk-actions-bar__close.p-button {
       width: 32px;
       height: 32px;
       border: none;
       border-radius: 8px;
       background: rgba(255, 255, 255, 0.1);
       color: #e2e8f0;
-      cursor: pointer;
-      transition: background 0.15s ease;
     }
 
-    .bulk-actions-bar__close:hover {
+    .bulk-actions-bar__close.p-button:hover {
       background: rgba(255, 255, 255, 0.2);
     }
 
@@ -121,17 +125,16 @@ export interface BulkAction {
       border-left: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    .bulk-actions-bar__link {
-      background: none;
+    .bulk-actions-bar__link.p-button {
+      padding: 0;
       border: none;
       color: #60a5fa;
       font-size: 0.85rem;
-      cursor: pointer;
       text-decoration: underline;
       white-space: nowrap;
     }
 
-    .bulk-actions-bar__link:hover {
+    .bulk-actions-bar__link.p-button:hover {
       color: #93c5fd;
     }
 

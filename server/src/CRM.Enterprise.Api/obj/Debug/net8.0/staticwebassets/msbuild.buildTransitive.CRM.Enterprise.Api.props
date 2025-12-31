@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../buildMultiTargeting/CRM.Enterprise.Api.props" />
-</Project>

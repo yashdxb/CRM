@@ -1,12 +1,19 @@
 export const PERMISSION_KEYS = {
-  dashboard: 'Permissions.Dashboard.View',
-  customers: 'Permissions.Customers.Manage',
-  contacts: 'Permissions.Contacts.Manage',
-  leads: 'Permissions.Leads.Manage',
-  opportunities: 'Permissions.Opportunities.Manage',
-  activities: 'Permissions.Activities.Manage',
-  administration: 'Permissions.Administration.Manage',
-  tenants: 'Permissions.Tenants.Manage'
+  dashboardView: 'Permissions.Dashboard.View',
+  customersView: 'Permissions.Customers.View',
+  customersManage: 'Permissions.Customers.Manage',
+  contactsView: 'Permissions.Contacts.View',
+  contactsManage: 'Permissions.Contacts.Manage',
+  leadsView: 'Permissions.Leads.View',
+  leadsManage: 'Permissions.Leads.Manage',
+  opportunitiesView: 'Permissions.Opportunities.View',
+  opportunitiesManage: 'Permissions.Opportunities.Manage',
+  activitiesView: 'Permissions.Activities.View',
+  activitiesManage: 'Permissions.Activities.Manage',
+  administrationView: 'Permissions.Administration.View',
+  administrationManage: 'Permissions.Administration.Manage',
+  tenantsView: 'Permissions.Tenants.View',
+  tenantsManage: 'Permissions.Tenants.Manage'
 } as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];

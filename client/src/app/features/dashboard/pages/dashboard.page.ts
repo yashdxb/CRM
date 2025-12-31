@@ -3,23 +3,26 @@ import { Component, computed, inject, OnInit, PLATFORM_ID } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { ChartModule } from 'primeng/chart';
+import { ButtonModule } from 'primeng/button';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
 import { DashboardSummary } from '../models/dashboard.model';
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
+import { CommandPaletteService } from '../../../core/command-palette/command-palette.service';
 
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [NgIf, NgFor, DatePipe, DecimalPipe, CurrencyPipe, ChartModule, BreadcrumbsComponent],
+  imports: [NgIf, NgFor, DatePipe, DecimalPipe, CurrencyPipe, ChartModule, ButtonModule, BreadcrumbsComponent],
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.scss'
 })
 export class DashboardPage implements OnInit {
   private readonly dashboardData = inject(DashboardDataService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly commandPaletteService = inject(CommandPaletteService);
   private readonly summarySignal = toSignal(this.dashboardData.getSummary(), { initialValue: null });
 
   protected readonly summary = computed(() => this.summarySignal());
@@ -99,6 +102,10 @@ export class DashboardPage implements OnInit {
     if (isPlatformBrowser(this.platformId)) {
       this.initCharts();
     }
+  }
+
+  protected onQuickAdd(): void {
+    this.commandPaletteService.requestQuickAdd('lead');
   }
 
   private initCharts(): void {

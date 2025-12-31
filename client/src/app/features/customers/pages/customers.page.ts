@@ -3,6 +3,8 @@ import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CardModule } from 'primeng/card';
+import { CheckboxModule } from 'primeng/checkbox';
+import { FileUploadModule } from 'primeng/fileupload';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
@@ -12,8 +14,8 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { forkJoin, of, Subscription, timer } from 'rxjs';
+import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 
 import { Customer, CustomerStatus } from '../models/customer.model';
 import { CustomerDataService } from '../services/customer-data.service';
@@ -23,6 +25,11 @@ import { SavedView, SavedViewsService } from '../../../shared/services/saved-vie
 import { RecentlyViewedItem, RecentlyViewedService } from '../../../shared/services/recently-viewed.service';
 import { BulkAction, BulkActionsBarComponent } from '../../../shared/components/bulk-actions/bulk-actions-bar.component';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
+import { CsvImportJob, CsvImportJobStatusResponse } from '../../../shared/models/csv-import.model';
+import { ImportJobService } from '../../../shared/services/import-job.service';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
+import { AppToastService } from '../../../core/app-toast.service';
 
 interface StatusOption {
   label: string;
@@ -54,6 +61,8 @@ interface CustomerViewFilters {
     DatePipe,
     FormsModule,
     CardModule,
+    CheckboxModule,
+    FileUploadModule,
     TableModule,
     TagModule,
     InputTextModule,
@@ -121,6 +130,11 @@ export class CustomersPage {
 
     return rows;
   });
+
+  protected readonly canManage = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.customersManage);
+  });
   protected readonly metrics = computed(() => {
     const rows = this.customers();
     const leads = rows.filter((c) => c.status === 'Lead').length;
@@ -151,25 +165,41 @@ export class CustomersPage {
   ]);
   protected viewName = '';
   protected readonly selectedIds = signal<string[]>([]);
-  protected readonly bulkActions: BulkAction[] = [
-    { id: 'assign-owner', label: 'Assign owner', icon: 'pi pi-user' },
-    { id: 'change-status', label: 'Change status', icon: 'pi pi-tag' },
-    { id: 'delete', label: 'Delete', icon: 'pi pi-trash', severity: 'danger' }
-  ];
+  protected readonly bulkActions = computed<BulkAction[]>(() => {
+    const disabled = !this.canManage();
+    return [
+      { id: 'assign-owner', label: 'Assign owner', icon: 'pi pi-user', disabled },
+      { id: 'change-status', label: 'Change status', icon: 'pi pi-tag', disabled },
+      { id: 'delete', label: 'Delete', icon: 'pi pi-trash', severity: 'danger', disabled }
+    ];
+  });
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
   protected assignDialogVisible = false;
   protected assignOwnerId: string | null = null;
   protected statusDialogVisible = false;
   protected bulkStatus: CustomerStatus | null = null;
   protected readonly recentCustomers = computed(() => this.recentlyViewed.itemsFor('customers'));
+  protected importDialogVisible = false;
+  protected importFile: File | null = null;
+  protected readonly importJob = signal<CsvImportJob | null>(null);
+  protected readonly importStatus = signal<CsvImportJobStatusResponse | null>(null);
+  protected readonly importError = signal<string | null>(null);
+  protected readonly importing = signal(false);
+  private importPoll?: Subscription;
 
   constructor(
     private readonly customerData: CustomerDataService,
     private readonly router: Router,
     private readonly savedViewsService: SavedViewsService,
     private readonly userAdminData: UserAdminDataService,
-    private readonly recentlyViewed: RecentlyViewedService
+    private readonly recentlyViewed: RecentlyViewedService,
+    private readonly toastService: AppToastService,
+    private readonly importJobs: ImportJobService
   ) {
+    const toast = history.state?.toast as { tone: 'success' | 'error'; message: string } | undefined;
+    if (toast) {
+      this.toastService.show(toast.tone, toast.message, 3000);
+    }
     this.loadSavedViews();
     this.load();
     this.loadOwners();
@@ -198,6 +228,55 @@ export class CustomersPage {
     this.router.navigate(['/app/customers/new']);
   }
 
+  protected openImport() {
+    this.importDialogVisible = true;
+    this.importFile = null;
+    this.importJob.set(null);
+    this.importStatus.set(null);
+    this.importError.set(null);
+    this.stopImportPolling();
+  }
+
+  protected closeImport() {
+    this.importDialogVisible = false;
+    this.stopImportPolling();
+  }
+
+  protected onImportFileSelected(event: { files?: File[] } | Event) {
+    if (event && 'files' in event && event.files) {
+      this.importFile = event.files.length ? event.files[0] : null;
+      return;
+    }
+
+    if (event instanceof Event) {
+      const input = event.target as HTMLInputElement | null;
+      const files = input?.files;
+      this.importFile = files && files.length ? files[0] : null;
+      return;
+    }
+
+    this.importFile = null;
+  }
+
+  protected onImport() {
+    if (!this.importFile) return;
+    this.importing.set(true);
+    this.importError.set(null);
+    this.customerData.importCsv(this.importFile).subscribe({
+      next: (job) => {
+        this.importJob.set(job);
+        this.importStatus.set(null);
+        this.raiseToast('success', 'Customer import queued.');
+        this.startImportPolling(job.id);
+      },
+      error: () => {
+        this.importError.set('Import failed. Please check your CSV and try again.');
+        this.importing.set(false);
+        this.raiseToast('error', 'Customer import failed.');
+      }
+    });
+  }
+
   protected onEdit(row: Customer) {
     this.recentlyViewed.add('customers', {
       id: row.id,
@@ -214,7 +293,13 @@ export class CustomersPage {
   protected onDelete(row: Customer) {
     const confirmed = confirm(`Delete ${row.name}?`);
     if (!confirmed) return;
-    this.customerData.delete(row.id).subscribe(() => this.load());
+    this.customerData.delete(row.id).subscribe({
+      next: () => {
+        this.load();
+        this.raiseToast('success', 'Customer deleted.');
+      },
+      error: () => this.raiseToast('error', 'Unable to delete customer.')
+    });
   }
 
   protected onSearch(term: string) {
@@ -338,6 +423,50 @@ export class CustomersPage {
     this.load();
   }
 
+  private startImportPolling(jobId: string) {
+    this.stopImportPolling();
+    this.importing.set(true);
+    this.importPoll = timer(0, 2000)
+      .pipe(
+        switchMap(() =>
+          this.importJobs.getStatus(jobId).pipe(
+            catchError(() => {
+              this.importError.set('Unable to check import status.');
+              this.importing.set(false);
+              this.raiseToast('error', 'Customer import status failed.');
+              return of(null);
+            })
+          )
+        ),
+        takeWhile(
+          (status) => !!status && (status.status === 'Queued' || status.status === 'Processing'),
+          true
+        ),
+        tap((status) => {
+          if (!status) return;
+          this.importStatus.set(status);
+          if (status.status === 'Completed' && this.importing()) {
+            this.importing.set(false);
+            this.load();
+            this.raiseToast('success', 'Customer import completed.');
+          }
+          if (status.status === 'Failed' && this.importing()) {
+            this.importing.set(false);
+            this.importError.set(status.errorMessage ?? 'Import failed. Please check your CSV and try again.');
+            this.raiseToast('error', 'Customer import failed.');
+          }
+        })
+      )
+      .subscribe();
+  }
+
+  private stopImportPolling() {
+    if (this.importPoll) {
+      this.importPoll.unsubscribe();
+      this.importPoll = undefined;
+    }
+  }
+
   protected statusSeverity(status: CustomerStatus) {
     switch (status) {
       case 'Lead':
@@ -425,8 +554,10 @@ export class CustomersPage {
       this.clearSelection();
       this.load();
       if (failures) {
-        alert(`${failures} customers could not be deleted.`);
+        this.raiseToast('error', `${failures} customers could not be deleted.`);
+        return;
       }
+      this.raiseToast('success', 'Customers deleted.');
     });
   }
 
@@ -441,9 +572,10 @@ export class CustomersPage {
         this.assignOwnerId = null;
         this.clearSelection();
         this.load();
+        this.raiseToast('success', 'Owner assigned.');
       },
       error: () => {
-        alert('Owner assignment failed. Please try again.');
+        this.raiseToast('error', 'Owner assignment failed.');
       }
     });
   }
@@ -459,11 +591,20 @@ export class CustomersPage {
         this.bulkStatus = null;
         this.clearSelection();
         this.load();
+        this.raiseToast('success', 'Status updated.');
       },
       error: () => {
-        alert('Status update failed. Please try again.');
+        this.raiseToast('error', 'Status update failed.');
       }
     });
+  }
+
+  protected clearToast() {
+    this.toastService.clear();
+  }
+
+  private raiseToast(tone: 'success' | 'error', message: string) {
+    this.toastService.show(tone, message, 3000);
   }
 
   private loadSavedViews() {

@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../../environments/environment';
+import { CsvImportJob } from '../../../shared/models/csv-import.model';
 import {
   Lead,
   LeadAssignmentStrategy,
@@ -86,5 +87,11 @@ export class LeadDataService {
 
   convert(id: string, payload: LeadConversionRequest) {
     return this.http.post<LeadConversionResponse>(`${this.baseUrl}/api/leads/${id}/convert`, payload);
+  }
+
+  importCsv(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<CsvImportJob>(`${this.baseUrl}/api/leads/import/queue`, formData);
   }
 }

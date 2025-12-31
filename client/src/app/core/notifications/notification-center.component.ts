@@ -1,14 +1,21 @@
 import { Component, HostListener, inject, signal } from '@angular/core';
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { ButtonModule } from 'primeng/button';
 import { NotificationInboxItem, NotificationService } from './notification.service';
 
 @Component({
   selector: 'app-notification-center',
   standalone: true,
-  imports: [NgIf, NgFor, NgClass, DatePipe],
+  imports: [NgIf, NgFor, NgClass, DatePipe, ButtonModule],
   template: `
     <div class="notification-center" [class.open]="open()">
-      <button class="notification-center__button" type="button" (click)="toggle()" aria-label="Open notifications">
+      <button
+        pButton
+        type="button"
+        class="notification-center__button p-button-rounded p-button-text"
+        (click)="toggle()"
+        aria-label="Open notifications"
+      >
         <i class="pi pi-bell"></i>
         <span class="notification-center__badge" *ngIf="unreadCount()">{{ unreadCount() }}</span>
       </button>
@@ -20,15 +27,30 @@ import { NotificationInboxItem, NotificationService } from './notification.servi
             <span>{{ unreadCount() }} unread</span>
           </div>
           <div class="notification-center__actions">
-            <button type="button" (click)="markAllRead()" [disabled]="!unreadCount()">Mark all read</button>
-            <button type="button" (click)="clearAll()" [disabled]="!items().length">Clear</button>
+            <button
+              pButton
+              type="button"
+              class="notification-center__action p-button-text"
+              label="Mark all read"
+              (click)="markAllRead()"
+              [disabled]="!unreadCount()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              class="notification-center__action p-button-text"
+              label="Clear"
+              (click)="clearAll()"
+              [disabled]="!items().length"
+            ></button>
           </div>
         </header>
 
         <div class="notification-center__list" *ngIf="items().length; else emptyState">
           <button
+            pButton
             type="button"
-            class="notification-center__item"
+            class="notification-center__item p-button-text"
             *ngFor="let item of items()"
             [ngClass]="{ 'notification-center__item--unread': !item.read }"
             (click)="markRead(item)"
@@ -57,22 +79,18 @@ import { NotificationInboxItem, NotificationService } from './notification.servi
       position: relative;
     }
 
-    .notification-center__button {
+    .notification-center__button.p-button {
       position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
       width: 38px;
       height: 38px;
       border-radius: 999px;
       border: 1px solid rgba(148, 163, 184, 0.3);
       background: #ffffff;
       color: #475569;
-      cursor: pointer;
       transition: all 0.2s ease;
     }
 
-    .notification-center__button:hover {
+    .notification-center__button.p-button:hover {
       border-color: rgba(99, 102, 241, 0.4);
       color: #4f46e5;
       box-shadow: 0 6px 16px rgba(99, 102, 241, 0.18);
@@ -137,20 +155,18 @@ import { NotificationInboxItem, NotificationService } from './notification.servi
       gap: 6px;
     }
 
-    .notification-center__actions button {
+    .notification-center__action.p-button {
+      padding: 0;
       border: none;
       background: transparent;
       color: #4f46e5;
       font-size: 0.75rem;
       font-weight: 600;
-      cursor: pointer;
       text-align: right;
-      padding: 0;
     }
 
-    .notification-center__actions button:disabled {
+    .notification-center__action.p-button:disabled {
       color: #cbd5f5;
-      cursor: not-allowed;
     }
 
     .notification-center__list {
@@ -161,7 +177,7 @@ import { NotificationInboxItem, NotificationService } from './notification.servi
       gap: 10px;
     }
 
-    .notification-center__item {
+    .notification-center__item.p-button {
       display: grid;
       grid-template-columns: auto 1fr auto;
       gap: 12px;
@@ -171,7 +187,6 @@ import { NotificationInboxItem, NotificationService } from './notification.servi
       border: 1px solid rgba(226, 232, 240, 0.9);
       background: #f8fafc;
       text-align: left;
-      cursor: pointer;
       transition: all 0.15s ease;
     }
 

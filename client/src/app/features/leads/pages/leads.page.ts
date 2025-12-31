@@ -1,12 +1,17 @@
-import { Component, computed, signal } from '@angular/core';
-import { DatePipe, NgFor, NgIf, DecimalPipe, NgClass } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { DatePipe, NgFor, NgIf, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
+import { FileUploadModule } from 'primeng/fileupload';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { Router } from '@angular/router';
 import { DialogModule } from 'primeng/dialog';
-import { forkJoin, of } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { forkJoin, of, Subscription, timer } from 'rxjs';
+import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 
 import { Lead, LeadStatus } from '../models/lead.model';
 import { LeadDataService } from '../services/lead-data.service';
@@ -15,6 +20,11 @@ import { SavedView, SavedViewsService } from '../../../shared/services/saved-vie
 import { BulkAction, BulkActionsBarComponent } from '../../../shared/components/bulk-actions/bulk-actions-bar.component';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { RecentlyViewedItem, RecentlyViewedService } from '../../../shared/services/recently-viewed.service';
+import { CsvImportJob, CsvImportJobStatusResponse } from '../../../shared/models/csv-import.model';
+import { ImportJobService } from '../../../shared/services/import-job.service';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
+import { AppToastService } from '../../../core/app-toast.service';
 
 interface StatusOption {
   label: string;
@@ -33,9 +43,13 @@ interface LeadViewFilters {
   imports: [
     NgIf,
     NgFor,
-    NgClass,
     FormsModule,
+    ButtonModule,
+    CheckboxModule,
+    FileUploadModule,
+    InputTextModule,
     SelectModule,
+    TableModule,
     PaginatorModule,
     DecimalPipe,
     DatePipe,
@@ -49,7 +63,7 @@ interface LeadViewFilters {
 export class LeadsPage {
   protected readonly Math = Math;
   protected viewMode: 'table' | 'kanban' = 'table';
-  protected readonly toast = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
+  private readonly toastService = inject(AppToastService);
   
   protected readonly statusOptions: StatusOption[] = [
     { label: 'All', value: 'all' },
@@ -102,33 +116,51 @@ export class LeadsPage {
   ]);
   protected viewName = '';
   protected readonly selectedIds = signal<string[]>([]);
-  protected readonly bulkActions: BulkAction[] = [
-    { id: 'assign-owner', label: 'Assign owner', icon: 'pi pi-user' },
-    { id: 'change-status', label: 'Change status', icon: 'pi pi-tag' },
-    { id: 'delete', label: 'Delete', icon: 'pi pi-trash', severity: 'danger' }
-  ];
+  protected readonly bulkActions = computed<BulkAction[]>(() => {
+    const disabled = !this.canManage();
+    return [
+      { id: 'assign-owner', label: 'Assign owner', icon: 'pi pi-user', disabled },
+      { id: 'change-status', label: 'Change status', icon: 'pi pi-tag', disabled },
+      { id: 'delete', label: 'Delete', icon: 'pi pi-trash', severity: 'danger', disabled }
+    ];
+  });
+  protected readonly canManage = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
+  });
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
   protected assignDialogVisible = false;
   protected assignOwnerId: string | null = null;
   protected statusDialogVisible = false;
   protected bulkStatus: LeadStatus | null = null;
   protected readonly recentLeads = computed(() => this.recentlyViewed.itemsFor('leads'));
+  protected importDialogVisible = false;
+  protected importFile: File | null = null;
+  protected readonly importJob = signal<CsvImportJob | null>(null);
+  protected readonly importStatus = signal<CsvImportJobStatusResponse | null>(null);
+  protected readonly importError = signal<string | null>(null);
+  protected readonly importing = signal(false);
+  private importPoll?: Subscription;
 
   constructor(
     private readonly leadData: LeadDataService,
     private readonly router: Router,
     private readonly savedViewsService: SavedViewsService,
     private readonly userAdminData: UserAdminDataService,
-    private readonly recentlyViewed: RecentlyViewedService
+    private readonly recentlyViewed: RecentlyViewedService,
+    private readonly importJobs: ImportJobService
   ) {
     this.loadSavedViews();
     this.loadOwners();
     if (this.router.url.includes('/leads/pipeline')) {
       this.viewMode = 'kanban';
     }
+    if (this.router.url.includes('/leads/import')) {
+      this.importDialogVisible = true;
+    }
     const toast = history.state?.toast as { tone: 'success' | 'error'; message: string } | undefined;
     if (toast) {
-      this.toast.set(toast);
+      this.toastService.show(toast.tone, toast.message, 3000);
       history.replaceState({}, '');
     }
     this.load();
@@ -175,6 +207,58 @@ export class LeadsPage {
     this.router.navigate(['/app/leads/new']);
   }
 
+  protected openImport() {
+    this.importDialogVisible = true;
+    this.importFile = null;
+    this.importJob.set(null);
+    this.importStatus.set(null);
+    this.importError.set(null);
+    this.stopImportPolling();
+  }
+
+  protected closeImport() {
+    this.importDialogVisible = false;
+    if (this.router.url.includes('/leads/import')) {
+      this.router.navigate(['/app/leads']);
+    }
+    this.stopImportPolling();
+  }
+
+  protected onImportFileSelected(event: { files?: File[] } | Event) {
+    if (event && 'files' in event && event.files) {
+      this.importFile = event.files.length ? event.files[0] : null;
+      return;
+    }
+
+    if (event instanceof Event) {
+      const input = event.target as HTMLInputElement | null;
+      const files = input?.files;
+      this.importFile = files && files.length ? files[0] : null;
+      return;
+    }
+
+    this.importFile = null;
+  }
+
+  protected onImport() {
+    if (!this.importFile) return;
+    this.importing.set(true);
+    this.importError.set(null);
+    this.leadData.importCsv(this.importFile).subscribe({
+      next: (job) => {
+        this.importJob.set(job);
+        this.importStatus.set(null);
+        this.raiseToast('success', 'Lead import queued.');
+        this.startImportPolling(job.id);
+      },
+      error: () => {
+        this.importError.set('Import failed. Please check your CSV and try again.');
+        this.importing.set(false);
+        this.raiseToast('error', 'Lead import failed.');
+      }
+    });
+  }
+
   protected onEdit(row: Lead) {
     this.recentlyViewed.add('leads', {
       id: row.id,
@@ -200,7 +284,13 @@ export class LeadsPage {
   protected onDelete(row: Lead) {
     const confirmed = confirm(`Delete lead ${row.name}?`);
     if (!confirmed) return;
-    this.leadData.delete(row.id).subscribe(() => this.load());
+    this.leadData.delete(row.id).subscribe({
+      next: () => {
+        this.load();
+        this.raiseToast('success', 'Lead deleted.');
+      },
+      error: () => this.raiseToast('error', 'Unable to delete lead.')
+    });
   }
 
   protected onSearch(term: string) {
@@ -219,6 +309,50 @@ export class LeadsPage {
     this.pageIndex = event.page ?? 0;
     this.rows = event.rows ?? this.rows;
     this.load();
+  }
+
+  private startImportPolling(jobId: string) {
+    this.stopImportPolling();
+    this.importing.set(true);
+    this.importPoll = timer(0, 2000)
+      .pipe(
+        switchMap(() =>
+          this.importJobs.getStatus(jobId).pipe(
+            catchError(() => {
+              this.importError.set('Unable to check import status.');
+              this.importing.set(false);
+              this.raiseToast('error', 'Lead import status failed.');
+              return of(null);
+            })
+          )
+        ),
+        takeWhile(
+          (status) => !!status && (status.status === 'Queued' || status.status === 'Processing'),
+          true
+        ),
+        tap((status) => {
+          if (!status) return;
+          this.importStatus.set(status);
+          if (status.status === 'Completed' && this.importing()) {
+            this.importing.set(false);
+            this.load();
+            this.raiseToast('success', 'Lead import completed.');
+          }
+          if (status.status === 'Failed' && this.importing()) {
+            this.importing.set(false);
+            this.importError.set(status.errorMessage ?? 'Import failed. Please check your CSV and try again.');
+            this.raiseToast('error', 'Lead import failed.');
+          }
+        })
+      )
+      .subscribe();
+  }
+
+  private stopImportPolling() {
+    if (this.importPoll) {
+      this.importPoll.unsubscribe();
+      this.importPoll = undefined;
+    }
   }
 
   protected isSelected(id: string) {
@@ -287,8 +421,10 @@ export class LeadsPage {
       this.clearSelection();
       this.load();
       if (failures) {
-        alert(`${failures} leads could not be deleted.`);
+        this.raiseToast('error', `${failures} leads could not be deleted.`);
+        return;
       }
+      this.raiseToast('success', 'Leads deleted.');
     });
   }
 
@@ -303,9 +439,10 @@ export class LeadsPage {
         this.assignOwnerId = null;
         this.clearSelection();
         this.load();
+        this.raiseToast('success', 'Owner assigned.');
       },
       error: () => {
-        alert('Owner assignment failed. Please try again.');
+        this.raiseToast('error', 'Owner assignment failed.');
       }
     });
   }
@@ -321,9 +458,10 @@ export class LeadsPage {
         this.bulkStatus = null;
         this.clearSelection();
         this.load();
+        this.raiseToast('success', 'Status updated.');
       },
       error: () => {
-        alert('Status update failed. Please try again.');
+        this.raiseToast('error', 'Status update failed.');
       }
     });
   }
@@ -333,9 +471,12 @@ export class LeadsPage {
       return;
     }
     this.leadData.updateStatus(row.id, status).subscribe({
-      next: () => this.load(),
+      next: () => {
+        this.load();
+        this.raiseToast('success', 'Status updated.');
+      },
       error: () => {
-        alert('Status update failed. Please try again.');
+        this.raiseToast('error', 'Status update failed.');
       }
     });
   }
@@ -345,9 +486,12 @@ export class LeadsPage {
       return;
     }
     this.leadData.updateOwner(row.id, ownerId).subscribe({
-      next: () => this.load(),
+      next: () => {
+        this.load();
+        this.raiseToast('success', 'Owner updated.');
+      },
       error: () => {
-        alert('Owner update failed. Please try again.');
+        this.raiseToast('error', 'Owner update failed.');
       }
     });
   }
@@ -441,7 +585,11 @@ export class LeadsPage {
   // Lead create/edit handled by separate page.
 
   protected clearToast() {
-    this.toast.set(null);
+    this.toastService.clear();
+  }
+
+  private raiseToast(tone: 'success' | 'error', message: string) {
+    this.toastService.show(tone, message, 3000);
   }
 
   private loadSavedViews() {

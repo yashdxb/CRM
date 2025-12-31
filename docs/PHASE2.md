@@ -13,26 +13,21 @@ Legend:
 Acceptance criteria are written as testable statements (UI + API).
 
 1) Multi-tenancy + workspace settings
-- Status: PARTIAL
+- Status: DONE
 - Evidence:
   - Workspace settings UI: `client/src/app/features/settings/pages/workspace-settings.page.ts`
   - Workspace settings API: `server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs`
-  - Tenant scaffolding: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`
-- Gaps to confirm:
-  - Tenant isolation (DB-level, middleware, or filters)
-  - Subdomain / custom domain routing
+  - Tenant middleware + filters: `server/src/CRM.Enterprise.Api/Middleware/TenantResolutionMiddleware.cs`
 - Acceptance criteria:
   - Tenant isolation enforced for all CRM entities.
   - Workspace settings update and persist by tenant.
   - Tenant context resolved for each request.
 
 2) Account / Contact detail enrichment (timeline, attachments, related records, notes)
-- Status: PARTIAL
+- Status: DONE
 - Evidence:
   - Customers page: `client/src/app/features/customers/pages/customers.page.html`
   - Contacts page: `client/src/app/features/contacts/pages/contacts.page.html`
-- Gaps to confirm:
-  - Timeline, attachments, and related record tabs not visible
 - Acceptance criteria:
   - Timeline shows recent activities.
   - Attachments can be uploaded and downloaded.
@@ -103,14 +98,17 @@ Acceptance criteria are written as testable statements (UI + API).
   - Inbox sync for replies.
 
 8) CSV import/export
-- Status: PARTIAL
+- Status: DONE
 - Evidence:
   - Export wired for customers: `client/src/app/features/customers/pages/customers.page.ts`
   - Export wired for contacts: `client/src/app/features/contacts/pages/contacts.page.ts`
   - Export wired for opportunities: `client/src/app/features/opportunities/pages/opportunities.page.ts`
-  - Leads import route only: `client/src/app/app.routes.ts`
-- Gap:
-  - CSV import not implemented.
+  - Import API: `server/src/CRM.Enterprise.Api/Controllers/CustomersController.cs`
+  - Import API: `server/src/CRM.Enterprise.Api/Controllers/ContactsController.cs`
+  - Import API: `server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs`
+  - Import UI: `client/src/app/features/customers/pages/customers.page.html`
+  - Import UI: `client/src/app/features/contacts/pages/contacts.page.html`
+  - Import UI: `client/src/app/features/leads/pages/leads.page.html`
 - Acceptance criteria:
   - CSV export available from list views (customers, contacts, opportunities).
   - CSV import for accounts, contacts, leads.

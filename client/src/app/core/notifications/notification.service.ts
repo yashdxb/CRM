@@ -2,6 +2,19 @@ import { Injectable, signal, computed } from '@angular/core';
 import { readUserId } from '../auth/token.utils';
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
+export type NotificationChannel = 'inApp' | 'email';
+
+export interface NotificationChannelPreferences {
+  success: boolean;
+  error: boolean;
+  warning: boolean;
+  info: boolean;
+}
+
+export interface NotificationPreferences {
+  inApp: NotificationChannelPreferences;
+  email: NotificationChannelPreferences;
+}
 
 export interface Notification {
   id: string;
@@ -30,13 +43,16 @@ export interface NotificationInboxItem {
 export class NotificationService {
   private readonly _notifications = signal<Notification[]>([]);
   private readonly _inbox = signal<NotificationInboxItem[]>(this.readInbox());
+  private readonly _preferences = signal<NotificationPreferences>(this.readPreferences());
   private currentStorageKey = this.storageKey();
+  private currentPrefsKey = this.prefsStorageKey();
   
   readonly notifications = this._notifications.asReadonly();
   readonly hasNotifications = computed(() => this._notifications().length > 0);
   readonly latestNotification = computed(() => this._notifications()[0] ?? null);
   readonly inbox = this._inbox.asReadonly();
   readonly unreadCount = computed(() => this._inbox().filter((item) => !item.read).length);
+  readonly preferences = this._preferences.asReadonly();
 
   private generateId(): string {
     return `notif-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -44,6 +60,9 @@ export class NotificationService {
 
   show(notification: Omit<Notification, 'id' | 'timestamp'>): string {
     this.syncForUser();
+    if (!this._preferences().inApp[notification.type]) {
+      return '';
+    }
     const id = this.generateId();
     const newNotification: Notification = {
       ...notification,
@@ -79,6 +98,25 @@ export class NotificationService {
     return this.show({ type: 'info', title, message, action });
   }
 
+  pushInbox(type: NotificationType, title: string, message?: string): string {
+    this.syncForUser();
+    if (!this._preferences().inApp[type]) {
+      return '';
+    }
+    const id = this.generateId();
+    const entry: Notification = {
+      id,
+      type,
+      title,
+      message,
+      timestamp: new Date(),
+      dismissible: true,
+      duration: 0
+    };
+    this.addToInbox(entry);
+    return id;
+  }
+
   dismiss(id: string): void {
     this._notifications.update(list => list.filter(n => n.id !== id));
   }
@@ -103,6 +141,25 @@ export class NotificationService {
     this.syncForUser();
     this._inbox.set([]);
     this.persistInbox();
+  }
+
+  updatePreference(channel: NotificationChannel, type: NotificationType, enabled: boolean): void {
+    this.syncForUser();
+    const current = this._preferences();
+    this._preferences.set({
+      ...current,
+      [channel]: {
+        ...current[channel],
+        [type]: enabled
+      }
+    });
+    this.persistPreferences();
+  }
+
+  resetPreferences(): void {
+    this.syncForUser();
+    this._preferences.set(this.defaultPreferences());
+    this.persistPreferences();
   }
 
   private getDefaultDuration(type: NotificationType): number {
@@ -131,10 +188,21 @@ export class NotificationService {
   private syncForUser() {
     const key = this.storageKey();
     if (key === this.currentStorageKey) {
+      this.syncPrefsForUser();
       return;
     }
     this.currentStorageKey = key;
     this._inbox.set(this.readInbox());
+    this.syncPrefsForUser();
+  }
+
+  private syncPrefsForUser() {
+    const key = this.prefsStorageKey();
+    if (key === this.currentPrefsKey) {
+      return;
+    }
+    this.currentPrefsKey = key;
+    this._preferences.set(this.readPreferences());
   }
 
   private readInbox(): NotificationInboxItem[] {
@@ -158,8 +226,52 @@ export class NotificationService {
     }
   }
 
+  private readPreferences(): NotificationPreferences {
+    try {
+      const stored = localStorage.getItem(this.prefsStorageKey());
+      if (!stored) {
+        return this.defaultPreferences();
+      }
+      const parsed = JSON.parse(stored) as NotificationPreferences;
+      return parsed?.inApp && parsed?.email ? parsed : this.defaultPreferences();
+    } catch {
+      return this.defaultPreferences();
+    }
+  }
+
+  private persistPreferences() {
+    try {
+      localStorage.setItem(this.prefsStorageKey(), JSON.stringify(this._preferences()));
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  private defaultPreferences(): NotificationPreferences {
+    const defaults: NotificationChannelPreferences = {
+      success: true,
+      error: true,
+      warning: true,
+      info: true
+    };
+    return {
+      inApp: { ...defaults },
+      email: {
+        success: false,
+        error: false,
+        warning: false,
+        info: false
+      }
+    };
+  }
+
   private storageKey() {
     const userId = readUserId() ?? 'anonymous';
     return `notification_inbox:${userId}`;
+  }
+
+  private prefsStorageKey() {
+    const userId = readUserId() ?? 'anonymous';
+    return `notification_prefs:${userId}`;
   }
 }

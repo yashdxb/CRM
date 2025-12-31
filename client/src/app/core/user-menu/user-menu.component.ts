@@ -2,8 +2,11 @@ import { Component, inject, signal, HostListener, ElementRef, computed } from '@
 import { NgIf, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { AvatarModule } from 'primeng/avatar';
+import { ButtonModule } from 'primeng/button';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { ThemeService } from '../theme/theme.service';
+import { readTokenContext } from '../auth/token.utils';
+import { AuthService } from '../auth/auth.service';
 
 export interface UserInfo {
   fullName: string;
@@ -15,7 +18,7 @@ export interface UserInfo {
 @Component({
   selector: 'app-user-menu',
   standalone: true,
-  imports: [NgIf, NgClass, AvatarModule],
+  imports: [NgIf, NgClass, AvatarModule, ButtonModule],
   animations: [
     trigger('dropdownAnimation', [
       transition(':enter', [
@@ -29,7 +32,13 @@ export interface UserInfo {
   ],
   template: `
     <div class="user-menu" #menuContainer>
-      <button class="user-menu__trigger" (click)="toggleMenu()" [attr.aria-expanded]="isOpen()">
+      <button
+        pButton
+        type="button"
+        class="user-menu__trigger p-button-text"
+        (click)="toggleMenu()"
+        [attr.aria-expanded]="isOpen()"
+      >
         <p-avatar 
           [label]="initials()" 
           shape="circle" 
@@ -60,11 +69,11 @@ export interface UserInfo {
         <div class="user-menu__divider"></div>
 
         <div class="user-menu__section">
-          <button class="user-menu__item" (click)="navigateTo('/app/profile')">
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="navigateTo('/app/profile')">
             <i class="pi pi-user"></i>
             <span>My Profile</span>
           </button>
-          <button class="user-menu__item" (click)="navigateTo('/app/settings')">
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="navigateTo('/app/settings')">
             <i class="pi pi-cog"></i>
             <span>Settings</span>
           </button>
@@ -73,12 +82,12 @@ export interface UserInfo {
         <div class="user-menu__divider"></div>
 
         <div class="user-menu__section">
-          <button class="user-menu__item" (click)="toggleTheme()">
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="toggleTheme()">
             <i class="pi" [ngClass]="themeService.themeIcon()"></i>
             <span>{{ themeService.themeLabel() }}</span>
             <span class="user-menu__badge">{{ themeService.isDarkMode() ? 'On' : 'Off' }}</span>
           </button>
-          <button class="user-menu__item" (click)="openKeyboardShortcuts()">
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="openKeyboardShortcuts()">
             <i class="pi pi-key"></i>
             <span>Keyboard Shortcuts</span>
             <kbd>?</kbd>
@@ -88,7 +97,7 @@ export interface UserInfo {
         <div class="user-menu__divider"></div>
 
         <div class="user-menu__section">
-          <button class="user-menu__item user-menu__item--danger" (click)="logout()">
+          <button pButton type="button" class="user-menu__item user-menu__item--danger p-button-text" (click)="logout()">
             <i class="pi pi-sign-out"></i>
             <span>Sign Out</span>
           </button>
@@ -101,7 +110,7 @@ export interface UserInfo {
       position: relative;
     }
 
-    .user-menu__trigger {
+    .user-menu__trigger.p-button {
       display: flex;
       align-items: center;
       gap: 10px;
@@ -109,11 +118,10 @@ export interface UserInfo {
       border: none;
       border-radius: 12px;
       background: transparent;
-      cursor: pointer;
       transition: background 0.15s ease;
     }
 
-    .user-menu__trigger:hover {
+    .user-menu__trigger.p-button:hover {
       background: rgba(15, 23, 42, 0.06);
     }
 
@@ -188,7 +196,7 @@ export interface UserInfo {
       padding: 8px;
     }
 
-    .user-menu__item {
+    .user-menu__item.p-button {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -197,7 +205,6 @@ export interface UserInfo {
       border: none;
       border-radius: 10px;
       background: transparent;
-      cursor: pointer;
       font-family: inherit;
       font-size: 0.875rem;
       color: #334155;
@@ -205,7 +212,7 @@ export interface UserInfo {
       transition: background 0.15s ease;
     }
 
-    .user-menu__item:hover {
+    .user-menu__item.p-button:hover {
       background: #f1f5f9;
     }
 
@@ -259,7 +266,7 @@ export interface UserInfo {
         display: none;
       }
 
-      .user-menu__trigger {
+      .user-menu__trigger.p-button {
         padding: 6px;
       }
     }
@@ -269,13 +276,10 @@ export class UserMenuComponent {
   protected readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef);
+  private readonly authService = inject(AuthService);
 
   protected readonly isOpen = signal(false);
-  protected readonly user = signal<UserInfo>({
-    fullName: 'Yasser Ahmed',
-    email: 'yasser@example.com',
-    role: 'Administrator'
-  });
+  protected readonly user = signal<UserInfo>(this.getUserFromToken());
 
   // Computed signal for initials to avoid recalculation on each change detection
   protected readonly initials = computed(() => {
@@ -319,9 +323,28 @@ export class UserMenuComponent {
   }
 
   logout(): void {
-    // Clear auth and redirect
-    localStorage.removeItem('auth_token');
-    this.router.navigate(['/landing']);
+    this.authService.logout();
     this.isOpen.set(false);
+  }
+
+  private getUserFromToken(): UserInfo {
+    const context = readTokenContext();
+    if (!context) {
+      return { fullName: 'Guest', email: '', role: 'Signed out' };
+    }
+
+    const payload = context.payload;
+    const roleClaim = payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+    const roles = Array.isArray(roleClaim)
+      ? roleClaim.filter((role) => typeof role === 'string')
+      : typeof roleClaim === 'string'
+        ? [roleClaim]
+        : [];
+
+    const fullName = typeof payload['unique_name'] === 'string' ? payload['unique_name'] : 'User';
+    const email = typeof payload['email'] === 'string' ? payload['email'] : '';
+    const role = roles[0] ?? 'User';
+
+    return { fullName, email, role };
   }
 }

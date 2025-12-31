@@ -20,6 +20,7 @@ export interface Opportunity {
 export interface OpportunitySearchRequest {
   search?: string;
   stage?: string;
+  accountId?: string;
   page?: number;
   pageSize?: number;
 }

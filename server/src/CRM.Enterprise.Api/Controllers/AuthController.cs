@@ -26,7 +26,7 @@ public class AuthController : ControllerBase
             return Unauthorized();
         }
 
-        return Ok(new LoginResponse(result.AccessToken, result.ExpiresAtUtc, result.Email, result.FullName, result.Roles, result.Permissions));
+        return Ok(new LoginResponse(result.AccessToken, result.ExpiresAtUtc, result.Email, result.FullName, result.Roles, result.Permissions, result.TenantKey));
     }
 
     [HttpPost("logout")]

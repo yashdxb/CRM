@@ -1,6 +1,7 @@
 <section class="tenant-management">
   <app-breadcrumbs></app-breadcrumbs>
 
+
   <div class="tenant-management__banner">
     <div>
       <p class="tenant-management__eyebrow">Super admin</p>
@@ -55,7 +56,7 @@
           <div class="form-grid">
             <label>
               Time zone
-              <p-select
+              <p-select appendTo="body"
                 [options]="timeZoneOptions"
                 optionLabel="label"
                 optionValue="value"
@@ -66,7 +67,7 @@
             </label>
             <label>
               Currency
-              <p-select
+              <p-select appendTo="body"
                 [options]="currencyOptions"
                 optionLabel="label"
                 optionValue="value"
@@ -78,7 +79,7 @@
           </div>
 
           <div class="dialog-actions">
-            <button type="submit" pButton label="Create tenant" [loading]="saving()"></button>
+            <button type="submit" pButton label="Create tenant" [loading]="saving()" [disabled]="!canManageTenants()"></button>
           </div>
         </form>
 
@@ -101,6 +102,28 @@
             </div>
           </div>
 
+          <div class="active-tenant">
+            <p class="summary-label">Active tenant</p>
+            <p-select appendTo="body"
+              [options]="tenantOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="activeTenantKey()"
+              (ngModelChange)="activeTenantKey.set($event)"
+              placeholder="Select tenant"
+              styleClass="w-full"
+            ></p-select>
+            <button
+              type="button"
+              pButton
+              label="Set active tenant"
+              class="p-button-sm"
+              [disabled]="!canManageTenants() || !activeTenantKey()"
+              (click)="applyActiveTenant()"
+            ></button>
+            <small class="active-tenant__hint">Applies to the current browser session.</small>
+          </div>
+
           <div class="tenant-list">
             <div class="tenant-list__item" *ngFor="let tenant of tenants()">
               <div>
@@ -121,10 +144,4 @@
     </ng-template>
   </article>
 
-  <div class="toast" *ngIf="toast() as alert" [ngClass]="'toast--' + alert.tone">
-    <span>{{ alert.message }}</span>
-    <button type="button" (click)="clearToast()" aria-label="Dismiss">
-      <i class="pi pi-times"></i>
-    </button>
-  </div>
 </section>

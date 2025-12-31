@@ -76,7 +76,7 @@
           <span>Temporary password</span>
           <div class="password-field">
             <input pInputText type="text" formControlName="temporaryPassword" placeholder="Optional" />
-            <button type="button" pButton label="Generate" (click)="generatePassword()"></button>
+            <button type="button" pButton label="Generate" [disabled]="!canManageAdmin()" (click)="generatePassword()"></button>
           </div>
           <small *ngIf="generatedPassword()">Share with the user: {{ generatedPassword() }}</small>
         </label>

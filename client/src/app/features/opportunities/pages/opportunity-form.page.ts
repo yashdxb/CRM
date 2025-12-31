@@ -11,6 +11,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 
 import { OpportunityDataService, SaveOpportunityRequest } from '../services/opportunity-data.service';
 import { CustomerDataService } from '../../customers/services/customer-data.service';
+import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 
 interface Option<T = string> {
   label: string;
@@ -28,7 +29,8 @@ interface Option<T = string> {
     InputNumberModule,
     TextareaModule,
     SelectModule,
-    DatePickerModule
+    DatePickerModule,
+    BreadcrumbsComponent
   ],
   template: `
     <div class="opportunity-form-page">
@@ -39,6 +41,7 @@ interface Option<T = string> {
         <div class="grid-pattern"></div>
       </div>
       <div class="page-container">
+        <app-breadcrumbs></app-breadcrumbs>
         <section class="hero-section">
           <div class="hero-content">
             <div class="hero-badge">

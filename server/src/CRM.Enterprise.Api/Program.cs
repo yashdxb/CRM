@@ -4,16 +4,39 @@ using CRM.Enterprise.Infrastructure;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Auth;
 using CRM.Enterprise.Api.Middleware;
+using CRM.Enterprise.Api.Jobs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
+using Hangfire;
+using Hangfire.SqlServer;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<CrmDbContext>("db");
+builder.Services.AddHangfire(config =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("SqlServer")
+        ?? throw new InvalidOperationException("Connection string 'SqlServer' was not found.");
+    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
+        {
+            CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+            SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+            QueuePollInterval = TimeSpan.FromSeconds(15),
+            UseRecommendedIsolationLevel = true,
+            DisableGlobalLocks = true
+        });
+});
+builder.Services.AddHangfireServer();
+builder.Services.AddScoped<BackgroundJobs>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -56,18 +79,32 @@ builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(Permissions.Policies.DashboardView, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.DashboardView));
+    options.AddPolicy(Permissions.Policies.CustomersView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.CustomersView));
     options.AddPolicy(Permissions.Policies.CustomersManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.CustomersManage));
+    options.AddPolicy(Permissions.Policies.ContactsView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ContactsView));
     options.AddPolicy(Permissions.Policies.ContactsManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ContactsManage));
+    options.AddPolicy(Permissions.Policies.LeadsView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.LeadsView));
     options.AddPolicy(Permissions.Policies.LeadsManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.LeadsManage));
+    options.AddPolicy(Permissions.Policies.OpportunitiesView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.OpportunitiesView));
     options.AddPolicy(Permissions.Policies.OpportunitiesManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.OpportunitiesManage));
+    options.AddPolicy(Permissions.Policies.ActivitiesView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ActivitiesView));
     options.AddPolicy(Permissions.Policies.ActivitiesManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ActivitiesManage));
+    options.AddPolicy(Permissions.Policies.AdministrationView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.AdministrationView));
     options.AddPolicy(Permissions.Policies.AdministrationManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.AdministrationManage));
+    options.AddPolicy(Permissions.Policies.TenantsView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.TenantsView));
     options.AddPolicy(Permissions.Policies.TenantsManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.TenantsManage));
 
@@ -82,6 +119,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseHangfireDashboard("/hangfire");
 }
 
 app.UseCors();
@@ -96,11 +134,17 @@ app.MapGet("/health", () => Results.Ok(new
     Status = "ok",
     TimestampUtc = DateTime.UtcNow
 })).AllowAnonymous();
+app.MapHealthChecks("/healthz").AllowAnonymous();
 
 using (var scope = app.Services.CreateScope())
 {
     var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
     await initializer.InitializeAsync();
 }
+
+RecurringJob.AddOrUpdate<BackgroundJobs>(
+    "crm-heartbeat",
+    job => job.HeartbeatAsync(),
+    Cron.Hourly);
 
 await app.RunAsync();

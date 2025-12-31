@@ -31,7 +31,7 @@
       </div>
       <div class="hero-actions">
         <p-button icon="pi pi-download" label="Export" styleClass="crm-button crm-button--ghost" (onClick)="onExport()"></p-button>
-        <p-button icon="pi pi-plus" label="New opportunity" styleClass="crm-button crm-button--primary" (onClick)="onCreate()"></p-button>
+        <p-button icon="pi pi-plus" label="New opportunity" styleClass="crm-button crm-button--primary" [disabled]="!canManage()" (onClick)="onCreate()"></p-button>
       </div>
     </div>
     <div class="hero-panels">
@@ -107,7 +107,7 @@
     </div>
 
     <div class="filter-group crm-filter">
-      <p-select
+      <p-select appendTo="body"
         [options]="stageOptions"
         optionLabel="label"
         optionValue="value"
@@ -120,20 +120,20 @@
     <div class="filter-group crm-filter pills">
       <span class="pill-label">Quick stages</span>
       <div class="pill-list">
-        <button type="button" class="pill" (click)="onStageChange('all')">All</button>
-        <button type="button" class="pill" (click)="onStageChange('Prospecting')">Prospecting</button>
-        <button type="button" class="pill" (click)="onStageChange('Proposal')">Proposal</button>
-        <button type="button" class="pill" (click)="onStageChange('Closed Won')">Closed Won</button>
-        <button type="button" class="pill" (click)="onStageChange('Closed Lost')">Closed Lost</button>
+        <button pButton type="button" class="pill" (click)="onStageChange('all')">All</button>
+        <button pButton type="button" class="pill" (click)="onStageChange('Prospecting')">Prospecting</button>
+        <button pButton type="button" class="pill" (click)="onStageChange('Proposal')">Proposal</button>
+        <button pButton type="button" class="pill" (click)="onStageChange('Closed Won')">Closed Won</button>
+        <button pButton type="button" class="pill" (click)="onStageChange('Closed Lost')">Closed Lost</button>
       </div>
     </div>
 
     <div class="filter-group view-toggle">
-      <button type="button" class="view-toggle__btn" [class.active]="viewMode() === 'board'" (click)="setViewMode('board')">
+      <button pButton type="button" class="view-toggle__btn" [class.active]="viewMode() === 'board'" (click)="setViewMode('board')">
         <i class="pi pi-columns"></i>
         Pipeline
       </button>
-      <button type="button" class="view-toggle__btn" [class.active]="viewMode() === 'table'" (click)="setViewMode('table')">
+      <button pButton type="button" class="view-toggle__btn" [class.active]="viewMode() === 'table'" (click)="setViewMode('table')">
         <i class="pi pi-table"></i>
         Table
       </button>
@@ -145,7 +145,7 @@
   <section class="views-bar crm-panel">
     <div class="views-select">
       <i class="pi pi-bookmark"></i>
-      <p-select
+      <p-select appendTo="body"
         [options]="viewOptions()"
         optionLabel="label"
         optionValue="value"
@@ -168,7 +168,7 @@
       <span>{{ recentOpportunities().length }} recent</span>
     </div>
     <div class="recently-viewed__list">
-      <button class="recent-item" *ngFor="let item of recentOpportunities()" (click)="openRecent(item)">
+      <button pButton type="button" class="recent-item" *ngFor="let item of recentOpportunities()" (click)="openRecent(item)">
         <div class="recent-item__title">{{ item.title }}</div>
         <div class="recent-item__meta">
           {{ item.subtitle || 'Opportunity' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
@@ -186,7 +186,7 @@
         </div>
         <div class="list-actions">
           <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-chart-bar" label="Forecast"></button>
-          <button pButton type="button" class="crm-button crm-button--primary crm-button--sm" icon="pi pi-plus" label="Add opportunity" (click)="onCreate()"></button>
+          <button pButton type="button" class="crm-button crm-button--primary crm-button--sm" icon="pi pi-plus" label="Add opportunity" [disabled]="!canManage()" (click)="onCreate()"></button>
         </div>
       </header>
 
@@ -242,7 +242,7 @@
                 <td>{{ row.account }}</td>
                 <td>
                   <ng-container *ngIf="!row.stage.startsWith('Closed'); else closedStage">
-                    <p-select
+                    <p-select appendTo="body"
                       [options]="stageOptionsInline"
                       optionLabel="label"
                       optionValue="value"
@@ -265,7 +265,7 @@
                 <td>{{ row.closeDate | date: 'MMM d, y' }}</td>
                 <td><p-tag [value]="row.status" [severity]="statusSeverity(row.status)"></p-tag></td>
                 <td>
-                  <p-select
+                  <p-select appendTo="body"
                     [options]="ownerOptionsForAssign()"
                     optionLabel="label"
                     optionValue="value"
@@ -276,8 +276,8 @@
                   ></p-select>
                 </td>
                 <td class="actions">
-                  <button pButton icon="pi pi-pencil" (click)="$event.stopPropagation(); onEdit(row)"></button>
-                  <button pButton icon="pi pi-trash" (click)="$event.stopPropagation(); onDelete(row)"></button>
+                  <button pButton icon="pi pi-pencil" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(row)"></button>
+                  <button pButton icon="pi pi-trash" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(row)"></button>
                 </td>
               </tr>
             </ng-template>
@@ -349,7 +349,7 @@
                 <i class="pi pi-exclamation-triangle"></i>
                 <span>Stalled {{ stalledAge(row) }}d</span>
               </div>
-              <button type="button" class="pipeline-card__history-toggle" (click)="toggleCardHistory(row.id)">
+              <button pButton type="button" class="pipeline-card__history-toggle" (click)="toggleCardHistory(row.id)">
                 <i class="pi" [ngClass]="isCardHistoryOpen(row.id) ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
                 Stage history
               </button>
@@ -375,7 +375,7 @@
                 <small>Win/Loss notes</small>
                 <p>{{ row.winLossReason }}</p>
               </div>
-              <p-select
+              <p-select appendTo="body"
                 [options]="stageOptions"
                 optionLabel="label"
                 optionValue="value"
@@ -411,7 +411,7 @@
       </div>
       <div class="field">
         <label>Account</label>
-        <p-select
+        <p-select appendTo="body"
           [options]="customers()"
           optionLabel="name"
           optionValue="id"
@@ -422,7 +422,7 @@
       </div>
       <div class="field">
         <label>Stage</label>
-        <p-select
+        <p-select appendTo="body"
           [options]="stageOptions"
           optionLabel="label"
           optionValue="value"
@@ -449,8 +449,14 @@
         <textarea pTextarea name="summary" [(ngModel)]="form.summary" rows="3" placeholder="Notes"></textarea>
       </div>
       <div class="field checkbox">
-        <label><input type="checkbox" [(ngModel)]="form.isClosed" name="isClosed" /> Closed</label>
-        <label><input type="checkbox" [(ngModel)]="form.isWon" name="isWon" /> Won</label>
+        <label>
+          <p-checkbox [binary]="true" [(ngModel)]="form.isClosed" name="isClosed"></p-checkbox>
+          Closed
+        </label>
+        <label>
+          <p-checkbox [binary]="true" [(ngModel)]="form.isWon" name="isWon"></p-checkbox>
+          Won
+        </label>
       </div>
       <div class="field" *ngIf="form.isClosed">
         <label>Win/Loss reason</label>
@@ -494,8 +500,9 @@
 
       <div class="dialog-actions">
         <button type="button" pButton label="Cancel" class="crm-button crm-button--ghost" (click)="dialogVisible = false"></button>
-        <button type="submit" pButton label="Save" class="crm-button crm-button--primary" [disabled]="!form.name"></button>
+        <button type="submit" pButton label="Save" class="crm-button crm-button--primary" [disabled]="!form.name || !canManage()"></button>
       </div>
     </form>
   </p-dialog>
+
 </div>

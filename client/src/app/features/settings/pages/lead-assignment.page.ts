@@ -3,14 +3,18 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
 
 import { LeadAssignmentRule, LeadAssignmentRuleType, UpsertLeadAssignmentRuleRequest } from '../models/lead-assignment.model';
 import { LeadAssignmentService } from '../services/lead-assignment.service';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { UserListItem } from '../models/user-admin.model';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
 
 interface SelectOption<T> {
   label: string;
@@ -20,7 +24,17 @@ interface SelectOption<T> {
 @Component({
   selector: 'app-lead-assignment-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ButtonModule, InputTextModule, SelectModule, BreadcrumbsComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    ButtonModule,
+    CheckboxModule,
+    InputTextModule,
+    SelectModule,
+    TableModule,
+    BreadcrumbsComponent
+  ],
   templateUrl: './lead-assignment.page.html',
   styleUrl: './lead-assignment.page.scss'
 })
@@ -28,6 +42,9 @@ export class LeadAssignmentPage implements OnInit {
   protected readonly rules = signal<LeadAssignmentRule[]>([]);
   protected readonly loading = signal(true);
   protected readonly editingId = signal<string | null>(null);
+  protected readonly canManageLeads = signal(
+    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.leadsManage)
+  );
 
   protected readonly typeOptions: SelectOption<LeadAssignmentRuleType>[] = [
     { label: 'Manual', value: 'Manual' },

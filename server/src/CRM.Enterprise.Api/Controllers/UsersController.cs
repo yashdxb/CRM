@@ -17,7 +17,7 @@ namespace CRM.Enterprise.Api.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize(Policy = Permissions.Policies.AdministrationManage)]
+[Authorize(Policy = Permissions.Policies.AdministrationView)]
 public class UsersController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
@@ -96,6 +96,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<ActionResult<UserDetailResponse>> CreateUser([FromBody] UpsertUserRequest request, CancellationToken cancellationToken = default)
     {
         var roleIds = request.RoleIds?.ToList() ?? new List<Guid>();
@@ -136,6 +137,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpsertUserRequest request, CancellationToken cancellationToken = default)
     {
         var roleIds = request.RoleIds?.ToList() ?? new List<Guid>();
@@ -163,6 +165,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/reset-password")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<IActionResult> ResetPassword(Guid id, [FromBody] ResetPasswordRequest request, CancellationToken cancellationToken = default)
     {
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
@@ -180,6 +183,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/activate")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken = default)
     {
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
@@ -201,6 +205,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpPost("{id:guid}/deactivate")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken = default)
     {
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
@@ -220,6 +225,7 @@ public class UsersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken = default)
     {
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);

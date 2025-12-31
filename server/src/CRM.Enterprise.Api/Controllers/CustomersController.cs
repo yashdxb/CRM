@@ -2,23 +2,40 @@ using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Customers;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Api.Contracts.Shared;
+using CRM.Enterprise.Api.Utilities;
 using CRM.Enterprise.Infrastructure.Persistence;
+using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Api.Contracts.Imports;
+using CRM.Enterprise.Api.Jobs;
+using Hangfire;
+using Microsoft.AspNetCore.Hosting;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Api.Controllers;
 
-[Authorize(Policy = Permissions.Policies.CustomersManage)]
+[Authorize(Policy = Permissions.Policies.CustomersView)]
 [ApiController]
 [Route("api/customers")]
 public class CustomersController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
+    private readonly ITenantProvider _tenantProvider;
+    private readonly IWebHostEnvironment _environment;
+    private readonly IBackgroundJobClient _backgroundJobs;
 
-    public CustomersController(CrmDbContext dbContext)
+    public CustomersController(
+        CrmDbContext dbContext,
+        ITenantProvider tenantProvider,
+        IWebHostEnvironment environment,
+        IBackgroundJobClient backgroundJobs)
     {
         _dbContext = dbContext;
+        _tenantProvider = tenantProvider;
+        _environment = environment;
+        _backgroundJobs = backgroundJobs;
     }
 
     [HttpGet]
@@ -116,6 +133,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
     public async Task<ActionResult<CustomerListItem>> Create([FromBody] UpsertCustomerRequest request, CancellationToken cancellationToken)
     {
         var ownerId = await ResolveOwnerIdAsync(request.OwnerId, cancellationToken);
@@ -155,7 +173,104 @@ public class CustomersController : ControllerBase
         return CreatedAtAction(nameof(GetCustomer), new { id = account.Id }, dto);
     }
 
+    [HttpPost("import")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
+    public async Task<ActionResult<CsvImportResult>> Import([FromForm] IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest("CSV file is required.");
+        }
+
+        var rows = await CsvImportHelper.ReadAsync(file, cancellationToken);
+        if (rows.Count == 0)
+        {
+            return Ok(new CsvImportResult(0, 0, 0, Array.Empty<CsvImportError>()));
+        }
+
+        var errors = new List<CsvImportError>();
+        var imported = 0;
+
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var row = rows[i];
+            var name = CsvImportHelper.ReadValue(row, "name", "account", "accountname", "company");
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                errors.Add(new CsvImportError(i + 2, "Name is required."));
+                continue;
+            }
+
+            var ownerEmail = CsvImportHelper.ReadValue(row, "owner", "owneremail", "owner_email");
+            var ownerId = await ResolveOwnerIdFromEmailAsync(ownerEmail, cancellationToken);
+
+            var account = new Account
+            {
+                Name = name,
+                AccountNumber = CsvImportHelper.ReadValue(row, "accountnumber", "account_number"),
+                Industry = CsvImportHelper.ReadValue(row, "industry"),
+                Website = CsvImportHelper.ReadValue(row, "website"),
+                Phone = CsvImportHelper.ReadValue(row, "phone"),
+                LifecycleStage = CsvImportHelper.ReadValue(row, "lifecycle", "lifecyclestage", "status"),
+                OwnerId = ownerId,
+                Territory = CsvImportHelper.ReadValue(row, "territory"),
+                Description = CsvImportHelper.ReadValue(row, "description", "notes"),
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            _dbContext.Accounts.Add(account);
+            imported++;
+        }
+
+        if (imported > 0)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return Ok(new CsvImportResult(rows.Count, imported, rows.Count - imported, errors));
+    }
+
+    [HttpPost("import/queue")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
+    public async Task<ActionResult<ImportJobResponse>> QueueImport([FromForm] IFormFile file, CancellationToken cancellationToken)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest("CSV file is required.");
+        }
+
+        var tenantKey = _tenantProvider.TenantKey;
+        var storageRoot = Path.Combine(_environment.ContentRootPath, "uploads", "imports", tenantKey.ToLowerInvariant());
+        Directory.CreateDirectory(storageRoot);
+
+        var safeName = Path.GetFileName(file.FileName);
+        var importJob = new ImportJob
+        {
+            EntityType = "Customers",
+            FileName = safeName,
+            Status = "Queued",
+            RequestedById = GetUserId()
+        };
+        _dbContext.ImportJobs.Add(importJob);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var storedName = $"{importJob.Id:N}_{safeName}";
+        var storagePath = Path.Combine(storageRoot, storedName);
+        await using (var stream = System.IO.File.Create(storagePath))
+        {
+            await file.CopyToAsync(stream, cancellationToken);
+        }
+
+        importJob.FilePath = storagePath;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        _backgroundJobs.Enqueue<CsvImportJobs>(job => job.ProcessCustomersAsync(importJob.Id));
+
+        return Accepted(new ImportJobResponse(importJob.Id, importJob.EntityType, importJob.Status));
+    }
+
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpsertCustomerRequest request, CancellationToken cancellationToken)
     {
         var account = await _dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
@@ -177,6 +292,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var account = await _dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
@@ -225,6 +341,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPost("bulk-assign-owner")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
     public async Task<IActionResult> BulkAssignOwner([FromBody] BulkAssignOwnerRequest request, CancellationToken cancellationToken)
     {
         if (request.Ids is null || request.Ids.Count == 0)
@@ -259,6 +376,7 @@ public class CustomersController : ControllerBase
     }
 
     [HttpPost("bulk-update-lifecycle")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
     public async Task<IActionResult> BulkUpdateLifecycle([FromBody] BulkUpdateStatusRequest request, CancellationToken cancellationToken)
     {
         if (request.Ids is null || request.Ids.Count == 0)
@@ -303,5 +421,29 @@ public class CustomersController : ControllerBase
             .FirstOrDefaultAsync(cancellationToken);
 
         return fallbackUserId == Guid.Empty ? Guid.NewGuid() : fallbackUserId;
+    }
+
+    private async Task<Guid> ResolveOwnerIdFromEmailAsync(string? ownerEmail, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(ownerEmail))
+        {
+            var ownerId = await _dbContext.Users
+                .Where(u => u.Email == ownerEmail && u.IsActive && !u.IsDeleted)
+                .Select(u => u.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (ownerId != Guid.Empty)
+            {
+                return ownerId;
+            }
+        }
+
+        return await ResolveOwnerIdAsync(null, cancellationToken);
+    }
+
+    private Guid GetUserId()
+    {
+        var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
     }
 }

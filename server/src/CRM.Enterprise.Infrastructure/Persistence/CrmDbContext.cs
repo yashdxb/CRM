@@ -26,10 +26,13 @@ public class CrmDbContext : DbContext
     public DbSet<OpportunityStage> OpportunityStages => Set<OpportunityStage>();
     public DbSet<OpportunityStageHistory> OpportunityStageHistories => Set<OpportunityStageHistory>();
     public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<PermissionCatalogEntry> PermissionCatalogEntries => Set<PermissionCatalogEntry>();
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
     public DbSet<Tenant> Tenants => Set<Tenant>();
@@ -61,6 +64,8 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<OpportunityStage>().ToTable("OpportunityStages", CrmSchema);
         modelBuilder.Entity<OpportunityStageHistory>().ToTable("OpportunityStageHistories", CrmSchema);
         modelBuilder.Entity<Activity>().ToTable("Activities", CrmSchema);
+        modelBuilder.Entity<Attachment>().ToTable("Attachments", CrmSchema);
+        modelBuilder.Entity<ImportJob>().ToTable("ImportJobs", CrmSchema);
         modelBuilder.Entity<CustomFieldDefinition>().ToTable("CustomFieldDefinitions", CrmSchema);
         modelBuilder.Entity<CustomFieldValue>().ToTable("CustomFieldValues", CrmSchema);
 
@@ -68,6 +73,7 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Role>().ToTable("Roles", IdentitySchema);
         modelBuilder.Entity<UserRole>().ToTable("UserRoles", IdentitySchema);
         modelBuilder.Entity<RolePermission>().ToTable("RolePermissions", IdentitySchema);
+        modelBuilder.Entity<PermissionCatalogEntry>().ToTable("PermissionCatalog", IdentitySchema);
         modelBuilder.Entity<Tenant>().ToTable("Tenants", IdentitySchema);
         modelBuilder.Entity<Tenant>()
             .HasIndex(t => t.Key)
@@ -78,6 +84,22 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Tenant>()
             .Property(t => t.ApprovalApproverRole)
             .HasMaxLength(200);
+
+        modelBuilder.Entity<PermissionCatalogEntry>()
+            .HasIndex(entry => entry.Key)
+            .IsUnique();
+        modelBuilder.Entity<PermissionCatalogEntry>()
+            .Property(entry => entry.Key)
+            .HasMaxLength(200)
+            .IsRequired();
+        modelBuilder.Entity<PermissionCatalogEntry>()
+            .Property(entry => entry.Label)
+            .HasMaxLength(200)
+            .IsRequired();
+        modelBuilder.Entity<PermissionCatalogEntry>()
+            .Property(entry => entry.Description)
+            .HasMaxLength(500)
+            .IsRequired();
 
         ApplyTenantQueryFilters(modelBuilder);
     }

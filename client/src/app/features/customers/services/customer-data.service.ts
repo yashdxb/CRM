@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Customer, CustomerSearchRequest, CustomerSearchResponse, CustomerStatus } from '../models/customer.model';
 import { environment } from '../../../../environments/environment';
+import { CsvImportJob } from '../../../shared/models/csv-import.model';
 
 export interface SaveCustomerRequest {
   name: string;
@@ -78,5 +79,11 @@ export class CustomerDataService {
     return this.http.patch<void>(`${this.baseUrl}/api/customers/${id}/lifecycle`, {
       status
     });
+  }
+
+  importCsv(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<CsvImportJob>(`${this.baseUrl}/api/customers/import/queue`, formData);
   }
 }

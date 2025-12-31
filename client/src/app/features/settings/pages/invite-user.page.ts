@@ -11,6 +11,8 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { RoleSummary, UpsertUserRequest } from '../models/user-admin.model';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
 
 @Component({
   selector: 'app-invite-user-page',
@@ -39,6 +41,9 @@ export class InviteUserPage {
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
   protected readonly status = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
+  protected readonly canManageAdmin = signal(
+    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
+  );
 
   protected readonly timezoneOptions = [
     { label: 'UTC', value: 'UTC' },
@@ -68,7 +73,7 @@ export class InviteUserPage {
     temporaryPassword: ['']
   });
 
-  protected readonly canSubmit = computed(() => this.form.valid && !this.saving());
+  protected readonly canSubmit = computed(() => this.form.valid && !this.saving() && this.canManageAdmin());
 
   constructor() {
     this.loadRoles();

@@ -1,4 +1,4 @@
-import { NgClass, NgFor, NgIf } from '@angular/common';
+import { NgFor, NgIf } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -10,13 +10,15 @@ import { TooltipModule } from 'primeng/tooltip';
 import { PermissionDefinition, RoleSummary } from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
+import { AppToastService } from '../../../core/app-toast.service';
 
 @Component({
   selector: 'app-roles-page',
   standalone: true,
   imports: [
     ButtonModule,
-    NgClass,
     NgFor,
     NgIf,
     RouterLink,
@@ -31,15 +33,19 @@ import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 })
 export class RolesPage {
   private readonly dataService = inject(UserAdminDataService);
+  private readonly toastService = inject(AppToastService);
 
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly permissionCatalog = signal<PermissionDefinition[]>([]);
   protected readonly loadingRoles = signal(true);
   protected readonly loadingPermissions = signal(true);
   protected readonly roleSaving = signal(false);
-  protected readonly toast = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
+  protected readonly canManageAdmin = signal(false);
 
   constructor() {
+    this.canManageAdmin.set(
+      tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
+    );
     this.loadPermissions();
     this.loadRoles();
   }
@@ -96,15 +102,20 @@ export class RolesPage {
   }
 
   protected permissionLabel(key: string) {
-    return this.permissionCatalog().find((definition) => definition.key === key)?.label ?? key;
+    const definition = this.permissionCatalog().find((item) => item.key === key);
+    const label = definition?.label?.trim();
+    if (label) {
+      return label;
+    }
+    const trimmed = key.replace(/^Permissions\./i, '');
+    return trimmed.replace(/\./g, ' ') || key;
   }
 
   protected clearToast() {
-    this.toast.set(null);
+    this.toastService.clear();
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
-    this.toast.set({ tone, message });
-    setTimeout(() => this.clearToast(), 4000);
+    this.toastService.show(tone, message, 3000);
   }
 }

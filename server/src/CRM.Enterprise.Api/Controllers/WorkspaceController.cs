@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Api.Controllers;
 
-[Authorize(Policy = Permissions.Policies.AdministrationManage)]
+[Authorize(Policy = Permissions.Policies.AdministrationView)]
 [ApiController]
 [Route("api/workspace")]
 public class WorkspaceController : ControllerBase
@@ -46,6 +46,7 @@ public class WorkspaceController : ControllerBase
     }
 
     [HttpPut]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<ActionResult<WorkspaceSettingsResponse>> UpdateSettings(
         [FromBody] UpdateWorkspaceSettingsRequest request,
         CancellationToken cancellationToken)

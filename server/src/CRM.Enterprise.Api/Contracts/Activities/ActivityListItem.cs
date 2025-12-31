@@ -15,4 +15,5 @@ public record ActivityListItem(
     DateTime? CompletedDateUtc,
     string Status,
     Guid? OwnerId,
-    string? OwnerName);
+    string? OwnerName,
+    DateTime CreatedAtUtc);

@@ -17,6 +17,8 @@ import { Customer } from '../../customers/models/customer.model';
 import { Contact } from '../../contacts/models/contact.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
 import { Opportunity } from '../../opportunities/models/opportunity.model';
+import { AppToastService } from '../../../core/app-toast.service';
+import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 
 interface Option<T = string> {
   label: string;
@@ -40,16 +42,18 @@ interface ActivityTemplate {
     InputTextModule,
     SelectModule,
     TextareaModule,
-    DatePickerModule
+    DatePickerModule,
+    BreadcrumbsComponent
   ],
   template: `
     <div class="activity-form-page">
+      <app-breadcrumbs></app-breadcrumbs>
       <header class="page-header">
         <div class="header-content">
-          <a routerLink="/app/activities" class="back-link">
+          <button pButton type="button" class="back-link p-button-text" routerLink="/app/activities">
             <i class="pi pi-arrow-left"></i>
             <span>Back to activities</span>
-          </a>
+          </button>
           <div class="header-title">
             <h1>{{ isEditMode() ? 'Edit Activity' : 'Create New Activity' }}</h1>
             <p>{{ isEditMode() ? 'Update the schedule and details' : 'Track tasks, calls, and meetings' }}</p>
@@ -218,6 +222,9 @@ interface ActivityTemplate {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      padding: 0;
+      border: none;
+      background: transparent;
       color: #0ea5e9;
       text-decoration: none;
       font-size: 0.875rem;
@@ -392,6 +399,7 @@ export class ActivityFormPage implements OnInit {
 
   protected form: UpsertActivityRequest = this.createEmptyForm();
   protected saving = signal(false);
+  private readonly toastService = inject(AppToastService);
   protected customerOptions: Option<string>[] = [];
   protected contactOptions: Option<string>[] = [];
   protected opportunityOptions: Option<string>[] = [];
@@ -461,10 +469,18 @@ export class ActivityFormPage implements OnInit {
     request$.subscribe({
       next: () => {
         this.saving.set(false);
-        this.router.navigate(['/app/activities']);
+        const message = this.editingId ? 'Activity updated.' : 'Activity created.';
+        this.router.navigate(['/app/activities'], { state: { toast: { tone: 'success', message } } });
       },
-      error: () => this.saving.set(false)
+      error: () => {
+        this.saving.set(false);
+        this.raiseToast('error', this.editingId ? 'Unable to update activity.' : 'Unable to create activity.');
+      }
     });
+  }
+
+  private raiseToast(tone: 'success' | 'error', message: string) {
+    this.toastService.show(tone, message, 3000);
   }
 
   private loadLookups() {

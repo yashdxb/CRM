@@ -21,17 +21,21 @@
       </div>
       <div class="header-right">
         <div class="view-toggle">
-          <button class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View">
+          <button pButton type="button" class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View">
             <i class="pi pi-list"></i>
           </button>
-          <button class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Kanban View">
+          <button pButton type="button" class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Kanban View">
             <i class="pi pi-objects-column"></i>
           </button>
         </div>
-        <button class="btn-icon" (click)="load()" title="Refresh">
+        <button pButton type="button" class="btn-icon" (click)="load()" title="Refresh">
           <i class="pi pi-refresh"></i>
         </button>
-        <button class="btn-primary" (click)="onCreate()">
+        <button pButton type="button" class="btn-ghost" [disabled]="!canManage()" (click)="openImport()">
+          <i class="pi pi-upload"></i>
+          <span>Import</span>
+        </button>
+        <button pButton type="button" class="btn-primary" [disabled]="!canManage()" (click)="onCreate()">
           <i class="pi pi-plus"></i>
           <span>Add Lead</span>
         </button>
@@ -106,22 +110,23 @@
       <div class="search-box">
         <i class="pi pi-search"></i>
         <input 
+          pInputText
           type="text" 
           placeholder="Search leads..." 
           [(ngModel)]="searchTerm"
           (ngModelChange)="onSearch($event)"
         />
         <kbd *ngIf="!searchTerm">⌘K</kbd>
-        <button class="clear-btn" *ngIf="searchTerm" (click)="searchTerm = ''; onSearch('')">
+        <button pButton type="button" class="clear-btn" *ngIf="searchTerm" (click)="searchTerm = ''; onSearch('')">
           <i class="pi pi-times"></i>
         </button>
       </div>
       
       <div class="quick-filters">
-        <button class="filter-chip" [class.active]="statusFilter === 'all'" (click)="onStatusChange('all')">
+        <button pButton type="button" class="filter-chip" [class.active]="statusFilter === 'all'" (click)="onStatusChange('all')">
           All
         </button>
-        <button class="filter-chip" *ngFor="let opt of filteredStatusOptions" 
+        <button pButton type="button" class="filter-chip" *ngFor="let opt of filteredStatusOptions" 
                 [class.active]="statusFilter === opt.value"
                 (click)="onStatusChange(opt.value)">
           <span class="chip-dot" [attr.data-status]="opt.value"></span>
@@ -131,7 +136,7 @@
 
       <div class="action-right">
         <div class="views-controls">
-          <p-select
+          <p-select appendTo="body"
             [options]="viewOptions()"
             optionLabel="label"
             optionValue="value"
@@ -141,21 +146,22 @@
             styleClass="views-select"
           ></p-select>
           <input
+            pInputText
             type="text"
             class="views-input"
             placeholder="Name this view"
             [(ngModel)]="viewName"
           />
-          <button class="btn-ghost" (click)="onSaveView()">
+          <button pButton type="button" class="btn-ghost" (click)="onSaveView()">
             <i class="pi pi-bookmark"></i>
             Save
           </button>
-          <button class="btn-ghost" [disabled]="!selectedViewId()" (click)="onDeleteView()">
+          <button pButton type="button" class="btn-ghost" [disabled]="!selectedViewId()" (click)="onDeleteView()">
             <i class="pi pi-trash"></i>
             Delete
           </button>
         </div>
-        <button class="btn-ghost" *ngIf="statusFilter !== 'all'" (click)="onStatusChange('all')">
+        <button pButton type="button" class="btn-ghost" *ngIf="statusFilter !== 'all'" (click)="onStatusChange('all')">
           <i class="pi pi-filter-slash"></i>
           Clear Filter
         </button>
@@ -168,7 +174,7 @@
         <span>{{ recentLeads().length }} recent</span>
       </div>
       <div class="recently-viewed__list">
-        <button class="recent-item" *ngFor="let item of recentLeads()" (click)="openRecent(item)">
+        <button pButton type="button" class="recent-item" *ngFor="let item of recentLeads()" (click)="openRecent(item)">
           <div class="recent-item__title">{{ item.title }}</div>
           <div class="recent-item__meta">
             {{ item.subtitle || 'Lead' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
@@ -185,7 +191,7 @@
           <span class="column-count">{{ getLeadsByStatus(status).length }}</span>
         </div>
         <div class="column-body">
-          <div class="lead-card" *ngFor="let lead of getLeadsByStatus(status)" (click)="onEdit(lead)">
+          <div class="lead-card" *ngFor="let lead of getLeadsByStatus(status)" (click)="canManage() ? onEdit(lead) : null">
             <div class="lead-card-header">
               <div class="lead-avatar" [attr.data-status]="lead.status">
                 {{ lead.name.charAt(0) }}
@@ -214,13 +220,13 @@
                 {{ lead.owner }}
               </span>
               <div class="lead-actions">
-                <button class="mini-btn" (click)="$event.stopPropagation(); onEdit(lead)">
+                <button pButton type="button" class="mini-btn" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button class="mini-btn success" *ngIf="lead.status !== 'Converted'" (click)="$event.stopPropagation(); onConvert(lead)">
+                <button pButton type="button" class="mini-btn success" *ngIf="lead.status !== 'Converted'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)">
                   <i class="pi pi-bolt"></i>
                 </button>
-                <button class="mini-btn danger" (click)="$event.stopPropagation(); onDelete(lead)">
+                <button pButton type="button" class="mini-btn danger" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)">
                   <i class="pi pi-trash"></i>
                 </button>
               </div>
@@ -239,16 +245,15 @@
       <ng-container *ngIf="!loading(); else loadingState">
         <ng-container *ngIf="leads().length; else emptyState">
           <div class="table-container">
-            <table class="leads-table">
-              <thead>
+            <p-table class="leads-table" [value]="leads()">
+              <ng-template pTemplate="header">
                 <tr>
                   <th class="th-checkbox">
-                    <input
-                      type="checkbox"
-                      class="checkbox"
-                      [checked]="selectedIds().length && selectedIds().length === leads().length"
-                      (change)="toggleSelectAll($event.target.checked)"
-                    />
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="selectedIds().length && selectedIds().length === leads().length"
+                      (onChange)="toggleSelectAll($event.checked)"
+                    ></p-checkbox>
                   </th>
                   <th class="th-lead">Lead</th>
                   <th class="th-status">Status</th>
@@ -257,16 +262,15 @@
                   <th class="th-owner">Owner</th>
                   <th class="th-actions"></th>
                 </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let lead of leads(); let i = index" class="table-row" [class.highlight]="i === 0">
+              </ng-template>
+              <ng-template pTemplate="body" let-lead let-i="rowIndex">
+                <tr class="table-row" [class.highlight]="i === 0">
                   <td class="td-checkbox">
-                    <input
-                      type="checkbox"
-                      class="checkbox"
-                      [checked]="isSelected(lead.id)"
-                      (change)="toggleSelection(lead.id, $event.target.checked)"
-                    />
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="isSelected(lead.id)"
+                      (onChange)="toggleSelection(lead.id, $event.checked)"
+                    ></p-checkbox>
                   </td>
                   <td class="td-lead">
                     <div class="lead-cell">
@@ -280,7 +284,7 @@
                     </div>
                   </td>
                   <td class="td-status">
-                    <p-select
+                    <p-select appendTo="body"
                       [options]="filteredStatusOptions"
                       optionLabel="label"
                       optionValue="value"
@@ -311,7 +315,7 @@
                     </div>
                   </td>
                   <td class="td-owner">
-                    <p-select
+                    <p-select appendTo="body"
                       [options]="ownerOptionsForAssign()"
                       optionLabel="label"
                       optionValue="value"
@@ -323,20 +327,14 @@
                   </td>
                   <td class="td-actions">
                     <div class="row-actions">
-                      <button class="action-btn" (click)="onEdit(lead)" title="Edit">
-                        <i class="pi pi-pencil"></i>
-                      </button>
-                      <button class="action-btn success" *ngIf="lead.status !== 'Converted'" (click)="onConvert(lead)" title="Convert">
-                        <i class="pi pi-bolt"></i>
-                      </button>
-                      <button class="action-btn danger" (click)="onDelete(lead)" title="Delete">
-                        <i class="pi pi-trash"></i>
-                      </button>
+                      <button pButton type="button" class="action-btn" icon="pi pi-pencil" [disabled]="!canManage()" (click)="onEdit(lead)" title="Edit"></button>
+                      <button pButton type="button" class="action-btn success" icon="pi pi-bolt" *ngIf="lead.status !== 'Converted'" [disabled]="!canManage()" (click)="onConvert(lead)" title="Convert"></button>
+                      <button pButton type="button" class="action-btn danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="onDelete(lead)" title="Delete"></button>
                     </div>
                   </td>
                 </tr>
-              </tbody>
-            </table>
+              </ng-template>
+            </p-table>
           </div>
 
           <div class="table-footer">
@@ -377,7 +375,7 @@
           </div>
           <h3>No leads yet</h3>
           <p>Start building your pipeline by adding your first lead.</p>
-          <button class="btn-primary" (click)="onCreate()">
+          <button pButton type="button" class="btn-primary" [disabled]="!canManage()" (click)="onCreate()">
             <i class="pi pi-plus"></i>
             Add Lead
           </button>
@@ -388,7 +386,7 @@
 </div>
 
 <app-bulk-actions-bar
-  [actions]="bulkActions"
+  [actions]="bulkActions()"
   [selectedItems]="selectedIds()"
   [totalCount]="leads().length"
   (actionClicked)="onBulkAction($event)"
@@ -404,7 +402,7 @@
 >
   <div class="bulk-assign">
     <label>Owner</label>
-    <p-select
+    <p-select appendTo="body"
       [options]="ownerOptionsForAssign()"
       optionLabel="label"
       optionValue="value"
@@ -415,7 +413,7 @@
   </div>
   <ng-template pTemplate="footer">
     <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="assignDialogVisible = false"></button>
-    <button pButton type="button" class="crm-button crm-button--primary" label="Assign" [disabled]="!assignOwnerId" (click)="confirmBulkAssign()"></button>
+    <button pButton type="button" class="crm-button crm-button--primary" label="Assign" [disabled]="!assignOwnerId || !canManage()" (click)="confirmBulkAssign()"></button>
   </ng-template>
 </p-dialog>
 
@@ -427,7 +425,7 @@
 >
   <div class="bulk-assign">
     <label>Status</label>
-    <p-select
+    <p-select appendTo="body"
       [options]="filteredStatusOptions"
       optionLabel="label"
       optionValue="value"
@@ -438,14 +436,59 @@
   </div>
   <ng-template pTemplate="footer">
     <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="statusDialogVisible = false"></button>
-    <button pButton type="button" class="crm-button crm-button--primary" label="Update" [disabled]="!bulkStatus" (click)="confirmBulkStatusUpdate()"></button>
+    <button pButton type="button" class="crm-button crm-button--primary" label="Update" [disabled]="!bulkStatus || !canManage()" (click)="confirmBulkStatusUpdate()"></button>
   </ng-template>
 </p-dialog>
 
-<div class="toast-notification" *ngIf="toast() as alert" [ngClass]="'toast--' + alert.tone">
-  <i [class]="alert.tone === 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
-  <span>{{ alert.message }}</span>
-  <button type="button" class="toast-close" (click)="clearToast()" aria-label="Dismiss">
-    <i class="pi pi-times"></i>
-  </button>
-</div>
+<p-dialog
+  header="Import leads"
+  [(visible)]="importDialogVisible"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '480px' }"
+  (onHide)="closeImport()"
+>
+  <div class="import-dialog">
+    <p class="import-note">
+      Upload a CSV with headers. Required column: <strong>Name</strong> or <strong>FirstName</strong>.
+    </p>
+    <label class="import-upload">
+      <p-fileUpload
+        mode="basic"
+        name="file"
+        [auto]="false"
+        [customUpload]="true"
+        [showUploadButton]="false"
+        [showCancelButton]="false"
+        [chooseLabel]="importFile?.name || 'Choose CSV file'"
+        accept=".csv"
+        (onSelect)="onImportFileSelected($event)"
+      ></p-fileUpload>
+    </label>
+    <div class="import-actions">
+      <button pButton type="button" class="btn-ghost" (click)="closeImport()">Cancel</button>
+      <button pButton type="button" class="btn-primary" [disabled]="!importFile || importing() || !canManage()" (click)="onImport()">
+        {{ importing() ? 'Importing...' : 'Import' }}
+      </button>
+    </div>
+    <div class="import-error" *ngIf="importError()">{{ importError() }}</div>
+    <div class="import-status" *ngIf="importJob() as job">
+      <span>Status: {{ importStatus()?.status || job.status }}</span>
+    </div>
+    <div class="import-result" *ngIf="importStatus() as result">
+      <div class="import-metrics">
+        <span>Rows: {{ result.total }}</span>
+        <span>Imported: {{ result.imported }}</span>
+        <span>Skipped: {{ result.skipped }}</span>
+      </div>
+      <div class="import-errors" *ngIf="result.errors.length">
+        <p>Errors (first 5):</p>
+        <ul>
+          <li *ngFor="let err of result.errors.slice(0, 5)">
+            Row {{ err.rowNumber }}: {{ err.message }}
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</p-dialog>

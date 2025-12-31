@@ -25,6 +25,7 @@ import { CustomerDataService } from '../features/customers/services/customer-dat
 import { OpportunityDataService } from '../features/opportunities/services/opportunity-data.service';
 import { ActivityDataService } from '../features/activities/services/activity-data.service';
 import { UpsertActivityRequest } from '../features/activities/models/activity.model';
+import { AppToastComponent } from '../shared/app-toast.component';
 
 interface Option<T = string> {
   label: string;
@@ -42,71 +43,73 @@ interface NavLink {
 }
 
 const NAV_LINKS: NavLink[] = [
-  { label: 'Dashboard', icon: 'pi-chart-bar', path: '/app/dashboard', permission: PERMISSION_KEYS.dashboard },
+  { label: 'Dashboard', icon: 'pi-chart-bar', path: '/app/dashboard', permission: PERMISSION_KEYS.dashboardView },
   { 
     label: 'Customers', 
     icon: 'pi-building', 
     path: '/app/customers', 
-    permission: PERMISSION_KEYS.customers,
+    permission: PERMISSION_KEYS.customersView,
     children: [
-      { label: 'All Customers', icon: 'pi-list', path: '/app/customers', permission: PERMISSION_KEYS.customers },
-      { label: 'Add Customer', icon: 'pi-plus', path: '/app/customers/new', permission: PERMISSION_KEYS.customers }
+      { label: 'All Customers', icon: 'pi-list', path: '/app/customers', permission: PERMISSION_KEYS.customersView },
+      { label: 'Add Customer', icon: 'pi-plus', path: '/app/customers/new', permission: PERMISSION_KEYS.customersManage }
     ]
   },
   { 
     label: 'Leads', 
     icon: 'pi-bullseye', 
     path: '/app/leads', 
-    permission: PERMISSION_KEYS.leads,
+    permission: PERMISSION_KEYS.leadsView,
     children: [
-      { label: 'All Leads', icon: 'pi-list', path: '/app/leads', permission: PERMISSION_KEYS.leads },
-      { label: 'Add Lead', icon: 'pi-plus', path: '/app/leads/new', permission: PERMISSION_KEYS.leads },
-      { label: 'Pipeline', icon: 'pi-sitemap', path: '/app/leads/pipeline', permission: PERMISSION_KEYS.leads },
-      { label: 'Import Leads', icon: 'pi-upload', path: '/app/leads/import', permission: PERMISSION_KEYS.leads }
+      { label: 'All Leads', icon: 'pi-list', path: '/app/leads', permission: PERMISSION_KEYS.leadsView },
+      { label: 'Add Lead', icon: 'pi-plus', path: '/app/leads/new', permission: PERMISSION_KEYS.leadsManage },
+      { label: 'Pipeline', icon: 'pi-sitemap', path: '/app/leads/pipeline', permission: PERMISSION_KEYS.leadsView },
+      { label: 'Import Leads', icon: 'pi-upload', path: '/app/leads/import', permission: PERMISSION_KEYS.leadsManage }
     ]
   },
   { 
     label: 'Opportunities', 
     icon: 'pi-chart-line', 
     path: '/app/opportunities', 
-    permission: PERMISSION_KEYS.opportunities,
+    permission: PERMISSION_KEYS.opportunitiesView,
     children: [
-      { label: 'All Opportunities', icon: 'pi-list', path: '/app/opportunities', permission: PERMISSION_KEYS.opportunities },
-      { label: 'Add Opportunity', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunities }
+      { label: 'All Opportunities', icon: 'pi-list', path: '/app/opportunities', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'Add Opportunity', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage }
     ]
   },
   { 
     label: 'Activities', 
     icon: 'pi-calendar', 
     path: '/app/activities', 
-    permission: PERMISSION_KEYS.activities,
+    permission: PERMISSION_KEYS.activitiesView,
     children: [
-      { label: 'All Activities', icon: 'pi-list', path: '/app/activities', permission: PERMISSION_KEYS.activities },
-      { label: 'Calendar', icon: 'pi-calendar-plus', path: '/app/activities/calendar', permission: PERMISSION_KEYS.activities },
-      { label: 'Tasks', icon: 'pi-check-square', path: '/app/activities/tasks', permission: PERMISSION_KEYS.activities }
+      { label: 'All Activities', icon: 'pi-list', path: '/app/activities', permission: PERMISSION_KEYS.activitiesView },
+      { label: 'Calendar', icon: 'pi-calendar-plus', path: '/app/activities/calendar', permission: PERMISSION_KEYS.activitiesView },
+      { label: 'Tasks', icon: 'pi-check-square', path: '/app/activities/tasks', permission: PERMISSION_KEYS.activitiesView }
     ]
   },
   { 
     label: 'Contacts', 
     icon: 'pi-id-card', 
     path: '/app/contacts', 
-    permission: PERMISSION_KEYS.contacts,
+    permission: PERMISSION_KEYS.contactsView,
     children: [
-      { label: 'All Contacts', icon: 'pi-list', path: '/app/contacts', permission: PERMISSION_KEYS.contacts },
-      { label: 'Add Contact', icon: 'pi-plus', path: '/app/contacts/new', permission: PERMISSION_KEYS.contacts }
+      { label: 'All Contacts', icon: 'pi-list', path: '/app/contacts', permission: PERMISSION_KEYS.contactsView },
+      { label: 'Add Contact', icon: 'pi-plus', path: '/app/contacts/new', permission: PERMISSION_KEYS.contactsManage }
     ]
   },
   {
     label: 'Settings',
     icon: 'pi-cog',
     path: '/app/settings',
-    permission: PERMISSION_KEYS.administration,
+    permission: PERMISSION_KEYS.administrationView,
     children: [
-      { label: 'Users', icon: 'pi-users', path: '/app/settings/users', permission: PERMISSION_KEYS.administration },
-      { label: 'Roles', icon: 'pi-shield', path: '/app/settings/roles', permission: PERMISSION_KEYS.administration },
-      { label: 'Invite', icon: 'pi-user-plus', path: '/app/settings/invite', permission: PERMISSION_KEYS.administration },
-      { label: 'Workspace', icon: 'pi-sliders-h', path: '/app/settings/workspace', permission: PERMISSION_KEYS.administration },
-      { label: 'Lead assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.administration }
+      { label: 'Users', icon: 'pi-users', path: '/app/settings/users', permission: PERMISSION_KEYS.administrationView },
+      { label: 'Notifications', icon: 'pi-bell', path: '/app/settings/notifications', permission: PERMISSION_KEYS.administrationView },
+      { label: 'Roles', icon: 'pi-shield', path: '/app/settings/roles', permission: PERMISSION_KEYS.administrationView },
+      { label: 'Invite', icon: 'pi-user-plus', path: '/app/settings/invite', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Workspace', icon: 'pi-sliders-h', path: '/app/settings/workspace', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Lead assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
+      { label: 'Tenants', icon: 'pi-building', path: '/app/settings/tenants', permission: PERMISSION_KEYS.tenantsView }
     ]
   }
 ];
@@ -134,7 +137,8 @@ const NAV_LINKS: NavLink[] = [
     NotificationCenterComponent,
     CommandPaletteComponent,
     KeyboardShortcutsModalComponent,
-    UserMenuComponent
+    UserMenuComponent,
+    AppToastComponent
   ],
   template: `
     <div class="shell" [ngClass]="{ 'shell--collapsed': collapsed }">
@@ -216,7 +220,9 @@ const NAV_LINKS: NavLink[] = [
           </div>
           <div class="sidebar__footer-actions">
             <button
-              class="sidebar__theme-toggle"
+              pButton
+              type="button"
+              class="sidebar__theme-toggle p-button-text"
               (click)="themeService.toggleDarkMode()"
               [pTooltip]="themeService.themeLabel()"
               tooltipPosition="right"
@@ -224,7 +230,9 @@ const NAV_LINKS: NavLink[] = [
               <i class="pi" [ngClass]="themeService.themeIcon()"></i>
             </button>
             <button
-              class="sidebar__shortcuts"
+              pButton
+              type="button"
+              class="sidebar__shortcuts p-button-text"
               (click)="shortcutsService.openHelpModal()"
               pTooltip="Keyboard shortcuts (?)"
               tooltipPosition="right"
@@ -243,7 +251,9 @@ const NAV_LINKS: NavLink[] = [
           </div>
           <div class="topbar__actions">
             <button
-              class="topbar__command-palette"
+              pButton
+              type="button"
+              class="topbar__command-palette p-button-text"
               (click)="commandPaletteService.open()"
               pTooltip="Search or jump to... (⌘K)"
             >
@@ -261,6 +271,8 @@ const NAV_LINKS: NavLink[] = [
         <main class="content">
           <router-outlet />
         </main>
+
+        <app-toast />
       </div>
     </div>
 

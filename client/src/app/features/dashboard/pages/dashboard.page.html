@@ -39,15 +39,15 @@
         </div>
       </div>
       <div class="hero-actions">
-        <button class="btn-gradient btn-lg">
+        <button pButton type="button" class="btn-gradient btn-lg" (click)="onQuickAdd()">
           <i class="pi pi-plus"></i>
           <span>Quick Add</span>
         </button>
-        <button class="btn-glass">
+        <button pButton type="button" class="btn-glass">
           <i class="pi pi-calendar"></i>
           <span>Schedule</span>
         </button>
-        <button class="btn-glass">
+        <button pButton type="button" class="btn-glass">
           <i class="pi pi-download"></i>
           <span>Export</span>
         </button>
@@ -62,9 +62,9 @@
           Performance Overview
         </h2>
         <div class="metrics-period">
-          <button class="period-btn active">Today</button>
-          <button class="period-btn">Week</button>
-          <button class="period-btn">Month</button>
+          <button pButton type="button" class="period-btn active">Today</button>
+          <button pButton type="button" class="period-btn">Week</button>
+          <button pButton type="button" class="period-btn">Month</button>
         </div>
       </div>
       <div class="metrics-grid">
@@ -174,7 +174,7 @@
               <i class="pi pi-building"></i>
               Recent Accounts
             </h3>
-            <button class="btn-glass btn-sm">
+            <button pButton type="button" class="btn-glass btn-sm">
               View All <i class="pi pi-arrow-right"></i>
             </button>
           </div>
@@ -203,9 +203,7 @@
                         [class.customer]="account.status === 'Customer'"></span>
                   <span class="status-text">{{ account.status }}</span>
                 </div>
-                <button class="btn-icon-sm">
-                  <i class="pi pi-ellipsis-h"></i>
-                </button>
+                <button pButton type="button" class="btn-icon-sm" icon="pi pi-ellipsis-h"></button>
               </div>
             </div>
           </div>
@@ -311,9 +309,9 @@
               Activity Timeline
             </h3>
             <div class="timeline-filter">
-              <button class="filter-btn active">All</button>
-              <button class="filter-btn">Calls</button>
-              <button class="filter-btn">Tasks</button>
+              <button pButton type="button" class="filter-btn active">All</button>
+              <button pButton type="button" class="filter-btn">Calls</button>
+              <button pButton type="button" class="filter-btn">Tasks</button>
             </div>
           </div>
           <div class="card-body" *ngIf="upcomingActivities().length; else emptyActivities">

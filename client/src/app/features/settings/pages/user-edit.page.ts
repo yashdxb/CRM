@@ -11,6 +11,9 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 import { RoleSummary, UpsertUserRequest, UserDetailResponse } from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
+import { AppToastService } from '../../../core/app-toast.service';
 
 @Component({
   selector: 'app-user-edit-page',
@@ -34,12 +37,15 @@ export class UserEditPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-
+  private readonly toastService = inject(AppToastService);
   protected readonly user = signal<UserDetailResponse | null>(null);
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
+  protected readonly canManageAdmin = signal(
+    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
+  );
 
   protected readonly timezoneOptions = [
     { label: 'UTC', value: 'UTC' },
@@ -143,12 +149,24 @@ export class UserEditPage implements OnInit {
     this.dataService.update(selected.id, payload).subscribe({
       next: () => {
         this.saving.set(false);
-        this.router.navigate(['/app/settings/users']);
+        this.raiseToast('success', 'User updated');
+        setTimeout(() => {
+          this.router.navigate(['/app/settings/users'], {
+            state: {
+              toast: { tone: 'success', message: 'User updated' }
+            }
+          });
+        }, 3000);
       },
       error: () => {
         this.saving.set(false);
+        this.raiseToast('error', 'Unable to update user');
       }
     });
+  }
+
+  private raiseToast(tone: 'success' | 'error', message: string) {
+    this.toastService.show(tone, message, 3000);
   }
 
   private generatePasswordValue() {

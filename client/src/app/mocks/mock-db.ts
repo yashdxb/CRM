@@ -597,39 +597,79 @@ export function buildDashboardSummary(): DashboardSummary {
 
 const permissionCatalog: PermissionDefinition[] = [
   {
-    key: PERMISSION_KEYS.dashboard,
-    label: 'Dashboards',
+    key: PERMISSION_KEYS.dashboardView,
+    label: 'Dashboard',
     description: 'Access real-time company and pipeline health dashboards.'
   },
   {
-    key: PERMISSION_KEYS.customers,
-    label: 'Customers',
+    key: PERMISSION_KEYS.customersView,
+    label: 'Customers (View)',
+    description: 'View customer accounts and account details.'
+  },
+  {
+    key: PERMISSION_KEYS.customersManage,
+    label: 'Customers (Manage)',
     description: 'Create, edit, and manage customer accounts.'
   },
   {
-    key: PERMISSION_KEYS.contacts,
-    label: 'Contacts',
+    key: PERMISSION_KEYS.contactsView,
+    label: 'Contacts (View)',
+    description: 'View contact records tied to customers and leads.'
+  },
+  {
+    key: PERMISSION_KEYS.contactsManage,
+    label: 'Contacts (Manage)',
     description: 'Manage contact records tied to customers and leads.'
   },
   {
-    key: PERMISSION_KEYS.leads,
-    label: 'Leads',
+    key: PERMISSION_KEYS.leadsView,
+    label: 'Leads (View)',
+    description: 'View lead details and conversion history.'
+  },
+  {
+    key: PERMISSION_KEYS.leadsManage,
+    label: 'Leads (Manage)',
     description: 'Work every lead stage from prospecting through conversion.'
   },
   {
-    key: PERMISSION_KEYS.opportunities,
-    label: 'Opportunities',
+    key: PERMISSION_KEYS.opportunitiesView,
+    label: 'Opportunities (View)',
+    description: 'View pipelines, stages, and forecasting.'
+  },
+  {
+    key: PERMISSION_KEYS.opportunitiesManage,
+    label: 'Opportunities (Manage)',
     description: 'Forecast, update, and close opportunities across pipelines.'
   },
   {
-    key: PERMISSION_KEYS.activities,
-    label: 'Activities',
+    key: PERMISSION_KEYS.activitiesView,
+    label: 'Activities (View)',
+    description: 'View calls, meetings, and tasks.'
+  },
+  {
+    key: PERMISSION_KEYS.activitiesManage,
+    label: 'Activities (Manage)',
     description: 'Schedule, assign, and complete calls, meetings, and tasks.'
   },
   {
-    key: PERMISSION_KEYS.administration,
-    label: 'Administration',
+    key: PERMISSION_KEYS.administrationView,
+    label: 'Administration (View)',
+    description: 'View users, roles, and workspace settings.'
+  },
+  {
+    key: PERMISSION_KEYS.administrationManage,
+    label: 'Administration (Manage)',
     description: 'Invite teammates, assign roles, and configure workspace guardrails.'
+  },
+  {
+    key: PERMISSION_KEYS.tenantsView,
+    label: 'Tenants (View)',
+    description: 'View tenant workspaces and status.'
+  },
+  {
+    key: PERMISSION_KEYS.tenantsManage,
+    label: 'Tenants (Manage)',
+    description: 'Provision and manage tenant workspaces.'
   }
 ];
 
@@ -646,12 +686,17 @@ let mockRoles: RoleSummary[] = [
     name: 'Sales Manager',
     description: 'Manages pipeline, customers, and activities.',
     permissions: [
-      PERMISSION_KEYS.dashboard,
-      PERMISSION_KEYS.customers,
-      PERMISSION_KEYS.contacts,
-      PERMISSION_KEYS.leads,
-      PERMISSION_KEYS.opportunities,
-      PERMISSION_KEYS.activities
+      PERMISSION_KEYS.dashboardView,
+      PERMISSION_KEYS.customersView,
+      PERMISSION_KEYS.customersManage,
+      PERMISSION_KEYS.contactsView,
+      PERMISSION_KEYS.contactsManage,
+      PERMISSION_KEYS.leadsView,
+      PERMISSION_KEYS.leadsManage,
+      PERMISSION_KEYS.opportunitiesView,
+      PERMISSION_KEYS.opportunitiesManage,
+      PERMISSION_KEYS.activitiesView,
+      PERMISSION_KEYS.activitiesManage
     ],
     isSystem: true
   },
@@ -659,14 +704,23 @@ let mockRoles: RoleSummary[] = [
     id: 'role-success',
     name: 'Customer Success',
     description: 'Keeps customers healthy and coordinates follow-ups.',
-    permissions: [PERMISSION_KEYS.dashboard, PERMISSION_KEYS.customers, PERMISSION_KEYS.activities],
+    permissions: [
+      PERMISSION_KEYS.dashboardView,
+      PERMISSION_KEYS.customersView,
+      PERMISSION_KEYS.activitiesView,
+      PERMISSION_KEYS.activitiesManage
+    ],
     isSystem: false
   },
   {
     id: 'role-support',
     name: 'Support Agent',
     description: 'Limited read/write for customers and activities.',
-    permissions: [PERMISSION_KEYS.customers, PERMISSION_KEYS.activities],
+    permissions: [
+      PERMISSION_KEYS.customersView,
+      PERMISSION_KEYS.activitiesView,
+      PERMISSION_KEYS.activitiesManage
+    ],
     isSystem: false
   }
 ];

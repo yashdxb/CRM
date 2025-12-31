@@ -1,12 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { ButtonModule } from 'primeng/button';
 import { KeyboardShortcutsService } from './keyboard-shortcuts.service';
 
 @Component({
   selector: 'app-keyboard-shortcuts-modal',
   standalone: true,
-  imports: [NgFor, NgIf],
+  imports: [NgFor, NgIf, ButtonModule],
   animations: [
     trigger('fadeIn', [
       transition(':enter', [
@@ -32,9 +33,13 @@ import { KeyboardShortcutsService } from './keyboard-shortcuts.service';
       <div class="shortcuts-modal" [@slideUp] (click)="$event.stopPropagation()">
         <header class="shortcuts-modal__header">
           <h2>Keyboard Shortcuts</h2>
-          <button class="shortcuts-modal__close" (click)="shortcutsService.closeHelpModal()">
-            <i class="pi pi-times"></i>
-          </button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-times"
+            class="shortcuts-modal__close p-button-text"
+            (click)="shortcutsService.closeHelpModal()"
+          ></button>
         </header>
 
         <div class="shortcuts-modal__content">
@@ -118,21 +123,16 @@ import { KeyboardShortcutsService } from './keyboard-shortcuts.service';
       color: #0f172a;
     }
 
-    .shortcuts-modal__close {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .shortcuts-modal__close.p-button {
       width: 36px;
       height: 36px;
       border: none;
       border-radius: 10px;
       background: transparent;
       color: #64748b;
-      cursor: pointer;
-      transition: all 0.15s ease;
     }
 
-    .shortcuts-modal__close:hover {
+    .shortcuts-modal__close.p-button:hover {
       background: #f1f5f9;
       color: #0f172a;
     }

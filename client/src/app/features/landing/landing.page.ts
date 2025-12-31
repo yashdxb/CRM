@@ -1,25 +1,62 @@
-import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { NgFor } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { CardModule } from 'primeng/card';
+import { DividerModule } from 'primeng/divider';
+import { AvatarModule } from 'primeng/avatar';
+import { TagModule } from 'primeng/tag';
+import { ProgressBarModule } from 'primeng/progressbar';
+import { SkeletonModule } from 'primeng/skeleton';
+import { TooltipModule } from 'primeng/tooltip';
+
+import { CrmLandingService } from './services/crm-landing.service';
+import { CrmLandingVm } from './models/crm-landing.models';
+import { BreadcrumbsComponent } from '../../core/breadcrumbs';
 
 @Component({
   selector: 'app-landing-page',
   standalone: true,
-  imports: [RouterLink, NgFor, ButtonModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    ButtonModule,
+    CardModule,
+    DividerModule,
+    AvatarModule,
+    TagModule,
+    ProgressBarModule,
+    SkeletonModule,
+    TooltipModule,
+    BreadcrumbsComponent,
+],
   templateUrl: './landing.page.html',
-  styleUrls: ['./landing.page.scss']
+  styleUrls: ['./landing.page.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LandingPage {
-  highlights = [
-    { label: 'AI-first', value: 'Next best actions + predictive scoring' },
-    { label: 'Zero data entry', value: 'Voice-to-CRM + auto enrichment' },
-    { label: 'Fast rollout', value: '15-minute setup with smart defaults' }
-  ];
+export class LandingPage implements OnInit {
+  private readonly svc = inject(CrmLandingService);
+  private readonly router = inject(Router);
 
-  stats = [
-    { value: '3.2x', label: 'Pipeline velocity' },
-    { value: '42%', label: 'Data entry reduction' },
-    { value: '15 min', label: 'Time-to-setup' }
-  ];
+  vm: CrmLandingVm | null = null;
+  currentYear = new Date().getFullYear();
+
+  ngOnInit(): void {
+    this.vm = this.svc.getVm();
+  }
+
+  onGetStarted(): void {
+    // TODO: route to auth/register or app shell
+    console.log('Get Started');
+  }
+
+  onWatchDemo(): void {
+    // TODO: open demo modal or navigate to demo
+    console.log('Watch Demo');
+  }
+
+  onSignIn(): void {
+    void this.router.navigate(['/login']);
+  }
 }

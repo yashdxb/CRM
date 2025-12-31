@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -14,6 +15,8 @@ import { Lead, LeadAssignmentStrategy, LeadStatus } from '../models/lead.model';
 import { LeadDataService, SaveLeadRequest } from '../services/lead-data.service';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { UserListItem } from '../../settings/models/user-admin.model';
+import { AppToastService } from '../../../core/app-toast.service';
+import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 
 interface StatusOption {
   label: string;
@@ -38,19 +41,22 @@ interface OwnerOption {
     FormsModule,
     RouterLink,
     ButtonModule,
+    CheckboxModule,
     InputTextModule,
     SelectModule,
     InputNumberModule,
-    TextareaModule
+    TextareaModule,
+    BreadcrumbsComponent
   ],
   template: `
     <div class="lead-form-page">
+      <app-breadcrumbs></app-breadcrumbs>
       <header class="page-header">
         <div class="header-content">
-          <a routerLink="/app/leads" class="back-link">
+          <button pButton type="button" class="back-link p-button-text" routerLink="/app/leads">
             <i class="pi pi-arrow-left"></i>
             <span>Back to leads</span>
-          </a>
+          </button>
           <div class="header-title">
             <h1>{{ isEditMode() ? 'Edit Lead' : 'Create New Lead' }}</h1>
             <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
@@ -87,6 +93,7 @@ interface OwnerOption {
                   name="status"
                   [(ngModel)]="form.status"
                   placeholder="Select status"
+                  appendTo="body"
                   styleClass="w-full"
                 ></p-select>
               </div>
@@ -99,6 +106,7 @@ interface OwnerOption {
                   name="assignmentStrategy"
                   [(ngModel)]="form.assignmentStrategy"
                   placeholder="Select assignment"
+                  appendTo="body"
                   styleClass="w-full"
                 >
                   <ng-template pTemplate="item" let-option>
@@ -117,6 +125,7 @@ interface OwnerOption {
                   name="ownerId"
                   [(ngModel)]="form.ownerId"
                   placeholder="Select owner"
+                  appendTo="body"
                   styleClass="w-full"
                 >
                   <ng-template pTemplate="item" let-option>
@@ -154,7 +163,7 @@ interface OwnerOption {
             </div>
           </section>
 
-          <section class="form-section">
+          <section class="form-section form-section--qualification">
             <h2 class="section-title">
               <i class="pi pi-chart-line"></i>
               Qualification
@@ -172,7 +181,7 @@ interface OwnerOption {
                   [disabled]="form.autoScore"
                 ></p-inputNumber>
                 <label class="checkbox-row">
-                  <input type="checkbox" name="autoScore" [(ngModel)]="form.autoScore" />
+                  <p-checkbox name="autoScore" [(ngModel)]="form.autoScore" binary="true"></p-checkbox>
                   <span>Auto score</span>
                 </label>
                 <p class="hint-text" *ngIf="form.autoScore">
@@ -185,9 +194,15 @@ interface OwnerOption {
                 <label>Territory</label>
                 <input pInputText name="territory" [(ngModel)]="form.territory" placeholder="West, EMEA, APAC" class="w-full" />
               </div>
-              <div class="field">
+              <div class="field full-row">
                 <label>Notes</label>
-                <textarea pTextarea name="notes" rows="3" placeholder="Key context, objections, next steps" class="w-full"></textarea>
+                <textarea
+                  pTextarea
+                  name="notes"
+                  rows="5"
+                  placeholder="Key context, objections, next steps"
+                  class="w-full"
+                ></textarea>
               </div>
             </div>
           </section>
@@ -239,6 +254,9 @@ interface OwnerOption {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
+      padding: 0;
+      border: none;
+      background: transparent;
       color: #0ea5e9;
       text-decoration: none;
       font-size: 0.875rem;
@@ -289,6 +307,10 @@ interface OwnerOption {
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
     }
 
+    .form-section--qualification {
+      padding-bottom: 2rem;
+    }
+
     .section-title {
       display: flex;
       align-items: center;
@@ -310,6 +332,10 @@ interface OwnerOption {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 1.5rem;
+    }
+
+    .full-row {
+      grid-column: 1 / -1;
     }
 
     .field {
@@ -336,10 +362,9 @@ interface OwnerOption {
       user-select: none;
     }
 
-    .checkbox-row input[type="checkbox"] {
-      width: 16px;
-      height: 16px;
-      accent-color: #6366f1;
+    .checkbox-row .p-checkbox {
+      display: inline-flex;
+      align-items: center;
     }
 
     .hint-text {
@@ -348,6 +373,7 @@ interface OwnerOption {
       color: #94a3b8;
       line-height: 1.4;
     }
+
 
     .required {
       color: #ef4444;
@@ -390,6 +416,7 @@ export class LeadFormPage implements OnInit {
 
   protected form: SaveLeadRequest & { autoScore: boolean } = this.createEmptyForm();
   protected saving = signal(false);
+  private readonly toastService = inject(AppToastService);
 
   private readonly leadData = inject(LeadDataService);
   private readonly userAdminData = inject(UserAdminDataService);
@@ -443,8 +470,15 @@ export class LeadFormPage implements OnInit {
         const message = this.editingId ? 'Lead updated.' : 'Lead created.';
         this.router.navigate(['/app/leads'], { state: { toast: { tone: 'success', message } } });
       },
-      error: () => this.saving.set(false)
+      error: () => {
+        this.saving.set(false);
+        this.raiseToast('error', this.editingId ? 'Unable to update lead.' : 'Unable to create lead.');
+      }
     });
+  }
+
+  private raiseToast(tone: 'success' | 'error', message: string) {
+    this.toastService.show(tone, message, 3000);
   }
 
   private prefillFromLead(lead: Lead) {

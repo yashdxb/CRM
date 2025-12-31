@@ -10,6 +10,8 @@ export interface ActivitySearchRequest {
   search?: string;
   ownerId?: string;
   type?: Activity['type'];
+  relatedEntityType?: Activity['relatedEntityType'];
+  relatedEntityId?: string;
 }
 
 export interface ActivitySearchResponse {
@@ -42,6 +44,12 @@ export class ActivityDataService {
     }
     if (request.ownerId) {
       params = params.set('ownerId', request.ownerId);
+    }
+    if (request.relatedEntityType) {
+      params = params.set('relatedEntityType', request.relatedEntityType);
+    }
+    if (request.relatedEntityId) {
+      params = params.set('relatedEntityId', request.relatedEntityId);
     }
 
     return this.http.get<ActivitySearchResponse>(`${this.baseUrl}/api/activities`, { params });

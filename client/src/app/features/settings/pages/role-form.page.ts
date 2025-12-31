@@ -1,14 +1,18 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { ListboxModule } from 'primeng/listbox';
 import { SkeletonModule } from 'primeng/skeleton';
 
 import { PermissionDefinition, RoleSummary, UpsertRoleRequest } from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
+import { readTokenContext, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
+import { AppToastService } from '../../../core/app-toast.service';
 
 @Component({
   selector: 'app-role-form-page',
@@ -16,9 +20,11 @@ import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
   imports: [
     ButtonModule,
     InputTextModule,
+    ListboxModule,
     NgClass,
     NgFor,
     NgIf,
+    FormsModule,
     ReactiveFormsModule,
     RouterLink,
     SkeletonModule,
@@ -32,14 +38,15 @@ export class RoleFormPage {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly toastService = inject(AppToastService);
 
   protected readonly permissionCatalog = signal<PermissionDefinition[]>([]);
   protected readonly loadingPermissions = signal(true);
   protected readonly loadingRole = signal(false);
   protected readonly roleSaving = signal(false);
-  protected readonly toast = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
   protected readonly isEditMode = signal(false);
   protected readonly isSystemRole = signal(false);
+  protected readonly canManageAdmin = signal(false);
 
   protected readonly roleForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
@@ -50,6 +57,9 @@ export class RoleFormPage {
   private roleId: string | null = null;
 
   constructor() {
+    this.canManageAdmin.set(
+      tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
+    );
     this.roleId = this.route.snapshot.paramMap.get('id');
     this.isEditMode.set(!!this.roleId);
     this.loadPermissions();
@@ -133,38 +143,16 @@ export class RoleFormPage {
     });
   }
 
-  protected permissionChecked(key: string) {
-    const permissions = (this.roleForm.value.permissions ?? []) as string[];
-    return permissions.some((value) => value === key);
-  }
-
-  protected handlePermissionToggle(key: string, checked: boolean) {
-    const control = this.roleForm.get('permissions');
-    const current = new Set((control?.value as string[] | undefined) ?? []);
-    if (checked) {
-      current.add(key);
-    } else {
-      current.delete(key);
-    }
-    control?.setValue(Array.from(current));
-  }
-
-  protected handlePermissionToggleFromEvent(key: string, event: Event) {
-    const target = event.target as HTMLInputElement | null;
-    this.handlePermissionToggle(key, !!target?.checked);
-  }
-
   protected selectedPermissionCount() {
     const permissions = (this.roleForm.value.permissions ?? []) as string[];
     return permissions.length;
   }
 
   protected clearToast() {
-    this.toast.set(null);
+    this.toastService.clear();
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
-    this.toast.set({ tone, message });
-    setTimeout(() => this.clearToast(), 4000);
+    this.toastService.show(tone, message, 3000);
   }
 }

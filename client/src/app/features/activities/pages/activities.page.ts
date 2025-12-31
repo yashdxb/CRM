@@ -1,7 +1,10 @@
 import { DatePipe, NgFor, NgIf } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { Router } from '@angular/router';
 
@@ -12,8 +15,10 @@ import { Customer } from '../../customers/models/customer.model';
 import { ContactDataService } from '../../contacts/services/contact-data.service';
 import { Contact } from '../../contacts/models/contact.model';
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
-import { readUserId } from '../../../core/auth/token.utils';
+import { readTokenContext, readUserId, tokenHasPermission } from '../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../core/auth/permission.constants';
 import { RecentlyViewedItem, RecentlyViewedService } from '../../../shared/services/recently-viewed.service';
+import { AppToastService } from '../../../core/app-toast.service';
 
 interface StatusOption {
   label: string;
@@ -27,7 +32,10 @@ interface StatusOption {
     NgIf,
     NgFor,
     FormsModule,
+    ButtonModule,
+    InputTextModule,
     SelectModule,
+    TableModule,
     PaginatorModule,
     DatePipe,
     BreadcrumbsComponent
@@ -55,6 +63,7 @@ export class ActivitiesPage {
   protected readonly myOwnerId = signal<string | null>(null);
   protected readonly myView = signal(false);
   protected readonly overdueOnly = signal(false);
+  private readonly toastService = inject(AppToastService);
   protected readonly ownerOptions = computed(() => {
     const owners = new Map<string, string>();
     for (const activity of this.activities()) {
@@ -106,6 +115,10 @@ export class ActivitiesPage {
   });
   protected readonly calendarMonth = signal<Date>(new Date());
   protected readonly selectedDate = signal<Date>(new Date());
+  protected readonly canManage = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.activitiesManage);
+  });
   protected readonly calendarDays = computed(() => {
     const month = this.calendarMonth();
     const start = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -186,6 +199,10 @@ export class ActivitiesPage {
     private readonly recentlyViewed: RecentlyViewedService
   ) {
     this.myOwnerId.set(readUserId());
+    const toast = history.state?.toast as { tone: 'success' | 'error'; message: string } | undefined;
+    if (toast) {
+      this.toastService.show(toast.tone, toast.message, 3000);
+    }
     this.currentView.set(this.viewFromUrl(this.router.url));
     this.load();
     this.loadLookups();
@@ -367,7 +384,21 @@ export class ActivitiesPage {
     if (!confirm(`Delete activity ${row.subject}?`)) {
       return;
     }
-    this.activityData.delete(row.id).subscribe(() => this.load());
+    this.activityData.delete(row.id).subscribe({
+      next: () => {
+        this.load();
+        this.raiseToast('success', 'Activity deleted.');
+      },
+      error: () => this.raiseToast('error', 'Unable to delete activity.')
+    });
+  }
+
+  protected clearToast() {
+    this.toastService.clear();
+  }
+
+  private raiseToast(tone: 'success' | 'error', message: string) {
+    this.toastService.show(tone, message, 3000);
   }
 
   private loadLookups() {

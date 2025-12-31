@@ -1,6 +1,7 @@
 <section class="workspace-settings">
   <app-breadcrumbs></app-breadcrumbs>
 
+
   <div class="workspace-settings__banner">
     <div>
       <p class="workspace-settings__eyebrow">Workspace settings</p>
@@ -33,7 +34,7 @@
 
             <label>
               Time zone
-              <p-select
+              <p-select appendTo="body"
                 [options]="timeZoneOptions"
                 optionLabel="label"
                 optionValue="value"
@@ -45,7 +46,7 @@
 
             <label>
               Currency
-              <p-select
+              <p-select appendTo="body"
                 [options]="currencyOptions"
                 optionLabel="label"
                 optionValue="value"
@@ -76,7 +77,7 @@
           </div>
 
           <div class="dialog-actions">
-            <button type="submit" pButton label="Save settings" [loading]="saving()"></button>
+            <button type="submit" pButton label="Save settings" [loading]="saving()" [disabled]="!canManageAdmin()"></button>
           </div>
         </form>
 
@@ -135,10 +136,4 @@
     </ng-template>
   </article>
 
-  <div class="toast" *ngIf="toast() as alert" [ngClass]="'toast--' + alert.tone">
-    <span>{{ alert.message }}</span>
-    <button type="button" (click)="clearToast()" aria-label="Dismiss">
-      <i class="pi pi-times"></i>
-    </button>
-  </div>
 </section>

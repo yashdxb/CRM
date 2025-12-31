@@ -75,14 +75,14 @@
           <span>Temporary password</span>
           <div class="password-field">
             <input pInputText type="text" formControlName="temporaryPassword" placeholder="Optional" />
-            <button type="button" pButton label="Generate" (click)="generatePassword()"></button>
+            <button type="button" pButton label="Generate" [disabled]="!canManageAdmin()" (click)="generatePassword()"></button>
           </div>
           <small *ngIf="generatedPassword()">Share once, then require reset on first login.</small>
         </label>
       </div>
       <div class="user-edit__cta">
         <button type="button" pButton label="Cancel" class="p-button-outlined" routerLink="/app/settings/users"></button>
-        <button type="submit" pButton label="Save changes" icon="pi pi-check" [disabled]="saving()"></button>
+        <button type="submit" pButton label="Save changes" icon="pi pi-check" [disabled]="saving() || !canManageAdmin()"></button>
       </div>
     </form>
   </article>

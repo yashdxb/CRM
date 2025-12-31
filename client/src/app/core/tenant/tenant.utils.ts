@@ -8,3 +8,37 @@ export function getTenantKey(): string {
 export function setTenantKey(value: string) {
   localStorage.setItem(STORAGE_KEY, value);
 }
+
+export function resolveTenantKeyFromHost(hostname: string): string | null {
+  if (!hostname) {
+    return null;
+  }
+
+  const lower = hostname.toLowerCase();
+  if (lower === 'localhost' || lower === '127.0.0.1' || lower === '::1') {
+    return null;
+  }
+
+  const parts = lower.split('.').filter(Boolean);
+  if (parts.length >= 3) {
+    return parts[0];
+  }
+
+  if (parts.length === 2 && parts[1] === 'localhost') {
+    return parts[0];
+  }
+
+  return null;
+}
+
+export function initTenantFromHost() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const current = getTenantKey();
+  const hostKey = resolveTenantKeyFromHost(window.location.hostname);
+  if (hostKey && current === DEFAULT_TENANT) {
+    setTenantKey(hostKey);
+  }
+}

@@ -1,10 +1,11 @@
+<app-breadcrumbs></app-breadcrumbs>
 <div class="convert-page">
   <header class="page-header">
     <div class="header-content">
-      <a routerLink="/app/leads" class="back-link">
+      <button pButton type="button" class="back-link p-button-text" routerLink="/app/leads">
         <i class="pi pi-arrow-left"></i>
         <span>Back to leads</span>
-      </a>
+      </button>
       <div class="header-title">
         <h1>Convert lead</h1>
         <p *ngIf="lead() as leadData">Turn {{ leadData.name }} into an account, contact, and opportunity.</p>
@@ -32,7 +33,7 @@
           </h2>
           <div class="form-grid">
             <label class="checkbox-field">
-              <input type="checkbox" [(ngModel)]="form().createAccount" name="createAccount" />
+              <p-checkbox [(ngModel)]="form().createAccount" name="createAccount" binary="true"></p-checkbox>
               <span>Create new account</span>
             </label>
             <div class="field" *ngIf="form().createAccount">
@@ -49,7 +50,7 @@
           </h2>
           <div class="form-grid">
             <label class="checkbox-field">
-              <input type="checkbox" [(ngModel)]="form().createContact" name="createContact" />
+              <p-checkbox [(ngModel)]="form().createContact" name="createContact" binary="true"></p-checkbox>
               <span>Create contact from lead details</span>
             </label>
             <div class="field">
@@ -68,7 +69,7 @@
           </h2>
           <div class="form-grid">
             <label class="checkbox-field">
-              <input type="checkbox" [(ngModel)]="form().createOpportunity" name="createOpportunity" />
+              <p-checkbox [(ngModel)]="form().createOpportunity" name="createOpportunity" binary="true"></p-checkbox>
               <span>Create opportunity</span>
             </label>
             <div class="field" *ngIf="form().createOpportunity">
@@ -81,7 +82,7 @@
             </div>
             <div class="field" *ngIf="form().createOpportunity">
               <label>Expected close date</label>
-              <input type="date" name="expectedCloseDate" [(ngModel)]="form().expectedCloseDate" class="w-full" />
+              <p-datePicker name="expectedCloseDate" [(ngModel)]="form().expectedCloseDate" [showIcon]="true" styleClass="w-full"></p-datePicker>
             </div>
           </div>
           <p class="hint" *ngIf="form().createOpportunity && !form().createAccount">

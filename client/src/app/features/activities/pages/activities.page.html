@@ -21,20 +21,20 @@
       </div>
       <div class="header-right">
         <div class="view-toggle">
-          <button class="toggle-btn" [class.active]="currentView() === 'table'" (click)="setView('table')" title="Table View">
+          <button pButton type="button" class="toggle-btn" [class.active]="currentView() === 'table'" (click)="setView('table')" title="Table View">
             <i class="pi pi-list"></i>
           </button>
-          <button class="toggle-btn" [class.active]="currentView() === 'calendar'" (click)="setView('calendar')" title="Calendar View">
+          <button pButton type="button" class="toggle-btn" [class.active]="currentView() === 'calendar'" (click)="setView('calendar')" title="Calendar View">
             <i class="pi pi-calendar"></i>
           </button>
-          <button class="toggle-btn" [class.active]="currentView() === 'tasks'" (click)="setView('tasks')" title="Tasks View">
+          <button pButton type="button" class="toggle-btn" [class.active]="currentView() === 'tasks'" (click)="setView('tasks')" title="Tasks View">
             <i class="pi pi-check-square"></i>
           </button>
         </div>
-        <button class="btn-icon" (click)="load()" title="Refresh">
+        <button pButton type="button" class="btn-icon" (click)="load()" title="Refresh">
           <i class="pi pi-refresh"></i>
         </button>
-        <button class="btn-primary" (click)="onCreate()">
+        <button pButton type="button" class="btn-primary" [disabled]="!canManage()" (click)="onCreate()">
           <i class="pi pi-plus"></i>
           <span>Add Activity</span>
         </button>
@@ -53,7 +53,7 @@
         </div>
       </div>
       <div class="kpi-divider"></div>
-      <div class="kpi-card clickable" [class.active]="statusFilter === 'Upcoming'" (click)="onStatusChange('Upcoming')">
+      <button pButton type="button" class="kpi-card clickable" [class.active]="statusFilter === 'Upcoming'" (click)="onStatusChange('Upcoming')">
         <div class="kpi-icon upcoming">
           <i class="pi pi-clock"></i>
         </div>
@@ -61,8 +61,8 @@
           <span class="kpi-value">{{ openActivitiesCount() }}</span>
           <span class="kpi-label">Open</span>
         </div>
-      </div>
-      <div class="kpi-card clickable" [class.active]="isDueTodayActive" (click)="toggleDueToday()">
+      </button>
+      <button pButton type="button" class="kpi-card clickable" [class.active]="isDueTodayActive" (click)="toggleDueToday()">
         <div class="kpi-icon duetoday">
           <i class="pi pi-calendar-clock"></i>
         </div>
@@ -71,8 +71,8 @@
           <span class="kpi-label">Due Today</span>
         </div>
         <span class="kpi-badge info" *ngIf="dueTodayCount() > 0">!</span>
-      </div>
-      <div class="kpi-card clickable" [class.active]="overdueOnly()" (click)="toggleOverdue()">
+      </button>
+      <button pButton type="button" class="kpi-card clickable" [class.active]="overdueOnly()" (click)="toggleOverdue()">
         <div class="kpi-icon overdue">
           <i class="pi pi-exclamation-circle"></i>
         </div>
@@ -81,9 +81,9 @@
           <span class="kpi-label">Overdue</span>
         </div>
         <span class="kpi-badge danger" *ngIf="overdueCount() > 0">!</span>
-      </div>
+      </button>
       <div class="kpi-divider"></div>
-      <div class="kpi-card clickable" [class.active]="statusFilter === 'Completed'" (click)="onStatusChange('Completed')">
+      <button pButton type="button" class="kpi-card clickable" [class.active]="statusFilter === 'Completed'" (click)="onStatusChange('Completed')">
         <div class="kpi-icon completed">
           <i class="pi pi-check-circle"></i>
         </div>
@@ -92,7 +92,7 @@
           <span class="kpi-label">Done</span>
         </div>
         <span class="kpi-badge success" *ngIf="completionRate() > 0">{{ completionRate() }}%</span>
-      </div>
+      </button>
     </section>
 
     <!-- Toolbar -->
@@ -101,26 +101,26 @@
         <div class="toolbar-left">
           <div class="search-box">
             <i class="pi pi-search"></i>
-            <input type="text" placeholder="Search activities..." [(ngModel)]="searchQuery" (ngModelChange)="onSearch($event)" />
+            <input pInputText type="text" placeholder="Search activities..." [(ngModel)]="searchQuery" (ngModelChange)="onSearch($event)" />
           </div>
           <div class="filter-pills">
-            <button class="pill" [class.active]="typeFilter === 'all'" (click)="onTypeChange('all')">All</button>
-            <button class="pill" [class.active]="typeFilter === 'Call'" (click)="onTypeChange('Call')">
+            <button pButton type="button" class="pill" [class.active]="typeFilter === 'all'" (click)="onTypeChange('all')">All</button>
+            <button pButton type="button" class="pill" [class.active]="typeFilter === 'Call'" (click)="onTypeChange('Call')">
               <i class="pi pi-phone"></i> Calls
             </button>
-            <button class="pill" [class.active]="typeFilter === 'Email'" (click)="onTypeChange('Email')">
+            <button pButton type="button" class="pill" [class.active]="typeFilter === 'Email'" (click)="onTypeChange('Email')">
               <i class="pi pi-envelope"></i> Emails
             </button>
-            <button class="pill" [class.active]="typeFilter === 'Meeting'" (click)="onTypeChange('Meeting')">
+            <button pButton type="button" class="pill" [class.active]="typeFilter === 'Meeting'" (click)="onTypeChange('Meeting')">
               <i class="pi pi-users"></i> Meetings
             </button>
-            <button class="pill" [class.active]="typeFilter === 'Task'" (click)="onTypeChange('Task')">
+            <button pButton type="button" class="pill" [class.active]="typeFilter === 'Task'" (click)="onTypeChange('Task')">
               <i class="pi pi-check-square"></i> Tasks
             </button>
           </div>
         </div>
         <div class="toolbar-right">
-          <p-select
+          <p-select appendTo="body"
             [options]="ownerOptions()"
             optionLabel="label"
             optionValue="value"
@@ -129,7 +129,7 @@
             placeholder="All Owners"
             styleClass="filter-select"
           ></p-select>
-          <button class="pill toggle" [class.active]="myView()" (click)="toggleMine()">
+          <button pButton type="button" class="pill toggle" [class.active]="myView()" (click)="toggleMine()">
             <i class="pi pi-user"></i> Mine
           </button>
         </div>
@@ -142,7 +142,7 @@
         <span>{{ recentActivities().length }} recent</span>
       </div>
       <div class="recently-viewed__list">
-        <button class="recent-item" *ngFor="let item of recentActivities()" (click)="openRecent(item)">
+        <button pButton type="button" class="recent-item" *ngFor="let item of recentActivities()" (click)="openRecent(item)">
           <div class="recent-item__title">{{ item.title }}</div>
           <div class="recent-item__meta">
             {{ item.subtitle || 'Activity' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
@@ -157,8 +157,8 @@
         <ng-container *ngIf="!loading(); else loadingState">
           <ng-container *ngIf="filteredActivities().length; else emptyState">
             <div class="table-responsive">
-              <table class="data-table">
-                <thead>
+              <p-table class="data-table" [value]="filteredActivities()">
+                <ng-template pTemplate="header">
                   <tr>
                     <th>Subject</th>
                     <th>Type</th>
@@ -169,9 +169,9 @@
                     <th>Owner</th>
                     <th class="actions-col">Actions</th>
                   </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let row of filteredActivities()" class="table-row" (click)="onEdit(row)">
+                </ng-template>
+                <ng-template pTemplate="body" let-row>
+                  <tr class="table-row" (click)="canManage() ? onEdit(row) : null">
                     <td>
                       <span class="subject-text">{{ row.subject }}</span>
                     </td>
@@ -215,17 +215,13 @@
                     </td>
                     <td class="actions-col">
                       <div class="row-actions">
-                        <button class="btn-icon-sm" (click)="$event.stopPropagation(); onEdit(row)" title="Edit">
-                          <i class="pi pi-pencil"></i>
-                        </button>
-                        <button class="btn-icon-sm danger" (click)="$event.stopPropagation(); onDelete(row)" title="Delete">
-                          <i class="pi pi-trash"></i>
-                        </button>
+                        <button pButton type="button" class="btn-icon-sm" icon="pi pi-pencil" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(row)" title="Edit"></button>
+                        <button pButton type="button" class="btn-icon-sm danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(row)" title="Delete"></button>
                       </div>
                     </td>
                   </tr>
-                </tbody>
-              </table>
+                </ng-template>
+              </p-table>
             </div>
             
             <!-- Pagination -->
@@ -261,7 +257,7 @@
             </div>
             <h3 class="empty-title">No activities found</h3>
             <p class="empty-text">Create your first activity to start tracking calls, emails, and meetings.</p>
-            <button class="btn-primary" (click)="onCreate()">
+            <button pButton type="button" class="btn-primary" [disabled]="!canManage()" (click)="onCreate()">
               <i class="pi pi-plus"></i>
               New Activity
             </button>
@@ -280,13 +276,13 @@
             <p class="muted">{{ selectedDateLabel() }}</p>
           </div>
           <div class="calendar-actions">
-            <button class="btn-icon" (click)="previousMonth()" title="Previous month">
+            <button pButton type="button" class="btn-icon" (click)="previousMonth()" title="Previous month">
               <i class="pi pi-angle-left"></i>
             </button>
-            <button class="btn-icon" (click)="goToToday()" title="Today">
+            <button pButton type="button" class="btn-icon" (click)="goToToday()" title="Today">
               <i class="pi pi-calendar"></i>
             </button>
-            <button class="btn-icon" (click)="nextMonth()" title="Next month">
+            <button pButton type="button" class="btn-icon" (click)="nextMonth()" title="Next month">
               <i class="pi pi-angle-right"></i>
             </button>
           </div>
@@ -294,6 +290,8 @@
         <div class="calendar-grid">
           <div class="calendar-weekday" *ngFor="let day of weekdayLabels">{{ day }}</div>
           <button
+            pButton
+            type="button"
             class="calendar-day"
             *ngFor="let day of calendarDays()"
             [class.is-outside]="!day.isCurrentMonth"
@@ -349,17 +347,17 @@
     </section>
 
     <section class="tasks-section" *ngIf="currentView() === 'tasks'">
-      <div class="tasks-header glass-card">
-        <div>
-          <p class="eyebrow">Tasks</p>
-          <h2>Execution queue</h2>
-          <p class="muted">Focused list of open and completed tasks.</p>
+        <div class="tasks-header glass-card">
+          <div>
+            <p class="eyebrow">Tasks</p>
+            <h2>Execution queue</h2>
+            <p class="muted">Focused list of open and completed tasks.</p>
+          </div>
+          <button pButton type="button" class="btn-primary" [disabled]="!canManage()" (click)="onCreate()">
+            <i class="pi pi-plus"></i>
+            Add Task
+          </button>
         </div>
-        <button class="btn-primary" (click)="onCreate()">
-          <i class="pi pi-plus"></i>
-          Add Task
-        </button>
-      </div>
 
       <div class="tasks-grid">
         <article class="tasks-column">
@@ -367,13 +365,13 @@
             <span>Due today</span>
             <strong>{{ tasksToday().length }}</strong>
           </header>
-          <div class="task-card" *ngFor="let task of tasksToday()" (click)="onEdit(task)">
+          <button pButton type="button" class="task-card" *ngFor="let task of tasksToday()" [disabled]="!canManage()" (click)="onEdit(task)">
             <div>
               <strong>{{ task.subject }}</strong>
               <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
             </div>
             <span class="status-tag status-tag--today">Today</span>
-          </div>
+          </button>
           <p class="empty-text" *ngIf="!tasksToday().length">No tasks due today.</p>
         </article>
 
@@ -382,13 +380,13 @@
             <span>Overdue</span>
             <strong>{{ tasksOverdue().length }}</strong>
           </header>
-          <div class="task-card" *ngFor="let task of tasksOverdue()" (click)="onEdit(task)">
+          <button pButton type="button" class="task-card" *ngFor="let task of tasksOverdue()" [disabled]="!canManage()" (click)="onEdit(task)">
             <div>
               <strong>{{ task.subject }}</strong>
               <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
             </div>
             <span class="status-tag status-tag--overdue">Overdue</span>
-          </div>
+          </button>
           <p class="empty-text" *ngIf="!tasksOverdue().length">Nothing overdue.</p>
         </article>
 
@@ -397,13 +395,13 @@
             <span>Upcoming</span>
             <strong>{{ tasksUpcoming().length }}</strong>
           </header>
-          <div class="task-card" *ngFor="let task of tasksUpcoming()" (click)="onEdit(task)">
+          <button pButton type="button" class="task-card" *ngFor="let task of tasksUpcoming()" [disabled]="!canManage()" (click)="onEdit(task)">
             <div>
               <strong>{{ task.subject }}</strong>
               <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
             </div>
             <span class="status-tag status-tag--upcoming">Upcoming</span>
-          </div>
+          </button>
           <p class="empty-text" *ngIf="!tasksUpcoming().length">No upcoming tasks.</p>
         </article>
 
@@ -412,13 +410,13 @@
             <span>Completed</span>
             <strong>{{ tasksCompleted().length }}</strong>
           </header>
-          <div class="task-card" *ngFor="let task of tasksCompleted()" (click)="onEdit(task)">
+          <button pButton type="button" class="task-card" *ngFor="let task of tasksCompleted()" [disabled]="!canManage()" (click)="onEdit(task)">
             <div>
               <strong>{{ task.subject }}</strong>
               <small>{{ task.completedDateUtc ? (task.completedDateUtc | date: 'MMM d, h:mm a') : 'Completed' }}</small>
             </div>
             <span class="status-tag status-tag--done">Done</span>
-          </div>
+          </button>
           <p class="empty-text" *ngIf="!tasksCompleted().length">No completed tasks.</p>
         </article>
       </div>
@@ -427,6 +425,6 @@
 </div>
 
 <!-- Mobile FAB -->
-<button class="fab" (click)="onCreate()">
+<button pButton type="button" class="fab" [disabled]="!canManage()" (click)="onCreate()">
   <i class="pi pi-plus"></i>
 </button>

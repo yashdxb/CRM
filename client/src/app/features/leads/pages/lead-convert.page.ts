@@ -3,16 +3,29 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
+import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 
 import { Lead, LeadConversionRequest } from '../models/lead.model';
 import { LeadDataService } from '../services/lead-data.service';
+import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 
 @Component({
   selector: 'app-lead-convert-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, ButtonModule, InputNumberModule, InputTextModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    ButtonModule,
+    CheckboxModule,
+    DatePickerModule,
+    InputNumberModule,
+    InputTextModule,
+    BreadcrumbsComponent,
+],
   templateUrl: './lead-convert.page.html',
   styleUrl: './lead-convert.page.scss'
 })
@@ -62,9 +75,13 @@ export class LeadConvertPage implements OnInit {
     if (!this.leadId) return;
     if (!this.canConvert()) return;
     const value = this.form();
+    const closeDate = value.expectedCloseDate as unknown;
+    const expectedCloseDate = closeDate instanceof Date
+      ? closeDate.toISOString().slice(0, 10)
+      : (typeof closeDate === 'string' && closeDate.trim() ? closeDate : undefined);
     const payload: LeadConversionRequest = {
       ...value,
-      expectedCloseDate: value.expectedCloseDate?.trim() ? value.expectedCloseDate : undefined
+      expectedCloseDate
     };
     this.saving.set(true);
     this.leadData.convert(this.leadId, payload).subscribe({

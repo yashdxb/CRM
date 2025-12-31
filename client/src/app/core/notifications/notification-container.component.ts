@@ -1,12 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { NgFor, NgIf, NgClass } from '@angular/common';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { ButtonModule } from 'primeng/button';
 import { NotificationService, Notification } from './notification.service';
 
 @Component({
   selector: 'app-notification-container',
   standalone: true,
-  imports: [NgFor, NgIf, NgClass],
+  imports: [NgFor, NgIf, NgClass, ButtonModule],
   animations: [
     trigger('slideIn', [
       transition(':enter', [
@@ -36,19 +37,21 @@ import { NotificationService, Notification } from './notification.service';
         </div>
         <button
           *ngIf="notification.action"
-          class="notification__action"
+          pButton
+          type="button"
+          class="notification__action p-button-text"
+          [label]="notification.action.label"
           (click)="handleAction(notification)"
-        >
-          {{ notification.action.label }}
-        </button>
+        ></button>
         <button
           *ngIf="notification.dismissible"
-          class="notification__dismiss"
+          pButton
+          type="button"
+          icon="pi pi-times"
+          class="notification__dismiss p-button-text"
           (click)="notificationService.dismiss(notification.id)"
           aria-label="Dismiss notification"
-        >
-          <i class="pi pi-times"></i>
-        </button>
+        ></button>
       </div>
     </div>
   `,
@@ -127,7 +130,7 @@ import { NotificationService, Notification } from './notification.service';
       line-height: 1.4;
     }
 
-    .notification__action {
+    .notification__action.p-button {
       padding: 6px 12px;
       border-radius: 8px;
       border: none;
@@ -135,16 +138,15 @@ import { NotificationService, Notification } from './notification.service';
       color: #4f46e5;
       font-weight: 600;
       font-size: 0.8rem;
-      cursor: pointer;
       transition: background 0.15s ease;
       white-space: nowrap;
     }
 
-    .notification__action:hover {
+    .notification__action.p-button:hover {
       background: rgba(99, 102, 241, 0.2);
     }
 
-    .notification__dismiss {
+    .notification__dismiss.p-button {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -154,12 +156,11 @@ import { NotificationService, Notification } from './notification.service';
       border: none;
       background: transparent;
       color: #94a3b8;
-      cursor: pointer;
       transition: all 0.15s ease;
       flex-shrink: 0;
     }
 
-    .notification__dismiss:hover {
+    .notification__dismiss.p-button:hover {
       background: rgba(15, 23, 42, 0.06);
       color: #475569;
     }
