@@ -10,8 +10,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Text.Json;
 using Hangfire;
 using Hangfire.SqlServer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +39,7 @@ builder.Services.AddHangfire(config =>
 });
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<BackgroundJobs>();
+builder.Services.AddScoped<NotificationEmailJobs>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -134,7 +137,26 @@ app.MapGet("/health", () => Results.Ok(new
     Status = "ok",
     TimestampUtc = DateTime.UtcNow
 })).AllowAnonymous();
-app.MapHealthChecks("/healthz").AllowAnonymous();
+app.MapHealthChecks("/healthz", new HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var payload = new
+        {
+            status = report.Status.ToString(),
+            totalDuration = report.TotalDuration.TotalMilliseconds,
+            checks = report.Entries.Select(entry => new
+            {
+                name = entry.Key,
+                status = entry.Value.Status.ToString(),
+                duration = entry.Value.Duration.TotalMilliseconds,
+                description = entry.Value.Description
+            })
+        };
+        await context.Response.WriteAsync(JsonSerializer.Serialize(payload));
+    }
+}).AllowAnonymous();
 
 using (var scope = app.Services.CreateScope())
 {

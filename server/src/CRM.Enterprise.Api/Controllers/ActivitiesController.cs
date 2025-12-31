@@ -3,6 +3,8 @@ using CRM.Enterprise.Api.Contracts.Activities;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
+using CRM.Enterprise.Api.Jobs;
+using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +17,12 @@ namespace CRM.Enterprise.Api.Controllers;
 public class ActivitiesController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
+    private readonly IBackgroundJobClient _backgroundJobs;
 
-    public ActivitiesController(CrmDbContext dbContext)
+    public ActivitiesController(CrmDbContext dbContext, IBackgroundJobClient backgroundJobs)
     {
         _dbContext = dbContext;
+        _backgroundJobs = backgroundJobs;
     }
 
     [HttpGet]
@@ -195,6 +199,7 @@ public class ActivitiesController : ControllerBase
 
         _dbContext.Activities.Add(activity);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        _backgroundJobs.Enqueue<NotificationEmailJobs>(job => job.SendTaskAssignedAsync(activity.Id, CancellationToken.None));
 
         var dto = await MapToListItemAsync(activity.Id, cancellationToken);
         return CreatedAtAction(nameof(GetActivities), new { id = activity.Id }, dto);
@@ -207,6 +212,7 @@ public class ActivitiesController : ControllerBase
         var activity = await _dbContext.Activities.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
         if (activity is null) return NotFound();
 
+        var previousOwnerId = activity.OwnerId;
         activity.Subject = request.Subject;
         activity.Description = request.Description;
         activity.Type = request.Type;
@@ -219,6 +225,10 @@ public class ActivitiesController : ControllerBase
         activity.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        if (previousOwnerId != activity.OwnerId && activity.OwnerId != Guid.Empty)
+        {
+            _backgroundJobs.Enqueue<NotificationEmailJobs>(job => job.SendTaskAssignedAsync(activity.Id, CancellationToken.None));
+        }
         return NoContent();
     }
 

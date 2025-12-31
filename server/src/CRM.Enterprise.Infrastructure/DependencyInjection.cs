@@ -6,7 +6,9 @@ using CRM.Enterprise.Application.Auth;
 using CRM.Enterprise.Application.Dashboard;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Infrastructure.Persistence;
+using CRM.Enterprise.Infrastructure.Notifications;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -30,7 +32,9 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         services.AddScoped<IDashboardReadService, DashboardReadService>();
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IEmailSender, SendGridEmailSender>();
 
         return services;
     }

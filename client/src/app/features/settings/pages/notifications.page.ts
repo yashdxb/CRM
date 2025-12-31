@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -6,6 +6,8 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { BreadcrumbsComponent } from '../../../core/breadcrumbs';
 import { NotificationChannel, NotificationService, NotificationType } from '../../../core/notifications';
+import { NotificationPreferencesService } from '../../../shared/services/notification-preferences.service';
+import { AppToastService } from '../../../core/app-toast.service';
 
 interface NotificationPreferenceOption {
   key: NotificationType;
@@ -21,8 +23,10 @@ interface NotificationPreferenceOption {
   templateUrl: './notifications.page.html',
   styleUrl: './notifications.page.scss'
 })
-export class NotificationsPage {
+export class NotificationsPage implements OnInit {
   private readonly notificationService = inject(NotificationService);
+  private readonly preferencesApi = inject(NotificationPreferencesService);
+  private readonly toastService = inject(AppToastService);
 
   protected readonly preferences = this.notificationService.preferences;
 
@@ -37,11 +41,32 @@ export class NotificationsPage {
     Object.values(this.preferences().email).every((value) => !value)
   );
 
+  ngOnInit(): void {
+    this.preferencesApi.getPreferences().subscribe({
+      next: (prefs) => this.notificationService.setPreferences(prefs),
+      error: () => {
+        this.toastService.show('warning', 'Unable to load notification preferences.', 3000);
+      }
+    });
+  }
+
   protected toggle(channel: NotificationChannel, type: NotificationType, enabled: boolean) {
     this.notificationService.updatePreference(channel, type, enabled);
+    this.syncPreferences();
   }
 
   protected resetPreferences() {
     this.notificationService.resetPreferences();
+    this.syncPreferences();
+  }
+
+  private syncPreferences() {
+    const current = this.preferences();
+    this.preferencesApi.updatePreferences(current).subscribe({
+      next: (prefs) => this.notificationService.setPreferences(prefs),
+      error: () => {
+        this.toastService.show('error', 'Unable to save notification preferences.', 3000);
+      }
+    });
   }
 }

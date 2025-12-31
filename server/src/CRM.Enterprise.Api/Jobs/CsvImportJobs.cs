@@ -6,11 +6,13 @@ using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Security;
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CRM.Enterprise.Api.Jobs;
 
+[AutomaticRetry(Attempts = 3, DelaysInSeconds = new[] { 10, 30, 60 })]
 public class CsvImportJobs
 {
     private readonly CrmDbContext _dbContext;

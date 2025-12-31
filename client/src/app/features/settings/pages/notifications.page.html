@@ -51,13 +51,13 @@
       </div>
     </div>
 
-    <div class="glass-card preference-panel muted">
+    <div class="glass-card preference-panel">
       <div class="panel-header">
         <div>
           <span class="panel-eyebrow">Email alerts</span>
           <h2>Email notifications</h2>
         </div>
-        <span class="panel-pill muted">Coming soon</span>
+        <span class="panel-pill">Live</span>
       </div>
       <div class="panel-body">
         <div class="preference-row" *ngFor="let option of options">
@@ -72,11 +72,11 @@
           </div>
           <p-toggleSwitch
             [ngModel]="preferences().email[option.key]"
-            [disabled]="true"
+            (ngModelChange)="toggle('email', option.key, $event)"
           ></p-toggleSwitch>
         </div>
         <p class="panel-note" *ngIf="emailDisabled()">
-          Email delivery is part of Phase 2 integrations. Enablement will appear here once it ships.
+          Email notifications are currently disabled. Toggle the switches to enable delivery.
         </p>
       </div>
     </div>

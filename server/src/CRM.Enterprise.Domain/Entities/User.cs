@@ -9,6 +9,7 @@ public class User : AuditableEntity
     public string? PasswordHash { get; set; }
     public string? TimeZone { get; set; }
     public string? Locale { get; set; }
+    public string? NotificationPreferencesJson { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAtUtc { get; set; }
 

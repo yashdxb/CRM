@@ -1,7 +1,9 @@
+using Hangfire;
 using Microsoft.Extensions.Logging;
 
 namespace CRM.Enterprise.Api.Jobs;
 
+[AutomaticRetry(Attempts = 2, DelaysInSeconds = new[] { 30, 60 })]
 public class BackgroundJobs
 {
     private readonly ILogger<BackgroundJobs> _logger;

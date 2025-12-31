@@ -162,6 +162,12 @@ export class NotificationService {
     this.persistPreferences();
   }
 
+  setPreferences(preferences: NotificationPreferences): void {
+    this.syncForUser();
+    this._preferences.set(preferences);
+    this.persistPreferences();
+  }
+
   private getDefaultDuration(type: NotificationType): number {
     switch (type) {
       case 'error': return 8000;

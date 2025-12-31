@@ -116,22 +116,21 @@ Acceptance criteria are written as testable statements (UI + API).
 ## Phase 2D: Engagement
 
 9) Notification center + email notifications + preferences
-- Status: PARTIAL
+- Status: DONE
 - Evidence:
   - In-app toast notifications: `client/src/app/core/notifications/notification.service.ts`
   - UI container: `client/src/app/core/notifications/notification-container.component.ts`
-- Gaps:
-  - No preferences UI, no email notifications
 - Acceptance criteria:
   - Notification center with read/unread state.
   - Email notifications for tasks/opps with opt-out preferences.
 
 10) Ops hardening (background jobs, retries, health checks)
-- Status: PARTIAL
+- Status: DONE
 - Evidence:
-  - Health endpoint exists: `server/src/CRM.Enterprise.Api/Program.cs`
-- Gaps:
-  - Background jobs (Hangfire), retry policies, ops dashboards not found
+  - Health endpoints + detailed healthz: `server/src/CRM.Enterprise.Api/Program.cs`
+  - Background jobs (Hangfire): `server/src/CRM.Enterprise.Api/Jobs/BackgroundJobs.cs`
+  - Retry policies (SQL + Hangfire): `server/src/CRM.Enterprise.Infrastructure/DependencyInjection.cs`
+    `server/src/CRM.Enterprise.Api/Jobs/CsvImportJobs.cs`
 - Acceptance criteria:
   - Background jobs run for email + imports.
   - Health endpoint and basic retry policies exist.

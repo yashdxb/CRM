@@ -4,6 +4,8 @@ using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Infrastructure.Persistence;
+using CRM.Enterprise.Api.Jobs;
+using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,11 +20,13 @@ public class OpportunitiesController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IBackgroundJobClient _backgroundJobs;
 
-    public OpportunitiesController(CrmDbContext dbContext, ITenantProvider tenantProvider)
+    public OpportunitiesController(CrmDbContext dbContext, ITenantProvider tenantProvider, IBackgroundJobClient backgroundJobs)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
+        _backgroundJobs = backgroundJobs;
     }
 
     [HttpGet]
@@ -209,6 +213,11 @@ public class OpportunitiesController : ControllerBase
         _dbContext.Opportunities.Add(opp);
         AddStageHistory(opp, stageId, "Stage set");
         await _dbContext.SaveChangesAsync(cancellationToken);
+        if (opp.IsClosed)
+        {
+            _backgroundJobs.Enqueue<NotificationEmailJobs>(job =>
+                job.SendOpportunityClosedAsync(opp.Id, opp.IsWon, CancellationToken.None));
+        }
 
         var dto = new OpportunityListItem(
             opp.Id,
@@ -248,6 +257,8 @@ public class OpportunitiesController : ControllerBase
         }
 
         var previousStageId = opp.StageId;
+        var wasClosed = opp.IsClosed;
+        var wasWon = opp.IsWon;
 
         opp.Name = request.Name;
         opp.AccountId = await ResolveAccountIdAsync(request.AccountId, cancellationToken);
@@ -271,6 +282,11 @@ public class OpportunitiesController : ControllerBase
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        if (!wasClosed && opp.IsClosed)
+        {
+            _backgroundJobs.Enqueue<NotificationEmailJobs>(job =>
+                job.SendOpportunityClosedAsync(opp.Id, opp.IsWon, CancellationToken.None));
+        }
         return NoContent();
     }
 
