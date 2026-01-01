@@ -1,0 +1,657 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     CUSTOMERS PAGE - FUTURISTIC ENTERPRISE UI
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-container">
+  <!-- Animated Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- PrimeNG Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       HERO SECTION - Command Center Style
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Customer Intelligence Hub</span>
+      </div>
+      
+      <h1 class="hero-title">
+        <span class="title-gradient">Customer</span>
+        <span class="title-light">Workspace</span>
+      </h1>
+      
+      <p class="hero-description">
+        Manage relationships, track engagement, and drive growth with AI-powered insights
+      </p>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().total || 0 }}</div>
+          <div class="stat-label">Total Customers</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().leads }}</div>
+          <div class="stat-label">Active Leads</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--leads" [style.width.%]="metrics().total ? (metrics().leads / metrics().total) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().prospects }}</div>
+          <div class="stat-label">Prospects</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--prospects" [style.width.%]="metrics().total ? (metrics().prospects / metrics().total) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().activeCustomers }}</div>
+          <div class="stat-label">Converted</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--success" [style.width.%]="metrics().total ? (metrics().activeCustomers / metrics().total) * 100 : 0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-primary btn-glow" [disabled]="!canManage()" (click)="onCreate()">
+          <i class="pi pi-plus"></i>
+          <span>Add Customer</span>
+          <div class="btn-shine"></div>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" (click)="load()">
+          <i class="pi pi-refresh"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-chart-line"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">This Week</span>
+          <strong class="card-value">+{{ metrics().newThisWeek }}</strong>
+          <span class="card-trend card-trend--up">
+            <i class="pi pi-arrow-up"></i> New records
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-users"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Team Active</span>
+          <strong class="card-value">{{ ownerOptions().length - 1 }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-user"></i> Members
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       METRICS DASHBOARD
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="metrics-section">
+    <div class="metric-card metric-card--total">
+      <div class="metric-icon">
+        <i class="pi pi-database"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Total Records</span>
+        <strong class="metric-value">{{ metrics().total || '—' }}</strong>
+      </div>
+      <div class="metric-chart">
+        <svg viewBox="0 0 100 40" class="sparkline">
+          <path d="M0,35 Q25,30 50,20 T100,15" fill="none" stroke="url(#gradient-blue)" stroke-width="2"/>
+          <defs>
+            <linearGradient id="gradient-blue" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#667eea"/>
+              <stop offset="100%" stop-color="#764ba2"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--leads">
+      <div class="metric-icon">
+        <i class="pi pi-bolt"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Leads</span>
+        <strong class="metric-value">{{ metrics().leads }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--cyan" 
+            [attr.stroke-dasharray]="(metrics().total ? (metrics().leads / metrics().total) * 100 : 0) + ', 100'"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--prospects">
+      <div class="metric-icon">
+        <i class="pi pi-star"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Prospects</span>
+        <strong class="metric-value">{{ metrics().prospects }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--purple" 
+            [attr.stroke-dasharray]="(metrics().total ? (metrics().prospects / metrics().total) * 100 : 0) + ', 100'"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--customers">
+      <div class="metric-icon">
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Customers</span>
+        <strong class="metric-value">{{ metrics().activeCustomers }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--green" 
+            [attr.stroke-dasharray]="(metrics().total ? (metrics().activeCustomers / metrics().total) * 100 : 0) + ', 100'"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--new">
+      <div class="metric-icon">
+        <i class="pi pi-calendar-plus"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">This Week</span>
+        <strong class="metric-value">{{ metrics().newThisWeek }}</strong>
+      </div>
+      <div class="metric-badge">
+        <span>NEW</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       SMART FILTER BAR
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="filter-section">
+    <div class="filter-bar">
+      <div class="search-wrapper">
+        <i class="pi pi-search search-icon"></i>
+        <input
+          pInputText
+          type="search"
+          class="search-input"
+          placeholder="Search customers, companies, emails..."
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearch($event)"
+        />
+        <kbd class="search-kbd">⌘K</kbd>
+      </div>
+
+      <div class="filter-pills">
+        <div class="filter-pill">
+          <i class="pi pi-user"></i>
+          <p-select appendTo="body"
+            [options]="ownerOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="ownerFilter()"
+            (ngModelChange)="onOwnerFilterChange($event)"
+            placeholder="Owner"
+            styleClass="filter-select"
+          ></p-select>
+        </div>
+
+        <div class="filter-pill">
+          <i class="pi pi-tag"></i>
+          <p-select appendTo="body"
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="statusFilter"
+            (ngModelChange)="onStatusChange($event)"
+            placeholder="Status"
+            styleClass="filter-select"
+          ></p-select>
+        </div>
+
+        <div class="filter-pill">
+          <i class="pi pi-filter"></i>
+          <p-select appendTo="body"
+            [options]="segmentOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="segmentFilter()"
+            (ngModelChange)="onSegmentChange($event)"
+            placeholder="Segment"
+            styleClass="filter-select"
+          ></p-select>
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <div class="view-switcher">
+          <button 
+            pButton
+            type="button"
+            class="view-btn" 
+            [class.active]="viewMode === 'table'" 
+            (click)="setViewMode('table')"
+            title="Table view">
+            <i class="pi pi-list"></i>
+          </button>
+          <button 
+            pButton
+            type="button"
+            class="view-btn" 
+            [class.active]="viewMode === 'cards'" 
+            (click)="setViewMode('cards')"
+            title="Card view">
+            <i class="pi pi-th-large"></i>
+          </button>
+        </div>
+
+        <button pButton type="button" class="btn btn-ghost" (click)="resetFilters()">
+          <i class="pi pi-times"></i>
+          <span>Clear</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="views-bar">
+      <div class="views-select">
+        <i class="pi pi-bookmark"></i>
+        <p-select appendTo="body"
+          [options]="viewOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedViewId()"
+          (ngModelChange)="onSelectView($event)"
+          placeholder="Saved views"
+          styleClass="filter-select"
+        ></p-select>
+      </div>
+      <div class="views-save">
+        <input
+          pInputText
+          type="text"
+          placeholder="Name this view"
+          [(ngModel)]="viewName"
+        />
+        <button pButton type="button" class="btn btn-ghost" (click)="onSaveView()">
+          <i class="pi pi-bookmark"></i>
+          <span>Save</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" [disabled]="!selectedViewId()" (click)="onDeleteView()">
+          <i class="pi pi-trash"></i>
+          <span>Delete</span>
+        </button>
+      </div>
+    </div>
+
+    <section class="recently-viewed" *ngIf="recentCustomers().length">
+      <div class="recently-viewed__header">
+        <h3>Recently viewed</h3>
+        <span>{{ recentCustomers().length }} recent</span>
+      </div>
+      <div class="recently-viewed__list">
+        <button pButton type="button" class="recent-item" *ngFor="let item of recentCustomers()" (click)="openRecent(item)">
+          <div class="recent-item__title">{{ item.title }}</div>
+          <div class="recent-item__meta">
+            {{ item.subtitle || 'Customer' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <div class="filter-summary" *ngIf="searchTerm || statusFilter !== 'all' || ownerFilter() !== 'all'">
+      <span class="summary-label">Active filters:</span>
+      <span class="filter-tag" *ngIf="searchTerm">
+        "{{ searchTerm }}"
+        <i class="pi pi-times" (click)="searchTerm = ''; onSearch('')"></i>
+      </span>
+      <span class="filter-tag" *ngIf="statusFilter !== 'all'">
+        {{ statusFilter }}
+        <i class="pi pi-times" (click)="statusFilter = 'all'; onStatusChange('all')"></i>
+      </span>
+      <span class="filter-tag" *ngIf="ownerFilter() !== 'all'">
+        {{ ownerFilter() }}
+        <i class="pi pi-times" (click)="onOwnerFilterChange('all')"></i>
+      </span>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       DATA TABLE
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="data-section">
+    <div class="data-card">
+      <header class="data-header">
+        <div class="header-title">
+          <h2>Customer Records</h2>
+          <span class="record-count">
+            {{ filteredCustomers().length }} of {{ total() }} records
+          </span>
+        </div>
+        <div class="header-actions">
+          <button pButton type="button" class="action-btn" [disabled]="!canManage()" (click)="openImport()">
+            <i class="pi pi-upload"></i>
+            <span>Import</span>
+          </button>
+          <button pButton type="button" class="action-btn" (click)="onExport()">
+            <i class="pi pi-download"></i>
+            <span>Export</span>
+          </button>
+          <button pButton type="button" class="action-btn" [disabled]="!canManage()">
+            <i class="pi pi-cog"></i>
+            <span>Columns</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="loading()">
+        <div class="skeleton-row" *ngFor="let _ of [1,2,3,4,5]">
+          <div class="skeleton skeleton-avatar"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text skeleton-short"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-actions"></div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="!loading() && !filteredCustomers().length">
+        <div class="empty-icon">
+          <i class="pi pi-inbox"></i>
+        </div>
+        <h3>No customers found</h3>
+        <p>Try adjusting your search or filters to find what you're looking for</p>
+        <button pButton type="button" class="btn btn-primary" (click)="resetFilters()">
+          <i class="pi pi-refresh"></i>
+          <span>Reset Filters</span>
+        </button>
+      </div>
+
+      <!-- Table View -->
+      <div class="table-wrapper" *ngIf="!loading() && filteredCustomers().length && viewMode === 'table'">
+        <p-table class="crm-table data-table" [value]="filteredCustomers()">
+          <ng-template pTemplate="header">
+            <tr>
+              <th class="th-select">
+                <p-checkbox
+                  [binary]="true"
+                  [ngModel]="selectedIds().length && selectedIds().length === filteredCustomers().length"
+                  (onChange)="toggleSelectAll($event.checked)"
+                ></p-checkbox>
+              </th>
+              <th>Customer</th>
+              <th>Company</th>
+              <th>Status</th>
+              <th>Contact</th>
+              <th>Owner</th>
+              <th class="th-actions">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr class="table-row">
+              <td class="td-select">
+                <p-checkbox
+                  [binary]="true"
+                  [ngModel]="isSelected(row.id)"
+                  (onChange)="toggleSelection(row.id, $event.checked)"
+                ></p-checkbox>
+              </td>
+              <td class="td-customer">
+                <div class="customer-avatar">
+                  {{ row.name.charAt(0).toUpperCase() }}
+                </div>
+                <div class="customer-info">
+                  <span class="customer-name">{{ row.name }}</span>
+                  <span class="customer-date">Added {{ row.createdAt | date: 'MMM d, yyyy' }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="company-name">{{ row.company || '—' }}</span>
+              </td>
+              <td>
+                <p-select appendTo="body"
+                  [options]="statusOptionsInline"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="row.status"
+                  (ngModelChange)="onInlineStatusChange(row, $event)"
+                  styleClass="inline-select"
+                ></p-select>
+              </td>
+              <td>
+                <div class="contact-info">
+                  <span class="contact-email">{{ row.email || '—' }}</span>
+                  <span class="contact-phone" *ngIf="row.phone">{{ row.phone }}</span>
+                </div>
+              </td>
+              <td>
+                <p-select appendTo="body"
+                  [options]="ownerOptionsForAssign()"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="row.ownerId"
+                  (ngModelChange)="onInlineOwnerChange(row, $event)"
+                  [disabled]="!canManage()"
+                  placeholder="Owner"
+                  styleClass="inline-select"
+                ></p-select>
+              </td>
+              <td class="actions">
+                <button pButton icon="pi pi-pencil" [disabled]="!canManage()" (click)="onEdit(row)"></button>
+                <button pButton icon="pi pi-trash" [disabled]="!canManage()" (click)="onDelete(row)"></button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+
+      <!-- Card View -->
+      <div class="cards-wrapper" *ngIf="!loading() && filteredCustomers().length && viewMode === 'cards'">
+        <div class="customer-card" *ngFor="let row of filteredCustomers()">
+          <div class="card-header">
+            <div class="card-avatar">
+              {{ row.name.charAt(0).toUpperCase() }}
+            </div>
+            <span class="card-status" [attr.data-status]="row.status.toLowerCase()">
+              {{ row.status }}
+            </span>
+          </div>
+          <div class="card-body">
+            <h3 class="card-name">{{ row.name }}</h3>
+            <p class="card-company">{{ row.company || 'No company' }}</p>
+            <div class="card-details">
+              <div class="detail-row">
+                <i class="pi pi-envelope"></i>
+                <span>{{ row.email || 'No email' }}</span>
+              </div>
+              <div class="detail-row">
+                <i class="pi pi-phone"></i>
+                <span>{{ row.phone || 'No phone' }}</span>
+              </div>
+              <div class="detail-row">
+                <i class="pi pi-user"></i>
+                <span>{{ row.owner || 'Unassigned' }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button pButton type="button" class="card-btn" [disabled]="!canManage()" (click)="onEdit(row)">
+              <i class="pi pi-pencil"></i>
+              Edit
+            </button>
+            <button pButton type="button" class="card-btn card-btn--danger" [disabled]="!canManage()" (click)="onDelete(row)">
+              <i class="pi pi-trash"></i>
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <footer class="data-footer" *ngIf="!loading() && filteredCustomers().length">
+        <div class="pagination-info">
+          Showing {{ (pageIndex * rows) + 1 }} - {{ Math.min((pageIndex + 1) * rows, total()) }} of {{ total() }}
+        </div>
+        <p-paginator
+          [rows]="rows"
+          [totalRecords]="total()"
+          [rowsPerPageOptions]="[5, 10, 20, 50]"
+          [first]="pageIndex * rows"
+          (onPageChange)="onPageChange($event)"
+          styleClass="modern-paginator"
+        ></p-paginator>
+      </footer>
+    </div>
+  </section>
+
+  <app-bulk-actions-bar
+    [actions]="bulkActions()"
+    [selectedItems]="selectedIds()"
+    [totalCount]="filteredCustomers().length"
+    (actionClicked)="onBulkAction($event)"
+    (clearSelection)="clearSelection()"
+    (selectAll)="selectAllFiltered()"
+  ></app-bulk-actions-bar>
+
+  <p-dialog
+    header="Assign owner"
+    [(visible)]="assignDialogVisible"
+    [modal]="true"
+    [style]="{ width: '360px' }"
+  >
+    <div class="bulk-assign">
+      <label>Owner</label>
+      <p-select appendTo="body"
+        [options]="ownerOptionsForAssign()"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="assignOwnerId"
+        placeholder="Select owner"
+        styleClass="w-full"
+      ></p-select>
+    </div>
+    <ng-template pTemplate="footer">
+      <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="assignDialogVisible = false"></button>
+      <button pButton type="button" class="crm-button crm-button--primary" label="Assign" [disabled]="!assignOwnerId || !canManage()" (click)="confirmBulkAssign()"></button>
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog
+    header="Change status"
+    [(visible)]="statusDialogVisible"
+    [modal]="true"
+    [style]="{ width: '360px' }"
+  >
+    <div class="bulk-assign">
+      <label>Status</label>
+      <p-select appendTo="body"
+        [options]="statusOptionsInline"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="bulkStatus"
+        placeholder="Select status"
+        styleClass="w-full"
+      ></p-select>
+    </div>
+    <ng-template pTemplate="footer">
+      <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="statusDialogVisible = false"></button>
+      <button pButton type="button" class="crm-button crm-button--primary" label="Update" [disabled]="!bulkStatus || !canManage()" (click)="confirmBulkStatusUpdate()"></button>
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog
+    header="Import customers"
+    [(visible)]="importDialogVisible"
+    [modal]="true"
+    [dismissableMask]="true"
+    [style]="{ width: '480px' }"
+    (onHide)="closeImport()"
+  >
+    <div class="import-dialog">
+      <p class="import-note">
+        Upload a CSV with headers. Required column: <strong>Name</strong>.
+      </p>
+      <label class="import-upload">
+        <p-fileUpload
+          mode="basic"
+          name="file"
+          [auto]="false"
+          [customUpload]="true"
+          [showUploadButton]="false"
+          [showCancelButton]="false"
+          [chooseLabel]="importFile?.name || 'Choose CSV file'"
+          accept=".csv"
+          (onSelect)="onImportFileSelected($event)"
+        ></p-fileUpload>
+      </label>
+      <div class="import-actions">
+        <button pButton type="button" class="btn btn-ghost" (click)="closeImport()">Cancel</button>
+        <button pButton type="button" class="btn btn-primary" [disabled]="!importFile || importing() || !canManage()" (click)="onImport()">
+          {{ importing() ? 'Importing...' : 'Import' }}
+        </button>
+      </div>
+      <div class="import-error" *ngIf="importError()">{{ importError() }}</div>
+      <div class="import-status" *ngIf="importJob() as job">
+        <span>Status: {{ importStatus()?.status || job.status }}</span>
+      </div>
+      <div class="import-result" *ngIf="importStatus() as result">
+        <div class="import-metrics">
+          <span>Rows: {{ result.total }}</span>
+          <span>Imported: {{ result.imported }}</span>
+          <span>Skipped: {{ result.skipped }}</span>
+        </div>
+        <div class="import-errors" *ngIf="result.errors.length">
+          <p>Errors (first 5):</p>
+          <ul>
+            <li *ngFor="let err of result.errors.slice(0, 5)">
+              Row {{ err.rowNumber }}: {{ err.message }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </p-dialog>
+
+  <!-- Floating Action Button -->
+  <button pButton type="button" class="fab" [disabled]="!canManage()" (click)="onCreate()" title="Add Customer">
+    <i class="pi pi-plus"></i>
+    <span class="fab-tooltip">Add Customer</span>
+  </button>
+
+</div>

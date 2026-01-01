@@ -1,0 +1,323 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     WORKSPACE SETTINGS PAGE - Premium Light UI
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-container">
+  <!-- Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       HERO SECTION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Workspace Settings</span>
+      </div>
+      
+      <h1 class="hero-title">
+        <span class="title-gradient">Tenant</span>
+        <span class="title-light">Configuration</span>
+      </h1>
+      
+      <p class="hero-description">
+        Set the company name, time zone, and currency that shape every record in the CRM. Configure approval workflows for high-value opportunities.
+      </p>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="stat-value">{{ settingsForm.value.name ? '1' : '0' }}</div>
+          <div class="stat-label">Workspace</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" [style.width.%]="settingsForm.value.name ? 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ settingsForm.value.timeZone || 'UTC' }}</div>
+          <div class="stat-label">Time Zone</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--info" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ settingsForm.value.currency || 'USD' }}</div>
+          <div class="stat-label">Currency</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--success" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ settingsForm.value.approvalAmountThreshold ? 'On' : 'Off' }}</div>
+          <div class="stat-label">Approvals</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--warning" [style.width.%]="settingsForm.value.approvalAmountThreshold ? 100 : 30"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Settings</span>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/roles">
+          <i class="pi pi-shield"></i>
+          <span>Manage Roles</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" [disabled]="loading()" (click)="loadSettings()">
+          <i class="pi pi-refresh"></i>
+          <span>Reload</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-building"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Active Workspace</span>
+          <strong class="card-value">{{ settingsForm.value.name || 'Untitled' }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-check-circle"></i> Configured
+          </span>
+        </div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-cog"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Settings</span>
+          <strong class="card-value">4</strong>
+          <span class="card-trend">
+            <i class="pi pi-sliders-h"></i> Configurable options
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       SETTINGS FORM SECTION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="data-section">
+    <div class="settings-layout">
+      <!-- Form Card -->
+      <div class="data-card">
+        <div class="data-header">
+          <div class="header-title">
+            <h2>Workspace Profile</h2>
+            <span class="record-count">Configure your tenant defaults</span>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge status-badge--success" *ngIf="!loading()">
+              <i class="pi pi-check"></i> Active
+            </span>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-state" *ngIf="loading()">
+          <div class="skeleton-row" *ngFor="let _ of [0, 1, 2]">
+            <div class="skeleton skeleton-text"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+        </div>
+
+        <!-- Form -->
+        <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon">
+                <i class="pi pi-building"></i>
+              </div>
+              <div>
+                <h3>Company Information</h3>
+                <p>Basic workspace identity settings</p>
+              </div>
+            </div>
+            
+            <div class="form-grid">
+              <div class="form-field">
+                <label class="field-label">
+                  <i class="pi pi-id-card"></i>
+                  Company Name
+                </label>
+                <input pInputText formControlName="name" placeholder="Acme CRM Workspace" class="field-input" />
+                <small class="field-hint">The display name for your workspace</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon section-icon--info">
+                <i class="pi pi-globe"></i>
+              </div>
+              <div>
+                <h3>Regional Settings</h3>
+                <p>Time zone and currency preferences</p>
+              </div>
+            </div>
+            
+            <div class="form-grid form-grid--2col">
+              <div class="form-field">
+                <label class="field-label">
+                  <i class="pi pi-clock"></i>
+                  Time Zone
+                </label>
+                <p-select appendTo="body"
+                  [options]="timeZoneOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  formControlName="timeZone"
+                  placeholder="Select time zone"
+                  styleClass="field-select"
+                ></p-select>
+                <small class="field-hint">Used for date/time display across the system</small>
+              </div>
+
+              <div class="form-field">
+                <label class="field-label">
+                  <i class="pi pi-dollar"></i>
+                  Currency
+                </label>
+                <p-select appendTo="body"
+                  [options]="currencyOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  formControlName="currency"
+                  placeholder="Select currency"
+                  styleClass="field-select"
+                ></p-select>
+                <small class="field-hint">Default currency for monetary values</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-header">
+              <div class="section-icon section-icon--warning">
+                <i class="pi pi-check-square"></i>
+              </div>
+              <div>
+                <h3>Approval Workflow</h3>
+                <p>Configure approval rules for high-value opportunities</p>
+              </div>
+            </div>
+            
+            <div class="form-grid form-grid--2col">
+              <div class="form-field">
+                <label class="field-label">
+                  <i class="pi pi-chart-line"></i>
+                  Approval Threshold
+                </label>
+                <p-inputNumber
+                  formControlName="approvalAmountThreshold"
+                  [min]="0"
+                  placeholder="Leave empty to disable"
+                  styleClass="field-input-number"
+                ></p-inputNumber>
+                <small class="field-hint">Require approval when closing above this amount</small>
+              </div>
+
+              <div class="form-field">
+                <label class="field-label">
+                  <i class="pi pi-user-plus"></i>
+                  Approver Role
+                </label>
+                <input pInputText formControlName="approvalApproverRole" placeholder="Sales Manager" class="field-input" />
+                <small class="field-hint">Role required to approve high-value opportunities</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">
+              <i class="pi pi-refresh"></i>
+              Reset
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving() || !canManageAdmin()">
+              <i class="pi pi-save" *ngIf="!saving()"></i>
+              <i class="pi pi-spinner pi-spin" *ngIf="saving()"></i>
+              {{ saving() ? 'Saving...' : 'Save Settings' }}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Preview Card -->
+      <aside class="preview-card" *ngIf="!loading()">
+        <div class="preview-header">
+          <div class="preview-title">
+            <i class="pi pi-eye"></i>
+            <h3>Live Preview</h3>
+          </div>
+          <span class="status-badge status-badge--success">Active</span>
+        </div>
+
+        <div class="preview-workspace">
+          <div class="preview-icon">
+            <i class="pi pi-building"></i>
+          </div>
+          <div class="preview-info">
+            <span class="preview-label">Workspace</span>
+            <strong class="preview-value">{{ settingsForm.value.name || 'Untitled workspace' }}</strong>
+          </div>
+        </div>
+
+        <div class="preview-grid">
+          <div class="preview-item">
+            <div class="preview-item-icon">
+              <i class="pi pi-clock"></i>
+            </div>
+            <div>
+              <span class="preview-item-label">Time Zone</span>
+              <strong class="preview-item-value">{{ settingsForm.value.timeZone || 'UTC' }}</strong>
+            </div>
+          </div>
+
+          <div class="preview-item">
+            <div class="preview-item-icon preview-item-icon--success">
+              <i class="pi pi-dollar"></i>
+            </div>
+            <div>
+              <span class="preview-item-label">Currency</span>
+              <strong class="preview-item-value">{{ settingsForm.value.currency || 'USD' }}</strong>
+            </div>
+          </div>
+
+          <div class="preview-item">
+            <div class="preview-item-icon preview-item-icon--warning">
+              <i class="pi pi-chart-line"></i>
+            </div>
+            <div>
+              <span class="preview-item-label">Approval Threshold</span>
+              <strong class="preview-item-value">
+                {{ settingsForm.value.approvalAmountThreshold ? (settingsForm.value.approvalAmountThreshold | number:'1.0-0') : 'Disabled' }}
+              </strong>
+            </div>
+          </div>
+
+          <div class="preview-item">
+            <div class="preview-item-icon preview-item-icon--info">
+              <i class="pi pi-user"></i>
+            </div>
+            <div>
+              <span class="preview-item-label">Approver Role</span>
+              <strong class="preview-item-value">{{ settingsForm.value.approvalApproverRole || 'Not set' }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-note">
+          <i class="pi pi-info-circle"></i>
+          <span>These defaults apply to new records and pipeline metrics.</span>
+        </div>
+      </aside>
+    </div>
+  </section>
+</div>

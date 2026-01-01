@@ -1,0 +1,138 @@
+<section class="invite-page">
+  <div class="form-header">
+    <div class="header-content">
+      <app-breadcrumbs></app-breadcrumbs>
+
+      <button type="button" class="back-link" routerLink="/app/settings/users">
+        <i class="pi pi-arrow-left"></i>
+        Back to Users
+      </button>
+
+      <div class="header-row">
+        <div class="header-title">
+          <h1>
+            <span class="title-gradient">Invite</span>
+            <span class="title-light">Teammate</span>
+          </h1>
+          <p class="header-subtitle">
+            Add new team members with personalized access and roles.
+          </p>
+        </div>
+        <div class="header-meta">
+          <span class="meta-chip">
+            <i class="pi pi-send"></i>
+            New Invitation
+          </span>
+          <span *ngIf="status() as banner" class="status-pill" [ngClass]="'status-pill--' + banner.tone">
+            {{ banner.message }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-body">
+    <article class="form-card">
+      <h3 class="section-title">
+        <i class="pi pi-user-plus"></i>
+        User Details
+      </h3>
+
+      <form [formGroup]="form" (ngSubmit)="handleSubmit()" class="form-layout">
+        <div class="form-grid">
+          <div class="field">
+            <label for="fullName">Full name</label>
+            <input pInputText id="fullName" formControlName="fullName" placeholder="Jordan Patel" class="w-full" />
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input pInputText id="email" formControlName="email" placeholder="user@example.com" class="w-full" />
+          </div>
+          <div class="field">
+            <label for="timeZone">Time zone</label>
+            <p-select
+              inputId="timeZone"
+              formControlName="timeZone"
+              [options]="timezoneOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            ></p-select>
+          </div>
+          <div class="field">
+            <label for="locale">Locale</label>
+            <p-select
+              inputId="locale"
+              formControlName="locale"
+              [options]="localeOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            ></p-select>
+          </div>
+          <div class="field full">
+            <label for="roles">Roles</label>
+            <p-multiSelect
+              inputId="roles"
+              formControlName="roleIds"
+              [options]="rolesAsOptions()"
+              optionLabel="label"
+              optionValue="value"
+              display="chip"
+              appendTo="body"
+              defaultLabel="Select roles"
+              styleClass="w-full"
+            ></p-multiSelect>
+          </div>
+          <div class="field full">
+            <label for="temporaryPassword">Temporary password</label>
+            <div class="password-field">
+              <input
+                pInputText
+                id="temporaryPassword"
+                type="text"
+                formControlName="temporaryPassword"
+                placeholder="Optional"
+                class="w-full"
+              />
+              <button type="button" class="btn-generate" [disabled]="!canManageAdmin()" (click)="generatePassword()">
+                <i class="pi pi-sync"></i>
+                Generate
+              </button>
+            </div>
+            <small *ngIf="generatedPassword()">Share once, then require reset on first login.</small>
+          </div>
+        </div>
+
+        <!-- Status Control Card -->
+        <div class="status-control-card" [class.status-control-card--active]="form.value.isActive" [class.status-control-card--inactive]="!form.value.isActive">
+          <div class="status-control-icon" [class.status-control-icon--active]="form.value.isActive">
+            <i class="pi" [class.pi-check-circle]="form.value.isActive" [class.pi-ban]="!form.value.isActive"></i>
+          </div>
+          <div class="status-control-content">
+            <span class="status-control-label">Account Status</span>
+            <strong class="status-control-value">{{ form.value.isActive ? 'Active' : 'Inactive' }}</strong>
+            <span class="status-control-hint">{{ form.value.isActive ? 'User can access the system immediately' : 'User access is disabled' }}</span>
+          </div>
+          <div class="status-control-toggle">
+            <p-toggleSwitch formControlName="isActive"></p-toggleSwitch>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" pButton label="Cancel" class="crm-button--ghost" routerLink="/app/settings/users"></button>
+          <button
+            type="submit"
+            pButton
+            label="Send Invite"
+            icon="pi pi-send"
+            class="crm-button--primary"
+            [disabled]="!canSubmit()"
+          ></button>
+        </div>
+      </form>
+    </article>
+  </div>
+</section>

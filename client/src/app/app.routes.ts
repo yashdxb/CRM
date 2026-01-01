@@ -12,11 +12,11 @@ export const routes: Routes = [
   },
   {
     path: 'landing',
-    loadComponent: () => import('./features/landing/landing.page').then((m) => m.LandingPage)
+    loadComponent: () => import('./public/landing/landing.page').then((m) => m.LandingPage)
   },
   {
     path: 'login',
-    loadComponent: () => import('./features/auth/login.page').then((m) => m.LoginPage)
+    loadComponent: () => import('./public/auth/login.page').then((m) => m.LoginPage)
   },
   {
     path: 'app',
@@ -30,7 +30,7 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.dashboardView, breadcrumb: 'Dashboard', icon: 'pi-chart-bar' },
         loadComponent: () =>
-          import('./features/dashboard/pages/dashboard.page').then((m) => m.DashboardPage)
+          import('./crm/features/dashboard/pages/dashboard.page').then((m) => m.DashboardPage)
       },
       {
         path: 'customers',
@@ -40,21 +40,21 @@ export const routes: Routes = [
           {
             path: '',
             loadComponent: () =>
-              import('./features/customers/pages/customers.page').then((m) => m.CustomersPage)
+              import('./crm/features/customers/pages/customers.page').then((m) => m.CustomersPage)
           },
           {
             path: 'new',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.customersManage, breadcrumb: 'New Customer' },
             loadComponent: () =>
-              import('./features/customers/pages/customer-form.page').then((m) => m.CustomerFormPage)
+              import('./crm/features/customers/pages/customer-form.page').then((m) => m.CustomerFormPage)
           },
           {
             path: ':id/edit',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.customersManage, breadcrumb: 'Edit Customer' },
             loadComponent: () =>
-              import('./features/customers/pages/customer-form.page').then((m) => m.CustomerFormPage)
+              import('./crm/features/customers/pages/customer-form.page').then((m) => m.CustomerFormPage)
           }
         ]
       },
@@ -67,21 +67,21 @@ export const routes: Routes = [
             path: '',
             pathMatch: 'full',
             loadComponent: () =>
-              import('./features/contacts/pages/contacts.page').then((m) => m.ContactsPage)
+              import('./crm/features/contacts/pages/contacts.page').then((m) => m.ContactsPage)
           },
           {
             path: 'new',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.contactsManage, breadcrumb: 'New Contact' },
             loadComponent: () =>
-              import('./features/contacts/pages/contact-form.page').then((m) => m.ContactFormPage)
+              import('./crm/features/contacts/pages/contact-form.page').then((m) => m.ContactFormPage)
           },
           {
             path: ':id/edit',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.contactsManage, breadcrumb: 'Edit Contact' },
             loadComponent: () =>
-              import('./features/contacts/pages/contact-form.page').then((m) => m.ContactFormPage)
+              import('./crm/features/contacts/pages/contact-form.page').then((m) => m.ContactFormPage)
           }
         ]
       },
@@ -90,86 +90,93 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.leadsView, breadcrumb: 'Leads', icon: 'pi-bullseye' },
         pathMatch: 'full',
-        loadComponent: () => import('./features/leads/pages/leads.page').then((m) => m.LeadsPage)
+        loadComponent: () => import('./crm/features/leads/pages/leads.page').then((m) => m.LeadsPage)
       },
       {
         path: 'leads/pipeline',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.leadsView, breadcrumb: 'Pipeline', icon: 'pi-sitemap' },
-        loadComponent: () => import('./features/leads/pages/leads.page').then((m) => m.LeadsPage)
+        loadComponent: () => import('./crm/features/leads/pages/leads.page').then((m) => m.LeadsPage)
       },
       {
         path: 'leads/import',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'Import Leads', icon: 'pi-upload' },
-        loadComponent: () => import('./features/leads/pages/leads.page').then((m) => m.LeadsPage)
+        loadComponent: () => import('./crm/features/leads/pages/leads.page').then((m) => m.LeadsPage)
       },
       {
         path: 'leads/new',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'New Lead', icon: 'pi-plus' },
-        loadComponent: () => import('./features/leads/pages/lead-form.page').then((m) => m.LeadFormPage)
+        loadComponent: () => import('./crm/features/leads/pages/lead-form.page').then((m) => m.LeadFormPage)
       },
       {
         path: 'leads/:id/edit',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'Edit Lead', icon: 'pi-pencil' },
-        loadComponent: () => import('./features/leads/pages/lead-form.page').then((m) => m.LeadFormPage)
+        loadComponent: () => import('./crm/features/leads/pages/lead-form.page').then((m) => m.LeadFormPage)
       },
       {
         path: 'leads/:id/convert',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'Convert Lead', icon: 'pi-bolt' },
-        loadComponent: () => import('./features/leads/pages/lead-convert.page').then((m) => m.LeadConvertPage)
+        loadComponent: () => import('./crm/features/leads/pages/lead-convert.page').then((m) => m.LeadConvertPage)
       },
       {
         path: 'opportunities',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Opportunities', icon: 'pi-chart-line' },
         loadComponent: () =>
-          import('./features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
+          import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
       },
       {
         path: 'opportunities/new',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'New Opportunity', icon: 'pi-plus' },
         loadComponent: () =>
-          import('./features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
+          import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
+      },
+      {
+        path: 'opportunities/:id/edit',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Edit Opportunity', icon: 'pi-pencil' },
+        loadComponent: () =>
+          import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
       },
       {
         path: 'activities',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.activitiesView, breadcrumb: 'Activities', icon: 'pi-calendar' },
         loadComponent: () =>
-          import('./features/activities/pages/activities.page').then((m) => m.ActivitiesPage)
+          import('./crm/features/activities/pages/activities.page').then((m) => m.ActivitiesPage)
       },
       {
         path: 'activities/calendar',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.activitiesView, breadcrumb: 'Calendar', icon: 'pi-calendar-plus' },
         loadComponent: () =>
-          import('./features/activities/pages/activities.page').then((m) => m.ActivitiesPage)
+          import('./crm/features/activities/pages/activities.page').then((m) => m.ActivitiesPage)
       },
       {
         path: 'activities/tasks',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.activitiesView, breadcrumb: 'Tasks', icon: 'pi-check-square' },
         loadComponent: () =>
-          import('./features/activities/pages/activities.page').then((m) => m.ActivitiesPage)
+          import('./crm/features/activities/pages/activities.page').then((m) => m.ActivitiesPage)
       },
       {
         path: 'activities/new',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.activitiesManage, breadcrumb: 'New Activity', icon: 'pi-plus' },
         loadComponent: () =>
-          import('./features/activities/pages/activity-form.page').then((m) => m.ActivityFormPage)
+          import('./crm/features/activities/pages/activity-form.page').then((m) => m.ActivityFormPage)
       },
       {
         path: 'activities/:id/edit',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.activitiesManage, breadcrumb: 'Edit Activity', icon: 'pi-pencil' },
         loadComponent: () =>
-          import('./features/activities/pages/activity-form.page').then((m) => m.ActivityFormPage)
+          import('./crm/features/activities/pages/activity-form.page').then((m) => m.ActivityFormPage)
       },
       {
         path: 'settings',
@@ -181,60 +188,66 @@ export const routes: Routes = [
             path: 'users',
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Users' },
             pathMatch: 'full',
-            loadComponent: () => import('./features/settings/pages/settings.page').then((m) => m.SettingsPage)
+            loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
           },
           {
             path: 'notifications',
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Notifications' },
             loadComponent: () =>
-              import('./features/settings/pages/notifications.page').then((m) => m.NotificationsPage)
+              import('./crm/features/settings/pages/notifications.page').then((m) => m.NotificationsPage)
           },
           {
             path: 'users/:id/edit',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Edit User' },
-            loadComponent: () => import('./features/settings/pages/user-edit.page').then((m) => m.UserEditPage)
+            loadComponent: () => import('./crm/features/settings/pages/user-edit.page').then((m) => m.UserEditPage)
           },
           {
             path: 'roles',
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Roles' },
-            loadComponent: () => import('./features/settings/pages/roles.page').then((m) => m.RolesPage)
+            loadComponent: () => import('./crm/features/settings/pages/roles.page').then((m) => m.RolesPage)
           },
           {
             path: 'roles/new',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'New Role' },
-            loadComponent: () => import('./features/settings/pages/role-form.page').then((m) => m.RoleFormPage)
+            loadComponent: () => import('./crm/features/settings/pages/role-form.page').then((m) => m.RoleFormPage)
           },
           {
             path: 'roles/:id/edit',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Edit Role' },
-            loadComponent: () => import('./features/settings/pages/role-form.page').then((m) => m.RoleFormPage)
+            loadComponent: () => import('./crm/features/settings/pages/role-form.page').then((m) => m.RoleFormPage)
           },
           {
             path: 'invite',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Invite User' },
-            loadComponent: () => import('./features/settings/pages/invite-user.page').then((m) => m.InviteUserPage)
+            loadComponent: () => import('./crm/features/settings/pages/invite-user.page').then((m) => m.InviteUserPage)
           },
           {
             path: 'workspace',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Workspace Settings' },
-            loadComponent: () => import('./features/settings/pages/workspace-settings.page').then((m) => m.WorkspaceSettingsPage)
+            loadComponent: () => import('./crm/features/settings/pages/workspace-settings.page').then((m) => m.WorkspaceSettingsPage)
           },
           {
             path: 'lead-assignment',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'Lead Assignment' },
-            loadComponent: () => import('./features/settings/pages/lead-assignment.page').then((m) => m.LeadAssignmentPage)
+            loadComponent: () => import('./crm/features/settings/pages/lead-assignment.page').then((m) => m.LeadAssignmentPage)
+          },
+          {
+            path: 'lead-assignment/:id/edit',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'Edit Lead Assignment' },
+            loadComponent: () => import('./crm/features/settings/pages/lead-assignment.page').then((m) => m.LeadAssignmentPage)
           },
           {
             path: 'tenants',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.tenantsView, breadcrumb: 'Tenants' },
-            loadComponent: () => import('./features/settings/pages/tenants.page').then((m) => m.TenantsPage)
+            loadComponent: () => import('./crm/features/settings/pages/tenants.page').then((m) => m.TenantsPage)
           }
         ]
       }

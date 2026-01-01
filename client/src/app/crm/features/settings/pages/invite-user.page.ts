@@ -1,0 +1,173 @@
+import { CommonModule } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
+
+import { UserAdminDataService } from '../services/user-admin-data.service';
+import { RoleSummary, UpsertUserRequest } from '../models/user-admin.model';
+import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
+import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
+
+@Component({
+  selector: 'app-invite-user-page',
+  standalone: true,
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterLink,
+    ButtonModule,
+    InputTextModule,
+    SelectModule,
+    MultiSelectModule,
+    ToggleSwitchModule,
+    BreadcrumbsComponent
+  ],
+  templateUrl: './invite-user.page.html',
+  styleUrl: './invite-user.page.scss'
+})
+export class InviteUserPage {
+  private readonly dataService = inject(UserAdminDataService);
+  private readonly fb = inject(FormBuilder);
+  private readonly router = inject(Router);
+
+  protected readonly roles = signal<RoleSummary[]>([]);
+  protected readonly loadingRoles = signal(true);
+  protected readonly saving = signal(false);
+  protected readonly generatedPassword = signal<string | null>(null);
+  protected readonly status = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
+  protected readonly canManageAdmin = signal(
+    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
+  );
+
+  protected readonly timezoneOptions = [
+    { label: 'UTC', value: 'UTC' },
+    { label: 'New York (ET)', value: 'America/New_York' },
+    { label: 'Chicago (CT)', value: 'America/Chicago' },
+    { label: 'Los Angeles (PT)', value: 'America/Los_Angeles' },
+    { label: 'London', value: 'Europe/London' },
+    { label: 'Berlin', value: 'Europe/Berlin' },
+    { label: 'Bangalore', value: 'Asia/Kolkata' }
+  ];
+
+  protected readonly localeOptions = [
+    { label: 'English (US)', value: 'en-US' },
+    { label: 'English (UK)', value: 'en-GB' },
+    { label: 'English (India)', value: 'en-IN' },
+    { label: 'French', value: 'fr-FR' },
+    { label: 'Spanish', value: 'es-ES' }
+  ];
+
+  protected readonly form = this.fb.nonNullable.group({
+    fullName: ['', [Validators.required, Validators.maxLength(120)]],
+    email: ['', [Validators.required, Validators.email]],
+    timeZone: ['UTC', Validators.required],
+    locale: ['en-US', Validators.required],
+    roleIds: [[] as string[]],
+    isActive: [true],
+    temporaryPassword: ['']
+  });
+
+  protected readonly canSubmit = computed(() => this.form.valid && !this.saving() && this.canManageAdmin());
+
+  constructor() {
+    this.loadRoles();
+  }
+
+  protected loadRoles() {
+    this.loadingRoles.set(true);
+    this.dataService.getRoles().subscribe({
+      next: (roles) => {
+        this.roles.set(roles);
+        this.loadingRoles.set(false);
+      },
+      error: () => {
+        this.loadingRoles.set(false);
+        this.raiseStatus('error', 'Unable to load roles. Refresh and try again.');
+      }
+    });
+  }
+
+  protected rolesAsOptions() {
+    return this.roles().map((role) => ({ label: role.name, value: role.id, description: role.description }));
+  }
+
+  protected handleSubmit() {
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    const payload: UpsertUserRequest = {
+      fullName: this.form.value.fullName?.trim() ?? '',
+      email: this.form.value.email?.trim().toLowerCase() ?? '',
+      timeZone: this.form.value.timeZone,
+      locale: this.form.value.locale,
+      isActive: !!this.form.value.isActive,
+      roleIds: (this.form.value.roleIds ?? []) as string[],
+      temporaryPassword: this.form.value.temporaryPassword?.trim() || undefined
+    };
+
+    if (payload.roleIds.length === 0) {
+      this.form.get('roleIds')?.setErrors({ required: true });
+      this.raiseStatus('error', 'Assign at least one role.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.dataService.create(payload).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.raiseStatus('success', 'User invited successfully.');
+        this.form.reset({
+          fullName: '',
+          email: '',
+          timeZone: 'UTC',
+          locale: 'en-US',
+          roleIds: [],
+          isActive: true,
+          temporaryPassword: ''
+        });
+        this.generatedPassword.set(null);
+      },
+      error: () => {
+        this.saving.set(false);
+        this.raiseStatus('error', 'Unable to invite user.');
+      }
+    });
+  }
+
+  protected generatePassword() {
+    const value = this.generatePasswordValue();
+    this.form.patchValue({ temporaryPassword: value });
+    this.generatedPassword.set(value);
+  }
+
+  protected navigateBack() {
+    this.router.navigate(['/app/settings']);
+  }
+
+  private generatePasswordValue() {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+    const upper = alphabet.toUpperCase();
+    const digits = '0123456789';
+    const symbols = '!@$?*#';
+    const pool = alphabet + upper + digits + symbols;
+    let value = '';
+    for (let i = 0; i < 14; i++) {
+      const index = Math.floor(Math.random() * pool.length);
+      value += pool[index];
+    }
+    return value;
+  }
+
+  private raiseStatus(tone: 'success' | 'error', message: string) {
+    this.status.set({ tone, message });
+    setTimeout(() => this.status.set(null), 4000);
+  }
+}

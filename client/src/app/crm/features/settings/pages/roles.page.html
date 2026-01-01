@@ -1,0 +1,217 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     ROLES PAGE - Premium Light UI
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-container">
+  <!-- PrimeNG Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       HERO SECTION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Access Control</span>
+      </div>
+      
+      <h1 class="hero-title">
+        <span class="title-gradient">Role</span>
+        <span class="title-light">Management</span>
+      </h1>
+      
+      <p class="hero-description">
+        
+      </p>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="stat-value">{{ roles().length }}</div>
+          <div class="stat-label">Total Roles</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ systemRolesCount() }}</div>
+          <div class="stat-label">System</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--warning" [style.width.%]="roles().length ? (systemRolesCount() / roles().length) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ customRolesCount() }}</div>
+          <div class="stat-label">Custom</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--success" [style.width.%]="roles().length ? (customRolesCount() / roles().length) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ permissionCatalog().length }}</div>
+          <div class="stat-label">Permissions</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--info" style="width: 100%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
+          <i class="pi pi-plus"></i>
+          <span>New Role</span>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/users">
+          <i class="pi pi-users"></i>
+          <span>Manage Users</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" (click)="loadRoles()">
+          <i class="pi pi-refresh"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-shield"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Access Profiles</span>
+          <strong class="card-value">{{ roles().length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-lock"></i> Auditable permissions
+          </span>
+        </div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-key"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Permission Types</span>
+          <strong class="card-value">{{ permissionCatalog().length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-check-circle"></i> Fine-grained control
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       DATA SECTION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="data-section">
+    <div class="data-card">
+      <div class="data-header">
+        <div class="header-title">
+          <h2>Role Directory</h2>
+          <span class="record-count">{{ roles().length }} roles configured</span>
+        </div>
+        <div class="header-actions">
+          <button class="action-btn action-btn--primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
+            <i class="pi pi-plus"></i>
+            <span>Add Role</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="loadingRoles()">
+        <div class="skeleton-row" *ngFor="let _ of [0, 1, 2, 3, 4]">
+          <div class="skeleton skeleton-avatar"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text skeleton-short"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-actions"></div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="!loadingRoles() && roles().length === 0">
+        <div class="empty-icon">
+          <i class="pi pi-shield"></i>
+        </div>
+        <h3>No roles configured</h3>
+        <p>Create your first role to start managing access control</p>
+        <button class="btn btn-primary" routerLink="/app/settings/roles/new">
+          <i class="pi pi-plus"></i>
+          Create Role
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper" *ngIf="!loadingRoles() && roles().length > 0">
+        <p-table
+          class="data-table"
+          [value]="roles()"
+          [tableStyle]="{ 'min-width': '100%' }"
+          responsiveLayout="scroll"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th class="th-role">Role</th>
+              <th>Permissions</th>
+              <th>Type</th>
+              <th class="th-actions">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-role>
+            <tr class="table-row" [class.row-system]="role.isSystem">
+              <td>
+                <div class="td-role">
+                  <div class="role-icon" [ngClass]="getRoleIconStyle(role)">
+                    <i [class]="getRoleIcon(role)"></i>
+                  </div>
+                  <div class="role-info">
+                    <span class="role-name">{{ role.name }}</span>
+                    <span class="role-description">{{ role.description || 'No description provided' }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="permission-pills">
+                  <span class="permission-pill" *ngFor="let permission of role.permissions.slice(0, 3)">
+                    {{ permissionLabel(permission) }}
+                  </span>
+                  <span class="permission-pill permission-pill--more" *ngIf="role.permissions.length > 3">
+                    +{{ role.permissions.length - 3 }} more
+                  </span>
+                </div>
+              </td>
+              <td>
+                <span class="status-badge" [class.status-badge--warning]="role.isSystem" [class.status-badge--success]="!role.isSystem">
+                  {{ role.isSystem ? 'System' : 'Custom' }}
+                </span>
+              </td>
+              <td class="td-actions">
+                <div class="action-buttons">
+                  <button
+                    class="action-icon"
+                    pTooltip="Edit role"
+                    tooltipPosition="top"
+                    [disabled]="!canManageAdmin()"
+                    [routerLink]="['/app/settings/roles', role.id, 'edit']"
+                  >
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button
+                    class="action-icon action-icon--danger"
+                    pTooltip="Delete role"
+                    tooltipPosition="top"
+                    [disabled]="role.isSystem || roleSaving() || !canManageAdmin()"
+                    (click)="deleteRole(role)"
+                  >
+                    <i class="pi pi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+  </section>
+</div>

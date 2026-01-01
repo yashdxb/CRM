@@ -2,8 +2,9 @@ import { HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { delay, of } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { UpsertRoleRequest, UpsertUserRequest } from '../features/settings/models/user-admin.model';
-import { SaveOpportunityRequest } from '../features/opportunities/services/opportunity-data.service';
+import { UpsertRoleRequest, UpsertUserRequest } from '../crm/features/settings/models/user-admin.model';
+import { SaveOpportunityRequest } from '../crm/features/opportunities/services/opportunity-data.service';
+import { PERMISSION_KEYS } from '../core/auth/permission.constants';
 import {
   buildDashboardSummary,
   createRole,
@@ -26,6 +27,7 @@ import {
   updateRole,
   updateUser,
   createOpportunity,
+  getOpportunityById,
   updateOpportunity,
   deleteOpportunity
 } from './mock-db';
@@ -60,6 +62,32 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
   const respond = <T>(body: T, status = 200, delayMs = 120) => of(new HttpResponse({ status, body })).pipe(delay(delayMs));
 
+  // Mock login endpoint - creates a JWT with all permissions for development
+  if (req.method === 'POST' && path === '/api/auth/login') {
+    const allPermissions = Object.values(PERMISSION_KEYS);
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({
+      sub: 'mock-user-001',
+      email: 'admin@example.com',
+      name: 'Admin User',
+      'http://schemas.microsoft.com/ws/2008/06/identity/claims/role': ['System Administrator'],
+      'crm:permission': allPermissions,
+      exp: Math.floor(Date.now() / 1000) + 86400 // 24 hours from now
+    }));
+    const signature = btoa('mock-signature');
+    const mockToken = `${header}.${payload}.${signature}`;
+
+    return respond({
+      accessToken: mockToken,
+      expiresAtUtc: new Date(Date.now() + 86400000).toISOString(),
+      email: 'admin@example.com',
+      fullName: 'Admin User',
+      roles: ['System Administrator'],
+      permissions: allPermissions,
+      tenantKey: 'default'
+    }, 200, 100);
+  }
+
   if (req.method === 'GET' && path.startsWith('/api/customers/')) {
     const id = path.split('/').pop();
     const customer = mockCustomers.find((c) => c.id === id);
@@ -86,6 +114,12 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
     const result = searchActivities({ page, pageSize, status, search, ownerId, type });
     return of(new HttpResponse({ status: 200, body: result })).pipe(delay(140));
+  }
+
+  if (req.method === 'GET' && /^\/api\/opportunities\/[^/]+$/.test(path)) {
+    const id = path.split('/').pop() ?? '';
+    const opportunity = getOpportunityById(id);
+    return respond(opportunity ?? { message: 'Not found' }, opportunity ? 200 : 404, 120);
   }
 
   if (req.method === 'GET' && path.startsWith('/api/opportunities')) {

@@ -1,0 +1,311 @@
+@use '../../../../shared/form-page-styles' as form;
+
+:host {
+  @include form.premium-selection;
+  @include form.premium-focus-ring;
+}
+
+.user-edit-page {
+  @include form.form-page-base;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-header {
+  @include form.form-page-header;
+}
+
+.header-content {
+  @include form.form-header-content;
+}
+
+.back-link {
+  @include form.form-back-link;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.header-title {
+  @include form.form-header-title;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(60, 60, 67, 0.8);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+
+  i {
+    color: #0ea5e9;
+  }
+}
+
+.status-pill {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: rgba(60, 60, 67, 0.8);
+}
+
+.status-pill--active {
+  background: rgba(16, 185, 129, 0.14);
+  color: #0f766e;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.status-pill--inactive {
+  background: rgba(248, 113, 113, 0.14);
+  color: #b91c1c;
+  border-color: rgba(248, 113, 113, 0.35);
+}
+
+.form-body {
+  @include form.form-container;
+}
+
+.form-layout {
+  @include form.form-layout;
+}
+
+.form-card {
+  @include form.form-section;
+}
+
+.section-title {
+  @include form.section-title;
+}
+
+.form-grid {
+  @include form.form-grid;
+}
+
+.field {
+  @include form.form-field;
+
+  label {
+    @include form.form-label;
+  }
+
+  &.full {
+    grid-column: 1 / -1;
+  }
+}
+
+.password-field {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn-generate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.15rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #8b5cf6 0%, #0ea5e9 100%);
+  color: #fff;
+
+  i {
+    font-size: 0.85rem;
+  }
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   STATUS CONTROL CARD
+   ─────────────────────────────────────────────────────────────────────────────*/
+.status-control-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  margin-top: 0.5rem;
+  transition: all 0.25s ease;
+
+  &--active {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(34, 197, 94, 0.05) 100%);
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+
+  &--inactive {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.06) 0%, rgba(248, 113, 113, 0.04) 100%);
+    border-color: rgba(239, 68, 68, 0.15);
+  }
+}
+
+.status-control-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  flex-shrink: 0;
+  transition: all 0.25s ease;
+
+  i {
+    font-size: 1.1rem;
+    color: rgba(60, 60, 67, 0.5);
+    transition: all 0.25s ease;
+  }
+
+  &--active {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(34, 197, 94, 0.12) 100%);
+
+    i {
+      color: #059669;
+    }
+  }
+}
+
+.status-control-card--inactive .status-control-icon {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(248, 113, 113, 0.08) 100%);
+
+  i {
+    color: #dc2626;
+  }
+}
+
+.status-control-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.status-control-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(60, 60, 67, 0.5);
+}
+
+.status-control-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.status-control-card--active .status-control-value {
+  color: #047857;
+}
+
+.status-control-card--inactive .status-control-value {
+  color: #b91c1c;
+}
+
+.status-control-hint {
+  font-size: 0.75rem;
+  color: rgba(60, 60, 67, 0.55);
+}
+
+.status-control-toggle {
+  flex-shrink: 0;
+}
+
+.form-actions {
+  @include form.form-actions;
+
+  .crm-button--ghost {
+    @include form.button-ghost;
+  }
+
+  .crm-button--primary {
+    @include form.button-primary;
+  }
+}
+
+.user-edit__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-3);
+}
+
+.loading-bar {
+  height: 64px;
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.3) 25%, rgba(226, 232, 240, 0.6) 50%, rgba(226, 232, 240, 0.3) 75%);
+  background-size: 200% 100%;
+  border-radius: 18px;
+  animation: shimmer 1.4s infinite;
+}
+
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .password-field {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+:host ::ng-deep .p-inputtext,
+:host ::ng-deep .p-dropdown,
+:host ::ng-deep .p-multiselect,
+:host ::ng-deep .p-inputtextarea {
+  @include form.premium-input;
+}
+
+:host ::ng-deep .p-inputtext:hover,
+:host ::ng-deep .p-dropdown:hover,
+:host ::ng-deep .p-multiselect:hover,
+:host ::ng-deep .p-inputtextarea:hover {
+  @include form.premium-input-hover;
+}
+
+:host ::ng-deep .p-inputtext:focus,
+:host ::ng-deep .p-dropdown:focus-within,
+:host ::ng-deep .p-multiselect:focus-within,
+:host ::ng-deep .p-inputtextarea:focus {
+  @include form.premium-input-focus;
+}

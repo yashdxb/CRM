@@ -19,12 +19,12 @@ import { KeyboardShortcutsModalComponent, KeyboardShortcutsService } from '../co
 import { UserMenuComponent } from '../core/user-menu';
 import { ThemeService } from '../core/theme/theme.service';
 import { filter } from 'rxjs/operators';
-import { LeadDataService, SaveLeadRequest } from '../features/leads/services/lead-data.service';
-import { ContactDataService } from '../features/contacts/services/contact-data.service';
-import { CustomerDataService } from '../features/customers/services/customer-data.service';
-import { OpportunityDataService } from '../features/opportunities/services/opportunity-data.service';
-import { ActivityDataService } from '../features/activities/services/activity-data.service';
-import { UpsertActivityRequest } from '../features/activities/models/activity.model';
+import { LeadDataService, SaveLeadRequest } from '../crm/features/leads/services/lead-data.service';
+import { ContactDataService } from '../crm/features/contacts/services/contact-data.service';
+import { CustomerDataService } from '../crm/features/customers/services/customer-data.service';
+import { OpportunityDataService } from '../crm/features/opportunities/services/opportunity-data.service';
+import { ActivityDataService } from '../crm/features/activities/services/activity-data.service';
+import { UpsertActivityRequest } from '../crm/features/activities/models/activity.model';
 import { AppToastComponent } from '../shared/app-toast.component';
 
 interface Option<T = string> {

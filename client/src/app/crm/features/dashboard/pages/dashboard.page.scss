@@ -1,0 +1,1711 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// DASHBOARD PAGE - Enterprise Glassmorphic Design System
+// ═══════════════════════════════════════════════════════════════════════════════
+@use '../../../../../styles/design-tokens' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANIMATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@keyframes orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -30px) scale(1.05); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(25px, 10px) scale(1.02); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-down {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKGROUND & PAGE LAYOUT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.page-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 50%, #f0fdff 100%);
+}
+
+.grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(102, 126, 234, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(102, 126, 234, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+.animated-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: orb-float 25s ease-in-out infinite;
+  
+  &.orb-1 {
+    width: 500px;
+    height: 500px;
+    background: $primary-gradient;
+    top: -150px;
+    left: -100px;
+  }
+  
+  &.orb-2 {
+    width: 400px;
+    height: 400px;
+    background: $cyan-gradient;
+    top: 40%;
+    right: -100px;
+    animation-delay: -8s;
+  }
+  
+  &.orb-3 {
+    width: 350px;
+    height: 350px;
+    background: $purple-gradient;
+    bottom: -50px;
+    left: 40%;
+    animation-delay: -16s;
+  }
+  
+  &.orb-4 {
+    width: 300px;
+    height: 300px;
+    background: $orange-gradient;
+    top: 20%;
+    left: 50%;
+    animation-delay: -12s;
+    opacity: 0.25;
+  }
+}
+
+.page-container {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: $space-5 $space-6;
+}
+
+.page-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  animation: fade-in-up 0.6s ease-out;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERO SECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.hero-section {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-6;
+  margin-bottom: $space-6;
+  padding: $space-6;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border-radius: $radius-2xl;
+  border: 1px solid $glass-border;
+  animation: fade-in-down 0.5s ease-out;
+}
+
+.hero-content {
+  flex: 1;
+}
+
+.hero-greeting {
+  display: block;
+  font-size: $font-size-sm;
+  color: $primary;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: $space-2;
+}
+
+// Page title uses global .page-title from _components.scss
+
+.hero-stats {
+  display: flex;
+  gap: $space-2;
+  flex-wrap: wrap;
+}
+
+.hero-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  background: rgba($primary, 0.08);
+  border-radius: $radius-full;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  
+  i {
+    color: $primary;
+  }
+  
+  strong {
+    color: $text-primary;
+  }
+  
+  &.success {
+    background: rgba($success, 0.1);
+    i { color: $success; }
+  }
+  
+  &.danger {
+    background: rgba($danger, 0.1);
+    i { color: $danger; }
+  }
+}
+
+.hero-actions {
+  display: flex;
+  gap: $space-2;
+  flex-wrap: wrap;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUTTONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.btn-gradient {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-3 $space-5;
+  background: $primary-gradient;
+  color: white;
+  border: none;
+  border-radius: $radius-xl;
+  font-weight: 600;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all $transition-base;
+  box-shadow: 0 4px 15px rgba($primary, 0.3);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba($primary, 0.4);
+  }
+  
+  &.btn-lg {
+    padding: $space-3 $space-6;
+    font-size: $font-size-base;
+  }
+}
+
+.btn-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-3 $space-4;
+  background: rgba(white, 0.7);
+  color: $text-secondary;
+  border: 1px solid $glass-border;
+  border-radius: $radius-xl;
+  font-weight: 500;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all $transition-base;
+  
+  &:hover {
+    background: white;
+    border-color: rgba($primary, 0.3);
+    color: $primary;
+  }
+  
+  &.btn-sm {
+    padding: $space-2 $space-3;
+    font-size: $font-size-xs;
+    border-radius: $radius-lg;
+  }
+}
+
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: $radius-lg;
+  color: $text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: rgba($primary, 0.1);
+    color: $primary;
+  }
+}
+
+.btn-icon-sm {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: $radius-md;
+  color: $text-muted;
+  cursor: pointer;
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: rgba($primary, 0.08);
+    color: $primary;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// METRICS DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.metrics-dashboard {
+  margin-bottom: $space-6;
+}
+
+.metrics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-4;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $text-primary;
+  margin: 0;
+  
+  i {
+    color: $primary;
+  }
+}
+
+.metrics-period {
+  display: flex;
+  background: $glass-bg;
+  border-radius: $radius-lg;
+  padding: 3px;
+  border: 1px solid $glass-border;
+}
+
+.period-btn {
+  padding: $space-2 $space-3;
+  font-size: $font-size-xs;
+  font-weight: 500;
+  color: $text-muted;
+  background: transparent;
+  border: none;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  
+  &:hover {
+    color: $text-secondary;
+  }
+  
+  &.active {
+    background: white;
+    color: $primary;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1.5fr repeat(4, 1fr);
+  gap: $space-4;
+}
+
+.metric-card {
+  position: relative;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border-radius: $radius-xl;
+  padding: $space-4;
+  border: 1px solid $glass-border;
+  transition: all $transition-base;
+  overflow: hidden;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: $glass-shadow-hover;
+  }
+  
+  &.featured {
+    grid-row: span 2;
+    display: flex;
+    flex-direction: column;
+    padding: $space-5;
+    
+    .metric-icon-large {
+      width: 72px;
+      height: 72px;
+      border-radius: $radius-xl;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: $space-4;
+      
+      i {
+        font-size: 2rem;
+      }
+      
+      &.primary {
+        background: $primary-gradient;
+        color: white;
+        box-shadow: 0 8px 25px rgba($primary, 0.3);
+      }
+    }
+    
+    .metric-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .metric-value-large {
+      font-size: $font-size-5xl;
+      font-weight: 800;
+      color: $text-primary;
+      line-height: 1;
+      margin-bottom: $space-2;
+    }
+    
+    .metric-label {
+      font-size: $font-size-base;
+      color: $text-muted;
+      margin-bottom: auto;
+    }
+    
+    .metric-trend {
+      margin-top: $space-4;
+      padding: $space-2 $space-3;
+      background: rgba($success, 0.1);
+      border-radius: $radius-lg;
+      width: fit-content;
+      
+      &.up {
+        color: $success;
+      }
+    }
+  }
+}
+
+.metric-glow {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  opacity: 0.1;
+  pointer-events: none;
+  
+  &.primary { background: $primary-gradient; }
+}
+
+.metric-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: $space-3;
+}
+
+.metric-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &.cyan {
+    background: linear-gradient(135deg, rgba($cyan, 0.15), rgba($cyan, 0.05));
+    color: $cyan;
+  }
+  
+  &.purple {
+    background: linear-gradient(135deg, rgba($purple, 0.15), rgba($purple, 0.05));
+    color: $purple;
+  }
+  
+  &.success {
+    background: linear-gradient(135deg, rgba($success, 0.15), rgba($success, 0.05));
+    color: $success;
+  }
+  
+  &.orange {
+    background: linear-gradient(135deg, rgba($orange, 0.15), rgba($orange, 0.05));
+    color: $orange;
+  }
+}
+
+.metric-trend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  
+  &.up { color: $success; }
+  &.down { color: $danger; }
+  
+  i { font-size: 10px; }
+}
+
+.metric-value {
+  font-size: $font-size-2xl;
+  font-weight: 700;
+  color: $text-primary;
+  line-height: 1;
+  margin-bottom: $space-1;
+}
+
+.metric-label {
+  font-size: $font-size-xs;
+  color: $text-muted;
+  margin-bottom: $space-3;
+}
+
+.metric-bar {
+  height: 4px;
+  background: $gray-200;
+  border-radius: $radius-full;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: $radius-full;
+  transition: width 0.6s ease;
+  
+  &.cyan { background: $cyan-gradient; }
+  &.purple { background: $purple-gradient; }
+  &.success { background: $success-gradient; }
+  &.orange { background: $orange-gradient; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN GRID
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.dashboard-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: $space-5;
+}
+
+.main-column {
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+.middle-column {
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+.side-column {
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHARTS ROW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: $space-5;
+  margin-bottom: $space-5;
+}
+
+.chart-card {
+  &.large {
+    .card-body {
+      padding: $space-5;
+    }
+  }
+}
+
+.chart-container {
+  position: relative;
+  width: 100%;
+  
+  &.medium {
+    height: 220px;
+  }
+  
+  &.small {
+    height: 160px;
+  }
+}
+
+.chart-legend {
+  display: flex;
+  gap: $space-3;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-xs;
+  color: $text-muted;
+  
+  &.primary .legend-dot {
+    background: $primary;
+  }
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLASS CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.glass-card {
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border-radius: $radius-2xl;
+  border: 1px solid $glass-border;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: $space-4 $space-5;
+  border-bottom: 1px solid rgba($glass-border, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.card-title {
+  font-size: $font-size-card-title;
+  font-weight: 600;
+  color: $text-primary;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  margin: 0;
+  
+  i { color: $primary; }
+}
+
+.card-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: $space-1 $space-2;
+  background: rgba($success, 0.1);
+  color: $success;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  border-radius: $radius-full;
+  
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: $success;
+    border-radius: 50%;
+    margin-right: $space-1;
+    animation: pulse 2s infinite;
+  }
+}
+
+.card-body {
+  padding: $space-5;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PIPELINE FUNNEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.funnel-container {
+  margin-bottom: $space-5;
+}
+
+.funnel-stage {
+  margin-bottom: $space-2;
+}
+
+.funnel-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-3 $space-4;
+  border-radius: $radius-lg;
+  margin: 0 auto;
+  transition: all $transition-base;
+  
+  &.stage-1 {
+    background: linear-gradient(135deg, rgba($cyan, 0.15), rgba($cyan, 0.05));
+    border: 1px solid rgba($cyan, 0.2);
+  }
+  
+  &.stage-2 {
+    background: linear-gradient(135deg, rgba($purple, 0.15), rgba($purple, 0.05));
+    border: 1px solid rgba($purple, 0.2);
+  }
+  
+  &.stage-3 {
+    background: linear-gradient(135deg, rgba($success, 0.15), rgba($success, 0.05));
+    border: 1px solid rgba($success, 0.2);
+  }
+  
+  &:hover {
+    transform: scale(1.02);
+  }
+}
+
+.funnel-label {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $text-secondary;
+}
+
+.funnel-value {
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.funnel-conversion {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  padding: $space-2 0;
+  font-size: $font-size-xs;
+  color: $text-muted;
+  
+  i {
+    font-size: 10px;
+    color: $primary;
+  }
+}
+
+.funnel-summary {
+  display: flex;
+  gap: $space-4;
+  padding-top: $space-4;
+  border-top: 1px solid $glass-border;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.summary-label {
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.summary-value {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $text-primary;
+  
+  &.success { color: $success; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACCOUNTS LIST
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3;
+  border-radius: $radius-lg;
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: rgba($primary, 0.03);
+  }
+}
+
+.account-rank {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  color: $text-muted;
+  background: $gray-100;
+  border-radius: $radius-md;
+}
+
+.account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: $font-size-base;
+  color: white;
+  
+  &.lead { background: $cyan-gradient; }
+  &.prospect { background: $purple-gradient; }
+  &.customer { background: $success-gradient; }
+}
+
+.account-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-name {
+  font-weight: 600;
+  color: $text-primary;
+  font-size: $font-size-sm;
+}
+
+.account-meta {
+  font-size: $font-size-xs;
+  color: $text-muted;
+  display: flex;
+  gap: $space-1;
+  
+  .separator { opacity: 0.5; }
+}
+
+.account-status {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  
+  &.lead { background: $cyan; }
+  &.prospect { background: $purple; }
+  &.customer { background: $success; }
+}
+
+.status-text {
+  font-size: $font-size-xs;
+  font-weight: 500;
+  color: $text-secondary;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIMELINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.my-tasks-card {
+  .card-body {
+    padding: $space-4 $space-5;
+  }
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+  padding: $space-3;
+  border-radius: $radius-lg;
+  background: rgba($primary, 0.05);
+  border: 1px solid rgba($glass-border, 0.6);
+}
+
+.task-marker {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba($success, 0.12);
+  color: $success;
+  border: 1px solid rgba($success, 0.2);
+
+  &.overdue {
+    background: rgba($danger, 0.12);
+    color: $danger;
+    border-color: rgba($danger, 0.2);
+  }
+}
+
+.task-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: $space-1;
+}
+
+.task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  font-size: $font-size-xs;
+  color: $text-muted;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-1;
+  }
+
+  i {
+    color: $primary;
+  }
+}
+
+.task-status {
+  font-size: $font-size-xs;
+  font-weight: 600;
+  color: $text-secondary;
+  padding: $space-1 $space-2;
+  border-radius: $radius-full;
+  background: rgba($primary, 0.08);
+  align-self: center;
+
+  &.overdue {
+    background: rgba($danger, 0.12);
+    color: $danger;
+  }
+}
+
+.timeline-filter {
+  display: flex;
+  gap: $space-1;
+}
+
+.filter-btn {
+  padding: $space-1 $space-2;
+  font-size: $font-size-xs;
+  font-weight: 500;
+  color: $text-muted;
+  background: transparent;
+  border: none;
+  border-radius: $radius-md;
+  cursor: pointer;
+  transition: all $transition-fast;
+  
+  &:hover { color: $text-secondary; }
+  
+  &.active {
+    background: rgba($primary, 0.1);
+    color: $primary;
+  }
+}
+
+.timeline {
+  position: relative;
+}
+
+.timeline-item {
+  display: flex;
+  gap: $space-3;
+  position: relative;
+  padding-bottom: $space-4;
+  
+  &.overdue {
+    .timeline-marker {
+      background: rgba($danger, 0.1) !important;
+      color: $danger !important;
+      border-color: rgba($danger, 0.2) !important;
+    }
+  }
+  
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.timeline-marker {
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+  
+  &.call {
+    background: rgba($cyan, 0.1);
+    color: $cyan;
+    border: 1px solid rgba($cyan, 0.2);
+  }
+  
+  &.email {
+    background: rgba($purple, 0.1);
+    color: $purple;
+    border: 1px solid rgba($purple, 0.2);
+  }
+  
+  &.meeting {
+    background: rgba($primary, 0.1);
+    color: $primary;
+    border: 1px solid rgba($primary, 0.2);
+  }
+  
+  &.task {
+    background: rgba($success, 0.1);
+    color: $success;
+    border: 1px solid rgba($success, 0.2);
+  }
+}
+
+.timeline-connector {
+  position: absolute;
+  left: 19px;
+  top: 44px;
+  width: 2px;
+  height: calc(100% - 44px);
+  background: linear-gradient(to bottom, $glass-border, transparent);
+}
+
+.timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-1;
+}
+
+.timeline-type {
+  font-size: $font-size-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-muted;
+}
+
+.timeline-time {
+  font-size: $font-size-xs;
+  color: $text-muted;
+  
+  &.overdue {
+    color: $danger;
+    font-weight: 600;
+  }
+}
+
+.timeline-subject {
+  font-size: $font-size-sm;
+  font-weight: 500;
+  color: $text-primary;
+  margin-bottom: $space-1;
+}
+
+.timeline-entity {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  color: $text-muted;
+  
+  i { font-size: 10px; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HEALTH METER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.stats-card .card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.health-meter {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  margin-bottom: $space-3;
+}
+
+.circular-progress {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.progress-bg {
+  fill: none;
+  stroke: $gray-200;
+  stroke-width: 8;
+}
+
+.progress-fill {
+  fill: none;
+  stroke: $primary;
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.6s ease;
+}
+
+.health-value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.health-number {
+  font-size: $font-size-3xl;
+  font-weight: 800;
+  background: $primary-gradient;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.health-unit {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $text-muted;
+}
+
+.health-label {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $text-secondary;
+  margin-bottom: $space-4;
+}
+
+.health-breakdown {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  background: $gray-50;
+  border-radius: $radius-lg;
+}
+
+.breakdown-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  
+  &.success { background: $success; }
+  &.danger { background: $danger; }
+}
+
+.breakdown-text {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  text-align: left;
+}
+
+.breakdown-value {
+  font-size: $font-size-sm;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EMPTY STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: $space-8 $space-4;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: $radius-xl;
+  background: $gray-100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $space-4;
+  
+  i {
+    font-size: 1.5rem;
+    color: $text-muted;
+  }
+}
+
+.empty-state h4 {
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: $text-secondary;
+  margin: 0 0 $space-1;
+}
+
+.empty-state p {
+  font-size: $font-size-sm;
+  color: $text-muted;
+  margin: 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LOADING STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: $space-4;
+  
+  p {
+    font-size: $font-size-sm;
+    color: $text-muted;
+  }
+}
+
+.loading-spinner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.spinner-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  animation: spin 1.2s ease-in-out infinite;
+  
+  &:nth-child(1) {
+    border-top-color: $primary;
+    animation-delay: 0s;
+  }
+  
+  &:nth-child(2) {
+    inset: 6px;
+    border-right-color: $cyan;
+    animation-delay: 0.2s;
+    animation-direction: reverse;
+  }
+  
+  &:nth-child(3) {
+    inset: 12px;
+    border-bottom-color: $purple;
+    animation-delay: 0.4s;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PIPELINE CHART CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.pipeline-chart-card {
+  .card-badge {
+    background: rgba($primary, 0.1);
+    color: $primary;
+    
+    &::before {
+      display: none;
+    }
+  }
+}
+
+.pipeline-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $space-3;
+  margin-top: $space-4;
+  padding-top: $space-4;
+  border-top: 1px solid $glass-border;
+}
+
+.pipeline-stat {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  text-align: center;
+  
+  .stat-label {
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+  
+  .stat-value {
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACTIVITY BREAKDOWN (DONUT CARD)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.donut-card {
+  .card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.donut-container {
+  width: 100%;
+  max-width: 280px;
+  margin-bottom: $space-4;
+}
+
+.activity-breakdown-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-2 $space-3;
+  background: rgba($gray-100, 0.5);
+  border-radius: $radius-lg;
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: rgba($primary, 0.05);
+  }
+}
+
+.breakdown-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  &.cyan {
+    background: rgba($cyan, 0.1);
+    color: $cyan;
+  }
+  
+  &.purple {
+    background: rgba($purple, 0.1);
+    color: $purple;
+  }
+  
+  &.primary {
+    background: rgba($primary, 0.1);
+    color: $primary;
+  }
+  
+  &.success {
+    background: rgba($success, 0.1);
+    color: $success;
+  }
+  
+  i { font-size: $font-size-sm; }
+}
+
+.breakdown-label {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+}
+
+.breakdown-count {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONVERSION CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.conversion-card {
+  .card-body {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+.trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: $space-1 $space-2;
+  border-radius: $radius-full;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  
+  &.up {
+    background: rgba($success, 0.1);
+    color: $success;
+  }
+  
+  &.down {
+    background: rgba($danger, 0.1);
+    color: $danger;
+  }
+  
+  i { font-size: 10px; }
+}
+
+.conversion-summary {
+  display: flex;
+  gap: $space-4;
+  margin-top: $space-4;
+  padding-top: $space-4;
+  border-top: 1px solid $glass-border;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  
+  .stat-value {
+    font-size: $font-size-xl;
+    font-weight: 700;
+    color: $text-primary;
+    
+    &.success { color: $success; }
+  }
+  
+  .stat-label {
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOP PERFORMERS CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.performers-card {
+  .card-body {
+    padding: $space-4;
+  }
+}
+
+.performers-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.performer-row {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3;
+  border-radius: $radius-lg;
+  transition: all $transition-fast;
+  
+  &:hover {
+    background: rgba($primary, 0.03);
+  }
+}
+
+.performer-rank {
+  width: 24px;
+  height: 24px;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  background: $gray-100;
+  color: $text-muted;
+  
+  &.gold {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: white;
+  }
+  
+  &.silver {
+    background: linear-gradient(135deg, #94a3b8, #64748b);
+    color: white;
+  }
+  
+  &.bronze {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    color: white;
+  }
+}
+
+.performer-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-lg;
+  background: $primary-gradient;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: $font-size-sm;
+}
+
+.performer-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.performer-name {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 2px;
+}
+
+.performer-stats {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  color: $text-muted;
+  
+  .separator {
+    opacity: 0.5;
+  }
+  
+  .revenue {
+    color: $success;
+    font-weight: 500;
+  }
+}
+
+.performer-badge {
+  color: #fbbf24;
+  animation: pulse 2s infinite;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HEALTH METRICS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.health-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-3;
+  margin-top: $space-4;
+  padding-top: $space-4;
+  border-top: 1px solid $glass-border;
+}
+
+.health-metric {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3;
+  background: $gray-50;
+  border-radius: $radius-lg;
+  
+  > i {
+    font-size: $font-size-lg;
+    color: $primary;
+  }
+}
+
+.metric-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  
+  .metric-value {
+    font-size: $font-size-base;
+    font-weight: 700;
+    color: $text-primary;
+  }
+  
+  .metric-label {
+    font-size: $font-size-xs;
+    color: $text-muted;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESPONSIVE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@media (max-width: 1400px) {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .side-column {
+    grid-column: span 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-5;
+  }
+}
+
+@media (max-width: 1200px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr;
+    
+    .metric-card.featured {
+      grid-column: span 2;
+      grid-row: span 1;
+      flex-direction: row;
+      align-items: center;
+      
+      .metric-icon-large {
+        margin-bottom: 0;
+        margin-right: $space-5;
+      }
+      
+      .metric-trend {
+        margin-top: $space-2;
+      }
+    }
+  }
+  
+  .dashboard-main-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .side-column {
+    grid-column: span 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .pipeline-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: $space-4;
+  }
+  
+  .hero-section {
+    flex-direction: column;
+    padding: $space-4;
+  }
+  
+  .hero-actions {
+    width: 100%;
+    
+    .btn-gradient, .btn-glass {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+  
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    
+    .metric-card.featured {
+      grid-column: span 1;
+      flex-direction: column;
+      align-items: flex-start;
+      
+      .metric-icon-large {
+        margin-right: 0;
+        margin-bottom: $space-4;
+      }
+    }
+  }
+  
+  .page-title {
+    font-size: $font-size-3xl;
+  }
+  
+  .health-metrics {
+    grid-template-columns: 1fr;
+  }
+  
+  .conversion-summary {
+    flex-direction: column;
+    gap: $space-3;
+  }
+}

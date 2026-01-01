@@ -1,11 +1,11 @@
-import { Activity } from '../features/activities/models/activity.model';
-import { ActivitySearchRequest, ActivitySearchResponse } from '../features/activities/services/activity-data.service';
-import { Customer, CustomerSearchRequest, CustomerSearchResponse } from '../features/customers/models/customer.model';
-import { DashboardSummary } from '../features/dashboard/models/dashboard.model';
+import { Activity } from '../crm/features/activities/models/activity.model';
+import { ActivitySearchRequest, ActivitySearchResponse } from '../crm/features/activities/services/activity-data.service';
+import { Customer, CustomerSearchRequest, CustomerSearchResponse } from '../crm/features/customers/models/customer.model';
+import { DashboardSummary } from '../crm/features/dashboard/models/dashboard.model';
 import { PERMISSION_KEYS } from '../core/auth/permission.constants';
-import { Opportunity, OpportunitySearchRequest, OpportunitySearchResponse } from '../features/opportunities/models/opportunity.model';
-import { SaveOpportunityRequest } from '../features/opportunities/services/opportunity-data.service';
-import { UpdateWorkspaceSettingsRequest, WorkspaceSettings } from '../features/settings/models/workspace-settings.model';
+import { Opportunity, OpportunitySearchRequest, OpportunitySearchResponse } from '../crm/features/opportunities/models/opportunity.model';
+import { SaveOpportunityRequest } from '../crm/features/opportunities/services/opportunity-data.service';
+import { UpdateWorkspaceSettingsRequest, WorkspaceSettings } from '../crm/features/settings/models/workspace-settings.model';
 import {
   PermissionDefinition,
   RoleSummary,
@@ -15,7 +15,7 @@ import {
   UserListItem,
   UserSearchRequest,
   UserSearchResponse
-} from '../features/settings/models/user-admin.model';
+} from '../crm/features/settings/models/user-admin.model';
 
 const today = new Date();
 
@@ -473,6 +473,11 @@ export function updateOpportunity(id: string, payload: SaveOpportunityRequest): 
   return { ...target };
 }
 
+export function getOpportunityById(id: string): Opportunity | null {
+  const target = mockOpportunities.find((opp) => opp.id === id);
+  return target ? { ...target } : null;
+}
+
 export function deleteOpportunity(id: string): boolean {
   const countBefore = mockOpportunities.length;
   const next = mockOpportunities.filter((opp) => opp.id !== id);
@@ -576,6 +581,7 @@ export function buildDashboardSummary(): DashboardSummary {
     overdueActivities,
     recentCustomers,
     activitiesNextWeek,
+    myTasks: [],
     
     // Chart data
     revenueByMonth,

@@ -1251,3 +1251,40 @@
     display: none !important;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CRM DATA TABLE - Global PrimeNG Table Styling
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.crm-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 16px;
+  overflow: hidden;
+
+  // Soft blue gradient header - Global Standard
+  .p-datatable-thead > tr > th {
+    background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
+    border: none;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+    padding: $space-3 $space-4;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #3b82f6;
+  }
+
+  // Standard body rows
+  .p-datatable-tbody > tr > td {
+    vertical-align: middle;
+    padding: $space-3 $space-2;
+  }
+
+  // Actions column styling
+  .actions {
+    display: flex;
+    gap: $space-2;
+    justify-content: flex-end;
+  }
+}

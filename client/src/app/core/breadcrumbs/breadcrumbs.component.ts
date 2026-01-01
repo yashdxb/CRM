@@ -10,7 +10,7 @@ import { BreadcrumbService } from './breadcrumb.service';
   imports: [NgIf, BreadcrumbModule],
   template: `
     <p-breadcrumb 
-      *ngIf="breadcrumbService.hasBreadcrumbs()"
+      *ngIf="breadcrumbService.breadcrumbs().length"
       [model]="items()" 
       [home]="home"
       styleClass="crm-breadcrumb"

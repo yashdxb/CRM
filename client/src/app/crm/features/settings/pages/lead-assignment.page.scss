@@ -1,0 +1,267 @@
+@use '../../../../shared/form-page-styles' as form;
+
+:host {
+  @include form.premium-selection;
+  @include form.premium-focus-ring;
+}
+
+.assignment-page {
+  @include form.form-page-base;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-header {
+  @include form.form-page-header;
+}
+
+.header-content {
+  @include form.form-header-content;
+}
+
+.back-link {
+  @include form.form-back-link;
+}
+
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.header-title {
+  @include form.form-header-title;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.meta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(60, 60, 67, 0.8);
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+
+  i {
+    color: #0ea5e9;
+  }
+}
+
+.form-body {
+  @include form.form-container;
+}
+
+.form-layout {
+  @include form.form-layout;
+}
+
+.form-grid {
+  @include form.form-grid;
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.form-card {
+  @include form.form-section;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-header h2 {
+  margin: 0.35rem 0 0;
+  font-size: 1.2rem;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.rules-table-wrapper {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.6);
+  @include form.premium-scrollbar;
+}
+
+.rules-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+:host ::ng-deep .rules-table {
+  border: none;
+
+  .p-datatable-thead > tr > th {
+    background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
+    color: #3b82f6;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.85rem 1rem;
+    border: none;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+  }
+
+  .p-datatable-tbody > tr > td {
+    border: none;
+    padding: 0.95rem 1rem;
+    vertical-align: middle;
+  }
+
+  .p-datatable-tbody > tr {
+    cursor: pointer;
+  }
+}
+
+.rule-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.rule-sub {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: rgba(148, 163, 184, 0.2);
+  color: #64748b;
+}
+
+.status-pill.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #047857;
+}
+
+.actions {
+  text-align: right;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  margin-left: 0.35rem;
+}
+
+.icon-btn.danger:hover {
+  color: #ef4444;
+}
+
+.rule-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field label {
+  @include form.form-label;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.field {
+  @include form.form-field;
+}
+
+.toggle-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  color: #334155;
+  margin-top: 0.5rem;
+}
+
+.form-actions {
+  @include form.form-actions;
+
+  .crm-button--ghost {
+    @include form.button-ghost;
+  }
+
+  .crm-button--primary {
+    @include form.button-primary;
+  }
+}
+
+.empty-state,
+.loading-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #94a3b8;
+}
+
+.loading-state .skeleton {
+  height: 24px;
+  border-radius: 12px;
+  background: rgba(148, 163, 184, 0.2);
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+:host ::ng-deep .p-inputtext,
+:host ::ng-deep .p-dropdown,
+:host ::ng-deep .p-multiselect,
+:host ::ng-deep .p-inputtextarea {
+  @include form.premium-input;
+}
+
+:host ::ng-deep .p-inputtext:hover,
+:host ::ng-deep .p-dropdown:hover,
+:host ::ng-deep .p-multiselect:hover,
+:host ::ng-deep .p-inputtextarea:hover {
+  @include form.premium-input-hover;
+}
+
+:host ::ng-deep .p-inputtext:focus,
+:host ::ng-deep .p-dropdown:focus-within,
+:host ::ng-deep .p-multiselect:focus-within,
+:host ::ng-deep .p-inputtextarea:focus {
+  @include form.premium-input-focus;
+}

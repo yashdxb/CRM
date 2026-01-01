@@ -1,0 +1,144 @@
+<section class="user-edit-page">
+  <div class="form-header">
+    <div class="header-content">
+      <app-breadcrumbs></app-breadcrumbs>
+
+      <button type="button" class="back-link" routerLink="/app/settings/users">
+        <i class="pi pi-arrow-left"></i>
+        Back to Users
+      </button>
+
+      <div class="header-row">
+        <div class="header-title">
+          <h1>
+            <span class="title-gradient">Edit</span>
+            <span class="title-light">User</span>
+          </h1>
+          <p>
+            Update access, roles, and preferences in a focused workspace. Changes are saved immediately for the selected teammate.
+          </p>
+        </div>
+        <div class="header-meta">
+          <span class="meta-chip">
+            <i class="pi pi-user"></i>
+            {{ user()?.fullName || 'User profile' }}
+          </span>
+          <span class="status-pill" [ngClass]="user()?.isActive ? 'status-pill--active' : 'status-pill--inactive'">
+            {{ user()?.isActive ? 'Active' : 'Inactive' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-body">
+    <article class="form-card" *ngIf="!loading(); else loadingState">
+      <h3 class="section-title">
+        <i class="pi pi-shield"></i>
+        Access Controls
+      </h3>
+
+      <form [formGroup]="form" (ngSubmit)="onSave()" class="form-layout">
+        <div class="form-grid">
+          <div class="field">
+            <label for="userName">Full name</label>
+            <input pInputText id="userName" formControlName="fullName" placeholder="Jordan Patel" class="w-full" />
+          </div>
+          <div class="field">
+            <label for="userEmail">Email</label>
+            <input pInputText id="userEmail" formControlName="email" placeholder="user@example.com" class="w-full" />
+          </div>
+          <div class="field">
+            <label for="userTimeZone">Time zone</label>
+            <p-select
+              inputId="userTimeZone"
+              formControlName="timeZone"
+              [options]="timezoneOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            ></p-select>
+          </div>
+          <div class="field">
+            <label for="userLocale">Locale</label>
+            <p-select
+              inputId="userLocale"
+              formControlName="locale"
+              [options]="localeOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="w-full"
+            ></p-select>
+          </div>
+          <div class="field full">
+            <label for="userRoles">Roles</label>
+            <p-multiSelect
+              inputId="userRoles"
+              formControlName="roleIds"
+              [options]="rolesAsOptions()"
+              optionLabel="label"
+              optionValue="value"
+              display="chip"
+              appendTo="body"
+              defaultLabel="Select roles"
+              styleClass="w-full"
+            ></p-multiSelect>
+          </div>
+          <div class="field full">
+            <label for="userTempPassword">Temporary password</label>
+            <div class="password-field">
+              <input
+                pInputText
+                id="userTempPassword"
+                type="text"
+                formControlName="temporaryPassword"
+                placeholder="Optional"
+                class="w-full"
+              />
+              <button type="button" class="btn-generate" [disabled]="!canManageAdmin()" (click)="generatePassword()">
+                <i class="pi pi-sync"></i>
+                Generate
+              </button>
+            </div>
+            <small *ngIf="generatedPassword()">Share once, then require reset on first login.</small>
+          </div>
+        </div>
+
+        <!-- Status Control Card -->
+        <div class="status-control-card" [class.status-control-card--active]="form.value.isActive" [class.status-control-card--inactive]="!form.value.isActive">
+          <div class="status-control-icon" [class.status-control-icon--active]="form.value.isActive">
+            <i class="pi" [class.pi-check-circle]="form.value.isActive" [class.pi-ban]="!form.value.isActive"></i>
+          </div>
+          <div class="status-control-content">
+            <span class="status-control-label">Account Status</span>
+            <strong class="status-control-value">{{ form.value.isActive ? 'Active' : 'Inactive' }}</strong>
+            <span class="status-control-hint">{{ form.value.isActive ? 'User can access the system' : 'User access is disabled' }}</span>
+          </div>
+          <div class="status-control-toggle">
+            <p-toggleSwitch formControlName="isActive"></p-toggleSwitch>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" pButton label="Cancel" class="crm-button--ghost" routerLink="/app/settings/users"></button>
+          <button
+            type="submit"
+            pButton
+            label="Save changes"
+            icon="pi pi-check"
+            class="crm-button--primary"
+            [disabled]="saving() || !canManageAdmin()"
+          ></button>
+        </div>
+      </form>
+    </article>
+  </div>
+
+  <ng-template #loadingState>
+    <div class="user-edit__loading">
+      <div class="loading-bar" *ngFor="let _ of [0,1,2,3]"></div>
+    </div>
+  </ng-template>
+</section>
