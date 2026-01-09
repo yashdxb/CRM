@@ -1,0 +1,162 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content stock-alerts">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-cyan">Catalog Stock Alerts</h1>
+          <p class="page-subtitle">Resolve critical stock risks and coordinate replenishment before production is disrupted.</p>
+        </div>
+        <div class="hero-actions">
+          <span class="p-input-icon-left search">
+            <i class="pi pi-search"></i>
+            <input
+              pInputText
+              type="text"
+              placeholder="Search product, SKU, or supplier"
+              [(ngModel)]="searchTerm"
+            />
+          </span>
+          <p-button icon="pi pi-download" label="Export" styleClass="btn-glass"></p-button>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card summary-card">
+      <div class="metric-strip">
+        <div class="metric-card" *ngFor="let metric of summaryMetrics()" [ngClass]="metric.severity">
+          <span class="metric-label">{{ metric.label }}</span>
+          <div class="metric-value">{{ metric.value }}</div>
+          <span class="metric-delta">{{ metric.delta }}</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="dashboard-layout">
+      <aside class="glass-card filter-panel">
+        <div class="card-header">
+          <h2 class="card-title">Filter alerts</h2>
+        </div>
+        <div class="card-body">
+          <div class="p-fluid p-formgrid grid">
+            <div class="field col-12">
+              <label>Status</label>
+              <p-select
+                [(ngModel)]="selectedStatus"
+                [options]="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="All statuses"
+              ></p-select>
+            </div>
+            <div class="field col-12">
+              <label>Category</label>
+              <p-select
+                [(ngModel)]="selectedCategory"
+                [options]="categoryOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="All categories"
+              ></p-select>
+            </div>
+            <div class="field col-12">
+              <label>Location</label>
+              <p-select
+                [(ngModel)]="selectedLocation"
+                [options]="locationOptions"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="All locations"
+              ></p-select>
+            </div>
+          </div>
+          <div class="panel-note">
+            <strong>{{ criticalAlerts().length }}</strong> critical and <strong>{{ warningAlerts().length }}</strong> warning alerts currently require attention.
+          </div>
+        </div>
+      </aside>
+
+      <section class="alert-content">
+        <div class="alert-group" *ngIf="criticalAlerts().length">
+          <header>
+            <h2>Critical alerts</h2>
+            <span class="badge">{{ criticalAlerts().length }}</span>
+          </header>
+          <div class="alert-list">
+            <article class="alert-card" *ngFor="let alert of criticalAlerts()">
+              <div class="alert-header">
+                <div>
+                  <span class="sku">{{ alert.sku }}</span>
+                  <h3>{{ alert.product }}</h3>
+                  <span class="meta">{{ alert.supplier }} · {{ alert.location }}</span>
+                </div>
+                <p-tag [value]="alert.status" [severity]="severity(alert.status)"></p-tag>
+              </div>
+              <div class="stats">
+                <div class="stat"><span class="label">Current</span><span class="value">{{ alert.currentStock | number }}</span></div>
+                <div class="stat"><span class="label">Safety</span><span class="value">{{ alert.safetyStock | number }}</span></div>
+                <div class="stat"><span class="label">Reorder</span><span class="value">{{ alert.reorderPoint | number }}</span></div>
+                <div class="stat"><span class="label">Days cover</span><span class="value">{{ alert.daysCover }}</span></div>
+              </div>
+              <div class="progress-block">
+                <p-progressBar [value]="stockProgress(alert)"></p-progressBar>
+                <small>Stock vs safety {{ stockProgress(alert) }}%</small>
+              </div>
+              <div class="tag-strip">
+                <p-chip *ngFor="let tag of alert.tags" [label]="tag"></p-chip>
+              </div>
+              <div class="card-footer">
+                <small>Last updated {{ alert.lastUpdated }}</small>
+                <p-button label="Create replenishment" icon="pi pi-briefcase" size="small" styleClass="btn-gradient"></p-button>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <section class="glass-card table-card">
+          <div class="card-header">
+            <h2 class="card-title">All alerts</h2>
+          </div>
+          <div class="card-body">
+            <p-table [value]="orderedAlerts()" responsiveLayout="scroll">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th>Product</th>
+                  <th>SKU</th>
+                  <th>Supplier</th>
+                  <th>Location</th>
+                  <th>Category</th>
+                  <th>Current</th>
+                  <th>Safety</th>
+                  <th>Reorder</th>
+                  <th>Status</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-alert>
+                <tr>
+                  <td>{{ alert.product }}</td>
+                  <td>{{ alert.sku }}</td>
+                  <td>{{ alert.supplier }}</td>
+                  <td>{{ alert.location }}</td>
+                  <td>{{ alert.category }}</td>
+                  <td>{{ alert.currentStock | number }}</td>
+                  <td>{{ alert.safetyStock | number }}</td>
+                  <td>{{ alert.reorderPoint | number }}</td>
+                  <td><p-tag [value]="alert.status" [severity]="severity(alert.status)"></p-tag></td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+        </section>
+      </section>
+    </div>
+  </div>
+</div>

@@ -1,158 +1,388 @@
-<section class="assignment-page">
-  <div class="form-header">
-    <div class="header-content">
-      <app-breadcrumbs></app-breadcrumbs>
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     LEAD ASSIGNMENT PAGE - Premium Glass UI Design System
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-container">
+  <!-- Animated Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
 
-      <button type="button" class="back-link" routerLink="/app/settings">
-        <i class="pi pi-arrow-left"></i>
-        Back to Settings
-      </button>
+  <!-- Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
 
-      <div class="header-row">
-        <div class="header-title">
-          <h1>
-            <span class="title-gradient">Lead Assignment</span>
-            <span class="title-light">Rules</span>
-          </h1>
-          <p>Define how new leads are routed across your team.</p>
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       HERO SECTION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Lead Routing</span>
+      </div>
+      
+      <h1 class="hero-title">
+        <span class="title-gradient">Assignment</span>
+        <span class="title-light">Rules</span>
+      </h1>
+      
+      <p class="hero-description">
+        Configure automated lead routing to distribute incoming leads across your sales team using round-robin, territory-based, or manual assignment strategies.
+      </p>
+
+      <!-- Hero Stats with Progress Bars -->
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="stat-value">{{ rules().length }}</div>
+          <div class="stat-label">Total Rules</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" style="width: 100%"></div>
+          </div>
         </div>
-        <div class="header-meta">
-          <span class="meta-chip">
-            <i class="pi pi-sitemap"></i>
-            {{ rules().length }} rules
+        <div class="hero-stat">
+          <div class="stat-value">{{ getActiveRulesCount() }}</div>
+          <div class="stat-label">Active</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--success" [style.width.%]="rules().length ? (getActiveRulesCount() / rules().length) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ getTerritoryRulesCount() }}</div>
+          <div class="stat-label">Territory</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--info" [style.width.%]="rules().length ? (getTerritoryRulesCount() / rules().length) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ getRoundRobinCount() }}</div>
+          <div class="stat-label">Round Robin</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--purple" [style.width.%]="rules().length ? (getRoundRobinCount() / rules().length) * 100 : 0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-primary" [disabled]="!canManageLeads()" (click)="resetForm()">
+          <i class="pi pi-plus"></i>
+          <span>New Rule</span>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Settings</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-bolt"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Automation</span>
+          <strong class="card-value">{{ getActiveRulesCount() }}</strong>
+          <span class="card-trend card-trend--up">
+            <i class="pi pi-check-circle"></i> Active rules
           </span>
-          <button pButton type="button" class="crm-button--ghost" routerLink="/app/settings/users">
-            <i class="pi pi-users"></i>
-            Team users
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-users"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Team Size</span>
+          <strong class="card-value">{{ ownerOptions().length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-user-plus"></i> Assignees
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       METRICS DASHBOARD
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="metrics-section">
+    <div class="metric-card metric-card--total">
+      <div class="metric-icon">
+        <i class="pi pi-list"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Total Rules</span>
+        <strong class="metric-value">{{ rules().length }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--purple" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--success">
+      <div class="metric-icon">
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Active</span>
+        <strong class="metric-value">{{ getActiveRulesCount() }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--green" [attr.stroke-dasharray]="(rules().length ? (getActiveRulesCount() / rules().length) * 100 : 0) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--leads">
+      <div class="metric-icon">
+        <i class="pi pi-map-marker"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Territory</span>
+        <strong class="metric-value">{{ getTerritoryRulesCount() }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--cyan" [attr.stroke-dasharray]="(rules().length ? (getTerritoryRulesCount() / rules().length) * 100 : 0) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--prospects">
+      <div class="metric-icon">
+        <i class="pi pi-sync"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Round Robin</span>
+        <strong class="metric-value">{{ getRoundRobinCount() }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--purple" [attr.stroke-dasharray]="(rules().length ? (getRoundRobinCount() / rules().length) * 100 : 0) + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       MAIN CONTENT - Two Column Layout
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <div class="content-grid">
+    <!-- Rules Table Card -->
+    <section class="form-card rules-card">
+      <h3 class="section-title">
+        <i class="pi pi-sitemap"></i>
+        Assignment Rules
+      </h3>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="loading()">
+        <div class="skeleton-row" *ngFor="let _ of [1,2,3,4]">
+          <div class="skeleton avatar"></div>
+          <div class="skeleton-content">
+            <div class="skeleton text"></div>
+            <div class="skeleton text short"></div>
+          </div>
+          <div class="skeleton badge"></div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="!loading() && rules().length === 0">
+        <div class="empty-icon">
+          <i class="pi pi-sitemap"></i>
+        </div>
+        <h4>No Rules Configured</h4>
+        <p>Create your first lead assignment rule to automate lead routing across your sales team.</p>
+        <button pButton type="button" class="btn btn-primary" [disabled]="!canManageLeads()" (click)="resetForm()">
+          <i class="pi pi-plus"></i>
+          Create First Rule
+        </button>
+      </div>
+
+      <!-- Rules List -->
+      <div class="rules-list" *ngIf="!loading() && rules().length > 0">
+        <div class="rule-item" 
+             *ngFor="let rule of rules()" 
+             [class.active]="editingId() === rule.id"
+             (click)="startEdit(rule)">
+          <div class="rule-avatar" [class]="getRuleTypeClass(rule.type)">
+            <i [class]="getTypeIcon(rule.type)"></i>
+          </div>
+          <div class="rule-content">
+            <div class="rule-header">
+              <span class="rule-name">{{ rule.name }}</span>
+              <span class="status-badge" [class.active]="rule.isActive" [class.paused]="!rule.isActive">
+                <span class="status-dot"></span>
+                {{ rule.isActive ? 'Active' : 'Paused' }}
+              </span>
+            </div>
+            <div class="rule-meta">
+              <span class="type-badge" [class]="getRuleTypeClass(rule.type)">
+                <i [class]="getTypeIcon(rule.type)"></i>
+                {{ rule.type }}
+              </span>
+              <span class="meta-divider" *ngIf="rule.territory">•</span>
+              <span class="territory-tag" *ngIf="rule.territory">
+                <i class="pi pi-map-marker"></i>
+                {{ rule.territory }}
+              </span>
+              <span class="meta-divider" *ngIf="rule.assignedUserName">•</span>
+              <span class="user-tag" *ngIf="rule.assignedUserName">
+                <i class="pi pi-user"></i>
+                {{ rule.assignedUserName }}
+              </span>
+            </div>
+            <div class="rule-last-assigned" *ngIf="rule.lastAssignedUserName">
+              <i class="pi pi-history"></i>
+              Last: {{ rule.lastAssignedUserName }}
+            </div>
+          </div>
+          <div class="rule-actions">
+            <button pButton type="button" class="icon-btn edit" pTooltip="Edit" tooltipPosition="top" [disabled]="!canManageLeads()" (click)="$event.stopPropagation(); startEdit(rule)">
+              <i class="pi pi-pencil"></i>
+            </button>
+            <button pButton type="button" class="icon-btn delete" pTooltip="Delete" tooltipPosition="top" [disabled]="!canManageLeads()" (click)="$event.stopPropagation(); deleteRule(rule)">
+              <i class="pi pi-trash"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rule Form Card -->
+    <section class="form-card editor-card">
+      <h3 class="section-title" [class.editing]="editingId()">
+        <i [class]="editingId() ? 'pi pi-pencil' : 'pi pi-plus-circle'"></i>
+        {{ editingId() ? 'Edit Rule' : 'Create Rule' }}
+      </h3>
+
+      <form class="rule-form" (ngSubmit)="saveRule()">
+        <!-- Rule Name -->
+        <div class="form-field">
+          <label class="field-label">
+            <i class="pi pi-bookmark"></i>
+            Rule Name <span class="required">*</span>
+          </label>
+          <input pInputText 
+                 name="name" 
+                 [(ngModel)]="form().name" 
+                 placeholder="e.g., West Coast Territory" 
+                 class="premium-input" />
+          <span class="field-hint">Give this rule a descriptive name</span>
+        </div>
+
+        <!-- Assignment Type -->
+        <div class="form-field">
+          <label class="field-label">
+            <i class="pi pi-cog"></i>
+            Assignment Type <span class="required">*</span>
+          </label>
+          <p-select appendTo="body"
+            [options]="typeOptions"
+            optionLabel="label"
+            optionValue="value"
+            name="type"
+            [(ngModel)]="form().type"
+            styleClass="premium-select"
+          >
+            <ng-template pTemplate="selectedItem" let-option>
+              <div class="select-option" *ngIf="option">
+                <i [class]="getTypeIcon(option.value)"></i>
+                {{ option.label }}
+              </div>
+            </ng-template>
+            <ng-template pTemplate="item" let-option>
+              <div class="select-option" [attr.data-testid]="'lead-rule-type-' + option.value">
+                <i [class]="getTypeIcon(option.value)"></i>
+                {{ option.label }}
+              </div>
+            </ng-template>
+          </p-select>
+          <span class="field-hint">
+            @switch (form().type) {
+              @case ('RoundRobin') { Leads rotate evenly across all team members }
+              @case ('Territory') { Leads go to the assigned owner for a region }
+              @case ('Manual') { Leads require manual assignment }
+            }
+          </span>
+        </div>
+
+        <!-- Territory (conditional) -->
+        @if (form().type === 'Territory') {
+          <div class="form-field">
+            <label class="field-label">
+              <i class="pi pi-map-marker"></i>
+              Territory <span class="required">*</span>
+            </label>
+            <input pInputText 
+                   name="territory" 
+                   [(ngModel)]="form().territory" 
+                   placeholder="e.g., West Coast, EMEA, APAC" 
+                   class="premium-input" />
+            <span class="field-hint">Geographic region or market segment</span>
+          </div>
+
+          <!-- Assigned User (conditional) -->
+          <div class="form-field">
+            <label class="field-label">
+              <i class="pi pi-user"></i>
+              Assigned Owner <span class="required">*</span>
+            </label>
+            <p-select appendTo="body"
+              [options]="ownerOptions()"
+              optionLabel="label"
+              optionValue="value"
+              name="assignedUserId"
+              [(ngModel)]="form().assignedUserId"
+              placeholder="Select team member"
+              styleClass="premium-select"
+            >
+              <ng-template pTemplate="item" let-option>
+                <div class="select-option" [attr.data-testid]="'lead-rule-owner-' + option.value">
+                  <div class="user-avatar-sm">{{ option.label.charAt(0) }}</div>
+                  {{ option.label }}
+                </div>
+              </ng-template>
+            </p-select>
+            <span class="field-hint">All leads matching this territory go to this person</span>
+          </div>
+        }
+
+        <!-- Active Toggle -->
+        <div class="form-field toggle-field">
+          <label class="toggle-wrapper">
+            <p-checkbox [binary]="true" [(ngModel)]="form().isActive" name="isActive"></p-checkbox>
+            <div class="toggle-content">
+              <span class="toggle-label">Active</span>
+              <span class="toggle-hint">Enable this rule for automatic lead assignment</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+          <button pButton type="button" class="btn btn-ghost" (click)="resetForm()">
+            <i class="pi pi-times"></i>
+            Cancel
+          </button>
+          <button pButton type="submit" class="btn btn-primary" [disabled]="!canSave() || !canManageLeads()">
+            <i [class]="editingId() ? 'pi pi-check' : 'pi pi-plus'"></i>
+            {{ editingId() ? 'Update Rule' : 'Create Rule' }}
           </button>
         </div>
-      </div>
-    </div>
+      </form>
+    </section>
   </div>
-
-  <div class="form-body">
-    <div class="layout-grid">
-      <div class="form-card">
-        <div class="card-header">
-          <div>
-            <span class="eyebrow">Rules</span>
-            <h2>{{ rules().length }} active configurations</h2>
-          </div>
-          <button pButton type="button" class="crm-button--ghost" [disabled]="!canManageLeads()" (click)="resetForm()">New rule</button>
-        </div>
-
-        <div class="rules-table-wrapper" *ngIf="!loading(); else loadingState">
-          <p-table class="rules-table" *ngIf="rules().length; else emptyState" [value]="rules()">
-            <ng-template pTemplate="header">
-              <tr>
-                <th>Rule</th>
-                <th>Type</th>
-                <th>Territory</th>
-                <th>Assigned user</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-rule>
-              <tr (click)="startEdit(rule)">
-                <td>
-                  <div class="rule-name">{{ rule.name }}</div>
-                  <div class="rule-sub" *ngIf="rule.lastAssignedUserName">Last: {{ rule.lastAssignedUserName }}</div>
-                </td>
-                <td>{{ rule.type }}</td>
-                <td>{{ rule.territory || '—' }}</td>
-                <td>{{ rule.assignedUserName || '—' }}</td>
-                <td>
-                  <span class="status-pill" [class.active]="rule.isActive">{{ rule.isActive ? 'Active' : 'Paused' }}</span>
-                </td>
-                <td class="actions">
-                  <button pButton type="button" class="icon-btn" icon="pi pi-pencil" [disabled]="!canManageLeads()" (click)="$event.stopPropagation(); startEdit(rule)"></button>
-                  <button pButton type="button" class="icon-btn danger" icon="pi pi-trash" [disabled]="!canManageLeads()" (click)="$event.stopPropagation(); deleteRule(rule)"></button>
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
-        </div>
-
-        <ng-template #emptyState>
-          <div class="empty-state">
-            <i class="pi pi-sitemap"></i>
-            <p>No lead assignment rules yet.</p>
-          </div>
-        </ng-template>
-
-        <ng-template #loadingState>
-          <div class="loading-state">
-            <div class="skeleton" *ngFor="let _ of [1,2,3,4]"></div>
-          </div>
-        </ng-template>
-      </div>
-
-      <div class="form-card">
-        <div class="card-header">
-          <div>
-            <span class="eyebrow">Rule details</span>
-            <h2>{{ editingId() ? 'Edit rule' : 'Create rule' }}</h2>
-          </div>
-        </div>
-
-        <form class="form-layout" (ngSubmit)="saveRule()">
-          <div class="form-grid">
-            <div class="field">
-              <label>Name</label>
-              <input pInputText name="name" [(ngModel)]="form().name" placeholder="e.g. Default round robin" class="w-full" />
-            </div>
-            <div class="field">
-              <label>Type</label>
-              <p-select appendTo="body"
-                [options]="typeOptions"
-                optionLabel="label"
-                optionValue="value"
-                name="type"
-                [(ngModel)]="form().type"
-                styleClass="w-full"
-              >
-                <ng-template pTemplate="item" let-option>
-                  <div class="option-row" [attr.data-testid]="'lead-rule-type-' + option.value">
-                    {{ option.label }}
-                  </div>
-                </ng-template>
-              </p-select>
-            </div>
-            <div class="field" *ngIf="form().type === 'Territory'">
-              <label>Territory</label>
-              <input pInputText name="territory" [(ngModel)]="form().territory" placeholder="West, EMEA, APAC" class="w-full" />
-            </div>
-            <div class="field" *ngIf="form().type === 'Territory'">
-              <label>Assigned user</label>
-              <p-select appendTo="body"
-                [options]="ownerOptions()"
-                optionLabel="label"
-                optionValue="value"
-                name="assignedUserId"
-                [(ngModel)]="form().assignedUserId"
-                placeholder="Select owner"
-                styleClass="w-full"
-              >
-                <ng-template pTemplate="item" let-option>
-                  <div class="option-row" [attr.data-testid]="'lead-rule-owner-' + option.value">
-                    {{ option.label }}
-                  </div>
-                </ng-template>
-              </p-select>
-            </div>
-            <label class="toggle-field">
-              <p-checkbox [binary]="true" [(ngModel)]="form().isActive" name="isActive"></p-checkbox>
-              <span>Active</span>
-            </label>
-          </div>
-
-          <div class="form-actions">
-            <button pButton type="button" class="crm-button--ghost" [disabled]="!canManageLeads()" (click)="resetForm()">Reset</button>
-            <button pButton type="submit" class="crm-button--primary" [disabled]="!canSave() || !canManageLeads()">Save rule</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-</section>
+</div>

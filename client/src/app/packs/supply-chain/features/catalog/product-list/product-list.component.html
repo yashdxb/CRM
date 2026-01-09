@@ -1,0 +1,251 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content product-list">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-indigo">Supplier Product Catalog</h1>
+          <p class="page-subtitle">Select suppliers to browse their products and launch RFQ drafts.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card supplier-card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Supplier selection</h2>
+          <p class="card-subtitle">Choose one or more suppliers to load the catalog.</p>
+        </div>
+        <p-button
+          label="Clear selection"
+          icon="pi pi-filter-slash"
+          styleClass="btn-glass"
+          [disabled]="!hasSupplierSelection() && !supplierSelectionTouched"
+          (onClick)="clearSupplierSelection()"
+        ></p-button>
+      </div>
+      <div class="card-body">
+        <div class="supplier-selection">
+          <p-multiSelect
+            [options]="suppliers"
+            [(ngModel)]="selectedSupplierIds"
+            optionLabel="name"
+            optionValue="id"
+            display="chip"
+            placeholder="Select suppliers to browse"
+            [showClear]="true"
+            [filter]="true"
+            (onChange)="onSupplierSelectionChange()"
+          ></p-multiSelect>
+        </div>
+
+        <div class="selection-summary" *ngIf="hasSupplierSelection()">
+          <span class="summary-label">Browsing:</span>
+          <span class="supplier-chip" *ngFor="let supplier of getSelectedSupplierNames()">
+            {{ supplier }}
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card table-card" *ngIf="hasSupplierSelection(); else supplierPrompt">
+      <div class="card-header">
+        <h2 class="card-title">Catalog products</h2>
+        <div class="table-actions">
+          <p-button
+            type="button"
+            label="Select all"
+            icon="pi pi-check-square"
+            styleClass="btn-glass"
+            (onClick)="selectAllVisible()"
+            [disabled]="!products.length"
+          ></p-button>
+          <p-button
+            type="button"
+            label="Clear selection"
+            icon="pi pi-times"
+            styleClass="btn-glass"
+            (onClick)="clearSelection()"
+            [disabled]="!selectedProducts.length"
+          ></p-button>
+          <p-button
+            type="button"
+            [label]="selectedProducts.length ? 'Add ' + selectedProducts.length + ' selected' : 'Add selected to RFQ draft'"
+            icon="pi pi-plus"
+            styleClass="btn-gradient"
+            (onClick)="addSelectedToRfqDraft()"
+            [disabled]="!selectedProducts.length"
+          ></p-button>
+        </div>
+      </div>
+      <div class="card-body">
+        <p-table
+          #dt
+          [value]="products"
+          selectionMode="multiple"
+          [(selection)]="selectedProducts"
+          (selectionChange)="onSelectionChange($event)"
+          dataKey="id"
+          [rows]="10"
+          [paginator]="true"
+          [rowsPerPageOptions]="[10, 25, 50]"
+          [loading]="loading"
+          [globalFilterFields]="['sku', 'name', 'categoryName', 'description', 'supplierName']"
+          [tableStyle]="{ 'min-width': '80rem' }"
+          responsiveLayout="scroll"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} products"
+        >
+          <ng-template pTemplate="caption">
+            <div class="table-header">
+              <div class="search-field">
+                <p-iconField iconPosition="left">
+                  <p-inputIcon styleClass="pi pi-search" />
+                  <input
+                    pInputText
+                    type="text"
+                    [(ngModel)]="searchValue"
+                    (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+                    placeholder="Search products..."
+                  />
+                </p-iconField>
+                <p-button
+                  type="button"
+                  icon="pi pi-filter-slash"
+                  label="Clear filter"
+                  styleClass="btn-glass"
+                  (onClick)="clear(dt)"
+                ></p-button>
+              </div>
+            </div>
+          </ng-template>
+
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 3rem">
+                <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+              </th>
+              <th pSortableColumn="sku">
+                SKU <p-sortIcon field="sku" />
+              </th>
+              <th pSortableColumn="name">
+                Product Name <p-sortIcon field="name" />
+              </th>
+              <th pSortableColumn="supplierName">
+                Supplier <p-sortIcon field="supplierName" />
+              </th>
+              <th pSortableColumn="categoryName">
+                Category <p-sortIcon field="categoryName" />
+              </th>
+              <th>UOM</th>
+              <th pSortableColumn="predictedDemand30Days">
+                Predicted Demand <p-sortIcon field="predictedDemand30Days" />
+              </th>
+              <th pSortableColumn="optimalStockLevel">
+                Stock Level <p-sortIcon field="optimalStockLevel" />
+              </th>
+              <th pSortableColumn="isActive">
+                Status <p-sortIcon field="isActive" />
+              </th>
+              <th class="actions-column">Actions</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-product>
+            <tr>
+              <td>
+                <p-tableCheckbox [value]="product"></p-tableCheckbox>
+              </td>
+              <td>
+                <span class="font-semibold">{{ product.sku }}</span>
+              </td>
+              <td>
+                <div class="product-name-cell">
+                  <span class="product-name">{{ product.name }}</span>
+                  <span class="product-description">{{ product.description }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="data-chip data-chip--supplier">{{ product.supplierName }}</span>
+              </td>
+              <td>
+                <span class="data-chip data-chip--category">{{ product.categoryName }}</span>
+              </td>
+              <td>
+                <span class="text-sm">{{ product.defaultUOM }}</span>
+              </td>
+              <td>
+                <div class="demand-cell">
+                  <span class="data-chip data-chip--demand" [ngClass]="getDemandSeverity(product.predictedDemand30Days)">
+                    {{ getDemandLevel(product.predictedDemand30Days) }}
+                  </span>
+                  <span class="demand-value">{{ product.predictedDemand30Days }} units</span>
+                </div>
+              </td>
+              <td>
+                <div class="stock-cell">
+                  <div class="stock-info">
+                    <span class="stock-current">{{ product.currentStockLevel || 0 }}</span>
+                    <span class="stock-divider">/</span>
+                    <span class="stock-optimal">{{ product.optimalStockLevel }}</span>
+                  </div>
+                  <span
+                    class="stock-status"
+                    [ngClass]="getStockStatusClass(product.currentStockLevel, product.optimalStockLevel)"
+                  >
+                    {{ getStockStatusLabel(product.currentStockLevel, product.optimalStockLevel) }}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <span class="status-pill" [ngClass]="{ 'active': product.isActive, 'inactive': !product.isActive }">
+                  {{ product.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions-column">
+                <p-button
+                  icon="pi pi-plus"
+                  label="Draft RFQ"
+                  styleClass="btn-gradient"
+                  size="small"
+                  (onClick)="addToRfqDraft(product)"
+                ></p-button>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="10" class="text-center">
+                No products found. Adjust your filters or supplier selection.
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+
+    <ng-template #supplierPrompt>
+      <section class="glass-card empty-card">
+        <div class="card-body">
+          <app-empty-state
+            type="no-data"
+            title="Select suppliers to load catalog"
+            description="Choose supplier partners above to view products and start RFQ drafts."
+          ></app-empty-state>
+        </div>
+      </section>
+    </ng-template>
+  </div>
+</div>
+
+<p-confirmDialog />
+<p-toast />

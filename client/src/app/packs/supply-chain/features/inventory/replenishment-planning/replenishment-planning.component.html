@@ -1,0 +1,148 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <app-breadcrumbs></app-breadcrumbs>
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge"><span class="badge-dot"></span><span>Supply Chain</span></div>
+      <h1 class="hero-title">
+        <span class="title-gradient">Replenishment</span>
+        <span class="title-light">Planning</span>
+      </h1>
+      <p class="hero-description">Balance safety stock, planned orders, and supplier capacity to keep lines running smoothly.</p>
+      <div class="hero-actions">
+        <p-select [options]="filters.priority" [(ngModel)]="selectedPriorityValue" optionLabel="label" optionValue="value"></p-select>
+        <p-select [options]="filters.status" [(ngModel)]="selectedStatusValue" optionLabel="label" optionValue="value"></p-select>
+        <p-select [options]="filters.warehouse" [(ngModel)]="selectedWarehouseValue" optionLabel="label" optionValue="value"></p-select>
+        <p-button label="New plan" icon="pi pi-plus" styleClass="btn-gradient"></p-button>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon"><i class="pi pi-truck"></i></div>
+        <div class="card-content">
+          <span class="card-label">Pending</span>
+          <strong class="card-value">{{ approvalProgress() }}%</strong>
+          <span class="card-trend card-trend--up"><i class="pi pi-arrow-up"></i> Approvals</span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+  <section class="metrics-section">
+    <div class="metric-card metric-card--total">
+      <div class="metric-icon"><i class="pi pi-database"></i></div>
+      <div class="metric-content">
+        <span class="metric-label">Plans</span>
+        <strong class="metric-value">{{ visiblePlans().length }}</strong>
+      </div>
+    </div>
+    <div class="metric-card metric-card--leads">
+      <div class="metric-icon"><i class="pi pi-tasks"></i></div>
+      <div class="metric-content">
+        <span class="metric-label">Tasks Open</span>
+        <strong class="metric-value">{{ openTasks() }}</strong>
+      </div>
+    </div>
+  </section>
+  <div class="grid-layout">
+    <section class="form-card plans-card">
+      <div class="card-header">
+        <h2 class="card-title">Active replenishment plans</h2>
+        <p-button label="Export" icon="pi pi-download" styleClass="btn-glass" size="small"></p-button>
+      </div>
+      <div class="card-body">
+        <p-table [value]="visiblePlans()" responsiveLayout="scroll" dataKey="planId" class="plans-table">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Plan</th>
+              <th>Warehouse</th>
+              <th>SKU / Product</th>
+              <th>Supplier</th>
+              <th>Order vs suggestion</th>
+              <th>ETA</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-plan>
+            <tr>
+              <td>
+                <div class="plan-cell">
+                  <span class="plan-id">{{ plan.planId }}</span>
+                  <p-tag [value]="plan.priority" [severity]="tagSeverity(plan.priority)"></p-tag>
+                </div>
+              </td>
+              <td>{{ plan.warehouse }}</td>
+              <td>
+                <div class="sku-cell">
+                  <span class="sku">{{ plan.sku }}</span>
+                  <p class="product">{{ plan.product }}</p>
+                  <div class="tag-strip">
+                    <p-chip *ngFor="let tag of plan.tags" [label]="tag"></p-chip>
+                  </div>
+                </div>
+              </td>
+              <td>{{ plan.supplier }}</td>
+              <td>
+                <div class="order-bar">
+                  <span class="values">{{ plan.orderQty | number }} / {{ plan.suggestedQty | number }}</span>
+                  <p-progressBar [value]="fillPercent(plan)"></p-progressBar>
+                </div>
+              </td>
+              <td>{{ plan.eta }}</td>
+              <td>
+                <p-tag [value]="plan.status" [severity]="statusSeverity(plan.status)"></p-tag>
+              </td>
+              <td class="row-actions">
+                <p-button icon="pi pi-edit" [text]="true"></p-button>
+                <p-button icon="pi pi-send" [text]="true"></p-button>
+              </td>
+            </tr>
+            <tr class="plan-detail">
+              <td colspan="8">
+                <div class="detail-body">
+                  <strong>Rationale:</strong> {{ plan.rationale }}
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+    <aside class="task-column">
+      <section class="form-card task-card">
+        <div class="card-header">
+          <h3 class="card-title">Workflow tasks</h3>
+          <p-button label="View board" icon="pi pi-external-link" [text]="true" size="small"></p-button>
+        </div>
+        <div class="card-body">
+          <div class="task-item" *ngFor="let task of tasks()">
+            <div>
+              <p class="task-title">{{ task.title }}</p>
+              <p class="task-desc">{{ task.description }}</p>
+              <small>{{ task.owner }} · {{ task.due }}</small>
+            </div>
+            <p-tag [value]="task.status" [severity]="task.status === 'Completed' ? 'success' : (task.status === 'Open' ? 'info' : 'warn')"></p-tag>
+          </div>
+        </div>
+      </section>
+      <section class="form-card guidance-card">
+        <div class="card-header">
+          <h3 class="card-title">Planning guidance</h3>
+        </div>
+        <div class="card-body">
+          <ul>
+            <li>Validate safety stock before committing to rush procurement.</li>
+            <li>Leverage supplier collaboration to consolidate shipments and reduce freight.</li>
+            <li>Escalate high-priority plans to sourcing for commercial alignment.</li>
+          </ul>
+          <p-button label="Open playbook" icon="pi pi-book" styleClass="btn-glass"></p-button>
+        </div>
+      </section>
+    </aside>
+  </div>
+</div>

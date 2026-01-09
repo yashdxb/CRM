@@ -7,6 +7,7 @@ public class Activity : AuditableEntity
 {
     public string Subject { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public string? Outcome { get; set; }
     public ActivityType Type { get; set; }
     public ActivityRelationType RelatedEntityType { get; set; }
     public Guid RelatedEntityId { get; set; }

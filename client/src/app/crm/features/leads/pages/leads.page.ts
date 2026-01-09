@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DatePipe, NgFor, NgIf, DecimalPipe } from '@angular/common';
+import { NgFor, NgIf, DecimalPipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -16,10 +16,8 @@ import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 import { Lead, LeadStatus } from '../models/lead.model';
 import { LeadDataService } from '../services/lead-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { SavedView, SavedViewsService } from '../../../../shared/services/saved-views.service';
 import { BulkAction, BulkActionsBarComponent } from '../../../../shared/components/bulk-actions/bulk-actions-bar.component';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
-import { RecentlyViewedItem, RecentlyViewedService } from '../../../../shared/services/recently-viewed.service';
 import { CsvImportJob, CsvImportJobStatusResponse } from '../../../../shared/models/csv-import.model';
 import { ImportJobService } from '../../../../shared/services/import-job.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -29,13 +27,9 @@ import { AppToastService } from '../../../../core/app-toast.service';
 interface StatusOption {
   label: string;
   value: LeadStatus | 'all';
+  icon: string;
 }
 
-interface LeadViewFilters {
-  searchTerm: string;
-  statusFilter: StatusOption['value'];
-  viewMode: 'table' | 'kanban';
-}
 
 @Component({
   selector: 'app-leads-page',
@@ -43,6 +37,7 @@ interface LeadViewFilters {
   imports: [
     NgIf,
     NgFor,
+    NgClass,
     FormsModule,
     ButtonModule,
     CheckboxModule,
@@ -52,7 +47,6 @@ interface LeadViewFilters {
     TableModule,
     PaginatorModule,
     DecimalPipe,
-    DatePipe,
     DialogModule,
     BreadcrumbsComponent,
     BulkActionsBarComponent
@@ -66,11 +60,12 @@ export class LeadsPage {
   private readonly toastService = inject(AppToastService);
   
   protected readonly statusOptions: StatusOption[] = [
-    { label: 'All', value: 'all' },
-    { label: 'New', value: 'New' },
-    { label: 'Qualified', value: 'Qualified' },
-    { label: 'Converted', value: 'Converted' },
-    { label: 'Lost', value: 'Lost' }
+    { label: 'All', value: 'all', icon: 'pi-inbox' },
+    { label: 'New', value: 'New', icon: 'pi-star' },
+    { label: 'Contacted', value: 'Contacted', icon: 'pi-comments' },
+    { label: 'Qualified', value: 'Qualified', icon: 'pi-check' },
+    { label: 'Converted', value: 'Converted', icon: 'pi-verified' },
+    { label: 'Lost', value: 'Lost', icon: 'pi-times' }
   ];
   protected readonly filteredStatusOptions = this.statusOptions.filter((o) => o.value !== 'all');
 
@@ -80,6 +75,7 @@ export class LeadsPage {
   protected readonly metrics = computed(() => {
     const rows = this.leads();
     const newLeads = rows.filter((l) => l.status === 'New').length;
+    const contacted = rows.filter((l) => l.status === 'Contacted').length;
     const qualified = rows.filter((l) => l.status === 'Qualified').length;
     const converted = rows.filter((l) => l.status === 'Converted').length;
     const lost = rows.filter((l) => l.status === 'Lost').length;
@@ -90,6 +86,7 @@ export class LeadsPage {
     return {
       total: this.total(),
       newLeads,
+      contacted,
       qualified,
       converted,
       lost,
@@ -108,13 +105,6 @@ export class LeadsPage {
   protected statusFilter: StatusOption['value'] = 'all';
   protected pageIndex = 0;
   protected rows = 10;
-  protected readonly savedViews = signal<SavedView<LeadViewFilters>[]>([]);
-  protected readonly selectedViewId = signal<string | null>(null);
-  protected readonly viewOptions = computed(() => [
-    { label: 'Saved views', value: null },
-    ...this.savedViews().map((view) => ({ label: view.name, value: view.id }))
-  ]);
-  protected viewName = '';
   protected readonly selectedIds = signal<string[]>([]);
   protected readonly bulkActions = computed<BulkAction[]>(() => {
     const disabled = !this.canManage();
@@ -133,7 +123,6 @@ export class LeadsPage {
   protected assignOwnerId: string | null = null;
   protected statusDialogVisible = false;
   protected bulkStatus: LeadStatus | null = null;
-  protected readonly recentLeads = computed(() => this.recentlyViewed.itemsFor('leads'));
   protected importDialogVisible = false;
   protected importFile: File | null = null;
   protected readonly importJob = signal<CsvImportJob | null>(null);
@@ -145,12 +134,9 @@ export class LeadsPage {
   constructor(
     private readonly leadData: LeadDataService,
     private readonly router: Router,
-    private readonly savedViewsService: SavedViewsService,
     private readonly userAdminData: UserAdminDataService,
-    private readonly recentlyViewed: RecentlyViewedService,
     private readonly importJobs: ImportJobService
   ) {
-    this.loadSavedViews();
     this.loadOwners();
     if (this.router.url.includes('/leads/pipeline')) {
       this.viewMode = 'kanban';
@@ -172,6 +158,7 @@ export class LeadsPage {
     if (m.total === 0) return 0;
     
     const count = status === 'New' ? m.newLeads
+      : status === 'Contacted' ? m.contacted
       : status === 'Qualified' ? m.qualified
       : status === 'Converted' ? m.converted
       : m.lost;
@@ -260,25 +247,22 @@ export class LeadsPage {
   }
 
   protected onEdit(row: Lead) {
-    this.recentlyViewed.add('leads', {
-      id: row.id,
-      title: row.name,
-      subtitle: row.company || row.email || row.status
-    });
     this.router.navigate(['/app/leads', row.id, 'edit'], { state: { lead: row } });
   }
 
-  protected onConvert(row: Lead) {
-    this.recentlyViewed.add('leads', {
-      id: row.id,
-      title: row.name,
-      subtitle: row.company || row.email || row.status
+  protected onLogActivity(row: Lead) {
+    const subject = row.name ? `Follow up: ${row.name}` : 'Lead follow-up';
+    this.router.navigate(['/app/activities/new'], {
+      queryParams: {
+        relatedType: 'Lead',
+        relatedId: row.id,
+        subject
+      }
     });
-    this.router.navigate(['/app/leads', row.id, 'convert'], { state: { lead: row } });
   }
 
-  protected openRecent(item: RecentlyViewedItem) {
-    this.router.navigate(['/app/leads', item.id, 'edit']);
+  protected onConvert(row: Lead) {
+    this.router.navigate(['/app/leads', row.id, 'convert'], { state: { lead: row } });
   }
 
   protected onDelete(row: Lead) {
@@ -496,50 +480,11 @@ export class LeadsPage {
     });
   }
 
-  protected onSaveView() {
-    const name = this.viewName.trim();
-    if (!name) {
-      return;
-    }
-    const saved = this.savedViewsService.saveView<LeadViewFilters>('leads', {
-      name,
-      filters: {
-        searchTerm: this.searchTerm,
-        statusFilter: this.statusFilter,
-        viewMode: this.viewMode
-      }
-    });
-    this.viewName = '';
-    this.loadSavedViews();
-    this.selectedViewId.set(saved.id);
-  }
-
-  protected onSelectView(id: string | null) {
-    if (!id) {
-      this.selectedViewId.set(null);
-      return;
-    }
-    const view = this.savedViews().find((item) => item.id === id);
-    if (!view) {
-      return;
-    }
-    this.selectedViewId.set(id);
-    this.applyView(view);
-  }
-
-  protected onDeleteView() {
-    const selected = this.selectedViewId();
-    if (!selected) {
-      return;
-    }
-    this.savedViewsService.deleteView('leads', selected);
-    this.selectedViewId.set(null);
-    this.loadSavedViews();
-  }
-
   protected statusSeverity(status: LeadStatus) {
     switch (status) {
       case 'New':
+        return 'info';
+      case 'Contacted':
         return 'info';
       case 'Qualified':
         return 'info';
@@ -556,6 +501,8 @@ export class LeadsPage {
     switch (status) {
       case 'New':
         return 'avatar-new';
+      case 'Contacted':
+        return 'avatar-contacted';
       case 'Qualified':
         return 'avatar-qualified';
       case 'Converted':
@@ -571,6 +518,8 @@ export class LeadsPage {
     switch (status) {
       case 'New':
         return 'badge-info';
+      case 'Contacted':
+        return 'badge-warning';
       case 'Qualified':
         return 'badge-purple';
       case 'Converted':
@@ -590,19 +539,6 @@ export class LeadsPage {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
-  }
-
-  private loadSavedViews() {
-    this.savedViews.set(this.savedViewsService.getViews<LeadViewFilters>('leads'));
-  }
-
-  private applyView(view: SavedView<LeadViewFilters>) {
-    const filters = view.filters;
-    this.searchTerm = filters.searchTerm ?? '';
-    this.statusFilter = filters.statusFilter ?? 'all';
-    this.viewMode = filters.viewMode ?? 'table';
-    this.pageIndex = 0;
-    this.load();
   }
 
   private loadOwners() {

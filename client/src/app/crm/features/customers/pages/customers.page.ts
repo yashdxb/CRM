@@ -21,8 +21,6 @@ import { Customer, CustomerStatus } from '../models/customer.model';
 import { CustomerDataService } from '../services/customer-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CsvColumn, exportToCsv } from '../../../../shared/utils/csv';
-import { SavedView, SavedViewsService } from '../../../../shared/services/saved-views.service';
-import { RecentlyViewedItem, RecentlyViewedService } from '../../../../shared/services/recently-viewed.service';
 import { BulkAction, BulkActionsBarComponent } from '../../../../shared/components/bulk-actions/bulk-actions-bar.component';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { CsvImportJob, CsvImportJobStatusResponse } from '../../../../shared/models/csv-import.model';
@@ -44,13 +42,6 @@ interface SegmentOption {
   description: string;
 }
 
-interface CustomerViewFilters {
-  searchTerm: string;
-  statusFilter: StatusOption['value'];
-  ownerFilter: string;
-  segmentFilter: SegmentValue;
-  viewMode: 'table' | 'cards';
-}
 
 @Component({
   selector: 'app-customers-page',
@@ -157,13 +148,6 @@ export class CustomersPage {
   protected rows = 10;
   protected viewMode: 'table' | 'cards' = 'table';
   protected readonly Math = Math;
-  protected readonly savedViews = signal<SavedView<CustomerViewFilters>[]>([]);
-  protected readonly selectedViewId = signal<string | null>(null);
-  protected readonly viewOptions = computed(() => [
-    { label: 'Saved views', value: null },
-    ...this.savedViews().map((view) => ({ label: view.name, value: view.id }))
-  ]);
-  protected viewName = '';
   protected readonly selectedIds = signal<string[]>([]);
   protected readonly bulkActions = computed<BulkAction[]>(() => {
     const disabled = !this.canManage();
@@ -178,7 +162,6 @@ export class CustomersPage {
   protected assignOwnerId: string | null = null;
   protected statusDialogVisible = false;
   protected bulkStatus: CustomerStatus | null = null;
-  protected readonly recentCustomers = computed(() => this.recentlyViewed.itemsFor('customers'));
   protected importDialogVisible = false;
   protected importFile: File | null = null;
   protected readonly importJob = signal<CsvImportJob | null>(null);
@@ -190,9 +173,7 @@ export class CustomersPage {
   constructor(
     private readonly customerData: CustomerDataService,
     private readonly router: Router,
-    private readonly savedViewsService: SavedViewsService,
     private readonly userAdminData: UserAdminDataService,
-    private readonly recentlyViewed: RecentlyViewedService,
     private readonly toastService: AppToastService,
     private readonly importJobs: ImportJobService
   ) {
@@ -200,7 +181,6 @@ export class CustomersPage {
     if (toast) {
       this.toastService.show(toast.tone, toast.message, 3000);
     }
-    this.loadSavedViews();
     this.load();
     this.loadOwners();
   }
@@ -278,16 +258,7 @@ export class CustomersPage {
   }
 
   protected onEdit(row: Customer) {
-    this.recentlyViewed.add('customers', {
-      id: row.id,
-      title: row.name,
-      subtitle: row.company || row.status
-    });
     this.router.navigate(['/app/customers', row.id, 'edit']);
-  }
-
-  protected openRecent(item: RecentlyViewedItem) {
-    this.router.navigate(['/app/customers', item.id, 'edit']);
   }
 
   protected onDelete(row: Customer) {
@@ -333,50 +304,6 @@ export class CustomersPage {
     this.statusFilter = value;
     this.pageIndex = 0;
     this.load();
-  }
-
-  protected onSaveView() {
-    const name = this.viewName.trim();
-    if (!name) {
-      return;
-    }
-
-    const saved = this.savedViewsService.saveView<CustomerViewFilters>('customers', {
-      name,
-      filters: {
-        searchTerm: this.searchTerm,
-        statusFilter: this.statusFilter,
-        ownerFilter: this.ownerFilter(),
-        segmentFilter: this.segmentFilter(),
-        viewMode: this.viewMode
-      }
-    });
-    this.viewName = '';
-    this.loadSavedViews();
-    this.selectedViewId.set(saved.id);
-  }
-
-  protected onSelectView(id: string | null) {
-    if (!id) {
-      this.selectedViewId.set(null);
-      return;
-    }
-    const view = this.savedViews().find((item) => item.id === id);
-    if (!view) {
-      return;
-    }
-    this.selectedViewId.set(id);
-    this.applyView(view);
-  }
-
-  protected onDeleteView() {
-    const selected = this.selectedViewId();
-    if (!selected) {
-      return;
-    }
-    this.savedViewsService.deleteView('customers', selected);
-    this.selectedViewId.set(null);
-    this.loadSavedViews();
   }
 
   protected onExport() {
@@ -605,21 +532,6 @@ export class CustomersPage {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
-  }
-
-  private loadSavedViews() {
-    this.savedViews.set(this.savedViewsService.getViews<CustomerViewFilters>('customers'));
-  }
-
-  private applyView(view: SavedView<CustomerViewFilters>) {
-    const filters = view.filters;
-    this.searchTerm = filters.searchTerm ?? '';
-    this.statusFilter = filters.statusFilter ?? 'all';
-    this.ownerFilter.set(filters.ownerFilter ?? 'all');
-    this.segmentFilter.set(filters.segmentFilter ?? 'all');
-    this.viewMode = filters.viewMode ?? 'table';
-    this.pageIndex = 0;
-    this.load();
   }
 
   private loadOwners() {

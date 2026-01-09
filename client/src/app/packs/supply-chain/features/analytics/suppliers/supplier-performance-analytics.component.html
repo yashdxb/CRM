@@ -1,0 +1,124 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content supplier-analytics">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-indigo">Performance Analytics</h1>
+          <p class="page-subtitle">Monitor supplier reliability, quality, and innovation trends to identify coaching moments and celebrate strategic wins.</p>
+        </div>
+        <div class="hero-actions">
+          <p-button label="Download dashboard" icon="pi pi-download" styleClass="btn-glass"></p-button>
+          <p-button label="Schedule QBR" icon="pi pi-calendar-plus" styleClass="btn-gradient"></p-button>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card kpi-strip">
+      <div class="kpi-card" *ngFor="let kpi of kpis()" [ngClass]="trendClasses(kpi.trend)">
+        <span class="kpi-label">{{ kpi.label }}</span>
+        <div class="kpi-value">{{ kpi.value }}</div>
+        <span class="kpi-delta">
+          <i class="pi"
+            [ngClass]="{
+              'pi-arrow-up-right': kpi.trend === 'up',
+              'pi-arrow-down-right': kpi.trend === 'down',
+              'pi-minus': kpi.trend === 'flat'
+            }"
+          ></i>
+          {{ kpi.delta }}
+        </span>
+      </div>
+    </section>
+
+    <div class="grid-layout">
+      <section class="glass-card trend-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">On-time delivery trend</h2>
+            <span class="muted">Average {{ avgOTD() }}% across last 5 months</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="trend-track">
+            <div class="trend-point" *ngFor="let point of otdTrend()">
+              <div class="bar" [style.height.%]="point.value">
+                <span class="value">{{ point.value }}%</span>
+              </div>
+              <span class="label">{{ point.label }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="glass-card trend-card">
+        <div class="card-header">
+          <div>
+            <h2 class="card-title">Defect rate (PPM)</h2>
+            <span class="muted">{{ ppmImprovement() }}% improvement since June</span>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="trend-track ppm">
+            <div class="trend-point" *ngFor="let point of ppmTrend()">
+              <div class="bar" [style.height.%]="point.value / 5">
+                <span class="value">{{ point.value }}</span>
+              </div>
+              <span class="label">{{ point.label }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <section class="glass-card opportunities-card">
+      <div class="card-header">
+        <h2 class="card-title">Continuous improvement pipeline</h2>
+        <p-button label="View roadmap" icon="pi pi-diagram-tree" [text]="true"></p-button>
+      </div>
+      <div class="card-body">
+        <p-table [value]="opportunities()" responsiveLayout="scroll" dataKey="supplier">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Supplier</th>
+              <th>Focus area</th>
+              <th>Projected impact</th>
+              <th>Owner</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-item>
+            <tr>
+              <td>
+                <div class="supplier-cell">
+                  <span class="supplier-name">{{ item.supplier }}</span>
+                  <div class="tag-strip">
+                    <p-chip *ngFor="let tag of item.tags" [label]="tag"></p-chip>
+                  </div>
+                </div>
+              </td>
+              <td>{{ item.focus }}</td>
+              <td>{{ item.impact }}</td>
+              <td>{{ item.owner }}</td>
+              <td>
+                <p-tag [value]="item.status" [severity]="statusSeverity(item.status)"></p-tag>
+              </td>
+              <td class="row-actions">
+                <p-button icon="pi pi-external-link" [text]="true" label="Details"></p-button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  </div>
+</div>

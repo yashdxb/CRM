@@ -1,0 +1,335 @@
+<!-- Animated Background -->
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container supplier-scorecards">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <!-- Premium Hero Section -->
+    <section class="hero-section">
+      <div class="hero-badge">
+        <i class="pi pi-star-fill"></i>
+        <span>Performance Analytics</span>
+      </div>
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-gradient">Supplier</span>
+            <span class="title-light">Scorecards</span>
+          </h1>
+          <p class="hero-description">Track and analyze supplier performance across quality, delivery, responsiveness, and innovation metrics.</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button pButton type="button" class="btn-glass" pTooltip="Export to Excel" tooltipPosition="top">
+          <i class="pi pi-download"></i>
+          <span>Export</span>
+        </button>
+        <button pButton type="button" class="btn-gradient" pTooltip="Schedule Review" tooltipPosition="top">
+          <i class="pi pi-calendar-plus"></i>
+          <span>Schedule Review</span>
+        </button>
+      </div>
+      
+      <!-- Hero Stats -->
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat__icon hero-stat__icon--cyan">
+            <i class="pi pi-users"></i>
+          </div>
+          <div class="hero-stat__content">
+            <div class="hero-stat__value">{{ rows.length }}</div>
+            <div class="hero-stat__label">Active Suppliers</div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat__icon hero-stat__icon--purple">
+            <i class="pi pi-chart-bar"></i>
+          </div>
+          <div class="hero-stat__content">
+            <div class="hero-stat__value">{{ getAverageOverall() }}</div>
+            <div class="hero-stat__label">Avg Score</div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat__icon hero-stat__icon--green">
+            <i class="pi pi-verified"></i>
+          </div>
+          <div class="hero-stat__content">
+            <div class="hero-stat__value">{{ getPreferredCount() }}</div>
+            <div class="hero-stat__label">Preferred</div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat__icon hero-stat__icon--orange">
+            <i class="pi pi-exclamation-triangle"></i>
+          </div>
+          <div class="hero-stat__content">
+            <div class="hero-stat__value">{{ getWatchCount() }}</div>
+            <div class="hero-stat__label">Watch List</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary Metrics Grid -->
+    <section class="summary-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="pi pi-chart-bar"></i>
+          Performance Overview
+        </h2>
+      </div>
+      <div class="summary-grid">
+        <div class="glass-card metric-card" *ngFor="let item of summary" [ngClass]="'metric-card--' + item.trend">
+          <div class="metric-icon-wrapper" [ngClass]="'icon--' + item.trend">
+            <i class="pi" [ngClass]="getMetricIcon(item.label)"></i>
+          </div>
+          <div class="metric-content">
+            <div class="metric-label">{{ item.label }}</div>
+            <div class="metric-value">{{ item.value }}</div>
+          </div>
+          <div class="metric-delta" [ngClass]="'delta--' + item.trend">
+            <i class="pi" [ngClass]="{ 'pi-arrow-up-right': item.trend === 'up', 'pi-arrow-down-right': item.trend === 'down' }"></i>
+            <span>{{ item.delta }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pulse Insights Grid -->
+    <section class="pulse-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="pi pi-bolt"></i>
+          Quick Insights
+        </h2>
+      </div>
+      <div class="pulse-grid">
+        <div class="glass-card pulse-card" *ngFor="let item of pulse" [ngClass]="'pulse-card--' + item.tone">
+          <div class="pulse-icon-wrapper" [ngClass]="'icon--' + item.tone">
+            <i class="pi" [ngClass]="item.tone === 'info' ? 'pi-check-circle' : 'pi-exclamation-circle'"></i>
+          </div>
+          <div class="pulse-content">
+            <div class="pulse-label">{{ item.label }}</div>
+            <div class="pulse-value">{{ item.value }}</div>
+            <div class="pulse-helper">{{ item.helper }}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Premium Data Table Section -->
+    <section class="table-section glass-card">
+      <div class="table-header">
+        <div class="table-title-wrapper">
+          <div class="table-icon-wrapper">
+            <i class="pi pi-table"></i>
+          </div>
+          <div>
+            <h3 class="table-title">Performance Snapshot</h3>
+            <p class="table-subtitle">Latest aggregated scorecards by supplier</p>
+          </div>
+        </div>
+        <div class="table-actions">
+          <button pButton type="button" class="btn-icon" pTooltip="Filter Data" tooltipPosition="top">
+            <i class="pi pi-filter"></i>
+          </button>
+          <button pButton type="button" class="btn-icon" pTooltip="Refresh" tooltipPosition="top">
+            <i class="pi pi-refresh"></i>
+          </button>
+          <button pButton type="button" class="btn-glass">
+            <i class="pi pi-sliders-h"></i>
+            <span>Advanced</span>
+          </button>
+        </div>
+      </div>
+      
+      <p-table 
+        [value]="rows" 
+        styleClass="p-datatable-sm scorecards-table"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="[5, 10, 25]"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} suppliers"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="supplier">
+              <div class="th-content">
+                <i class="pi pi-building"></i>
+                <span>Supplier</span>
+                <p-sortIcon field="supplier"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="category">
+              <div class="th-content">
+                <i class="pi pi-tag"></i>
+                <span>Category</span>
+                <p-sortIcon field="category"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="spendShare">
+              <div class="th-content">
+                <i class="pi pi-dollar"></i>
+                <span>Spend</span>
+                <p-sortIcon field="spendShare"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="quality">
+              <div class="th-content">
+                <i class="pi pi-verified"></i>
+                <span>Quality</span>
+                <p-sortIcon field="quality"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="delivery">
+              <div class="th-content">
+                <i class="pi pi-truck"></i>
+                <span>Delivery</span>
+                <p-sortIcon field="delivery"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="responsiveness">
+              <div class="th-content">
+                <i class="pi pi-comments"></i>
+                <span>Response</span>
+                <p-sortIcon field="responsiveness"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="innovation">
+              <div class="th-content">
+                <i class="pi pi-lightbulb"></i>
+                <span>Innovation</span>
+                <p-sortIcon field="innovation"></p-sortIcon>
+              </div>
+            </th>
+            <th pSortableColumn="overall">
+              <div class="th-content">
+                <i class="pi pi-star"></i>
+                <span>Overall</span>
+                <p-sortIcon field="overall"></p-sortIcon>
+              </div>
+            </th>
+            <th>
+              <div class="th-content">
+                <i class="pi pi-flag"></i>
+                <span>Status</span>
+              </div>
+            </th>
+            <th style="width: 100px">
+              <div class="th-content">
+                <i class="pi pi-cog"></i>
+                <span>Action</span>
+              </div>
+            </th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>
+              <div class="supplier-cell">
+                <div class="supplier-avatar" [ngClass]="getAvatarClass(row.status)">
+                  {{ row.supplier.charAt(0) }}
+                </div>
+                <div class="supplier-info">
+                  <span class="supplier-name">{{ row.supplier }}</span>
+                  <div class="supplier-tags">
+                    <p-chip *ngFor="let tag of row.tags" [label]="tag" styleClass="tag-chip"></p-chip>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="category-badge">{{ row.category }}</span>
+            </td>
+            <td>
+              <div class="spend-cell">
+                <span class="spend-value">{{ row.spendShare }}%</span>
+                <div class="spend-bar">
+                  <div class="spend-fill" [style.width.%]="row.spendShare"></div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="score-cell">
+                <div class="score-bar-wrapper">
+                  <p-progressBar [value]="row.quality" [showValue]="false" styleClass="score-bar score-bar--quality"></p-progressBar>
+                </div>
+                <span class="score-value" [ngClass]="getScoreClass(row.quality)">{{ row.quality }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="score-cell">
+                <div class="score-bar-wrapper">
+                  <p-progressBar [value]="row.delivery" [showValue]="false" styleClass="score-bar score-bar--delivery"></p-progressBar>
+                </div>
+                <span class="score-value" [ngClass]="getScoreClass(row.delivery)">{{ row.delivery }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="score-cell">
+                <div class="score-bar-wrapper">
+                  <p-progressBar [value]="row.responsiveness" [showValue]="false" styleClass="score-bar score-bar--responsiveness"></p-progressBar>
+                </div>
+                <span class="score-value" [ngClass]="getScoreClass(row.responsiveness)">{{ row.responsiveness }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="score-cell">
+                <div class="score-bar-wrapper">
+                  <p-progressBar [value]="row.innovation" [showValue]="false" styleClass="score-bar score-bar--innovation"></p-progressBar>
+                </div>
+                <span class="score-value" [ngClass]="getScoreClass(row.innovation)">{{ row.innovation }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="overall-cell">
+                <div class="overall-ring" [ngClass]="getOverallRingClass(row.overall)">
+                  <span class="overall-value">{{ row.overall }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <p-tag [value]="row.status" [severity]="tagSeverity(row.status)" styleClass="status-tag"></p-tag>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button pButton type="button" class="btn-icon btn-icon--view" pTooltip="View Details" tooltipPosition="top">
+                  <i class="pi pi-eye"></i>
+                </button>
+                <button pButton type="button" class="btn-icon btn-icon--edit" pTooltip="Edit Scorecard" tooltipPosition="top">
+                  <i class="pi pi-pencil"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="10">
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <i class="pi pi-inbox"></i>
+                </div>
+                <h3>No Scorecards Yet</h3>
+                <p>Add suppliers to start tracking performance metrics.</p>
+                <button pButton class="btn-gradient">
+                  <i class="pi pi-plus"></i>
+                  <span>Add Supplier</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+  </div>
+</div>

@@ -1,0 +1,564 @@
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHARED CARD MIXINS - DRY Card Patterns for Premium Glass UI
+// Import: @use 'styles/cards' as cards;
+// ═══════════════════════════════════════════════════════════════════════════════
+@use 'design-tokens' as *;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BASE GLASS CARD
+// Foundation mixin for all glassmorphic cards
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@mixin glass-card-base {
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  -webkit-backdrop-filter: blur($glass-blur);
+  border-radius: $radius-xl;
+  border: 1px solid $glass-border;
+  box-shadow: $glass-shadow;
+  transition: all $transition-base ease;
+}
+
+@mixin glass-card-hover {
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-hover;
+  }
+}
+
+@mixin glass-card-focus-within {
+  &:focus-within {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 12px 32px rgba(0, 122, 255, 0.1),
+      0 0 80px rgba(0, 122, 255, 0.08);
+  }
+}
+
+// Complete glass card with hover
+@mixin glass-card($hover: true) {
+  @include glass-card-base;
+  @if $hover {
+    @include glass-card-hover;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL CARD (Hero Section Decorative Cards)
+// Use in hero-visual sidebar for summary metrics
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@mixin visual-card-base {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  box-shadow: $glass-shadow;
+  min-width: 220px;
+  overflow: hidden;
+  transition: transform $transition-base, box-shadow $transition-base;
+
+  &:hover {
+    transform: translateY(-3px) scale(1.01);
+    box-shadow: $glass-shadow-lg;
+  }
+}
+
+@mixin visual-card-icon($size: 36px) {
+  width: $size;
+  height: $size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  font-size: $font-size-lg;
+  color: white;
+  transition: transform $transition-base;
+  flex-shrink: 0;
+}
+
+@mixin visual-card-icon-hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+@mixin visual-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+@mixin visual-card-label {
+  font-size: $font-size-xs;
+  color: $gray-500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@mixin visual-card-value {
+  font-size: $font-size-2xl;
+  font-weight: 700;
+  color: $gray-800;
+  line-height: 1.1;
+}
+
+@mixin visual-card-trend($positive: true) {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  @if $positive {
+    color: $success;
+  } @else {
+    color: $gray-500;
+  }
+}
+
+@mixin card-glow($color: rgba(102, 126, 234, 0.15)) {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, $color 0%, transparent 70%);
+  pointer-events: none;
+  transition: opacity $transition-base;
+}
+
+// Complete visual card
+@mixin visual-card($variant: 'primary') {
+  @include visual-card-base;
+  
+  .card-icon {
+    @include visual-card-icon;
+    
+    @if $variant == 'primary' {
+      background: $primary-gradient;
+    } @else if $variant == 'secondary' {
+      background: $cyan-gradient;
+    } @else if $variant == 'success' {
+      background: $success-gradient;
+    } @else if $variant == 'purple' {
+      background: $purple-gradient;
+    } @else if $variant == 'orange' {
+      background: $orange-gradient;
+    }
+  }
+  
+  &:hover .card-icon {
+    @include visual-card-icon-hover;
+  }
+  
+  .card-content {
+    @include visual-card-content;
+  }
+  
+  .card-label {
+    @include visual-card-label;
+  }
+  
+  .card-value {
+    @include visual-card-value;
+  }
+  
+  .card-trend {
+    @include visual-card-trend;
+    
+    &--up { color: $success; }
+    &--down { color: $danger; }
+  }
+  
+  .card-glow {
+    @include card-glow;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// METRIC CARD (KPI Dashboard Row)
+// Use for horizontal metric cards with ring charts
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@mixin metric-card-base {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border-radius: $radius-lg;
+  border: 1px solid $glass-border;
+  box-shadow: $glass-shadow-sm;
+  transition: all $transition-base;
+  position: relative;
+  overflow: hidden;
+}
+
+@mixin metric-card-hover {
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-lg;
+    border-color: rgba($primary, 0.3);
+    
+    .metric-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+  }
+}
+
+@mixin metric-card-icon($size: 36px) {
+  width: $size;
+  height: $size;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-base;
+  color: white;
+  transition: transform $transition-base;
+  flex-shrink: 0;
+}
+
+@mixin metric-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+@mixin metric-card-label {
+  font-size: $font-size-xs;
+  color: $gray-500;
+  font-weight: 500;
+}
+
+@mixin metric-card-value {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $gray-800;
+  line-height: 1.1;
+}
+
+@mixin metric-ring($size: 32px) {
+  width: $size;
+  height: $size;
+  flex-shrink: 0;
+  
+  svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+  
+  .ring-bg {
+    fill: none;
+    stroke: $gray-200;
+    stroke-width: 3;
+  }
+  
+  .ring-fill {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray $transition-slow;
+    
+    &--primary { stroke: $primary; }
+    &--cyan { stroke: $cyan; }
+    &--purple { stroke: $purple; }
+    &--success { stroke: $success; }
+    &--orange { stroke: $orange; }
+    &--danger { stroke: $danger; }
+  }
+}
+
+// Complete metric card
+@mixin metric-card($variant: 'primary') {
+  @include metric-card-base;
+  @include metric-card-hover;
+  
+  .metric-icon {
+    @include metric-card-icon;
+    
+    @if $variant == 'primary' or $variant == 'total' {
+      background: $primary-gradient;
+    } @else if $variant == 'cyan' or $variant == 'leads' {
+      background: $cyan-gradient;
+    } @else if $variant == 'purple' or $variant == 'prospects' {
+      background: $purple-gradient;
+    } @else if $variant == 'success' or $variant == 'customers' {
+      background: $success-gradient;
+    } @else if $variant == 'orange' or $variant == 'new' {
+      background: $orange-gradient;
+    }
+  }
+  
+  .metric-content {
+    @include metric-card-content;
+  }
+  
+  .metric-label {
+    @include metric-card-label;
+  }
+  
+  .metric-value {
+    @include metric-card-value;
+  }
+  
+  .metric-ring {
+    @include metric-ring;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// METRICS SECTION (Grid Container)
+// Use for the horizontal KPI row below hero
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@mixin metrics-section {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: $space-3;
+  margin-bottom: $space-5;
+  
+  @media (max-width: 1400px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Staggered animation for metric cards
+@mixin metric-card-stagger($count: 5) {
+  @for $i from 1 through $count {
+    &:nth-child(#{$i}) {
+      animation: fade-in-up 0.5s ease-out forwards;
+      animation-delay: #{($i - 1) * 0.05}s;
+      opacity: 0;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FORM CARD (Settings/Form Pages)
+// Glass card with focus-within glow effect
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@mixin form-card-base {
+  @include glass-card-base;
+  padding: $space-6;
+  position: relative;
+  
+  // Gradient border on hover (pseudo-element)
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, 
+      rgba(0, 122, 255, 0.4) 0%,
+      rgba(175, 82, 222, 0.3) 50%,
+      rgba(90, 200, 250, 0.4) 100%);
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity $transition-base;
+    pointer-events: none;
+  }
+}
+
+@mixin form-card-hover {
+  &:hover {
+    transform: translateY(-3px) scale(1.005);
+    box-shadow: 
+      0 24px 48px rgba(0, 122, 255, 0.08),
+      0 0 60px rgba(0, 122, 255, 0.06);
+    
+    &::before {
+      opacity: 0.6;
+    }
+  }
+}
+
+@mixin form-card-focus-within {
+  &:focus-within {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 12px 32px rgba(0, 122, 255, 0.1),
+      0 0 80px rgba(0, 122, 255, 0.08);
+  }
+}
+
+// Complete form card with all effects
+@mixin form-card {
+  @include form-card-base;
+  @include form-card-hover;
+  @include form-card-focus-within;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STAT CARD (Simple Value Display)
+// Compact card for single stat display
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@mixin stat-card {
+  @include glass-card-base;
+  padding: $space-4;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-hover;
+  }
+}
+
+@mixin stat-value {
+  font-size: $font-size-3xl;
+  font-weight: 700;
+  color: $gray-800;
+  line-height: 1;
+}
+
+@mixin stat-label {
+  font-size: $font-size-sm;
+  color: $gray-500;
+  font-weight: 500;
+}
+
+@mixin stat-change($positive: true) {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: $radius-full;
+  
+  @if $positive {
+    background: rgba($success, 0.1);
+    color: $success;
+  } @else {
+    background: rgba($danger, 0.1);
+    color: $danger;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CARD HEADER & SECTIONS
+// Reusable card header and section patterns
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@mixin card-header {
+  padding: $space-3 $space-4;
+  border-bottom: 1px solid $glass-border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+@mixin card-title {
+  font-size: $font-size-card-title;
+  font-weight: 600;
+  color: $gray-800;
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  
+  i {
+    color: $primary;
+  }
+}
+
+@mixin card-body {
+  padding: $space-4;
+}
+
+@mixin section-title-icon($color: $cyan) {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  background: rgba($color, 0.15);
+  color: $color;
+  font-size: $font-size-base;
+  transition: all $transition-base;
+}
+
+@mixin section-title {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding-bottom: $space-3;
+  margin-bottom: $space-4;
+  border-bottom: 1px solid rgba($cyan, 0.2);
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: darken($cyan, 25%);
+  
+  i {
+    @include section-title-icon;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BADGE UTILITIES
+// Common badge patterns for cards
+// ═══════════════════════════════════════════════════════════════════════════════
+
+@mixin badge-new {
+  position: absolute;
+  top: $space-2;
+  right: $space-2;
+  padding: 2px 8px;
+  background: $orange-gradient;
+  color: white;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  border-radius: $radius-full;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@mixin badge-status($color: $primary) {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: $space-1 $space-2;
+  background: rgba($color, 0.1);
+  color: $color;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  border-radius: $radius-md;
+  
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $color;
+  }
+}

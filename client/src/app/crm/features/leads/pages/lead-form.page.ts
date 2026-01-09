@@ -9,10 +9,11 @@ import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { ProgressBarModule } from 'primeng/progressbar';
+import { TagModule } from 'primeng/tag';
 
 import { map } from 'rxjs';
 
-import { Lead, LeadAssignmentStrategy, LeadStatus } from '../models/lead.model';
+import { Lead, LeadAssignmentStrategy, LeadStatus, LeadStatusHistoryItem } from '../models/lead.model';
 import { LeadDataService, SaveLeadRequest } from '../services/lead-data.service';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { UserListItem } from '../../settings/models/user-admin.model';
@@ -22,6 +23,8 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 interface StatusOption {
   label: string;
   value: LeadStatus;
+  icon: string;
+  disabled?: boolean;
 }
 
 interface AssignmentOption {
@@ -48,6 +51,7 @@ interface OwnerOption {
     InputNumberModule,
     TextareaModule,
     ProgressBarModule,
+    TagModule,
     BreadcrumbsComponent
   ],
   template: `
@@ -55,10 +59,31 @@ interface OwnerOption {
       <app-breadcrumbs></app-breadcrumbs>
       <header class="page-header">
         <div class="header-content">
-          <button pButton type="button" class="back-link p-button-text" routerLink="/app/leads">
-            <i class="pi pi-arrow-left"></i>
-            <span>Back to leads</span>
-          </button>
+          <div class="header-top">
+            <button pButton type="button" class="back-link p-button-text" routerLink="/app/leads">
+              <i class="pi pi-arrow-left"></i>
+              <span>Back to leads</span>
+            </button>
+            <button
+              pButton
+              type="button"
+              class="crm-button crm-button--primary"
+              icon="pi pi-calendar-plus"
+              label="Log activity"
+              *ngIf="isEditMode()"
+              (click)="logActivity()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              class="crm-button crm-button--primary"
+              icon="pi pi-bolt"
+              label="Convert lead"
+              *ngIf="isEditMode()"
+              [disabled]="!canConvertLead()"
+              (click)="onConvertLead()"
+            ></button>
+          </div>
           <div class="header-title">
             <h1>
               <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
@@ -92,15 +117,36 @@ interface OwnerOption {
               <div class="field">
                 <label>Status</label>
                 <p-select
-                  [options]="statusOptions"
+                  [options]="statusOptionsForView()"
                   optionLabel="label"
                   optionValue="value"
+                  optionDisabled="disabled"
                   name="status"
                   [(ngModel)]="form.status"
                   placeholder="Select status"
                   appendTo="body"
                   styleClass="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="status-option" [attr.data-status]="option.value">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="status-option" *ngIf="option" [attr.data-status]="option.value">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <span *ngIf="!option" class="status-placeholder">Select status</span>
+                  </ng-template>
+                </p-select>
+                <p class="status-note" *ngIf="isEditMode() && form.status === 'Converted'">
+                  This lead is already converted. Update the opportunity instead.
+                </p>
+                <p class="status-note" *ngIf="isEditMode() && form.status !== 'Converted'">
+                  Convert via the "Convert lead" button after qualification.
+                </p>
               </div>
               <div class="field">
                 <label>Assignment</label>
@@ -230,6 +276,28 @@ interface OwnerOption {
                 ></textarea>
               </div>
             </div>
+          </section>
+
+          <section class="form-section" *ngIf="isEditMode()">
+            <h2 class="section-title">
+              <i class="pi pi-history"></i>
+              Status history
+            </h2>
+            <div class="history-list" *ngIf="statusHistory().length; else noHistory">
+              <div class="history-item" *ngFor="let entry of statusHistory()">
+                <div class="history-header">
+                  <p-tag [value]="entry.status" [severity]="statusSeverity(entry.status)"></p-tag>
+                  <span class="history-time">{{ entry.changedAtUtc | date:'medium' }}</span>
+                </div>
+                <div class="history-meta">
+                  <span>Changed by {{ entry.changedBy || 'system' }}</span>
+                </div>
+                <div class="history-notes" *ngIf="entry.notes">{{ entry.notes }}</div>
+              </div>
+            </div>
+            <ng-template #noHistory>
+              <div class="history-empty">No status changes recorded yet.</div>
+            </ng-template>
           </section>
 
           <footer class="form-actions">
@@ -448,6 +516,14 @@ interface OwnerOption {
       margin: 0;
     }
 
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════════
        FORM LAYOUT
        ═══════════════════════════════════════════════════════════════════════════ */
@@ -464,6 +540,53 @@ interface OwnerOption {
       display: flex;
       flex-direction: column;
       gap: 1.25rem;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    .history-item {
+      padding: 0.85rem 1rem;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .history-time {
+      font-size: 0.85rem;
+      color: rgba(51, 65, 85, 0.75);
+    }
+
+    .history-meta {
+      font-size: 0.85rem;
+      color: rgba(51, 65, 85, 0.8);
+    }
+
+    .history-notes {
+      font-size: 0.9rem;
+      color: rgba(30, 41, 59, 0.9);
+    }
+
+    .history-empty {
+      padding: 0.85rem 1rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+      color: rgba(71, 85, 105, 0.9);
+      font-size: 0.9rem;
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -716,6 +839,38 @@ interface OwnerOption {
     :host ::ng-deep .p-inputtext::placeholder {
       color: rgba(var(--apple-gray-1), 0.6);
       font-weight: 400;
+    }
+
+    .status-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+    }
+
+    .status-option i {
+      font-size: 0.9rem;
+    }
+
+    .status-placeholder {
+      color: rgba(var(--apple-gray-1), 0.6);
+      font-weight: 500;
+    }
+
+    .status-option[data-status="New"] i { color: #06b6d4; }
+    .status-option[data-status="Contacted"] i { color: #f59e0b; }
+    .status-option[data-status="Qualified"] i { color: #10b981; }
+    .status-option[data-status="Converted"] i { color: #6366f1; }
+    .status-option[data-status="Lost"] i { color: #ef4444; }
+
+    .status-note {
+      margin: 0.5rem 0 0;
+      font-size: 0.82rem;
+      color: rgba(var(--apple-secondary), 0.7);
+    }
+
+    .status-note strong {
+      color: rgba(var(--apple-label), 0.9);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -1120,10 +1275,11 @@ interface OwnerOption {
 })
 export class LeadFormPage implements OnInit {
   protected readonly statusOptions: StatusOption[] = [
-    { label: 'New', value: 'New' },
-    { label: 'Qualified', value: 'Qualified' },
-    { label: 'Converted', value: 'Converted' },
-    { label: 'Lost', value: 'Lost' }
+    { label: 'New', value: 'New', icon: 'pi-star' },
+    { label: 'Contacted', value: 'Contacted', icon: 'pi-comments' },
+    { label: 'Qualified', value: 'Qualified', icon: 'pi-check' },
+    { label: 'Converted', value: 'Converted', icon: 'pi-verified' },
+    { label: 'Lost', value: 'Lost', icon: 'pi-times' }
   ];
   protected readonly assignmentOptions: AssignmentOption[] = [
     { label: 'Manual', value: 'Manual' },
@@ -1137,6 +1293,7 @@ export class LeadFormPage implements OnInit {
   protected aiScoring = signal(false);
   protected aiScoreNote = signal<string | null>(null);
   protected aiScoreSeverity = signal<'success' | 'info' | 'warn' | 'error'>('info');
+  protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
   private readonly toastService = inject(AppToastService);
 
   private readonly leadData = inject(LeadDataService);
@@ -1152,9 +1309,13 @@ export class LeadFormPage implements OnInit {
     this.loadOwners();
     if (this.editingId && lead) {
       this.prefillFromLead(lead);
+      this.loadStatusHistory(this.editingId);
     } else if (this.editingId) {
       this.leadData.get(this.editingId).subscribe({
-        next: (data) => this.prefillFromLead(data),
+        next: (data) => {
+          this.prefillFromLead(data);
+          this.loadStatusHistory(this.editingId!);
+        },
         error: () => this.router.navigate(['/app/leads'])
       });
     }
@@ -1162,6 +1323,40 @@ export class LeadFormPage implements OnInit {
 
   protected isEditMode() {
     return !!this.editingId;
+  }
+
+  protected logActivity(): void {
+    if (!this.editingId) {
+      return;
+    }
+    const fullName = `${this.form.firstName ?? ''} ${this.form.lastName ?? ''}`.trim();
+    const subject = fullName ? `Follow up: ${fullName}` : 'Lead follow-up';
+    this.router.navigate(['/app/activities/new'], {
+      queryParams: {
+        relatedType: 'Lead',
+        relatedId: this.editingId,
+        subject
+      }
+    });
+  }
+
+  protected canConvertLead(): boolean {
+    return this.isEditMode() && this.form.status === 'Qualified';
+  }
+
+  protected statusOptionsForView(): StatusOption[] {
+    const isConverted = this.form.status === 'Converted';
+    return this.statusOptions.map((option) => ({
+      ...option,
+      disabled: option.value === 'Converted' && !isConverted
+    }));
+  }
+
+  protected onConvertLead(): void {
+    if (!this.editingId || !this.canConvertLead()) {
+      return;
+    }
+    this.router.navigate(['/app/leads', this.editingId, 'convert']);
   }
 
   protected onSave() {
@@ -1219,6 +1414,13 @@ export class LeadFormPage implements OnInit {
       assignmentStrategy: 'Manual',
       territory: lead.territory ?? ''
     };
+  }
+
+  private loadStatusHistory(leadId: string) {
+    this.leadData.getStatusHistory(leadId).subscribe({
+      next: (history) => this.statusHistory.set(history),
+      error: () => this.statusHistory.set([])
+    });
   }
 
   private createEmptyForm(): SaveLeadRequest & { autoScore: boolean } {
@@ -1323,6 +1525,20 @@ export class LeadFormPage implements OnInit {
         return 'pi-times-circle';
       default:
         return 'pi-info-circle';
+    }
+  }
+
+  protected statusSeverity(status: LeadStatus | string) {
+    switch (status) {
+      case 'Qualified':
+      case 'Converted':
+        return 'success';
+      case 'Contacted':
+        return 'info';
+      case 'Lost':
+        return 'danger';
+      default:
+        return 'warn';
     }
   }
 }

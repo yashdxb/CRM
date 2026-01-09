@@ -1,0 +1,280 @@
+<!-- Animated Background -->
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content delivery-schedule">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <!-- Premium Hero Section -->
+    <section class="hero-section">
+      <div class="hero-badge">
+        <i class="pi pi-truck"></i>
+        <span>Logistics Hub</span>
+      </div>
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-gradient">Delivery</span>
+            <span class="title-light">Schedule</span>
+          </h1>
+          <p class="hero-description">
+            Plan dock utilisation, keep high-priority freight flowing, and resolve exceptions before they impact production.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button pButton type="button" class="btn-glass" pTooltip="Print Schedule" tooltipPosition="top">
+            <i class="pi pi-print"></i>
+            <span>Print Schedule</span>
+          </button>
+          <button pButton type="button" class="btn-gradient" pTooltip="Create New Slot" tooltipPosition="top">
+            <i class="pi pi-plus-circle"></i>
+            <span>Create Dock Slot</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Hero Stats -->
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat__icon hero-stat__icon--cyan">
+            <i class="pi pi-calendar"></i>
+          </div>
+          <div class="hero-stat__content">
+            <div class="hero-stat__value">{{ totalPlanned() }}</div>
+            <div class="hero-stat__label">Planned This Week</div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat__icon hero-stat__icon--green">
+            <i class="pi pi-check-circle"></i>
+          </div>
+          <div class="hero-stat__content">
+            <div class="hero-stat__value">{{ completionRate() }}%</div>
+            <div class="hero-stat__label">Completion Rate</div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat__icon hero-stat__icon--orange">
+            <i class="pi pi-exclamation-triangle"></i>
+          </div>
+          <div class="hero-stat__content">
+            <div class="hero-stat__value">{{ totalIssues() }}</div>
+            <div class="hero-stat__label">Issues Flagged</div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat__icon hero-stat__icon--purple">
+            <i class="pi pi-percentage"></i>
+          </div>
+          <div class="hero-stat__content">
+            <div class="hero-stat__value">{{ issueRate() }}%</div>
+            <div class="hero-stat__label">Issue Rate</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Weekly Calendar Strip -->
+    <section class="calendar-section">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="pi pi-calendar-times"></i>
+          Weekly Overview
+        </h2>
+      </div>
+      <div class="calendar-strip glass-card">
+        <div class="calendar-day" *ngFor="let day of calendar(); let i = index" [ngClass]="{'calendar-day--today': i === 2}">
+          <div class="day-header">
+            <span class="weekday">{{ day.weekday }}</span>
+            <span class="date">{{ day.date }}</span>
+          </div>
+          <div class="plan-bar-wrapper">
+            <div class="plan-bar">
+              <div class="bar-fill bar-fill--completed" [style.height.%]="(day.completed / day.planned) * 100"></div>
+              <div class="bar-fill bar-fill--issues" [style.height.%]="(day.issues / day.planned) * 100"></div>
+            </div>
+            <div class="plan-count">{{ day.planned }}</div>
+          </div>
+          <div class="day-legend">
+            <div class="legend-item legend-item--completed">
+              <i class="pi pi-check"></i>
+              <span>{{ day.completed }}</span>
+            </div>
+            <div class="legend-item legend-item--issues" *ngIf="day.issues > 0">
+              <i class="pi pi-exclamation-circle"></i>
+              <span>{{ day.issues }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dock Schedule Table -->
+    <section class="table-section glass-card">
+      <div class="table-header">
+        <div class="table-title-wrapper">
+          <div class="table-icon-wrapper">
+            <i class="pi pi-clock"></i>
+          </div>
+          <div>
+            <h3 class="table-title">Upcoming Dock Schedule</h3>
+            <p class="table-subtitle">Today's delivery slots and status</p>
+          </div>
+        </div>
+        <div class="table-actions">
+          <button pButton type="button" class="btn-icon" pTooltip="Refresh" tooltipPosition="top">
+            <i class="pi pi-refresh"></i>
+          </button>
+          <button pButton type="button" class="btn-glass">
+            <i class="pi pi-sliders-h"></i>
+            <span>Filter</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="card-body">
+        <p-table [value]="slots()" responsiveLayout="scroll" dataKey="window" styleClass="p-datatable-sm schedule-table">
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="window">
+                <div class="th-content">
+                  <i class="pi pi-clock"></i>
+                  <span>Time Window</span>
+                  <p-sortIcon field="window"></p-sortIcon>
+                </div>
+              </th>
+              <th>
+                <div class="th-content">
+                  <i class="pi pi-car"></i>
+                  <span>Carrier / Dock</span>
+                </div>
+              </th>
+              <th pSortableColumn="supplier">
+                <div class="th-content">
+                  <i class="pi pi-building"></i>
+                  <span>Supplier</span>
+                  <p-sortIcon field="supplier"></p-sortIcon>
+                </div>
+              </th>
+              <th>
+                <div class="th-content">
+                  <i class="pi pi-file"></i>
+                  <span>PO</span>
+                </div>
+              </th>
+              <th pSortableColumn="items">
+                <div class="th-content">
+                  <i class="pi pi-box"></i>
+                  <span>Units</span>
+                  <p-sortIcon field="items"></p-sortIcon>
+                </div>
+              </th>
+              <th pSortableColumn="status">
+                <div class="th-content">
+                  <i class="pi pi-flag"></i>
+                  <span>Status</span>
+                  <p-sortIcon field="status"></p-sortIcon>
+                </div>
+              </th>
+              <th>
+                <div class="th-content">
+                  <i class="pi pi-info-circle"></i>
+                  <span>Notes</span>
+                </div>
+              </th>
+              <th style="width: 180px">
+                <div class="th-content">
+                  <i class="pi pi-cog"></i>
+                  <span>Actions</span>
+                </div>
+              </th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-slot>
+            <tr>
+              <td>
+                <div class="time-cell">
+                  <div class="time-badge">
+                    <i class="pi pi-clock"></i>
+                    <span>{{ slot.window }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="dock-cell">
+                  <div class="carrier-avatar" [ngClass]="getCarrierClass(slot.carrier)">
+                    {{ slot.carrier.charAt(0) }}
+                  </div>
+                  <div class="dock-info">
+                    <span class="carrier-name">{{ slot.carrier }}</span>
+                    <span class="dock-name">{{ slot.dock }}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="supplier-cell">
+                  <span class="supplier-name">{{ slot.supplier }}</span>
+                  <div class="tag-strip">
+                    <p-chip *ngFor="let tag of slot.tags" [label]="tag" styleClass="tag-chip"></p-chip>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="po-badge">{{ slot.po }}</span>
+              </td>
+              <td>
+                <div class="units-cell">
+                  <span class="units-value">{{ slot.items | number }}</span>
+                  <span class="units-label">units</span>
+                </div>
+              </td>
+              <td>
+                <div class="status-cell">
+                  <p-tag [value]="slot.status" [severity]="statusSeverity(slot.status)" styleClass="status-tag"></p-tag>
+                </div>
+              </td>
+              <td>
+                <span class="notes-text">{{ slot.notes }}</span>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <button pButton type="button" class="btn-icon btn-icon--track" pTooltip="Track Shipment" tooltipPosition="top">
+                    <i class="pi pi-map-marker"></i>
+                  </button>
+                  <button pButton type="button" class="btn-icon btn-icon--escalate" pTooltip="Escalate Issue" tooltipPosition="top">
+                    <i class="pi pi-exclamation-circle"></i>
+                  </button>
+                  <button pButton type="button" class="btn-icon btn-icon--view" pTooltip="View Details" tooltipPosition="top">
+                    <i class="pi pi-eye"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="8">
+                <div class="empty-state">
+                  <div class="empty-icon">
+                    <i class="pi pi-inbox"></i>
+                  </div>
+                  <h3>No Deliveries Scheduled</h3>
+                  <p>Create a dock slot to start managing deliveries.</p>
+                  <button pButton class="btn-gradient">
+                    <i class="pi pi-plus"></i>
+                    <span>Create Dock Slot</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  </div>
+</div>

@@ -84,20 +84,29 @@
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HERO SECTION
+// HERO SECTION - Customer Workspace Style Layout
+// Use: .hero-section > .hero-content + .hero-visual for two-column layout
 // ═══════════════════════════════════════════════════════════════════════════════
 
 .hero-section {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: $space-6;
   margin-bottom: $space-5;
-  animation: fade-in-down 0.5s ease-out;
+  animation: fade-in-up 0.6s ease-out;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+    gap: $space-4;
+  }
 }
 
 .hero-content {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: $space-5;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: $space-3;
 }
 
 .hero-text {
@@ -161,6 +170,161 @@
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// HERO STATS - Compact inline metrics (Customer Workspace Style)
+// Use: .hero-stats > .hero-stat for inline stat metrics with progress bars
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.hero-stats {
+  display: flex;
+  gap: $space-6;
+  flex-wrap: wrap;
+  margin-top: $space-2;
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+
+  .stat-value {
+    font-size: $font-size-2xl;
+    font-weight: 700;
+    color: $gray-800;
+  }
+
+  .stat-label {
+    font-size: $font-size-xs;
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .stat-bar {
+    width: 100%;
+    height: 4px;
+    background: $gray-200;
+    border-radius: $radius-full;
+    overflow: hidden;
+    margin-top: 4px;
+
+    .stat-bar-fill {
+      height: 100%;
+      background: $primary-gradient;
+      border-radius: $radius-full;
+      transition: width 1s ease-out;
+
+      &--leads { background: $cyan-gradient; }
+      &--prospects { background: $purple-gradient; }
+      &--success { background: $success-gradient; }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERO VISUAL CARDS - Side cards with icon, value, trend (Customer Workspace Style)
+// Use: .hero-visual > .visual-card.visual-card--primary/--secondary/--success/--purple
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.hero-visual {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.visual-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  box-shadow: $glass-shadow;
+  min-width: 220px;
+  overflow: hidden;
+  transition: transform $transition-base, box-shadow $transition-base;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-lg;
+  }
+
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-md;
+    font-size: $font-size-xl;
+  }
+
+  &--primary .card-icon {
+    background: $primary-gradient;
+    color: white;
+  }
+
+  &--secondary .card-icon {
+    background: $cyan-gradient;
+    color: white;
+  }
+
+  &--success .card-icon {
+    background: $success-gradient;
+    color: white;
+  }
+
+  &--purple .card-icon {
+    background: $purple-gradient;
+    color: white;
+  }
+
+  .card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .card-label {
+    font-size: $font-size-xs;
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .card-value {
+    font-size: $font-size-2xl;
+    font-weight: 700;
+    color: $gray-800;
+  }
+
+  .card-trend {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    font-size: $font-size-xs;
+    color: $gray-500;
+
+    &--up {
+      color: $success;
+    }
+  }
+
+  .card-glow {
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // GLASSMORPHIC CARDS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -182,6 +346,85 @@
     transform: none;
     box-shadow: $glass-shadow;
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INPUT GROUP ICONS - Global addons + per-field color helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.p-inputgroup {
+  .p-inputgroup-addon {
+    background: rgba(255, 255, 255, 0.92);
+    color: #1f2937;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.06);
+
+    .pi {
+      font-size: 0.95rem;
+      color: currentColor;
+    }
+  }
+}
+
+.p-inputgroup-addon.icon-addon {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.p-inputgroup-addon.icon-addon--company {
+  background: rgba(37, 99, 235, 0.12) !important;
+  border-color: rgba(37, 99, 235, 0.25) !important;
+  color: #2563eb !important;
+}
+
+.p-inputgroup-addon.icon-addon--category {
+  background: rgba(249, 115, 22, 0.12) !important;
+  border-color: rgba(249, 115, 22, 0.25) !important;
+  color: #f97316 !important;
+}
+
+.p-inputgroup-addon.icon-addon--country {
+  background: rgba(6, 182, 212, 0.12) !important;
+  border-color: rgba(6, 182, 212, 0.25) !important;
+  color: #06b6d4 !important;
+}
+
+.p-inputgroup-addon.icon-addon--status {
+  background: rgba(168, 85, 247, 0.12) !important;
+  border-color: rgba(168, 85, 247, 0.25) !important;
+  color: #a855f7 !important;
+}
+
+.p-inputgroup-addon.icon-addon--contact {
+  background: rgba(14, 165, 233, 0.12) !important;
+  border-color: rgba(14, 165, 233, 0.25) !important;
+  color: #0ea5e9 !important;
+}
+
+.p-inputgroup-addon.icon-addon--email {
+  background: rgba(236, 72, 153, 0.12) !important;
+  border-color: rgba(236, 72, 153, 0.25) !important;
+  color: #ec4899 !important;
+}
+
+.p-inputgroup-addon.icon-addon--phone {
+  background: rgba(34, 197, 94, 0.12) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+  color: #22c55e !important;
+}
+
+.p-inputgroup-addon.icon-addon--website {
+  background: rgba(99, 102, 241, 0.12) !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+  color: #6366f1 !important;
+}
+
+.p-inputgroup-addon.icon-addon--notes {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  color: #f59e0b !important;
 }
 
 .card-header {
@@ -208,6 +451,63 @@
 
 .card-body {
   padding: $space-4;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GLOBAL DATA TABLE STYLE (RFQ LIST STANDARD)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+::ng-deep .p-datatable {
+  .p-datatable-thead > tr > th {
+    background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
+    color: #0c4a6e;
+    font-weight: 700;
+    border-bottom: 3px solid #3b82f6;
+    padding: 1.25rem 1rem;
+    font-size: 0.8125rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+
+    &:hover {
+      background: linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%);
+    }
+  }
+
+  .p-datatable-tbody > tr {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #eff6ff 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+    }
+
+    > td {
+      padding: 1.25rem 1rem;
+      border-bottom: 1px solid #e0f2fe;
+    }
+  }
+
+  .p-paginator {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border-top: 2px solid #bae6fd;
+    padding: 1rem 1.5rem;
+
+    .p-paginator-pages .p-paginator-page {
+      &.p-highlight {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        border-color: #2563eb;
+        color: white;
+        box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+      }
+    }
+
+    .p-paginator-current {
+      color: #0c4a6e;
+      font-weight: 600;
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -398,6 +698,15 @@
   }
 }
 
+// Ensure PrimeNG buttons respect global gradient style
+.p-button.btn-gradient {
+  @extend .btn-gradient;
+  border: none !important;
+  background: $primary-gradient !important;
+  color: white !important;
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4) !important;
+}
+
 .btn-glass {
   display: inline-flex;
   align-items: center;
@@ -425,6 +734,15 @@
   }
 }
 
+// Ensure PrimeNG buttons respect global glass style
+.p-button.btn-glass {
+  @extend .btn-glass;
+  background: $glass-bg !important;
+  color: $gray-700 !important;
+  border: 1px solid $glass-border !important;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15) !important;
+}
+
 .btn-icon {
   width: 32px;
   height: 32px;
@@ -433,21 +751,62 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   border-radius: $radius-md;
-  color: $gray-500;
+  color: #2563eb;
   cursor: pointer;
   transition: all $transition-fast ease;
   
   &:hover {
-    background: rgba(102, 126, 234, 0.1);
-    color: $primary;
-    border-color: rgba(102, 126, 234, 0.2);
+    background: transparent;
+    color: #1d4ed8;
   }
   
   i {
-    font-size: $font-size-sm;
+    font-size: 1rem;
+    color: inherit;
+    opacity: 1;
   }
+}
+
+.btn-icon.danger {
+  color: $danger;
+}
+
+.btn-icon.danger:hover {
+  color: $danger;
+}
+
+// PrimeNG button reset for icon-only actions
+.p-button.btn-icon {
+  padding: 0;
+  min-width: 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-md;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none;
+}
+
+.p-button.btn-icon:hover {
+  background: transparent !important;
+  color: #1d4ed8;
+}
+
+.p-button.btn-icon .pi {
+  color: #2563eb !important;
+  font-size: 1rem !important;
+  opacity: 1 !important;
+}
+
+.p-button.btn-icon:hover .pi {
+  color: #1d4ed8 !important;
+}
+
+.p-button.btn-icon.danger .pi,
+.p-button.btn-icon.danger:hover .pi {
+  color: $danger !important;
 }
 
 .btn-sm {

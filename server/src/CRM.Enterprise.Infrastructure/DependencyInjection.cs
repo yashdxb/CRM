@@ -2,13 +2,23 @@ using System;
 using CRM.Enterprise.Infrastructure.Auth;
 using CRM.Enterprise.Infrastructure.Dashboard;
 using CRM.Enterprise.Infrastructure.Tenants;
+using CRM.Enterprise.Infrastructure.Suppliers;
+using CRM.Enterprise.Infrastructure.Catalog;
+using CRM.Enterprise.Infrastructure.Pricing;
+using CRM.Enterprise.Infrastructure.Sourcing;
 using CRM.Enterprise.Application.Auth;
 using CRM.Enterprise.Application.Dashboard;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Application.Suppliers;
+using CRM.Enterprise.Application.Catalog;
+using CRM.Enterprise.Application.Pricing;
+using CRM.Enterprise.Application.Sourcing;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Notifications;
+using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Notifications;
+using CRM.Enterprise.Infrastructure.Leads;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -35,6 +45,24 @@ public static class DependencyInjection
         services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailSender, SendGridEmailSender>();
+        services.Configure<OpenAiOptions>(configuration.GetSection(OpenAiOptions.SectionName));
+        services.AddHttpClient<OpenAiLeadScoringService>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpenAiOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(options.BaseUrl))
+            {
+                client.BaseAddress = new Uri(options.BaseUrl);
+            }
+        });
+        services.AddScoped<ILeadScoringService>(sp => sp.GetRequiredService<OpenAiLeadScoringService>());
+        services.AddScoped<ISupplierService, SupplierService>();
+        services.AddScoped<IItemMasterService, ItemMasterService>();
+        services.AddScoped<IPriceListService, PriceListService>();
+        services.AddScoped<IRfqReadService, RfqReadService>();
+        services.AddScoped<IRfqService, RfqService>();
+        services.AddScoped<ISupplierQuoteReadService, SupplierQuoteReadService>();
+        services.AddScoped<IRfqAwardReadService, RfqAwardReadService>();
+        services.AddScoped<IRfqAwardService, RfqAwardService>();
 
         return services;
     }

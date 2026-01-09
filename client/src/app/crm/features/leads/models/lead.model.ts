@@ -1,4 +1,4 @@
-export type LeadStatus = 'New' | 'Qualified' | 'Converted' | 'Lost';
+export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
 export type LeadAssignmentStrategy = 'Manual' | 'RoundRobin' | 'Territory';
 
 export interface Lead {
@@ -44,4 +44,12 @@ export interface LeadConversionResponse {
   accountId?: string;
   contactId?: string;
   opportunityId?: string;
+}
+
+export interface LeadStatusHistoryItem {
+  id: string;
+  status: LeadStatus | string;
+  changedAtUtc: string;
+  changedBy?: string;
+  notes?: string;
 }

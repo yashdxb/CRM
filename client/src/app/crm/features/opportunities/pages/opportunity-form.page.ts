@@ -286,10 +286,10 @@ export class OpportunityFormPage implements OnInit {
     if (!this.form.name) return;
     this.saving.set(true);
 
-    const expectedCloseDate =
-      typeof this.form.expectedCloseDate === 'string' && !this.form.expectedCloseDate.trim()
-        ? undefined
-        : this.form.expectedCloseDate;
+    const rawCloseDate = this.form.expectedCloseDate as unknown;
+    const expectedCloseDate = rawCloseDate instanceof Date
+      ? rawCloseDate.toISOString()
+      : (typeof rawCloseDate === 'string' && rawCloseDate.trim() ? rawCloseDate : undefined);
     const payload: SaveOpportunityRequest = {
       ...this.form,
       expectedCloseDate,
@@ -359,7 +359,7 @@ export class OpportunityFormPage implements OnInit {
       amount: opp.amount ?? 0,
       currency: opp.currency ?? 'USD',
       probability: opp.probability ?? this.estimateProbability(stage),
-      expectedCloseDate: opp.closeDate,
+      expectedCloseDate: opp.closeDate ? new Date(opp.closeDate) : undefined,
       summary: this.form.summary ?? '',
       isClosed: opp.status !== 'Open',
       isWon: opp.status === 'Closed Won',

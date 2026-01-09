@@ -1,0 +1,95 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container award-detail">
+  <div class="page-content" *ngIf="award as award">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-gradient">Award</span>
+            <span class="title-light">Summary</span>
+          </h1>
+          <p class="hero-description">Review award details, line items, and supplier commitments.</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button pButton type="button" class="btn-glass" (click)="navigateToList()">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to awards</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="glass-card detail-card">
+      <div class="detail-header">
+        <div>
+          <div class="detail-title">{{ award.awardNumber }}</div>
+          <div class="detail-subtitle">RFQ {{ award.rfqNumber }} • {{ award.rfqTitle }}</div>
+        </div>
+        <p-tag [value]="award.status" [severity]="getStatusSeverity(award.status)"></p-tag>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="label">Supplier</span>
+          <span class="value">{{ award.supplierName }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Award Date</span>
+          <span class="value">{{ formatDate(award.awardDate) }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Award Amount</span>
+          <span class="value">{{ formatCurrency(award.awardAmount, award.currency) }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Currency</span>
+          <span class="value">{{ award.currency || 'USD' }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card lines-card">
+      <div class="card-title">Award Line Items</div>
+      <p-table [value]="award.lines" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Line</th>
+            <th>Item</th>
+            <th>UOM</th>
+            <th>Qty</th>
+            <th>Target Price</th>
+            <th>Total</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-line>
+          <tr>
+            <td>{{ line.lineNumber }}</td>
+            <td>{{ line.itemName }}</td>
+            <td>{{ line.uom || '-' }}</td>
+            <td>{{ line.quantity }}</td>
+            <td>{{ formatCurrency(line.targetPrice, award.currency) }}</td>
+            <td>{{ formatCurrency(line.lineTotal, award.currency) }}</td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6" class="empty-message">No line items available.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+
+    <section class="glass-card notes-card" *ngIf="award.notes">
+      <div class="card-title">Notes</div>
+      <p class="notes-text">{{ award.notes }}</p>
+    </section>
+  </div>
+</div>

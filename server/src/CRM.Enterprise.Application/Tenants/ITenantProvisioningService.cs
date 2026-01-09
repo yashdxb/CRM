@@ -10,5 +10,7 @@ public interface ITenantProvisioningService
         string adminPassword,
         string? timeZone,
         string? currency,
+        string? industryPreset,
+        IReadOnlyList<string>? industryModules,
         CancellationToken cancellationToken = default);
 }

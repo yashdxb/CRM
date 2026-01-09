@@ -4,6 +4,7 @@ export interface Activity {
   id: string;
   subject: string;
   description?: string;
+  outcome?: string;
   type: ActivityType;
   priority?: 'High' | 'Normal' | 'Low';
   dueDateUtc?: string;
@@ -20,10 +21,11 @@ export interface Activity {
 export interface UpsertActivityRequest {
   subject: string;
   description?: string;
+  outcome?: string;
   type: ActivityType;
   priority?: 'High' | 'Normal' | 'Low';
-  dueDateUtc?: string;
-  completedDateUtc?: string;
+  dueDateUtc?: string | Date;
+  completedDateUtc?: string | Date;
   relatedEntityType?: 'Account' | 'Contact' | 'Opportunity' | 'Lead';
   relatedEntityId?: string;
   ownerId?: string;

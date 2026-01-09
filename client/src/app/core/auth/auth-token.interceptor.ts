@@ -4,7 +4,7 @@ import { getTenantKey } from '../tenant/tenant.utils';
 
 export const authTokenInterceptor: HttpInterceptorFn = (req, next) => {
   const context = readTokenContext();
-  const token = context?.token;
+  const token = context?.token ?? localStorage.getItem('auth_token') ?? null;
   const tenantKey = getTenantKey();
 
   const headers: Record<string, string> = {

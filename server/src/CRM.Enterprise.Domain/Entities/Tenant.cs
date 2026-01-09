@@ -8,6 +8,8 @@ public class Tenant : Entity
     public string Name { get; set; } = string.Empty;
     public string TimeZone { get; set; } = "UTC";
     public string Currency { get; set; } = "USD";
+    public string? IndustryPreset { get; set; }
+    public string? IndustryModules { get; set; }
     public decimal? ApprovalAmountThreshold { get; set; }
     public string? ApprovalApproverRole { get; set; }
     public DateTime CreatedAtUtc { get; set; }

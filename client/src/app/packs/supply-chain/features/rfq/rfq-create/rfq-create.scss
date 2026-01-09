@@ -1,0 +1,605 @@
+// ============================================
+// RFQ CREATE - AURA SKY BLUE THEME
+// Enhanced styling with PrimeNG Aura design system
+// ============================================
+
+.rfq-create {
+  padding: 0;
+}
+
+.grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+// Stepper Container
+.stepper-container {
+  border-radius: 20px;
+  padding: 2rem;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+  }
+}
+
+// Step Content
+.step-content {
+  padding: 2rem 0;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem 0;
+  }
+}
+
+// Form Section
+.form-section {
+  margin-bottom: 2rem;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0c4a6e;
+  margin: 0 0 1.5rem 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid #e0f2fe;
+}
+
+.section-description {
+  color: #64748b;
+  font-size: 0.9375rem;
+  margin: -0.5rem 0 1.5rem 0;
+  line-height: 1.6;
+}
+
+.catalog-prefill-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #0f172a;
+
+  i {
+    font-size: 1.5rem;
+    color: #2563eb;
+  }
+
+  .banner-title {
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .banner-subtitle {
+    font-size: 0.85rem;
+    color: #475569;
+  }
+
+  &.info {
+    background: rgba(22, 163, 74, 0.12);
+    border-color: rgba(22, 163, 74, 0.2);
+    color: #064e3b;
+
+    i {
+      color: #047857;
+    }
+
+    .banner-subtitle {
+      color: #036749;
+    }
+  }
+}
+
+// Form Grid Layout
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Form Fields
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+
+    .required {
+      color: #dc2626;
+      font-size: 1rem;
+    }
+  }
+
+  input,
+  textarea {
+    width: 100%;
+  }
+
+  .p-error {
+    color: #dc2626;
+    font-size: 0.8125rem;
+    margin-top: 0.25rem;
+  }
+}
+
+.required {
+  color: #dc2626;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.shipping-summary {
+  margin-top: 1.5rem;
+  border-radius: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  background: linear-gradient(135deg, #f5f9ff 0%, #e0f2fe 100%);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  .summary-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+
+    i {
+      font-size: 1.1rem;
+      color: #2563eb;
+      margin-top: 0.15rem;
+    }
+
+    strong {
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    div {
+      color: #475569;
+      line-height: 1.4;
+    }
+  }
+}
+
+// Step Actions
+.step-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px solid #e0f2fe;
+
+  @media (max-width: 768px) {
+    flex-direction: column-reverse;
+  }
+}
+
+// Line Items
+.line-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.line-item-card {
+  background: #f8fafc;
+  border: 2px solid #e0f2fe;
+  border-radius: 10px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: #7dd3fc;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+  }
+}
+
+.line-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0f2fe;
+
+  h4 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #0c4a6e;
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
+.line-item-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+// Info Box
+.info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  margin-top: 1.5rem;
+
+  i {
+    font-size: 1.25rem;
+    color: #3b82f6;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+
+  div {
+    color: #1e40af;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+
+    strong {
+      font-weight: 700;
+    }
+  }
+}
+
+// ============================================
+// PRIMENG COMPONENT CUSTOMIZATION
+// ============================================
+::ng-deep {
+  .rfq-create {
+    // Stepper Customization
+    .p-stepper {
+      .p-stepper-list {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #e0f2fe;
+      }
+
+      .p-step {
+        .p-step-header {
+          padding: 1rem;
+          border-radius: 8px;
+          transition: all 0.2s ease;
+          position: relative;
+
+          &:hover {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          }
+
+          // Active/Current step - highly visible
+          &.p-highlight {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            border: 2px solid #3b82f6;
+            transform: scale(1.05);
+
+            .p-step-number {
+              background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+              color: white;
+              box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+              border: none;
+              animation: pulse 2s ease-in-out infinite;
+            }
+
+            .p-step-title {
+              color: #0c4a6e;
+              font-weight: 700;
+              font-size: 1rem;
+            }
+
+            // Active indicator
+            &::after {
+              content: '';
+              position: absolute;
+              bottom: -1.5rem;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 0;
+              height: 0;
+              border-left: 8px solid transparent;
+              border-right: 8px solid transparent;
+              border-top: 8px solid #3b82f6;
+            }
+          }
+
+          // Completed steps
+          &.p-disabled {
+            .p-step-number {
+              background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+              color: white;
+              border: none;
+              box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+
+              // Checkmark icon
+              &::before {
+                content: '✓';
+                font-weight: 700;
+              }
+            }
+
+            .p-step-title {
+              color: #059669;
+              font-weight: 600;
+            }
+          }
+
+          // Default/upcoming steps
+          .p-step-number {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            border: 2px solid #bae6fd;
+            background: #ffffff;
+            color: #3b82f6;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .p-step-title {
+            color: #64748b;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            transition: all 0.3s ease;
+          }
+        }
+      }
+
+      .p-stepper-separator {
+        background: #e0f2fe;
+        transition: all 0.3s ease;
+        height: 3px;
+
+        &.p-highlight {
+          background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+          box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+        }
+      }
+    }
+
+    // Pulse animation for active step
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      }
+      50% {
+        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.6);
+      }
+    }
+
+    // Input text and textarea
+    .p-inputtext,
+    .p-inputtextarea {
+      border: 2px solid #bae6fd;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.2s ease;
+      font-size: 0.95rem;
+
+      &:hover {
+        border-color: #7dd3fc;
+      }
+
+      &:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      }
+
+      &.ng-invalid.ng-touched {
+        border-color: #dc2626;
+
+        &:focus {
+          box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+        }
+      }
+    }
+
+    // Select dropdown
+    .p-select {
+      border: 2px solid #bae6fd;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: #7dd3fc;
+      }
+
+      &.p-focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      }
+
+      &.ng-invalid.ng-touched {
+        border-color: #dc2626;
+
+        &.p-focus {
+          box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+        }
+      }
+    }
+
+    // Multiselect
+    .p-multiselect {
+      border: 2px solid #bae6fd;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: #7dd3fc;
+      }
+
+      &.p-focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      }
+
+      &.ng-invalid.ng-touched {
+        border-color: #dc2626;
+
+        &.p-focus {
+          box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+        }
+      }
+
+      .p-multiselect-label {
+        padding: 0.75rem;
+      }
+
+      .p-multiselect-chip {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        border-radius: 6px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+
+        .p-chip-remove-icon {
+          color: white;
+        }
+      }
+    }
+
+    // Datepicker
+    .p-datepicker {
+      border: 2px solid #bae6fd;
+      border-radius: 8px;
+
+      .p-inputtext {
+        border: none;
+
+        &:focus {
+          box-shadow: none;
+        }
+      }
+
+      &:hover {
+        border-color: #7dd3fc;
+      }
+
+      &.p-focus,
+      &:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+      }
+
+      &.ng-invalid.ng-touched {
+        border-color: #dc2626;
+
+        &.p-focus,
+        &:focus-within {
+          box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.1);
+        }
+      }
+    }
+
+    // Input number
+    .p-inputnumber {
+      .p-inputtext {
+        width: 100%;
+      }
+    }
+
+    // Buttons
+    .p-button {
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
+
+      &.p-button-text {
+        box-shadow: none;
+
+        &:hover {
+          transform: none;
+          background-color: rgba(59, 130, 246, 0.1);
+        }
+      }
+
+      &.p-button-sm,
+      &[size="small"] {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+      }
+    }
+
+    .p-button-rounded {
+      &.p-button-text {
+        width: 2.5rem;
+        height: 2.5rem;
+
+        &:hover {
+          background-color: rgba(220, 38, 38, 0.1);
+          transform: scale(1.1);
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container awards">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-gradient">Awards</span>
+            <span class="title-light">Center</span>
+          </h1>
+          <p class="hero-description">Track awarded RFQs and supplier commitments.</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button pButton type="button" class="btn-glass">
+          <i class="pi pi-filter"></i>
+          <span>Filter</span>
+        </button>
+        <button pButton type="button" class="btn-gradient">
+          <i class="pi pi-trophy"></i>
+          <span>Create Award</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="glass-card">
+      <p-table [value]="rows" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Award</th>
+            <th>RFQ</th>
+            <th>Supplier</th>
+            <th>Status</th>
+            <th>Awarded On</th>
+            <th>Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr class="row-click" (click)="openAward(row)">
+            <td>{{ row.award }}</td>
+            <td>{{ row.rfq }}</td>
+            <td>{{ row.supplier }}</td>
+            <td>{{ row.status }}</td>
+            <td>{{ row.date }}</td>
+            <td>
+              <button pButton type="button" class="btn-ghost" (click)="openAward(row); $event.stopPropagation()">
+                <i class="pi pi-eye"></i>
+                <span>View</span>
+              </button>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6" class="empty-message">
+              No awards yet. Finalize a RFQ to create an award.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+  </div>
+</div>

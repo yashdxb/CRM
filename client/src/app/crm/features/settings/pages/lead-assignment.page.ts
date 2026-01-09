@@ -7,6 +7,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
+import { TooltipModule } from 'primeng/tooltip';
 
 import { LeadAssignmentRule, LeadAssignmentRuleType, UpsertLeadAssignmentRuleRequest } from '../models/lead-assignment.model';
 import { LeadAssignmentService } from '../services/lead-assignment.service';
@@ -33,6 +34,7 @@ interface SelectOption<T> {
     InputTextModule,
     SelectModule,
     TableModule,
+    TooltipModule,
     BreadcrumbsComponent
   ],
   templateUrl: './lead-assignment.page.html',
@@ -142,6 +144,36 @@ export class LeadAssignmentPage implements OnInit {
     const confirmed = confirm(`Delete assignment rule "${rule.name}"?`);
     if (!confirmed) return;
     this.assignmentService.delete(rule.id).subscribe(() => this.loadRules());
+  }
+
+  protected getActiveRulesCount(): number {
+    return this.rules().filter(r => r.isActive).length;
+  }
+
+  protected getTerritoryRulesCount(): number {
+    return this.rules().filter(r => r.type === 'Territory').length;
+  }
+
+  protected getRoundRobinCount(): number {
+    return this.rules().filter(r => r.type === 'RoundRobin').length;
+  }
+
+  protected getRuleTypeClass(type: LeadAssignmentRuleType): string {
+    switch (type) {
+      case 'Manual': return 'manual';
+      case 'RoundRobin': return 'roundrobin';
+      case 'Territory': return 'territory';
+      default: return 'manual';
+    }
+  }
+
+  protected getTypeIcon(type: LeadAssignmentRuleType): string {
+    switch (type) {
+      case 'Manual': return 'pi pi-hand-stop';
+      case 'RoundRobin': return 'pi pi-sync';
+      case 'Territory': return 'pi pi-map-marker';
+      default: return 'pi pi-cog';
+    }
   }
 
   private loadRules() {

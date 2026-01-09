@@ -1,3 +1,4 @@
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // GLOBAL DESIGN SYSTEM IMPORTS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -5,6 +6,44 @@
 @use 'styles/animations';
 @use 'styles/components';
 @use 'app/shared/page-design-system';
+
+// Vibrant PrimeNG input group icon colors (global override)
+:root .p-inputgroup-addon .pi-building {
+  color: #5b6eea !important;
+  font-weight: bold !important;
+}
+:root .p-inputgroup-addon .pi-tags {
+  color: #f97316 !important;
+  font-weight: bold !important;
+}
+:root .p-inputgroup-addon .pi-globe {
+  color: #06b6d4 !important;
+  font-weight: bold !important;
+}
+:root .p-inputgroup-addon .pi-flag {
+  color: #a855f7 !important;
+  font-weight: bold !important;
+}
+:root .p-inputgroup-addon .pi-user {
+  color: #0ea5e9 !important;
+  font-weight: bold !important;
+}
+:root .p-inputgroup-addon .pi-envelope {
+  color: #ec4899 !important;
+  font-weight: bold !important;
+}
+:root .p-inputgroup-addon .pi-phone {
+  color: #22c55e !important;
+  font-weight: bold !important;
+}
+:root .p-inputgroup-addon .pi-link {
+  color: #6366f1 !important;
+  font-weight: bold !important;
+}
+:root .p-inputgroup-addon .pi-align-left {
+  color: #f59e0b !important;
+  font-weight: bold !important;
+}
 
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 @import 'primeicons/primeicons.css';

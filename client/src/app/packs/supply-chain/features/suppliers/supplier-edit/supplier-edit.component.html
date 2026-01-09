@@ -1,0 +1,192 @@
+
+<section class="supplier-edit-page">
+  <div class="form-header">
+    <div class="header-content">
+      <app-breadcrumbs></app-breadcrumbs>
+
+      <button type="button" class="back-link" (click)="cancel()">
+        <i class="pi pi-arrow-left"></i>
+        Back to Suppliers
+      </button>
+
+      <div class="header-row">
+        <div class="header-title">
+          <h1>
+            <span class="title-gradient">Edit</span>
+            <span class="title-light">Supplier</span>
+          </h1>
+          <p>Maintain supplier status, primary contact details, and onboarding notes in one workspace.</p>
+        </div>
+        <div class="header-meta">
+          <span class="meta-chip">
+            <i class="pi pi-building"></i>
+            {{ form.value.name || 'Supplier profile' }}
+          </span>
+          <span
+            class="status-pill"
+            [class.status-pill--active]="form.value.status === 'Active' || form.value.status === 'Approved'"
+            [class.status-pill--pending]="form.value.status === 'Pending Approval'"
+            [class.status-pill--draft]="form.value.status === 'Draft'"
+            [class.status-pill--onhold]="form.value.status === 'On Hold'"
+            [class.status-pill--blocked]="form.value.status === 'Blocked'"
+            [class.status-pill--inactive]="form.value.status === 'Inactive'">
+            {{ statusLabel(form.value.status) }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-body">
+    <article class="form-card">
+      <h3 class="section-title">
+        <i class="pi pi-briefcase"></i>
+        Supplier Details
+      </h3>
+      <form [formGroup]="form" (ngSubmit)="saveSupplier()" class="form-layout">
+        <div class="form-grid">
+          <div class="field">
+            <label for="supplierName">Company name</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--company">
+                <i class="pi pi-building"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="supplierName" formControlName="name" placeholder="Company name" class="w-full" />
+            </p-inputgroup>
+          </div>
+          <div class="field">
+            <label for="supplierCategory">Category</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--category">
+                <i class="pi pi-tags"></i>
+              </p-inputgroup-addon>
+              <input
+                pInputText
+                id="supplierCategory"
+                formControlName="category"
+                placeholder="Category"
+                class="w-full"
+              />
+            </p-inputgroup>
+          </div>
+          <div class="field">
+            <label for="supplierCountry">Country</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--country">
+                <i class="pi pi-globe"></i>
+              </p-inputgroup-addon>
+              <p-select
+                inputId="supplierCountry"
+                [options]="countryOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="country"
+                placeholder="Select country"
+                appendTo="body"
+                styleClass="w-full"
+              ></p-select>
+            </p-inputgroup>
+          </div>
+          <div class="field">
+            <label for="supplierStatus">Status</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--status">
+                <i class="pi pi-flag"></i>
+              </p-inputgroup-addon>
+              <p-select
+                inputId="supplierStatus"
+                [options]="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="status"
+                placeholder="Select status"
+                appendTo="body"
+                styleClass="w-full"
+              ></p-select>
+            </p-inputgroup>
+          </div>
+          <div class="field">
+            <label for="supplierContact">Primary contact</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--contact">
+                <i class="pi pi-user"></i>
+              </p-inputgroup-addon>
+              <input
+                pInputText
+                id="supplierContact"
+                formControlName="contactName"
+                placeholder="Contact name"
+                class="w-full"
+              />
+            </p-inputgroup>
+          </div>
+          <div class="field">
+            <label for="supplierEmail">Email</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--email">
+                <i class="pi pi-envelope"></i>
+              </p-inputgroup-addon>
+              <input
+                pInputText
+                id="supplierEmail"
+                formControlName="contactEmail"
+                placeholder="Email address"
+                class="w-full"
+              />
+            </p-inputgroup>
+          </div>
+          <div class="field">
+            <label for="supplierPhone">Phone</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--phone">
+                <i class="pi pi-phone"></i>
+              </p-inputgroup-addon>
+              <input
+                pInputText
+                id="supplierPhone"
+                formControlName="contactPhone"
+                placeholder="Phone number"
+                class="w-full"
+              />
+            </p-inputgroup>
+          </div>
+          <div class="field">
+            <label for="supplierWebsite">Website</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--website">
+                <i class="pi pi-link"></i>
+              </p-inputgroup-addon>
+              <input
+                pInputText
+                id="supplierWebsite"
+                formControlName="website"
+                placeholder="Website"
+                class="w-full"
+              />
+            </p-inputgroup>
+          </div>
+          <div class="field full">
+            <label for="supplierNotes">Notes</label>
+            <p-inputgroup class="w-full">
+              <p-inputgroup-addon class="icon-addon icon-addon--notes">
+                <i class="pi pi-align-left"></i>
+              </p-inputgroup-addon>
+              <textarea
+                pTextarea
+                id="supplierNotes"
+                rows="4"
+                formControlName="notes"
+                placeholder="Notes"
+                class="w-full"></textarea>
+            </p-inputgroup>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" pButton label="Cancel" class="crm-button--ghost" (click)="cancel()"></button>
+          <button type="submit" pButton label="Save changes" icon="pi pi-check" class="crm-button--primary"></button>
+        </div>
+      </form>
+    </article>
+  </div>
+</section>

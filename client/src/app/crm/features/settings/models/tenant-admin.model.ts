@@ -3,6 +3,8 @@ export interface TenantSummary {
   key: string;
   name: string;
   createdAtUtc: string;
+  industryPreset?: string | null;
+  industryModules?: string[] | null;
 }
 
 export interface CreateTenantRequest {
@@ -13,4 +15,6 @@ export interface CreateTenantRequest {
   adminPassword: string;
   timeZone?: string | null;
   currency?: string | null;
+  industryPreset?: string | null;
+  industryModules?: string[] | null;
 }

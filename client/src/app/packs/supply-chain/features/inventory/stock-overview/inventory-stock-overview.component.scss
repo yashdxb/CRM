@@ -1,0 +1,194 @@
+.inventory-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.summary-card {
+  .metric-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .metric-card {
+    padding: 1rem 1.1rem;
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+
+    &.up {
+      border-color: rgba(34, 197, 94, 0.25);
+    }
+
+    &.down {
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    .metric-label {
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .metric-delta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: #475569;
+    }
+  }
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.warehouse-card {
+  .header-actions {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .warehouse-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+
+    .name {
+      font-weight: 600;
+      color: #0f172a;
+    }
+  }
+
+  .coverage {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+
+    .coverage-trend.up {
+      color: #16a34a;
+    }
+
+    .coverage-trend.down {
+      color: #dc2626;
+    }
+
+    .coverage-trend.flat {
+      color: #64748b;
+    }
+  }
+
+  .fill-rate {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .row-actions {
+    text-align: right;
+  }
+}
+
+.right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.risk-card {
+  .risk-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .sku {
+      font-weight: 600;
+      color: #1d4ed8;
+    }
+
+    .product {
+      margin: 0.15rem 0 0.25rem;
+      font-weight: 600;
+    }
+  }
+
+  .risk-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+    text-align: right;
+
+    .risk-action {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .eta {
+      color: #64748b;
+    }
+  }
+}
+
+.replenishment-card {
+  .replenishment-item {
+    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .order-head,
+    .order-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .order-body {
+      margin: 0.4rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      color: #475569;
+    }
+
+    .reference {
+      font-weight: 600;
+      color: #0f172a;
+    }
+  }
+}
+
+.card-subtitle {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 1100px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}

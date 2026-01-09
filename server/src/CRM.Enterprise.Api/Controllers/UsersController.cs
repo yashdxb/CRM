@@ -105,7 +105,19 @@ public class UsersController : ControllerBase
             return BadRequest("At least one role must be assigned.");
         }
 
-        var exists = await _dbContext.Users.AnyAsync(u => u.Email == request.Email && !u.IsDeleted, cancellationToken);
+        var normalizedEmail = NormalizeEmail(request.Email);
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return BadRequest("Email is required.");
+        }
+
+        var exists = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .AnyAsync(u =>
+                !u.IsDeleted &&
+                (u.EmailNormalized == normalizedEmail ||
+                 (u.EmailNormalized == null && u.Email.ToLower() == normalizedEmail)),
+                cancellationToken);
         if (exists)
         {
             return Conflict("A user with that email already exists.");
@@ -114,7 +126,8 @@ public class UsersController : ControllerBase
         var user = new User
         {
             FullName = request.FullName,
-            Email = request.Email,
+            Email = normalizedEmail,
+            EmailNormalized = normalizedEmail,
             TimeZone = string.IsNullOrWhiteSpace(request.TimeZone) ? "UTC" : request.TimeZone,
             Locale = string.IsNullOrWhiteSpace(request.Locale) ? "en-US" : request.Locale,
             IsActive = request.IsActive,
@@ -146,14 +159,34 @@ public class UsersController : ControllerBase
             return BadRequest("At least one role must be assigned.");
         }
 
+        var normalizedEmail = NormalizeEmail(request.Email);
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+        {
+            return BadRequest("Email is required.");
+        }
+
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
         if (user is null)
         {
             return NotFound();
         }
 
+        var exists = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .AnyAsync(u =>
+                u.Id != user.Id &&
+                !u.IsDeleted &&
+                (u.EmailNormalized == normalizedEmail ||
+                 (u.EmailNormalized == null && u.Email.ToLower() == normalizedEmail)),
+                cancellationToken);
+        if (exists)
+        {
+            return Conflict("A user with that email already exists.");
+        }
+
         user.FullName = request.FullName;
-        user.Email = request.Email;
+        user.Email = normalizedEmail;
+        user.EmailNormalized = normalizedEmail;
         user.TimeZone = request.TimeZone;
         user.Locale = request.Locale;
         user.IsActive = request.IsActive;
@@ -312,5 +345,10 @@ public class UsersController : ControllerBase
     {
         var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(subject, out var currentUserId) && currentUserId == userId;
+    }
+
+    private static string NormalizeEmail(string? email)
+    {
+        return (email ?? string.Empty).Trim().ToLowerInvariant();
     }
 }

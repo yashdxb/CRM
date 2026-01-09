@@ -17,8 +17,13 @@ import { Customer } from '../../customers/models/customer.model';
 import { Contact } from '../../contacts/models/contact.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
 import { Opportunity } from '../../opportunities/models/opportunity.model';
+import { LeadDataService } from '../../leads/services/lead-data.service';
+import { Lead } from '../../leads/models/lead.model';
+import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
+import { UserListItem } from '../../settings/models/user-admin.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
+import { readUserId } from '../../../../core/auth/token.utils';
 
 interface Option<T = string> {
   label: string;
@@ -114,11 +119,49 @@ interface ActivityTemplate {
                 ></p-select>
               </div>
               <div class="field">
+                <label>Status</label>
+                <p-select
+                  [options]="statusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="status"
+                  [(ngModel)]="activityStatus"
+                  (ngModelChange)="onStatusChange($event)"
+                  placeholder="Select status"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label>Owner</label>
+                <p-select
+                  [options]="ownerOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="ownerId"
+                  [(ngModel)]="form.ownerId"
+                  placeholder="Select owner"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
                 <label>Due date</label>
                 <p-datePicker
                   name="dueDateUtc"
                   [(ngModel)]="form.dueDateUtc"
                   [showIcon]="true"
+                  [showTime]="true"
+                  hourFormat="12"
+                  styleClass="w-full"
+                ></p-datePicker>
+              </div>
+              <div class="field" *ngIf="activityStatus === 'Completed'">
+                <label>Completed at</label>
+                <p-datePicker
+                  name="completedDateUtc"
+                  [(ngModel)]="form.completedDateUtc"
+                  [showIcon]="true"
+                  [showTime]="true"
+                  hourFormat="12"
                   styleClass="w-full"
                 ></p-datePicker>
               </div>
@@ -171,9 +214,25 @@ interface ActivityTemplate {
                   styleClass="w-full"
                 ></p-select>
               </div>
+              <div class="field" *ngIf="form.relatedEntityType === 'Lead'">
+                <label>Lead</label>
+                <p-select
+                  [options]="leadOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="relatedEntityId"
+                  [(ngModel)]="form.relatedEntityId"
+                  placeholder="Select lead"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
               <div class="field full-row">
-                <label>Description</label>
-                <textarea pTextarea name="description" [(ngModel)]="form.description" rows="3" placeholder="Add notes or agenda"></textarea>
+                <label>Notes / Agenda</label>
+                <textarea pTextarea name="description" [(ngModel)]="form.description" rows="3" placeholder="Add agenda notes"></textarea>
+              </div>
+              <div class="field full-row">
+                <label>Outcome</label>
+                <textarea pTextarea name="outcome" [(ngModel)]="form.outcome" rows="3" placeholder="Capture call outcome and next steps"></textarea>
               </div>
             </div>
           </section>
@@ -840,10 +899,16 @@ export class ActivityFormPage implements OnInit {
     { label: 'Low', value: 'Low' }
   ];
 
+  protected readonly statusOptions: Option<'Open' | 'Completed'>[] = [
+    { label: 'Open', value: 'Open' },
+    { label: 'Completed', value: 'Completed' }
+  ];
+
   protected readonly relationOptions: Option<NonNullable<UpsertActivityRequest['relatedEntityType']>>[] = [
     { label: 'Account', value: 'Account' },
     { label: 'Contact', value: 'Contact' },
-    { label: 'Opportunity', value: 'Opportunity' }
+    { label: 'Opportunity', value: 'Opportunity' },
+    { label: 'Lead', value: 'Lead' }
   ];
   protected readonly templateOptions: Option<string>[] = [
     { label: 'No template', value: 'none' },
@@ -890,12 +955,22 @@ export class ActivityFormPage implements OnInit {
   protected customerOptions: Option<string>[] = [];
   protected contactOptions: Option<string>[] = [];
   protected opportunityOptions: Option<string>[] = [];
+  protected leadOptions: Option<string>[] = [];
+  protected ownerOptions: Option<string>[] = [];
   protected selectedTemplate = 'none';
+  protected activityStatus: 'Open' | 'Completed' = 'Open';
+  private pendingAccountOption: Option<string> | null = null;
+  private pendingContactOption: Option<string> | null = null;
+  private pendingOpportunityOption: Option<string> | null = null;
+  private pendingLeadOption: Option<string> | null = null;
+  private pendingOwnerOption: Option<string> | null = null;
 
   private readonly activityData = inject(ActivityDataService);
   private readonly customerData = inject(CustomerDataService);
   private readonly contactData = inject(ContactDataService);
   private readonly opportunityData = inject(OpportunityDataService);
+  private readonly leadData = inject(LeadDataService);
+  private readonly userAdminData = inject(UserAdminDataService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
 
@@ -906,11 +981,16 @@ export class ActivityFormPage implements OnInit {
     const activity = history.state?.activity as Activity | undefined;
     if (this.editingId && activity) {
       this.prefill(activity);
-    } else if (this.editingId && !activity) {
-      this.router.navigate(['/app/activities']);
-      return;
     }
 
+    if (this.editingId) {
+      this.loadActivityForEdit(this.editingId);
+    }
+
+    if (!this.editingId) {
+      this.applyContextFromQuery();
+    }
+    this.loadOwners();
     this.loadLookups();
   }
 
@@ -943,15 +1023,31 @@ export class ActivityFormPage implements OnInit {
     };
   }
 
+  protected onStatusChange(status?: 'Open' | 'Completed' | null) {
+    const nextStatus = status ?? 'Open';
+    this.activityStatus = nextStatus;
+    if (nextStatus === 'Completed') {
+      if (!this.form.completedDateUtc) {
+        this.form.completedDateUtc = new Date();
+      }
+      return;
+    }
+    this.form.completedDateUtc = undefined;
+  }
+
   protected onSave() {
     if (!this.form.subject) {
       return;
     }
 
     this.saving.set(true);
+    const payload: UpsertActivityRequest = {
+      ...this.form,
+      completedDateUtc: this.activityStatus === 'Completed' ? (this.form.completedDateUtc ?? new Date()) : undefined
+    };
     const request$ = this.editingId
-      ? this.activityData.update(this.editingId, this.form).pipe(map(() => null))
-      : this.activityData.create(this.form).pipe(map(() => null));
+      ? this.activityData.update(this.editingId, payload).pipe(map(() => null))
+      : this.activityData.create(payload).pipe(map(() => null));
 
     request$.subscribe({
       next: () => {
@@ -973,39 +1069,176 @@ export class ActivityFormPage implements OnInit {
   private loadLookups() {
     this.customerData.search({ page: 1, pageSize: 100 }).subscribe((res) => {
       this.customerOptions = res.items.map((c: Customer) => ({ label: c.name, value: c.id }));
+      if (this.pendingAccountOption) {
+        const exists = this.customerOptions.some((option) => option.value === this.pendingAccountOption?.value);
+        if (!exists) {
+          this.customerOptions = [this.pendingAccountOption, ...this.customerOptions];
+        }
+        this.pendingAccountOption = null;
+      }
     });
     this.contactData.search({ page: 1, pageSize: 100 }).subscribe((res) => {
       this.contactOptions = res.items.map((c: Contact) => ({ label: c.name, value: c.id }));
+      if (this.pendingContactOption) {
+        const exists = this.contactOptions.some((option) => option.value === this.pendingContactOption?.value);
+        if (!exists) {
+          this.contactOptions = [this.pendingContactOption, ...this.contactOptions];
+        }
+        this.pendingContactOption = null;
+      }
     });
     this.opportunityData.search({ page: 1, pageSize: 100 }).subscribe((res) => {
       this.opportunityOptions = res.items.map((o: Opportunity) => ({ label: o.name, value: o.id }));
+      if (this.pendingOpportunityOption) {
+        const exists = this.opportunityOptions.some((option) => option.value === this.pendingOpportunityOption?.value);
+        if (!exists) {
+          this.opportunityOptions = [this.pendingOpportunityOption, ...this.opportunityOptions];
+        }
+        this.pendingOpportunityOption = null;
+      }
+    });
+    this.leadData.search({ page: 1, pageSize: 100 }).subscribe((res) => {
+      this.leadOptions = res.items.map((lead: Lead) => ({
+        label: lead.company ? `${lead.name} · ${lead.company}` : lead.name,
+        value: lead.id
+      }));
+      if (this.pendingLeadOption) {
+        const exists = this.leadOptions.some((option) => option.value === this.pendingLeadOption?.value);
+        if (!exists) {
+          this.leadOptions = [this.pendingLeadOption, ...this.leadOptions];
+        }
+        this.pendingLeadOption = null;
+      }
+    });
+  }
+
+  private loadActivityForEdit(id: string) {
+    this.activityData.get(id).subscribe({
+      next: (activity) => this.prefill(activity),
+      error: () => {
+        this.raiseToast('error', 'Unable to load activity.');
+        this.router.navigate(['/app/activities']);
+      }
     });
   }
 
   private prefill(activity: Activity) {
+    const dueDate = activity.dueDateUtc ? new Date(activity.dueDateUtc) : undefined;
+    const completedDate = activity.completedDateUtc ? new Date(activity.completedDateUtc) : undefined;
     this.form = {
       subject: activity.subject,
       description: activity.description,
+      outcome: activity.outcome,
       type: activity.type,
       priority: activity.priority ?? 'Normal',
-      dueDateUtc: activity.dueDateUtc,
-      completedDateUtc: activity.completedDateUtc,
+      dueDateUtc: dueDate,
+      completedDateUtc: completedDate,
       relatedEntityType: activity.relatedEntityType ?? 'Account',
       relatedEntityId: activity.relatedEntityId,
       ownerId: activity.ownerId
     };
+    this.activityStatus = completedDate ? 'Completed' : 'Open';
+    if (activity.ownerId) {
+      const label = activity.ownerName?.trim() || 'Owner';
+      const option = { label, value: activity.ownerId };
+      const exists = this.ownerOptions.some((item) => item.value === option.value);
+      if (!exists) {
+        this.ownerOptions = [option, ...this.ownerOptions];
+      }
+      this.pendingOwnerOption = option;
+    }
+
+    if (activity.relatedEntityType === 'Lead' && activity.relatedEntityId) {
+      const label = activity.relatedEntityName?.trim() || 'Lead';
+      const option = { label, value: activity.relatedEntityId };
+      const exists = this.leadOptions.some((item) => item.value === option.value);
+      if (!exists) {
+        this.leadOptions = [option, ...this.leadOptions];
+      }
+      this.pendingLeadOption = option;
+      return;
+    }
+
+    if (activity.relatedEntityType === 'Account' && activity.relatedEntityId) {
+      const label = activity.relatedEntityName?.trim() || 'Account';
+      const option = { label, value: activity.relatedEntityId };
+      const exists = this.customerOptions.some((item) => item.value === option.value);
+      if (!exists) {
+        this.customerOptions = [option, ...this.customerOptions];
+      }
+      this.pendingAccountOption = option;
+    } else if (activity.relatedEntityType === 'Contact' && activity.relatedEntityId) {
+      const label = activity.relatedEntityName?.trim() || 'Contact';
+      const option = { label, value: activity.relatedEntityId };
+      const exists = this.contactOptions.some((item) => item.value === option.value);
+      if (!exists) {
+        this.contactOptions = [option, ...this.contactOptions];
+      }
+      this.pendingContactOption = option;
+    } else if (activity.relatedEntityType === 'Opportunity' && activity.relatedEntityId) {
+      const label = activity.relatedEntityName?.trim() || 'Opportunity';
+      const option = { label, value: activity.relatedEntityId };
+      const exists = this.opportunityOptions.some((item) => item.value === option.value);
+      if (!exists) {
+        this.opportunityOptions = [option, ...this.opportunityOptions];
+      }
+      this.pendingOpportunityOption = option;
+    }
   }
 
   private createEmptyForm(): UpsertActivityRequest {
     return {
       subject: '',
       description: '',
+      outcome: '',
       type: 'Task',
       priority: 'Normal',
       dueDateUtc: undefined,
       relatedEntityType: 'Account',
       relatedEntityId: undefined,
-      ownerId: undefined
+      ownerId: readUserId() ?? undefined
     };
+  }
+
+  private loadOwners() {
+    this.userAdminData.search({ page: 1, pageSize: 100, includeInactive: false }).subscribe({
+      next: (res) => {
+        this.ownerOptions = res.items.map((user: UserListItem) => ({
+          label: user.fullName,
+          value: user.id
+        }));
+        if (this.pendingOwnerOption) {
+          const exists = this.ownerOptions.some((option) => option.value === this.pendingOwnerOption?.value);
+          if (!exists) {
+            this.ownerOptions = [this.pendingOwnerOption, ...this.ownerOptions];
+          }
+          this.pendingOwnerOption = null;
+        }
+        if (!this.form.ownerId) {
+          this.form.ownerId = readUserId() ?? undefined;
+        }
+      },
+      error: () => {
+        this.ownerOptions = [];
+      }
+    });
+  }
+
+  private applyContextFromQuery() {
+    const relatedType = this.route.snapshot.queryParamMap.get('relatedType') as UpsertActivityRequest['relatedEntityType'];
+    const relatedId = this.route.snapshot.queryParamMap.get('relatedId') ?? undefined;
+    const subject = this.route.snapshot.queryParamMap.get('subject') ?? undefined;
+
+    if (relatedType) {
+      this.form.relatedEntityType = relatedType;
+    }
+
+    if (relatedId) {
+      this.form.relatedEntityId = relatedId;
+    }
+
+    if (subject && !this.form.subject) {
+      this.form.subject = subject;
+    }
   }
 }

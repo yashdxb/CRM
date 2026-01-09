@@ -9,6 +9,7 @@ public class CrmDbContext : DbContext
 {
     private const string CrmSchema = "crm";
     private const string IdentitySchema = "identity";
+    private const string SupplyChainSchema = "scm";
     private readonly ITenantProvider _tenantProvider;
 
     public CrmDbContext(DbContextOptions<CrmDbContext> options, ITenantProvider tenantProvider) : base(options)
@@ -36,6 +37,40 @@ public class CrmDbContext : DbContext
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<SupplierCertification> SupplierCertifications => Set<SupplierCertification>();
+    public DbSet<SupplierContact> SupplierContacts => Set<SupplierContact>();
+    public DbSet<SupplierAddress> SupplierAddresses => Set<SupplierAddress>();
+    public DbSet<SupplierDocument> SupplierDocuments => Set<SupplierDocument>();
+    public DbSet<SupplierIssue> SupplierIssues => Set<SupplierIssue>();
+    public DbSet<SupplierKpi> SupplierKpis => Set<SupplierKpi>();
+    public DbSet<SupplierScorecard> SupplierScorecards => Set<SupplierScorecard>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderLine> PurchaseOrderLines => Set<PurchaseOrderLine>();
+    public DbSet<PurchaseOrderApproval> PurchaseOrderApprovals => Set<PurchaseOrderApproval>();
+    public DbSet<PurchaseOrderChange> PurchaseOrderChanges => Set<PurchaseOrderChange>();
+    public DbSet<Carrier> Carriers => Set<Carrier>();
+    public DbSet<Shipment> Shipments => Set<Shipment>();
+    public DbSet<ShipmentLine> ShipmentLines => Set<ShipmentLine>();
+    public DbSet<GoodsReceipt> GoodsReceipts => Set<GoodsReceipt>();
+    public DbSet<GoodsReceiptLine> GoodsReceiptLines => Set<GoodsReceiptLine>();
+    public DbSet<Warehouse> Warehouses => Set<Warehouse>();
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<ReorderRule> ReorderRules => Set<ReorderRule>();
+    public DbSet<Inspection> Inspections => Set<Inspection>();
+    public DbSet<NonConformance> NonConformances => Set<NonConformance>();
+    public DbSet<CorrectiveAction> CorrectiveActions => Set<CorrectiveAction>();
+    public DbSet<SpendAnalyticsSnapshot> SpendAnalyticsSnapshots => Set<SpendAnalyticsSnapshot>();
+    public DbSet<SupplierPerformanceSnapshot> SupplierPerformanceSnapshots => Set<SupplierPerformanceSnapshot>();
+    public DbSet<SavingsTrackingSnapshot> SavingsTrackingSnapshots => Set<SavingsTrackingSnapshot>();
+    public DbSet<Rfq> Rfqs => Set<Rfq>();
+    public DbSet<RfqLine> RfqLines => Set<RfqLine>();
+    public DbSet<SupplierQuote> SupplierQuotes => Set<SupplierQuote>();
+    public DbSet<SupplierQuoteLine> SupplierQuoteLines => Set<SupplierQuoteLine>();
+    public DbSet<RfqAward> RfqAwards => Set<RfqAward>();
+    public DbSet<ItemMaster> ItemMasters => Set<ItemMaster>();
+    public DbSet<PriceList> PriceLists => Set<PriceList>();
+    public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -59,7 +94,13 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Lead>().ToTable("Leads", CrmSchema);
         modelBuilder.Entity<LeadAssignmentRule>().ToTable("LeadAssignmentRules", CrmSchema);
         modelBuilder.Entity<LeadStatus>().ToTable("LeadStatuses", CrmSchema);
+        modelBuilder.Entity<LeadStatus>()
+            .HasIndex(ls => new { ls.TenantId, ls.Name })
+            .IsUnique();
         modelBuilder.Entity<LeadStatusHistory>().ToTable("LeadStatusHistories", CrmSchema);
+        modelBuilder.Entity<Lead>()
+            .Property(l => l.AiConfidence)
+            .HasPrecision(5, 4);
         modelBuilder.Entity<Opportunity>().ToTable("Opportunities", CrmSchema);
         modelBuilder.Entity<OpportunityStage>().ToTable("OpportunityStages", CrmSchema);
         modelBuilder.Entity<OpportunityStageHistory>().ToTable("OpportunityStageHistories", CrmSchema);
@@ -68,8 +109,49 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<ImportJob>().ToTable("ImportJobs", CrmSchema);
         modelBuilder.Entity<CustomFieldDefinition>().ToTable("CustomFieldDefinitions", CrmSchema);
         modelBuilder.Entity<CustomFieldValue>().ToTable("CustomFieldValues", CrmSchema);
+        modelBuilder.Entity<Supplier>().ToTable("Suppliers", SupplyChainSchema);
+        modelBuilder.Entity<SupplierCertification>().ToTable("SupplierCertifications", SupplyChainSchema);
+        modelBuilder.Entity<SupplierContact>().ToTable("SupplierContacts", SupplyChainSchema);
+        modelBuilder.Entity<SupplierAddress>().ToTable("SupplierAddresses", SupplyChainSchema);
+        modelBuilder.Entity<SupplierDocument>().ToTable("SupplierDocuments", SupplyChainSchema);
+        modelBuilder.Entity<SupplierIssue>().ToTable("SupplierIssues", SupplyChainSchema);
+        modelBuilder.Entity<SupplierKpi>().ToTable("SupplierKpis", SupplyChainSchema);
+        modelBuilder.Entity<SupplierScorecard>().ToTable("SupplierScorecards", SupplyChainSchema);
+        modelBuilder.Entity<PurchaseOrder>().ToTable("PurchaseOrders", SupplyChainSchema);
+        modelBuilder.Entity<PurchaseOrderLine>().ToTable("PurchaseOrderLines", SupplyChainSchema);
+        modelBuilder.Entity<PurchaseOrderApproval>().ToTable("PurchaseOrderApprovals", SupplyChainSchema);
+        modelBuilder.Entity<PurchaseOrderChange>().ToTable("PurchaseOrderChanges", SupplyChainSchema);
+        modelBuilder.Entity<Carrier>().ToTable("Carriers", SupplyChainSchema);
+        modelBuilder.Entity<Shipment>().ToTable("Shipments", SupplyChainSchema);
+        modelBuilder.Entity<ShipmentLine>().ToTable("ShipmentLines", SupplyChainSchema);
+        modelBuilder.Entity<GoodsReceipt>().ToTable("GoodsReceipts", SupplyChainSchema);
+        modelBuilder.Entity<GoodsReceiptLine>().ToTable("GoodsReceiptLines", SupplyChainSchema);
+        modelBuilder.Entity<Warehouse>().ToTable("Warehouses", SupplyChainSchema);
+        modelBuilder.Entity<InventoryItem>().ToTable("InventoryItems", SupplyChainSchema);
+        modelBuilder.Entity<ReorderRule>().ToTable("ReorderRules", SupplyChainSchema);
+        modelBuilder.Entity<Inspection>().ToTable("Inspections", SupplyChainSchema);
+        modelBuilder.Entity<NonConformance>().ToTable("NonConformances", SupplyChainSchema);
+        modelBuilder.Entity<CorrectiveAction>().ToTable("CorrectiveActions", SupplyChainSchema);
+        modelBuilder.Entity<SpendAnalyticsSnapshot>().ToTable("SpendAnalyticsSnapshots", SupplyChainSchema);
+        modelBuilder.Entity<SupplierPerformanceSnapshot>().ToTable("SupplierPerformanceSnapshots", SupplyChainSchema);
+        modelBuilder.Entity<SavingsTrackingSnapshot>().ToTable("SavingsTrackingSnapshots", SupplyChainSchema);
+        modelBuilder.Entity<Rfq>().ToTable("Rfqs", SupplyChainSchema);
+        modelBuilder.Entity<RfqLine>().ToTable("RfqLines", SupplyChainSchema);
+        modelBuilder.Entity<SupplierQuote>().ToTable("SupplierQuotes", SupplyChainSchema);
+        modelBuilder.Entity<SupplierQuoteLine>().ToTable("SupplierQuoteLines", SupplyChainSchema);
+        modelBuilder.Entity<RfqAward>().ToTable("RfqAwards", SupplyChainSchema);
+        modelBuilder.Entity<ItemMaster>().ToTable("ItemMasters", SupplyChainSchema);
+        modelBuilder.Entity<PriceList>().ToTable("PriceLists", SupplyChainSchema);
+        modelBuilder.Entity<PriceListItem>().ToTable("PriceListItems", SupplyChainSchema);
 
         modelBuilder.Entity<User>().ToTable("Users", IdentitySchema);
+        modelBuilder.Entity<User>()
+            .Property(u => u.EmailNormalized)
+            .HasMaxLength(320);
+        modelBuilder.Entity<User>()
+            .HasIndex(u => new { u.TenantId, u.EmailNormalized })
+            .HasFilter("[EmailNormalized] IS NOT NULL AND [IsDeleted] = 0")
+            .IsUnique();
         modelBuilder.Entity<Role>().ToTable("Roles", IdentitySchema);
         modelBuilder.Entity<UserRole>().ToTable("UserRoles", IdentitySchema);
         modelBuilder.Entity<RolePermission>().ToTable("RolePermissions", IdentitySchema);

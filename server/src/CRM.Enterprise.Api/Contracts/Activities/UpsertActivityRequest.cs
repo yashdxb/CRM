@@ -6,6 +6,7 @@ namespace CRM.Enterprise.Api.Contracts.Activities;
 public record UpsertActivityRequest(
     string Subject,
     string? Description,
+    string? Outcome,
     ActivityType Type,
     string? Priority,
     DateTime? DueDateUtc,

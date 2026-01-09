@@ -8,6 +8,7 @@
 // STATUS COLORS
 // ═══════════════════════════════════════════════════════════════════════════════
 $status-new: #06b6d4;
+$status-contacted: #f59e0b;
 $status-qualified: #10b981;
 $status-converted: #6366f1;
 $status-lost: #ef4444;
@@ -399,66 +400,6 @@ $status-lost: #ef4444;
   flex-wrap: wrap;
 }
 
-.recently-viewed {
-  padding: 14px 18px;
-  margin-bottom: 20px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 16px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
-}
-
-.recently-viewed__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-
-  h3 {
-    margin: 0;
-    font-size: 15px;
-    color: $gray-900;
-  }
-
-  span {
-    font-size: 12px;
-    color: $gray-400;
-  }
-}
-
-.recently-viewed__list {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-
-.recent-item {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 10px 12px;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover {
-    border-color: rgba(99, 102, 241, 0.4);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-    transform: translateY(-1px);
-  }
-}
-
-.recent-item__title {
-  font-weight: 600;
-  color: $gray-900;
-}
-
-.recent-item__meta {
-  margin-top: 2px;
-  font-size: 12px;
-  color: $gray-500;
-}
-
 .glass-card {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
@@ -578,6 +519,7 @@ $status-lost: #ef4444;
   border-radius: 50%;
 
   &[data-status="New"] { background: $status-new; }
+  &[data-status="Contacted"] { background: $status-contacted; }
   &[data-status="Qualified"] { background: $status-qualified; }
   &[data-status="Converted"] { background: $status-converted; }
   &[data-status="Lost"] { background: $status-lost; }
@@ -605,42 +547,28 @@ $status-lost: #ef4444;
   }
 }
 
-.views-controls {
-  display: flex;
+
+.status-option {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-
-  .btn-ghost {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
+  gap: 0.5rem;
+  font-weight: 600;
 }
 
-.views-input {
-  min-width: 160px;
-  padding: 8px 10px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 10px;
-  font-size: 13px;
-  color: $gray-700;
-  background: white;
-
-  &:focus {
-    outline: none;
-    border-color: $status-qualified;
-    box-shadow: 0 0 0 3px rgba($status-qualified, 0.12);
-  }
+.status-option i {
+  font-size: 0.9rem;
 }
 
-::ng-deep .views-select {
-  .p-select {
-    min-width: 160px;
-    border-radius: 10px;
-  }
+.status-placeholder {
+  color: rgba($gray-600, 0.8);
+  font-weight: 500;
 }
+
+.status-option[data-status="New"] i { color: $status-new; }
+.status-option[data-status="Contacted"] i { color: $status-contacted; }
+.status-option[data-status="Qualified"] i { color: $status-qualified; }
+.status-option[data-status="Converted"] i { color: $status-converted; }
+.status-option[data-status="Lost"] i { color: $status-lost; }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // KANBAN BOARD
@@ -676,6 +604,7 @@ $status-lost: #ef4444;
   border-bottom: 2px solid;
 
   &[data-status="New"] { border-color: $status-new; }
+  &[data-status="Contacted"] { border-color: $status-contacted; }
   &[data-status="Qualified"] { border-color: $status-qualified; }
   &[data-status="Converted"] { border-color: $status-converted; }
   &[data-status="Lost"] { border-color: $status-lost; }
@@ -739,6 +668,7 @@ $status-lost: #ef4444;
   flex-shrink: 0;
 
   &[data-status="New"] { background: linear-gradient(135deg, $status-new 0%, color.adjust($status-new, $lightness: -10%) 100%); }
+  &[data-status="Contacted"] { background: linear-gradient(135deg, $status-contacted 0%, color.adjust($status-contacted, $lightness: -10%) 100%); }
   &[data-status="Qualified"] { background: linear-gradient(135deg, $status-qualified 0%, color.adjust($status-qualified, $lightness: -10%) 100%); }
   &[data-status="Converted"] { background: linear-gradient(135deg, $status-converted 0%, color.adjust($status-converted, $lightness: -10%) 100%); }
   &[data-status="Lost"] { background: linear-gradient(135deg, $status-lost 0%, color.adjust($status-lost, $lightness: -10%) 100%); }
@@ -874,6 +804,11 @@ $status-lost: #ef4444;
     background: rgba($status-converted, 0.12);
     color: $status-converted;
   }
+
+  &.info:hover {
+    background: rgba($primary, 0.12);
+    color: $primary;
+  }
 }
 
 .column-empty {
@@ -982,10 +917,11 @@ $status-lost: #ef4444;
     color: white;
     flex-shrink: 0;
 
-  &[data-status="New"] { background: linear-gradient(135deg, $status-new 0%, color.adjust($status-new, $lightness: -10%) 100%); }
-  &[data-status="Qualified"] { background: linear-gradient(135deg, $status-qualified 0%, color.adjust($status-qualified, $lightness: -10%) 100%); }
-  &[data-status="Converted"] { background: linear-gradient(135deg, $status-converted 0%, color.adjust($status-converted, $lightness: -10%) 100%); }
-  &[data-status="Lost"] { background: linear-gradient(135deg, $status-lost 0%, color.adjust($status-lost, $lightness: -10%) 100%); }
+    &[data-status="New"] { background: linear-gradient(135deg, $status-new 0%, color.adjust($status-new, $lightness: -10%) 100%); }
+    &[data-status="Contacted"] { background: linear-gradient(135deg, $status-contacted 0%, color.adjust($status-contacted, $lightness: -10%) 100%); }
+    &[data-status="Qualified"] { background: linear-gradient(135deg, $status-qualified 0%, color.adjust($status-qualified, $lightness: -10%) 100%); }
+    &[data-status="Converted"] { background: linear-gradient(135deg, $status-converted 0%, color.adjust($status-converted, $lightness: -10%) 100%); }
+    &[data-status="Lost"] { background: linear-gradient(135deg, $status-lost 0%, color.adjust($status-lost, $lightness: -10%) 100%); }
 }
 
   .lead-info {
@@ -1017,6 +953,11 @@ $status-lost: #ef4444;
   &[data-status="New"] {
     background: rgba($status-new, 0.12);
     color: color.adjust($status-new, $lightness: -15%);
+  }
+
+  &[data-status="Contacted"] {
+    background: rgba($status-contacted, 0.12);
+    color: color.adjust($status-contacted, $lightness: -10%);
   }
 
   &[data-status="Qualified"] {

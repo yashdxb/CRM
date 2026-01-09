@@ -48,12 +48,12 @@ Acceptance criteria are written as testable statements (UI + API).
   - Conversion creates account/contact/opportunity when selected.
 
 4) Lead AI scoring
-- Status: PARTIAL
+- Status: DONE
 - Evidence:
-  - Rule-based auto score: `server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs`
-  - UI toggle + preview: `client/src/app/features/leads/pages/lead-form.page.ts`
-- Gap:
-  - No AI integration (Azure OpenAI or similar)
+  - OpenAI scoring service: `server/src/CRM.Enterprise.Infrastructure/Leads/OpenAiLeadScoringService.cs`
+  - AI score endpoint: `server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs`
+  - Auto-score trigger on key field changes: `server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs`
+  - UI trigger + display: `client/src/app/features/leads/pages/lead-form.page.ts`
 - Acceptance criteria:
   - AI score returns a confidence and rationale.
   - Score updates when key fields change.
@@ -120,6 +120,9 @@ Acceptance criteria are written as testable statements (UI + API).
 - Evidence:
   - In-app toast notifications: `client/src/app/core/notifications/notification.service.ts`
   - UI container: `client/src/app/core/notifications/notification-container.component.ts`
+  - Preferences API: `server/src/CRM.Enterprise.Api/Controllers/NotificationPreferencesController.cs`
+  - Email delivery jobs: `server/src/CRM.Enterprise.Api/Jobs/NotificationEmailJobs.cs`
+  - Preferences UI: `client/src/app/features/settings/pages/notifications.page.ts`
 - Acceptance criteria:
   - Notification center with read/unread state.
   - Email notifications for tasks/opps with opt-out preferences.

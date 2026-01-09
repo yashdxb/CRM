@@ -1,4 +1,4 @@
-import { DatePipe, NgFor, NgIf } from '@angular/common';
+import { NgFor, NgIf } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
@@ -22,10 +22,8 @@ import { CustomerDataService } from '../../customers/services/customer-data.serv
 import { Customer } from '../../customers/models/customer.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CsvColumn, exportToCsv } from '../../../../shared/utils/csv';
-import { SavedView, SavedViewsService } from '../../../../shared/services/saved-views.service';
 import { BulkAction, BulkActionsBarComponent } from '../../../../shared/components/bulk-actions/bulk-actions-bar.component';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
-import { RecentlyViewedItem, RecentlyViewedService } from '../../../../shared/services/recently-viewed.service';
 import { CsvImportJob, CsvImportJobStatusResponse } from '../../../../shared/models/csv-import.model';
 import { ImportJobService } from '../../../../shared/services/import-job.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -37,12 +35,6 @@ interface LifecycleOption {
   value: string | 'all';
 }
 
-interface ContactViewFilters {
-  searchTerm: string;
-  ownerFilter: string;
-  lifecycleFilter: LifecycleOption['value'];
-  accountFilter: string | 'all';
-}
 
 @Component({
   selector: 'app-contacts-page',
@@ -50,7 +42,6 @@ interface ContactViewFilters {
   imports: [
     NgIf,
     NgFor,
-    DatePipe,
     FormsModule,
     CardModule,
     CheckboxModule,
@@ -123,13 +114,6 @@ export class ContactsPage {
   protected accountFilter: string | 'all' = 'all';
   protected pageIndex = 0;
   protected rows = 10;
-  protected readonly savedViews = signal<SavedView<ContactViewFilters>[]>([]);
-  protected readonly selectedViewId = signal<string | null>(null);
-  protected readonly viewOptions = computed(() => [
-    { label: 'Saved views', value: null },
-    ...this.savedViews().map((view) => ({ label: view.name, value: view.id }))
-  ]);
-  protected viewName = '';
   protected readonly selectedIds = signal<string[]>([]);
   protected readonly bulkActions = computed<BulkAction[]>(() => {
     const disabled = !this.canManage();
@@ -144,7 +128,6 @@ export class ContactsPage {
   protected assignOwnerId: string | null = null;
   protected statusDialogVisible = false;
   protected bulkStatus: string | null = null;
-  protected readonly recentContacts = computed(() => this.recentlyViewed.itemsFor('contacts'));
   protected importDialogVisible = false;
   protected importFile: File | null = null;
   protected readonly importJob = signal<CsvImportJob | null>(null);
@@ -171,9 +154,7 @@ export class ContactsPage {
     private readonly contactsData: ContactDataService,
     private readonly customerData: CustomerDataService,
     private readonly router: Router,
-    private readonly savedViewsService: SavedViewsService,
     private readonly userAdminData: UserAdminDataService,
-    private readonly recentlyViewed: RecentlyViewedService,
     private readonly toastService: AppToastService,
     private readonly importJobs: ImportJobService
   ) {
@@ -181,7 +162,6 @@ export class ContactsPage {
     if (toast) {
       this.toastService.show(toast.tone, toast.message, 3000);
     }
-    this.loadSavedViews();
     this.load();
     this.loadAccounts();
     this.loadOwners();
@@ -264,16 +244,7 @@ export class ContactsPage {
   }
 
   protected onEdit(row: Contact) {
-    this.recentlyViewed.add('contacts', {
-      id: row.id,
-      title: row.name,
-      subtitle: row.email || row.accountName || 'Contact'
-    });
     this.router.navigate(['/app/contacts', row.id, 'edit'], { state: { contact: row } });
-  }
-
-  protected openRecent(item: RecentlyViewedItem) {
-    this.router.navigate(['/app/contacts', item.id, 'edit']);
   }
 
   protected onDelete(row: Contact) {
@@ -508,48 +479,6 @@ export class ContactsPage {
     this.toastService.show(tone, message, 3000);
   }
 
-  protected onSaveView() {
-    const name = this.viewName.trim();
-    if (!name) {
-      return;
-    }
-    const saved = this.savedViewsService.saveView<ContactViewFilters>('contacts', {
-      name,
-      filters: {
-        searchTerm: this.searchTerm,
-        ownerFilter: this.ownerFilter(),
-        lifecycleFilter: this.lifecycleFilter(),
-        accountFilter: this.accountFilter
-      }
-    });
-    this.viewName = '';
-    this.loadSavedViews();
-    this.selectedViewId.set(saved.id);
-  }
-
-  protected onSelectView(id: string | null) {
-    if (!id) {
-      this.selectedViewId.set(null);
-      return;
-    }
-    const view = this.savedViews().find((item) => item.id === id);
-    if (!view) {
-      return;
-    }
-    this.selectedViewId.set(id);
-    this.applyView(view);
-  }
-
-  protected onDeleteView() {
-    const selected = this.selectedViewId();
-    if (!selected) {
-      return;
-    }
-    this.savedViewsService.deleteView('contacts', selected);
-    this.selectedViewId.set(null);
-    this.loadSavedViews();
-  }
-
   protected onExport() {
     const rows = this.filteredContacts();
     const columns: CsvColumn<Contact>[] = [
@@ -568,20 +497,6 @@ export class ContactsPage {
     if (stage === 'Prospect') return 'warn';
     if (stage === 'Lead') return 'info';
     return 'info';
-  }
-
-  private loadSavedViews() {
-    this.savedViews.set(this.savedViewsService.getViews<ContactViewFilters>('contacts'));
-  }
-
-  private applyView(view: SavedView<ContactViewFilters>) {
-    const filters = view.filters;
-    this.searchTerm = filters.searchTerm ?? '';
-    this.ownerFilter.set(filters.ownerFilter ?? 'all');
-    this.lifecycleFilter.set(filters.lifecycleFilter ?? 'all');
-    this.accountFilter = filters.accountFilter ?? 'all';
-    this.pageIndex = 0;
-    this.load();
   }
 
   private loadOwners() {

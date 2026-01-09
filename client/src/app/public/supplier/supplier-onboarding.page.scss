@@ -1,0 +1,345 @@
+@use '../../shared/page-design-system' as *;
+
+.registration-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.registration-card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 960px;
+  width: 100%;
+  padding: 2.5rem;
+
+  @media (max-width: 768px) {
+    padding: 1.5rem;
+  }
+}
+
+.registration-header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 0.5rem 0;
+  }
+
+  p {
+    font-size: 1rem;
+    color: #6b7280;
+    margin: 0;
+  }
+}
+
+.registration-meta {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.meta-pill {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.meta-text {
+  opacity: 0.9;
+}
+
+.step-form {
+  padding: 1.5rem 0;
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 1.5rem 0;
+  }
+
+  h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 1.5rem 0 1rem 0;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 2rem 0 1rem 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+  }
+}
+
+.section-subtitle {
+  margin: -0.75rem 0 1.25rem;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+
+  label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.95rem;
+  }
+
+  input {
+    width: 100%;
+  }
+
+  .form-hint {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+  }
+
+  small.error {
+    font-size: 0.85rem;
+    color: #dc2626;
+    margin-top: 0.25rem;
+  }
+
+  .checkbox-label {
+    margin-left: 0.5rem;
+    font-weight: normal;
+
+    a {
+      color: #2563eb;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.certifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.certification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f3f4f6;
+    border-color: #d1d5db;
+  }
+
+  .cert-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .cert-type {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      color: #1f2937;
+      font-size: 1rem;
+
+      i {
+        color: #dc2626;
+        font-size: 1.25rem;
+      }
+    }
+
+    .cert-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.875rem;
+      color: #6b7280;
+
+      .cert-number {
+        font-weight: 500;
+        color: #374151;
+      }
+
+      .cert-dates {
+        font-style: italic;
+      }
+
+      .cert-file {
+        color: #2563eb;
+      }
+    }
+  }
+
+  .cert-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+
+    .cert-actions {
+      width: 100%;
+      justify-content: flex-end;
+    }
+  }
+}
+
+.add-cert-section {
+  margin: 1.5rem 0;
+}
+
+.certification-form-panel {
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  h4 {
+    margin-top: 0;
+    color: #1f2937;
+  }
+
+  .cert-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+    }
+  }
+}
+
+.review-section {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+
+  h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #1f2937;
+  }
+
+  .review-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    .review-item {
+      display: flex;
+      justify-content: space-between;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+
+      &:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+
+      .review-label {
+        font-weight: 600;
+        color: #6b7280;
+        font-size: 0.95rem;
+      }
+
+      .review-value {
+        color: #1f2937;
+        font-size: 0.95rem;
+        text-align: right;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .registration-container {
+    padding: 1rem;
+  }
+
+  .registration-card {
+    padding: 1.5rem 1rem;
+  }
+
+  .registration-header {
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    p {
+      font-size: 0.9rem;
+    }
+  }
+
+  .step-form {
+    h3 {
+      font-size: 1.25rem;
+    }
+  }
+}

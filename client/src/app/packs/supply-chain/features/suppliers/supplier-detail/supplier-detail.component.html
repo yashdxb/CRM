@@ -1,0 +1,76 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container supplier-detail">
+  <div class="page-content" *ngIf="supplier as supplier">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-gradient">Supplier</span>
+            <span class="title-light">Profile</span>
+          </h1>
+          <p class="hero-description">Review supplier details, contacts, and onboarding status.</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button pButton type="button" class="btn-glass" (click)="navigateToList()">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to directory</span>
+        </button>
+        <button pButton type="button" class="btn-gradient" (click)="editSupplier()">
+          <i class="pi pi-pencil"></i>
+          <span>Edit supplier</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="glass-card detail-card">
+      <div class="detail-header">
+        <div>
+          <div class="detail-title">{{ supplier.companyName }}</div>
+          <div class="detail-subtitle">Supplier ID: {{ supplier.id }}</div>
+        </div>
+        <p-tag [value]="supplier.status" [severity]="getStatusSeverity(supplier.status)"></p-tag>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="label">Industry</span>
+          <span class="value">{{ supplier.industry }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Country</span>
+          <span class="value">{{ supplier.country }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Contact</span>
+          <span class="value">{{ supplier.contactName }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Email</span>
+          <span class="value">{{ supplier.contactEmail }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Phone</span>
+          <span class="value">{{ supplier.contactPhone }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="label">Website</span>
+          <span class="value">{{ supplier.website }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card notes-card">
+      <div class="card-title">Notes</div>
+      <p class="notes-text">{{ supplier.notes }}</p>
+    </section>
+  </div>
+</div>

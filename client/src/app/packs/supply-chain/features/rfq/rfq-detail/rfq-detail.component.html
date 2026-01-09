@@ -1,0 +1,251 @@
+<div class="rfq-detail">
+  <p-toast></p-toast>
+
+  <div *ngIf="rfq; else loading" class="detail-container">
+    <!-- Header -->
+    <div class="detail-header">
+      <div class="header-left">
+        <p-button
+          icon="pi pi-arrow-left"
+          [text]="true"
+          (onClick)="goBack()"
+          label="Back to List">
+        </p-button>
+      </div>
+      <div class="header-right">
+        <p-button
+          icon="pi pi-pencil"
+          label="Edit"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="editRFQ()"
+          *ngIf="rfq.status === 'Draft'">
+        </p-button>
+        <p-button
+          icon="pi pi-send"
+          label="Publish"
+          (onClick)="publishRFQ()"
+          *ngIf="rfq.status === 'Draft'">
+        </p-button>
+        <p-button
+          icon="pi pi-chart-bar"
+          label="Compare Quotes"
+          (onClick)="compareQuotes()"
+          *ngIf="rfq.status === 'Published' || rfq.status === 'In Progress'">
+        </p-button>
+        <p-button
+          icon="pi pi-trophy"
+          label="View Award"
+          severity="success"
+          [outlined]="true"
+          (onClick)="viewAward()"
+          *ngIf="awardId && rfq.status === 'Awarded'">
+        </p-button>
+        <p-button
+          icon="pi pi-lock"
+          label="Close RFQ"
+          severity="warn"
+          (onClick)="closeRFQ()"
+          *ngIf="rfq.status === 'Published' || rfq.status === 'In Progress'">
+        </p-button>
+        <p-button
+          icon="pi pi-times"
+          label="Cancel"
+          severity="danger"
+          [outlined]="true"
+          (onClick)="cancelRFQ()"
+          *ngIf="rfq.status !== 'Awarded' && rfq.status !== 'Cancelled'">
+        </p-button>
+      </div>
+    </div>
+
+    <!-- Title Section -->
+    <div class="title-section">
+      <div class="title-row">
+        <div class="rfq-number">{{ rfq.rfqNumber }}</div>
+        <div class="tags">
+          <p-tag [value]="rfq.type" [severity]="getTypeSeverity(rfq.type)"></p-tag>
+          <p-tag [value]="rfq.status" [severity]="getStatusSeverity(rfq.status)"></p-tag>
+        </div>
+      </div>
+      <h1 class="rfq-title">{{ rfq.title }}</h1>
+      <p class="rfq-description" *ngIf="rfq.description">{{ rfq.description }}</p>
+    </div>
+
+    <!-- Key Info Cards -->
+    <div class="info-cards">
+      <div class="info-card">
+        <div class="card-icon">
+          <i class="pi pi-calendar"></i>
+        </div>
+        <div class="card-content">
+          <div class="card-label">Close Date</div>
+          <div class="card-value">{{ rfq.closeDate | date: 'MMM dd, yyyy' }}</div>
+          <div class="card-meta" *ngIf="rfq.status === 'Published'">
+            {{ getDaysRemaining() }} days remaining
+          </div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="card-icon">
+          <i class="pi pi-building"></i>
+        </div>
+        <div class="card-content">
+          <div class="card-label">Invited Suppliers</div>
+          <div class="card-value">{{ rfq.invitedSupplierCount }}</div>
+          <div class="card-meta">suppliers invited</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="card-icon">
+          <i class="pi pi-file"></i>
+        </div>
+        <div class="card-content">
+          <div class="card-label">Responses</div>
+          <div class="card-value">{{ rfq.responseCount }} / {{ rfq.invitedSupplierCount }}</div>
+          <div class="card-meta">quotes received</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="card-icon">
+          <i class="pi pi-dollar"></i>
+        </div>
+        <div class="card-content">
+          <div class="card-label">Currency</div>
+          <div class="card-value">{{ rfq.currency }}</div>
+          <div class="card-meta">{{ rfq.lineItems.length }} line items</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Section -->
+    <div class="details-grid">
+      <!-- General Information -->
+      <div class="detail-card">
+        <h3 class="card-title">General Information</h3>
+        <p-divider></p-divider>
+        <div class="detail-rows">
+          <div class="detail-row">
+            <span class="detail-label">Buyer Organization:</span>
+            <span class="detail-value">{{ rfq.buyerName }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Response Deadline:</span>
+            <span class="detail-value">{{ rfq.responseDeadline | date: 'MMM dd, yyyy HH:mm' }}</span>
+          </div>
+          <div class="detail-row" *ngIf="rfq.publishDate">
+            <span class="detail-label">Published Date:</span>
+            <span class="detail-value">{{ rfq.publishDate | date: 'MMM dd, yyyy' }}</span>
+          </div>
+          <div class="detail-row" *ngIf="rfq.deliveryDate">
+            <span class="detail-label">Required Delivery Date:</span>
+            <span class="detail-value">{{ rfq.deliveryDate | date: 'MMM dd, yyyy' }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Created By:</span>
+            <span class="detail-value">{{ rfq.createdBy }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Created At:</span>
+            <span class="detail-value">{{ rfq.createdAt | date: 'MMM dd, yyyy HH:mm' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Terms & Conditions -->
+      <div class="detail-card">
+        <h3 class="card-title">Terms & Conditions</h3>
+        <p-divider></p-divider>
+        <div class="detail-rows">
+          <div class="detail-row" *ngIf="rfq.paymentTerms">
+            <span class="detail-label">Payment Terms:</span>
+            <span class="detail-value">{{ rfq.paymentTerms }}</span>
+          </div>
+          <div class="detail-row" *ngIf="rfq.incoterms">
+            <span class="detail-label">Incoterms:</span>
+            <span class="detail-value">{{ rfq.incoterms }}</span>
+          </div>
+          <div class="detail-row" *ngIf="rfq.deliveryLocation">
+            <span class="detail-label">Delivery Location:</span>
+            <span class="detail-value">{{ rfq.deliveryLocation }}</span>
+          </div>
+          <div class="detail-row">
+            <span class="detail-label">Currency:</span>
+            <span class="detail-value">{{ rfq.currency }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Line Items -->
+    <div class="line-items-section">
+      <h3 class="section-title">Line Items</h3>
+      <div class="table-container">
+        <p-table [value]="rfq.lineItems" styleClass="p-datatable-sm">
+          <ng-template pTemplate="header">
+            <tr>
+              <th style="width: 50px">#</th>
+              <th>Product Name</th>
+              <th>Description</th>
+              <th>Quantity</th>
+              <th>UOM</th>
+              <th>Target Price</th>
+              <th>Specifications</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-item let-i="rowIndex">
+            <tr>
+              <td>{{ i + 1 }}</td>
+              <td>
+                <span class="product-name">{{ item.productName }}</span>
+              </td>
+              <td>{{ item.description }}</td>
+              <td>
+                <span class="quantity">{{ item.quantity }}</span>
+              </td>
+              <td>{{ item.uom }}</td>
+              <td>
+                <span class="target-price" *ngIf="item.targetPrice">
+                  {{ rfq.currency }} {{ item.targetPrice | number: '1.2-2' }}
+                </span>
+                <span *ngIf="!item.targetPrice">-</span>
+              </td>
+              <td>
+                <span class="specifications">{{ item.specifications || '-' }}</span>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+
+    <!-- Responses Section -->
+    <div class="responses-section" *ngIf="rfq.status !== 'Draft'">
+      <div class="section-header">
+        <h3 class="section-title">Supplier Responses</h3>
+        <p-button
+          icon="pi pi-eye"
+          label="View All Responses"
+          [outlined]="true"
+          size="small"
+          (onClick)="viewResponses()">
+        </p-button>
+      </div>
+      <div class="response-placeholder">
+        <i class="pi pi-inbox"></i>
+        <p>{{ rfq.responseCount }} response(s) received</p>
+        <small>Click "View All Responses" to see supplier quotes</small>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #loading>
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Loading RFQ details...</p>
+    </div>
+  </ng-template>
+</div>

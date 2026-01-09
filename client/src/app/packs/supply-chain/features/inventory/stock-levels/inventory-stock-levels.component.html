@@ -1,0 +1,138 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content stock-levels">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-indigo">Stock Levels</h1>
+          <p class="page-subtitle">
+            Track on-hand quantities versus safety and reorder thresholds across warehouses.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <p-button label="Export" icon="pi pi-download" styleClass="btn-glass"></p-button>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card summary-card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Inventory filters</h2>
+          <p class="card-subtitle">Filter the watchlist by status, category, and warehouse.</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="filters">
+          <span class="p-input-icon-left search">
+            <i class="pi pi-search"></i>
+            <input
+              pInputText
+              type="text"
+              placeholder="Search SKU, product, or supplier"
+              [(ngModel)]="searchValue"
+            />
+          </span>
+          <p-select
+            [options]="filterOptions.status"
+            [(ngModel)]="selectedStatusValue"
+            optionLabel="label"
+            optionValue="value"
+          ></p-select>
+          <p-select
+            [options]="filterOptions.category"
+            [(ngModel)]="selectedCategoryValue"
+            optionLabel="label"
+            optionValue="value"
+          ></p-select>
+          <p-select
+            [options]="filterOptions.warehouse"
+            [(ngModel)]="selectedWarehouseValue"
+            optionLabel="label"
+            optionValue="value"
+          ></p-select>
+        </div>
+        <div class="pills">
+          <p-chip label="Critical" [styleClass]="'pill danger'" [removable]="false">
+            <span class="count">{{ criticalCount() }}</span>
+          </p-chip>
+          <p-chip label="Watch" [styleClass]="'pill warn'" [removable]="false">
+            <span class="count">{{ watchCount() }}</span>
+          </p-chip>
+          <p-chip label="Healthy" [styleClass]="'pill success'" [removable]="false">
+            <span class="count">{{ filteredRows().length - criticalCount() - watchCount() }}</span>
+          </p-chip>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card table-card">
+      <div class="card-header">
+        <h2 class="card-title">Stock positions</h2>
+      </div>
+      <div class="card-body">
+        <p-table [value]="filteredRows()" dataKey="sku" responsiveLayout="scroll" class="level-table">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>SKU / Product</th>
+              <th>Category</th>
+              <th>Supplier</th>
+              <th>Warehouse</th>
+              <th>Current vs safety</th>
+              <th>Reorder point</th>
+              <th>Days cover</th>
+              <th>On order</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr>
+              <td>
+                <div class="sku-cell">
+                  <span class="sku">{{ row.sku }}</span>
+                  <p class="product">{{ row.product }}</p>
+                  <div class="tag-strip">
+                    <p-chip *ngFor="let tag of row.tags" [label]="tag"></p-chip>
+                  </div>
+                </div>
+              </td>
+              <td>{{ row.category }}</td>
+              <td>{{ row.supplier }}</td>
+              <td>{{ row.warehouse }}</td>
+              <td>
+                <div class="stock-bar">
+                  <span class="values">{{ row.current | number }} / {{ row.safety | number }}</span>
+                  <p-progressBar [value]="stockProgress(row)"></p-progressBar>
+                </div>
+              </td>
+              <td>{{ row.reorder | number }}</td>
+              <td>
+                <span class="days" [ngClass]="{ low: row.daysCover < 12 }">
+                  {{ row.daysCover }} days
+                </span>
+              </td>
+              <td>
+                <span>{{ row.onOrder | number }}</span>
+              </td>
+              <td>
+                <p-tag [value]="row.status" [severity]="severity(row.status)"></p-tag>
+              </td>
+              <td class="row-actions">
+                <p-button icon="pi pi-send" [text]="true" label="Rebalance"></p-button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  </div>
+</div>

@@ -6,6 +6,7 @@ using CRM.Enterprise.Api.Contracts.Dashboard;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
+using System.Security.Claims;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -24,7 +25,7 @@ public class DashboardController : ControllerBase
     [HttpGet("summary")]
     public async Task<ActionResult<DashboardSummaryResponse>> GetSummary(CancellationToken cancellationToken)
     {
-        var summary = await _mediator.Send(new GetDashboardSummaryQuery(), cancellationToken);
+        var summary = await _mediator.Send(new GetDashboardSummaryQuery(GetCurrentUserId()), cancellationToken);
 
         var recentCustomers = summary.RecentAccounts
             .Select(rc => new CustomerListItem(
@@ -44,6 +45,26 @@ public class DashboardController : ControllerBase
                 a.Id,
                 a.Subject,
                 a.Type,
+                null,
+                null,
+                null,
+                a.RelatedEntityId,
+                a.RelatedEntityName,
+                a.RelatedEntityType,
+                a.DueDateUtc,
+                a.CompletedDateUtc,
+                a.Status,
+                null,
+                null,
+                a.DueDateUtc ?? DateTime.UtcNow))
+            .ToList();
+
+        var myTasks = summary.MyTasks
+            .Select(a => new ActivityListItem(
+                a.Id,
+                a.Subject,
+                a.Type,
+                null,
                 null,
                 null,
                 a.RelatedEntityId,
@@ -69,6 +90,7 @@ public class DashboardController : ControllerBase
             summary.OverdueActivities,
             recentCustomers,
             activitiesNextWeek,
+            myTasks,
             summary.PipelineValue.Select(stage => new PipelineStageSummary(stage.Stage, stage.Count, stage.Value)).ToList(),
             summary.RevenueByMonth.Select(point => new ChartDataPoint(point.Label, point.Value)).ToList(),
             summary.CustomerGrowth.Select(point => new ChartDataPoint(point.Label, point.Value)).ToList(),
@@ -83,5 +105,11 @@ public class DashboardController : ControllerBase
             summary.ChurnRate);
 
         return Ok(response);
+    }
+
+    private Guid? GetCurrentUserId()
+    {
+        var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(subject, out var userId) ? userId : null;
     }
 }

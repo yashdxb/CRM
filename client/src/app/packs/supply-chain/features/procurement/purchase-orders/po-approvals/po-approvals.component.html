@@ -1,0 +1,94 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container po-approvals">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-gradient">PO</span>
+            <span class="title-light">Approvals</span>
+          </h1>
+          <p class="hero-description">Monitor pending approvals, escalations, and audit-ready trails.</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button pButton type="button" class="btn-glass">
+          <i class="pi pi-sliders-h"></i>
+          <span>Approval Matrix</span>
+        </button>
+        <button pButton type="button" class="btn-gradient">
+          <i class="pi pi-check"></i>
+          <span>Review Queue</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="table-container glass-card">
+      <p-table [value]="approvals" responsiveLayout="scroll" [tableStyle]="{ 'min-width': '68rem' }">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>PO</th>
+            <th>Requestor</th>
+            <th>Timeline</th>
+            <th>Status</th>
+            <th>Approvers</th>
+            <th>Amount</th>
+            <th style="width: 140px">Action</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-item>
+          <tr>
+            <td>
+              <div class="ref">
+                <span class="id">{{ item.poNumber }}</span>
+                <span class="department">{{ item.department }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="requestor">
+                <p-avatar size="large" shape="circle" [label]="item.requestor.charAt(0)"></p-avatar>
+                <div>
+                  <span class="name">{{ item.requestor }}</span>
+                  <span class="notes">{{ item.notes }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="timeline">
+                <span>Submitted {{ item.submittedOn }}</span>
+                <span class="due">Due {{ item.dueBy }}</span>
+              </div>
+            </td>
+            <td>
+              <p-tag [value]="item.status" [severity]="statusSeverity(item.status)"></p-tag>
+            </td>
+            <td>
+              <div class="chips">
+                <p-chip
+                  *ngFor="let approver of item.approvers"
+                  [label]="approver"
+                  [ngClass]="{ 'current': approver === item.currentApprover }">
+                </p-chip>
+              </div>
+            </td>
+            <td class="amount">{{ item.amount }}</td>
+            <td class="row-actions">
+              <button pButton type="button" class="btn-gradient btn-sm">
+                <i class="pi pi-check"></i>
+                <span>Review</span>
+              </button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+  </div>
+</div>

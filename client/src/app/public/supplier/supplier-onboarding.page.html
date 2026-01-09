@@ -1,0 +1,565 @@
+<div class="registration-container">
+  <div class="registration-card">
+    <div class="registration-header">
+      <h1>Supplier Registration</h1>
+      <p>Join the supplier network and respond to RFQs faster.</p>
+      <div class="registration-meta">
+        <span class="meta-pill">Step {{ activeIndex + 1 }} of 4</span>
+        <span class="meta-text">Estimated time: 5-7 minutes</span>
+        <span class="meta-text">Fields marked * are required</span>
+      </div>
+    </div>
+
+    <p-tabs [(value)]="activeIndex">
+      <p-tablist>
+        <p-tab [value]="0">Company</p-tab>
+        <p-tab [value]="1">Contact</p-tab>
+        <p-tab [value]="2">Certifications</p-tab>
+        <p-tab [value]="3">Account</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <p-tabpanel [value]="0">
+          <form [formGroup]="companyForm" class="step-form">
+            <h3>Company Information</h3>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="companyName">Company Name *</label>
+                <input
+                  pInputText
+                  id="companyName"
+                  formControlName="companyName"
+                  placeholder="Enter company name" />
+                <small class="error" *ngIf="isFieldInvalid(companyForm, 'companyName')">
+                  {{ getFieldError(companyForm, 'companyName') }}
+                </small>
+              </div>
+
+              <div class="form-field">
+                <label for="taxId">Tax ID / EIN *</label>
+                <input
+                  pInputText
+                  id="taxId"
+                  formControlName="taxId"
+                  placeholder="XX-XXXXXXX" />
+                <small class="error" *ngIf="isFieldInvalid(companyForm, 'taxId')">
+                  {{ getFieldError(companyForm, 'taxId') }}
+                </small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="businessType">Business Type *</label>
+                <p-select
+                  id="businessType"
+                  formControlName="businessType"
+                  [options]="businessTypes"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select business type"
+                  appendTo="body"
+                  [style]="{ width: '100%' }">
+                </p-select>
+                <small class="error" *ngIf="isFieldInvalid(companyForm, 'businessType')">
+                  {{ getFieldError(companyForm, 'businessType') }}
+                </small>
+              </div>
+
+              <div class="form-field">
+                <label for="industry">Industry *</label>
+                <p-select
+                  id="industry"
+                  formControlName="industry"
+                  [options]="industries"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select industry"
+                  appendTo="body"
+                  [style]="{ width: '100%' }">
+                </p-select>
+                <small class="error" *ngIf="isFieldInvalid(companyForm, 'industry')">
+                  {{ getFieldError(companyForm, 'industry') }}
+                </small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="yearEstablished">Year Established *</label>
+                <input
+                  pInputText
+                  id="yearEstablished"
+                  type="number"
+                  formControlName="yearEstablished"
+                  placeholder="YYYY" />
+                <small class="error" *ngIf="isFieldInvalid(companyForm, 'yearEstablished')">
+                  {{ getFieldError(companyForm, 'yearEstablished') }}
+                </small>
+              </div>
+
+              <div class="form-field">
+                <label for="numberOfEmployees">Number of Employees *</label>
+                <p-select
+                  id="numberOfEmployees"
+                  formControlName="numberOfEmployees"
+                  [options]="employeeRanges"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select range"
+                  appendTo="body"
+                  [style]="{ width: '100%' }">
+                </p-select>
+                <small class="error" *ngIf="isFieldInvalid(companyForm, 'numberOfEmployees')">
+                  {{ getFieldError(companyForm, 'numberOfEmployees') }}
+                </small>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="website">Website (Optional)</label>
+              <input
+                pInputText
+                id="website"
+                formControlName="website"
+                placeholder="https://www.example.com" />
+              <small class="form-hint">Public site or product catalog link.</small>
+              <small class="error" *ngIf="isFieldInvalid(companyForm, 'website')">
+                {{ getFieldError(companyForm, 'website') }}
+              </small>
+            </div>
+
+            <div class="step-actions">
+              <p-button
+                type="button"
+                label="Next"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                (onClick)="nextStep()">
+              </p-button>
+            </div>
+          </form>
+        </p-tabpanel>
+
+        <p-tabpanel [value]="1">
+          <form [formGroup]="contactForm" class="step-form">
+            <h3>Primary Contact Information</h3>
+            <p class="section-subtitle">We will use this contact for RFQ communication.</p>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="primaryContactName">Full Name *</label>
+                <input
+                  pInputText
+                  id="primaryContactName"
+                  formControlName="primaryContactName"
+                  placeholder="John Doe" />
+                <small class="error" *ngIf="isFieldInvalid(contactForm, 'primaryContactName')">
+                  {{ getFieldError(contactForm, 'primaryContactName') }}
+                </small>
+              </div>
+
+              <div class="form-field">
+                <label for="primaryContactPosition">Position *</label>
+                <input
+                  pInputText
+                  id="primaryContactPosition"
+                  formControlName="primaryContactPosition"
+                  placeholder="Sales Manager" />
+                <small class="error" *ngIf="isFieldInvalid(contactForm, 'primaryContactPosition')">
+                  {{ getFieldError(contactForm, 'primaryContactPosition') }}
+                </small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="primaryContactEmail">Email *</label>
+                <input
+                  pInputText
+                  id="primaryContactEmail"
+                  type="email"
+                  formControlName="primaryContactEmail"
+                  placeholder="john@company.com" />
+                <small class="error" *ngIf="isFieldInvalid(contactForm, 'primaryContactEmail')">
+                  {{ getFieldError(contactForm, 'primaryContactEmail') }}
+                </small>
+              </div>
+
+              <div class="form-field">
+                <label for="primaryContactPhone">Phone *</label>
+                <input
+                  pInputText
+                  id="primaryContactPhone"
+                  formControlName="primaryContactPhone"
+                  placeholder="+1 (555) 123-4567" />
+                <small class="error" *ngIf="isFieldInvalid(contactForm, 'primaryContactPhone')">
+                  {{ getFieldError(contactForm, 'primaryContactPhone') }}
+                </small>
+              </div>
+            </div>
+
+            <h3 class="section-title">Company Address</h3>
+            <p class="section-subtitle">Used for documentation and compliance records.</p>
+
+            <div class="form-field">
+              <label for="street">Street Address *</label>
+              <input
+                pInputText
+                id="street"
+                formControlName="street"
+                placeholder="123 Main Street" />
+              <small class="error" *ngIf="isFieldInvalid(contactForm, 'street')">
+                {{ getFieldError(contactForm, 'street') }}
+              </small>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="city">City *</label>
+                <input
+                  pInputText
+                  id="city"
+                  formControlName="city"
+                  placeholder="New York" />
+                <small class="error" *ngIf="isFieldInvalid(contactForm, 'city')">
+                  {{ getFieldError(contactForm, 'city') }}
+                </small>
+              </div>
+
+              <div class="form-field">
+                <label for="state">State/Province *</label>
+                <input
+                  pInputText
+                  id="state"
+                  formControlName="state"
+                  placeholder="NY" />
+                <small class="error" *ngIf="isFieldInvalid(contactForm, 'state')">
+                  {{ getFieldError(contactForm, 'state') }}
+                </small>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="country">Country *</label>
+                <input
+                  pInputText
+                  id="country"
+                  formControlName="country"
+                  placeholder="United States" />
+                <small class="error" *ngIf="isFieldInvalid(contactForm, 'country')">
+                  {{ getFieldError(contactForm, 'country') }}
+                </small>
+              </div>
+
+              <div class="form-field">
+                <label for="postalCode">Postal Code *</label>
+                <input
+                  pInputText
+                  id="postalCode"
+                  formControlName="postalCode"
+                  placeholder="10001" />
+                <small class="error" *ngIf="isFieldInvalid(contactForm, 'postalCode')">
+                  {{ getFieldError(contactForm, 'postalCode') }}
+                </small>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <p-button
+                type="button"
+                label="Back"
+                icon="pi pi-arrow-left"
+                (onClick)="previousStep()"
+                [outlined]="true">
+              </p-button>
+              <p-button
+                type="button"
+                label="Next"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                (onClick)="nextStep()">
+              </p-button>
+            </div>
+          </form>
+        </p-tabpanel>
+
+        <p-tabpanel [value]="2">
+          <div class="step-form">
+            <h3>Certifications</h3>
+            <p class="section-subtitle">Optional now. You can add more later.</p>
+
+            <p-message severity="info" [text]="getCertificationMessage()" [closable]="false"></p-message>
+
+            <div class="certifications-list" *ngIf="certifications.length > 0">
+              <div class="certification-item" *ngFor="let cert of certifications; let i = index">
+                <div class="cert-info">
+                  <div class="cert-type">
+                    <i class="pi pi-file-pdf"></i>
+                    <span>{{ cert.type }}</span>
+                  </div>
+                  <div class="cert-details">
+                    <span class="cert-number">{{ cert.number }}</span>
+                    <span class="cert-dates">
+                      {{ cert.issuedDate | date: 'MM/dd/yyyy' }} - {{ cert.expiryDate | date: 'MM/dd/yyyy' }}
+                    </span>
+                    <span class="cert-file">{{ cert.fileName }} ({{ formatFileSize(cert.fileSize || 0) }})</span>
+                  </div>
+                </div>
+                <div class="cert-actions">
+                  <p-button
+                    type="button"
+                    icon="pi pi-pencil"
+                    [text]="true"
+                    [rounded]="true"
+                    severity="info"
+                    (onClick)="editCertification(cert, i)">
+                  </p-button>
+                  <p-button
+                    type="button"
+                    icon="pi pi-trash"
+                    [text]="true"
+                    [rounded]="true"
+                    severity="danger"
+                    (onClick)="removeCertification(i)">
+                  </p-button>
+                </div>
+              </div>
+            </div>
+
+            <div class="add-cert-section" *ngIf="!showCertificationForm">
+              <p-button
+                type="button"
+                label="Add Certification"
+                icon="pi pi-plus"
+                (onClick)="openCertificationForm()"
+                [outlined]="true"
+                [style]="{ width: '100%' }">
+              </p-button>
+            </div>
+
+            <div class="certification-form-panel" *ngIf="showCertificationForm">
+              <form [formGroup]="certificationForm">
+                <h4>{{ editingIndex >= 0 ? 'Edit' : 'Add' }} Certification</h4>
+
+                <div class="form-field">
+                  <label for="certType">Certification Type *</label>
+                  <p-select
+                    id="certType"
+                    formControlName="type"
+                    [options]="certificationTypes"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select certification type"
+                    appendTo="body"
+                    [style]="{ width: '100%' }">
+                  </p-select>
+                  <small class="error" *ngIf="isFieldInvalid(certificationForm, 'type')">
+                    {{ getFieldError(certificationForm, 'type') }}
+                  </small>
+                </div>
+
+                <div class="form-field">
+                  <label for="certNumber">Certification Number *</label>
+                  <input
+                    pInputText
+                    id="certNumber"
+                    formControlName="number"
+                    placeholder="ISO9001-2024-12345" />
+                  <small class="error" *ngIf="isFieldInvalid(certificationForm, 'number')">
+                    {{ getFieldError(certificationForm, 'number') }}
+                  </small>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <label for="issuedDate">Issued Date *</label>
+                    <p-datepicker
+                      id="issuedDate"
+                      formControlName="issuedDate"
+                      [showIcon]="true"
+                      appendTo="body"
+                      dateFormat="mm/dd/yy"
+                      [style]="{ width: '100%' }">
+                    </p-datepicker>
+                    <small class="error" *ngIf="isFieldInvalid(certificationForm, 'issuedDate')">
+                      {{ getFieldError(certificationForm, 'issuedDate') }}
+                    </small>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="expiryDate">Expiry Date *</label>
+                    <p-datepicker
+                      id="expiryDate"
+                      formControlName="expiryDate"
+                      [showIcon]="true"
+                      appendTo="body"
+                      dateFormat="mm/dd/yy"
+                      [style]="{ width: '100%' }">
+                    </p-datepicker>
+                    <small class="error" *ngIf="isFieldInvalid(certificationForm, 'expiryDate')">
+                      {{ getFieldError(certificationForm, 'expiryDate') }}
+                    </small>
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label for="file">Upload Certificate *</label>
+                  <p-fileupload
+                    mode="basic"
+                    chooseLabel="Choose File"
+                    [auto]="true"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    [maxFileSize]="10000000"
+                    (onSelect)="onFileSelect($event)"
+                    [customUpload]="true">
+                  </p-fileupload>
+                  <small class="form-hint">Accepted: PDF, JPG, PNG (Max 10MB)</small>
+                  <small class="error" *ngIf="isFieldInvalid(certificationForm, 'file')">
+                    {{ getFieldError(certificationForm, 'file') }}
+                  </small>
+                </div>
+
+                <div class="cert-form-actions">
+                  <p-button
+                    type="button"
+                    label="Cancel"
+                    (onClick)="cancelCertificationForm()"
+                    [outlined]="true">
+                  </p-button>
+                  <p-button
+                    type="button"
+                    label="Save Certification"
+                    icon="pi pi-check"
+                    (onClick)="saveCertification()">
+                  </p-button>
+                </div>
+              </form>
+            </div>
+
+            <div class="step-actions">
+              <p-button
+                type="button"
+                label="Back"
+                icon="pi pi-arrow-left"
+                (onClick)="previousStep()"
+                [outlined]="true">
+              </p-button>
+              <p-button
+                type="button"
+                label="Next"
+                icon="pi pi-arrow-right"
+                iconPos="right"
+                (onClick)="nextStep()">
+              </p-button>
+            </div>
+          </div>
+        </p-tabpanel>
+
+        <p-tabpanel [value]="3">
+          <form [formGroup]="accountForm" class="step-form">
+            <h3>Create Your Account</h3>
+
+            <div class="form-field">
+              <label for="username">Username *</label>
+              <input
+                pInputText
+                id="username"
+                formControlName="username"
+                placeholder="Choose a username" />
+              <small class="error" *ngIf="isFieldInvalid(accountForm, 'username')">
+                {{ getFieldError(accountForm, 'username') }}
+              </small>
+            </div>
+
+            <div class="form-field">
+              <label for="password">Password *</label>
+              <input
+                pInputText
+                id="password"
+                type="password"
+                formControlName="password"
+                placeholder="Create a strong password" />
+              <small class="form-hint">
+                Must contain uppercase, lowercase, number, and special character (!@#$%^&*)
+              </small>
+              <small class="error" *ngIf="isFieldInvalid(accountForm, 'password')">
+                {{ getFieldError(accountForm, 'password') }}
+              </small>
+            </div>
+
+            <div class="form-field">
+              <label for="confirmPassword">Confirm Password *</label>
+              <input
+                pInputText
+                id="confirmPassword"
+                type="password"
+                formControlName="confirmPassword"
+                placeholder="Re-enter your password" />
+              <small
+                class="error"
+                *ngIf="accountForm.hasError('passwordMismatch') && accountForm.get('confirmPassword')?.touched">
+                Passwords do not match
+              </small>
+            </div>
+
+            <div class="form-field">
+              <p-checkbox formControlName="termsAccepted" [binary]="true" inputId="terms"></p-checkbox>
+              <label for="terms" class="checkbox-label">
+                I agree to the <a href="/terms" target="_blank">Terms of Service</a> and
+                <a href="/privacy" target="_blank">Privacy Policy</a> *
+              </label>
+              <small class="error" *ngIf="isFieldInvalid(accountForm, 'termsAccepted')" style="display: block;">
+                You must accept the terms and conditions
+              </small>
+            </div>
+
+            <div class="review-section">
+              <h4>Review Your Information</h4>
+              <div class="review-summary">
+                <div class="review-item">
+                  <span class="review-label">Company:</span>
+                  <span class="review-value">{{ companyForm.get('companyName')?.value }}</span>
+                </div>
+                <div class="review-item">
+                  <span class="review-label">Business Type:</span>
+                  <span class="review-value">{{ companyForm.get('businessType')?.value }}</span>
+                </div>
+                <div class="review-item">
+                  <span class="review-label">Contact Email:</span>
+                  <span class="review-value">{{ contactForm.get('primaryContactEmail')?.value }}</span>
+                </div>
+                <div class="review-item">
+                  <span class="review-label">Certifications:</span>
+                  <span class="review-value">{{ certifications.length }} added</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="step-actions">
+              <p-button
+                type="button"
+                label="Back"
+                icon="pi pi-arrow-left"
+                (onClick)="previousStep()"
+                [outlined]="true">
+              </p-button>
+              <p-button
+                type="button"
+                label="Submit Registration"
+                icon="pi pi-check"
+                iconPos="right"
+                (onClick)="submitRegistration()"
+                severity="success">
+              </p-button>
+            </div>
+          </form>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </div>
+</div>
+
+<p-toast></p-toast>

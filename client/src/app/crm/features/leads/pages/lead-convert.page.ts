@@ -77,7 +77,7 @@ export class LeadConvertPage implements OnInit {
     const value = this.form();
     const closeDate = value.expectedCloseDate as unknown;
     const expectedCloseDate = closeDate instanceof Date
-      ? closeDate.toISOString().slice(0, 10)
+      ? closeDate.toISOString()
       : (typeof closeDate === 'string' && closeDate.trim() ? closeDate : undefined);
     const payload: LeadConversionRequest = {
       ...value,

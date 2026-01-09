@@ -1,7 +1,14 @@
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     WORKSPACE SETTINGS PAGE - Premium Light UI
+     WORKSPACE SETTINGS PAGE - Premium Glass UI with Design System
      ═══════════════════════════════════════════════════════════════════════════ -->
 <div class="page-container">
+  <!-- Animated Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
   <!-- Breadcrumb -->
   <app-breadcrumbs></app-breadcrumbs>
 
@@ -23,37 +30,6 @@
       <p class="hero-description">
         Set the company name, time zone, and currency that shape every record in the CRM. Configure approval workflows for high-value opportunities.
       </p>
-
-      <div class="hero-stats">
-        <div class="hero-stat">
-          <div class="stat-value">{{ settingsForm.value.name ? '1' : '0' }}</div>
-          <div class="stat-label">Workspace</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill" [style.width.%]="settingsForm.value.name ? 100 : 0"></div>
-          </div>
-        </div>
-        <div class="hero-stat">
-          <div class="stat-value">{{ settingsForm.value.timeZone || 'UTC' }}</div>
-          <div class="stat-label">Time Zone</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill stat-bar-fill--info" style="width: 100%"></div>
-          </div>
-        </div>
-        <div class="hero-stat">
-          <div class="stat-value">{{ settingsForm.value.currency || 'USD' }}</div>
-          <div class="stat-label">Currency</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill stat-bar-fill--success" style="width: 100%"></div>
-          </div>
-        </div>
-        <div class="hero-stat">
-          <div class="stat-value">{{ settingsForm.value.approvalAmountThreshold ? 'On' : 'Off' }}</div>
-          <div class="stat-label">Approvals</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill stat-bar-fill--warning" [style.width.%]="settingsForm.value.approvalAmountThreshold ? 100 : 30"></div>
-          </div>
-        </div>
-      </div>
 
       <div class="hero-actions">
         <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings">
@@ -83,6 +59,7 @@
             <i class="pi pi-check-circle"></i> Configured
           </span>
         </div>
+        <div class="card-glow"></div>
       </div>
 
       <div class="visual-card visual-card--secondary">
@@ -96,6 +73,84 @@
             <i class="pi pi-sliders-h"></i> Configurable options
           </span>
         </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       METRICS DASHBOARD
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="metrics-section">
+    <div class="metric-card metric-card--total">
+      <div class="metric-icon">
+        <i class="pi pi-building"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Workspace</span>
+        <strong class="metric-value">{{ settingsForm.value.name ? '1' : '0' }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--purple" 
+            [attr.stroke-dasharray]="(settingsForm.value.name ? 100 : 0) + ', 100'"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--leads">
+      <div class="metric-icon">
+        <i class="pi pi-clock"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Time Zone</span>
+        <strong class="metric-value">{{ settingsForm.value.timeZone || 'UTC' }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--cyan" 
+            stroke-dasharray="100, 100"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--customers">
+      <div class="metric-icon">
+        <i class="pi pi-dollar"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Currency</span>
+        <strong class="metric-value">{{ settingsForm.value.currency || 'USD' }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--green" 
+            stroke-dasharray="100, 100"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--new">
+      <div class="metric-icon">
+        <i class="pi pi-check-square"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Approvals</span>
+        <strong class="metric-value">{{ settingsForm.value.approvalAmountThreshold ? 'On' : 'Off' }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--orange" 
+            [attr.stroke-dasharray]="(settingsForm.value.approvalAmountThreshold ? 100 : 30) + ', 100'"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
       </div>
     </div>
   </section>
@@ -129,111 +184,84 @@
 
         <!-- Form -->
         <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
-          <div class="form-section">
-            <div class="section-header">
-              <div class="section-icon">
-                <i class="pi pi-building"></i>
-              </div>
-              <div>
-                <h3>Company Information</h3>
-                <p>Basic workspace identity settings</p>
-              </div>
-            </div>
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-building"></i>
+              Company Information
+            </h3>
+            <p class="section-description">Basic workspace identity settings</p>
             
             <div class="form-grid">
-              <div class="form-field">
-                <label class="field-label">
-                  <i class="pi pi-id-card"></i>
-                  Company Name
-                </label>
-                <input pInputText formControlName="name" placeholder="Acme CRM Workspace" class="field-input" />
+              <div class="field">
+                <label>Company Name <span class="required">*</span></label>
+                <input pInputText formControlName="name" placeholder="Acme CRM Workspace" class="w-full" />
                 <small class="field-hint">The display name for your workspace</small>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div class="form-section">
-            <div class="section-header">
-              <div class="section-icon section-icon--info">
-                <i class="pi pi-globe"></i>
-              </div>
-              <div>
-                <h3>Regional Settings</h3>
-                <p>Time zone and currency preferences</p>
-              </div>
-            </div>
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-globe"></i>
+              Regional Settings
+            </h3>
+            <p class="section-description">Time zone and currency preferences</p>
             
             <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label class="field-label">
-                  <i class="pi pi-clock"></i>
-                  Time Zone
-                </label>
+              <div class="field">
+                <label>Time Zone <span class="required">*</span></label>
                 <p-select appendTo="body"
                   [options]="timeZoneOptions"
                   optionLabel="label"
                   optionValue="value"
                   formControlName="timeZone"
                   placeholder="Select time zone"
-                  styleClass="field-select"
+                  styleClass="w-full"
                 ></p-select>
                 <small class="field-hint">Used for date/time display across the system</small>
               </div>
 
-              <div class="form-field">
-                <label class="field-label">
-                  <i class="pi pi-dollar"></i>
-                  Currency
-                </label>
+              <div class="field">
+                <label>Currency <span class="required">*</span></label>
                 <p-select appendTo="body"
                   [options]="currencyOptions"
                   optionLabel="label"
                   optionValue="value"
                   formControlName="currency"
                   placeholder="Select currency"
-                  styleClass="field-select"
+                  styleClass="w-full"
                 ></p-select>
                 <small class="field-hint">Default currency for monetary values</small>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div class="form-section">
-            <div class="section-header">
-              <div class="section-icon section-icon--warning">
-                <i class="pi pi-check-square"></i>
-              </div>
-              <div>
-                <h3>Approval Workflow</h3>
-                <p>Configure approval rules for high-value opportunities</p>
-              </div>
-            </div>
+          <section class="form-card">
+            <h3 class="section-title section-title--warning">
+              <i class="pi pi-check-square"></i>
+              Approval Workflow
+            </h3>
+            <p class="section-description">Configure approval rules for high-value opportunities</p>
             
             <div class="form-grid form-grid--2col">
-              <div class="form-field">
-                <label class="field-label">
-                  <i class="pi pi-chart-line"></i>
-                  Approval Threshold
-                </label>
+              <div class="field">
+                <label>Approval Threshold</label>
                 <p-inputNumber
                   formControlName="approvalAmountThreshold"
                   [min]="0"
                   placeholder="Leave empty to disable"
-                  styleClass="field-input-number"
+                  styleClass="w-full"
                 ></p-inputNumber>
                 <small class="field-hint">Require approval when closing above this amount</small>
               </div>
 
-              <div class="form-field">
-                <label class="field-label">
-                  <i class="pi pi-user-plus"></i>
-                  Approver Role
-                </label>
-                <input pInputText formControlName="approvalApproverRole" placeholder="Sales Manager" class="field-input" />
+              <div class="field">
+                <label>Approver Role</label>
+                <input pInputText formControlName="approvalApproverRole" placeholder="Sales Manager" class="w-full" />
                 <small class="field-hint">Role required to approve high-value opportunities</small>
               </div>
             </div>
-          </div>
+          </section>
 
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">

@@ -17,6 +17,139 @@ import {
   UserSearchResponse
 } from '../crm/features/settings/models/user-admin.model';
 
+// Sample suppliers for mock API
+export let mockSuppliers = [
+  {
+    id: 's-001',
+    name: 'Acme Manufacturing',
+    category: 'Industrial',
+    status: 'Active',
+    country: 'USA',
+    website: 'https://acme.com',
+    contactName: 'John Doe',
+    contactEmail: 'john.doe@acme.com',
+    contactPhone: '555-1001',
+    notes: 'Preferred supplier for widgets.'
+  },
+  {
+    id: 's-002',
+    name: 'Global Supplies Ltd.',
+    category: 'Wholesale',
+    status: 'Pending Approval',
+    country: 'UK',
+    website: 'https://globalsupplies.co.uk',
+    contactName: 'Jane Smith',
+    contactEmail: 'jane.smith@globalsupplies.co.uk',
+    contactPhone: '555-2002',
+    notes: 'Awaiting compliance review.'
+  },
+  {
+    id: 's-003',
+    name: 'Pacific Traders',
+    category: 'Retail',
+    status: 'Approved',
+    country: 'Canada',
+    website: 'https://pacifictraders.ca',
+    contactName: 'Carlos Ruiz',
+    contactEmail: 'carlos.ruiz@pacifictraders.ca',
+    contactPhone: '555-3003',
+    notes: 'Ready to start transacting.'
+  },
+  {
+    id: 's-004',
+    name: 'Dragon Electronics',
+    category: 'Electronics',
+    status: 'On Hold',
+    country: 'China',
+    website: 'https://dragonelec.cn',
+    contactName: 'Wei Zhang',
+    contactEmail: 'wei.zhang@dragonelec.cn',
+    contactPhone: '555-4004',
+    notes: 'Quality issue under investigation.'
+  },
+  {
+    id: 's-005',
+    name: 'EuroTech GmbH',
+    category: 'Technology',
+    status: 'Blocked',
+    country: 'Germany',
+    website: 'https://eurotech.de',
+    contactName: 'Hans Mueller',
+    contactEmail: 'hans.mueller@eurotech.de',
+    contactPhone: '555-5005',
+    notes: 'Compliance violation - export restrictions.'
+  },
+  {
+    id: 's-006',
+    name: 'Old Parts Inc.',
+    category: 'Industrial',
+    status: 'Inactive',
+    country: 'USA',
+    website: 'https://oldparts.com',
+    contactName: 'Bob Wilson',
+    contactEmail: 'bob.wilson@oldparts.com',
+    contactPhone: '555-6006',
+    notes: 'Archived - no longer in business.'
+  },
+  {
+    id: 's-007',
+    name: 'New Ventures Co.',
+    category: 'Services',
+    status: 'Draft',
+    country: 'India',
+    website: 'https://newventures.in',
+    contactName: 'Priya Sharma',
+    contactEmail: 'priya.sharma@newventures.in',
+    contactPhone: '555-7007',
+    notes: 'Profile incomplete - awaiting documents.'
+  }
+];
+
+// Supplier CRUD functions for mock API
+export function searchSuppliers(params: { search?: string; status?: string; page?: number; pageSize?: number }) {
+  let filtered = [...mockSuppliers];
+  if (params.search) {
+    const term = params.search.toLowerCase();
+    filtered = filtered.filter(s =>
+      s.name.toLowerCase().includes(term) ||
+      s.category.toLowerCase().includes(term) ||
+      s.country.toLowerCase().includes(term)
+    );
+  }
+  if (params.status) {
+    filtered = filtered.filter(s => s.status === params.status);
+  }
+  const page = params.page ?? 1;
+  const pageSize = params.pageSize ?? 20;
+  const start = (page - 1) * pageSize;
+  const items = filtered.slice(start, start + pageSize);
+  return { items, total: filtered.length };
+}
+
+export function getSupplierById(id: string) {
+  return mockSuppliers.find(s => s.id === id) ?? null;
+}
+
+export function createSupplier(data: Omit<typeof mockSuppliers[0], 'id'>) {
+  const newSupplier = { ...data, id: `s-${Date.now()}` };
+  mockSuppliers.push(newSupplier);
+  return newSupplier;
+}
+
+export function updateSupplier(id: string, data: Partial<typeof mockSuppliers[0]>) {
+  const idx = mockSuppliers.findIndex(s => s.id === id);
+  if (idx === -1) return null;
+  mockSuppliers[idx] = { ...mockSuppliers[idx], ...data };
+  return mockSuppliers[idx];
+}
+
+export function deleteSupplier(id: string) {
+  const idx = mockSuppliers.findIndex(s => s.id === id);
+  if (idx === -1) return false;
+  mockSuppliers.splice(idx, 1);
+  return true;
+}
+
 const today = new Date();
 
 const addDays = (date: Date, days: number) => {

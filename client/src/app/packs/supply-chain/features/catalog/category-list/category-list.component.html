@@ -1,0 +1,245 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content category-list">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-indigo">Product Categories</h1>
+          <p class="page-subtitle">Organize catalog hierarchies and maintain parent-child structures.</p>
+        </div>
+        <div class="hero-actions">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-refresh"
+            label="Refresh"
+            styleClass="btn-glass"
+            (click)="loadCategories()">
+          </button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-plus"
+            label="New Category"
+            styleClass="btn-gradient"
+            (click)="navigateToNew()">
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card split-card">
+      <div class="split-container">
+        <div class="tree-panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <i class="pi pi-sitemap"></i>
+              <span>Category Tree</span>
+            </div>
+            <div class="panel-actions">
+              <button
+                pButton
+                type="button"
+                icon="pi pi-plus"
+                styleClass="btn-glass"
+                pTooltip="Expand All"
+                tooltipPosition="top"
+                (click)="expandAll()">
+              </button>
+              <button
+                pButton
+                type="button"
+                icon="pi pi-minus"
+                styleClass="btn-glass"
+                pTooltip="Collapse All"
+                tooltipPosition="top"
+                (click)="collapseAll()">
+              </button>
+            </div>
+          </div>
+
+          <div class="search-box">
+            <span class="p-input-icon-left" style="width: 100%;">
+              <i class="pi pi-search"></i>
+              <input
+                pInputText
+                type="text"
+                placeholder="Search categories..."
+                [(ngModel)]="searchText"
+                (input)="onSearch()"
+                style="width: 100%;" />
+            </span>
+          </div>
+
+          <div class="tree-content">
+            <p-tree
+              [value]="categories"
+              selectionMode="single"
+              [(selection)]="selectedNode"
+              (onNodeSelect)="onNodeSelect($event)"
+              [loading]="loading"
+              styleClass="category-tree">
+              <ng-template let-node pTemplate="default">
+                <div class="tree-node-content">
+                  <span class="level-badge">L{{ node.data.level }}</span>
+                  <span class="node-label">{{ node.data.name }}</span>
+                  <span class="node-count" *ngIf="node.data.productCount">
+                    {{ node.data.productCount }}
+                  </span>
+                  <span
+                    class="node-status"
+                    [ngClass]="node.data.isActive ? 'active-dot' : 'inactive-dot'">
+                  </span>
+                </div>
+              </ng-template>
+            </p-tree>
+
+            <div class="empty-tree" *ngIf="categories.length === 0">
+              <div class="empty-icon">📁</div>
+              <div class="empty-text">No categories found</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-panel">
+          <div class="detail-empty" *ngIf="!selectedCategory">
+            <div class="empty-icon">🏷️</div>
+            <div class="empty-text">Select a category to view details</div>
+            <div class="empty-subtext">Choose a category from the tree on the left</div>
+          </div>
+
+          <div class="detail-content" *ngIf="selectedCategory && !isEditing">
+            <div class="detail-header">
+              <div class="detail-title-section">
+                <h2 class="detail-title">{{ selectedCategory.name }}</h2>
+                <span
+                  class="status-tag"
+                  [ngClass]="selectedCategory.isActive ? 'active' : 'inactive'">
+                  {{ selectedCategory.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
+              <div class="detail-actions">
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-plus"
+                  label="Add Subcategory"
+                  styleClass="btn-glass"
+                  (click)="addSubcategory(selectedCategory.id)"
+                  *ngIf="selectedCategory.level < 2">
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-pencil"
+                  label="Edit"
+                  styleClass="btn-gradient"
+                  (click)="startEdit()">
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-trash"
+                  styleClass="btn-glass"
+                  (click)="deleteCategory(selectedCategory.id)">
+                </button>
+              </div>
+            </div>
+
+            <div class="detail-body">
+              <div class="info-section" *ngIf="categoryPath.length > 0">
+                <div class="section-title">Hierarchy Path</div>
+                <div class="hierarchy-path">
+                  <span *ngFor="let cat of categoryPath; let last = last" class="path-item">
+                    {{ cat.name }}
+                    <i class="pi pi-angle-right" *ngIf="!last"></i>
+                  </span>
+                </div>
+              </div>
+
+              <div class="info-section">
+                <div class="section-title">Category Details</div>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="info-label">Description</span>
+                    <span class="info-value">{{ selectedCategory.description || '—' }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Level</span>
+                    <span class="info-value">Level {{ selectedCategory.level }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Products</span>
+                    <span class="info-value">{{ selectedCategory.productCount || 0 }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="info-section" *ngIf="subcategories.length > 0">
+                <div class="section-title">Subcategories</div>
+                <div class="subcategories">
+                  <div class="subcategory-item" *ngFor="let sub of subcategories">
+                    <div>
+                      <strong>{{ sub.name }}</strong>
+                      <p>{{ sub.description }}</p>
+                    </div>
+                    <span class="status-tag" [ngClass]="sub.isActive ? 'active' : 'inactive'">
+                      {{ sub.isActive ? 'Active' : 'Inactive' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-content" *ngIf="selectedCategory && isEditing">
+            <form [formGroup]="editForm" (ngSubmit)="saveCategory()">
+              <div class="detail-header">
+                <div class="detail-title-section">
+                  <h2 class="detail-title">Edit Category</h2>
+                </div>
+                <div class="detail-actions">
+                  <button pButton type="button" label="Cancel" styleClass="btn-glass" (click)="cancelEdit()"></button>
+                  <button pButton type="submit" label="Save" styleClass="btn-gradient"></button>
+                </div>
+              </div>
+
+              <div class="detail-body">
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label>Name</label>
+                    <input pInputText formControlName="name" />
+                  </div>
+                  <div class="form-field">
+                    <label>Parent Category</label>
+                    <p-select
+                      [options]="parentCategoryOptions"
+                      formControlName="parentCategoryId"
+                      placeholder="Select parent category"
+                    ></p-select>
+                  </div>
+                  <div class="form-field full">
+                    <label>Description</label>
+                    <textarea pTextarea rows="3" formControlName="description"></textarea>
+                  </div>
+                  <div class="form-field">
+                    <label>Status</label>
+                    <p-toggleSwitch formControlName="isActive"></p-toggleSwitch>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

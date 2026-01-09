@@ -1,0 +1,62 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container rfq-compare">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-gradient">RFQ</span>
+            <span class="title-light">Comparison</span>
+          </h1>
+          <p class="hero-description">Compare multiple RFQs side-by-side.</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button pButton type="button" class="btn-glass">
+          <i class="pi pi-filter"></i>
+          <span>Filter</span>
+        </button>
+        <button pButton type="button" class="btn-gradient">
+          <i class="pi pi-plus"></i>
+          <span>Add RFQ</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="glass-card">
+      <p-table [value]="rows" styleClass="p-datatable-sm">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>RFQ</th>
+            <th>Suppliers</th>
+            <th>Responses</th>
+            <th>Status</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.rfq }}</td>
+            <td>{{ row.suppliers }}</td>
+            <td>{{ row.responses }}</td>
+            <td>{{ row.status }}</td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="4" class="empty-message">
+              Select at least two RFQs to compare.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </section>
+  </div>
+</div>

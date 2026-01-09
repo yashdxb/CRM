@@ -16,9 +16,7 @@ import { CsvColumn, exportToCsv } from '../../../../shared/utils/csv';
 
 import { Opportunity, OpportunitySearchRequest, OpportunityStatus } from '../models/opportunity.model';
 import { OpportunityDataService } from '../services/opportunity-data.service';
-import { SavedView, SavedViewsService } from '../../../../shared/services/saved-views.service';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
-import { RecentlyViewedItem, RecentlyViewedService } from '../../../../shared/services/recently-viewed.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
@@ -28,10 +26,6 @@ interface StageOption {
   value: string;
 }
 
-interface OpportunityViewFilters {
-  searchTerm: string;
-  stageFilter: string | 'all';
-}
 
 @Component({
   selector: 'app-opportunities-page',
@@ -106,24 +100,13 @@ export class OpportunitiesPage {
   protected stageFilter: string | 'all' = 'all';
   protected pageIndex = 0;
   protected rows = 10;
-  protected readonly savedViews = signal<SavedView<OpportunityViewFilters>[]>([]);
-  protected readonly selectedViewId = signal<string | null>(null);
-  protected readonly viewOptions = computed(() => [
-    { label: 'Saved views', value: null },
-    ...this.savedViews().map((view) => ({ label: view.name, value: view.id }))
-  ]);
-  protected viewName = '';
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
-  protected readonly recentOpportunities = computed(() => this.recentlyViewed.itemsFor('opportunities'));
 
   constructor(
     private readonly opportunityData: OpportunityDataService,
     private readonly router: Router,
-    private readonly savedViewsService: SavedViewsService,
-    private readonly userAdminData: UserAdminDataService,
-    private readonly recentlyViewed: RecentlyViewedService
+    private readonly userAdminData: UserAdminDataService
   ) {
-    this.loadSavedViews();
     this.load();
     this.loadOwners();
   }
@@ -151,23 +134,7 @@ export class OpportunitiesPage {
   }
 
   protected onEdit(row: Opportunity) {
-    this.recentlyViewed.add('opportunities', {
-      id: row.id,
-      title: row.name,
-      subtitle: row.account || row.stage
-    });
     this.router.navigate(['/app/opportunities', row.id, 'edit']);
-  }
-
-  protected openRecent(item: RecentlyViewedItem) {
-    const row = this.opportunities().find((entry) => entry.id === item.id);
-    if (row) {
-      this.onEdit(row);
-      return;
-    }
-    this.searchTerm = item.title;
-    this.pageIndex = 0;
-    this.load();
   }
 
   protected onDelete(row: Opportunity) {
@@ -206,46 +173,6 @@ export class OpportunitiesPage {
     this.pageIndex = event.page ?? 0;
     this.rows = event.rows ?? this.rows;
     this.load();
-  }
-
-  protected onSaveView() {
-    const name = this.viewName.trim();
-    if (!name) {
-      return;
-    }
-    const saved = this.savedViewsService.saveView<OpportunityViewFilters>('opportunities', {
-      name,
-      filters: {
-        searchTerm: this.searchTerm,
-        stageFilter: this.stageFilter
-      }
-    });
-    this.viewName = '';
-    this.loadSavedViews();
-    this.selectedViewId.set(saved.id);
-  }
-
-  protected onSelectView(id: string | null) {
-    if (!id) {
-      this.selectedViewId.set(null);
-      return;
-    }
-    const view = this.savedViews().find((item) => item.id === id);
-    if (!view) {
-      return;
-    }
-    this.selectedViewId.set(id);
-    this.applyView(view);
-  }
-
-  protected onDeleteView() {
-    const selected = this.selectedViewId();
-    if (!selected) {
-      return;
-    }
-    this.savedViewsService.deleteView('opportunities', selected);
-    this.selectedViewId.set(null);
-    this.loadSavedViews();
   }
 
   protected onExport() {
@@ -316,18 +243,6 @@ export class OpportunitiesPage {
   private daysSince(date: Date): number {
     const ms = Date.now() - date.getTime();
     return Math.floor(ms / (1000 * 60 * 60 * 24));
-  }
-
-  private loadSavedViews() {
-    this.savedViews.set(this.savedViewsService.getViews<OpportunityViewFilters>('opportunities'));
-  }
-
-  private applyView(view: SavedView<OpportunityViewFilters>) {
-    const filters = view.filters;
-    this.searchTerm = filters.searchTerm ?? '';
-    this.stageFilter = filters.stageFilter ?? 'all';
-    this.pageIndex = 0;
-    this.load();
   }
 
   private loadOwners() {

@@ -31,6 +31,8 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         string adminPassword,
         string? timeZone,
         string? currency,
+        string? industryPreset,
+        IReadOnlyList<string>? industryModules,
         CancellationToken cancellationToken = default)
     {
         var normalizedKey = key.Trim();
@@ -47,6 +49,8 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             Name = normalizedName,
             TimeZone = string.IsNullOrWhiteSpace(timeZone) ? "UTC" : timeZone.Trim(),
             Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency.Trim(),
+            IndustryPreset = string.IsNullOrWhiteSpace(industryPreset) ? "CoreCRM" : industryPreset.Trim(),
+            IndustryModules = industryModules is { Count: > 0 } ? string.Join(',', industryModules) : null,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -108,18 +112,6 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             {
                 User = adminUser,
                 Role = adminRole
-            });
-        }
-
-        if (!await _dbContext.LeadStatuses.AnyAsync(cancellationToken))
-        {
-            var now = DateTime.UtcNow;
-            _dbContext.LeadStatuses.AddRange(new[]
-            {
-                new LeadStatus { Name = "New", Order = 1, IsDefault = true, IsClosed = false, CreatedAtUtc = now },
-                new LeadStatus { Name = "Qualified", Order = 2, IsClosed = false, CreatedAtUtc = now },
-                new LeadStatus { Name = "Converted", Order = 3, IsClosed = true, CreatedAtUtc = now },
-                new LeadStatus { Name = "Lost", Order = 4, IsClosed = true, CreatedAtUtc = now }
             });
         }
 

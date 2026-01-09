@@ -1,0 +1,56 @@
+<div class="page-container">
+  <div class="page-content item-master">
+    <app-breadcrumbs></app-breadcrumbs>
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-indigo">Item Master</h1>
+          <p class="page-subtitle">Authoritative list of your company’s main items.</p>
+        </div>
+      </div>
+    </section>
+    <section class="glass-card table-card">
+      <div class="card-header">
+        <h2 class="card-title">Master Items</h2>
+      </div>
+      <div class="card-body">
+        <p-table #dt [value]="items" [loading]="loading" [rows]="10" [paginator]="true" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['sku', 'name', 'categoryName', 'description']" [tableStyle]="{ 'min-width': '60rem' }" responsiveLayout="scroll">
+          <ng-template pTemplate="caption">
+            <div class="table-header">
+              <div class="search-field">
+                <input pInputText type="text" [(ngModel)]="searchValue" (input)="dt.filterGlobal($any($event.target).value, 'contains')" placeholder="Search items..." />
+              </div>
+            </div>
+          </ng-template>
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="sku">SKU <p-sortIcon field="sku" /></th>
+              <th pSortableColumn="name">Item Name <p-sortIcon field="name" /></th>
+              <th pSortableColumn="categoryName">Category <p-sortIcon field="categoryName" /></th>
+              <th>UOM</th>
+              <th pSortableColumn="isActive">Status <p-sortIcon field="isActive" /></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-item>
+            <tr>
+              <td>{{ item.sku }}</td>
+              <td>{{ item.name }}</td>
+              <td>{{ item.categoryName }}</td>
+              <td>{{ item.defaultUom }}</td>
+              <td>
+                <span class="status-pill" [ngClass]="{ 'active': item.isActive, 'inactive': !item.isActive }">
+                  {{ item.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="5" class="text-center">No master items found.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  </div>
+</div>

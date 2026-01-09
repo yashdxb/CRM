@@ -67,51 +67,85 @@ $glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0
     background-clip: text;
   }
 }
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERO STATS - Compact inline metrics (customers workspace style)
+// ═══════════════════════════════════════════════════════════════════════════════
 .hero-stats {
   display: flex;
-  gap: 32px;
+  gap: 24px;
   flex-wrap: wrap;
   margin-top: 8px;
 }
+
 .hero-stat {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 80px;
+
   .stat-value {
-    font-size: 1.4rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #1a1a2e;
   }
+
   .stat-label {
-    font-size: 12px;
+    font-size: 11px;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
+
+  .stat-bar {
+    width: 100%;
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 4px;
+
+    .stat-bar-fill {
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 999px;
+      transition: width 1s ease-out;
+
+      &--leads { background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%); }
+      &--prospects { background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); }
+      &--success { background: linear-gradient(135deg, #22c55e 0%, #10b981 100%); }
+    }
+  }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERO VISUAL CARDS - Side cards with icon, value, trend (customers workspace style)
+// ═══════════════════════════════════════════════════════════════════════════════
 .hero-visual {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
+
 .visual-card {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 18px 24px;
+  gap: 14px;
+  padding: 14px 18px;
   background: $glass-bg;
   backdrop-filter: blur($glass-blur);
   border: 1px solid $glass-border-light;
-  border-radius: 18px;
+  border-radius: 14px;
   box-shadow: $glass-shadow;
-  min-width: 220px;
+  min-width: 200px;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: $glass-shadow-hover;
   }
+
   .card-icon {
     width: 36px;
     height: 36px;
@@ -119,19 +153,68 @@ $glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0
     align-items: center;
     justify-content: center;
     border-radius: 10px;
-    font-size: 22px;
-    background: linear-gradient(135deg, #e0e7ff 0%, #f0fdfa 100%);
-    color: #6366f1;
+    font-size: 1rem;
   }
-  .visual-label {
-    font-size: 13px;
+
+  &--primary .card-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+  }
+
+  &--secondary .card-icon {
+    background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+    color: white;
+  }
+
+  &--success .card-icon {
+    background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+    color: white;
+  }
+
+  &--purple .card-icon {
+    background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+    color: white;
+  }
+
+  .card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .card-label {
+    font-size: 11px;
     color: #64748b;
-    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
-  .visual-value {
-    font-size: 1.1rem;
+
+  .card-value {
+    font-size: 1.35rem;
     font-weight: 700;
     color: #1a1a2e;
+  }
+
+  .card-trend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #64748b;
+
+    &--up {
+      color: #22c55e;
+    }
+  }
+
+  .card-glow {
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+    pointer-events: none;
   }
 }
 // Glass Card
@@ -166,10 +249,21 @@ $glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0
   flex-direction: column;
   gap: 8px;
 }
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 .form-label {
   font-size: 15px;
   font-weight: 600;
   color: #374151;
+  transition: color 0.2s ease, font-weight 0.2s ease;
+}
+.form-group:focus-within .form-label,
+.form-field:focus-within label {
+  color: #2563eb;
+  font-weight: 700;
 }
 .form-input {
   width: 100%;
@@ -193,6 +287,27 @@ $glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0
     resize: vertical;
     min-height: 100px;
   }
+}
+.form-group:focus-within .p-inputtext,
+.form-group:focus-within .p-inputtextarea,
+.form-group:focus-within .p-select,
+.form-group:focus-within .p-dropdown,
+.form-group:focus-within .p-inputnumber,
+.form-group:focus-within .p-inputnumber-input,
+.form-group:focus-within .p-multiselect,
+.form-group:focus-within .p-datepicker,
+.form-group:focus-within .p-inputgroup,
+.form-field:focus-within .p-inputtext,
+.form-field:focus-within .p-inputtextarea,
+.form-field:focus-within .p-select,
+.form-field:focus-within .p-dropdown,
+.form-field:focus-within .p-inputnumber,
+.form-field:focus-within .p-inputnumber-input,
+.form-field:focus-within .p-multiselect,
+.form-field:focus-within .p-datepicker,
+.form-field:focus-within .p-inputgroup {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12) !important;
 }
 .dialog-actions {
   display: flex;

@@ -1,0 +1,31 @@
+.quick-add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-space-3);
+}
+
+.quick-add__type {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quick-add__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--md-space-3);
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quick-add__grid .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+:host ::ng-deep .quick-add-dialog .p-dialog-content {
+  padding-top: var(--md-space-3);
+}

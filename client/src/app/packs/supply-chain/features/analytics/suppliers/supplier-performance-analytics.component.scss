@@ -1,0 +1,125 @@
+.supplier-analytics {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+
+  .kpi-card {
+    padding: 1rem 1.1rem;
+    border-radius: 0.9rem;
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .kpi-label {
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .kpi-value {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .kpi-delta {
+      font-size: 0.85rem;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+  }
+}
+
+.grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.trend-track {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  height: 180px;
+
+  .trend-point {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+
+    .bar {
+      width: 100%;
+      border-radius: 0.6rem 0.6rem 0 0;
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.8), rgba(59, 130, 246, 0.4));
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 0.3rem;
+      color: #0f172a;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .label {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+  }
+
+  &.ppm .bar {
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.8), rgba(245, 158, 11, 0.4));
+  }
+}
+
+.opportunities-card {
+  .supplier-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .supplier-name {
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .tag-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+  }
+
+  .row-actions {
+    text-align: right;
+  }
+}
+
+.muted {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .hero-actions {
+    flex-direction: column;
+  }
+}

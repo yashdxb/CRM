@@ -1,0 +1,43 @@
+.change-orders {
+  padding: 0;
+}
+
+.grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+.empty-state {
+  text-align: center;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: center;
+
+  h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #0f172a;
+  }
+
+  p {
+    margin: 0;
+    max-width: 520px;
+    color: #64748b;
+  }
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  font-size: 1.6rem;
+}

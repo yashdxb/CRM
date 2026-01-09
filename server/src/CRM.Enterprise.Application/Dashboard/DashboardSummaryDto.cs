@@ -15,6 +15,7 @@ public record DashboardSummaryDto(
     int OverdueActivities,
     IReadOnlyList<RecentAccountDto> RecentAccounts,
     IReadOnlyList<UpcomingActivityDto> ActivitiesNextWeek,
+    IReadOnlyList<UpcomingActivityDto> MyTasks,
     IReadOnlyList<PipelineStageDto> PipelineValue,
     IReadOnlyList<ChartDataPointDto> RevenueByMonth,
     IReadOnlyList<ChartDataPointDto> CustomerGrowth,

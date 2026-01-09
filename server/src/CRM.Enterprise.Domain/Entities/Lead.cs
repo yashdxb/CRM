@@ -15,6 +15,10 @@ public class Lead : AuditableEntity
     public string? Source { get; set; }
     public string? Territory { get; set; }
     public int Score { get; set; }
+    public int? AiScore { get; set; }
+    public decimal? AiConfidence { get; set; }
+    public string? AiRationale { get; set; }
+    public DateTime? AiScoredAtUtc { get; set; }
     public Guid? AccountId { get; set; }
     public Guid? ContactId { get; set; }
     public Guid? ConvertedOpportunityId { get; set; }

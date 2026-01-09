@@ -7,6 +7,7 @@ public record ActivityListItem(
     string Subject,
     string Type,
     string? Description,
+    string? Outcome,
     string? Priority,
     Guid? RelatedEntityId,
     string? RelatedEntityName,

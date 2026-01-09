@@ -287,52 +287,6 @@
       </div>
     </div>
 
-    <div class="views-bar">
-      <div class="views-select">
-        <i class="pi pi-bookmark"></i>
-        <p-select appendTo="body"
-          [options]="viewOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="selectedViewId()"
-          (ngModelChange)="onSelectView($event)"
-          placeholder="Saved views"
-          styleClass="filter-select"
-        ></p-select>
-      </div>
-      <div class="views-save">
-        <input
-          pInputText
-          type="text"
-          placeholder="Name this view"
-          [(ngModel)]="viewName"
-        />
-        <button pButton type="button" class="btn btn-ghost" (click)="onSaveView()">
-          <i class="pi pi-bookmark"></i>
-          <span>Save</span>
-        </button>
-        <button pButton type="button" class="btn btn-ghost" [disabled]="!selectedViewId()" (click)="onDeleteView()">
-          <i class="pi pi-trash"></i>
-          <span>Delete</span>
-        </button>
-      </div>
-    </div>
-
-    <section class="recently-viewed" *ngIf="recentCustomers().length">
-      <div class="recently-viewed__header">
-        <h3>Recently viewed</h3>
-        <span>{{ recentCustomers().length }} recent</span>
-      </div>
-      <div class="recently-viewed__list">
-        <button pButton type="button" class="recent-item" *ngFor="let item of recentCustomers()" (click)="openRecent(item)">
-          <div class="recent-item__title">{{ item.title }}</div>
-          <div class="recent-item__meta">
-            {{ item.subtitle || 'Customer' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
-          </div>
-        </button>
-      </div>
-    </section>
-
     <div class="filter-summary" *ngIf="searchTerm || statusFilter !== 'all' || ownerFilter() !== 'all'">
       <span class="summary-label">Active filters:</span>
       <span class="filter-tag" *ngIf="searchTerm">

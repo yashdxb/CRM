@@ -14,12 +14,19 @@ public class DashboardReadService : IDashboardReadService
         _dbContext = dbContext;
     }
 
-    public async Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)
+    public async Task<DashboardSummaryDto> GetSummaryAsync(Guid? userId, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
         var nextWeek = now.AddDays(7);
         var startOfToday = now.Date;
         var endOfToday = startOfToday.AddDays(1);
+        var userEmail = userId.HasValue
+            ? await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId.Value)
+                .Select(u => u.Email)
+                .FirstOrDefaultAsync(cancellationToken)
+            : null;
 
         var totalCustomers = await _dbContext.Accounts.CountAsync(a => !a.IsDeleted, cancellationToken);
         var leads = await _dbContext.Accounts.CountAsync(a => !a.IsDeleted && a.LifecycleStage == "Lead", cancellationToken);
@@ -111,33 +118,55 @@ public class DashboardReadService : IDashboardReadService
                 a.DueDateUtc.Value <= nextWeek)
             .OrderBy(a => a.DueDateUtc)
             .Take(10)
-            .Select(a => new
-            {
+            .Select(a => new DashboardActivityRaw(
                 a.Id,
                 a.Subject,
                 a.Type,
                 a.RelatedEntityType,
                 a.RelatedEntityId,
                 a.DueDateUtc,
-                a.CompletedDateUtc
-            })
+                a.CompletedDateUtc))
             .ToListAsync(cancellationToken);
 
-        var accountIds = activitiesNextWeekRaw
+        var myTasksRaw = userId.HasValue
+            ? await _dbContext.Activities
+                .AsNoTracking()
+                .Where(a =>
+                    !a.IsDeleted &&
+                    !a.CompletedDateUtc.HasValue &&
+                    a.Type == ActivityType.Task &&
+                    (a.OwnerId == userId.Value ||
+                     (!string.IsNullOrWhiteSpace(userEmail) && a.CreatedBy == userEmail)))
+                .OrderBy(a => a.DueDateUtc ?? DateTime.MaxValue)
+                .Take(6)
+                .Select(a => new DashboardActivityRaw(
+                    a.Id,
+                    a.Subject,
+                    a.Type,
+                    a.RelatedEntityType,
+                    a.RelatedEntityId,
+                    a.DueDateUtc,
+                    a.CompletedDateUtc))
+                .ToListAsync(cancellationToken)
+            : new List<DashboardActivityRaw>();
+
+        var activityLookups = activitiesNextWeekRaw.Concat(myTasksRaw).ToList();
+
+        var accountIds = activityLookups
             .Where(a => a.RelatedEntityType == ActivityRelationType.Account)
             .Select(a => a.RelatedEntityId)
             .Where(id => id != Guid.Empty)
             .Distinct()
             .ToList();
 
-        var contactIds = activitiesNextWeekRaw
+        var contactIds = activityLookups
             .Where(a => a.RelatedEntityType == ActivityRelationType.Contact)
             .Select(a => a.RelatedEntityId)
             .Where(id => id != Guid.Empty)
             .Distinct()
             .ToList();
 
-        var opportunityIds = activitiesNextWeekRaw
+        var opportunityIds = activityLookups
             .Where(a => a.RelatedEntityType == ActivityRelationType.Opportunity)
             .Select(a => a.RelatedEntityId)
             .Where(id => id != Guid.Empty)
@@ -182,6 +211,23 @@ public class DashboardReadService : IDashboardReadService
             })
             .ToList();
 
+        var myTasks = myTasksRaw
+            .Select(a =>
+            {
+                var relatedId = a.RelatedEntityId == Guid.Empty ? (Guid?)null : a.RelatedEntityId;
+                return new UpcomingActivityDto(
+                    a.Id,
+                    a.Subject,
+                    a.Type.ToString(),
+                    relatedId,
+                    ResolveCustomerName(a.RelatedEntityType, relatedId, accountLookup, contactLookup, opportunityLookup),
+                    a.RelatedEntityType.ToString(),
+                    a.DueDateUtc,
+                    a.CompletedDateUtc,
+                    ComputeStatus(a.DueDateUtc, a.CompletedDateUtc));
+            })
+            .ToList();
+
         return new DashboardSummaryDto(
             totalCustomers,
             leads,
@@ -194,6 +240,7 @@ public class DashboardReadService : IDashboardReadService
             overdueActivitiesCount,
             recentCustomers,
             activitiesNextWeek,
+            myTasks,
             pipelineValueStages,
             Array.Empty<ChartDataPointDto>(),
             Array.Empty<ChartDataPointDto>(),
@@ -236,4 +283,13 @@ public class DashboardReadService : IDashboardReadService
             _ => string.Empty
         };
     }
+
+    private sealed record DashboardActivityRaw(
+        Guid Id,
+        string Subject,
+        ActivityType Type,
+        ActivityRelationType RelatedEntityType,
+        Guid RelatedEntityId,
+        DateTime? DueDateUtc,
+        DateTime? CompletedDateUtc);
 }

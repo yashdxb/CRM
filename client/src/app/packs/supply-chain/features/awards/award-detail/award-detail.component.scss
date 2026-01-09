@@ -1,0 +1,98 @@
+@use '../../../../../shared/_form-page-styles.scss' as formStyles;
+@use '../../../../../../styles/design-tokens' as *;
+
+.award-detail {
+  @include formStyles.form-page-base;
+}
+
+.grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+.detail-card,
+.lines-card,
+.notes-card {
+  @include formStyles.form-section;
+  padding: 1.6rem;
+}
+
+.lines-card,
+.notes-card {
+  margin-top: 1rem;
+}
+
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.detail-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.2rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.detail-item .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-subtle);
+}
+
+.detail-item .value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.card-title {
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--text-strong);
+}
+
+.notes-text {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1rem 0;
+}
+
+@media (max-width: 768px) {
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

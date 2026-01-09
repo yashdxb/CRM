@@ -1,0 +1,158 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content in-transit-tracking">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-primary">In-Transit Tracking</h1>
+          <p class="page-subtitle">Monitor live shipments and raise alerts before they impact production</p>
+        </div>
+        <div class="hero-actions">
+          <p-button icon="pi pi-refresh" label="Refresh" styleClass="btn-glass"></p-button>
+          <p-button icon="pi pi-bell" label="Create Alert" styleClass="btn-gradient"></p-button>
+        </div>
+      </div>
+    </section>
+
+    <div class="filter-bar glass-card">
+      <div class="filter-group">
+        <span class="p-input-icon-left">
+          <i class="pi pi-search"></i>
+          <input
+            pInputText
+            type="text"
+            placeholder="Search by tracking, carrier, origin..."
+          />
+        </span>
+      </div>
+      <div class="filter-group">
+        <p-select
+          [options]="laneOptions()"
+          placeholder="Filter by lane"
+          [style]="{ 'min-width': '220px' }"
+        ></p-select>
+      </div>
+      <p-button icon="pi pi-filter-slash" label="Reset" styleClass="btn-glass"></p-button>
+    </div>
+
+    <div class="stats-cards">
+      <div class="stat-card glass-card">
+        <div class="stat-icon in-transit">
+          <i class="pi pi-compass"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">On-schedule shipments</div>
+          <div class="stat-value">{{ onTimeRatio() }}%</div>
+          <small>{{ shipments().length }} active moves</small>
+        </div>
+      </div>
+      <div class="stat-card glass-card highlight">
+        <div class="stat-icon issues">
+          <i class="pi pi-exclamation-triangle"></i>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">At risk</div>
+          <div class="stat-value">{{ atRiskCount() }}</div>
+          <small>Escalate lanes requiring attention</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="lane-summary-card glass-card">
+      <div class="card-header">
+        <h3 class="card-title">Lane performance</h3>
+        <p-button label="View network map" icon="pi pi-globe" styleClass="btn-glass"></p-button>
+      </div>
+      <div class="card-body">
+        <div class="lane-grid">
+          <div class="lane-item" *ngFor="let lane of laneSummaries()">
+            <span class="lane-name">{{ lane.lane }}</span>
+            <div class="lane-stats">
+              <span>{{ lane.departures }} departures</span>
+              <span [ngClass]="trendClass(lane.trend)">{{ lane.onTime }} on time · {{ lane.delayed }} delayed</span>
+            </div>
+            <div class="lane-progress">
+              <div class="progress ontime" [style.width.%]="(lane.onTime / lane.departures) * 100"></div>
+              <div class="progress delayed" [style.width.%]="(lane.delayed / lane.departures) * 100"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container glass-card">
+      <div class="card-body">
+        <p-table
+          [value]="shipments()"
+          [paginator]="true"
+          [rows]="15"
+          [rowsPerPageOptions]="[10, 15, 25]"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} shipments"
+          styleClass="p-datatable-sm"
+          responsiveLayout="scroll"
+          dataKey="trackingId"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Tracking ID</th>
+              <th>Carrier</th>
+              <th>Route</th>
+              <th>Departure</th>
+              <th>ETA</th>
+              <th>Milestone</th>
+              <th>Progress</th>
+              <th>Status</th>
+              <th>Tags</th>
+              <th style="width: 140px">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-shipment>
+            <tr>
+              <td class="tracking-cell">
+                <span class="tracking-number">{{ shipment.trackingId }}</span>
+              </td>
+              <td>{{ shipment.carrier }}</td>
+              <td>
+                <div class="route-cell">
+                  <span>{{ shipment.origin }}</span>
+                  <span class="arrow">→</span>
+                  <span>{{ shipment.destination }}</span>
+                </div>
+              </td>
+              <td>{{ shipment.departure }}</td>
+              <td>{{ shipment.eta }}</td>
+              <td>{{ shipment.milestone }}</td>
+              <td>
+                <div class="progress-wrap">
+                  <p-progressBar [value]="shipment.progress"></p-progressBar>
+                  <small>{{ shipment.progress }}%</small>
+                </div>
+              </td>
+              <td>
+                <p-tag [value]="shipment.status" [severity]="severity(shipment.status)"></p-tag>
+              </td>
+              <td>
+                <div class="tag-strip">
+                  <p-chip *ngFor="let tag of shipment.tags" [label]="tag"></p-chip>
+                </div>
+              </td>
+              <td class="row-actions">
+                <p-button icon="pi pi-route" [text]="true" label="Track"></p-button>
+                <p-button icon="pi pi-bell" [text]="true" label="Alert"></p-button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+  </div>
+</div>

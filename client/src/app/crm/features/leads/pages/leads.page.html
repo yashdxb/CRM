@@ -135,32 +135,6 @@
       </div>
 
       <div class="action-right">
-        <div class="views-controls">
-          <p-select appendTo="body"
-            [options]="viewOptions()"
-            optionLabel="label"
-            optionValue="value"
-            [ngModel]="selectedViewId()"
-            (ngModelChange)="onSelectView($event)"
-            placeholder="Saved views"
-            styleClass="views-select"
-          ></p-select>
-          <input
-            pInputText
-            type="text"
-            class="views-input"
-            placeholder="Name this view"
-            [(ngModel)]="viewName"
-          />
-          <button pButton type="button" class="btn-ghost" (click)="onSaveView()">
-            <i class="pi pi-bookmark"></i>
-            Save
-          </button>
-          <button pButton type="button" class="btn-ghost" [disabled]="!selectedViewId()" (click)="onDeleteView()">
-            <i class="pi pi-trash"></i>
-            Delete
-          </button>
-        </div>
         <button pButton type="button" class="btn-ghost" *ngIf="statusFilter !== 'all'" (click)="onStatusChange('all')">
           <i class="pi pi-filter-slash"></i>
           Clear Filter
@@ -168,24 +142,9 @@
       </div>
     </section>
 
-    <section class="recently-viewed" *ngIf="recentLeads().length">
-      <div class="recently-viewed__header">
-        <h3>Recently viewed</h3>
-        <span>{{ recentLeads().length }} recent</span>
-      </div>
-      <div class="recently-viewed__list">
-        <button pButton type="button" class="recent-item" *ngFor="let item of recentLeads()" (click)="openRecent(item)">
-          <div class="recent-item__title">{{ item.title }}</div>
-          <div class="recent-item__meta">
-            {{ item.subtitle || 'Lead' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
-          </div>
-        </button>
-      </div>
-    </section>
-
     <!-- Kanban View -->
     <section class="kanban-board" *ngIf="viewMode === 'kanban'">
-      <div class="kanban-column" *ngFor="let status of ['New', 'Qualified', 'Converted', 'Lost']">
+      <div class="kanban-column" *ngFor="let status of ['New', 'Contacted', 'Qualified', 'Converted', 'Lost']">
         <div class="column-header" [attr.data-status]="status">
           <span class="column-title">{{ status }}</span>
           <span class="column-count">{{ getLeadsByStatus(status).length }}</span>
@@ -223,7 +182,10 @@
                 <button pButton type="button" class="mini-btn" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button pButton type="button" class="mini-btn success" *ngIf="lead.status !== 'Converted'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)">
+                <button pButton type="button" class="mini-btn info" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)">
+                  <i class="pi pi-calendar-plus"></i>
+                </button>
+                <button pButton type="button" class="mini-btn success" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)">
                   <i class="pi pi-bolt"></i>
                 </button>
                 <button pButton type="button" class="mini-btn danger" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)">
@@ -291,7 +253,21 @@
                       [ngModel]="lead.status"
                       (ngModelChange)="onInlineStatusChange(lead, $event)"
                       styleClass="inline-select"
-                    ></p-select>
+                    >
+                      <ng-template pTemplate="item" let-option>
+                        <div class="status-option" [attr.data-status]="option.value">
+                          <i class="pi" [ngClass]="option.icon"></i>
+                          <span>{{ option.label }}</span>
+                        </div>
+                      </ng-template>
+                      <ng-template pTemplate="value" let-option>
+                        <div class="status-option" *ngIf="option" [attr.data-status]="option.value">
+                          <i class="pi" [ngClass]="option.icon"></i>
+                          <span>{{ option.label }}</span>
+                        </div>
+                        <span *ngIf="!option" class="status-placeholder">Select status</span>
+                      </ng-template>
+                    </p-select>
                   </td>
                   <td class="td-contact">
                     <div class="contact-cell">
@@ -328,7 +304,8 @@
                   <td class="td-actions">
                     <div class="row-actions">
                       <button pButton type="button" class="action-btn" icon="pi pi-pencil" [disabled]="!canManage()" (click)="onEdit(lead)" title="Edit"></button>
-                      <button pButton type="button" class="action-btn success" icon="pi pi-bolt" *ngIf="lead.status !== 'Converted'" [disabled]="!canManage()" (click)="onConvert(lead)" title="Convert"></button>
+                      <button pButton type="button" class="action-btn info" icon="pi pi-calendar-plus" [disabled]="!canManage()" (click)="onLogActivity(lead)" title="Log activity"></button>
+                      <button pButton type="button" class="action-btn success" icon="pi pi-bolt" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="onConvert(lead)" title="Convert"></button>
                       <button pButton type="button" class="action-btn danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="onDelete(lead)" title="Delete"></button>
                     </div>
                   </td>
@@ -432,7 +409,21 @@
       [(ngModel)]="bulkStatus"
       placeholder="Select status"
       styleClass="w-full"
-    ></p-select>
+    >
+      <ng-template pTemplate="item" let-option>
+        <div class="status-option" [attr.data-status]="option.value">
+          <i class="pi" [ngClass]="option.icon"></i>
+          <span>{{ option.label }}</span>
+        </div>
+      </ng-template>
+      <ng-template pTemplate="value" let-option>
+        <div class="status-option" *ngIf="option" [attr.data-status]="option.value">
+          <i class="pi" [ngClass]="option.icon"></i>
+          <span>{{ option.label }}</span>
+        </div>
+        <span *ngIf="!option" class="status-placeholder">Select status</span>
+      </ng-template>
+    </p-select>
   </div>
   <ng-template pTemplate="footer">
     <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="statusDialogVisible = false"></button>

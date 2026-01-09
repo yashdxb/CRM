@@ -17,7 +17,6 @@ import { Contact } from '../../contacts/models/contact.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
-import { RecentlyViewedItem, RecentlyViewedService } from '../../../../shared/services/recently-viewed.service';
 import { AppToastService } from '../../../../core/app-toast.service';
 
 interface StatusOption {
@@ -86,7 +85,6 @@ export class ActivitiesPage {
   protected statusFilter: StatusOption['value'] = 'all';
   protected pageIndex = 0;
   protected rows = 10;
-  protected readonly recentActivities = computed(() => this.recentlyViewed.itemsFor('activities'));
   private readonly todayKey = this.toDateKey(new Date());
   protected readonly openActivitiesCount = computed(() =>
     this.activities().filter((activity) => activity.status !== 'Completed').length
@@ -195,8 +193,7 @@ export class ActivitiesPage {
     private readonly activityData: ActivityDataService,
     private readonly customerData: CustomerDataService,
     private readonly contactData: ContactDataService,
-    private readonly router: Router,
-    private readonly recentlyViewed: RecentlyViewedService
+    private readonly router: Router
   ) {
     this.myOwnerId.set(readUserId());
     const toast = history.state?.toast as { tone: 'success' | 'error'; message: string } | undefined;
@@ -284,6 +281,10 @@ export class ActivitiesPage {
     return 'info';
   }
 
+  protected canMarkComplete(activity: Activity) {
+    return this.canManage() && !activity.completedDateUtc;
+  }
+
   protected relationLabel(type?: Activity['relatedEntityType']) {
     if (!type) return 'Record';
     return type;
@@ -368,16 +369,7 @@ export class ActivitiesPage {
   }
 
   protected onEdit(row: Activity) {
-    this.recentlyViewed.add('activities', {
-      id: row.id,
-      title: row.subject,
-      subtitle: row.relatedEntityName || row.type
-    });
     this.router.navigate(['/app/activities', row.id, 'edit'], { state: { activity: row } });
-  }
-
-  protected openRecent(item: RecentlyViewedItem) {
-    this.router.navigate(['/app/activities', item.id, 'edit']);
   }
 
   protected onDelete(row: Activity) {
@@ -390,6 +382,32 @@ export class ActivitiesPage {
         this.raiseToast('success', 'Activity deleted.');
       },
       error: () => this.raiseToast('error', 'Unable to delete activity.')
+    });
+  }
+
+  protected markCompleted(row: Activity) {
+    if (!this.canManage()) {
+      return;
+    }
+
+    const payload = {
+      subject: row.subject,
+      description: row.description,
+      type: row.type,
+      priority: row.priority,
+      dueDateUtc: row.dueDateUtc,
+      completedDateUtc: new Date().toISOString(),
+      relatedEntityType: row.relatedEntityType,
+      relatedEntityId: row.relatedEntityId,
+      ownerId: row.ownerId
+    };
+
+    this.activityData.update(row.id, payload).subscribe({
+      next: () => {
+        this.raiseToast('success', 'Activity marked completed.');
+        this.load();
+      },
+      error: () => this.raiseToast('error', 'Unable to mark activity completed.')
     });
   }
 

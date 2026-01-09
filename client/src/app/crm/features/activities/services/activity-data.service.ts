@@ -55,6 +55,10 @@ export class ActivityDataService {
     return this.http.get<ActivitySearchResponse>(`${this.baseUrl}/api/activities`, { params });
   }
 
+  get(id: string) {
+    return this.http.get<Activity>(`${this.baseUrl}/api/activities/${id}`);
+  }
+
   create(payload: UpsertActivityRequest) {
     return this.http.post<Activity>(`${this.baseUrl}/api/activities`, payload);
   }

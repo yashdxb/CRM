@@ -20,12 +20,13 @@
       "name": "CRM.Enterprise.Api",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build",
+      "preLaunchTask": "build-api",
       "program": "${workspaceFolder}/server/src/CRM.Enterprise.Api/bin/Debug/net8.0/CRM.Enterprise.Api.dll",
       "cwd": "${workspaceFolder}/server/src/CRM.Enterprise.Api",
       "stopAtEntry": false,
       "env": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5014"
       }
     }
   ]

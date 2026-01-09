@@ -5,6 +5,7 @@ using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Api.Utilities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Api.Contracts.Imports;
 using CRM.Enterprise.Api.Jobs;
 using Hangfire;
@@ -25,17 +26,20 @@ public class LeadsController : ControllerBase
     private readonly ITenantProvider _tenantProvider;
     private readonly IWebHostEnvironment _environment;
     private readonly IBackgroundJobClient _backgroundJobs;
+    private readonly ILeadScoringService _leadScoringService;
 
     public LeadsController(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
         IWebHostEnvironment environment,
-        IBackgroundJobClient backgroundJobs)
+        IBackgroundJobClient backgroundJobs,
+        ILeadScoringService leadScoringService)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _environment = environment;
         _backgroundJobs = backgroundJobs;
+        _leadScoringService = leadScoringService;
     }
 
     [HttpGet]
@@ -150,6 +154,59 @@ public class LeadsController : ControllerBase
         return Ok(item);
     }
 
+    [HttpGet("{id:guid}/status-history")]
+    public async Task<ActionResult<IEnumerable<LeadStatusHistoryItem>>> GetLeadStatusHistory(Guid id, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.Leads
+            .AsNoTracking()
+            .AnyAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
+
+        if (!exists)
+        {
+            return NotFound();
+        }
+
+        var history = await _dbContext.LeadStatusHistories
+            .AsNoTracking()
+            .Include(h => h.LeadStatus)
+            .Where(h => h.LeadId == id)
+            .OrderByDescending(h => h.ChangedAtUtc)
+            .Select(h => new LeadStatusHistoryItem(
+                h.Id,
+                h.LeadStatus != null ? h.LeadStatus.Name : "Unknown",
+                h.ChangedAtUtc,
+                h.ChangedBy,
+                h.Notes))
+            .ToListAsync(cancellationToken);
+
+        return Ok(history);
+    }
+
+    [HttpPost("{id:guid}/ai-score")]
+    [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    public async Task<ActionResult<LeadAiScoreResponse>> ScoreLead(Guid id, CancellationToken cancellationToken)
+    {
+        var lead = await _dbContext.Leads
+            .Include(l => l.Status)
+            .FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
+
+        if (lead is null)
+        {
+            return NotFound();
+        }
+
+        var score = await _leadScoringService.ScoreAsync(lead, cancellationToken);
+        lead.AiScore = score.Score;
+        lead.AiConfidence = score.Confidence;
+        lead.AiRationale = score.Rationale;
+        lead.AiScoredAtUtc = DateTime.UtcNow;
+        lead.Score = score.Score;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new LeadAiScoreResponse(score.Score, score.Confidence, score.Rationale, lead.AiScoredAtUtc.Value));
+    }
+
     [HttpPost]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<ActionResult<LeadListItem>> Create([FromBody] UpsertLeadRequest request, CancellationToken cancellationToken)
@@ -181,6 +238,11 @@ public class LeadsController : ControllerBase
         ApplyStatusSideEffects(lead, resolvedStatusName);
         AddStatusHistory(lead, statusId, null);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (HasAiSignals(request))
+        {
+            _backgroundJobs.Enqueue<LeadAiScoringJobs>(job => job.ScoreLeadAsync(lead.Id, CancellationToken.None));
+        }
 
         var ownerName = await _dbContext.Users
             .Where(u => u.Id == ownerId)
@@ -346,6 +408,7 @@ public class LeadsController : ControllerBase
         if (lead is null) return NotFound();
 
         var previousStatusId = lead.LeadStatusId;
+        var shouldAiScore = HasAiSignalChanges(lead, request);
 
         lead.FirstName = request.FirstName;
         lead.LastName = request.LastName;
@@ -367,10 +430,17 @@ public class LeadsController : ControllerBase
         if (lead.LeadStatusId != previousStatusId)
         {
             ApplyStatusSideEffects(lead, statusName);
+            await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, cancellationToken);
             AddStatusHistory(lead, lead.LeadStatusId, null);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (shouldAiScore && HasAiSignals(request))
+        {
+            _backgroundJobs.Enqueue<LeadAiScoringJobs>(job => job.ScoreLeadAsync(lead.Id, CancellationToken.None));
+        }
+
         return NoContent();
     }
 
@@ -467,11 +537,13 @@ public class LeadsController : ControllerBase
         lead.AccountId = accountId;
         lead.ContactId = contactId;
         lead.ConvertedOpportunityId = opportunityId;
+        var previousStatusId = lead.LeadStatusId;
         lead.LeadStatusId = await ResolveLeadStatusIdAsync("Converted", cancellationToken);
         lead.ConvertedAtUtc = now;
         lead.UpdatedAtUtc = now;
 
         ApplyStatusSideEffects(lead, "Converted");
+        await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, "Converted", cancellationToken);
         AddStatusHistory(lead, lead.LeadStatusId, "Converted lead");
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -529,6 +601,7 @@ public class LeadsController : ControllerBase
         if (lead.LeadStatusId != previousStatusId)
         {
             ApplyStatusSideEffects(lead, statusName);
+            await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, cancellationToken);
             AddStatusHistory(lead, lead.LeadStatusId, null);
         }
 
@@ -599,6 +672,7 @@ public class LeadsController : ControllerBase
             if (lead.LeadStatusId != previousStatusId)
             {
                 ApplyStatusSideEffects(lead, statusName);
+                await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, cancellationToken);
                 AddStatusHistory(lead, lead.LeadStatusId, "Bulk status update");
             }
         }
@@ -716,6 +790,57 @@ public class LeadsController : ControllerBase
         });
     }
 
+    private async Task AddAutoContactedHistoryAsync(
+        Lead lead,
+        Guid previousStatusId,
+        Guid targetStatusId,
+        string? targetStatusName,
+        CancellationToken cancellationToken)
+    {
+        if (previousStatusId == targetStatusId)
+        {
+            return;
+        }
+
+        var previousName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
+        if (!string.Equals(previousName, "New", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (string.Equals(targetStatusName, "New", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(targetStatusName, "Contacted", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!string.Equals(targetStatusName, "Qualified", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(targetStatusName, "Converted", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var contactedId = await _dbContext.LeadStatuses
+            .Where(s => s.Name == "Contacted")
+            .Select(s => s.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (contactedId == Guid.Empty)
+        {
+            return;
+        }
+
+        var alreadyLogged = await _dbContext.LeadStatusHistories
+            .AnyAsync(h => h.LeadId == lead.Id && h.LeadStatusId == contactedId, cancellationToken);
+
+        if (alreadyLogged)
+        {
+            return;
+        }
+
+        AddStatusHistory(lead, contactedId, "Auto: Contacted");
+    }
+
     private async Task<string?> ResolveLeadStatusNameAsync(Guid statusId, CancellationToken cancellationToken)
     {
         var status = await _dbContext.LeadStatuses
@@ -762,6 +887,38 @@ public class LeadsController : ControllerBase
         }
 
         return Math.Clamp(score, 0, 100);
+    }
+
+    private static bool HasAiSignals(UpsertLeadRequest request)
+    {
+        var signals = 0;
+        if (!string.IsNullOrWhiteSpace(request.Email)) signals++;
+        if (!string.IsNullOrWhiteSpace(request.Phone)) signals++;
+        if (!string.IsNullOrWhiteSpace(request.CompanyName)) signals++;
+        if (!string.IsNullOrWhiteSpace(request.JobTitle)) signals++;
+        if (!string.IsNullOrWhiteSpace(request.Source)) signals++;
+        if (!string.IsNullOrWhiteSpace(request.Territory)) signals++;
+        if (request.AccountId.HasValue) signals++;
+        if (request.ContactId.HasValue) signals++;
+
+        return signals >= 2;
+    }
+
+    private static bool HasAiSignalChanges(Lead lead, UpsertLeadRequest request)
+    {
+        return !string.Equals(Normalize(lead.Email), Normalize(request.Email), StringComparison.OrdinalIgnoreCase)
+               || !string.Equals(Normalize(lead.Phone), Normalize(request.Phone), StringComparison.OrdinalIgnoreCase)
+               || !string.Equals(Normalize(lead.CompanyName), Normalize(request.CompanyName), StringComparison.OrdinalIgnoreCase)
+               || !string.Equals(Normalize(lead.JobTitle), Normalize(request.JobTitle), StringComparison.OrdinalIgnoreCase)
+               || !string.Equals(Normalize(lead.Source), Normalize(request.Source), StringComparison.OrdinalIgnoreCase)
+               || !string.Equals(Normalize(lead.Territory), Normalize(request.Territory), StringComparison.OrdinalIgnoreCase)
+               || lead.AccountId != request.AccountId
+               || lead.ContactId != request.ContactId;
+    }
+
+    private static string? Normalize(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private Guid GetUserId()

@@ -40,6 +40,7 @@ builder.Services.AddHangfire(config =>
 builder.Services.AddHangfireServer();
 builder.Services.AddScoped<BackgroundJobs>();
 builder.Services.AddScoped<NotificationEmailJobs>();
+builder.Services.AddScoped<LeadAiScoringJobs>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {

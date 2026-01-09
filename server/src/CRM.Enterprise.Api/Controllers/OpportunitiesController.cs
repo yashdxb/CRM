@@ -361,17 +361,46 @@ public class OpportunitiesController : ControllerBase
     {
         if (requestedOwnerId.HasValue && requestedOwnerId.Value != Guid.Empty)
         {
-            var exists = await _dbContext.Users.AnyAsync(u => u.Id == requestedOwnerId.Value && u.IsActive && !u.IsDeleted, cancellationToken);
+            var tenantId = _tenantProvider.TenantId;
+            var exists = await _dbContext.Users.AnyAsync(
+                u => u.Id == requestedOwnerId.Value
+                     && u.IsActive
+                     && !u.IsDeleted
+                     && (tenantId == Guid.Empty || u.TenantId == tenantId),
+                cancellationToken);
             if (exists) return requestedOwnerId.Value;
         }
 
+        var currentUserId = GetUserId();
+        if (currentUserId != Guid.Empty)
+        {
+            var tenantId = _tenantProvider.TenantId;
+            var currentExists = await _dbContext.Users.AnyAsync(
+                u => u.Id == currentUserId
+                     && u.IsActive
+                     && !u.IsDeleted
+                     && (tenantId == Guid.Empty || u.TenantId == tenantId),
+                cancellationToken);
+            if (currentExists)
+            {
+                return currentUserId;
+            }
+        }
+
+        var currentTenantId = _tenantProvider.TenantId;
         var fallbackUserId = await _dbContext.Users
-            .Where(u => u.IsActive && !u.IsDeleted)
+            .Where(u => u.IsActive && !u.IsDeleted && (currentTenantId == Guid.Empty || u.TenantId == currentTenantId))
             .OrderBy(u => u.CreatedAtUtc)
             .Select(u => u.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         return fallbackUserId == Guid.Empty ? Guid.NewGuid() : fallbackUserId;
+    }
+
+    private Guid GetUserId()
+    {
+        var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
     }
 
     private async Task<Guid> ResolveStageIdAsync(Guid? requestedStageId, string? stageName, CancellationToken cancellationToken)

@@ -19,6 +19,16 @@ export const routes: Routes = [
     loadComponent: () => import('./public/auth/login.page').then((m) => m.LoginPage)
   },
   {
+    path: 'supplier/onboard',
+    loadComponent: () =>
+      import('./public/supplier/supplier-onboarding.page').then((m) => m.SupplierOnboardingPage)
+  },
+  {
+    path: 'supplier/onboard/:token',
+    loadComponent: () =>
+      import('./public/supplier/supplier-onboarding.page').then((m) => m.SupplierOnboardingPage)
+  },
+  {
     path: 'app',
     component: ShellComponent,
     canActivate: [authGuard],
@@ -248,6 +258,310 @@ export const routes: Routes = [
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.tenantsView, breadcrumb: 'Tenants' },
             loadComponent: () => import('./crm/features/settings/pages/tenants.page').then((m) => m.TenantsPage)
+          }
+        ]
+      },
+      {
+        path: 'supply-chain',
+        data: { breadcrumb: 'Supply Chain', icon: 'pi-sitemap' },
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'rfqs' },
+          {
+            path: 'rfqs',
+            data: { breadcrumb: 'RFQs' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/rfq/rfq-list/rfq-list').then((m) => m.RfqListComponent)
+          },
+          {
+            path: 'rfqs/new',
+            data: { breadcrumb: 'New RFQ' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/rfq/rfq-create/rfq-create').then((m) => m.RfqCreateComponent)
+          },
+          {
+            path: 'rfqs/draft',
+            data: { breadcrumb: 'RFQ Draft' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/rfq/rfq-draft-workspace/rfq-draft-workspace.component').then((m) => m.RfqDraftWorkspaceComponent)
+          },
+          {
+            path: 'rfqs/compare',
+            data: { breadcrumb: 'Compare RFQs' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/rfq/rfq-compare/rfq-compare.component').then((m) => m.RfqCompareComponent)
+          },
+          {
+            path: 'rfqs/history',
+            data: { breadcrumb: 'RFQ History' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/rfq/rfq-history/rfq-history.component').then((m) => m.RfqHistoryComponent)
+          },
+          {
+            path: 'quotes',
+            data: { breadcrumb: 'Quote Comparison' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/quotes/quote-comparison/quote-comparison.component').then((m) => m.QuoteComparisonComponent)
+          },
+          {
+            path: 'awards',
+            data: { breadcrumb: 'Awards' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/awards/awards.component').then((m) => m.AwardsComponent)
+          },
+          {
+            path: 'awards/:id',
+            data: { breadcrumb: 'Award Details' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/awards/award-detail/award-detail.component').then(
+                (m) => m.AwardDetailComponent
+              )
+          },
+          {
+            path: 'suppliers',
+            data: { breadcrumb: 'Supplier Directory' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/suppliers/supplier-directory/supplier-directory.component').then(
+                (m) => m.SupplierDirectoryComponent
+              )
+          },
+          {
+            path: 'suppliers/compliance',
+            data: { breadcrumb: 'Compliance / Certifications' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/suppliers/supplier-compliance/supplier-compliance.component').then(
+                (m) => m.SupplierComplianceComponent
+              )
+          },
+          {
+            path: 'suppliers/performance',
+            data: { breadcrumb: 'Performance / Scorecards' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/suppliers/supplier-scorecards/supplier-scorecards.component').then(
+                (m) => m.SupplierScorecardsComponent
+              )
+          },
+          {
+            path: 'suppliers/:id',
+            data: { breadcrumb: 'Supplier Details' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/suppliers/supplier-detail/supplier-detail.component').then(
+                (m) => m.SupplierDetailComponent
+              )
+          },
+          {
+            path: 'suppliers/new/edit',
+            data: { breadcrumb: 'Add Supplier' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/suppliers/supplier-edit/supplier-edit.component').then(
+                (m) => m.SupplierEditComponent
+              )
+          },
+          {
+            path: 'suppliers/:id/edit',
+            data: { breadcrumb: 'Edit Supplier' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/suppliers/supplier-edit/supplier-edit.component').then(
+                (m) => m.SupplierEditComponent
+              )
+          },
+          {
+            path: 'po',
+            data: { breadcrumb: 'Purchase Orders' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/procurement/purchase-orders/po-list/po-list.component').then(
+                (m) => m.PoListComponent
+              )
+          },
+          {
+            path: 'approvals',
+            data: { breadcrumb: 'Approvals' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/procurement/purchase-orders/po-approvals/po-approvals.component').then(
+                (m) => m.PoApprovalsComponent
+              )
+          },
+          {
+            path: 'change-orders',
+            data: { breadcrumb: 'Change Orders' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/procurement/purchase-orders/change-orders/change-orders.component').then(
+                (m) => m.ChangeOrdersComponent
+              )
+          },
+          {
+            path: 'receiving',
+            data: { breadcrumb: 'Receiving / GRN' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/logistics/receiving/delivery-schedule.component').then(
+                (m) => m.DeliveryScheduleComponent
+              )
+          },
+          {
+            path: 'shipments',
+            data: { breadcrumb: 'Shipments' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/logistics/shipments/in-transit-tracking.component').then(
+                (m) => m.InTransitTrackingComponent
+              )
+          },
+          {
+            path: 'carriers',
+            data: { breadcrumb: 'Carrier Management' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/logistics/carriers/carrier-list.component').then(
+                (m) => m.CarrierListComponent
+              )
+          },
+          {
+            path: 'inventory',
+            data: { breadcrumb: 'Stock Levels' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/inventory/stock-levels/inventory-stock-levels.component').then(
+                (m) => m.InventoryStockLevelsComponent
+              )
+          },
+          {
+            path: 'replenishment',
+            data: { breadcrumb: 'Replenishment' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/inventory/replenishment-planning/replenishment-planning.component').then(
+                (m) => m.ReplenishmentPlanningComponent
+              )
+          },
+          {
+            path: 'warehousing',
+            data: { breadcrumb: 'Warehousing' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/inventory/stock-overview/inventory-stock-overview.component').then(
+                (m) => m.InventoryStockOverviewComponent
+              )
+          },
+          {
+            path: 'catalog',
+            data: { breadcrumb: 'Catalog' },
+            children: [
+              {
+                path: '',
+                pathMatch: 'full',
+                redirectTo: 'item-master'
+              },
+              {
+                path: 'item-master',
+                data: { breadcrumb: 'Item Master' },
+                loadComponent: () =>
+                  import('./packs/supply-chain/features/catalog/item-master/item-master.component').then(
+                    (m) => m.ItemMasterComponent
+                  )
+              },
+              {
+                path: 'supplier-catalog',
+                data: { breadcrumb: 'Supplier Catalog' },
+                loadComponent: () =>
+                  import('./packs/supply-chain/features/catalog/product-list/product-list.component').then(
+                    (m) => m.ProductListComponent
+                  )
+              }
+            ]
+          },
+          {
+            path: 'catalog/categories',
+            data: { breadcrumb: 'Categories' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/category-list/category-list.component').then(
+                (m) => m.CategoryListComponent
+              )
+          },
+          {
+            path: 'catalog/categories/:id',
+            data: { breadcrumb: 'Category Details' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/category-detail/category-detail.component').then(
+                (m) => m.CategoryDetailComponent
+              )
+          },
+          {
+            path: 'catalog/alerts',
+            data: { breadcrumb: 'Stock Alerts' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/stock-alerts/catalog-stock-alerts.component').then(
+                (m) => m.CatalogStockAlertsComponent
+              )
+          },
+          {
+            path: 'pricing',
+            data: { breadcrumb: 'Pricing' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/pricing/pricing-rates.component').then(
+                (m) => m.PricingRatesComponent
+              )
+          },
+          {
+            path: 'contracts',
+            data: { breadcrumb: 'Contracts' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/contracts/contracts.component').then(
+                (m) => m.ContractsComponent
+              )
+          },
+          {
+            path: 'quality/inspections',
+            data: { breadcrumb: 'Inspections' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/quality/inspections/quality-inspection.component').then(
+                (m) => m.QualityInspectionComponent
+              )
+          },
+          {
+            path: 'quality/nonconformance',
+            data: { breadcrumb: 'Non-conformance' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/quality/nonconformance/returns-claims.component').then(
+                (m) => m.ReturnsClaimsComponent
+              )
+          },
+          {
+            path: 'quality/capa',
+            data: { breadcrumb: 'Corrective Actions' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/quality/corrective-actions/corrective-actions.component').then(
+                (m) => m.CorrectiveActionsComponent
+              )
+          },
+          {
+            path: 'analytics/spend',
+            data: { breadcrumb: 'Spend Analytics' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/analytics/spend/spend-analysis.component').then(
+                (m) => m.SpendAnalysisComponent
+              )
+          },
+          {
+            path: 'analytics/suppliers',
+            data: { breadcrumb: 'Supplier Performance' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/analytics/suppliers/supplier-performance-analytics.component').then(
+                (m) => m.SupplierPerformanceAnalyticsComponent
+              )
+          },
+          {
+            path: 'analytics/savings',
+            data: { breadcrumb: 'Savings Tracking' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/analytics/savings/savings-tracking.component').then(
+                (m) => m.SavingsTrackingComponent
+              )
+          },
+          {
+            path: 'rfqs/:id',
+            data: { breadcrumb: 'RFQ Details' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/rfq/rfq-detail/rfq-detail.component').then((m) => m.RfqDetailComponent)
+          },
+          {
+            path: 'rfqs/:id/edit',
+            data: { breadcrumb: 'Edit RFQ' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/rfq/rfq-create/rfq-create').then((m) => m.RfqCreateComponent)
           }
         ]
       }

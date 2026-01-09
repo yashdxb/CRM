@@ -1,0 +1,107 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content returns-claims">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-amber">Returns & Claims (RMA)</h1>
+          <p class="page-subtitle">Coordinate defect returns, capture supplier credits, and keep production running without excess stock exposure.</p>
+        </div>
+        <div class="hero-actions">
+          <p-button label="New RMA" icon="pi pi-plus-circle" styleClass="btn-gradient"></p-button>
+          <p-button label="Download summary" icon="pi pi-download" styleClass="btn-glass"></p-button>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card metric-strip">
+      <div class="metric-card">
+        <span class="metric-label">Open claims</span>
+        <div class="metric-value">{{ openClaims() }}</div>
+        <small>{{ claims().length }} total records</small>
+      </div>
+      <div class="metric-card drafts">
+        <span class="metric-label">Drafts awaiting review</span>
+        <div class="metric-value">{{ draftClaims() }}</div>
+        <small>Set owners to keep velocity high</small>
+      </div>
+      <div class="metric-card closed">
+        <span class="metric-label">Close rate</span>
+        <div class="metric-value">{{ closeRate() }}%</div>
+        <small>Resolved month-to-date</small>
+      </div>
+    </section>
+
+    <section class="glass-card summary-card">
+      <div class="card-body">
+        <div class="summary-grid">
+          <div class="summary-pill" *ngFor="let item of summaries()">
+            <span class="status">{{ item.status }}</span>
+            <div class="count">{{ item.count }}</div>
+            <span class="delta">{{ item.delta }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card table-card">
+      <div class="card-header">
+        <h2 class="card-title">Return & claim queue</h2>
+        <p-button label="Filter" icon="pi pi-sliders-h" [text]="true"></p-button>
+      </div>
+      <div class="card-body">
+        <p-table [value]="claims()" responsiveLayout="scroll" dataKey="rmaId">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>RMA</th>
+              <th>Supplier</th>
+              <th>PO / SKU</th>
+              <th>Qty</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th>Owner</th>
+              <th>Created</th>
+              <th></th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-claim>
+            <tr>
+              <td>{{ claim.rmaId }}</td>
+              <td>{{ claim.supplier }}</td>
+              <td>
+                <div class="po-cell">
+                  <span>{{ claim.po }}</span>
+                  <small>{{ claim.sku }}</small>
+                </div>
+              </td>
+              <td>{{ claim.quantity | number }}</td>
+              <td>
+                <div class="reason-cell">
+                  <span>{{ claim.reason }}</span>
+                  <div class="tag-strip">
+                    <p-chip *ngFor="let tag of claim.tags" [label]="tag"></p-chip>
+                  </div>
+                </div>
+              </td>
+              <td><p-tag [value]="claim.status" [severity]="statusSeverity(claim.status)"></p-tag></td>
+              <td>{{ claim.owner }}</td>
+              <td>{{ claim.createdOn }}</td>
+              <td class="row-actions">
+                <p-button icon="pi pi-comments" [text]="true" label="Notes"></p-button>
+                <p-button icon="pi pi-external-link" [text]="true" label="Open"></p-button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  </div>
+</div>

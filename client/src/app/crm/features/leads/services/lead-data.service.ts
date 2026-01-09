@@ -9,7 +9,8 @@ import {
   LeadConversionResponse,
   LeadSearchRequest,
   LeadSearchResponse,
-  LeadStatus
+  LeadStatus,
+  LeadStatusHistoryItem
 } from '../models/lead.model';
 
 export interface SaveLeadRequest {
@@ -52,6 +53,10 @@ export class LeadDataService {
 
   get(id: string) {
     return this.http.get<Lead>(`${this.baseUrl}/api/leads/${id}`);
+  }
+
+  getStatusHistory(id: string) {
+    return this.http.get<LeadStatusHistoryItem[]>(`${this.baseUrl}/api/leads/${id}/status-history`);
   }
 
   create(payload: SaveLeadRequest) {

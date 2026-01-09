@@ -47,6 +47,7 @@ The dev server launches at `http://localhost:4200` and proxies `/api/**` request
 - `ThemeService` (see `src/app/core/theme`) pushes CSS variables at bootstrap using the value in `environment.theme` (`default` for dev, `graphite` for prod).
 - Material Design 3 spacing tokens (`--md-space-*`) live in `src/styles.scss`; use them instead of raw pixel values.
 - To add an org palette, extend `THEMES` inside `theme.tokens.ts` and set the desired key in the environment files.
+- Every page must inherit from the global design system (no isolated one-off styles). See `docs/STYLE_GUIDE.md` for the source-of-truth global style files.
 
 ### Feature structure
 

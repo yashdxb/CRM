@@ -1,0 +1,35 @@
+@use '../../../../../styles/design-tokens' as *;
+
+.awards {
+  padding: 0;
+}
+
+.grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: $gray-600;
+  border: none;
+  padding: 0.25rem 0.5rem;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: $gray-800;
+  }
+}
+
+.row-click {
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(15, 23, 42, 0.04);
+  }
+}

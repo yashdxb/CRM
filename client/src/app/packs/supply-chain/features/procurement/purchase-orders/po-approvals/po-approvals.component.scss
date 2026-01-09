@@ -1,0 +1,83 @@
+.po-approvals {
+  padding: 0;
+}
+
+.grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+.table-container {
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.ref {
+  display: grid;
+  gap: 0.2rem;
+
+  .id {
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  .department {
+    color: #94a3b8;
+    font-size: 0.85rem;
+  }
+}
+
+.requestor {
+  display: inline-flex;
+  gap: 0.75rem;
+  align-items: center;
+
+  .name {
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .notes {
+    display: block;
+    color: #64748b;
+    font-size: 0.85rem;
+    max-width: 260px;
+  }
+}
+
+.timeline {
+  display: grid;
+  gap: 0.25rem;
+
+  .due {
+    color: #dc2626;
+    font-weight: 600;
+  }
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.amount {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+:host ::ng-deep .p-chip.current {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  font-weight: 600;
+}

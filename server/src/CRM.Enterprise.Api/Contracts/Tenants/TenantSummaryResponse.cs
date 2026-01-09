@@ -4,4 +4,6 @@ public record TenantSummaryResponse(
     Guid Id,
     string Key,
     string Name,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    string? IndustryPreset,
+    IReadOnlyList<string> IndustryModules);

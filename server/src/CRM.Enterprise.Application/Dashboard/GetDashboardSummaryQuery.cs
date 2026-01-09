@@ -1,10 +1,11 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 
 namespace CRM.Enterprise.Application.Dashboard;
 
-public record GetDashboardSummaryQuery : IRequest<DashboardSummaryDto>;
+public record GetDashboardSummaryQuery(Guid? UserId) : IRequest<DashboardSummaryDto>;
 
 public class GetDashboardSummaryHandler : IRequestHandler<GetDashboardSummaryQuery, DashboardSummaryDto>
 {
@@ -16,5 +17,5 @@ public class GetDashboardSummaryHandler : IRequestHandler<GetDashboardSummaryQue
     }
 
     public Task<DashboardSummaryDto> Handle(GetDashboardSummaryQuery request, CancellationToken cancellationToken)
-        => _dashboardReadService.GetSummaryAsync(cancellationToken);
+        => _dashboardReadService.GetSummaryAsync(request.UserId, cancellationToken);
 }

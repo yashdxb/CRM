@@ -7,4 +7,6 @@ public record CreateTenantRequest(
     string AdminEmail,
     string AdminPassword,
     string? TimeZone,
-    string? Currency);
+    string? Currency,
+    string? IndustryPreset,
+    IReadOnlyList<string>? IndustryModules);

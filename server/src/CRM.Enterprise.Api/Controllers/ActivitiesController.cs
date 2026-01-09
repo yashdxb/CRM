@@ -8,6 +8,7 @@ using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -97,6 +98,7 @@ public class ActivitiesController : ControllerBase
                 a.DueDateUtc,
                 a.CompletedDateUtc,
                 a.Description,
+                a.Outcome,
                 a.Priority,
                 a.OwnerId,
                 a.CreatedAtUtc
@@ -124,6 +126,13 @@ public class ActivitiesController : ControllerBase
             .Distinct()
             .ToList();
 
+        var leadIds = activities
+            .Where(a => a.RelatedEntityType == ActivityRelationType.Lead)
+            .Select(a => a.RelatedEntityId)
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
+
         var accountLookup = await _dbContext.Accounts
             .Where(a => accountIds.Contains(a.Id))
             .AsNoTracking()
@@ -141,6 +150,32 @@ public class ActivitiesController : ControllerBase
             .AsNoTracking()
             .Select(o => new { o.Id, o.Name })
             .ToDictionaryAsync(o => o.Id, o => o.Name, cancellationToken);
+
+        var leadLookup = await _dbContext.Leads
+            .Where(l => leadIds.Contains(l.Id))
+            .AsNoTracking()
+            .Select(l => new
+            {
+                l.Id,
+                Name = (l.FirstName + " " + l.LastName).Trim(),
+                l.Email,
+                l.CompanyName
+            })
+            .ToDictionaryAsync(
+                l => l.Id,
+                l =>
+                {
+                    if (!string.IsNullOrWhiteSpace(l.Name))
+                    {
+                        return l.Name;
+                    }
+                    if (!string.IsNullOrWhiteSpace(l.Email))
+                    {
+                        return l.Email;
+                    }
+                    return l.CompanyName ?? string.Empty;
+                },
+                cancellationToken);
 
         var ownerIds = activities.Select(a => a.OwnerId).Where(id => id != Guid.Empty).Distinct().ToList();
         var ownerLookup = await _dbContext.Users
@@ -163,9 +198,10 @@ public class ActivitiesController : ControllerBase
                     a.Subject,
                     a.Type.ToString(),
                     a.Description,
+                    a.Outcome,
                     a.Priority,
                     relatedId,
-                    ResolveCustomerName(a.RelatedEntityType, relatedId, accountLookup, contactLookup, opportunityLookup),
+                    ResolveCustomerName(a.RelatedEntityType, relatedId, accountLookup, contactLookup, opportunityLookup, leadLookup),
                     a.RelatedEntityType.ToString(),
                     a.DueDateUtc,
                     a.CompletedDateUtc,
@@ -179,6 +215,22 @@ public class ActivitiesController : ControllerBase
         return Ok(new ActivitySearchResponse(items, total));
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<ActivityListItem>> GetById(Guid id, CancellationToken cancellationToken = default)
+    {
+        var activity = await _dbContext.Activities
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
+
+        if (activity is null)
+        {
+            return NotFound();
+        }
+
+        var item = await MapToListItemAsync(id, cancellationToken);
+        return Ok(item);
+    }
+
     [HttpPost]
     [Authorize(Policy = Permissions.Policies.ActivitiesManage)]
     public async Task<ActionResult<ActivityListItem>> Create([FromBody] UpsertActivityRequest request, CancellationToken cancellationToken)
@@ -187,6 +239,7 @@ public class ActivitiesController : ControllerBase
         {
             Subject = request.Subject,
             Description = request.Description,
+            Outcome = request.Outcome,
             Type = request.Type,
             Priority = request.Priority,
             DueDateUtc = request.DueDateUtc,
@@ -215,6 +268,7 @@ public class ActivitiesController : ControllerBase
         var previousOwnerId = activity.OwnerId;
         activity.Subject = request.Subject;
         activity.Description = request.Description;
+        activity.Outcome = request.Outcome;
         activity.Type = request.Type;
         activity.Priority = request.Priority;
         activity.DueDateUtc = request.DueDateUtc;
@@ -257,7 +311,8 @@ public class ActivitiesController : ControllerBase
         Guid? relatedEntityId,
         IReadOnlyDictionary<Guid, string> accountLookup,
         IReadOnlyDictionary<Guid, string> contactLookup,
-        IReadOnlyDictionary<Guid, string> opportunityLookup)
+        IReadOnlyDictionary<Guid, string> opportunityLookup,
+        IReadOnlyDictionary<Guid, string> leadLookup)
     {
         if (!relatedEntityId.HasValue || relatedEntityId.Value == Guid.Empty)
         {
@@ -270,6 +325,7 @@ public class ActivitiesController : ControllerBase
             ActivityRelationType.Account when accountLookup.TryGetValue(value, out var accountName) => accountName,
             ActivityRelationType.Contact when contactLookup.TryGetValue(value, out var contactName) => contactName,
             ActivityRelationType.Opportunity when opportunityLookup.TryGetValue(value, out var opportunityName) => opportunityName,
+            ActivityRelationType.Lead when leadLookup.TryGetValue(value, out var leadName) => leadName,
             _ => string.Empty
         };
     }
@@ -302,6 +358,13 @@ public class ActivitiesController : ControllerBase
                 .Select(o => o.Name)
                 .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
         }
+        else if (activity.RelatedEntityType == ActivityRelationType.Lead && activity.RelatedEntityId != Guid.Empty)
+        {
+            relatedName = await _dbContext.Leads
+                .Where(l => l.Id == activity.RelatedEntityId)
+                .Select(l => (l.FirstName + " " + l.LastName).Trim())
+                .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+        }
 
         var ownerId = activity.OwnerId == Guid.Empty ? (Guid?)null : activity.OwnerId;
         var ownerName = ownerId.HasValue
@@ -313,6 +376,7 @@ public class ActivitiesController : ControllerBase
             activity.Subject,
             activity.Type.ToString(),
             activity.Description,
+            activity.Outcome,
             activity.Priority,
             activity.RelatedEntityId == Guid.Empty ? null : activity.RelatedEntityId,
             relatedName,
@@ -329,11 +393,19 @@ public class ActivitiesController : ControllerBase
     {
         if (requestedOwnerId.HasValue && requestedOwnerId != Guid.Empty)
         {
-            var exists = await _dbContext.Users.AnyAsync(u => u.Id == requestedOwnerId.Value, cancellationToken);
+            var exists = await _dbContext.Users.AnyAsync(
+                u => u.Id == requestedOwnerId.Value && u.IsActive && !u.IsDeleted,
+                cancellationToken);
             if (exists)
             {
                 return requestedOwnerId.Value;
             }
+        }
+
+        var currentUserId = GetUserId();
+        if (currentUserId != Guid.Empty)
+        {
+            return currentUserId;
         }
 
         var fallback = await _dbContext.Users
@@ -343,5 +415,11 @@ public class ActivitiesController : ControllerBase
             .FirstOrDefaultAsync(cancellationToken);
 
         return fallback == Guid.Empty ? Guid.NewGuid() : fallback;
+    }
+
+    private Guid GetUserId()
+    {
+        var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
     }
 }

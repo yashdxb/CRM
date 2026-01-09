@@ -1,0 +1,440 @@
+// ============================================
+// SMART SUPPLIER POOL - THEME MIXINS
+// Reusable style patterns
+// ============================================
+
+@use './variables' as *;
+
+// ============================================
+// LAYOUT MIXINS
+// ============================================
+
+// Page Container
+@mixin page-container {
+  padding: $spacing-3xl;
+  background: $gradient-background;
+  min-height: 100vh;
+
+  @media (max-width: $breakpoint-lg) {
+    padding: $spacing-xl;
+  }
+
+  @media (max-width: $breakpoint-md) {
+    padding: $spacing-lg;
+  }
+}
+
+// Card Container
+@mixin card-container {
+  background: $bg-primary;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md;
+  border: 1px solid $border-light;
+  overflow: hidden;
+  transition: box-shadow $transition-base;
+
+  &:hover {
+    box-shadow: $shadow-lg;
+  }
+}
+
+// Header Section with Accent Bar
+@mixin header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-3xl;
+  background: $gradient-header;
+  padding: $header-padding;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-md;
+  border: 1px solid $border-medium;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: $header-accent-width;
+    height: 100%;
+    background: $gradient-primary;
+  }
+
+  @media (max-width: $breakpoint-md) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $spacing-lg;
+    padding: $header-padding-mobile $header-padding-mobile $header-padding-mobile calc($header-padding-mobile + $header-accent-width);
+  }
+}
+
+// Title Section
+@mixin title-section {
+  padding-left: $spacing-lg;
+
+  .page-title {
+    font-size: $font-3xl;
+    font-weight: $font-bold;
+    color: $primary-900;
+    margin: 0 0 $spacing-sm 0;
+    letter-spacing: $tracking-tighter;
+
+    @media (max-width: $breakpoint-md) {
+      font-size: $font-2xl;
+    }
+  }
+
+  .page-subtitle {
+    font-size: $font-lg;
+    color: $neutral-500;
+    margin: 0;
+    font-weight: $font-medium;
+
+    @media (max-width: $breakpoint-md) {
+      font-size: $font-base;
+    }
+  }
+}
+
+// Actions Section
+@mixin actions-section {
+  display: flex;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+
+  @media (max-width: $breakpoint-sm) {
+    width: 100%;
+
+    >* {
+      flex: 1;
+    }
+  }
+}
+
+// ============================================
+// TABLE MIXINS
+// ============================================
+
+@mixin table-section {
+  @include card-container;
+}
+
+@mixin table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $spacing-lg;
+  padding: $spacing-lg;
+
+  @media (max-width: $breakpoint-md) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+// ============================================
+// CELL MIXINS
+// ============================================
+
+@mixin cell-with-subtitle {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+
+  .cell-primary {
+    font-weight: $font-semibold;
+    color: $text-primary;
+    font-size: $font-md;
+  }
+
+  .cell-secondary {
+    font-size: $font-sm;
+    color: $text-secondary;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@mixin cell-with-value {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+
+  .cell-value {
+    font-size: $font-sm;
+    color: $text-secondary;
+  }
+}
+
+@mixin cell-info-display {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-xs;
+  font-size: $font-md;
+
+  .info-primary {
+    font-weight: $font-bold;
+    color: $text-primary;
+  }
+
+  .info-divider {
+    color: $text-tertiary;
+  }
+
+  .info-secondary {
+    color: $text-secondary;
+  }
+}
+
+// ============================================
+// STATE MIXINS
+// ============================================
+
+@mixin empty-state {
+  padding: $spacing-4xl $spacing-lg;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 4rem;
+    color: $text-disabled;
+    margin-bottom: $spacing-lg;
+  }
+
+  .empty-title {
+    font-size: $font-xl;
+    font-weight: $font-semibold;
+    color: $text-secondary;
+    margin: 0 0 $spacing-sm 0;
+  }
+
+  .empty-subtitle {
+    font-size: $font-md;
+    color: $text-tertiary;
+    margin: 0;
+  }
+}
+
+@mixin loading-state {
+  padding: $spacing-4xl $spacing-lg;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-lg;
+
+  .loading-icon {
+    font-size: 2.5rem;
+    color: $accent-light;
+  }
+
+  p {
+    font-size: $font-lg;
+    color: $text-secondary;
+    margin: 0;
+  }
+}
+
+// ============================================
+// BUTTON MIXINS
+// ============================================
+
+@mixin button-base {
+  font-weight: $font-semibold;
+  transition: all $transition-fast;
+  box-shadow: $shadow-button;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-button-hover;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+@mixin button-icon {
+  &.p-button-text {
+    width: 2.5rem;
+    height: 2.5rem;
+    box-shadow: none;
+
+    &:hover {
+      background-color: rgba(59, 130, 246, 0.1);
+      transform: scale(1.1);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+}
+
+// ============================================
+// TAG MIXINS
+// ============================================
+
+@mixin tag-base {
+  font-size: $font-xs;
+  font-weight: $font-bold;
+  padding: 0.375rem 0.875rem;
+  border-radius: $radius-sm;
+  letter-spacing: $tracking-wide;
+  box-shadow: $shadow-tag;
+}
+
+@mixin tag-success {
+  background: $gradient-success;
+  color: white;
+}
+
+@mixin tag-warning {
+  background: $gradient-warning;
+  color: white;
+}
+
+@mixin tag-danger {
+  background: $gradient-danger;
+  color: white;
+}
+
+@mixin tag-info {
+  background: $gradient-info;
+  color: white;
+}
+
+// ============================================
+// FORM MIXINS
+// ============================================
+
+@mixin input-base {
+  border: $input-border-width solid $border-strong;
+  border-radius: $radius-md;
+  transition: all $transition-fast;
+
+  &:hover {
+    border-color: $primary-300;
+  }
+
+  &:focus {
+    border-color: $accent-light;
+    box-shadow: $shadow-focus;
+  }
+}
+
+@mixin form-field {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+
+  label {
+    font-size: $font-sm;
+    font-weight: $font-semibold;
+    color: $text-secondary;
+
+    .required {
+      color: $danger-light;
+    }
+  }
+
+  .field-error {
+    font-size: $font-xs;
+    color: $danger-light;
+    margin-top: $spacing-xs;
+  }
+}
+
+// ============================================
+// UTILITY MIXINS
+// ============================================
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin line-clamp($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@mixin hover-lift {
+  transition: transform $transition-fast, box-shadow $transition-fast;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-lg;
+  }
+}
+
+@mixin focus-ring {
+
+  &:focus,
+  &:focus-visible {
+    outline: none;
+    box-shadow: $shadow-focus;
+  }
+}
+
+// ============================================
+// RESPONSIVE MIXINS
+// ============================================
+
+@mixin respond-to($breakpoint) {
+  @if $breakpoint ==xs {
+    @media (max-width: $breakpoint-xs) {
+      @content;
+    }
+  }
+
+  @else if $breakpoint ==sm {
+    @media (max-width: $breakpoint-sm) {
+      @content;
+    }
+  }
+
+  @else if $breakpoint ==md {
+    @media (max-width: $breakpoint-md) {
+      @content;
+    }
+  }
+
+  @else if $breakpoint ==lg {
+    @media (max-width: $breakpoint-lg) {
+      @content;
+    }
+  }
+
+  @else if $breakpoint ==xl {
+    @media (max-width: $breakpoint-xl) {
+      @content;
+    }
+  }
+
+  @else if $breakpoint ==2xl {
+    @media (max-width: $breakpoint-2xl) {
+      @content;
+    }
+  }
+}

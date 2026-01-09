@@ -29,7 +29,12 @@ import {
   createOpportunity,
   getOpportunityById,
   updateOpportunity,
-  deleteOpportunity
+  deleteOpportunity,
+  searchSuppliers,
+  getSupplierById,
+  createSupplier,
+  updateSupplier,
+  deleteSupplier
 } from './mock-db';
 
 const toNumber = (value: string | null, fallback: number) => {
@@ -272,6 +277,48 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     if (match) {
       const ok = deleteRole(match[1]);
       return respond(ok ? null : { message: 'Unable to delete role' }, ok ? 204 : 400, 130);
+    }
+  }
+
+  // ─── Supplier CRUD ────────────────────────────────────────────────────────────
+  if (req.method === 'GET' && path === '/api/supply-chain/suppliers') {
+    const params = {
+      search: req.params.get('search') ?? undefined,
+      status: req.params.get('status') ?? undefined,
+      page: toNumber(req.params.get('page'), 1),
+      pageSize: toNumber(req.params.get('pageSize'), 20)
+    };
+    return respond(searchSuppliers(params), 200, 120);
+  }
+
+  if (req.method === 'GET' && /^\/api\/supply-chain\/suppliers\/[^/]+$/.test(path)) {
+    const match = path.match(/^\/api\/supply-chain\/suppliers\/([^/]+)$/);
+    if (match) {
+      const supplier = getSupplierById(match[1]);
+      return respond(supplier ?? { message: 'Not found' }, supplier ? 200 : 404, 100);
+    }
+  }
+
+  if (req.method === 'POST' && path === '/api/supply-chain/suppliers') {
+    const payload = req.body as Parameters<typeof createSupplier>[0];
+    const created = createSupplier(payload);
+    return respond(created, 201, 150);
+  }
+
+  if (req.method === 'PUT' && /^\/api\/supply-chain\/suppliers\/[^/]+$/.test(path)) {
+    const match = path.match(/^\/api\/supply-chain\/suppliers\/([^/]+)$/);
+    if (match) {
+      const payload = req.body as Parameters<typeof updateSupplier>[1];
+      const updated = updateSupplier(match[1], payload);
+      return respond(updated ?? { message: 'Not found' }, updated ? 200 : 404, 140);
+    }
+  }
+
+  if (req.method === 'DELETE' && /^\/api\/supply-chain\/suppliers\/[^/]+$/.test(path)) {
+    const match = path.match(/^\/api\/supply-chain\/suppliers\/([^/]+)$/);
+    if (match) {
+      const ok = deleteSupplier(match[1]);
+      return respond(ok ? null : { message: 'Not found' }, ok ? 204 : 404, 120);
     }
   }
 

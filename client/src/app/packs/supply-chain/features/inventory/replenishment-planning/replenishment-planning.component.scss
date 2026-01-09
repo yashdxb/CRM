@@ -1,0 +1,145 @@
+@use '../../../../../../styles/design-tokens' as *;
+@use '../../../../../shared/page-design-system' as page-design-system;
+@use '../../../../../shared/_form-page-styles' as form;
+  // removed stray closing brace
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+
+  ::ng-deep .p-select {
+    min-width: 170px;
+  }
+}
+
+.insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+// ...existing code...
+
+  .order-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+
+    .values {
+      font-weight: 500;
+      color: #0f172a;
+    }
+
+    ::ng-deep .p-progressbar {
+      height: 0.55rem;
+      border-radius: 999px;
+    }
+  }
+
+  .row-actions {
+    text-align: right;
+  }
+
+  .plan-detail {
+    background: rgba(15, 23, 42, 0.02);
+      color: #475569;
+// Use global form-section for all cards
+.task-card {
+  @include form.form-section;
+  .task-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .task-title {
+      margin: 0 0 0.15rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .task-desc {
+      margin: 0 0 0.25rem;
+      color: #64748b;
+    }
+  }
+  .row-actions {
+    text-align: right;
+  }
+    }
+  }
+
+.task-column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.task-card {
+  .task-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .task-title {
+      margin: 0 0 0.15rem;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .task-desc {
+      margin: 0 0 0.25rem;
+      color: #64748b;
+    }
+  }
+}
+
+.guidance-card {
+  ul {
+    padding-left: 1.2rem;
+    margin: 0 0 1rem;
+    color: #475569;
+    display: grid;
+    gap: 0.5rem;
+  }
+}
+// Use global form-section for all cards
+
+.guidance-card {
+  @include form.form-section;
+  ul {
+    padding-left: 1.2rem;
+    margin: 0 0 1rem;
+    color: #475569;
+    display: grid;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 1100px) {
+  .grid-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    ::ng-deep .p-select {
+      width: 100%;
+    }
+  }
+}

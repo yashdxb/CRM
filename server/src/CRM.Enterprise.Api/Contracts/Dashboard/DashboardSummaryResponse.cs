@@ -16,6 +16,7 @@ public record DashboardSummaryResponse(
     int OverdueActivities,
     IEnumerable<CustomerListItem> RecentCustomers,
     IEnumerable<ActivityListItem> ActivitiesNextWeek,
+    IEnumerable<ActivityListItem> MyTasks,
     IEnumerable<PipelineStageSummary> PipelineValue,
     IEnumerable<ChartDataPoint> RevenueByMonth,
     IEnumerable<ChartDataPoint> CustomerGrowth,

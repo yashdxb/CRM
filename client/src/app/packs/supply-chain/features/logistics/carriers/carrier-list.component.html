@@ -1,0 +1,310 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="animated-orb orb-4"></div>
+</div>
+
+<div class="page-container">
+  <div class="page-content carrier-page">
+    <p-toast></p-toast>
+    <p-confirmDialog></p-confirmDialog>
+
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="page-title gradient-primary">Carrier Directory</h1>
+          <p class="page-subtitle">Manage global logistics partners, service coverage, and performance</p>
+        </div>
+        <div class="hero-actions">
+          <p-button icon="pi pi-plus" label="Add Carrier" styleClass="btn-gradient" (onClick)="openCreateDialog()"></p-button>
+        </div>
+      </div>
+    </section>
+
+    <div class="filter-bar glass-card">
+      <div class="filter-group search">
+        <p-iconField iconPosition="left">
+          <p-inputIcon styleClass="pi pi-search"></p-inputIcon>
+          <input
+            pInputText
+            type="text"
+            placeholder="Search carriers by name, mode, or region"
+            [(ngModel)]="searchText"
+            (input)="onSearch()"
+          />
+        </p-iconField>
+      </div>
+
+      <div class="filter-group">
+        <p-select
+          [options]="modeOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Filter by mode"
+          [(ngModel)]="selectedMode"
+          (onChange)="applyFilters()"
+        ></p-select>
+      </div>
+
+      <div class="filter-group">
+        <p-select
+          [options]="statusOptions"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Filter by status"
+          [(ngModel)]="selectedStatus"
+          (onChange)="applyFilters()"
+        ></p-select>
+      </div>
+
+      <p-button
+        icon="pi pi-filter-slash"
+        label="Reset"
+        styleClass="btn-glass"
+        (onClick)="resetFilters()"
+      ></p-button>
+    </div>
+
+    <div class="table-section glass-card">
+      <div class="card-body">
+        <p-table
+          [value]="filteredCarriers"
+          [loading]="loading"
+          [paginator]="true"
+          [rows]="12"
+          [rowsPerPageOptions]="[10, 25, 50]"
+          [showCurrentPageReport]="true"
+          responsiveLayout="scroll"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} carriers"
+          styleClass="p-datatable-sm"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="name">Carrier <p-sortIcon field="name"></p-sortIcon></th>
+              <th>Modes</th>
+              <th>Coverage</th>
+              <th pSortableColumn="primaryRegion">Primary Region <p-sortIcon field="primaryRegion"></p-sortIcon></th>
+              <th>On-Time %</th>
+              <th>Status</th>
+              <th class="actions-column">Actions</th>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="body" let-carrier>
+            <tr>
+              <td>
+                <div class="carrier-name">{{ carrier.name }}</div>
+                <div class="carrier-contact">{{ carrier.contactName }} · {{ carrier.phone }}</div>
+                <div class="carrier-email">{{ carrier.contactEmail }}</div>
+              </td>
+              <td>
+                <div class="chip-row">
+                  <p-tag *ngFor="let mode of carrier.modes" [value]="mode" severity="info"></p-tag>
+                </div>
+              </td>
+              <td>
+                <div class="chip-row">
+                  <p-tag *ngFor="let region of carrier.coverage" [value]="region" severity="secondary"></p-tag>
+                </div>
+              </td>
+              <td>{{ carrier.primaryRegion }}</td>
+              <td>
+                <span class="metric">{{ carrier.onTimeRate }}%</span>
+                <small class="metric-sub">Avg transit {{ carrier.avgTransitDays }} days</small>
+              </td>
+              <td>
+                <p-tag [value]="carrier.status" [severity]="statusSeverity(carrier.status)" [rounded]="true"></p-tag>
+              </td>
+              <td class="actions-column">
+                <div class="action-group">
+                  <p-button
+                    icon="pi pi-pencil"
+                    styleClass="btn-icon"
+                    pTooltip="Edit"
+                    (onClick)="openEditDialog(carrier)"
+                  ></p-button>
+                  <p-button
+                    icon="pi pi-trash"
+                    styleClass="btn-icon danger"
+                    pTooltip="Delete"
+                    (onClick)="deleteCarrier(carrier)"
+                  ></p-button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="7" class="empty-state">
+                <i class="pi pi-truck empty-icon"></i>
+                <p class="empty-title">No carriers match your criteria</p>
+                <p class="empty-subtitle">Adjust filters or add a new carrier to the directory.</p>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+
+    <p-dialog
+      [(visible)]="showDialog"
+      [header]="editMode ? 'Edit Carrier' : 'Add Carrier'"
+      [modal]="true"
+      [style]="{ width: '640px' }"
+      [draggable]="false"
+      [resizable]="false"
+      (onHide)="closeDialog()"
+    >
+      <div class="dialog-grid">
+        <div class="form-field">
+          <label for="carrier-name">Carrier Name *</label>
+          <input
+            id="carrier-name"
+            pInputText
+            [(ngModel)]="carrierForm.name"
+            placeholder="e.g., Global Freight Group"
+            class="w-full"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="carrier-region">Primary Region *</label>
+          <p-select
+            inputId="carrier-region"
+            [options]="regionOptions"
+            [(ngModel)]="carrierForm.primaryRegion"
+            class="w-full"
+          ></p-select>
+        </div>
+
+        <div class="form-field">
+          <label for="contact-name">Contact Name *</label>
+          <input
+            id="contact-name"
+            pInputText
+            [(ngModel)]="carrierForm.contactName"
+            placeholder="Primary contact"
+            class="w-full"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="contact-email">Contact Email *</label>
+          <input
+            id="contact-email"
+            pInputText
+            [(ngModel)]="carrierForm.contactEmail"
+            placeholder="name@carrier.com"
+            class="w-full"
+          />
+        </div>
+
+        <div class="form-field">
+          <label for="contact-phone">Phone</label>
+          <input
+            id="contact-phone"
+            pInputText
+            [(ngModel)]="carrierForm.phone"
+            placeholder="+1 555 123 4567"
+            class="w-full"
+          />
+        </div>
+
+        <div class="form-field">
+          <label>Transportation Modes *</label>
+          <div class="chip-row">
+            <p-button
+              *ngFor="let mode of modeOptions.slice(1)"
+              [label]="mode.label"
+              [severity]="carrierForm.modes.includes(mode.value!) ? 'primary' : 'secondary'"
+              [outlined]="!carrierForm.modes.includes(mode.value!)"
+              (onClick)="toggleMode(mode.value!, !carrierForm.modes.includes(mode.value!))"
+            ></p-button>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label>Coverage Regions *</label>
+          <div class="chip-row">
+            <p-button
+              *ngFor="let region of regionOptions"
+              [label]="region"
+              [severity]="carrierForm.coverage.includes(region) ? 'primary' : 'secondary'"
+              [outlined]="!carrierForm.coverage.includes(region)"
+              (onClick)="toggleCoverage(region, !carrierForm.coverage.includes(region))"
+            ></p-button>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="avg-transit">Avg Transit Days</label>
+          <p-inputNumber
+            inputId="avg-transit"
+            [(ngModel)]="carrierForm.avgTransitDays"
+            [min]="0"
+            [maxFractionDigits]="0"
+            inputStyleClass="w-full"
+            styleClass="w-full"
+          ></p-inputNumber>
+        </div>
+
+        <div class="form-field">
+          <label for="on-time-rate">On-Time Rate (%)</label>
+          <p-inputNumber
+            inputId="on-time-rate"
+            [(ngModel)]="carrierForm.onTimeRate"
+            [min]="0"
+            [max]="100"
+            suffix="%"
+            [step]="0.5"
+            inputStyleClass="w-full"
+            styleClass="w-full"
+          ></p-inputNumber>
+        </div>
+
+        <div class="form-field">
+          <label for="carrier-status">Status</label>
+          <p-select
+            inputId="carrier-status"
+            [options]="statusOptions.slice(1)"
+            optionLabel="label"
+            optionValue="value"
+            [(ngModel)]="carrierForm.status"
+            class="w-full"
+          ></p-select>
+        </div>
+
+        <div class="form-field full">
+          <label for="carrier-notes">Notes</label>
+          <textarea
+            id="carrier-notes"
+            pTextarea
+            rows="3"
+            [(ngModel)]="carrierForm.notes"
+            placeholder="SLA, certifications, special instructions..."
+            class="w-full"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="dialog-actions">
+        <p-button
+          label="Cancel"
+          icon="pi pi-times"
+          severity="secondary"
+          [outlined]="true"
+          (onClick)="closeDialog()"
+        ></p-button>
+        <p-button
+          label="Save"
+          icon="pi pi-check"
+          (onClick)="saveCarrier()"
+        ></p-button>
+      </div>
+    </p-dialog>
+  </div>
+</div>

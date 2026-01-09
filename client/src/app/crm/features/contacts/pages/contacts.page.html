@@ -225,39 +225,6 @@
       </div>
     </div>
 
-    <div class="views-bar">
-      <div class="views-select">
-        <i class="pi pi-bookmark"></i>
-        <p-select appendTo="body"
-          [options]="viewOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="selectedViewId()"
-          (ngModelChange)="onSelectView($event)"
-          placeholder="Saved views"
-        ></p-select>
-      </div>
-      <div class="views-save">
-        <input pInputText type="text" placeholder="Name this view" [(ngModel)]="viewName" />
-        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-bookmark" label="Save" (click)="onSaveView()"></button>
-        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-trash" label="Delete" [disabled]="!selectedViewId()" (click)="onDeleteView()"></button>
-      </div>
-    </div>
-
-    <section class="recently-viewed" *ngIf="recentContacts().length">
-      <div class="recently-viewed__header">
-        <h3>Recently viewed</h3>
-        <span>{{ recentContacts().length }} recent</span>
-      </div>
-      <div class="recently-viewed__list">
-        <button pButton type="button" class="recent-item" *ngFor="let item of recentContacts()" (click)="openRecent(item)">
-          <div class="recent-item__title">{{ item.title }}</div>
-          <div class="recent-item__meta">
-            {{ item.subtitle || 'Contact' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
-          </div>
-        </button>
-      </div>
-    </section>
   </section>
 
   <section class="contacts__content">

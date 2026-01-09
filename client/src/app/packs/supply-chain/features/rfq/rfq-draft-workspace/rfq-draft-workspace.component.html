@@ -1,0 +1,210 @@
+<p-toast></p-toast>
+
+<ng-container *ngIf="loading; else draftContent">
+  <div class="draft-loading">
+    <i class="pi pi-spin pi-spinner"></i>
+    <p>Preparing draft workspace…</p>
+  </div>
+</ng-container>
+
+<ng-template #draftContent>
+  <ng-container *ngIf="hasDraft; else emptyDraft">
+    <div class="draft-shell">
+      <section class="draft-hero">
+        <div class="hero-header">
+          <div class="hero-title">
+            <p-button
+              icon="pi pi-arrow-left"
+              [text]="true"
+              severity="secondary"
+              label="Back to catalog"
+              (onClick)="returnToCatalog()"
+            ></p-button>
+            <div class="title-copy">
+              <span class="eyebrow">Sourcing Drafts</span>
+              <h1>RFQ Draft Workspace</h1>
+              <p class="meta">
+                {{ supplierGroups.length }} supplier{{ supplierGroups.length === 1 ? '' : 's' }} ·
+                {{ draftItems.length }} line item{{ draftItems.length === 1 ? '' : 's' }}
+              </p>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <p-button
+              icon="pi pi-refresh"
+              label="Reset Draft"
+              severity="secondary"
+              [outlined]="true"
+              (onClick)="returnToCatalog()"
+            ></p-button>
+            <p-button
+              icon="pi pi-arrow-right"
+              label="Continue to RFQ setup"
+              severity="success"
+              (onClick)="continueToSetup()"
+            ></p-button>
+          </div>
+        </div>
+
+        <div class="hero-metrics">
+          <article class="metric-card" *ngFor="let metric of metrics">
+            <div class="metric-icon" [ngClass]="metric.tone">
+              <i [class]="metric.icon"></i>
+            </div>
+            <div class="metric-body">
+              <span class="metric-label">{{ metric.label }}</span>
+              <span class="metric-value">{{ metric.value }}</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <main class="draft-content">
+        <p-card class="overview-card">
+          <ng-template pTemplate="header">
+            <div class="overview-header">
+              <div>
+                <h2>Draft Overview</h2>
+                <p class="overview-subtitle">
+                  Finalize supplier selections, quantities, and target dates before launching the RFQ.
+                </p>
+              </div>
+            </div>
+          </ng-template>
+
+          <div class="overview-grid">
+            <div class="overview-item">
+              <span class="item-label">Primary Supplier{{ supplierGroups.length === 1 ? '' : 's' }}</span>
+              <span class="item-value">
+                <ng-container *ngFor="let group of supplierGroups; let last = last">
+                  {{ group.supplierName }}<span *ngIf="!last">, </span>
+                </ng-container>
+              </span>
+            </div>
+            <div class="overview-item">
+              <span class="item-label">Earliest Need By</span>
+              <span class="item-value">{{ (earliestNeedBy || defaultNeedByDate()) | date : 'MMM d, y' }}</span>
+            </div>
+            <div class="overview-item highlight">
+              <span class="item-label">Target Spend</span>
+              <span class="item-value">{{ totalTargetSpend | currency : 'USD' : 'symbol' : '1.0-0' }}</span>
+            </div>
+          </div>
+        </p-card>
+
+        <section class="supplier-stack">
+          <p-card class="supplier-card" *ngFor="let group of supplierGroups">
+            <ng-template pTemplate="header">
+              <div class="supplier-header">
+                <div>
+                  <h3>{{ group.supplierName }}</h3>
+                  <p class="supplier-meta">
+                    {{ group.items.length }} product{{ group.items.length === 1 ? '' : 's' }} in scope
+                  </p>
+                </div>
+                <p-tag value="Ready for RFQ" severity="info"></p-tag>
+              </div>
+            </ng-template>
+
+            <p-table
+              [value]="group.items"
+              responsiveLayout="scroll"
+              styleClass="draft-table"
+              [tableStyle]="{ 'min-width': '48rem' }"
+            >
+              <ng-template pTemplate="header">
+                <tr>
+                  <th class="col-product">Product</th>
+                  <th class="col-description">Description</th>
+                  <th class="col-compact text-right">Qty</th>
+                  <th class="col-compact text-right">Target Price</th>
+                  <th class="col-compact text-right">Need By</th>
+                  <th class="col-notes">Notes</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-item>
+                <tr>
+                  <td class="product-cell">
+                    <span class="product-code">{{ item.product.sku }}</span>
+                    <span class="product-name">{{ item.product.name }}</span>
+                  </td>
+                  <td>{{ item.product.description }}</td>
+                  <td class="col-compact">
+                    <p-inputNumber
+                      [(ngModel)]="item.desiredQuantity"
+                      inputId="qty-{{ item.product.id }}"
+                      [min]="1"
+                      (onInput)="onQuantityChange()"
+                      styleClass="quantity-input"
+                    ></p-inputNumber>
+                  </td>
+                  <td class="col-compact">
+                    <p-inputNumber
+                      [(ngModel)]="item.targetPrice"
+                      mode="currency"
+                      currency="USD"
+                      locale="en-US"
+                      inputId="target-{{ item.product.id }}"
+                    ></p-inputNumber>
+                  </td>
+                  <td class="col-compact">
+                    <p-datepicker
+                      [(ngModel)]="item.needByDate"
+                      inputId="date-{{ item.product.id }}"
+                      dateFormat="M d, yy"
+                      (onSelect)="onNeedByDateChange()"
+                    ></p-datepicker>
+                  </td>
+                  <td class="col-notes">
+                    <textarea
+                      pTextarea
+                      autoResize="autoResize"
+                      rows="1"
+                      [(ngModel)]="item.notes"
+                      placeholder="Optional instructions"
+                    ></textarea>
+                  </td>
+                  <td class="col-actions">
+                    <p-button
+                      icon="pi pi-trash"
+                      [text]="true"
+                      severity="danger"
+                      (onClick)="removeItem(item)"
+                      pTooltip="Remove from draft"
+                      tooltipPosition="top"
+                    ></p-button>
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </p-card>
+        </section>
+      </main>
+
+      <div class="draft-cta">
+        <p-button
+          label="Continue to RFQ setup"
+          icon="pi pi-arrow-right"
+          severity="success"
+          (onClick)="continueToSetup()"
+        ></p-button>
+      </div>
+    </div>
+  </ng-container>
+</ng-template>
+
+<ng-template #emptyDraft>
+  <div class="empty-state">
+    <i class="pi pi-inbox"></i>
+    <h2>No draft selections found</h2>
+    <p>Select products in the catalog and choose “Add to RFQ Draft” to start a new workspace.</p>
+    <p-button
+      label="Browse catalog"
+      icon="pi pi-arrow-left"
+      severity="secondary"
+      [text]="true"
+      (onClick)="returnToCatalog()"
+    ></p-button>
+  </div>
+</ng-template>

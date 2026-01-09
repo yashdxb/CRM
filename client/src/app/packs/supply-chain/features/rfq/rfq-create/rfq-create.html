@@ -1,0 +1,370 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container rfq-create">
+  <div class="page-content">
+    <p-toast></p-toast>
+
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <h1 class="hero-title">
+            <span class="title-gradient">Create</span>
+            <span class="title-light">RFQ</span>
+          </h1>
+          <p class="hero-description">Request quotations from suppliers</p>
+        </div>
+      </div>
+      <div class="hero-actions">
+        <button pButton type="button" class="btn-glass" (click)="cancel()">
+          <i class="pi pi-times"></i>
+          <span>Cancel</span>
+        </button>
+        <button pButton type="button" class="btn-gradient" (click)="saveDraft()">
+          <i class="pi pi-save"></i>
+          <span>Save Draft</span>
+        </button>
+      </div>
+    </section>
+
+    <div class="stepper-container glass-card">
+    <p-stepper [value]="1">
+      <p-step-list>
+        <p-step [value]="1">Basic Information</p-step>
+        <p-step [value]="2">Terms & Conditions</p-step>
+        <p-step [value]="3">Line Items</p-step>
+        <p-step [value]="4">Select Suppliers</p-step>
+      </p-step-list>
+
+      <p-step-panels>
+        <!-- Step 1: Basic Information -->
+        <p-step-panel [value]="1">
+          <ng-template #content let-activateCallback="activateCallback">
+            <form [formGroup]="basicInfoGroup" class="step-content">
+              <div class="form-section">
+                <h3 class="section-title">RFQ Details</h3>
+                
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="type">Type <span class="required">*</span></label>
+                    <p-select inputId="type" formControlName="type" [options]="rfqTypes" placeholder="Select type" styleClass="w-full"></p-select>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="currency">Currency <span class="required">*</span></label>
+                    <p-select inputId="currency" [formControl]="currencyControl" [options]="currencies" placeholder="Select currency" styleClass="w-full"></p-select>
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label for="title">Title <span class="required">*</span></label>
+                  <input pInputText id="title" formControlName="title" placeholder="Enter RFQ title" class="w-full" />
+                  <small class="p-error" *ngIf="hasError('basicInfo', 'title')">Title is required (5-200 characters)</small>
+                </div>
+
+                <div class="form-field">
+                  <label for="description">Description</label>
+                  <textarea pTextarea id="description" formControlName="description" rows="4" placeholder="Enter detailed description" class="w-full"></textarea>
+                </div>
+
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="closeDate">Close Date <span class="required">*</span></label>
+                    <p-inputgroup class="w-full">
+                      <p-inputgroup-addon><i class="pi pi-calendar"></i></p-inputgroup-addon>
+                      <p-datepicker inputId="closeDate" formControlName="closeDate" [showIcon]="false" appendTo="body" placeholder="Select close date" styleClass="w-full"></p-datepicker>
+                    </p-inputgroup>
+                    <small class="p-error" *ngIf="hasError('basicInfo', 'closeDate')">Close date is required</small>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="responseDeadline">Response Deadline <span class="required">*</span></label>
+                    <p-inputgroup class="w-full">
+                      <p-inputgroup-addon><i class="pi pi-clock"></i></p-inputgroup-addon>
+                      <p-datepicker inputId="responseDeadline" formControlName="responseDeadline" [showIcon]="false" appendTo="body" placeholder="Select response deadline" styleClass="w-full"></p-datepicker>
+                    </p-inputgroup>
+                    <small class="p-error" *ngIf="hasError('basicInfo', 'responseDeadline')">Response deadline is required</small>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="deliveryDate">Expected Delivery Date</label>
+                    <p-inputgroup class="w-full">
+                      <p-inputgroup-addon><i class="pi pi-truck"></i></p-inputgroup-addon>
+                      <p-datepicker inputId="deliveryDate" formControlName="deliveryDate" [showIcon]="false" appendTo="body" placeholder="Select expected delivery date" styleClass="w-full"></p-datepicker>
+                    </p-inputgroup>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button pButton type="button" class="btn-gradient" (click)="activateCallback(2)">
+                  <span>Next</span>
+                  <i class="pi pi-arrow-right"></i>
+                </button>
+              </div>
+            </form>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- Step 2: Terms & Conditions -->
+        <p-step-panel [value]="2">
+          <ng-template #content let-activateCallback="activateCallback">
+            <form [formGroup]="termsGroup" class="step-content">
+              <div class="form-section">
+                <h3 class="section-title">Payment & Delivery Terms</h3>
+                
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="paymentTerms">Payment Terms</label>
+                    <p-select inputId="paymentTerms" formControlName="paymentTerms" [options]="paymentTermsOptions" placeholder="Select payment terms" styleClass="w-full"></p-select>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="incoterms">Incoterms</label>
+                    <p-select inputId="incoterms" formControlName="incoterms" [options]="incotermsOptions" placeholder="Select incoterms" styleClass="w-full"></p-select>
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label for="deliveryLocation">Delivery Location</label>
+                  <input pInputText id="deliveryLocation" formControlName="deliveryLocation" placeholder="Enter delivery address" class="w-full" />
+                </div>
+              </div>
+
+              <div class="form-section">
+                <h3 class="section-title">Shipping Preferences</h3>
+                <p class="section-description">Link this RFQ to your preferred lanes, carriers, and rate cards maintained in reference data.</p>
+
+                <div class="form-grid">
+                  <div class="form-field">
+                    <label for="shippingLaneId">Preferred Lane</label>
+                    <p-select
+                      inputId="shippingLaneId"
+                      formControlName="shippingLaneId"
+                      [options]="shippingLaneOptions"
+                      placeholder="Select shipping lane"
+                      [showClear]="true"
+                      (onChange)="onShippingLaneChange($event.value)"
+                      styleClass="w-full">
+                    </p-select>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="transportMode">Mode</label>
+                    <p-select
+                      inputId="transportMode"
+                      formControlName="transportMode"
+                      [options]="transportModeOptions"
+                      placeholder="Select mode"
+                      styleClass="w-full">
+                    </p-select>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="preferredCarrierId">Preferred Carrier</label>
+                    <p-select
+                      inputId="preferredCarrierId"
+                      formControlName="preferredCarrierId"
+                      [options]="carrierOptionsForLane"
+                      placeholder="Select carrier"
+                      [showClear]="true"
+                      styleClass="w-full">
+                    </p-select>
+                  </div>
+
+                  <div class="form-field">
+                    <label for="shippingRateId">Reference Rate Card</label>
+                    <p-select
+                      inputId="shippingRateId"
+                      formControlName="shippingRateId"
+                      [options]="shippingRateOptions"
+                      placeholder="Select rate card"
+                      [showClear]="true"
+                      (onChange)="onShippingRateChange($event.value)"
+                      styleClass="w-full">
+                    </p-select>
+                    <small class="field-hint">Rates are sourced from Shipping Rates reference data.</small>
+                  </div>
+                </div>
+
+                <div class="shipping-summary" *ngIf="selectedLaneDetails || selectedRateDetails">
+                  <div class="summary-row" *ngIf="selectedLaneDetails">
+                    <i class="pi pi-map-marker"></i>
+                    <div>
+                      <strong>{{ selectedLaneDetails.laneCode }}</strong>
+                      <div>{{ selectedLaneDetails.originHub }} → {{ selectedLaneDetails.destinationHub }}</div>
+                      <div *ngIf="selectedLaneDetails.leadTimeDays">Planned lead time: {{ selectedLaneDetails.leadTimeDays }} days</div>
+                    </div>
+                  </div>
+                  <div class="summary-row" *ngIf="selectedRateDetails">
+                    <i class="pi pi-wallet"></i>
+                    <div>
+                      <strong>{{ selectedRateDetails.carrier }}</strong>
+                      <div>{{ selectedRateDetails.chargeBasis }} · {{ selectedRateDetails.currency }} {{ selectedRateDetails.baseRate | number: '1.2-2' }}</div>
+                      <div *ngIf="selectedRateDetails.serviceLevel">Service level: {{ selectedRateDetails.serviceLevel }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button pButton type="button" class="btn-glass" (click)="activateCallback(1)">
+                  <i class="pi pi-arrow-left"></i>
+                  <span>Back</span>
+                </button>
+                <button pButton type="button" class="btn-gradient" (click)="activateCallback(3)">
+                  <span>Next</span>
+                  <i class="pi pi-arrow-right"></i>
+                </button>
+              </div>
+            </form>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- Step 3: Line Items -->
+        <p-step-panel [value]="3">
+          <ng-template #content let-activateCallback="activateCallback">
+            <div class="step-content">
+              <div class="form-section">
+                <div class="section-header">
+                  <h3 class="section-title">Product Line Items</h3>
+                  <button pButton type="button" class="btn-glass btn-sm" (click)="addLineItem()">
+                    <i class="pi pi-plus"></i>
+                    <span>Add Line Item</span>
+                  </button>
+                </div>
+
+                <div class="catalog-prefill-banner" *ngIf="catalogPrefillCount">
+                  <i class="pi pi-bolt"></i>
+                  <div>
+                    <div class="banner-title">
+                      {{ catalogPrefillCount }} catalog item{{ catalogPrefillCount === 1 ? '' : 's' }} added from your selection
+                    </div>
+                    <div class="banner-subtitle">
+                      Update quantities or add supplemental lines before publishing.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="line-items-container">
+                  <div *ngFor="let item of lineItems.controls; let i = index" class="line-item-card">
+                    <div class="line-item-header">
+                      <h4>Line Item #{{ i + 1 }}</h4>
+                      <button
+                        pButton
+                        type="button"
+                        class="btn-icon danger"
+                        (click)="removeLineItem(i)"
+                        [disabled]="lineItems.length === 1">
+                        <i class="pi pi-trash"></i>
+                      </button>
+                    </div>
+
+                    <form [formGroup]="getLineItemGroup(i)" class="line-item-form">
+                      <div class="form-grid">
+                        <div class="form-field">
+                          <label [for]="'productName-' + i">Product Name <span class="required">*</span></label>
+                          <input pInputText [id]="'productName-' + i" formControlName="productName" placeholder="Enter product name" class="w-full" />
+                          <small class="p-error" *ngIf="hasLineItemError(i, 'productName')">Product name is required</small>
+                        </div>
+
+                        <div class="form-field">
+                          <label [for]="'quantity-' + i">Quantity <span class="required">*</span></label>
+                          <p-inputnumber [inputId]="'quantity-' + i" formControlName="quantity" [min]="0.01" [showButtons]="true" placeholder="0" styleClass="w-full"></p-inputnumber>
+                          <small class="p-error" *ngIf="hasLineItemError(i, 'quantity')">Quantity is required</small>
+                        </div>
+
+                        <div class="form-field">
+                          <label [for]="'uom-' + i">UOM <span class="required">*</span></label>
+                          <p-select [inputId]="'uom-' + i" formControlName="uom" [options]="uomOptions" placeholder="Select UOM" styleClass="w-full"></p-select>
+                        </div>
+
+                        <div class="form-field">
+                          <label [for]="'targetPrice-' + i">Target Price ({{ currencyControl.value || 'USD' }})</label>
+                          <p-inputnumber [inputId]="'targetPrice-' + i" formControlName="targetPrice" mode="currency" [currency]="currencyControl.value || 'USD'" [min]="0" placeholder="0.00" styleClass="w-full"></p-inputnumber>
+                        </div>
+                      </div>
+
+                      <div class="form-field">
+                        <label [for]="'description-' + i">Description <span class="required">*</span></label>
+                        <textarea pTextarea [id]="'description-' + i" formControlName="description" rows="2" placeholder="Enter product description" class="w-full"></textarea>
+                        <small class="p-error" *ngIf="hasLineItemError(i, 'description')">Description is required</small>
+                      </div>
+
+                      <div class="form-field">
+                        <label [for]="'specifications-' + i">Technical Specifications</label>
+                        <textarea pTextarea [id]="'specifications-' + i" formControlName="specifications" rows="3" placeholder="Enter technical specifications" class="w-full"></textarea>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button pButton type="button" class="btn-glass" (click)="activateCallback(2)">
+                  <i class="pi pi-arrow-left"></i>
+                  <span>Back</span>
+                </button>
+                <button pButton type="button" class="btn-gradient" (click)="activateCallback(4)">
+                  <span>Next</span>
+                  <i class="pi pi-arrow-right"></i>
+                </button>
+              </div>
+            </div>
+          </ng-template>
+        </p-step-panel>
+
+        <!-- Step 4: Select Suppliers -->
+        <p-step-panel [value]="4">
+          <ng-template #content let-activateCallback="activateCallback">
+            <form [formGroup]="suppliersGroup" class="step-content">
+              <div class="form-section">
+                <h3 class="section-title">Invite Suppliers</h3>
+                <p class="section-description">Select suppliers you want to send this RFQ to. At least one supplier must be selected.</p>
+
+                <div class="catalog-prefill-banner info" *ngIf="catalogPrefillSuppliers.length">
+                  <i class="pi pi-users"></i>
+                  <div>
+                    <div class="banner-title">
+                      {{ catalogPrefillSuppliers.length === 1 ? 'Supplier auto-selected from catalog' : catalogPrefillSuppliers.length + ' suppliers auto-selected from catalog' }}
+                    </div>
+                    <div class="banner-subtitle">{{ catalogPrefillSuppliers.join(', ') }}</div>
+                  </div>
+                </div>
+
+                <div class="form-field">
+                  <label for="invitedSupplierIds">Suppliers <span class="required">*</span></label>
+                  <p-multiselect inputId="invitedSupplierIds" formControlName="invitedSupplierIds" [options]="availableSuppliers" placeholder="Select suppliers" [filter]="true" [showClear]="true" display="chip" styleClass="w-full"></p-multiselect>
+                  <small class="p-error" *ngIf="suppliersGroup.get('invitedSupplierIds')?.invalid && suppliersGroup.get('invitedSupplierIds')?.touched">At least one supplier must be selected</small>
+                </div>
+
+                <div class="info-box">
+                  <i class="pi pi-info-circle"></i>
+                  <div><strong>Note:</strong> Selected suppliers will receive an email notification with access to view and respond to this RFQ.</div>
+                </div>
+              </div>
+
+              <div class="step-actions">
+                <button pButton type="button" class="btn-glass" (click)="activateCallback(3)">
+                  <i class="pi pi-arrow-left"></i>
+                  <span>Back</span>
+                </button>
+                <button pButton type="button" class="btn-gradient" (click)="publish()">
+                  <span>Publish RFQ</span>
+                  <i class="pi pi-send"></i>
+                </button>
+              </div>
+            </form>
+          </ng-template>
+        </p-step-panel>
+
+      </p-step-panels>
+    </p-stepper>
+  </div>
+</div>

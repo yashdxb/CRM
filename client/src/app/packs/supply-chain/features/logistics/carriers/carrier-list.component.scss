@@ -1,0 +1,133 @@
+.carrier-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.filter-group {
+  flex: 1 1 220px;
+
+  &.search {
+    flex: 2 1 360px;
+  }
+
+  p-iconField,
+  p-select {
+    width: 100%;
+  }
+}
+
+.table-section {
+  overflow: hidden;
+}
+
+.carrier-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.carrier-contact {
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.carrier-email {
+  font-size: 0.85rem;
+  color: #2563eb;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.metric {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.metric-sub {
+  display: block;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.actions-column {
+  width: 160px;
+  text-align: center;
+}
+
+.action-group {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.empty-state {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  .empty-icon {
+    font-size: 2.8rem;
+    color: #2563eb;
+  }
+
+  .empty-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .empty-subtitle {
+    font-size: 0.95rem;
+    color: #64748b;
+  }
+}
+
+.dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.25rem;
+  padding: 0.5rem 0 1.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &.full {
+    grid-column: 1 / -1;
+  }
+
+  label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1f2937;
+    letter-spacing: 0.02em;
+  }
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1rem;
+}
+
+::ng-deep .p-dialog {
+  border-radius: 20px;
+  overflow: hidden;
+}

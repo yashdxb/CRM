@@ -136,21 +136,6 @@
       </div>
     </section>
 
-    <section class="recently-viewed glass-card" *ngIf="recentActivities().length">
-      <div class="recently-viewed__header">
-        <h3>Recently viewed</h3>
-        <span>{{ recentActivities().length }} recent</span>
-      </div>
-      <div class="recently-viewed__list">
-        <button pButton type="button" class="recent-item" *ngFor="let item of recentActivities()" (click)="openRecent(item)">
-          <div class="recent-item__title">{{ item.title }}</div>
-          <div class="recent-item__meta">
-            {{ item.subtitle || 'Activity' }} · {{ item.viewedAt | date:'MMM d, h:mm a' }}
-          </div>
-        </button>
-      </div>
-    </section>
-
     <!-- Activities Table -->
     <section class="table-section" *ngIf="currentView() === 'table'">
       <div class="data-table-wrapper glass-card">
@@ -215,6 +200,15 @@
                     </td>
                     <td class="actions-col">
                       <div class="row-actions">
+                        <button
+                          pButton
+                          type="button"
+                          class="btn-icon-sm success"
+                          icon="pi pi-check"
+                          [disabled]="!canMarkComplete(row)"
+                          (click)="$event.stopPropagation(); markCompleted(row)"
+                          title="Mark completed"
+                        ></button>
                         <button pButton type="button" class="btn-icon-sm" icon="pi pi-pencil" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(row)" title="Edit"></button>
                         <button pButton type="button" class="btn-icon-sm danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(row)" title="Delete"></button>
                       </div>
