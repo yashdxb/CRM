@@ -15,4 +15,7 @@ public record LeadListItem(
     DateTime CreatedAt,
     string? Source,
     string? Territory,
-    string? JobTitle);
+    string? JobTitle,
+    Guid? AccountId,
+    Guid? ContactId,
+    Guid? ConvertedOpportunityId);

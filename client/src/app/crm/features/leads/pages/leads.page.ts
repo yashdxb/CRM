@@ -8,7 +8,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { DialogModule } from 'primeng/dialog';
 import { forkJoin, of, Subscription, timer } from 'rxjs';
 import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
@@ -49,7 +49,8 @@ interface StatusOption {
     DecimalPipe,
     DialogModule,
     BreadcrumbsComponent,
-    BulkActionsBarComponent
+    BulkActionsBarComponent,
+    RouterLink
   ],
   templateUrl: './leads.page.html',
   styleUrl: './leads.page.scss'
@@ -118,6 +119,22 @@ export class LeadsPage {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
   });
+
+  protected hasConvertedLinks(lead: Lead): boolean {
+    return !!(lead.accountId || lead.contactId || lead.convertedOpportunityId);
+  }
+
+  protected leadAccountLink(lead: Lead): string[] | null {
+    return lead.accountId ? ['/app/customers', lead.accountId, 'edit'] : null;
+  }
+
+  protected leadContactLink(lead: Lead): string[] | null {
+    return lead.contactId ? ['/app/contacts', lead.contactId, 'edit'] : null;
+  }
+
+  protected leadOpportunityLink(lead: Lead): string[] | null {
+    return lead.convertedOpportunityId ? ['/app/opportunities', lead.convertedOpportunityId, 'edit'] : null;
+  }
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
   protected assignDialogVisible = false;
   protected assignOwnerId: string | null = null;

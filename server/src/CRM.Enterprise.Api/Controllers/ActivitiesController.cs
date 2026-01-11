@@ -1,7 +1,9 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Activities;
+using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
+using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Api.Jobs;
 using Hangfire;
@@ -17,13 +19,16 @@ namespace CRM.Enterprise.Api.Controllers;
 [Route("api/activities")]
 public class ActivitiesController : ControllerBase
 {
+    private const string ActivityEntityType = "Activity";
     private readonly CrmDbContext _dbContext;
     private readonly IBackgroundJobClient _backgroundJobs;
+    private readonly IAuditEventService _auditEvents;
 
-    public ActivitiesController(CrmDbContext dbContext, IBackgroundJobClient backgroundJobs)
+    public ActivitiesController(CrmDbContext dbContext, IBackgroundJobClient backgroundJobs, IAuditEventService auditEvents)
     {
         _dbContext = dbContext;
         _backgroundJobs = backgroundJobs;
+        _auditEvents = auditEvents;
     }
 
     [HttpGet]
@@ -231,6 +236,38 @@ public class ActivitiesController : ControllerBase
         return Ok(item);
     }
 
+    [HttpGet("{id:guid}/audit")]
+    public async Task<ActionResult<IEnumerable<AuditEventItem>>> GetAudit(Guid id, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.Activities
+            .AsNoTracking()
+            .AnyAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
+
+        if (!exists)
+        {
+            return NotFound();
+        }
+
+        var items = await _dbContext.AuditEvents
+            .AsNoTracking()
+            .Where(a => a.EntityType == ActivityEntityType && a.EntityId == id)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Select(a => new AuditEventItem(
+                a.Id,
+                a.EntityType,
+                a.EntityId,
+                a.Action,
+                a.Field,
+                a.OldValue,
+                a.NewValue,
+                a.ChangedByUserId,
+                a.ChangedByName,
+                a.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        return Ok(items);
+    }
+
     [HttpPost]
     [Authorize(Policy = Permissions.Policies.ActivitiesManage)]
     public async Task<ActionResult<ActivityListItem>> Create([FromBody] UpsertActivityRequest request, CancellationToken cancellationToken)
@@ -251,6 +288,9 @@ public class ActivitiesController : ControllerBase
         };
 
         _dbContext.Activities.Add(activity);
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(activity.Id, "Created", null, null, null),
+            cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         _backgroundJobs.Enqueue<NotificationEmailJobs>(job => job.SendTaskAssignedAsync(activity.Id, CancellationToken.None));
 
@@ -266,6 +306,8 @@ public class ActivitiesController : ControllerBase
         if (activity is null) return NotFound();
 
         var previousOwnerId = activity.OwnerId;
+        var previousCompletedAt = activity.CompletedDateUtc;
+        var previousOutcome = activity.Outcome;
         activity.Subject = request.Subject;
         activity.Description = request.Description;
         activity.Outcome = request.Outcome;
@@ -277,6 +319,36 @@ public class ActivitiesController : ControllerBase
         activity.RelatedEntityId = request.RelatedEntityId ?? Guid.Empty;
         activity.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, cancellationToken);
         activity.UpdatedAtUtc = DateTime.UtcNow;
+
+        if (previousOwnerId != activity.OwnerId)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(activity.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), activity.OwnerId.ToString()),
+                cancellationToken);
+        }
+
+        if (previousCompletedAt != activity.CompletedDateUtc && activity.CompletedDateUtc.HasValue)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(
+                    activity.Id,
+                    "Completed",
+                    "CompletedDateUtc",
+                    previousCompletedAt?.ToString("u"),
+                    activity.CompletedDateUtc?.ToString("u")),
+                cancellationToken);
+        }
+
+        if (!string.Equals(previousOutcome, activity.Outcome, StringComparison.Ordinal))
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(activity.Id, "OutcomeUpdated", "Outcome", previousOutcome, activity.Outcome),
+                cancellationToken);
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(activity.Id, "Updated", null, null, null),
+            cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         if (previousOwnerId != activity.OwnerId && activity.OwnerId != Guid.Empty)
@@ -295,6 +367,9 @@ public class ActivitiesController : ControllerBase
 
         activity.IsDeleted = true;
         activity.DeletedAtUtc = DateTime.UtcNow;
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(activity.Id, "Deleted", null, null, null),
+            cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
@@ -421,5 +496,25 @@ public class ActivitiesController : ControllerBase
     {
         var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
+    }
+
+    private AuditEventEntry CreateAuditEntry(
+        Guid entityId,
+        string action,
+        string? field,
+        string? oldValue,
+        string? newValue)
+    {
+        var userId = GetUserId();
+        var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
+        return new AuditEventEntry(
+            ActivityEntityType,
+            entityId,
+            action,
+            field,
+            oldValue,
+            newValue,
+            userId == Guid.Empty ? null : userId,
+            name);
     }
 }

@@ -1,0 +1,284 @@
+<section class="tenant-page tenant-create-page">
+  <div class="page-background">
+    <div class="animated-orb orb-1"></div>
+    <div class="animated-orb orb-2"></div>
+    <div class="animated-orb orb-3"></div>
+  </div>
+
+  <div class="page-container">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="hero-text">
+          <div class="hero-badge">
+            <span class="badge-dot"></span>
+            <span>Super Admin</span>
+          </div>
+          <h1 class="hero-title">
+            <span class="title-gradient">Create</span>
+            <span class="title-light">Tenant</span>
+          </h1>
+          <p class="hero-subtitle">
+            Provision a new workspace with a primary admin and optional industry packs.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <button
+            type="button"
+            pButton
+            class="crm-button crm-button--ghost"
+            icon="pi pi-arrow-left"
+            label="Back to tenants"
+            routerLink="/app/settings/tenants"
+          ></button>
+          <button
+            type="button"
+            pButton
+            class="crm-button crm-button--ghost"
+            icon="pi pi-sliders-h"
+            label="Workspace Settings"
+            routerLink="/app/settings/workspace"
+          ></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid tenant-create-grid">
+      <div class="main-cards">
+        <article class="glass-card">
+          <header class="card-header">
+            <div class="card-header-icon card-header-icon--primary">
+              <i class="pi pi-building"></i>
+            </div>
+            <div>
+              <h2 class="card-title">Tenant details</h2>
+              <p class="card-subtitle">Core workspace identity and admin user</p>
+            </div>
+          </header>
+
+          <form class="tenant-form" [formGroup]="tenantForm" (ngSubmit)="createTenant()">
+            <div class="form-section">
+              <h3 class="section-title">
+                <i class="pi pi-briefcase"></i>
+                Workspace info
+              </h3>
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Tenant key</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="addon--cyan">
+                      <i class="pi pi-key"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText formControlName="key" placeholder="north-edge" />
+                  </p-inputgroup>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Tenant name</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="addon--purple">
+                      <i class="pi pi-building"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText formControlName="name" placeholder="NorthEdge CRM" />
+                  </p-inputgroup>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">
+                <i class="pi pi-user"></i>
+                Primary admin
+              </h3>
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Admin name</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="addon--blue">
+                      <i class="pi pi-user"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText formControlName="adminName" placeholder="Yasser Ahmed" />
+                  </p-inputgroup>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Admin email</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="addon--pink">
+                      <i class="pi pi-envelope"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText formControlName="adminEmail" placeholder="admin@company.com" />
+                  </p-inputgroup>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Admin password</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="addon--orange">
+                      <i class="pi pi-lock"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText type="password" formControlName="adminPassword" placeholder="Secure password" />
+                  </p-inputgroup>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">
+                <i class="pi pi-sliders-h"></i>
+                Defaults
+              </h3>
+              <div class="form-row">
+                <div class="form-field">
+                  <label class="form-label">Time zone</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="addon--teal">
+                      <i class="pi pi-clock"></i>
+                    </p-inputgroup-addon>
+                    <p-select
+                      appendTo="body"
+                      formControlName="timeZone"
+                      [options]="timeZoneOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select time zone"
+                    >
+                      <ng-template pTemplate="item" let-option>
+                        <div class="select-option">
+                          <i class="pi" [ngClass]="[option.icon, option.iconClass]"></i>
+                          <span>{{ option.label }}</span>
+                        </div>
+                      </ng-template>
+                      <ng-template pTemplate="value" let-option>
+                        <div class="select-option" *ngIf="option; else tzPlaceholder">
+                          <i class="pi" [ngClass]="[option.icon, option.iconClass]"></i>
+                          <span>{{ option.label }}</span>
+                        </div>
+                        <ng-template #tzPlaceholder>
+                          <span class="select-placeholder">Select time zone</span>
+                        </ng-template>
+                      </ng-template>
+                    </p-select>
+                  </p-inputgroup>
+                </div>
+                <div class="form-field">
+                  <label class="form-label">Currency</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="addon--green">
+                      <i class="pi pi-wallet"></i>
+                    </p-inputgroup-addon>
+                    <p-select
+                      appendTo="body"
+                      formControlName="currency"
+                      [options]="currencyOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      placeholder="Select currency"
+                    >
+                      <ng-template pTemplate="item" let-option>
+                        <div class="select-option">
+                          <i class="pi" [ngClass]="[option.icon, option.iconClass]"></i>
+                          <span>{{ option.label }}</span>
+                        </div>
+                      </ng-template>
+                      <ng-template pTemplate="value" let-option>
+                        <div class="select-option" *ngIf="option; else currencyPlaceholder">
+                          <i class="pi" [ngClass]="[option.icon, option.iconClass]"></i>
+                          <span>{{ option.label }}</span>
+                        </div>
+                        <ng-template #currencyPlaceholder>
+                          <span class="select-placeholder">Select currency</span>
+                        </ng-template>
+                      </ng-template>
+                    </p-select>
+                  </p-inputgroup>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3 class="section-title">
+                <i class="pi pi-sitemap"></i>
+                Industry packs
+              </h3>
+              <div class="industry-pack-grid">
+                <div class="pack-card pack-card--core">
+                  <div class="pack-header">
+                    <div class="pack-icon pack-icon--core">
+                      <i class="pi pi-shield"></i>
+                    </div>
+                    <div class="pack-meta">
+                      <h4>Core CRM</h4>
+                      <p>Leads, Accounts, Contacts, Opportunities, Activities.</p>
+                    </div>
+                    <p-tag value="Always on" severity="success"></p-tag>
+                  </div>
+                  <p class="pack-body">
+                    Core CRM is enabled for every tenant. You can layer Supply Chain modules for sourcing,
+                    procurement, logistics, and supplier workflows.
+                  </p>
+                </div>
+
+                <div class="pack-card pack-card--supply">
+                  <div class="pack-header">
+                    <div class="pack-icon pack-icon--supply">
+                      <i class="pi pi-sitemap"></i>
+                    </div>
+                    <div class="pack-meta">
+                      <h4>Supply Chain</h4>
+                      <p>Enable optional sourcing and supplier operations.</p>
+                    </div>
+                    <div class="pack-toggle">
+                      <p-toggleSwitch formControlName="supplyChainEnabled" (onChange)="onSupplyChainToggle()"></p-toggleSwitch>
+                    </div>
+                  </div>
+
+                  <div class="module-grid" formGroupName="modules" [class.is-disabled]="!tenantForm.controls.supplyChainEnabled.value">
+                    <label
+                      class="module-item"
+                      *ngFor="let module of supplyChainModules"
+                      [class.is-disabled]="!tenantForm.controls.supplyChainEnabled.value"
+                    >
+                      <p-checkbox
+                        [binary]="true"
+                        [formControlName]="module.key"
+                        [disabled]="!tenantForm.controls.supplyChainEnabled.value"
+                      ></p-checkbox>
+                      <div class="module-meta">
+                        <div class="module-title">
+                          <i class="pi" [ngClass]="[module.icon, module.iconClass]"></i>
+                          <span>{{ module.label }}</span>
+                        </div>
+                        <div class="module-desc">{{ module.description }}</div>
+                      </div>
+                    </label>
+                  </div>
+                  <small class="form-hint">Core CRM remains active. Toggle Supply Chain to select modules.</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button
+                type="button"
+                pButton
+                class="crm-button crm-button--ghost"
+                label="Cancel"
+                routerLink="/app/settings/tenants"
+              ></button>
+              <button
+                type="submit"
+                pButton
+                icon="pi pi-check"
+                label="Create tenant"
+                class="crm-button crm-button--primary"
+                [loading]="saving()"
+                [disabled]="tenantForm.invalid || saving() || !canManageTenants()"
+              ></button>
+            </div>
+          </form>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>

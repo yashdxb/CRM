@@ -1,0 +1,36 @@
+
+    <div class="notification-container" role="region" aria-label="Notifications" aria-live="polite">
+      <div
+        *ngFor="let notification of notificationService.notifications()"
+        class="notification"
+        [ngClass]="'notification--' + notification.type"
+        [@slideIn]
+        role="alert"
+      >
+        <div class="notification__icon">
+          <i class="pi" [ngClass]="getIcon(notification.type)"></i>
+        </div>
+        <div class="notification__content">
+          <p class="notification__title">{{ notification.title }}</p>
+          <p *ngIf="notification.message" class="notification__message">{{ notification.message }}</p>
+        </div>
+        <button
+          *ngIf="notification.action"
+          pButton
+          type="button"
+          class="notification__action p-button-text"
+          [label]="notification.action.label"
+          (click)="handleAction(notification)"
+        ></button>
+        <button
+          *ngIf="notification.dismissible"
+          pButton
+          type="button"
+          icon="pi pi-times"
+          class="notification__dismiss p-button-text"
+          (click)="notificationService.dismiss(notification.id)"
+          aria-label="Dismiss notification"
+        ></button>
+      </div>
+    </div>
+  

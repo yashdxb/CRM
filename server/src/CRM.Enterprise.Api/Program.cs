@@ -14,8 +14,14 @@ using System.Text.Json;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Data.SqlClient;
+using System.Threading;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var sqlConnectionString = builder.Configuration.GetConnectionString("SqlServer")
+    ?? throw new InvalidOperationException("Connection string 'SqlServer' was not found.");
+EnsureSqlServerAvailable(sqlConnectionString);
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -23,12 +29,10 @@ builder.Services.AddHealthChecks()
     .AddDbContextCheck<CrmDbContext>("db");
 builder.Services.AddHangfire(config =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("SqlServer")
-        ?? throw new InvalidOperationException("Connection string 'SqlServer' was not found.");
     config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
         .UseSimpleAssemblyNameTypeSerializer()
         .UseRecommendedSerializerSettings()
-        .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
+        .UseSqlServerStorage(sqlConnectionString, new SqlServerStorageOptions
         {
             CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
             SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
@@ -107,6 +111,8 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.AdministrationView));
     options.AddPolicy(Permissions.Policies.AdministrationManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.AdministrationManage));
+    options.AddPolicy(Permissions.Policies.AuditView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.AuditView));
     options.AddPolicy(Permissions.Policies.TenantsView, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.TenantsView));
     options.AddPolicy(Permissions.Policies.TenantsManage, policy =>
@@ -171,3 +177,32 @@ RecurringJob.AddOrUpdate<BackgroundJobs>(
     Cron.Hourly);
 
 await app.RunAsync();
+
+static void EnsureSqlServerAvailable(string connectionString)
+{
+    const int maxAttempts = 5;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+        try
+        {
+            var builder = new SqlConnectionStringBuilder(connectionString)
+            {
+                ConnectTimeout = 5
+            };
+            using var connection = new SqlConnection(builder.ConnectionString);
+            connection.Open();
+            return;
+        }
+        catch (Exception) when (attempt < maxAttempts)
+        {
+            Thread.Sleep(TimeSpan.FromSeconds(attempt));
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                "SQL Server is not reachable. Start Docker Desktop and run `docker compose up -d sqlserver`, " +
+                "or update ConnectionStrings:SqlServer to a reachable instance.",
+                ex);
+        }
+    }
+}

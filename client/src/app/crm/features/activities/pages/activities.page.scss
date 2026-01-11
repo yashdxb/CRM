@@ -990,10 +990,11 @@ $glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12),
   }
 }
 
-.related-cell {
+.related-cell,
+.related-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .related-type {
@@ -1006,6 +1007,25 @@ $glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12),
 .related-name {
   font-size: 14px;
   color: #374151;
+}
+
+.related-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.related-link i {
+  font-size: 12px;
+}
+
+.related-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
 }
 
 .priority-badge {

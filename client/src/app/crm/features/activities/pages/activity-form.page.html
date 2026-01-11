@@ -1,0 +1,386 @@
+
+    <section class="activity-form-page">
+      <div class="form-header">
+        <div class="header-content">
+          <app-breadcrumbs></app-breadcrumbs>
+          <button type="button" class="back-link" routerLink="/app/activities">
+            <i class="pi pi-arrow-left"></i>
+            Back to activities
+          </button>
+          <div class="header-title">
+            <h1>
+              <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
+              <span class="title-light">Activity</span>
+            </h1>
+            <p>{{ isEditMode() ? 'Update the schedule and details' : 'Track tasks, calls, and meetings' }}</p>
+          </div>
+        </div>
+      </div>
+
+      <section class="related-summary" *ngIf="isEditMode()">
+        <div class="related-summary-label">Related record</div>
+        <div class="related-summary-links" *ngIf="relatedLink() as link; else noRelatedSummary">
+          <a class="related-summary-link" [routerLink]="link">
+            <i class="pi pi-link"></i>
+            {{ relatedLabel() }}
+          </a>
+        </div>
+        <ng-template #noRelatedSummary>
+          <span class="related-summary-empty">No related record yet.</span>
+        </ng-template>
+      </section>
+
+      <div class="form-body">
+        <form class="form-layout" (ngSubmit)="onSave()">
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-calendar"></i>
+              Activity details
+            </h3>
+            <div class="form-grid">
+              <div class="field">
+                <label>Template</label>
+                <p-select
+                  appendTo="body"
+                  [options]="templateOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="template"
+                  [(ngModel)]="selectedTemplate"
+                  (ngModelChange)="onTemplateChange($event)"
+                  placeholder="Choose template"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else templatePlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #templatePlaceholder>
+                      <span class="select-placeholder">Choose template</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field full">
+                <label>Subject <span class="required">*</span></label>
+                <input pInputText name="subject" [(ngModel)]="form.subject" required placeholder="Enter activity subject" class="w-full" />
+              </div>
+              <div class="field">
+                <label>Type</label>
+                <p-select
+                  appendTo="body"
+                  [options]="typeOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="type"
+                  [(ngModel)]="form.type"
+                  placeholder="Select type"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else typePlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #typePlaceholder>
+                      <span class="select-placeholder">Select type</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field">
+                <label>Priority</label>
+                <p-select
+                  appendTo="body"
+                  [options]="priorityOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="priority"
+                  [(ngModel)]="form.priority"
+                  placeholder="Select priority"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else priorityPlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #priorityPlaceholder>
+                      <span class="select-placeholder">Select priority</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field">
+                <label>Status</label>
+                <p-select
+                  appendTo="body"
+                  [options]="statusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="status"
+                  [(ngModel)]="activityStatus"
+                  (ngModelChange)="onStatusChange($event)"
+                  placeholder="Select status"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else statusPlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #statusPlaceholder>
+                      <span class="select-placeholder">Select status</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field">
+                <label>Owner</label>
+                <p-select
+                  appendTo="body"
+                  [options]="ownerOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="ownerId"
+                  [(ngModel)]="form.ownerId"
+                  placeholder="Select owner"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else ownerPlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #ownerPlaceholder>
+                      <span class="select-placeholder">Select owner</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field">
+                <label>Due date</label>
+                <p-datePicker
+                  name="dueDateUtc"
+                  appendTo="body"
+                  [(ngModel)]="form.dueDateUtc"
+                  [showIcon]="true"
+                  [showTime]="true"
+                  hourFormat="12"
+                  styleClass="w-full"
+                ></p-datePicker>
+              </div>
+              <div class="field" *ngIf="activityStatus === 'Completed'">
+                <label>Completed at</label>
+                <p-datePicker
+                  name="completedDateUtc"
+                  appendTo="body"
+                  [(ngModel)]="form.completedDateUtc"
+                  [showIcon]="true"
+                  [showTime]="true"
+                  hourFormat="12"
+                  styleClass="w-full"
+                ></p-datePicker>
+              </div>
+              <div class="field">
+                <label>Related to</label>
+                <p-select
+                  appendTo="body"
+                  [options]="relationOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="relatedEntityType"
+                  [(ngModel)]="form.relatedEntityType"
+                  (ngModelChange)="onRelationTypeChange($event)"
+                  placeholder="Select record type"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else relatedPlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #relatedPlaceholder>
+                      <span class="select-placeholder">Select record type</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field" *ngIf="form.relatedEntityType === 'Account'">
+                <label>Account</label>
+                <p-select
+                  appendTo="body"
+                  [options]="customerOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="relatedEntityId"
+                  [(ngModel)]="form.relatedEntityId"
+                  placeholder="Select account"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else accountPlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #accountPlaceholder>
+                      <span class="select-placeholder">Select account</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field" *ngIf="form.relatedEntityType === 'Contact'">
+                <label>Contact</label>
+                <p-select
+                  appendTo="body"
+                  [options]="contactOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="relatedEntityId"
+                  [(ngModel)]="form.relatedEntityId"
+                  placeholder="Select contact"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else contactPlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #contactPlaceholder>
+                      <span class="select-placeholder">Select contact</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field" *ngIf="form.relatedEntityType === 'Opportunity'">
+                <label>Opportunity</label>
+                <p-select
+                  appendTo="body"
+                  [options]="opportunityOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="relatedEntityId"
+                  [(ngModel)]="form.relatedEntityId"
+                  placeholder="Select opportunity"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else opportunityPlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #opportunityPlaceholder>
+                      <span class="select-placeholder">Select opportunity</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field" *ngIf="form.relatedEntityType === 'Lead'">
+                <label>Lead</label>
+                <p-select
+                  appendTo="body"
+                  [options]="leadOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="relatedEntityId"
+                  [(ngModel)]="form.relatedEntityId"
+                  placeholder="Select lead"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="select-option" *ngIf="option; else leadPlaceholder">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <ng-template #leadPlaceholder>
+                      <span class="select-placeholder">Select lead</span>
+                    </ng-template>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field full">
+                <label>Notes / Agenda</label>
+                <textarea pTextarea name="description" [(ngModel)]="form.description" rows="3" placeholder="Add agenda notes"></textarea>
+              </div>
+              <div class="field full">
+                <label>Outcome</label>
+                <textarea pTextarea name="outcome" [(ngModel)]="form.outcome" rows="3" placeholder="Capture call outcome and next steps"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <div class="form-actions">
+            <button type="button" pButton label="Cancel" class="crm-button--ghost" (click)="router.navigate(['/app/activities'])"></button>
+            <button
+              type="submit"
+              pButton
+              [label]="isEditMode() ? 'Update activity' : 'Create activity'"
+              class="crm-button--primary"
+              [disabled]="!form.subject || saving()"
+            ></button>
+          </div>
+        </form>
+      </div>
+    </section>
+  

@@ -1,0 +1,40 @@
+
+    <div class="bulk-actions-bar" *ngIf="selectedCount() > 0" [@slideUp]>
+      <div class="bulk-actions-bar__info">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-times"
+          class="bulk-actions-bar__close p-button-text"
+          (click)="onClearSelection()"
+          pTooltip="Clear selection"
+        ></button>
+        <span class="bulk-actions-bar__count">
+          <strong>{{ selectedCount() }}</strong> {{ selectedCount() === 1 ? 'item' : 'items' }} selected
+        </span>
+      </div>
+
+      <div class="bulk-actions-bar__actions">
+        <button
+          *ngFor="let action of actions"
+          pButton
+          [label]="action.label"
+          [icon]="action.icon"
+          [severity]="action.severity || 'secondary'"
+          [disabled]="action.disabled"
+          (click)="onActionClick(action)"
+          class="p-button-sm"
+        ></button>
+      </div>
+
+      <div class="bulk-actions-bar__select-all" *ngIf="totalCount && totalCount > selectedCount()">
+        <button
+          pButton
+          type="button"
+          class="bulk-actions-bar__link p-button-text"
+          [label]="'Select all ' + totalCount + ' items'"
+          (click)="onSelectAll()"
+        ></button>
+      </div>
+    </div>
+  

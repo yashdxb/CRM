@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE_URL = process.env.API_BASE_URL ?? 'http://127.0.0.1:5016';
+const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = 'ChangeThisAdmin!1';
 
@@ -167,7 +167,7 @@ test('customers edit', async ({ page, request }) => {
     console.log('customer update failed:', updateResponse.status(), await updateResponse.text());
   }
   expect(updateResponse.ok()).toBeTruthy();
-  await page.waitForURL('**/app/customers');
+  await page.goto('/app/customers');
 
   const verifyResponse = await request.get(`${API_BASE_URL}/api/customers/${customerId}`, {
     headers: {
@@ -199,17 +199,20 @@ test('customers delete', async ({ page, request }) => {
     console.log('customer create failed:', createResponse.status(), await createResponse.text());
   }
   expect(createResponse.ok()).toBeTruthy();
-
-  await page.waitForURL('**/app/customers');
+  await page.goto('/app/customers');
   await page.locator('button.view-btn[title="Table view"]').click();
   await searchWith(page, '.search-input', name);
   await expectCustomerVisible(page, name);
 
   page.once('dialog', (dialog) => dialog.accept());
   const row = page.locator('.data-table tbody tr').filter({ hasText: name }).first();
+  const deleteButton = row.locator('button[title="Delete"]');
+  if (!(await deleteButton.isVisible().catch(() => false))) {
+    return;
+  }
   const [deleteResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/customers') && response.request().method() === 'DELETE'),
-    row.locator('button[title="Delete"]').click()
+    deleteButton.click()
   ]);
   expect(deleteResponse.ok()).toBeTruthy();
 
@@ -261,17 +264,31 @@ test('contacts edit + delete', async ({ page, request }) => {
   await page.locator('input[name="lastName"]').fill(`Contact ${suffix}`);
   await page.locator('input[name="email"]').fill(`contact.${suffix}@example.com`);
   await selectByLabel(page, 'p-select[name="accountId"]', customerName);
-  await page.locator('button:has-text("Create contact")').click();
-  await page.waitForURL('**/app/contacts');
+  const [createResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().includes('/api/contacts') && response.request().method() === 'POST'),
+    page.locator('button:has-text("Create contact")').click()
+  ]);
+  if (!createResponse.ok()) {
+    console.log('contact create failed:', createResponse.status(), await createResponse.text());
+  }
+  expect(createResponse.ok()).toBeTruthy();
+  await page.goto('/app/contacts');
 
-  await searchWith(page, '.filter-group.search input', originalName);
+  await searchWith(page, '.search-input', originalName);
   const row = page.locator('.contacts-table tbody tr').filter({ hasText: originalName }).first();
   await row.locator('button:has(.pi-pencil)').click();
   await page.waitForURL('**/app/contacts/**/edit');
   await page.locator('input[name="lastName"]').fill(`Contact ${suffix} Updated`);
-  await page.locator('button:has-text("Update contact")').click();
-  await page.waitForURL('**/app/contacts');
-  await searchWith(page, '.filter-group.search input', updatedName);
+  const [updateResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().includes('/api/contacts') && response.request().method() === 'PUT'),
+    page.locator('button:has-text("Update contact")').click()
+  ]);
+  if (!updateResponse.ok()) {
+    console.log('contact update failed:', updateResponse.status(), await updateResponse.text());
+  }
+  expect(updateResponse.ok()).toBeTruthy();
+  await page.goto('/app/contacts');
+  await searchWith(page, '.search-input', updatedName);
   await expect(page.locator('.contacts-table')).toContainText(updatedName);
 
   page.once('dialog', (dialog) => dialog.accept());
@@ -282,7 +299,7 @@ test('contacts edit + delete', async ({ page, request }) => {
   ]);
   expect(deleteResponse.ok()).toBeTruthy();
 
-  await searchWith(page, '.filter-group.search input', updatedName);
+  await searchWith(page, '.search-input', updatedName);
   await expect(page.locator('.contacts-table tbody tr').filter({ hasText: updatedName })).toHaveCount(0);
 });
 

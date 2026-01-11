@@ -1,0 +1,281 @@
+
+    <div class="lead-form-page">
+      <app-breadcrumbs></app-breadcrumbs>
+      <header class="page-header">
+        <div class="header-content">
+          <div class="header-top">
+            <button pButton type="button" class="back-link p-button-text" routerLink="/app/leads">
+              <i class="pi pi-arrow-left"></i>
+              <span>Back to leads</span>
+            </button>
+            <button
+              pButton
+              type="button"
+              class="crm-button crm-button--primary"
+              icon="pi pi-calendar-plus"
+              label="Log activity"
+              *ngIf="isEditMode()"
+              (click)="logActivity()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              class="crm-button crm-button--primary"
+              icon="pi pi-bolt"
+              label="Convert lead"
+              *ngIf="isEditMode()"
+              [disabled]="!canConvertLead()"
+              (click)="onConvertLead()"
+            ></button>
+          </div>
+          <div class="header-title">
+            <h1>
+              <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
+              <span class="title-light">Lead</span>
+            </h1>
+            <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
+          </div>
+        </div>
+      </header>
+
+      <section class="related-summary" *ngIf="isEditMode()">
+        <div class="related-summary-label">Converted to</div>
+        <div class="related-summary-links" *ngIf="hasLinkedRecords(); else noLinkedSummary">
+          <a *ngIf="linkedAccountLink() as link" [routerLink]="link" class="related-summary-link">
+            <i class="pi pi-building"></i>
+            Account
+          </a>
+          <a *ngIf="linkedContactLink() as link" [routerLink]="link" class="related-summary-link">
+            <i class="pi pi-user"></i>
+            Contact
+          </a>
+          <a *ngIf="linkedOpportunityLink() as link" [routerLink]="link" class="related-summary-link">
+            <i class="pi pi-briefcase"></i>
+            Opportunity
+          </a>
+        </div>
+        <ng-template #noLinkedSummary>
+          <span class="related-summary-empty">No linked records yet.</span>
+        </ng-template>
+      </section>
+
+      <main class="form-container">
+        <form class="lead-form" (ngSubmit)="onSave()">
+          <section class="form-section">
+            <h2 class="section-title">
+              <i class="pi pi-user"></i>
+              Lead basics
+            </h2>
+            <div class="form-grid">
+              <div class="field">
+                <label>First name <span class="required">*</span></label>
+                <input pInputText name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" class="w-full" />
+              </div>
+              <div class="field">
+                <label>Last name <span class="required">*</span></label>
+                <input pInputText name="lastName" [(ngModel)]="form.lastName" required placeholder="Last name" class="w-full" />
+              </div>
+              <div class="field">
+                <label>Company</label>
+                <input pInputText name="companyName" [(ngModel)]="form.companyName" placeholder="Company" class="w-full" />
+              </div>
+              <div class="field">
+                <label>Status</label>
+                <p-select
+                  [options]="statusOptionsForView()"
+                  optionLabel="label"
+                  optionValue="value"
+                  optionDisabled="disabled"
+                  name="status"
+                  [(ngModel)]="form.status"
+                  placeholder="Select status"
+                  appendTo="body"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="status-option" [attr.data-status]="option.value">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="value" let-option>
+                    <div class="status-option" *ngIf="option" [attr.data-status]="option.value">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <span *ngIf="!option" class="status-placeholder">Select status</span>
+                  </ng-template>
+                </p-select>
+                <p class="status-note" *ngIf="isEditMode() && form.status === 'Converted'">
+                  This lead is already converted. Update the opportunity instead.
+                </p>
+                <p class="status-note" *ngIf="isEditMode() && form.status !== 'Converted'">
+                  Convert via the "Convert lead" button after qualification.
+                </p>
+              </div>
+              <div class="field">
+                <label>Assignment</label>
+                <p-select
+                  [options]="assignmentOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="assignmentStrategy"
+                  [(ngModel)]="form.assignmentStrategy"
+                  placeholder="Select assignment"
+                  appendTo="body"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="option-row" [attr.data-testid]="'lead-assignment-option-' + option.value">
+                      {{ option.label }}
+                    </div>
+                  </ng-template>
+                </p-select>
+              </div>
+              <div class="field" *ngIf="form.assignmentStrategy === 'Manual'">
+                <label>Owner</label>
+                <p-select
+                  [options]="ownerOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="ownerId"
+                  [(ngModel)]="form.ownerId"
+                  placeholder="Select owner"
+                  appendTo="body"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="option-row" [attr.data-testid]="'lead-owner-option-' + option.value">
+                      {{ option.label }}
+                    </div>
+                  </ng-template>
+                </p-select>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section">
+            <h2 class="section-title">
+              <i class="pi pi-phone"></i>
+              Contact details
+            </h2>
+            <div class="form-grid">
+              <div class="field">
+                <label>Email</label>
+                <input pInputText name="email" [(ngModel)]="form.email" type="email" placeholder="name@company.com" class="w-full" />
+              </div>
+              <div class="field">
+                <label>Phone</label>
+                <input pInputText name="phone" [(ngModel)]="form.phone" placeholder="+1 555-0101" class="w-full" />
+              </div>
+              <div class="field">
+                <label>Job title</label>
+                <input pInputText name="jobTitle" [(ngModel)]="form.jobTitle" placeholder="Role or title" class="w-full" />
+              </div>
+              <div class="field">
+                <label>Source</label>
+                <input pInputText name="source" [(ngModel)]="form.source" placeholder="Web, Referral, Event" class="w-full" />
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section form-section--qualification">
+            <h2 class="section-title">
+              <i class="pi pi-chart-line"></i>
+              Qualification
+            </h2>
+            <p-progressBar
+              *ngIf="aiScoring()"
+              styleClass="ai-score-progress ai-score-progress--top"
+              mode="indeterminate"
+            ></p-progressBar>
+            <div class="form-grid">
+              <div class="field score-field">
+                <label>Lead score</label>
+                <p-inputNumber
+                  name="score"
+                  [(ngModel)]="form.score"
+                  [min]="0"
+                  [max]="100"
+                  placeholder="0-100"
+                  class="w-full"
+                  [disabled]="form.autoScore"
+                ></p-inputNumber>
+                <label class="checkbox-row">
+                  <p-checkbox name="autoScore" [(ngModel)]="form.autoScore" binary="true"></p-checkbox>
+                  <span>Auto score</span>
+                </label>
+                <p class="hint-text" *ngIf="form.autoScore">
+                  Auto score uses email, phone, company, job title, source, territory, and linked account/contact.
+                  Preview: {{ computeAutoScore() }}.
+                  <span *ngIf="isEditMode()">Last saved: {{ form.score ?? 0 }}.</span>
+                </p>
+                <div class="ai-score-row" *ngIf="isEditMode()">
+                  <button
+                    pButton
+                    type="button"
+                    label="AI score"
+                    icon="pi pi-bolt"
+                    class="crm-button crm-button--primary ai-score-button"
+                    (click)="onAiScore()"
+                    [disabled]="aiScoring()"
+                  ></button>
+                  <div class="ai-score-inline" *ngIf="aiScoreNote() && !aiScoring()" [ngClass]="aiScoreClass()">
+                    <i class="pi" [ngClass]="aiScoreIcon()"></i>
+                    <span>{{ aiScoreNote() }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="field" *ngIf="form.assignmentStrategy === 'Territory'">
+                <label>Territory</label>
+                <input pInputText name="territory" [(ngModel)]="form.territory" placeholder="West, EMEA, APAC" class="w-full" />
+              </div>
+              <div class="field full-row">
+                <label>Notes</label>
+                <textarea
+                  pTextarea
+                  name="notes"
+                  rows="5"
+                  placeholder="Key context, objections, next steps"
+                  class="w-full"
+                ></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" *ngIf="isEditMode()">
+            <h2 class="section-title">
+              <i class="pi pi-history"></i>
+              Status history
+            </h2>
+            <div class="history-list" *ngIf="statusHistory().length; else noHistory">
+              <div class="history-item" *ngFor="let entry of statusHistory()">
+                <div class="history-header">
+                  <p-tag [value]="entry.status" [severity]="statusSeverity(entry.status)"></p-tag>
+                  <span class="history-time">{{ entry.changedAtUtc | date:'medium' }}</span>
+                </div>
+                <div class="history-meta">
+                  <span>Changed by {{ entry.changedBy || 'system' }}</span>
+                </div>
+                <div class="history-notes" *ngIf="entry.notes">{{ entry.notes }}</div>
+              </div>
+            </div>
+            <ng-template #noHistory>
+              <div class="history-empty">No status changes recorded yet.</div>
+            </ng-template>
+          </section>
+
+          <footer class="form-actions">
+            <button type="button" pButton label="Cancel" class="crm-button crm-button--ghost" (click)="router.navigate(['/app/leads'])"></button>
+            <button
+              type="submit"
+              pButton
+              [label]="isEditMode() ? 'Update lead' : 'Create lead'"
+              class="crm-button crm-button--primary"
+              [disabled]="!form.firstName || !form.lastName || saving()"
+            ></button>
+          </footer>
+        </form>
+      </main>
+    </div>
+  

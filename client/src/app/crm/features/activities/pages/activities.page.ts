@@ -6,7 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { Activity, ActivityType } from '../models/activity.model';
 import { ActivityDataService } from '../services/activity-data.service';
@@ -37,6 +37,7 @@ interface StatusOption {
     TableModule,
     PaginatorModule,
     DatePipe,
+    RouterLink,
     BreadcrumbsComponent
   ],
   templateUrl: './activities.page.html',
@@ -188,6 +189,25 @@ export class ActivitiesPage {
       return this.toDateKey(activity.dueDateUtc) === this.todayKey;
     })
   );
+
+  protected relatedLink(activity: Activity): string | null {
+    if (!activity.relatedEntityId || !activity.relatedEntityType) {
+      return null;
+    }
+
+    switch (activity.relatedEntityType) {
+      case 'Lead':
+        return `/app/leads/${activity.relatedEntityId}/edit`;
+      case 'Account':
+        return `/app/customers/${activity.relatedEntityId}/edit`;
+      case 'Contact':
+        return `/app/contacts/${activity.relatedEntityId}/edit`;
+      case 'Opportunity':
+        return `/app/opportunities/${activity.relatedEntityId}/edit`;
+      default:
+        return null;
+    }
+  }
 
   constructor(
     private readonly activityData: ActivityDataService,

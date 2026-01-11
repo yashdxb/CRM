@@ -150,13 +150,6 @@ export class UserEditPage implements OnInit {
       next: () => {
         this.saving.set(false);
         this.raiseToast('success', 'User updated');
-        setTimeout(() => {
-          this.router.navigate(['/app/settings/users'], {
-            state: {
-              toast: { tone: 'success', message: 'User updated' }
-            }
-          });
-        }, 3000);
       },
       error: () => {
         this.saving.set(false);

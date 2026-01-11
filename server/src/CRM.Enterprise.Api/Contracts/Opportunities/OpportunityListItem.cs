@@ -5,6 +5,7 @@ namespace CRM.Enterprise.Api.Contracts.Opportunities;
 public record OpportunityListItem(
     Guid Id,
     string Name,
+    Guid AccountId,
     string Account,
     string Stage,
     decimal Amount,

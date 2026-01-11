@@ -1,11 +1,13 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Leads;
+using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Api.Utilities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Leads;
+using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Api.Contracts.Imports;
 using CRM.Enterprise.Api.Jobs;
 using Hangfire;
@@ -22,24 +24,28 @@ namespace CRM.Enterprise.Api.Controllers;
 [Route("api/leads")]
 public class LeadsController : ControllerBase
 {
+    private const string LeadEntityType = "Lead";
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IWebHostEnvironment _environment;
     private readonly IBackgroundJobClient _backgroundJobs;
     private readonly ILeadScoringService _leadScoringService;
+    private readonly IAuditEventService _auditEvents;
 
     public LeadsController(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
         IWebHostEnvironment environment,
         IBackgroundJobClient backgroundJobs,
-        ILeadScoringService leadScoringService)
+        ILeadScoringService leadScoringService,
+        IAuditEventService auditEvents)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _environment = environment;
         _backgroundJobs = backgroundJobs;
         _leadScoringService = leadScoringService;
+        _auditEvents = auditEvents;
     }
 
     [HttpGet]
@@ -93,7 +99,10 @@ public class LeadsController : ControllerBase
                 l.CreatedAtUtc,
                 l.Source,
                 l.Territory,
-                l.JobTitle
+                l.JobTitle,
+                l.AccountId,
+                l.ContactId,
+                l.ConvertedOpportunityId
             })
             .ToListAsync(cancellationToken);
 
@@ -116,7 +125,10 @@ public class LeadsController : ControllerBase
             l.CreatedAtUtc,
             l.Source,
             l.Territory,
-            l.JobTitle));
+            l.JobTitle,
+            l.AccountId,
+            l.ContactId,
+            l.ConvertedOpportunityId));
 
         return Ok(new LeadSearchResponse(items, total));
     }
@@ -149,7 +161,10 @@ public class LeadsController : ControllerBase
             lead.CreatedAtUtc,
             lead.Source,
             lead.Territory,
-            lead.JobTitle);
+            lead.JobTitle,
+            lead.AccountId,
+            lead.ContactId,
+            lead.ConvertedOpportunityId);
 
         return Ok(item);
     }
@@ -180,6 +195,38 @@ public class LeadsController : ControllerBase
             .ToListAsync(cancellationToken);
 
         return Ok(history);
+    }
+
+    [HttpGet("{id:guid}/audit")]
+    public async Task<ActionResult<IEnumerable<AuditEventItem>>> GetLeadAudit(Guid id, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.Leads
+            .AsNoTracking()
+            .AnyAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
+
+        if (!exists)
+        {
+            return NotFound();
+        }
+
+        var items = await _dbContext.AuditEvents
+            .AsNoTracking()
+            .Where(a => a.EntityType == LeadEntityType && a.EntityId == id)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Select(a => new AuditEventItem(
+                a.Id,
+                a.EntityType,
+                a.EntityId,
+                a.Action,
+                a.Field,
+                a.OldValue,
+                a.NewValue,
+                a.ChangedByUserId,
+                a.ChangedByName,
+                a.CreatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        return Ok(items);
     }
 
     [HttpPost("{id:guid}/ai-score")]
@@ -237,6 +284,9 @@ public class LeadsController : ControllerBase
         var resolvedStatusName = await ResolveLeadStatusNameAsync(statusId, cancellationToken);
         ApplyStatusSideEffects(lead, resolvedStatusName);
         AddStatusHistory(lead, statusId, null);
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(lead.Id, "Created", null, null, null),
+            cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         if (HasAiSignals(request))
@@ -262,7 +312,10 @@ public class LeadsController : ControllerBase
             lead.CreatedAtUtc,
             lead.Source,
             lead.Territory,
-            lead.JobTitle);
+            lead.JobTitle,
+            lead.AccountId,
+            lead.ContactId,
+            lead.ConvertedOpportunityId);
 
         return CreatedAtAction(nameof(GetLead), new { id = lead.Id }, dto);
     }
@@ -408,6 +461,7 @@ public class LeadsController : ControllerBase
         if (lead is null) return NotFound();
 
         var previousStatusId = lead.LeadStatusId;
+        var previousOwnerId = lead.OwnerId;
         var shouldAiScore = HasAiSignalChanges(lead, request);
 
         lead.FirstName = request.FirstName;
@@ -432,7 +486,23 @@ public class LeadsController : ControllerBase
             ApplyStatusSideEffects(lead, statusName);
             await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, cancellationToken);
             AddStatusHistory(lead, lead.LeadStatusId, null);
+
+            var oldStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(lead.Id, "StatusChanged", "Status", oldStatusName, statusName),
+                cancellationToken);
         }
+
+        if (previousOwnerId != lead.OwnerId)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(lead.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), lead.OwnerId.ToString()),
+                cancellationToken);
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(lead.Id, "Updated", null, null, null),
+            cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
@@ -546,6 +616,15 @@ public class LeadsController : ControllerBase
         await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, "Converted", cancellationToken);
         AddStatusHistory(lead, lead.LeadStatusId, "Converted lead");
 
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(
+                lead.Id,
+                "Converted",
+                null,
+                null,
+                $"AccountId={accountId};ContactId={contactId};OpportunityId={opportunityId}"),
+            cancellationToken);
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Ok(new LeadConversionResponse(lead.Id, accountId, contactId, opportunityId));
@@ -560,6 +639,9 @@ public class LeadsController : ControllerBase
 
         lead.IsDeleted = true;
         lead.DeletedAtUtc = DateTime.UtcNow;
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(lead.Id, "Deleted", null, null, null),
+            cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
@@ -575,8 +657,16 @@ public class LeadsController : ControllerBase
         var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
         if (lead is null) return NotFound();
 
+        var previousOwnerId = lead.OwnerId;
         lead.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, lead.Territory, null, cancellationToken);
         lead.UpdatedAtUtc = DateTime.UtcNow;
+
+        if (previousOwnerId != lead.OwnerId)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(lead.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), lead.OwnerId.ToString()),
+                cancellationToken);
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
@@ -603,6 +693,11 @@ public class LeadsController : ControllerBase
             ApplyStatusSideEffects(lead, statusName);
             await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, cancellationToken);
             AddStatusHistory(lead, lead.LeadStatusId, null);
+
+            var oldStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(lead.Id, "StatusChanged", "Status", oldStatusName, statusName),
+                cancellationToken);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -925,5 +1020,25 @@ public class LeadsController : ControllerBase
     {
         var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
+    }
+
+    private AuditEventEntry CreateAuditEntry(
+        Guid entityId,
+        string action,
+        string? field,
+        string? oldValue,
+        string? newValue)
+    {
+        var userId = GetUserId();
+        var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
+        return new AuditEventEntry(
+            LeadEntityType,
+            entityId,
+            action,
+            field,
+            oldValue,
+            newValue,
+            userId == Guid.Empty ? null : userId,
+            name);
     }
 }

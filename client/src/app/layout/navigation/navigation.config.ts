@@ -169,7 +169,8 @@ export const NAV_LINKS: NavLink[] = [
       { label: 'Invite', icon: 'pi-user-plus', path: '/app/settings/invite', permission: PERMISSION_KEYS.administrationManage },
       { label: 'Workspace', icon: 'pi-sliders-h', path: '/app/settings/workspace', permission: PERMISSION_KEYS.administrationManage },
       { label: 'Lead assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
-      { label: 'Tenants', icon: 'pi-building', path: '/app/settings/tenants', permission: PERMISSION_KEYS.tenantsView }
+      { label: 'Audit log', icon: 'pi-clipboard', path: '/app/settings/audit-log', permission: PERMISSION_KEYS.auditView },
+      { label: 'Tenant configuration', icon: 'pi-building', path: '/app/settings/tenants', permission: PERMISSION_KEYS.tenantsView }
     ]
   }
 ];

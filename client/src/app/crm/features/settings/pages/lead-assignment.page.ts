@@ -126,7 +126,6 @@ export class LeadAssignmentPage implements OnInit {
       this.assignmentService.update(editId, payload).subscribe({
         next: () => {
           this.loadRules();
-          this.resetForm();
         }
       });
       return;

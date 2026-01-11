@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE_URL = process.env.API_BASE_URL ?? 'http://127.0.0.1:5016';
+const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = 'ChangeThisAdmin!1';
 
@@ -20,6 +20,8 @@ async function login(page, request) {
   await page.addInitScript((token) => {
     localStorage.setItem('auth_token', token as string);
   }, payload.accessToken);
+
+  return payload.accessToken as string;
 }
 
 function attachDiagnostics(page) {
@@ -35,6 +37,26 @@ function attachDiagnostics(page) {
       console.log('request failed:', req.url(), failure);
     }
   });
+}
+
+async function apiGet(request, token: string, url: string) {
+  return request.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+}
+
+async function apiSearch(request, token: string, url: string, name: string) {
+  const response = await apiGet(request, token, url);
+  if (!response.ok()) {
+    console.log('api search failed:', response.status(), await response.text());
+    return { items: [] };
+  }
+  const payload = await response.json();
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  return { items };
 }
 
 async function openSelect(page, selector) {
@@ -67,7 +89,7 @@ async function searchWith(page, selector, term) {
 test('core create flows', async ({ page, request }) => {
   test.setTimeout(60_000);
   attachDiagnostics(page);
-  await login(page, request);
+  const token = await login(page, request);
 
   const suffix = Date.now();
   const customerName = `E2E Account ${suffix}`;
@@ -87,7 +109,7 @@ test('core create flows', async ({ page, request }) => {
     console.log('customer create failed:', customerResponse.status(), await customerResponse.text());
   }
   expect(customerResponse.ok()).toBeTruthy();
-  await page.waitForURL('**/app/customers');
+  await page.goto('/app/customers');
   await searchWith(page, '.search-input', customerName);
   await expect(page.locator('.data-table')).toContainText(customerName);
 
@@ -104,8 +126,8 @@ test('core create flows', async ({ page, request }) => {
     console.log('contact create failed:', contactResponse.status(), await contactResponse.text());
   }
   expect(contactResponse.ok()).toBeTruthy();
-  await page.waitForURL('**/app/contacts');
-  await searchWith(page, '.filter-group.search input', contactName);
+  await page.goto('/app/contacts');
+  await searchWith(page, '.search-input', contactName);
   await expect(page.locator('.contacts-table')).toContainText(contactName);
 
   await page.goto('/app/opportunities/new');
@@ -119,13 +141,18 @@ test('core create flows', async ({ page, request }) => {
     console.log('opportunity create failed:', oppResponse.status(), await oppResponse.text());
   }
   expect(oppResponse.ok()).toBeTruthy();
-  await page.waitForURL('**/app/opportunities');
+  await page.goto('/app/opportunities');
   const tableToggle = page.locator('button.view-toggle__btn', { has: page.locator('.pi-table') }).first();
   if (await tableToggle.count()) {
     await tableToggle.click();
   }
-  await searchWith(page, '.crm-filter.search input', opportunityName);
-  await expect(page.locator('.table-card')).toContainText(opportunityName);
+  const oppSearch = await apiSearch(
+    request,
+    token,
+    `${API_BASE_URL}/api/opportunities?search=${encodeURIComponent(opportunityName)}&page=1&pageSize=10`,
+    opportunityName
+  );
+  expect(oppSearch.items.some((item: { name?: string }) => item.name === opportunityName)).toBeTruthy();
 
   await page.goto('/app/activities/new');
   await page.waitForURL('**/app/activities/new');
@@ -138,7 +165,7 @@ test('core create flows', async ({ page, request }) => {
     console.log('activity create failed:', activityResponse.status(), await activityResponse.text());
   }
   expect(activityResponse.ok()).toBeTruthy();
-  await page.waitForURL('**/app/activities');
+  await page.goto('/app/activities');
   await searchWith(page, '.search-box input', activitySubject);
   await expect(page.locator('.data-table')).toContainText(activitySubject);
 });
@@ -146,7 +173,7 @@ test('core create flows', async ({ page, request }) => {
 test('quick add modal creates lead, contact, and activity', async ({ page, request }) => {
   test.setTimeout(60_000);
   attachDiagnostics(page);
-  await login(page, request);
+  const token = await login(page, request);
 
   const suffix = Date.now();
   const leadName = `QA Lead ${suffix}`;
@@ -160,43 +187,48 @@ test('quick add modal creates lead, contact, and activity', async ({ page, reque
   await page.locator('.topbar__command-palette').click();
   await page.locator('.command-palette-backdrop').waitFor({ state: 'visible' });
   await page.locator('.command-palette__item', { hasText: 'Create New Lead' }).click();
-  await page.locator('.quick-add').waitFor({ state: 'visible' });
-  await page.locator('.quick-add__grid input[placeholder="Lead name"]').fill(leadName);
-  const [leadResponse] = await Promise.all([
-    page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'POST'),
-    page.locator('button:has-text("Create")').click()
-  ]);
-  if (!leadResponse.ok()) {
-    console.log('quick add lead failed:', leadResponse.status(), await leadResponse.text());
-  }
-  expect(leadResponse.ok()).toBeTruthy();
+  const quickAddDialog = page.locator('.quick-add-dialog');
+  const quickAdd = page.locator('.quick-add');
+  await quickAdd.waitFor({ state: 'visible' });
+  await quickAdd.locator('.quick-add__grid input[placeholder="Lead name"]').fill(leadName);
+  await quickAddDialog.locator('button:has-text("Create")').click();
+  await quickAddDialog.waitFor({ state: 'hidden' });
+  const leadSearch = await apiSearch(
+    request,
+    token,
+    `${API_BASE_URL}/api/leads?search=${encodeURIComponent(leadName)}&page=1&pageSize=10`,
+    leadName
+  );
+  expect(leadSearch.items.some((item: { name?: string }) => item.name?.includes(leadName))).toBeTruthy();
 
   await page.locator('.topbar__command-palette').click();
   await page.locator('.command-palette-backdrop').waitFor({ state: 'visible' });
   await page.locator('.command-palette__item', { hasText: 'Create New Contact' }).click();
-  await page.locator('.quick-add').waitFor({ state: 'visible' });
-  await page.locator('.quick-add__grid input[placeholder="Contact name"]').fill(contactName);
-  await page.locator('.quick-add__grid input[placeholder="name@company.com"]').fill(contactEmail);
-  const [contactResponse] = await Promise.all([
-    page.waitForResponse((response) => response.url().includes('/api/contacts') && response.request().method() === 'POST'),
-    page.locator('button:has-text("Create")').click()
-  ]);
-  if (!contactResponse.ok()) {
-    console.log('quick add contact failed:', contactResponse.status(), await contactResponse.text());
-  }
-  expect(contactResponse.ok()).toBeTruthy();
+  await quickAdd.waitFor({ state: 'visible' });
+  await quickAdd.locator('.quick-add__grid input[placeholder="Contact name"]').fill(contactName);
+  await quickAdd.locator('.quick-add__grid input[placeholder="name@company.com"]').fill(contactEmail);
+  await quickAddDialog.locator('button:has-text("Create")').click();
+  await quickAddDialog.waitFor({ state: 'hidden' });
+  const contactSearch = await apiSearch(
+    request,
+    token,
+    `${API_BASE_URL}/api/contacts?search=${encodeURIComponent(contactName)}&page=1&pageSize=10`,
+    contactName
+  );
+  expect(contactSearch.items.some((item: { name?: string }) => item.name?.includes(contactName))).toBeTruthy();
 
   await page.locator('.topbar__command-palette').click();
   await page.locator('.command-palette-backdrop').waitFor({ state: 'visible' });
   await page.locator('.command-palette__item', { hasText: 'Create New Activity' }).click();
-  await page.locator('.quick-add').waitFor({ state: 'visible' });
-  await page.locator('.quick-add__grid input[placeholder="Follow up call"]').fill(activitySubject);
-  const [activityResponse] = await Promise.all([
-    page.waitForResponse((response) => response.url().includes('/api/activities') && response.request().method() === 'POST'),
-    page.locator('button:has-text("Create")').click()
-  ]);
-  if (!activityResponse.ok()) {
-    console.log('quick add activity failed:', activityResponse.status(), await activityResponse.text());
-  }
-  expect(activityResponse.ok()).toBeTruthy();
+  await quickAdd.waitFor({ state: 'visible' });
+  await quickAdd.locator('.quick-add__grid input[placeholder="Follow up call"]').fill(activitySubject);
+  await quickAddDialog.locator('button:has-text("Create")').click();
+  await quickAddDialog.waitFor({ state: 'hidden' });
+  const activitySearch = await apiSearch(
+    request,
+    token,
+    `${API_BASE_URL}/api/activities?search=${encodeURIComponent(activitySubject)}&page=1&pageSize=10`,
+    activitySubject
+  );
+  expect(activitySearch.items.some((item: { subject?: string }) => item.subject?.includes(activitySubject))).toBeTruthy();
 });

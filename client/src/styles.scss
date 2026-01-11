@@ -268,6 +268,58 @@ body .app-inline-toast {
   background: transparent !important;
 }
 
+/* Colorful select icons (global) */
+.p-select-option .pi,
+.p-dropdown-item .pi,
+.p-select-label .pi {
+  color: #3b82f6 !important;
+}
+
+.p-select-option .pi.pi-check-circle,
+.p-dropdown-item .pi.pi-check-circle { color: #22c55e !important; }
+.p-select-option .pi.pi-times-circle,
+.p-dropdown-item .pi.pi-times-circle { color: #ef4444 !important; }
+.p-select-option .pi.pi-clock,
+.p-dropdown-item .pi.pi-clock { color: #f59e0b !important; }
+.p-select-option .pi.pi-inbox,
+.p-dropdown-item .pi.pi-inbox { color: #6366f1 !important; }
+.p-select-option .pi.pi-exclamation-triangle,
+.p-dropdown-item .pi.pi-exclamation-triangle { color: #f97316 !important; }
+.p-select-option .pi.pi-arrow-up,
+.p-dropdown-item .pi.pi-arrow-up { color: #22c55e !important; }
+.p-select-option .pi.pi-arrow-down,
+.p-dropdown-item .pi.pi-arrow-down { color: #ef4444 !important; }
+.p-select-option .pi.pi-minus,
+.p-dropdown-item .pi.pi-minus { color: #0ea5e9 !important; }
+.p-select-option .pi.pi-envelope,
+.p-dropdown-item .pi.pi-envelope { color: #0ea5e9 !important; }
+.p-select-option .pi.pi-phone,
+.p-dropdown-item .pi.pi-phone { color: #10b981 !important; }
+.p-select-option .pi.pi-linkedin,
+.p-dropdown-item .pi.pi-linkedin { color: #2563eb !important; }
+.p-select-option .pi.pi-globe,
+.p-dropdown-item .pi.pi-globe { color: #14b8a6 !important; }
+.p-select-option .pi.pi-share-alt,
+.p-dropdown-item .pi.pi-share-alt { color: #a855f7 !important; }
+.p-select-option .pi.pi-search,
+.p-dropdown-item .pi.pi-search { color: #3b82f6 !important; }
+.p-select-option .pi.pi-file-pdf,
+.p-dropdown-item .pi.pi-file-pdf { color: #ef4444 !important; }
+.p-select-option .pi.pi-comments,
+.p-dropdown-item .pi.pi-comments { color: #8b5cf6 !important; }
+.p-select-option .pi.pi-thumbs-up,
+.p-dropdown-item .pi.pi-thumbs-up { color: #22c55e !important; }
+.p-select-option .pi.pi-thumbs-down,
+.p-dropdown-item .pi.pi-thumbs-down { color: #ef4444 !important; }
+.p-select-option .pi.pi-briefcase,
+.p-dropdown-item .pi.pi-briefcase { color: #f59e0b !important; }
+.p-select-option .pi.pi-user,
+.p-dropdown-item .pi.pi-user { color: #3b82f6 !important; }
+.p-select-option .pi.pi-id-card,
+.p-dropdown-item .pi.pi-id-card { color: #06b6d4 !important; }
+.p-select-option .pi.pi-building,
+.p-dropdown-item .pi.pi-building { color: #6366f1 !important; }
+
 /* Select label (displayed value) */
 .p-select-label {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif !important;

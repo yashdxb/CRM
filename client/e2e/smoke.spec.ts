@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE_URL = process.env.API_BASE_URL ?? 'http://127.0.0.1:5016';
+const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = 'ChangeThisAdmin!1';
 
@@ -54,7 +54,7 @@ test('core screens smoke', async ({ page, request }) => {
   await expect(page.getByRole('heading', { name: /Leads/i })).toBeVisible();
 
   await page.goto('/app/opportunities');
-  await expect(page.getByRole('heading', { name: /Opportunity intelligence/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Opportunity Pipeline', level: 1 })).toBeVisible();
 
   await page.goto('/app/activities');
   await expect(page.getByRole('heading', { name: /Activities/i })).toBeVisible();

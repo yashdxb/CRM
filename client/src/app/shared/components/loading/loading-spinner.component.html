@@ -1,0 +1,26 @@
+
+    <div class="loading-spinner" [class.loading-spinner--fullscreen]="fullscreen" [class.loading-spinner--overlay]="overlay">
+      <div class="loading-spinner__content">
+        <svg class="loading-spinner__svg" viewBox="0 0 50 50" [style.width]="size" [style.height]="size">
+          <circle
+            class="loading-spinner__track"
+            cx="25"
+            cy="25"
+            r="20"
+            fill="none"
+            stroke-width="4"
+          />
+          <circle
+            class="loading-spinner__circle"
+            cx="25"
+            cy="25"
+            r="20"
+            fill="none"
+            stroke-width="4"
+            stroke-linecap="round"
+          />
+        </svg>
+        <p *ngIf="message" class="loading-spinner__message">{{ message }}</p>
+      </div>
+    </div>
+  

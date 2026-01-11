@@ -95,6 +95,61 @@
   }
 }
 
+.related-summary {
+  max-width: 1400px;
+  width: min(1400px, calc(100% - 3rem));
+  margin: 1rem auto 0;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.related-summary-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(71, 85, 105, 0.75);
+}
+
+.related-summary-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.related-summary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.related-summary-link i {
+  font-size: 0.9rem;
+}
+
+.related-summary-link:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1e40af;
+}
+
+.related-summary-empty {
+  color: rgba(71, 85, 105, 0.8);
+  font-size: 0.85rem;
+}
+
 .form-actions {
   @include form.form-actions;
 

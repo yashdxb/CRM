@@ -112,7 +112,6 @@ export class SupplierEditComponent implements OnInit {
       this.supplierData.updateSupplier(this.supplierId, request).subscribe({
         next: (res) => {
           this.supplierId = res.id;
-          this.navigateToDetail();
         },
         error: (err) => {
           alert('Failed to update supplier: ' + (err?.error?.message || 'Unknown error'));
@@ -122,7 +121,6 @@ export class SupplierEditComponent implements OnInit {
       this.supplierData.createSupplier(request).subscribe({
         next: (res) => {
           this.supplierId = res.id;
-          this.navigateToDetail();
         },
         error: (err) => {
           alert('Failed to create supplier: ' + (err?.error?.message || 'Unknown error'));

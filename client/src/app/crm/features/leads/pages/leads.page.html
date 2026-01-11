@@ -173,6 +173,26 @@
                 <span>{{ lead.phone }}</span>
               </div>
             </div>
+            <div class="lead-related" *ngIf="hasConvertedLinks(lead)" (click)="$event.stopPropagation()">
+              <span class="lead-related-label">Converted to</span>
+              <div class="lead-related-links">
+                <a
+                  *ngIf="leadAccountLink(lead)"
+                  class="lead-related-link"
+                  [routerLink]="leadAccountLink(lead)"
+                >Account</a>
+                <a
+                  *ngIf="leadContactLink(lead)"
+                  class="lead-related-link"
+                  [routerLink]="leadContactLink(lead)"
+                >Contact</a>
+                <a
+                  *ngIf="leadOpportunityLink(lead)"
+                  class="lead-related-link"
+                  [routerLink]="leadOpportunityLink(lead)"
+                >Opportunity</a>
+              </div>
+            </div>
             <div class="lead-card-footer">
               <span class="lead-owner">
                 <i class="pi pi-user"></i>
@@ -242,6 +262,26 @@
                       <div class="lead-info">
                         <span class="name">{{ lead.name }}</span>
                         <span class="company">{{ lead.company }}</span>
+                        <div class="lead-related" *ngIf="hasConvertedLinks(lead)">
+                          <span class="lead-related-label">Converted to</span>
+                          <div class="lead-related-links">
+                            <a
+                              *ngIf="leadAccountLink(lead)"
+                              class="lead-related-link"
+                              [routerLink]="leadAccountLink(lead)"
+                            >Account</a>
+                            <a
+                              *ngIf="leadContactLink(lead)"
+                              class="lead-related-link"
+                              [routerLink]="leadContactLink(lead)"
+                            >Contact</a>
+                            <a
+                              *ngIf="leadOpportunityLink(lead)"
+                              class="lead-related-link"
+                              [routerLink]="leadOpportunityLink(lead)"
+                            >Opportunity</a>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </td>

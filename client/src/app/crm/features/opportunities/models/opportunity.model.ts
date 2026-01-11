@@ -3,6 +3,7 @@ export type OpportunityStatus = 'Open' | 'Closed Won' | 'Closed Lost';
 export interface Opportunity {
   id: string;
   name: string;
+  accountId?: string;
   account: string;
   stage: string;
   amount: number;

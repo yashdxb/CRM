@@ -23,6 +23,7 @@ public static class Permissions
         public const string ActivitiesManage = "Permissions.Activities.Manage";
         public const string AdministrationView = "Permissions.Administration.View";
         public const string AdministrationManage = "Permissions.Administration.Manage";
+        public const string AuditView = "Permissions.Audit.View";
         public const string TenantsView = "Permissions.Tenants.View";
         public const string TenantsManage = "Permissions.Tenants.Manage";
     }
@@ -64,6 +65,7 @@ public static class Permissions
         new(Policies.ActivitiesManage, "Activities (Manage)", "Log calls, meetings, and tasks tied to records."),
         new(Policies.AdministrationView, "Administration (View)", "View users, roles, and workspace settings."),
         new(Policies.AdministrationManage, "Administration (Manage)", "Invite users, edit roles, and configure workspace policies."),
+        new(Policies.AuditView, "Audit Log (View)", "View system audit history for records and changes."),
         new(Policies.TenantsView, "Tenants (View)", "View tenant workspaces and status."),
         new(Policies.TenantsManage, "Tenants (Manage)", "Provision and manage tenant workspaces.")
     };

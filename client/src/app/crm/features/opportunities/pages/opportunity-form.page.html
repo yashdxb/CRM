@@ -1,0 +1,203 @@
+
+    <section class="opportunity-form-page">
+      <div class="form-header">
+        <div class="header-content">
+          <app-breadcrumbs></app-breadcrumbs>
+
+          <button type="button" class="back-link" routerLink="/app/opportunities">
+            <i class="pi pi-arrow-left"></i>
+            Back to Opportunities
+          </button>
+
+          <div class="header-row">
+            <div class="header-title">
+              <h1>
+                <span class="title-gradient">{{ isEditMode() ? 'Update' : 'Create' }}</span>
+                <span class="title-light">Opportunity</span>
+              </h1>
+              <p>Capture the deal details, set your stage, and keep the team aligned on next steps.</p>
+            </div>
+            <div class="header-meta">
+              <span class="meta-chip">
+                <i class="pi pi-flag"></i>
+                {{ selectedStage || 'Prospecting' }}
+              </span>
+              <span class="meta-chip">
+                <i class="pi pi-percentage"></i>
+                {{ form.probability ?? 0 }}%
+              </span>
+              <span class="meta-chip">
+                <i class="pi pi-money-bill"></i>
+                {{ form.currency || 'USD' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="related-summary" *ngIf="isEditMode()">
+        <div class="related-summary-label">Related record</div>
+        <div class="related-summary-links" *ngIf="accountLink() as link; else noAccountSummary">
+          <a class="related-summary-link" [routerLink]="link">
+            <i class="pi pi-building"></i>
+            Account: {{ accountLabel() }}
+          </a>
+        </div>
+        <ng-template #noAccountSummary>
+          <span class="related-summary-empty">No linked account yet.</span>
+        </ng-template>
+      </section>
+
+      <div class="form-body">
+        <form class="form-layout" (ngSubmit)="onSave()">
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-briefcase"></i>
+              Opportunity Details
+            </h3>
+            <div class="form-grid">
+              <div class="field">
+                <label for="oppName">Opportunity name <span class="required">*</span></label>
+                <input
+                  pInputText
+                  id="oppName"
+                  name="name"
+                  [(ngModel)]="form.name"
+                  required
+                  placeholder="ACME rollout"
+                  class="w-full"
+                />
+              </div>
+              <div class="field">
+                <label for="oppAccount">Account</label>
+                <p-select
+                  inputId="oppAccount"
+                  appendTo="body"
+                  [options]="accountOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="accountId"
+                  [(ngModel)]="form.accountId"
+                  placeholder="Select account"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label for="oppStage">Stage *</label>
+                <p-select
+                  inputId="oppStage"
+                  appendTo="body"
+                  [options]="stageOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="stage"
+                  [(ngModel)]="selectedStage"
+                  (ngModelChange)="onStageChange($event)"
+                  placeholder="Pick stage"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label for="oppClose">Expected close</label>
+                <p-datePicker
+                  inputId="oppClose"
+                  appendTo="body"
+                  name="closeDate"
+                  [(ngModel)]="form.expectedCloseDate"
+                  [showIcon]="true"
+                  styleClass="w-full"
+                ></p-datePicker>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-chart-line"></i>
+              Deal Settings
+            </h3>
+            <div class="form-grid">
+              <div class="field">
+                <label for="oppAmount">Amount</label>
+                <p-inputNumber
+                  inputId="oppAmount"
+                  [(ngModel)]="form.amount"
+                  name="amount"
+                  mode="currency"
+                  [currency]="form.currency"
+                  placeholder="0"
+                  class="w-full"
+                ></p-inputNumber>
+              </div>
+              <div class="field">
+                <label for="oppCurrency">Currency</label>
+                <p-select
+                  inputId="oppCurrency"
+                  appendTo="body"
+                  [options]="currencyOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="currency"
+                  [(ngModel)]="form.currency"
+                  placeholder="Currency"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label for="oppProbability">Probability (%)</label>
+                <p-inputNumber
+                  inputId="oppProbability"
+                  [(ngModel)]="form.probability"
+                  name="probability"
+                  suffix="%"
+                  [min]="0"
+                  [max]="100"
+                  class="w-full"
+                ></p-inputNumber>
+              </div>
+              <div class="field">
+                <label for="oppReason">Win/Loss reason</label>
+                <input
+                  pInputText
+                  id="oppReason"
+                  name="reason"
+                  [(ngModel)]="form.winLossReason"
+                  placeholder="Optional"
+                  class="w-full"
+                />
+              </div>
+              <div class="field full">
+                <label for="oppSummary">Summary</label>
+                <textarea
+                  pTextarea
+                  id="oppSummary"
+                  rows="4"
+                  name="summary"
+                  [(ngModel)]="form.summary"
+                  placeholder="Key notes, stakeholders, risks"
+                  class="w-full"
+                ></textarea>
+              </div>
+            </div>
+          </section>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              pButton
+              label="Cancel"
+              class="crm-button--ghost"
+              (click)="router.navigate(['/app/opportunities'])"
+            ></button>
+            <button
+              pButton
+              type="submit"
+              [label]="isEditMode() ? 'Update opportunity' : 'Save opportunity'"
+              class="crm-button--primary"
+              [disabled]="!form.name || saving()"
+            ></button>
+          </div>
+        </form>
+      </div>
+    </section>
+  

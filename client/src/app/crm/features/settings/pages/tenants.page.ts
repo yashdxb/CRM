@@ -1,47 +1,44 @@
 import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
+import { CheckboxModule } from 'primeng/checkbox';
+import { ListboxModule } from 'primeng/listbox';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
-import { TreeModule } from 'primeng/tree';
+import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
-import { TreeNode } from 'primeng/api';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { CreateTenantRequest, TenantSummary } from '../models/tenant-admin.model';
+import { TenantSummary } from '../models/tenant-admin.model';
 import { TenantAdminDataService } from '../services/tenant-admin-data.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { getTenantKey, setTenantKey } from '../../../../core/tenant/tenant.utils';
 
-interface Option<T = string> {
-  label: string;
-  value: T;
-}
-
 @Component({
   selector: 'app-tenants-page',
   standalone: true,
   imports: [
     ButtonModule,
-    InputTextModule,
+    CheckboxModule,
+    ListboxModule,
+    ToggleSwitchModule,
     InputGroupModule,
     InputGroupAddonModule,
     SelectModule,
     SkeletonModule,
-    TreeModule,
+    TagModule,
     TooltipModule,
     DatePipe,
     NgClass,
     NgFor,
     NgIf,
     FormsModule,
-    ReactiveFormsModule,
     RouterLink,
     BreadcrumbsComponent
   ],
@@ -50,7 +47,6 @@ interface Option<T = string> {
 })
 export class TenantsPage {
   private readonly dataService = inject(TenantAdminDataService);
-  private readonly fb = inject(FormBuilder);
   private readonly toastService = inject(AppToastService);
 
   protected readonly loading = signal(true);
@@ -70,72 +66,29 @@ export class TenantsPage {
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.tenantsManage)
   );
 
-  protected readonly timeZoneOptions: Option[] = [
-    { label: 'UTC', value: 'UTC' },
-    { label: 'America/New_York', value: 'America/New_York' },
-    { label: 'America/Chicago', value: 'America/Chicago' },
-    { label: 'America/Los_Angeles', value: 'America/Los_Angeles' },
-    { label: 'Europe/London', value: 'Europe/London' },
-    { label: 'Asia/Kolkata', value: 'Asia/Kolkata' }
+  protected readonly supplyChainModules = [
+    { key: 'rfq', label: 'RFQ', icon: 'pi pi-file-edit', iconClass: 'icon-blue', description: 'Source requests and vendor invites.' },
+    { key: 'rfi', label: 'RFI / RFP', icon: 'pi pi-file', iconClass: 'icon-teal', description: 'Collect supplier information early.' },
+    { key: 'quotes', label: 'Quote Comparison', icon: 'pi pi-chart-line', iconClass: 'icon-indigo', description: 'Capture supplier pricing responses.' },
+    { key: 'awards', label: 'Awards', icon: 'pi pi-trophy', iconClass: 'icon-amber', description: 'Finalize awards and suppliers.' },
+    { key: 'suppliers', label: 'Supplier Management', icon: 'pi pi-users', iconClass: 'icon-green', description: 'Manage supplier profiles and status.' },
+    { key: 'procurement', label: 'Procurement Execution', icon: 'pi pi-briefcase', iconClass: 'icon-purple', description: 'Track purchase and approvals flow.' },
+    { key: 'logistics', label: 'Fulfillment & Logistics', icon: 'pi pi-truck', iconClass: 'icon-blue', description: 'Monitor shipping and delivery.' },
+    { key: 'inventory', label: 'Inventory', icon: 'pi pi-box', iconClass: 'icon-teal', description: 'Stock levels and replenishment.' },
+    { key: 'catalog', label: 'Item Master / Catalog', icon: 'pi pi-list', iconClass: 'icon-rose', description: 'Item master and catalogs.' },
+    { key: 'pricing', label: 'Price Lists / Rate Cards', icon: 'pi pi-tags', iconClass: 'icon-indigo', description: 'Supplier pricing and rate cards.' },
+    { key: 'contracts', label: 'Contracts', icon: 'pi pi-file', iconClass: 'icon-orange', description: 'Contract references and terms.' },
+    { key: 'quality', label: 'Quality', icon: 'pi pi-check-circle', iconClass: 'icon-green', description: 'Inspections and compliance.' },
+    { key: 'analytics', label: 'Analytics', icon: 'pi pi-chart-bar', iconClass: 'icon-purple', description: 'Spend and supplier performance.' }
   ];
-
-  protected readonly currencyOptions: Option[] = [
-    { label: 'USD', value: 'USD' },
-    { label: 'CAD', value: 'CAD' },
-    { label: 'EUR', value: 'EUR' },
-    { label: 'GBP', value: 'GBP' },
-    { label: 'INR', value: 'INR' }
-  ];
-
-  protected readonly tenantForm = this.fb.group({
-    key: ['', [Validators.required, Validators.maxLength(80)]],
-    name: ['', [Validators.required, Validators.maxLength(120)]],
-    adminName: ['', [Validators.required, Validators.maxLength(120)]],
-    adminEmail: ['', [Validators.required, Validators.email]],
-    adminPassword: ['', [Validators.required, Validators.minLength(8)]],
-    timeZone: ['UTC', [Validators.required]],
-    currency: ['USD', [Validators.required]],
-    industryPreset: ['CoreCRM', [Validators.required]],
-    industryModules: [[] as string[]]
-  });
-
-  protected readonly industryPackNodes: TreeNode[] = [
-    {
-      key: 'core-crm',
-      label: 'Core CRM',
-      icon: 'pi pi-lock',
-      selectable: false
-    },
-    {
-      key: 'supply-chain',
-      label: 'Supply Chain',
-      icon: 'pi pi-sitemap',
-      children: [
-        { key: 'sc:rfq', label: 'RFQ' },
-        { key: 'sc:rfi', label: 'RFI' },
-        { key: 'sc:quotes', label: 'Quotes' },
-        { key: 'sc:awards', label: 'Awards' },
-        { key: 'sc:suppliers', label: 'Supplier Management' },
-        { key: 'sc:procurement', label: 'Procurement' },
-        { key: 'sc:logistics', label: 'Logistics' },
-        { key: 'sc:inventory', label: 'Inventory' },
-        { key: 'sc:catalog', label: 'Catalog' },
-        { key: 'sc:pricing', label: 'Pricing' },
-        { key: 'sc:contracts', label: 'Contracts' },
-        { key: 'sc:quality', label: 'Quality' },
-        { key: 'sc:analytics', label: 'Analytics' }
-      ]
-    }
-  ];
-
-  protected industrySelection: TreeNode[] = [];
-  protected activeIndustrySelection: TreeNode[] = [];
-  private readonly industryNodeMap = new Map<string, TreeNode>();
+  protected activeSupplyChainEnabled = false;
+  protected activeModuleState: Record<string, boolean> = {};
+  protected activeModuleSelection: string[] = [];
 
   protected readonly totalTenants = computed(() => this.tenants().length);
 
   constructor() {
-    this.indexIndustryNodes(this.industryPackNodes);
+    this.activeModuleState = this.buildModuleState([]);
     this.loadTenants();
   }
 
@@ -150,39 +103,6 @@ export class TenantsPage {
       error: () => {
         this.loading.set(false);
         this.raiseToast('error', 'Unable to load tenants');
-      }
-    });
-  }
-
-  protected createTenant() {
-    if (this.tenantForm.invalid) {
-      this.tenantForm.markAllAsTouched();
-      return;
-    }
-
-    const payload = this.tenantForm.getRawValue() as CreateTenantRequest;
-    this.saving.set(true);
-    this.dataService.createTenant(payload).subscribe({
-      next: (tenant) => {
-        this.saving.set(false);
-        this.tenants.set([tenant, ...this.tenants()]);
-        this.tenantForm.reset({
-          key: '',
-          name: '',
-          adminName: '',
-          adminEmail: '',
-          adminPassword: '',
-          timeZone: 'UTC',
-          currency: 'USD',
-          industryPreset: 'CoreCRM',
-          industryModules: []
-        });
-        this.industrySelection = [];
-        this.raiseToast('success', 'Tenant provisioned');
-      },
-      error: () => {
-        this.saving.set(false);
-        this.raiseToast('error', 'Unable to create tenant');
       }
     });
   }
@@ -213,23 +133,6 @@ export class TenantsPage {
     this.toastService.show(tone, message, 3000);
   }
 
-  protected onIndustrySelectionChange(selection: TreeNode[] | TreeNode | null | undefined) {
-    this.industrySelection = this.normalizeSelection(selection);
-    const moduleKeys = this.extractModuleKeys(this.industrySelection);
-    const hasSupplyChain = moduleKeys.length > 0 || this.hasSupplyChainSelected(this.industrySelection);
-    this.tenantForm.patchValue(
-      {
-        industryPreset: hasSupplyChain ? 'SupplyChain' : 'CoreCRM',
-        industryModules: moduleKeys
-      },
-      { emitEvent: false }
-    );
-  }
-
-  protected setActiveIndustrySelection(selection: TreeNode[] | TreeNode | null | undefined) {
-    this.activeIndustrySelection = this.normalizeSelection(selection);
-  }
-
   protected saveActiveIndustrySettings() {
     const tenant = this.activeTenant();
     if (!tenant) {
@@ -237,14 +140,16 @@ export class TenantsPage {
       return;
     }
 
-    const moduleKeys = this.extractModuleKeys(this.activeIndustrySelection);
-    const hasSupplyChain = moduleKeys.length > 0 || this.hasSupplyChainSelected(this.activeIndustrySelection);
+    const moduleKeys = this.supplyChainModules
+      .filter((module) => this.activeModuleState[module.key])
+      .map((module) => module.key);
+    const hasSupplyChain = this.activeSupplyChainEnabled || moduleKeys.length > 0;
 
     this.saving.set(true);
     this.dataService
       .updateIndustrySettings(tenant.id, {
         industryPreset: hasSupplyChain ? 'SupplyChain' : 'CoreCRM',
-        industryModules: moduleKeys
+        industryModules: hasSupplyChain ? moduleKeys : []
       })
       .subscribe({
         next: (updated) => {
@@ -262,55 +167,48 @@ export class TenantsPage {
       });
   }
 
+  protected onActiveSupplyChainToggle(event?: { checked?: boolean; value?: boolean }) {
+    if (event && typeof event.checked === 'boolean') {
+      this.activeSupplyChainEnabled = event.checked;
+    } else if (event && typeof event.value === 'boolean') {
+      this.activeSupplyChainEnabled = event.value;
+    }
+
+    if (this.activeSupplyChainEnabled) {
+      const allModules = this.supplyChainModules.map((module) => module.key);
+      this.activeModuleSelection = [...allModules];
+      this.activeModuleState = this.buildModuleState(allModules);
+      return;
+    }
+
+    this.activeModuleSelection = [];
+    this.activeModuleState = this.buildModuleState([]);
+  }
+
+  protected onModuleSelectionChange() {
+    this.activeModuleState = this.buildModuleState(this.activeModuleSelection);
+  }
+
   private syncActiveIndustrySelection() {
     const tenant = this.activeTenant();
     if (!tenant) {
-      this.activeIndustrySelection = [];
+      this.activeSupplyChainEnabled = false;
+      this.activeModuleSelection = [];
+      this.activeModuleState = this.buildModuleState([]);
       return;
     }
 
     const modules = tenant.industryModules ?? [];
-    const nextKeys: string[] = [];
-
-    if (tenant.industryPreset === 'SupplyChain' || modules.length > 0) {
-      nextKeys.push('supply-chain', ...modules.map((module) => `sc:${module}`));
-    }
-
-    this.activeIndustrySelection = this.buildSelectionFromKeys(nextKeys);
+    this.activeSupplyChainEnabled = tenant.industryPreset === 'SupplyChain' || modules.length > 0;
+    this.activeModuleSelection = [...modules];
+    this.activeModuleState = this.buildModuleState(modules);
   }
 
-  private extractModuleKeys(selection: TreeNode[]): string[] {
-    return selection
-      .map((node) => node.key)
-      .filter((key): key is string => typeof key === 'string' && key.startsWith('sc:'))
-      .map((key) => key.replace('sc:', ''));
-  }
-
-  private normalizeSelection(selection: TreeNode[] | TreeNode | null | undefined): TreeNode[] {
-    if (!selection) {
-      return [];
-    }
-    return Array.isArray(selection) ? selection : [selection];
-  }
-
-  private hasSupplyChainSelected(selection: TreeNode[]): boolean {
-    return selection.some((node) => node.key === 'supply-chain');
-  }
-
-  private buildSelectionFromKeys(keys: string[]): TreeNode[] {
-    return keys
-      .map((key) => this.industryNodeMap.get(key))
-      .filter((node): node is TreeNode => !!node);
-  }
-
-  private indexIndustryNodes(nodes: TreeNode[]) {
-    nodes.forEach((node) => {
-      if (node.key) {
-        this.industryNodeMap.set(node.key, node);
-      }
-      if (node.children?.length) {
-        this.indexIndustryNodes(node.children);
-      }
+  private buildModuleState(modules: string[]): Record<string, boolean> {
+    const state: Record<string, boolean> = {};
+    this.supplyChainModules.forEach((module) => {
+      state[module.key] = modules.includes(module.key);
     });
+    return state;
   }
 }

@@ -320,8 +320,8 @@ export class RoleFormPage {
     request$.subscribe({
       next: () => {
         this.roleSaving.set(false);
-        this.raiseToast('success', this.roleId ? 'Role updated' : 'Role created');
-        this.router.navigate(['/app/settings/roles']);
+        const message = this.roleId ? 'Role updated' : 'Role created';
+        this.raiseToast('success', message);
       },
       error: () => {
         this.roleSaving.set(false);

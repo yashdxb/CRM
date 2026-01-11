@@ -1,5 +1,6 @@
 using System;
 using CRM.Enterprise.Infrastructure.Auth;
+using CRM.Enterprise.Infrastructure.Audit;
 using CRM.Enterprise.Infrastructure.Dashboard;
 using CRM.Enterprise.Infrastructure.Tenants;
 using CRM.Enterprise.Infrastructure.Suppliers;
@@ -7,6 +8,7 @@ using CRM.Enterprise.Infrastructure.Catalog;
 using CRM.Enterprise.Infrastructure.Pricing;
 using CRM.Enterprise.Infrastructure.Sourcing;
 using CRM.Enterprise.Application.Auth;
+using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Dashboard;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Suppliers;
@@ -55,6 +57,7 @@ public static class DependencyInjection
             }
         });
         services.AddScoped<ILeadScoringService>(sp => sp.GetRequiredService<OpenAiLeadScoringService>());
+        services.AddScoped<IAuditEventService, AuditEventService>();
         services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IItemMasterService, ItemMasterService>();
         services.AddScoped<IPriceListService, PriceListService>();

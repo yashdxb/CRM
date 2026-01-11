@@ -1,0 +1,94 @@
+
+    <div class="command-palette-backdrop" *ngIf="commandService.isOpen()" [@fadeIn] (click)="commandService.close()">
+      <div class="command-palette" [@slideUp] (click)="$event.stopPropagation()">
+        <div class="command-palette__header">
+          <i class="pi pi-search"></i>
+          <input
+            pInputText
+            #searchInput
+            type="text"
+            class="command-palette__input"
+            placeholder="Search commands, navigate, or create..."
+            [ngModel]="commandService.searchQuery()"
+            (ngModelChange)="commandService.setSearchQuery($event)"
+            (keydown)="onKeydown($event)"
+            autofocus
+          />
+          <kbd class="command-palette__kbd">ESC</kbd>
+        </div>
+        
+        <div class="command-palette__results">
+          <div class="command-palette__group" *ngIf="recentCommands().length > 0 && !commandService.searchQuery()">
+            <div class="command-palette__group-label">Recent</div>
+            <button
+              pButton
+              type="button"
+              *ngFor="let cmd of recentCommands(); let i = index"
+              class="command-palette__item p-button-text"
+              [ngClass]="{ 'command-palette__item--selected': commandService.selectedIndex() === i }"
+              (click)="commandService.executeCommand(cmd)"
+              (mouseenter)="onHover(i)"
+            >
+              <i class="pi" [ngClass]="cmd.icon || 'pi-arrow-right'"></i>
+              <div class="command-palette__item-content">
+                <span class="command-palette__item-label">{{ cmd.label }}</span>
+                <span *ngIf="cmd.description" class="command-palette__item-desc">{{ cmd.description }}</span>
+              </div>
+              <kbd *ngIf="cmd.shortcut" class="command-palette__shortcut">{{ cmd.shortcut }}</kbd>
+            </button>
+          </div>
+
+          <div class="command-palette__group" *ngIf="navigationCommands().length > 0">
+            <div class="command-palette__group-label">{{ commandService.searchQuery() ? 'Results' : 'Navigation' }}</div>
+            <button
+              pButton
+              type="button"
+              *ngFor="let cmd of navigationCommands(); let i = index"
+              class="command-palette__item p-button-text"
+              [ngClass]="{ 'command-palette__item--selected': commandService.selectedIndex() === recentOffset() + i }"
+              (click)="commandService.executeCommand(cmd)"
+              (mouseenter)="onHover(recentOffset() + i)"
+            >
+              <i class="pi" [ngClass]="cmd.icon || 'pi-arrow-right'"></i>
+              <div class="command-palette__item-content">
+                <span class="command-palette__item-label">{{ cmd.label }}</span>
+                <span *ngIf="cmd.description" class="command-palette__item-desc">{{ cmd.description }}</span>
+              </div>
+              <kbd *ngIf="cmd.shortcut" class="command-palette__shortcut">{{ cmd.shortcut }}</kbd>
+            </button>
+          </div>
+
+          <div class="command-palette__group" *ngIf="actionCommands().length > 0 && !commandService.searchQuery()">
+            <div class="command-palette__group-label">Actions</div>
+            <button
+              pButton
+              type="button"
+              *ngFor="let cmd of actionCommands(); let i = index"
+              class="command-palette__item p-button-text"
+              [ngClass]="{ 'command-palette__item--selected': commandService.selectedIndex() === navOffset() + i }"
+              (click)="commandService.executeCommand(cmd)"
+              (mouseenter)="onHover(navOffset() + i)"
+            >
+              <i class="pi" [ngClass]="cmd.icon || 'pi-bolt'"></i>
+              <div class="command-palette__item-content">
+                <span class="command-palette__item-label">{{ cmd.label }}</span>
+                <span *ngIf="cmd.description" class="command-palette__item-desc">{{ cmd.description }}</span>
+              </div>
+              <kbd *ngIf="cmd.shortcut" class="command-palette__shortcut">{{ cmd.shortcut }}</kbd>
+            </button>
+          </div>
+
+          <div class="command-palette__empty" *ngIf="commandService.filteredCommands().length === 0">
+            <i class="pi pi-search"></i>
+            <p>No commands found for "{{ commandService.searchQuery() }}"</p>
+          </div>
+        </div>
+
+        <div class="command-palette__footer">
+          <span><kbd>↑↓</kbd> Navigate</span>
+          <span><kbd>↵</kbd> Select</span>
+          <span><kbd>ESC</kbd> Close</span>
+        </div>
+      </div>
+    </div>
+  

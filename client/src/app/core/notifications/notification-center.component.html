@@ -1,0 +1,67 @@
+
+    <div class="notification-center" [class.open]="open()">
+      <button
+        pButton
+        type="button"
+        class="notification-center__button p-button-rounded p-button-text"
+        (click)="toggle()"
+        aria-label="Open notifications"
+      >
+        <i class="pi pi-bell"></i>
+        <span class="notification-center__badge" *ngIf="unreadCount()">{{ unreadCount() }}</span>
+      </button>
+
+      <div class="notification-center__panel" *ngIf="open()">
+        <header class="notification-center__header">
+          <div>
+            <h4>Notifications</h4>
+            <span>{{ unreadCount() }} unread</span>
+          </div>
+          <div class="notification-center__actions">
+            <button
+              pButton
+              type="button"
+              class="notification-center__action p-button-text"
+              label="Mark all read"
+              (click)="markAllRead()"
+              [disabled]="!unreadCount()"
+            ></button>
+            <button
+              pButton
+              type="button"
+              class="notification-center__action p-button-text"
+              label="Clear"
+              (click)="clearAll()"
+              [disabled]="!items().length"
+            ></button>
+          </div>
+        </header>
+
+        <div class="notification-center__list" *ngIf="items().length; else emptyState">
+          <button
+            pButton
+            type="button"
+            class="notification-center__item p-button-text"
+            *ngFor="let item of items()"
+            [ngClass]="{ 'notification-center__item--unread': !item.read }"
+            (click)="markRead(item)"
+          >
+            <span class="notification-center__dot"></span>
+            <div class="notification-center__content">
+              <div class="notification-center__title">{{ item.title }}</div>
+              <div class="notification-center__message" *ngIf="item.message">{{ item.message }}</div>
+              <div class="notification-center__meta">{{ item.createdAt | date:'MMM d, h:mm a' }}</div>
+            </div>
+            <span class="notification-center__type" [ngClass]="'type--' + item.type">{{ item.type }}</span>
+          </button>
+        </div>
+
+        <ng-template #emptyState>
+          <div class="notification-center__empty">
+            <i class="pi pi-bell"></i>
+            <p>You're all caught up.</p>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  

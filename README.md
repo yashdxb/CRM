@@ -90,6 +90,8 @@ Each feature keeps its own `models`, `services`, and `pages` folders to align wi
 4. Use `dotnet ef migrations add InitialCreate -p CRM.Enterprise.Infrastructure -s CRM.Enterprise.Api` once the DbContext mappings are finalized to create the schema.
 5. The API hosts Swagger UI at `https://localhost:5001/swagger` (or the port assigned by Kestrel) and exposes a `/health` probe for quick smoke tests.
 
+Tip: Use `./scripts/dev-api.sh` to automatically start the local SQL container and then launch the API.
+
 ### Local SQL Server via Docker
 
 ```bash

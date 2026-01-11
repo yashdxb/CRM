@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE_URL = process.env.API_BASE_URL ?? 'http://127.0.0.1:5016';
+const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = 'ChangeThisAdmin!1';
 
@@ -86,7 +86,7 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
   const token = await login(page, request);
 
   await page.goto('/app/settings/lead-assignment');
-  await expect(page.getByRole('heading', { name: 'Lead Assignment Rules' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Assignment Rules', level: 1 })).toBeVisible();
 
   await page.goto('/app/leads/new');
   await page.waitForURL('**/app/leads/new');
@@ -101,7 +101,7 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
     page.locator('button:has-text("Create lead")').click()
   ]);
   expect(manualResponse.ok()).toBeTruthy();
-  await page.waitForURL('**/app/leads');
+  await page.goto('/app/leads');
   await expect(page.locator('.leads-table')).toContainText(manualLead);
 
   await page.goto('/app/leads/new');
@@ -115,7 +115,7 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
     page.locator('button:has-text("Create lead")').click()
   ]);
   expect(roundResponse.ok()).toBeTruthy();
-  await page.waitForURL('**/app/leads');
+  await page.goto('/app/leads');
   await expect(page.locator('.leads-table')).toContainText(roundLead);
 
   const territoryResponse = await request.post(`${API_BASE_URL}/api/leads`, {
@@ -141,12 +141,21 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
   await page.goto('/app/leads');
   await searchLeads(page, manualLead);
   const manualRow = page.locator('tr').filter({ hasText: manualLead }).first();
-  await manualRow.locator('button[title="Convert"]').click();
+  await manualRow.locator('button[title="Edit"]').click();
+  await page.waitForURL('**/app/leads/**');
+  await selectByLabel(page, 'p-select[name="status"]', 'Qualified');
+  const [updateResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'PUT'),
+    page.locator('button:has-text("Update lead")').click()
+  ]);
+  expect(updateResponse.ok()).toBeTruthy();
+  await page.locator('button:has-text("Convert lead")').first().click();
+  await page.waitForURL('**/app/leads/**/convert');
   const [convertResponse] = await Promise.all([
     page.waitForResponse(
       (response) => response.url().includes('/convert') && response.request().method() === 'POST'
     ),
-    page.locator('button:has-text("Convert lead")').click()
+    page.locator('form.convert-form button:has-text("Convert lead")').click()
   ]);
   if (!convertResponse.ok()) {
     console.log('convert failed:', convertResponse.status(), await convertResponse.text());
@@ -201,12 +210,21 @@ test('lead auto score and conversion carries owner', async ({ page, request }) =
 
   await page.goto('/app/leads');
   const row = page.locator('tr').filter({ hasText: companyName }).first();
-  await row.locator('button[title="Convert"]').click();
+  await row.locator('button[title="Edit"]').click();
+  await page.waitForURL('**/app/leads/**');
+  await selectByLabel(page, 'p-select[name="status"]', 'Qualified');
+  const [updateResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'PUT'),
+    page.locator('button:has-text("Update lead")').click()
+  ]);
+  expect(updateResponse.ok()).toBeTruthy();
+  await page.locator('button:has-text("Convert lead")').first().click();
+  await page.waitForURL('**/app/leads/**/convert');
   const [convertResponse] = await Promise.all([
     page.waitForResponse(
       (response) => response.url().includes('/convert') && response.request().method() === 'POST'
     ),
-    page.locator('button:has-text("Convert lead")').click()
+    page.locator('form.convert-form button:has-text("Convert lead")').click()
   ]);
   expect(convertResponse.ok()).toBeTruthy();
   const conversion = await convertResponse.json();

@@ -1,0 +1,185 @@
+@use '../../../../shared/form-page-styles' as form;
+
+:host {
+  @include form.premium-selection;
+  @include form.premium-focus-ring;
+}
+
+.activity-form-page {
+  @include form.form-page-base;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-header {
+  @include form.form-page-header;
+}
+
+.header-content {
+  @include form.form-header-content;
+}
+
+.back-link {
+  @include form.form-back-link;
+}
+
+.header-title {
+  @include form.form-header-title;
+}
+
+.form-body {
+  @include form.form-container;
+}
+
+.form-layout {
+  @include form.form-layout;
+}
+
+.form-card {
+  @include form.form-section;
+}
+
+.section-title {
+  @include form.section-title;
+}
+
+.form-grid {
+  @include form.form-grid;
+}
+
+.field {
+  @include form.form-field;
+
+  label {
+    @include form.form-label;
+
+    .required {
+      @include form.form-required;
+    }
+  }
+
+  &.full {
+    grid-column: 1 / -1;
+  }
+}
+
+.related-summary {
+  max-width: 1400px;
+  width: min(1400px, calc(100% - 3rem));
+  margin: 1rem auto 0;
+  padding: 0.75rem 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.related-summary-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(71, 85, 105, 0.75);
+}
+
+.related-summary-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.related-summary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.08);
+  color: #1d4ed8;
+  font-weight: 600;
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.related-summary-link i {
+  font-size: 0.9rem;
+}
+
+.related-summary-link:hover {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1e40af;
+}
+
+.related-summary-empty {
+  color: rgba(71, 85, 105, 0.8);
+  font-size: 0.85rem;
+}
+
+.form-actions {
+  @include form.form-actions;
+
+  .crm-button--ghost {
+    @include form.button-ghost;
+  }
+
+  .crm-button--primary {
+    @include form.button-primary;
+  }
+}
+
+:host ::ng-deep .p-inputtext,
+:host ::ng-deep .p-inputnumber .p-inputtext,
+:host ::ng-deep .p-dropdown,
+:host ::ng-deep .p-select,
+:host ::ng-deep .p-inputtextarea,
+:host ::ng-deep .p-datepicker input {
+  @include form.premium-input;
+}
+
+:host ::ng-deep .p-inputtext:hover,
+:host ::ng-deep .p-inputnumber .p-inputtext:hover,
+:host ::ng-deep .p-dropdown:hover,
+:host ::ng-deep .p-select:hover,
+:host ::ng-deep .p-inputtextarea:hover,
+:host ::ng-deep .p-datepicker input:hover {
+  @include form.premium-input-hover;
+}
+
+:host ::ng-deep .p-inputtext:focus,
+:host ::ng-deep .p-inputnumber .p-inputtext:focus,
+:host ::ng-deep .p-dropdown:focus-within,
+:host ::ng-deep .p-select:focus-within,
+:host ::ng-deep .p-inputtextarea:focus,
+:host ::ng-deep .p-datepicker input:focus {
+  @include form.premium-input-focus;
+}
+
+:host ::ng-deep .p-select-item,
+:host ::ng-deep .p-dropdown-item {
+  .select-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+  }
+
+  .select-option i {
+    font-size: 0.95rem;
+    color: rgba(59, 130, 246, 0.9);
+  }
+}
+
+.select-placeholder {
+  color: rgba(100, 116, 139, 0.75);
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

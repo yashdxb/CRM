@@ -1,240 +1,92 @@
-<section class="tenant-page">
-  <!-- Background orbs -->
-  <div class="page-background">
-    <div class="animated-orb orb-1"></div>
-    <div class="animated-orb orb-2"></div>
-    <div class="animated-orb orb-3"></div>
-  </div>
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+</div>
 
-  <div class="page-container">
+<div class="page-container">
+  <div class="page-content tenant-page">
     <app-breadcrumbs></app-breadcrumbs>
 
-    <!-- Hero Section -->
-    <div class="hero-section">
+    <header class="page-hero">
       <div class="hero-content">
-        <div class="hero-text">
-          <div class="hero-badge">
-            <span class="badge-dot"></span>
-            <span>Super Admin</span>
-          </div>
-          <h1 class="hero-title">
-            <span class="title-gradient">Tenant</span>
-            <span class="title-light">Management</span>
-          </h1>
-          <p class="hero-subtitle">
-            Create workspaces, configure industry packs, and manage multi-tenant environments with ease.
-          </p>
+        <span class="hero-eyebrow">
+          <i class="pi pi-shield"></i>
+          Super Admin
+        </span>
+        <h1 class="hero-title">Tenant configuration</h1>
+        <p class="hero-subtitle">Set active workspaces, manage Industry Packs, and review tenants in one place.</p>
+      </div>
+      <div class="hero-actions">
+        <button
+          type="button"
+          pButton
+          class="crm-button crm-button--ghost"
+          icon="pi pi-arrow-left"
+          label="Back to Settings"
+          routerLink="/app/settings"
+        ></button>
+        <button
+          type="button"
+          pButton
+          class="crm-button crm-button--ghost"
+          icon="pi pi-sliders-h"
+          label="Workspace Settings"
+          routerLink="/app/settings/workspace"
+        ></button>
+        <button
+          *ngIf="canManageTenants()"
+          type="button"
+          pButton
+          class="crm-button crm-button--primary"
+          icon="pi pi-plus"
+          label="Create tenant"
+          routerLink="/app/settings/tenants/new"
+        ></button>
+      </div>
+    </header>
+
+    <div class="tenant-metrics">
+      <div class="metric-card">
+        <div class="metric-icon metric-icon--primary">
+          <i class="pi pi-building"></i>
         </div>
-        <div class="hero-actions">
-          <button type="button" pButton class="p-button-outlined p-button-secondary" icon="pi pi-arrow-left" label="Back to Settings" routerLink="/app/settings"></button>
-          <button type="button" pButton class="p-button-outlined" icon="pi pi-sliders-h" label="Workspace Settings" routerLink="/app/settings/workspace"></button>
+        <div>
+          <span class="metric-value">{{ totalTenants() }}</span>
+          <span class="metric-label">Total tenants</span>
         </div>
       </div>
-
-      <!-- Hero Stats -->
-      <div class="hero-stats">
-        <div class="stat-card">
-          <div class="stat-icon stat-icon--primary">
-            <i class="pi pi-building"></i>
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ totalTenants() }}</span>
-            <span class="stat-label">Total Tenants</span>
-          </div>
+      <div class="metric-card">
+        <div class="metric-icon metric-icon--success">
+          <i class="pi pi-check-circle"></i>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon stat-icon--success">
-            <i class="pi pi-check-circle"></i>
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ activeTenant()?.name || '—' }}</span>
-            <span class="stat-label">Active Tenant</span>
-          </div>
+        <div>
+          <span class="metric-value">{{ activeTenant()?.name || '—' }}</span>
+          <span class="metric-label">Active tenant</span>
         </div>
-        <div class="stat-card">
-          <div class="stat-icon stat-icon--purple">
-            <i class="pi pi-sitemap"></i>
-          </div>
-          <div class="stat-content">
-            <span class="stat-value">{{ activeTenant()?.industryPreset || 'CoreCRM' }}</span>
-            <span class="stat-label">Industry Preset</span>
-          </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon metric-icon--purple">
+          <i class="pi pi-sitemap"></i>
+        </div>
+        <div>
+          <span class="metric-value">{{ activeTenant()?.industryPreset || 'CoreCRM' }}</span>
+          <span class="metric-label">Industry preset</span>
         </div>
       </div>
     </div>
 
-    <!-- Main Content Grid -->
     <ng-container *ngIf="!loading(); else loadingState">
-      <div class="content-grid">
-        <!-- Create Tenant Card -->
-        <article class="glass-card create-card">
-          <header class="card-header">
-            <div class="card-header-icon card-header-icon--primary">
-              <i class="pi pi-plus-circle"></i>
-            </div>
-            <div>
-              <h2 class="card-title">Create New Tenant</h2>
-              <p class="card-subtitle">Provision a new workspace with admin credentials</p>
-            </div>
-          </header>
-
-          <form class="tenant-form" [formGroup]="tenantForm" (ngSubmit)="createTenant()">
-            <!-- Section: Basic Info -->
-            <div class="form-section">
-              <h3 class="section-title">
-                <i class="pi pi-info-circle"></i>
-                Basic Information
-              </h3>
-              <div class="form-row">
-                <div class="form-field">
-                  <label class="form-label">Tenant Key</label>
-                  <p-inputgroup>
-                    <p-inputgroup-addon class="addon--cyan">
-                      <i class="pi pi-key"></i>
-                    </p-inputgroup-addon>
-                    <input pInputText formControlName="key" placeholder="acme" />
-                  </p-inputgroup>
-                  <small class="form-hint">Lowercase, no spaces. Used for routing.</small>
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Workspace Name</label>
-                  <p-inputgroup>
-                    <p-inputgroup-addon class="addon--purple">
-                      <i class="pi pi-building"></i>
-                    </p-inputgroup-addon>
-                    <input pInputText formControlName="name" placeholder="Acme Corporation" />
-                  </p-inputgroup>
-                </div>
-              </div>
-            </div>
-
-            <!-- Section: Admin Credentials -->
-            <div class="form-section">
-              <h3 class="section-title">
-                <i class="pi pi-user-plus"></i>
-                Admin Credentials
-              </h3>
-              <div class="form-row form-row--3col">
-                <div class="form-field">
-                  <label class="form-label">Admin Name</label>
-                  <p-inputgroup>
-                    <p-inputgroup-addon class="addon--blue">
-                      <i class="pi pi-user"></i>
-                    </p-inputgroup-addon>
-                    <input pInputText formControlName="adminName" placeholder="John Admin" />
-                  </p-inputgroup>
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Admin Email</label>
-                  <p-inputgroup>
-                    <p-inputgroup-addon class="addon--pink">
-                      <i class="pi pi-envelope"></i>
-                    </p-inputgroup-addon>
-                    <input pInputText type="email" formControlName="adminEmail" placeholder="admin@acme.com" />
-                  </p-inputgroup>
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Password</label>
-                  <p-inputgroup>
-                    <p-inputgroup-addon class="addon--orange">
-                      <i class="pi pi-lock"></i>
-                    </p-inputgroup-addon>
-                    <input pInputText type="password" formControlName="adminPassword" placeholder="Temporary password" />
-                  </p-inputgroup>
-                </div>
-              </div>
-            </div>
-
-            <!-- Section: Regional Settings -->
-            <div class="form-section">
-              <h3 class="section-title">
-                <i class="pi pi-globe"></i>
-                Regional Settings
-              </h3>
-              <div class="form-row">
-                <div class="form-field">
-                  <label class="form-label">Time Zone</label>
-                  <p-inputgroup>
-                    <p-inputgroup-addon class="addon--teal">
-                      <i class="pi pi-clock"></i>
-                    </p-inputgroup-addon>
-                    <p-select
-                      appendTo="body"
-                      [options]="timeZoneOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      formControlName="timeZone"
-                      placeholder="Select time zone"
-                      styleClass="w-full"
-                    ></p-select>
-                  </p-inputgroup>
-                </div>
-                <div class="form-field">
-                  <label class="form-label">Currency</label>
-                  <p-inputgroup>
-                    <p-inputgroup-addon class="addon--green">
-                      <i class="pi pi-dollar"></i>
-                    </p-inputgroup-addon>
-                    <p-select
-                      appendTo="body"
-                      [options]="currencyOptions"
-                      optionLabel="label"
-                      optionValue="value"
-                      formControlName="currency"
-                      placeholder="Select currency"
-                      styleClass="w-full"
-                    ></p-select>
-                  </p-inputgroup>
-                </div>
-              </div>
-            </div>
-
-            <!-- Section: Industry Packs -->
-            <div class="form-section">
-              <h3 class="section-title">
-                <i class="pi pi-box"></i>
-                Industry Packs
-              </h3>
-              <div class="industry-pack-container">
-                <p-tree
-                  [value]="industryPackNodes"
-                  selectionMode="checkbox"
-                  [selection]="industrySelection"
-                  (selectionChange)="onIndustrySelectionChange($event)"
-                  [propagateSelectionDown]="true"
-                  [propagateSelectionUp]="false"
-                  class="industry-tree"
-                ></p-tree>
-                <small class="form-hint">Core CRM is always enabled. Toggle Supply Chain modules as needed.</small>
-              </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="form-actions">
-              <button
-                type="submit"
-                pButton
-                class="p-button-primary p-button-lg"
-                icon="pi pi-plus"
-                label="Create Tenant"
-                [loading]="saving()"
-                [disabled]="!canManageTenants() || tenantForm.invalid"
-              ></button>
-            </div>
-          </form>
-        </article>
-
-        <!-- Sidebar: Active Tenant Management -->
-        <aside class="sidebar-cards">
-          <!-- Active Tenant Card -->
+      <div class="tenant-layout">
+        <section class="tenant-controls">
           <article class="glass-card active-tenant-card">
             <header class="card-header">
               <div class="card-header-icon card-header-icon--success">
                 <i class="pi pi-check-circle"></i>
               </div>
               <div>
-                <h2 class="card-title">Active Tenant</h2>
-                <p class="card-subtitle">Switch or configure the current workspace</p>
+                <h2 class="card-title">Active tenant</h2>
+                <p class="card-subtitle">Switch the workspace used by this session.</p>
               </div>
               <span class="live-badge">
                 <span class="live-dot"></span>
@@ -243,7 +95,7 @@
             </header>
 
             <div class="active-tenant-selector">
-              <label class="form-label">Select Tenant</label>
+              <label class="form-label">Select tenant</label>
               <p-inputgroup>
                 <p-inputgroup-addon class="addon--primary">
                   <i class="pi pi-building"></i>
@@ -262,9 +114,9 @@
               <button
                 type="button"
                 pButton
-                class="p-button-success p-button-sm activate-btn"
+                class="crm-button crm-button--primary activate-btn"
                 icon="pi pi-check"
-                label="Set as Active"
+                label="Set active tenant"
                 [disabled]="!canManageTenants() || !activeTenantKey()"
                 (click)="applyActiveTenant()"
               ></button>
@@ -272,49 +124,85 @@
             </div>
           </article>
 
-          <!-- Industry Configuration Card -->
           <article class="glass-card industry-config-card">
             <header class="card-header">
               <div class="card-header-icon card-header-icon--purple">
                 <i class="pi pi-sitemap"></i>
               </div>
               <div>
-                <h2 class="card-title">Industry Configuration</h2>
-                <p class="card-subtitle">Manage modules for active tenant</p>
+                <h2 class="card-title">Industry packs</h2>
               </div>
             </header>
 
             <div class="industry-config-content">
-              <p-tree
-                [value]="industryPackNodes"
-                selectionMode="checkbox"
-                [selection]="activeIndustrySelection"
-                (selectionChange)="setActiveIndustrySelection($event)"
-                [propagateSelectionDown]="true"
-                [propagateSelectionUp]="false"
-                class="industry-tree industry-tree--compact"
-              ></p-tree>
+              <div class="industry-pack-grid">
+                <div class="pack-card pack-card--core">
+                  <div class="pack-header">
+                    <div class="pack-icon pack-icon--core">
+                      <i class="pi pi-shield"></i>
+                    </div>
+                    <div class="pack-meta">
+                      <h4>Core CRM</h4>
+                    </div>
+                    <p-tag value="Always on" severity="success"></p-tag>
+                  </div>
+                </div>
+
+                <div class="pack-card pack-card--supply">
+                  <div class="pack-header">
+                    <div class="pack-icon pack-icon--supply">
+                      <i class="pi pi-sitemap"></i>
+                    </div>
+                    <div class="pack-meta">
+                      <h4>Supply Chain</h4>
+                    </div>
+                    <div class="pack-toggle">
+                      <p-toggleSwitch [(ngModel)]="activeSupplyChainEnabled" (onChange)="onActiveSupplyChainToggle($event)"></p-toggleSwitch>
+                    </div>
+                  </div>
+
+                  <p-listbox
+                    class="module-listbox"
+                    [options]="supplyChainModules"
+                    optionLabel="label"
+                    optionValue="key"
+                    [multiple]="true"
+                    [checkbox]="true"
+                    [disabled]="!activeSupplyChainEnabled"
+                    [(ngModel)]="activeModuleSelection"
+                    (onChange)="onModuleSelectionChange()"
+                  >
+                    <ng-template let-module pTemplate="item">
+                      <div class="module-option">
+                        <i class="pi" [ngClass]="[module.icon, module.iconClass]"></i>
+                        <span>{{ module.label }}</span>
+                      </div>
+                    </ng-template>
+                  </p-listbox>
+                </div>
+              </div>
               <button
                 type="button"
                 pButton
-                class="p-button-outlined p-button-sm save-industry-btn"
+                class="crm-button crm-button--primary save-industry-btn"
                 icon="pi pi-save"
-                label="Save Industry Packs"
+                label="Save industry packs"
                 [loading]="saving()"
                 [disabled]="!canManageTenants() || !activeTenant()"
                 (click)="saveActiveIndustrySettings()"
               ></button>
             </div>
           </article>
+        </section>
 
-          <!-- Tenant Registry Card -->
+        <section class="tenant-registry">
           <article class="glass-card registry-card">
             <header class="card-header">
               <div class="card-header-icon card-header-icon--orange">
                 <i class="pi pi-list"></i>
               </div>
               <div>
-                <h2 class="card-title">Tenant Registry</h2>
+                <h2 class="card-title">Tenant registry</h2>
                 <p class="card-subtitle">{{ totalTenants() }} registered workspaces</p>
               </div>
               <button
@@ -354,11 +242,10 @@
               </div>
             </div>
           </article>
-        </aside>
+        </section>
       </div>
     </ng-container>
 
-    <!-- Loading State -->
     <ng-template #loadingState>
       <div class="loading-grid">
         <div class="glass-card">
@@ -377,4 +264,4 @@
       </div>
     </ng-template>
   </div>
-</section>
+</div>

@@ -14,31 +14,7 @@ import { UserMenuComponent } from '../../core/user-menu';
     NotificationCenterComponent,
     UserMenuComponent
   ],
-  template: `
-    <header class="topbar">
-      <div class="topbar__left">
-        <div class="topbar__title">Dynamics CRM</div>
-        <p class="topbar__subtitle">Customer + Activity workspace</p>
-      </div>
-      <div class="topbar__actions">
-        <button
-          pButton
-          type="button"
-          class="topbar__command-palette p-button-text"
-          (click)="commandPaletteService.open()"
-          pTooltip="Search or jump to... (⌘K)"
-        >
-          <i class="pi pi-search"></i>
-          <span>Search...</span>
-          <kbd>⌘K</kbd>
-        </button>
-        <app-notification-center></app-notification-center>
-        <button pButton type="button" icon="pi pi-bars" class="p-button-text p-button-rounded topbar__toggle" (click)="toggleSidebar.emit()"></button>
-        <button pButton label="New" icon="pi pi-plus" class="p-button-rounded p-button-sm p-button-primary" (click)="openQuickAdd.emit()"></button>
-        <app-user-menu></app-user-menu>
-      </div>
-    </header>
-  `,
+  templateUrl: "./topbar.component.html",
   styleUrl: './topbar.component.scss'
 })
 export class TopbarComponent {

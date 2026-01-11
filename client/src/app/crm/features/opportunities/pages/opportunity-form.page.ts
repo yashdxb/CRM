@@ -35,196 +35,7 @@ interface Option<T = string> {
     DatePickerModule,
     BreadcrumbsComponent
   ],
-  template: `
-    <section class="opportunity-form-page">
-      <div class="form-header">
-        <div class="header-content">
-          <app-breadcrumbs></app-breadcrumbs>
-
-          <button type="button" class="back-link" routerLink="/app/opportunities">
-            <i class="pi pi-arrow-left"></i>
-            Back to Opportunities
-          </button>
-
-          <div class="header-row">
-            <div class="header-title">
-              <h1>
-                <span class="title-gradient">{{ isEditMode() ? 'Update' : 'Create' }}</span>
-                <span class="title-light">Opportunity</span>
-              </h1>
-              <p>Capture the deal details, set your stage, and keep the team aligned on next steps.</p>
-            </div>
-            <div class="header-meta">
-              <span class="meta-chip">
-                <i class="pi pi-flag"></i>
-                {{ selectedStage || 'Prospecting' }}
-              </span>
-              <span class="meta-chip">
-                <i class="pi pi-percentage"></i>
-                {{ form.probability ?? 0 }}%
-              </span>
-              <span class="meta-chip">
-                <i class="pi pi-money-bill"></i>
-                {{ form.currency || 'USD' }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-body">
-        <form class="form-layout" (ngSubmit)="onSave()">
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-briefcase"></i>
-              Opportunity Details
-            </h3>
-            <div class="form-grid">
-              <div class="field">
-                <label for="oppName">Opportunity name <span class="required">*</span></label>
-                <input
-                  pInputText
-                  id="oppName"
-                  name="name"
-                  [(ngModel)]="form.name"
-                  required
-                  placeholder="ACME rollout"
-                  class="w-full"
-                />
-              </div>
-              <div class="field">
-                <label for="oppAccount">Account</label>
-                <p-select
-                  inputId="oppAccount"
-                  appendTo="body"
-                  [options]="accountOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  name="accountId"
-                  [(ngModel)]="form.accountId"
-                  placeholder="Select account"
-                  styleClass="w-full"
-                ></p-select>
-              </div>
-              <div class="field">
-                <label for="oppStage">Stage *</label>
-                <p-select
-                  inputId="oppStage"
-                  appendTo="body"
-                  [options]="stageOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  name="stage"
-                  [(ngModel)]="selectedStage"
-                  (ngModelChange)="onStageChange($event)"
-                  placeholder="Pick stage"
-                  styleClass="w-full"
-                ></p-select>
-              </div>
-              <div class="field">
-                <label for="oppClose">Expected close</label>
-                <p-datePicker
-                  inputId="oppClose"
-                  appendTo="body"
-                  name="closeDate"
-                  [(ngModel)]="form.expectedCloseDate"
-                  [showIcon]="true"
-                  styleClass="w-full"
-                ></p-datePicker>
-              </div>
-            </div>
-          </section>
-
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-chart-line"></i>
-              Deal Settings
-            </h3>
-            <div class="form-grid">
-              <div class="field">
-                <label for="oppAmount">Amount</label>
-                <p-inputNumber
-                  inputId="oppAmount"
-                  [(ngModel)]="form.amount"
-                  name="amount"
-                  mode="currency"
-                  [currency]="form.currency"
-                  placeholder="0"
-                  class="w-full"
-                ></p-inputNumber>
-              </div>
-              <div class="field">
-                <label for="oppCurrency">Currency</label>
-                <p-select
-                  inputId="oppCurrency"
-                  appendTo="body"
-                  [options]="currencyOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  name="currency"
-                  [(ngModel)]="form.currency"
-                  placeholder="Currency"
-                  styleClass="w-full"
-                ></p-select>
-              </div>
-              <div class="field">
-                <label for="oppProbability">Probability (%)</label>
-                <p-inputNumber
-                  inputId="oppProbability"
-                  [(ngModel)]="form.probability"
-                  name="probability"
-                  suffix="%"
-                  [min]="0"
-                  [max]="100"
-                  class="w-full"
-                ></p-inputNumber>
-              </div>
-              <div class="field">
-                <label for="oppReason">Win/Loss reason</label>
-                <input
-                  pInputText
-                  id="oppReason"
-                  name="reason"
-                  [(ngModel)]="form.winLossReason"
-                  placeholder="Optional"
-                  class="w-full"
-                />
-              </div>
-              <div class="field full">
-                <label for="oppSummary">Summary</label>
-                <textarea
-                  pTextarea
-                  id="oppSummary"
-                  rows="4"
-                  name="summary"
-                  [(ngModel)]="form.summary"
-                  placeholder="Key notes, stakeholders, risks"
-                  class="w-full"
-                ></textarea>
-              </div>
-            </div>
-          </section>
-
-          <div class="form-actions">
-            <button
-              type="button"
-              pButton
-              label="Cancel"
-              class="crm-button--ghost"
-              (click)="router.navigate(['/app/opportunities'])"
-            ></button>
-            <button
-              pButton
-              type="submit"
-              [label]="isEditMode() ? 'Update opportunity' : 'Save opportunity'"
-              class="crm-button--primary"
-              [disabled]="!form.name || saving()"
-            ></button>
-          </div>
-        </form>
-      </div>
-    </section>
-  `,
+  templateUrl: "./opportunity-form.page.html",
   styleUrls: ['./opportunity-form.page.scss']
 })
 export class OpportunityFormPage implements OnInit {
@@ -304,10 +115,21 @@ export class OpportunityFormPage implements OnInit {
     request$.subscribe({
       next: () => {
         this.saving.set(false);
-        this.router.navigate(['/app/opportunities']);
       },
       error: () => this.saving.set(false)
     });
+  }
+
+  protected accountLink(): string | null {
+    return this.form.accountId ? `/app/customers/${this.form.accountId}/edit` : null;
+  }
+
+  protected accountLabel(): string {
+    const id = this.form.accountId;
+    if (!id) {
+      return 'No linked account yet.';
+    }
+    return this.accountOptions.find((option) => option.value === id)?.label ?? 'Account';
   }
 
   private loadAccounts() {
@@ -346,15 +168,16 @@ export class OpportunityFormPage implements OnInit {
   }
 
   private applyOpportunity(opp: Opportunity) {
-    const accountId = this.accountOptions.find((opt) => opt.label === opp.account)?.value;
-    if (!accountId && opp.account) {
+    const accountIdFromName = this.accountOptions.find((opt) => opt.label === opp.account)?.value;
+    if (!accountIdFromName && opp.account) {
       this.pendingAccountName = opp.account;
     }
+    const resolvedAccountId = opp.accountId ?? accountIdFromName ?? this.form.accountId;
     const stage = opp.stage || 'Prospecting';
     this.selectedStage = stage;
     Object.assign(this.form, {
       name: opp.name,
-      accountId: accountId ?? this.form.accountId,
+      accountId: resolvedAccountId,
       stageName: stage,
       amount: opp.amount ?? 0,
       currency: opp.currency ?? 'USD',

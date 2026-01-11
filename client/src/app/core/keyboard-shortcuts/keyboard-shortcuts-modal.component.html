@@ -1,0 +1,58 @@
+
+    <div class="shortcuts-backdrop" *ngIf="shortcutsService.isHelpModalOpen()" [@fadeIn] (click)="shortcutsService.closeHelpModal()">
+      <div class="shortcuts-modal" [@slideUp] (click)="$event.stopPropagation()">
+        <header class="shortcuts-modal__header">
+          <h2>Keyboard Shortcuts</h2>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-times"
+            class="shortcuts-modal__close p-button-text"
+            (click)="shortcutsService.closeHelpModal()"
+          ></button>
+        </header>
+
+        <div class="shortcuts-modal__content">
+          <section class="shortcuts-section">
+            <h3>Navigation</h3>
+            <p class="shortcuts-section__hint">Press <kbd>G</kbd> then a letter</p>
+            <ul>
+              <li *ngFor="let shortcut of shortcutsService.getShortcutsByCategory('navigation')">
+                <span>{{ shortcut.description }}</span>
+                <kbd>{{ formatKeys(shortcut.keys) }}</kbd>
+              </li>
+            </ul>
+          </section>
+
+          <section class="shortcuts-section">
+            <h3>Quick Actions</h3>
+            <p class="shortcuts-section__hint">Press <kbd>N</kbd> then a letter to create</p>
+            <ul>
+              <li *ngFor="let shortcut of shortcutsService.getShortcutsByCategory('actions')">
+                <span>{{ shortcut.description }}</span>
+                <kbd>{{ formatKeys(shortcut.keys) }}</kbd>
+              </li>
+            </ul>
+          </section>
+
+          <section class="shortcuts-section">
+            <h3>General</h3>
+            <ul>
+              <li>
+                <span>Open command palette</span>
+                <kbd>⌘ K</kbd>
+              </li>
+              <li *ngFor="let shortcut of shortcutsService.getShortcutsByCategory('general')">
+                <span>{{ shortcut.description }}</span>
+                <kbd>{{ formatKeys(shortcut.keys) }}</kbd>
+              </li>
+            </ul>
+          </section>
+        </div>
+
+        <footer class="shortcuts-modal__footer">
+          <span>Press <kbd>?</kbd> anywhere to show this help</span>
+        </footer>
+      </div>
+    </div>
+  

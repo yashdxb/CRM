@@ -12,6 +12,7 @@ export const PERMISSION_KEYS = {
   activitiesManage: 'Permissions.Activities.Manage',
   administrationView: 'Permissions.Administration.View',
   administrationManage: 'Permissions.Administration.Manage',
+  auditView: 'Permissions.Audit.View',
   tenantsView: 'Permissions.Tenants.View',
   tenantsManage: 'Permissions.Tenants.Manage'
 } as const;

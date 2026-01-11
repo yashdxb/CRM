@@ -24,37 +24,7 @@ import { QuickAddModalComponent } from './quick-add/quick-add-modal.component';
     TopbarComponent,
     QuickAddModalComponent
   ],
-  template: `
-    <div class="shell" [ngClass]="{ 'shell--collapsed': nav.collapsed() }">
-      <app-sidebar (toggleSidebar)="nav.toggleSidebar()" />
-
-      <div class="body">
-        <app-topbar 
-          (toggleSidebar)="nav.toggleSidebar()" 
-          (openQuickAdd)="openQuickAdd()" 
-        />
-
-        <main class="content">
-          <router-outlet />
-        </main>
-
-        <app-toast />
-      </div>
-    </div>
-
-    <!-- Global overlays -->
-    <app-notification-container></app-notification-container>
-    <app-command-palette></app-command-palette>
-    <app-keyboard-shortcuts-modal></app-keyboard-shortcuts-modal>
-
-    <app-quick-add-modal
-      #quickAddModal
-      [visible]="quickAddVisible()"
-      [initialType]="quickAddType()"
-      (close)="quickAddVisible.set(false)"
-      (created)="onQuickAddCreated()"
-    />
-  `,
+  templateUrl: "./shell.component.html",
   styleUrl: './shell.component.scss'
 })
 export class ShellComponent {

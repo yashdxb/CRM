@@ -15,6 +15,9 @@ export interface Lead {
   source?: string;
   territory?: string;
   jobTitle?: string;
+  accountId?: string;
+  contactId?: string;
+  convertedOpportunityId?: string;
 }
 
 export interface LeadSearchRequest {

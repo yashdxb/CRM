@@ -1,8 +1,10 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Opportunities;
+using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Api.Jobs;
 using Hangfire;
@@ -18,15 +20,22 @@ namespace CRM.Enterprise.Api.Controllers;
 [Route("api/opportunities")]
 public class OpportunitiesController : ControllerBase
 {
+    private const string OpportunityEntityType = "Opportunity";
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IBackgroundJobClient _backgroundJobs;
+    private readonly IAuditEventService _auditEvents;
 
-    public OpportunitiesController(CrmDbContext dbContext, ITenantProvider tenantProvider, IBackgroundJobClient backgroundJobs)
+    public OpportunitiesController(
+        CrmDbContext dbContext,
+        ITenantProvider tenantProvider,
+        IBackgroundJobClient backgroundJobs,
+        IAuditEventService auditEvents)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _backgroundJobs = backgroundJobs;
+        _auditEvents = auditEvents;
     }
 
     [HttpGet]
@@ -75,6 +84,7 @@ public class OpportunitiesController : ControllerBase
             {
                 o.Id,
                 o.Name,
+                o.AccountId,
                 Account = o.Account != null ? o.Account.Name : string.Empty,
                 Stage = o.Stage != null ? o.Stage.Name : "Prospecting",
                 o.Amount,
@@ -99,6 +109,7 @@ public class OpportunitiesController : ControllerBase
         var items = data.Select(o => new OpportunityListItem(
             o.Id,
             o.Name,
+            o.AccountId,
             o.Account,
             o.Stage,
             o.Amount,
@@ -134,6 +145,7 @@ public class OpportunitiesController : ControllerBase
         var item = new OpportunityListItem(
             opp.Id,
             opp.Name,
+            opp.AccountId,
             opp.Account?.Name ?? string.Empty,
             opp.Stage?.Name ?? "Prospecting",
             opp.Amount,
@@ -167,6 +179,38 @@ public class OpportunitiesController : ControllerBase
                 h.ChangedAtUtc,
                 h.ChangedBy,
                 h.Notes))
+            .ToListAsync(cancellationToken);
+
+        return Ok(items);
+    }
+
+    [HttpGet("{id:guid}/audit")]
+    public async Task<ActionResult<IEnumerable<AuditEventItem>>> GetAudit(Guid id, CancellationToken cancellationToken)
+    {
+        var exists = await _dbContext.Opportunities
+            .AsNoTracking()
+            .AnyAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+
+        if (!exists)
+        {
+            return NotFound();
+        }
+
+        var items = await _dbContext.AuditEvents
+            .AsNoTracking()
+            .Where(a => a.EntityType == OpportunityEntityType && a.EntityId == id)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Select(a => new AuditEventItem(
+                a.Id,
+                a.EntityType,
+                a.EntityId,
+                a.Action,
+                a.Field,
+                a.OldValue,
+                a.NewValue,
+                a.ChangedByUserId,
+                a.ChangedByName,
+                a.CreatedAtUtc))
             .ToListAsync(cancellationToken);
 
         return Ok(items);
@@ -212,6 +256,9 @@ public class OpportunitiesController : ControllerBase
 
         _dbContext.Opportunities.Add(opp);
         AddStageHistory(opp, stageId, "Stage set");
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(opp.Id, "Created", null, null, null),
+            cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         if (opp.IsClosed)
         {
@@ -222,6 +269,7 @@ public class OpportunitiesController : ControllerBase
         var dto = new OpportunityListItem(
             opp.Id,
             opp.Name,
+            opp.AccountId,
             await _dbContext.Accounts.Where(a => a.Id == opp.AccountId).Select(a => a.Name).FirstOrDefaultAsync(cancellationToken) ?? string.Empty,
             await _dbContext.OpportunityStages.Where(s => s.Id == opp.StageId).Select(s => s.Name).FirstOrDefaultAsync(cancellationToken) ?? "Prospecting",
             opp.Amount,
@@ -257,8 +305,12 @@ public class OpportunitiesController : ControllerBase
         }
 
         var previousStageId = opp.StageId;
+        var previousStageName = await ResolveStageNameAsync(previousStageId, cancellationToken);
         var wasClosed = opp.IsClosed;
         var wasWon = opp.IsWon;
+        var previousOwnerId = opp.OwnerId;
+        var previousAmount = opp.Amount;
+        var previousExpectedClose = opp.ExpectedCloseDate;
 
         opp.Name = request.Name;
         opp.AccountId = await ResolveAccountIdAsync(request.AccountId, cancellationToken);
@@ -279,7 +331,50 @@ public class OpportunitiesController : ControllerBase
         if (previousStageId != nextStageId)
         {
             AddStageHistory(opp, nextStageId, "Stage updated");
+            var nextStageName = await ResolveStageNameAsync(nextStageId, cancellationToken);
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(opp.Id, "StageChanged", "Stage", previousStageName, nextStageName),
+                cancellationToken);
         }
+
+        if (previousOwnerId != opp.OwnerId)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(opp.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), opp.OwnerId.ToString()),
+                cancellationToken);
+        }
+
+        if (previousAmount != opp.Amount)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(opp.Id, "AmountChanged", "Amount", previousAmount.ToString("0.##"), opp.Amount.ToString("0.##")),
+                cancellationToken);
+        }
+
+        if (previousExpectedClose != opp.ExpectedCloseDate)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(
+                    opp.Id,
+                    "CloseDateChanged",
+                    "ExpectedCloseDate",
+                    previousExpectedClose?.ToString("u"),
+                    opp.ExpectedCloseDate?.ToString("u")),
+                cancellationToken);
+        }
+
+        var previousStatus = ComputeStatus(wasClosed, wasWon);
+        var nextStatus = ComputeStatus(opp.IsClosed, opp.IsWon);
+        if (!string.Equals(previousStatus, nextStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(opp.Id, "StatusChanged", "Status", previousStatus, nextStatus),
+                cancellationToken);
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(opp.Id, "Updated", null, null, null),
+            cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         if (!wasClosed && opp.IsClosed)
@@ -299,6 +394,9 @@ public class OpportunitiesController : ControllerBase
 
         opp.IsDeleted = true;
         opp.DeletedAtUtc = DateTime.UtcNow;
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(opp.Id, "Deleted", null, null, null),
+            cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
@@ -314,8 +412,16 @@ public class OpportunitiesController : ControllerBase
         var opp = await _dbContext.Opportunities.FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
         if (opp is null) return NotFound();
 
+        var previousOwnerId = opp.OwnerId;
         opp.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, cancellationToken);
         opp.UpdatedAtUtc = DateTime.UtcNow;
+
+        if (previousOwnerId != opp.OwnerId)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(opp.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), opp.OwnerId.ToString()),
+                cancellationToken);
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
@@ -340,11 +446,16 @@ public class OpportunitiesController : ControllerBase
         var nextStageId = await ResolveStageIdAsync(null, request.Stage, cancellationToken);
         if (nextStageId != opp.StageId)
         {
+            var previousStageName = await ResolveStageNameAsync(opp.StageId, cancellationToken);
             opp.StageId = nextStageId;
             opp.IsClosed = false;
             opp.IsWon = false;
             opp.UpdatedAtUtc = DateTime.UtcNow;
             AddStageHistory(opp, nextStageId, "Stage updated");
+            var nextStageName = await ResolveStageNameAsync(nextStageId, cancellationToken);
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(opp.Id, "StageChanged", "Stage", previousStageName, nextStageName),
+                cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
@@ -419,6 +530,14 @@ public class OpportunitiesController : ControllerBase
 
         var fallback = await _dbContext.OpportunityStages.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
         return fallback?.Id ?? Guid.NewGuid();
+    }
+
+    private async Task<string?> ResolveStageNameAsync(Guid stageId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.OpportunityStages
+            .Where(s => s.Id == stageId)
+            .Select(s => s.Name)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task<Guid> ResolveAccountIdAsync(Guid? requestedAccountId, CancellationToken cancellationToken)
@@ -501,5 +620,25 @@ public class OpportunitiesController : ControllerBase
     {
         var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(subject, out var userId) ? userId : null;
+    }
+
+    private AuditEventEntry CreateAuditEntry(
+        Guid entityId,
+        string action,
+        string? field,
+        string? oldValue,
+        string? newValue)
+    {
+        var userId = GetCurrentUserId();
+        var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
+        return new AuditEventEntry(
+            OpportunityEntityType,
+            entityId,
+            action,
+            field,
+            oldValue,
+            newValue,
+            userId,
+            name);
     }
 }

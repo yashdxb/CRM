@@ -254,9 +254,21 @@ export const routes: Routes = [
             loadComponent: () => import('./crm/features/settings/pages/lead-assignment.page').then((m) => m.LeadAssignmentPage)
           },
           {
+            path: 'audit-log',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.auditView, breadcrumb: 'Audit Log' },
+            loadComponent: () => import('./crm/features/settings/pages/audit-log.page').then((m) => m.AuditLogPage)
+          },
+          {
+            path: 'tenants/new',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.tenantsManage, breadcrumb: 'Create Tenant' },
+            loadComponent: () => import('./crm/features/settings/pages/tenant-create.page').then((m) => m.TenantCreatePage)
+          },
+          {
             path: 'tenants',
             canActivate: [roleGuard],
-            data: { permission: PERMISSION_KEYS.tenantsView, breadcrumb: 'Tenants' },
+            data: { permission: PERMISSION_KEYS.tenantsView, breadcrumb: 'Tenant Configuration' },
             loadComponent: () => import('./crm/features/settings/pages/tenants.page').then((m) => m.TenantsPage)
           }
         ]

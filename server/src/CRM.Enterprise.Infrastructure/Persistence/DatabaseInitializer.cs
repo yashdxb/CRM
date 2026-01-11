@@ -1581,7 +1581,11 @@ public class DatabaseInitializer : IDatabaseInitializer
     private readonly (string Name, string Description, string[] Permissions)[] _roleDefinitions =
     {
         (Permissions.RoleNames.SuperAdmin, "Platform super administrator", Permissions.AllKeys.ToArray()),
-        (Permissions.RoleNames.Admin, "System administrator", Permissions.WorkspaceAdminKeys.ToArray()),
+        (
+            Permissions.RoleNames.Admin,
+            "System administrator",
+            Permissions.WorkspaceAdminKeys.Concat(new[] { Permissions.Policies.AuditView }).Distinct().ToArray()
+        ),
         (
             Permissions.RoleNames.SalesManager,
             "Manages team pipeline and forecasts",
@@ -1673,6 +1677,7 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         await BackfillTenantIdsAsync(defaultTenant.Id, cancellationToken);
         await SeedTenantDataAsync(defaultTenant, cancellationToken);
+        await SeedAuditEventsAsync(defaultTenant.Id, cancellationToken);
         
         // All sample data seeding disabled
         // await SeedSampleSuppliersAsync(defaultTenant.Id, cancellationToken);
@@ -2039,6 +2044,76 @@ public class DatabaseInitializer : IDatabaseInitializer
         {
             _tenantProvider.SetTenant(originalTenantId, originalTenantKey);
         }
+    }
+
+    private async Task SeedAuditEventsAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        var existing = await _dbContext.AuditEvents.IgnoreQueryFilters()
+            .AnyAsync(a => a.TenantId == tenantId, cancellationToken);
+
+        if (existing)
+        {
+            return;
+        }
+
+        var user = await _dbContext.Users.IgnoreQueryFilters()
+            .Where(u => u.TenantId == tenantId && !u.IsDeleted)
+            .OrderBy(u => u.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var entries = new List<AuditEvent>
+        {
+            new()
+            {
+                TenantId = tenantId,
+                EntityType = "Lead",
+                EntityId = Guid.NewGuid(),
+                Action = "StatusChanged",
+                Field = "Status",
+                OldValue = "New",
+                NewValue = "Contacted",
+                ChangedByUserId = user?.Id,
+                ChangedByName = user?.FullName,
+                CreatedAtUtc = now.AddMinutes(-45),
+                CreatedBy = user?.FullName ?? "system"
+            },
+            new()
+            {
+                TenantId = tenantId,
+                EntityType = "Opportunity",
+                EntityId = Guid.NewGuid(),
+                Action = "Updated",
+                Field = "Stage",
+                OldValue = "Discovery",
+                NewValue = "Proposal",
+                ChangedByUserId = user?.Id,
+                ChangedByName = user?.FullName,
+                CreatedAtUtc = now.AddMinutes(-25),
+                CreatedBy = user?.FullName ?? "system"
+            },
+            new()
+            {
+                TenantId = tenantId,
+                EntityType = "Activity",
+                EntityId = Guid.NewGuid(),
+                Action = "Completed",
+                Field = "Status",
+                OldValue = "Open",
+                NewValue = "Completed",
+                ChangedByUserId = user?.Id,
+                ChangedByName = user?.FullName,
+                CreatedAtUtc = now.AddMinutes(-10),
+                CreatedBy = user?.FullName ?? "system"
+            }
+        };
+
+        _dbContext.AuditEvents.AddRange(entries);
     }
 
     private async Task BackfillTenantIdsAsync(Guid tenantId, CancellationToken cancellationToken)

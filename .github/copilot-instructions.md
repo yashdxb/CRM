@@ -31,6 +31,9 @@
   - Use the shared global files: `src/styles.scss`, `src/styles/_design-tokens.scss`, `src/styles/_components.scss`,
     `src/styles/_animations.scss`, `src/app/shared/_form-page-styles.scss`, `src/app/shared/page-design-system.scss`, `src/app/app.scss`.
 - Use PrimeNG `p-inputgroup` + `p-inputgroup-addon` with `pi` icons for form inputs; apply `icon-addon` + specific `icon-addon--*` classes for per-field colors (global rules live in `client/src/styles/_components.scss`).
+- Edit/Create form pages must match the **Edit Customer** page standard:
+  - Card title styling, card body glass styling, field hover/focus, and primary action button must match.
+  - Do not introduce per-page button colors or focus colors.
 
 ---
 
@@ -94,75 +97,714 @@ $font-size-2xl: 1.375rem;  // 22px - section headers
 
 ---
 
-## Page Design Pattern (List/Dashboard Pages)
+## 📐 LIST PAGE DESIGN SPECIFICATION (MANDATORY)
 
-Use for: `customers.page`, `leads.page`, `opportunities.page`, `contacts.page`, `dashboard.page`
+**Reference Implementation:** `customers.page.ts` + `customers.page.scss`  
+**Use for:** `customers.page`, `leads.page`, `opportunities.page`, `contacts.page`, `dashboard.page`
 
-### Required HTML Structure
-```html
-<div class="page-container">
-  <!-- Animated Background Orbs -->
-  <div class="bg-orbs">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
-  
-  <app-breadcrumbs></app-breadcrumbs>
-  
-  <!-- Hero Section: two-column grid -->
-  <section class="hero-section">
-    <div class="hero-content">
-      <div class="hero-badge"><span class="badge-dot"></span><span>Page Label</span></div>
-      <h1 class="hero-title">
-        <span class="title-gradient">Title</span>
-        <span class="title-light">Subtitle</span>
-      </h1>
-      <p class="hero-description">Page description text</p>
-      
-      <!-- Stats with progress bars -->
-      <div class="hero-stats">
-        <div class="hero-stat">
-          <div class="stat-value">{{ count }}</div>
-          <div class="stat-label">Label</div>
-          <div class="stat-bar"><div class="stat-bar-fill"></div></div>
-        </div>
-      </div>
-      
-      <div class="hero-actions"><!-- Buttons --></div>
-    </div>
-    
-    <!-- Visual cards sidebar -->
-    <div class="hero-visual">
-      <div class="visual-card visual-card--primary">
-        <div class="card-icon"><i class="pi pi-chart-line"></i></div>
-        <div class="card-content">
-          <span class="card-label">Label</span>
-          <strong class="card-value">{{ value }}</strong>
-          <span class="card-trend card-trend--up"><i class="pi pi-arrow-up"></i> Trend</span>
-        </div>
-        <div class="card-glow"></div>
-      </div>
-    </div>
-  </section>
-  
-  <!-- Data table section -->
-  <section class="data-section">...</section>
-</div>
-```
+### Visual Reference
 
-### SCSS Imports
+![Customers List Page - Reference Implementation](../docs/images/customers-list-page-reference.png)
+
+*The Customers Workspace page showcasing the canonical list page design: gradient background with animated orbs, hero section with stats, visual summary cards, metric KPI cards with ring charts, search/filter toolbar, and glassmorphic data table.*
+
+---
+
+### 1. PAGE CONTAINER & BACKGROUND
+
 ```scss
-@use '../../../../shared/page-design-system' as *;
-@use '../../../../../styles/design-tokens' as *;
+// Page container with gradient background
+.page-container {
+  position: relative;
+  min-height: 100vh;
+  padding: $space-5 $space-6;  // 20px 24px
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 50%, #d8dde8 100%);
+  overflow-x: hidden;
+  
+  @media (max-width: 768px) {
+    padding: $space-3;  // 12px
+  }
+}
+
+// Animated background orbs (fixed position)
+.bg-orbs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.4;
+  animation: orb-float 20s ease-in-out infinite;
+  
+  &.orb-1 { width: 600px; height: 600px; background: $primary-gradient; top: -200px; right: -100px; }
+  &.orb-2 { width: 400px; height: 400px; background: $cyan-gradient; bottom: 10%; left: -100px; animation-delay: -7s; }
+  &.orb-3 { width: 300px; height: 300px; background: $secondary-gradient; top: 40%; right: 20%; animation-delay: -14s; }
+}
 ```
 
-### Available CSS Classes (from `_components.scss`)
-- **Layout**: `.page-container`, `.hero-section`, `.hero-content`, `.hero-visual`, `.data-section`
-- **Stats**: `.hero-stats`, `.hero-stat`, `.stat-value`, `.stat-label`, `.stat-bar`, `.stat-bar-fill--success/--warning/--info`
-- **Visual cards**: `.visual-card--primary/--secondary/--success/--purple`, `.card-icon`, `.card-content`, `.card-glow`
-- **Title**: `.hero-badge`, `.badge-dot`, `.hero-title`, `.title-gradient`, `.title-light`
-- **Cards**: `.glass-card`, `.card-header`, `.card-title`
+---
+
+### 2. HERO SECTION - TITLE STYLES (MANDATORY SIZES)
+
+```scss
+// Hero section: two-column grid layout
+.hero-section {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: $space-6;  // 24px
+  margin-bottom: $space-5;  // 20px
+  animation: fade-in-up 0.6s ease-out;
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: 1fr;
+    gap: $space-4;  // 16px
+  }
+}
+
+// HERO TITLE - "Customer Workspace" main title
+.hero-title {
+  font-size: $font-size-4xl;  // 32px (2rem)
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  margin: 0 0 $space-1;  // 0 0 4px
+  
+  .title-gradient {
+    background: $primary-gradient;  // #667eea → #764ba2
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 4s ease-in-out infinite;
+  }
+  
+  .title-light {
+    -webkit-text-fill-color: $gray-700;  // #374151
+    margin-left: $space-2;  // 8px
+  }
+}
+
+// Hero badge (e.g., "Customer Intelligence Hub")
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;  // 8px
+  padding: $space-1 $space-3;  // 4px 12px
+  background: $glass-bg;  // rgba(255, 255, 255, 0.85)
+  backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;  // rgba(255, 255, 255, 0.3)
+  border-radius: $radius-full;  // 9999px (pill shape)
+  font-size: $font-size-sm;  // 14px (0.875rem)
+  font-weight: 600;
+  color: $primary;  // #667eea
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  width: fit-content;
+  box-shadow: $glass-shadow;
+  
+  .badge-dot {
+    width: 8px;
+    height: 8px;
+    background: $success;  // #22c55e
+    border-radius: 50%;
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+}
+
+// Hero description text
+.hero-description {
+  font-size: $font-size-base;  // 16px (1rem)
+  color: $gray-500;  // #6b7280
+  font-weight: 400;
+  max-width: 500px;
+  line-height: 1.6;
+  margin: 0;
+}
+```
+
+---
+
+### 3. HERO STATS (INLINE METRICS WITH PROGRESS BARS)
+
+```scss
+.hero-stats {
+  display: flex;
+  gap: $space-4;  // 16px
+  flex-wrap: wrap;
+  margin-top: $space-2;  // 8px
+}
+
+.hero-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 80px;
+  
+  .stat-value {
+    font-size: $font-size-2xl;  // 22px (1.375rem)
+    font-weight: 700;
+    color: $gray-800;  // #1f2937
+  }
+  
+  .stat-label {
+    font-size: $font-size-xs;  // 13px (0.8125rem)
+    color: $gray-500;  // #6b7280
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .stat-bar {
+    width: 100%;
+    height: 4px;
+    background: $gray-200;  // #e5e7eb
+    border-radius: $radius-full;
+    overflow: hidden;
+    
+    .stat-bar-fill {
+      height: 100%;
+      background: $primary-gradient;
+      border-radius: $radius-full;
+      transition: width 1s ease-out;
+      
+      &--leads { background: $cyan-gradient; }
+      &--prospects { background: linear-gradient(135deg, $purple 0%, #9333ea 100%); }
+      &--success { background: $success-gradient; }
+    }
+  }
+}
+```
+
+---
+
+### 4. VISUAL CARDS (HERO SIDEBAR)
+
+```scss
+.hero-visual {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;  // 12px
+  animation: slide-in-right 0.6s ease-out 0.2s both;
+}
+
+.visual-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-3;  // 12px
+  padding: $space-3 $space-4;  // 12px 16px
+  background: $glass-bg;  // rgba(255, 255, 255, 0.85)
+  backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;  // 12px (0.75rem)
+  box-shadow: $glass-shadow;
+  min-width: 220px;
+  overflow: hidden;
+  transition: transform 250ms, box-shadow 250ms;
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-lg;
+  }
+  
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-md;  // 8px
+    font-size: $font-size-xl;  // 20px (1.25rem)
+  }
+  
+  &--primary .card-icon { background: $primary-gradient; color: white; }
+  &--secondary .card-icon { background: $cyan-gradient; color: white; }
+  &--success .card-icon { background: $success-gradient; color: white; }
+  &--purple .card-icon { background: $purple-gradient; color: white; }
+  
+  .card-label {
+    font-size: $font-size-xs;  // 13px
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .card-value {
+    font-size: $font-size-2xl;  // 22px (1.375rem)
+    font-weight: 700;
+    color: $gray-800;
+  }
+  
+  .card-trend {
+    display: flex;
+    align-items: center;
+    gap: $space-1;  // 4px
+    font-size: $font-size-xs;  // 13px
+    color: $gray-500;
+    
+    &--up { color: $success; }
+  }
+  
+  .card-glow {
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+}
+```
+
+---
+
+### 5. METRIC CARDS (KPI ROW)
+
+```scss
+.metrics-section {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: $space-3;  // 12px
+  margin-bottom: $space-5;  // 20px
+  
+  @media (max-width: 1400px) { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 900px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
+}
+
+.metric-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-3;  // 12px
+  padding: $space-3 $space-4;  // 12px 16px
+  background: $glass-bg;
+  backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;  // 12px
+  box-shadow: $glass-shadow;
+  overflow: hidden;
+  transition: all 250ms;
+  animation: fade-in-up 0.5s ease-out backwards;
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.05}s;
+    }
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-lg;
+    
+    .metric-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+  }
+  
+  .metric-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-md;  // 8px
+    font-size: $font-size-lg;  // 18px
+    color: white;
+    flex-shrink: 0;
+    transition: transform 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  
+  &--total .metric-icon { background: $primary-gradient; }
+  &--leads .metric-icon { background: $cyan-gradient; }
+  &--prospects .metric-icon { background: linear-gradient(135deg, $purple 0%, #9333ea 100%); }
+  &--customers .metric-icon { background: $success-gradient; }
+  &--new .metric-icon { background: $orange-gradient; }
+  
+  .metric-label {
+    font-size: $font-size-xs;  // 13px
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  
+  .metric-value {
+    font-size: $font-size-2xl;  // 22px (1.375rem)
+    font-weight: 700;
+    color: $gray-800;
+  }
+}
+
+// Ring chart inside metric card
+.metric-ring {
+  position: absolute;
+  right: $space-3;  // 12px
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  
+  svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: $gray-200; stroke-width: 3; }
+  .ring-fill {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dasharray 1s ease-out;
+    
+    &--cyan { stroke: $cyan; }
+    &--purple { stroke: $purple; }
+    &--green { stroke: $success; }
+  }
+}
+
+// "NEW" badge pulse
+.metric-badge span {
+  display: inline-block;
+  padding: $space-1 $space-2;  // 4px 8px
+  background: $orange-gradient;
+  color: white;
+  font-size: $font-size-xs;  // 13px
+  font-weight: 700;
+  border-radius: $radius-sm;  // 6px
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+```
+
+---
+
+### 6. BUTTONS (LIST PAGE ACTIONS)
+
+```scss
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;  // 8px
+  padding: $space-2 $space-4;  // 8px 16px
+  border: none;
+  border-radius: $radius-md;  // 8px
+  font-size: $font-size-base;  // 16px
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 250ms;
+  overflow: hidden;
+  
+  i { font-size: $font-size-base; }
+}
+
+.btn-primary {
+  background: $primary-gradient;  // #667eea → #764ba2
+  color: white;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
+  
+  &:active { transform: translateY(0); }
+}
+
+// Shimmer glow effect on primary button
+.btn-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 3s infinite;
+}
+
+.btn-secondary {
+  background: $glass-bg;
+  backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;
+  color: $gray-700;
+  box-shadow: $glass-shadow;
+  
+  &:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-lg;
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  color: $gray-600;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: $gray-800;
+  }
+}
+```
+
+---
+
+### 7. DATA TABLE STYLES (MANDATORY)
+
+```scss
+.data-section {
+  position: relative;
+  z-index: 1;
+  animation: fade-in-up 0.5s ease-out 0.4s both;
+}
+
+.data-card {
+  background: $glass-bg;
+  backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;
+  border-radius: $radius-2xl;  // 24px (1.5rem)
+  box-shadow: $glass-shadow;
+  overflow: hidden;
+}
+
+.data-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-3 $space-4;  // 12px 16px
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  
+  h2 {
+    margin: 0;
+    font-size: $font-size-lg;  // 18px (1.125rem)
+    font-weight: 600;
+    color: $gray-800;
+  }
+  
+  .record-count {
+    font-size: $font-size-sm;  // 14px
+    color: $gray-500;
+  }
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 16px;
+  overflow: hidden;
+  
+  // TABLE HEADER - Soft blue gradient (GLOBAL STANDARD)
+  ::ng-deep .p-datatable-thead > tr > th {
+    background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
+    border: none;
+    border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+    padding: $space-3 $space-4;  // 12px 16px
+    font-size: 0.72rem;  // ~11.5px (header labels)
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #3b82f6;  // Blue-500
+  }
+  
+  // TABLE BODY CELLS
+  ::ng-deep .p-datatable-tbody > tr > td {
+    vertical-align: middle;
+    padding: $space-3 $space-2;  // 12px 8px
+  }
+  
+  // Row hover effect
+  .table-row {
+    transition: background 150ms;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    
+    &:last-child { border-bottom: none; }
+    
+    &:hover {
+      background: rgba($primary, 0.03);
+      
+      .customer-avatar {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba($primary, 0.2);
+      }
+    }
+  }
+}
+
+// Customer avatar in table
+.customer-avatar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $primary-gradient;
+  color: white;
+  font-size: $font-size-sm;  // 14px
+  font-weight: 600;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: all 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+// Customer name in table
+.customer-info {
+  .customer-name {
+    font-weight: 600;
+    font-size: $font-size-base;  // 16px
+    color: $gray-800;
+  }
+  
+  .customer-date {
+    font-size: $font-size-xs;  // 13px
+    color: $gray-400;
+  }
+}
+
+// Status badges
+.status-badge {
+  display: inline-flex;
+  padding: 2px $space-2;  // 2px 8px
+  font-size: $font-size-sm;  // 14px
+  font-weight: 600;
+  border-radius: $radius-full;  // pill
+  text-transform: capitalize;
+  
+  &[data-status="lead"] { background: rgba($cyan, 0.15); color: darken($cyan, 15%); }
+  &[data-status="prospect"] { background: rgba($purple, 0.15); color: darken($purple, 15%); }
+  &[data-status="customer"] { background: rgba($success, 0.15); color: darken($success, 15%); }
+  &[data-status="inactive"] { background: rgba($gray-500, 0.15); color: $gray-600; }
+}
+```
+
+---
+
+### 8. TABLE ACTION BUTTONS
+
+```scss
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;  // 6px
+  color: $gray-400;
+  cursor: pointer;
+  font-size: $font-size-sm;  // 14px
+  transition: all 150ms;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: $gray-700;
+  }
+  
+  &--danger:hover {
+    background: rgba($danger, 0.1);
+    color: $danger;
+  }
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;  // 4px
+  padding: $space-1 $space-3;  // 4px 12px
+  background: transparent;
+  border: 1px solid $gray-200;
+  border-radius: $radius-md;  // 8px
+  font-size: $font-size-sm;  // 14px
+  color: $gray-600;
+  cursor: pointer;
+  transition: all 150ms;
+  
+  &:hover {
+    background: $gray-50;
+    border-color: $gray-300;
+    color: $gray-800;
+  }
+}
+```
+
+---
+
+### 9. REQUIRED ANIMATIONS
+
+```scss
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 40px rgba(102, 126, 234, 0.6); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(50px, -30px) scale(1.1); }
+  50% { transform: translate(100px, 20px) scale(0.9); }
+  75% { transform: translate(30px, 50px) scale(1.05); }
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+```
+
+---
+
+### 10. QUICK SIZE REFERENCE TABLE
+
+| Element | Font Size | Padding/Size | Notes |
+|---------|-----------|--------------|-------|
+| Hero Title (`.hero-title`) | 32px (`$font-size-4xl`) | - | Bold 800, gradient text |
+| Hero Title Light (`.title-light`) | 32px | `margin-left: 8px` | Gray-700 color |
+| Hero Badge | 14px (`$font-size-sm`) | `4px 12px` | Uppercase, letter-spacing 0.1em |
+| Hero Description | 16px (`$font-size-base`) | - | Gray-500, max-width 500px |
+| Stat Value | 22px (`$font-size-2xl`) | - | Bold 700 |
+| Stat Label | 13px (`$font-size-xs`) | - | Uppercase, letter-spacing 0.05em |
+| Visual Card | - | `12px 16px` | Min-width 220px |
+| Visual Card Icon | 20px (`$font-size-xl`) | `36px × 36px` | Border-radius 8px |
+| Visual Card Value | 22px (`$font-size-2xl`) | - | Bold 700 |
+| Metric Card | - | `12px 16px` | Border-radius 12px |
+| Metric Card Icon | 18px (`$font-size-lg`) | `36px × 36px` | Border-radius 8px |
+| Metric Card Value | 22px (`$font-size-2xl`) | - | Bold 700 |
+| Button (`.btn`) | 16px (`$font-size-base`) | `8px 16px` | Bold 600, border-radius 8px |
+| Table Header | ~11.5px (`0.72rem`) | `12px 16px` | Uppercase, letter-spacing 0.08em |
+| Table Cell | 16px (`$font-size-base`) | `12px 8px` | - |
+| Customer Avatar | 14px (`$font-size-sm`) | `32px × 32px` | Circular |
+| Status Badge | 14px (`$font-size-sm`) | `2px 8px` | Pill shape |
+| Icon Button | 14px (`$font-size-sm`) | `26px × 26px` | Border-radius 6px |
+
+---
+
+### 11. SCSS IMPORT PATTERN
+
+```scss
+// customers.page.scss (or any list page)
+@use '../../../../../styles/design-tokens' as *;
+@use 'sass:color';
+
+// All styles from this specification...
+```
 
 ---
 
@@ -375,6 +1017,31 @@ Use for: `role-form.page`, `customer-form.page`, `lead-form.page`, `workspace-se
     </form>
   </div>
 </section>
+```
+
+### Mandatory Select Rules
+- **Every `<p-select>` MUST render icons for each option.**
+- Always include `pTemplate="item"` + `pTemplate="value"` with icon + label.
+- Always show a placeholder inside the value template when empty.
+- Icons must be colorful (no black/white). Add color mappings in `client/src/styles.scss` when introducing new icons.
+
+Example pattern:
+```html
+<p-select [options]="statusOptions()" optionLabel="label" optionValue="value" formControlName="status">
+  <ng-template pTemplate="item" let-option>
+    <div class="select-option">
+      <i class="pi" [ngClass]="option.icon"></i>
+      <span>{{ option.label }}</span>
+    </div>
+  </ng-template>
+  <ng-template pTemplate="value" let-option>
+    <div class="select-option" *ngIf="option">
+      <i class="pi" [ngClass]="option.icon"></i>
+      <span>{{ option.label }}</span>
+    </div>
+    <span *ngIf="!option" class="select-placeholder">Select status</span>
+  </ng-template>
+</p-select>
 ```
 
 ### Available Mixins (`_form-page-styles.scss`)

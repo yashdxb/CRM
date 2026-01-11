@@ -71,6 +71,7 @@ public class CrmDbContext : DbContext
     public DbSet<ItemMaster> ItemMasters => Set<ItemMaster>();
     public DbSet<PriceList> PriceLists => Set<PriceList>();
     public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -143,6 +144,26 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<ItemMaster>().ToTable("ItemMasters", SupplyChainSchema);
         modelBuilder.Entity<PriceList>().ToTable("PriceLists", SupplyChainSchema);
         modelBuilder.Entity<PriceListItem>().ToTable("PriceListItems", SupplyChainSchema);
+        modelBuilder.Entity<AuditEvent>().ToTable("AuditEvents", CrmSchema);
+        modelBuilder.Entity<AuditEvent>()
+            .HasIndex(e => new { e.TenantId, e.EntityType, e.EntityId, e.CreatedAtUtc });
+        modelBuilder.Entity<AuditEvent>()
+            .Property(e => e.EntityType)
+            .HasMaxLength(80)
+            .IsRequired();
+        modelBuilder.Entity<AuditEvent>()
+            .Property(e => e.Action)
+            .HasMaxLength(80)
+            .IsRequired();
+        modelBuilder.Entity<AuditEvent>()
+            .Property(e => e.Field)
+            .HasMaxLength(120);
+        modelBuilder.Entity<AuditEvent>()
+            .Property(e => e.OldValue)
+            .HasMaxLength(2000);
+        modelBuilder.Entity<AuditEvent>()
+            .Property(e => e.NewValue)
+            .HasMaxLength(2000);
 
         modelBuilder.Entity<User>().ToTable("Users", IdentitySchema);
         modelBuilder.Entity<User>()

@@ -714,13 +714,18 @@ export class RfqCreateComponent implements OnInit {
       detail: `RFQ ${status === RFQStatus.DRAFT ? 'draft saved' : 'published'} successfully.`
     });
 
-    if (rfqId) {
-      this.tryCreateAward(rfqId, status);
-      this.router.navigate(['/app/supply-chain/rfqs', rfqId]);
+    if (this.isEditMode) {
+      if (rfqId) {
+        this.rfqId = rfqId;
+      }
       return;
     }
 
-    this.router.navigate(['/app/supply-chain/rfqs']);
+    if (rfqId) {
+      this.tryCreateAward(rfqId, status);
+      this.rfqId = rfqId;
+      return;
+    }
   }
 
   private handleSaveError(error?: any): void {

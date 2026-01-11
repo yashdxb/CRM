@@ -1,0 +1,75 @@
+
+    <div class="user-menu" #menuContainer>
+      <button
+        pButton
+        type="button"
+        class="user-menu__trigger p-button-text"
+        (click)="toggleMenu()"
+        [attr.aria-expanded]="isOpen()"
+      >
+        <p-avatar 
+          [label]="initials()" 
+          shape="circle" 
+          styleClass="user-menu__avatar"
+          [style]="{ 'background': 'linear-gradient(135deg, #6366f1, #8b5cf6)', 'color': 'white' }"
+        ></p-avatar>
+        <div class="user-menu__info">
+          <span class="user-menu__name">{{ user().fullName }}</span>
+          <span class="user-menu__role">{{ user().role }}</span>
+        </div>
+        <i class="pi pi-chevron-down user-menu__chevron" [ngClass]="{ 'user-menu__chevron--open': isOpen() }"></i>
+      </button>
+
+      <div class="user-menu__dropdown" *ngIf="isOpen()" [@dropdownAnimation]>
+        <div class="user-menu__header">
+          <p-avatar 
+            [label]="initials()" 
+            shape="circle" 
+            size="large"
+            [style]="{ 'background': 'linear-gradient(135deg, #6366f1, #8b5cf6)', 'color': 'white' }"
+          ></p-avatar>
+          <div>
+            <p class="user-menu__header-name">{{ user().fullName }}</p>
+            <p class="user-menu__header-email">{{ user().email }}</p>
+          </div>
+        </div>
+
+        <div class="user-menu__divider"></div>
+
+        <div class="user-menu__section">
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="navigateTo('/app/profile')">
+            <i class="pi pi-user"></i>
+            <span>My Profile</span>
+          </button>
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="navigateTo('/app/settings')">
+            <i class="pi pi-cog"></i>
+            <span>Settings</span>
+          </button>
+        </div>
+
+        <div class="user-menu__divider"></div>
+
+        <div class="user-menu__section">
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="toggleTheme()">
+            <i class="pi" [ngClass]="themeService.themeIcon()"></i>
+            <span>{{ themeService.themeLabel() }}</span>
+            <span class="user-menu__badge">{{ themeService.isDarkMode() ? 'On' : 'Off' }}</span>
+          </button>
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="openKeyboardShortcuts()">
+            <i class="pi pi-key"></i>
+            <span>Keyboard Shortcuts</span>
+            <kbd>?</kbd>
+          </button>
+        </div>
+
+        <div class="user-menu__divider"></div>
+
+        <div class="user-menu__section">
+          <button pButton type="button" class="user-menu__item user-menu__item--danger p-button-text" (click)="logout()">
+            <i class="pi pi-sign-out"></i>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  
