@@ -26,16 +26,20 @@ public class TenantResolutionMiddleware
             return;
         }
 
+        var host = context.Request.Host.Host;
         var tenantKey = context.Request.Headers[TenantHeader].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(tenantKey))
         {
-            tenantKey = GetTenantFromHost(context.Request.Host.Host);
+            tenantKey = GetTenantFromHost(host);
         }
 
         if (string.IsNullOrWhiteSpace(tenantKey))
         {
             tenantKey = _configuration["Tenant:DefaultKey"] ?? "default";
         }
+
+        // Log the resolved tenantKey and host for debugging
+        Console.WriteLine($"[TenantResolution] Host: {host}, Resolved TenantKey: {tenantKey}");
 
         var tenant = await dbContext.Tenants
             .AsNoTracking()
@@ -44,7 +48,7 @@ public class TenantResolutionMiddleware
         if (tenant is null)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsJsonAsync(new { message = "Invalid tenant xxxxxxxx." });
+            await context.Response.WriteAsJsonAsync(new { message = $"Invalid tenant: {tenantKey}" });
             return;
         }
 
