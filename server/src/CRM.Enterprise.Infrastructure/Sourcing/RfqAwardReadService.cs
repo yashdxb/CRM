@@ -74,10 +74,10 @@ public sealed class RfqAwardReadService : IRfqAwardReadService
             award.Currency,
             award.Notes,
             award.RfqId,
-            award.Rfq.RfqNumber,
-            award.Rfq.Title,
+            award.Rfq!.RfqNumber,
+            award.Rfq!.Title,
             award.SupplierId,
-            award.Supplier.Name,
+            award.Supplier!.Name,
             lines);
     }
 }
