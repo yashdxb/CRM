@@ -6,8 +6,7 @@ using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Infrastructure.Persistence;
-using CRM.Enterprise.Api.Jobs;
-using Hangfire;
+// using CRM.Enterprise.Api.Jobs; // Removed Hangfire
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,18 +22,16 @@ public class OpportunitiesController : ControllerBase
     private const string OpportunityEntityType = "Opportunity";
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
-    private readonly IBackgroundJobClient _backgroundJobs;
+
     private readonly IAuditEventService _auditEvents;
 
     public OpportunitiesController(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
-        IBackgroundJobClient backgroundJobs,
         IAuditEventService auditEvents)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
-        _backgroundJobs = backgroundJobs;
         _auditEvents = auditEvents;
     }
 
@@ -262,8 +259,7 @@ public class OpportunitiesController : ControllerBase
         await _dbContext.SaveChangesAsync(cancellationToken);
         if (opp.IsClosed)
         {
-            _backgroundJobs.Enqueue<NotificationEmailJobs>(job =>
-                job.SendOpportunityClosedAsync(opp.Id, opp.IsWon, CancellationToken.None));
+            // Hangfire removed: notification jobs must be triggered directly or via another mechanism if needed
         }
 
         var dto = new OpportunityListItem(
@@ -379,8 +375,7 @@ public class OpportunitiesController : ControllerBase
         await _dbContext.SaveChangesAsync(cancellationToken);
         if (!wasClosed && opp.IsClosed)
         {
-            _backgroundJobs.Enqueue<NotificationEmailJobs>(job =>
-                job.SendOpportunityClosedAsync(opp.Id, opp.IsWon, CancellationToken.None));
+            // Hangfire removed: notification jobs must be triggered directly or via another mechanism if needed
         }
         return NoContent();
     }

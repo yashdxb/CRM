@@ -6,8 +6,7 @@ using CRM.Enterprise.Api.Utilities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Api.Contracts.Imports;
-using CRM.Enterprise.Api.Jobs;
-using Hangfire;
+// using CRM.Enterprise.Api.Jobs; // Removed Hangfire
 using Microsoft.AspNetCore.Hosting;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -24,18 +23,16 @@ public class ContactsController : ControllerBase
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IWebHostEnvironment _environment;
-    private readonly IBackgroundJobClient _backgroundJobs;
+
 
     public ContactsController(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
-        IWebHostEnvironment environment,
-        IBackgroundJobClient backgroundJobs)
+        IWebHostEnvironment environment)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _environment = environment;
-        _backgroundJobs = backgroundJobs;
     }
 
     [HttpGet]
@@ -318,7 +315,8 @@ public class ContactsController : ControllerBase
         importJob.FilePath = storagePath;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _backgroundJobs.Enqueue<CsvImportJobs>(job => job.ProcessContactsAsync(importJob.Id));
+
+        // Directly mark as queued, but do not enqueue background job (Hangfire removed)
 
         return Accepted(new ImportJobResponse(importJob.Id, importJob.EntityType, importJob.Status));
     }

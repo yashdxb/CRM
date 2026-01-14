@@ -44,7 +44,7 @@ public class TenantResolutionMiddleware
         if (tenant is null)
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsJsonAsync(new { message = "Invalid tenant." });
+            await context.Response.WriteAsJsonAsync(new { message = "Invalid tenant xxxxxxxx." });
             return;
         }
 

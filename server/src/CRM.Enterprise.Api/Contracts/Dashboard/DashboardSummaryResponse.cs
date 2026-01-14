@@ -17,6 +17,7 @@ public record DashboardSummaryResponse(
     IEnumerable<CustomerListItem> RecentCustomers,
     IEnumerable<ActivityListItem> ActivitiesNextWeek,
     IEnumerable<ActivityListItem> MyTasks,
+    IEnumerable<TeamMonthlyKpiSummary> TeamMonthlyKpis,
     IEnumerable<PipelineStageSummary> PipelineValue,
     IEnumerable<ChartDataPoint> RevenueByMonth,
     IEnumerable<ChartDataPoint> CustomerGrowth,
@@ -37,3 +38,12 @@ public record ActivityBreakdownItem(string Type, int Count, int Percentage);
 public record PipelineStageSummary(string Stage, int Count, decimal Value);
 
 public record PerformerSummary(string Name, int Deals, decimal Revenue, string? Avatar);
+
+public record TeamMonthlyKpiSummary(
+    Guid OwnerId,
+    string OwnerName,
+    int LeadsCreated,
+    int LeadsQualified,
+    int OpportunitiesCreated,
+    int DealsWon,
+    decimal RevenueWon);

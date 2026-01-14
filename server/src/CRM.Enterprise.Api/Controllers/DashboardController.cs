@@ -16,10 +16,12 @@ namespace CRM.Enterprise.Api.Controllers;
 public class DashboardController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IDashboardLayoutService _layoutService;
 
-    public DashboardController(IMediator mediator)
+    public DashboardController(IMediator mediator, IDashboardLayoutService layoutService)
     {
         _mediator = mediator;
+        _layoutService = layoutService;
     }
 
     [HttpGet("summary")]
@@ -91,6 +93,14 @@ public class DashboardController : ControllerBase
             recentCustomers,
             activitiesNextWeek,
             myTasks,
+            summary.TeamMonthlyKpis.Select(kpi => new TeamMonthlyKpiSummary(
+                kpi.OwnerId,
+                kpi.OwnerName,
+                kpi.LeadsCreated,
+                kpi.LeadsQualified,
+                kpi.OpportunitiesCreated,
+                kpi.DealsWon,
+                kpi.RevenueWon)).ToList(),
             summary.PipelineValue.Select(stage => new PipelineStageSummary(stage.Stage, stage.Count, stage.Value)).ToList(),
             summary.RevenueByMonth.Select(point => new ChartDataPoint(point.Label, point.Value)).ToList(),
             summary.CustomerGrowth.Select(point => new ChartDataPoint(point.Label, point.Value)).ToList(),
@@ -105,6 +115,34 @@ public class DashboardController : ControllerBase
             summary.ChurnRate);
 
         return Ok(response);
+    }
+
+    [HttpGet("layout")]
+    public async Task<ActionResult<DashboardLayoutResponse>> GetLayout(CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var layout = await _layoutService.GetLayoutAsync(userId.Value, cancellationToken);
+        return Ok(new DashboardLayoutResponse(layout));
+    }
+
+    [HttpPut("layout")]
+    public async Task<ActionResult<DashboardLayoutResponse>> UpdateLayout(
+        [FromBody] UpdateDashboardLayoutRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var updated = await _layoutService.UpdateLayoutAsync(userId.Value, request.CardOrder, cancellationToken);
+        return Ok(new DashboardLayoutResponse(updated));
     }
 
     private Guid? GetCurrentUserId()

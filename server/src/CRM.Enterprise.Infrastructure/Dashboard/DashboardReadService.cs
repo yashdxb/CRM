@@ -2,6 +2,7 @@ using CRM.Enterprise.Application.Dashboard;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Globalization;
 
 namespace CRM.Enterprise.Infrastructure.Dashboard;
 
@@ -228,6 +229,221 @@ public class DashboardReadService : IDashboardReadService
             })
             .ToList();
 
+        var monthStart = new DateTime(now.Year, now.Month, 1);
+        var sixMonthStart = monthStart.AddMonths(-5);
+        var monthEnd = monthStart.AddMonths(1);
+        var monthBuckets = Enumerable.Range(0, 6)
+            .Select(offset => monthStart.AddMonths(offset - 5))
+            .ToList();
+        var monthKeyedLabels = monthBuckets.ToDictionary(
+            bucket => (bucket.Year, bucket.Month),
+            bucket => bucket.ToString("MMM yyyy", CultureInfo.InvariantCulture));
+
+        var revenueRows = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon)
+            .Select(o => new
+            {
+                ClosedAt = o.ExpectedCloseDate ?? o.UpdatedAtUtc ?? o.CreatedAtUtc,
+                o.Amount
+            })
+            .Where(o => o.ClosedAt >= sixMonthStart && o.ClosedAt < monthEnd)
+            .ToListAsync(cancellationToken);
+
+        var revenueLookup = revenueRows
+            .GroupBy(row => (row.ClosedAt.Year, row.ClosedAt.Month))
+            .ToDictionary(group => group.Key, group => group.Sum(row => row.Amount));
+
+        var revenueByMonth = monthBuckets
+            .Select(bucket =>
+            {
+                var key = (bucket.Year, bucket.Month);
+                return new ChartDataPointDto(
+                    monthKeyedLabels[key],
+                    revenueLookup.TryGetValue(key, out var value) ? value : 0);
+            })
+            .ToList();
+
+        var customerRows = await _dbContext.Accounts
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted && a.CreatedAtUtc >= sixMonthStart && a.CreatedAtUtc < monthEnd)
+            .Select(a => new { a.CreatedAtUtc })
+            .ToListAsync(cancellationToken);
+
+        var customerLookup = customerRows
+            .GroupBy(row => (row.CreatedAtUtc.Year, row.CreatedAtUtc.Month))
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        var customerGrowth = monthBuckets
+            .Select(bucket =>
+            {
+                var key = (bucket.Year, bucket.Month);
+                return new ChartDataPointDto(
+                    monthKeyedLabels[key],
+                    customerLookup.TryGetValue(key, out var value) ? value : 0);
+            })
+            .ToList();
+
+        var activityWindowStart = now.AddDays(-30);
+        var activityRows = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted && a.CreatedAtUtc >= activityWindowStart)
+            .Select(a => a.Type)
+            .ToListAsync(cancellationToken);
+
+        var activityTotal = activityRows.Count;
+        var activityBreakdown = activityRows
+            .GroupBy(type => type)
+            .Select(group =>
+            {
+                var count = group.Count();
+                var percent = activityTotal == 0 ? 0 : (int)Math.Round(count * 100d / activityTotal);
+                return new ActivityBreakdownItemDto(group.Key.ToString(), count, percent);
+            })
+            .OrderByDescending(item => item.Count)
+            .ToList();
+
+        var conversionRows = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted && l.CreatedAtUtc >= sixMonthStart && l.CreatedAtUtc < monthEnd)
+            .Select(l => new { l.CreatedAtUtc, l.QualifiedAtUtc, l.ConvertedAtUtc })
+            .ToListAsync(cancellationToken);
+
+        var conversionTrend = monthBuckets
+            .Select(bucket =>
+            {
+                var created = conversionRows
+                    .Where(row => row.CreatedAtUtc.Year == bucket.Year && row.CreatedAtUtc.Month == bucket.Month)
+                    .ToList();
+                if (created.Count == 0)
+                {
+                    return new ChartDataPointDto(monthKeyedLabels[(bucket.Year, bucket.Month)], 0);
+                }
+
+                var qualified = created.Count(row => row.QualifiedAtUtc.HasValue || row.ConvertedAtUtc.HasValue);
+                var percent = (decimal)Math.Round(qualified * 100d / created.Count);
+                return new ChartDataPointDto(monthKeyedLabels[(bucket.Year, bucket.Month)], percent);
+            })
+            .ToList();
+
+        var topWindowStart = now.AddDays(-90);
+        var performerRows = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon)
+            .Select(o => new
+            {
+                o.OwnerId,
+                o.Amount,
+                ClosedAt = o.UpdatedAtUtc ?? o.CreatedAtUtc
+            })
+            .Where(o => o.ClosedAt >= topWindowStart)
+            .ToListAsync(cancellationToken);
+
+        var performerGroups = performerRows
+            .GroupBy(row => row.OwnerId)
+            .Select(group => new
+            {
+                OwnerId = group.Key,
+                Deals = group.Count(),
+                Revenue = group.Sum(row => row.Amount)
+            })
+            .OrderByDescending(group => group.Revenue)
+            .Take(5)
+            .ToList();
+
+        var performerOwnerIds = performerGroups.Select(group => group.OwnerId).ToList();
+        var performerOwners = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => performerOwnerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToListAsync(cancellationToken);
+
+        var topPerformers = performerGroups
+            .Select(group => new PerformerSummaryDto(
+                performerOwners.FirstOrDefault(owner => owner.Id == group.OwnerId)?.FullName ?? "Unknown",
+                group.Deals,
+                group.Revenue,
+                null))
+            .ToList();
+
+        var monthLeadOwners = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted && l.CreatedAtUtc >= monthStart && l.CreatedAtUtc < monthEnd)
+            .Select(l => l.OwnerId)
+            .ToListAsync(cancellationToken);
+
+        var monthQualifiedOwners = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted && l.QualifiedAtUtc.HasValue && l.QualifiedAtUtc.Value >= monthStart && l.QualifiedAtUtc.Value < monthEnd)
+            .Select(l => l.OwnerId)
+            .ToListAsync(cancellationToken);
+
+        var monthOpportunityOwners = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && o.CreatedAtUtc >= monthStart && o.CreatedAtUtc < monthEnd)
+            .Select(o => o.OwnerId)
+            .ToListAsync(cancellationToken);
+
+        var monthWonRows = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon)
+            .Select(o => new
+            {
+                o.OwnerId,
+                o.Amount,
+                ClosedAt = o.UpdatedAtUtc ?? o.CreatedAtUtc
+            })
+            .Where(o => o.ClosedAt >= monthStart && o.ClosedAt < monthEnd)
+            .ToListAsync(cancellationToken);
+
+        var teamOwnerIds = monthLeadOwners
+            .Concat(monthQualifiedOwners)
+            .Concat(monthOpportunityOwners)
+            .Concat(monthWonRows.Select(row => row.OwnerId))
+            .Distinct()
+            .ToList();
+
+        var teamOwners = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => teamOwnerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToListAsync(cancellationToken);
+
+        var teamMonthlyKpis = teamOwnerIds
+            .Select(ownerId => new TeamMonthlyKpiDto(
+                ownerId,
+                teamOwners.FirstOrDefault(owner => owner.Id == ownerId)?.FullName ?? "Unknown",
+                monthLeadOwners.Count(id => id == ownerId),
+                monthQualifiedOwners.Count(id => id == ownerId),
+                monthOpportunityOwners.Count(id => id == ownerId),
+                monthWonRows.Count(row => row.OwnerId == ownerId),
+                monthWonRows.Where(row => row.OwnerId == ownerId).Sum(row => row.Amount)))
+            .OrderByDescending(kpi => kpi.RevenueWon)
+            .ToList();
+
+        var closedStatsWindowStart = now.AddDays(-90);
+        var closedStatsRows = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && o.IsClosed)
+            .Select(o => new
+            {
+                o.Amount,
+                o.IsWon,
+                o.CreatedAtUtc,
+                ClosedAt = o.UpdatedAtUtc ?? o.CreatedAtUtc
+            })
+            .Where(o => o.ClosedAt >= closedStatsWindowStart)
+            .ToListAsync(cancellationToken);
+
+        var closedTotal = closedStatsRows.Count;
+        var wonRows = closedStatsRows.Where(row => row.IsWon).ToList();
+        var wonCount = wonRows.Count;
+        var avgDealSize = wonCount == 0 ? 0 : wonRows.Sum(row => row.Amount) / wonCount;
+        var winRate = closedTotal == 0 ? 0 : (int)Math.Round(wonCount * 100d / closedTotal);
+        var avgSalesCycle = closedTotal == 0
+            ? 0
+            : (int)Math.Round(closedStatsRows.Average(row => (row.ClosedAt - row.CreatedAtUtc).TotalDays));
+
         return new DashboardSummaryDto(
             totalCustomers,
             leads,
@@ -241,15 +457,16 @@ public class DashboardReadService : IDashboardReadService
             recentCustomers,
             activitiesNextWeek,
             myTasks,
+            teamMonthlyKpis,
             pipelineValueStages,
-            Array.Empty<ChartDataPointDto>(),
-            Array.Empty<ChartDataPointDto>(),
-            Array.Empty<ActivityBreakdownItemDto>(),
-            Array.Empty<ChartDataPointDto>(),
-            Array.Empty<PerformerSummaryDto>(),
-            0,
-            0,
-            0,
+            revenueByMonth,
+            customerGrowth,
+            activityBreakdown,
+            conversionTrend,
+            topPerformers,
+            avgDealSize,
+            winRate,
+            avgSalesCycle,
             0,
             0,
             0);

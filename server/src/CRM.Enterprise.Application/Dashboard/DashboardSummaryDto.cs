@@ -16,6 +16,7 @@ public record DashboardSummaryDto(
     IReadOnlyList<RecentAccountDto> RecentAccounts,
     IReadOnlyList<UpcomingActivityDto> ActivitiesNextWeek,
     IReadOnlyList<UpcomingActivityDto> MyTasks,
+    IReadOnlyList<TeamMonthlyKpiDto> TeamMonthlyKpis,
     IReadOnlyList<PipelineStageDto> PipelineValue,
     IReadOnlyList<ChartDataPointDto> RevenueByMonth,
     IReadOnlyList<ChartDataPointDto> CustomerGrowth,
@@ -49,6 +50,15 @@ public record UpcomingActivityDto(
     DateTime? DueDateUtc,
     DateTime? CompletedDateUtc,
     string Status);
+
+public record TeamMonthlyKpiDto(
+    Guid OwnerId,
+    string OwnerName,
+    int LeadsCreated,
+    int LeadsQualified,
+    int OpportunitiesCreated,
+    int DealsWon,
+    decimal RevenueWon);
 
 public record PipelineStageDto(string Stage, int Count, decimal Value);
 

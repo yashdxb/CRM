@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
         services.AddScoped<IDashboardReadService, DashboardReadService>();
+        services.AddScoped<IDashboardLayoutService, DashboardLayoutService>();
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();

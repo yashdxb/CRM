@@ -5,8 +5,6 @@ using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Infrastructure.Persistence;
-using CRM.Enterprise.Api.Jobs;
-using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,13 +19,11 @@ public class ActivitiesController : ControllerBase
 {
     private const string ActivityEntityType = "Activity";
     private readonly CrmDbContext _dbContext;
-    private readonly IBackgroundJobClient _backgroundJobs;
     private readonly IAuditEventService _auditEvents;
 
-    public ActivitiesController(CrmDbContext dbContext, IBackgroundJobClient backgroundJobs, IAuditEventService auditEvents)
+    public ActivitiesController(CrmDbContext dbContext, IAuditEventService auditEvents)
     {
         _dbContext = dbContext;
-        _backgroundJobs = backgroundJobs;
         _auditEvents = auditEvents;
     }
 
@@ -291,8 +287,9 @@ public class ActivitiesController : ControllerBase
         await _auditEvents.TrackAsync(
             CreateAuditEntry(activity.Id, "Created", null, null, null),
             cancellationToken);
+
         await _dbContext.SaveChangesAsync(cancellationToken);
-        _backgroundJobs.Enqueue<NotificationEmailJobs>(job => job.SendTaskAssignedAsync(activity.Id, CancellationToken.None));
+        // Hangfire removed: notification jobs must be triggered directly or via another mechanism if needed
 
         var dto = await MapToListItemAsync(activity.Id, cancellationToken);
         return CreatedAtAction(nameof(GetActivities), new { id = activity.Id }, dto);
@@ -351,10 +348,7 @@ public class ActivitiesController : ControllerBase
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
-        if (previousOwnerId != activity.OwnerId && activity.OwnerId != Guid.Empty)
-        {
-            _backgroundJobs.Enqueue<NotificationEmailJobs>(job => job.SendTaskAssignedAsync(activity.Id, CancellationToken.None));
-        }
+        // Hangfire removed: notification jobs must be triggered directly or via another mechanism if needed
         return NoContent();
     }
 

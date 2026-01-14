@@ -4,15 +4,12 @@ using CRM.Enterprise.Infrastructure;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Auth;
 using CRM.Enterprise.Api.Middleware;
-using CRM.Enterprise.Api.Jobs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.Json;
-using Hangfire;
-using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Data.SqlClient;
 using System.Threading;
@@ -27,24 +24,7 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<CrmDbContext>("db");
-builder.Services.AddHangfire(config =>
-{
-    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-        .UseSimpleAssemblyNameTypeSerializer()
-        .UseRecommendedSerializerSettings()
-        .UseSqlServerStorage(sqlConnectionString, new SqlServerStorageOptions
-        {
-            CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-            SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-            QueuePollInterval = TimeSpan.FromSeconds(15),
-            UseRecommendedIsolationLevel = true,
-            DisableGlobalLocks = true
-        });
-});
-builder.Services.AddHangfireServer();
-builder.Services.AddScoped<BackgroundJobs>();
-builder.Services.AddScoped<NotificationEmailJobs>();
-builder.Services.AddScoped<LeadAiScoringJobs>();
+
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -129,7 +109,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseHangfireDashboard("/hangfire");
 }
 
 app.UseCors();
@@ -171,16 +150,13 @@ using (var scope = app.Services.CreateScope())
     await initializer.InitializeAsync();
 }
 
-RecurringJob.AddOrUpdate<BackgroundJobs>(
-    "crm-heartbeat",
-    job => job.HeartbeatAsync(),
-    Cron.Hourly);
-
 await app.RunAsync();
 
 static void EnsureSqlServerAvailable(string connectionString)
 {
-    const int maxAttempts = 5;
+    const int maxAttempts = 30;
+    var delay = TimeSpan.FromSeconds(2);
+
     for (var attempt = 1; attempt <= maxAttempts; attempt++)
     {
         try
@@ -195,7 +171,7 @@ static void EnsureSqlServerAvailable(string connectionString)
         }
         catch (Exception) when (attempt < maxAttempts)
         {
-            Thread.Sleep(TimeSpan.FromSeconds(attempt));
+            Thread.Sleep(delay);
         }
         catch (Exception ex)
         {

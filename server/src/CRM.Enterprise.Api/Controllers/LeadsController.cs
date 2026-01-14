@@ -9,8 +9,7 @@ using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Api.Contracts.Imports;
-using CRM.Enterprise.Api.Jobs;
-using Hangfire;
+// using CRM.Enterprise.Api.Jobs; // Removed Hangfire
 using Microsoft.AspNetCore.Hosting;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -28,7 +27,7 @@ public class LeadsController : ControllerBase
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IWebHostEnvironment _environment;
-    private readonly IBackgroundJobClient _backgroundJobs;
+
     private readonly ILeadScoringService _leadScoringService;
     private readonly IAuditEventService _auditEvents;
 
@@ -36,14 +35,12 @@ public class LeadsController : ControllerBase
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
         IWebHostEnvironment environment,
-        IBackgroundJobClient backgroundJobs,
         ILeadScoringService leadScoringService,
         IAuditEventService auditEvents)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _environment = environment;
-        _backgroundJobs = backgroundJobs;
         _leadScoringService = leadScoringService;
         _auditEvents = auditEvents;
     }
@@ -291,7 +288,7 @@ public class LeadsController : ControllerBase
 
         if (HasAiSignals(request))
         {
-            _backgroundJobs.Enqueue<LeadAiScoringJobs>(job => job.ScoreLeadAsync(lead.Id, CancellationToken.None));
+            // Hangfire removed: scoring jobs must be triggered directly or via another mechanism if needed
         }
 
         var ownerName = await _dbContext.Users
@@ -448,7 +445,7 @@ public class LeadsController : ControllerBase
         importJob.FilePath = storagePath;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _backgroundJobs.Enqueue<CsvImportJobs>(job => job.ProcessLeadsAsync(importJob.Id));
+        // Hangfire removed: import jobs must be processed directly or via another mechanism if needed
 
         return Accepted(new ImportJobResponse(importJob.Id, importJob.EntityType, importJob.Status));
     }
@@ -508,7 +505,7 @@ public class LeadsController : ControllerBase
 
         if (shouldAiScore && HasAiSignals(request))
         {
-            _backgroundJobs.Enqueue<LeadAiScoringJobs>(job => job.ScoreLeadAsync(lead.Id, CancellationToken.None));
+            // Hangfire removed: scoring jobs must be triggered directly or via another mechanism if needed
         }
 
         return NoContent();
