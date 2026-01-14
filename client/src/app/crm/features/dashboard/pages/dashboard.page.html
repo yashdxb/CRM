@@ -51,6 +51,10 @@
           <i class="pi pi-download"></i>
           <span>Export</span>
         </button>
+        <button pButton type="button" class="btn-glass" (click)="openLayoutDialog()">
+          <i class="pi pi-sliders-h"></i>
+          <span>Customize layout</span>
+        </button>
       </div>
     </section>
 
@@ -106,17 +110,35 @@
 
     <!-- Charts Row -->
     <section class="charts-row">
-      <article class="glass-card chart-card large">
+      <article
+        class="glass-card chart-card chart-card--resizable card-resizable large"
+        *ngIf="showRevenueChart"
+        #revenueCard
+        data-card-id="revenue"
+        [ngStyle]="getCardDimensions('revenue')"
+        data-min-width="320"
+        data-min-height="320"
+      >
         <div class="card-header">
           <h3 class="card-title">
             <i class="pi pi-chart-line"></i>
             Revenue Trend
           </h3>
-          <div class="chart-legend">
-            <span class="legend-item primary">
-              <span class="legend-dot"></span>
-              Revenue
-            </span>
+          <div class="card-actions">
+            <div class="chart-legend">
+              <span class="legend-item primary">
+                <span class="legend-dot"></span>
+                Revenue
+              </span>
+            </div>
+            <button
+              pButton
+              type="button"
+              class="btn-icon-sm card-control"
+              icon="pi pi-times"
+              aria-label="Hide revenue chart"
+              (click)="hideChart('revenue')"
+            ></button>
           </div>
         </div>
         <div class="card-body">
@@ -124,35 +146,73 @@
             <p-chart type="line" [data]="revenueChartData" [options]="revenueChartOptions" height="280px"></p-chart>
           </div>
         </div>
+        <ng-container *ngTemplateOutlet="resizeHandles; context: { $implicit: revenueCard }"></ng-container>
       </article>
 
-      <article class="glass-card chart-card">
+      <article
+        class="glass-card chart-card chart-card--resizable card-resizable"
+        *ngIf="showCustomerGrowthChart"
+        #growthCard
+        data-card-id="growth"
+        [ngStyle]="getCardDimensions('growth')"
+        data-min-width="280"
+        data-min-height="280"
+      >
         <div class="card-header">
           <h3 class="card-title">
             <i class="pi pi-users"></i>
             Customer Growth
           </h3>
+          <div class="card-actions">
+            <button
+              pButton
+              type="button"
+              class="btn-icon-sm card-control"
+              icon="pi pi-times"
+              aria-label="Hide customer growth chart"
+              (click)="hideChart('growth')"
+            ></button>
+          </div>
         </div>
         <div class="card-body">
           <div class="chart-container">
             <p-chart type="bar" [data]="customerGrowthData" [options]="customerGrowthOptions" height="280px"></p-chart>
           </div>
         </div>
+        <ng-container *ngTemplateOutlet="resizeHandles; context: { $implicit: growthCard }"></ng-container>
       </article>
     </section>
 
-    <!-- Main Grid: Three Column Layout -->
-    <section class="dashboard-main-grid">
-      <!-- Left Column -->
-      <div class="main-column">
+    <!-- Main Grid: Command Center Cards -->
+    <section
+      class="dashboard-card-grid"
+      cdkDropList
+      [cdkDropListData]="layoutOrder"
+      (cdkDropListDropped)="onCardDrop($event)"
+    >
+      <article
+        class="glass-card dashboard-card card-resizable"
+        *ngFor="let cardId of layoutOrder"
+        [ngSwitch]="cardId"
+        [ngClass]="getCardSizeClass(cardId)"
+        cdkDrag
+        #dashboardCard
+        [attr.data-card-id]="cardId"
+        [ngStyle]="getCardDimensions(cardId)"
+        data-min-width="280"
+        data-min-height="220"
+      >
         <!-- Pipeline Value Chart -->
-        <article class="glass-card pipeline-chart-card">
+        <ng-container *ngSwitchCase="'pipeline'">
           <div class="card-header">
             <h3 class="card-title">
               <i class="pi pi-filter"></i>
               Pipeline by Stage
             </h3>
-            <span class="card-badge">{{ totalPipelineValue() | currency:'USD':'symbol':'1.0-0' }}</span>
+            <div class="card-actions">
+              <span class="card-badge">{{ totalPipelineValue() | currency:'USD':'symbol':'1.0-0' }}</span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
           </div>
           <div class="card-body">
             <div class="chart-container medium">
@@ -165,18 +225,21 @@
               </div>
             </div>
           </div>
-        </article>
+        </ng-container>
 
         <!-- Recent Accounts -->
-        <article class="glass-card accounts-card">
+        <ng-container *ngSwitchCase="'accounts'">
           <div class="card-header">
             <h3 class="card-title">
               <i class="pi pi-building"></i>
               Recent Accounts
             </h3>
-            <button pButton type="button" class="btn-glass btn-sm">
-              View All <i class="pi pi-arrow-right"></i>
-            </button>
+            <div class="card-actions">
+              <button pButton type="button" class="btn-glass btn-sm">
+                View All <i class="pi pi-arrow-right"></i>
+              </button>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
           </div>
           <div class="card-body" *ngIf="recentAccounts().length; else emptyAccounts">
             <div class="accounts-list">
@@ -207,18 +270,18 @@
               </div>
             </div>
           </div>
-        </article>
-      </div>
+        </ng-container>
 
-      <!-- Middle Column -->
-      <div class="middle-column">
         <!-- Activity Breakdown Donut -->
-        <article class="glass-card donut-card">
+        <ng-container *ngSwitchCase="'activity-mix'">
           <div class="card-header">
             <h3 class="card-title">
               <i class="pi pi-chart-pie"></i>
               Activity Mix
             </h3>
+            <div class="card-actions">
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
           </div>
           <div class="card-body">
             <div class="donut-container">
@@ -234,19 +297,22 @@
               </div>
             </div>
           </div>
-        </article>
+        </ng-container>
 
         <!-- Conversion Trend -->
-        <article class="glass-card conversion-card">
+        <ng-container *ngSwitchCase="'conversion'">
           <div class="card-header">
             <h3 class="card-title">
               <i class="pi pi-percentage"></i>
               Conversion Trend
             </h3>
-            <span class="trend-badge up">
-              <i class="pi pi-arrow-up"></i>
-              +12%
-            </span>
+            <div class="card-actions">
+              <span class="trend-badge up">
+                <i class="pi pi-arrow-up"></i>
+                +12%
+              </span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
           </div>
           <div class="card-body">
             <div class="chart-container small">
@@ -263,15 +329,18 @@
               </div>
             </div>
           </div>
-        </article>
+        </ng-container>
 
         <!-- Top Performers -->
-        <article class="glass-card performers-card">
+        <ng-container *ngSwitchCase="'top-performers'">
           <div class="card-header">
             <h3 class="card-title">
               <i class="pi pi-trophy"></i>
               Top Performers
             </h3>
+            <div class="card-actions">
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
           </div>
           <div class="card-body">
             <div class="performers-list">
@@ -296,19 +365,19 @@
               </div>
             </div>
           </div>
-        </article>
-      </div>
+        </ng-container>
 
-      <!-- Right Column -->
-      <div class="side-column">
         <!-- My Tasks -->
-        <article class="glass-card my-tasks-card">
+        <ng-container *ngSwitchCase="'my-tasks'">
           <div class="card-header">
             <h3 class="card-title">
               <i class="pi pi-check-square"></i>
               My Tasks
             </h3>
-            <span class="card-badge" *ngIf="myTasks().length">{{ myTasks().length }} open</span>
+            <div class="card-actions">
+              <span class="card-badge" *ngIf="myTasks().length">{{ myTasks().length }} open</span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
           </div>
           <div class="card-body" *ngIf="myTasks().length; else emptyMyTasks">
             <div class="task-list">
@@ -330,19 +399,22 @@
               </div>
             </div>
           </div>
-        </article>
+        </ng-container>
 
         <!-- Activity Timeline -->
-        <article class="glass-card timeline-card">
+        <ng-container *ngSwitchCase="'timeline'">
           <div class="card-header">
             <h3 class="card-title">
               <i class="pi pi-clock"></i>
               Activity Timeline
             </h3>
-            <div class="timeline-filter">
-              <button pButton type="button" class="filter-btn active">All</button>
-              <button pButton type="button" class="filter-btn">Calls</button>
-              <button pButton type="button" class="filter-btn">Tasks</button>
+            <div class="card-actions">
+              <div class="timeline-filter">
+                <button pButton type="button" class="filter-btn active">All</button>
+                <button pButton type="button" class="filter-btn">Calls</button>
+                <button pButton type="button" class="filter-btn">Tasks</button>
+              </div>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
             </div>
           </div>
           <div class="card-body" *ngIf="upcomingActivities().length; else emptyActivities">
@@ -377,15 +449,18 @@
               </div>
             </div>
           </div>
-        </article>
+        </ng-container>
 
         <!-- Quick Stats -->
-        <article class="glass-card stats-card">
+        <ng-container *ngSwitchCase="'health'">
           <div class="card-header">
             <h3 class="card-title">
               <i class="pi pi-heart"></i>
               Business Health
             </h3>
+            <div class="card-actions">
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
           </div>
           <div class="card-body">
             <div class="health-meter">
@@ -429,8 +504,9 @@
               </div>
             </div>
           </div>
-        </article>
-      </div>
+        </ng-container>
+        <ng-container *ngTemplateOutlet="resizeHandles; context: { $implicit: dashboardCard }"></ng-container>
+      </article>
     </section>
   </div>
 </div>
@@ -464,6 +540,76 @@
     <p>No upcoming activities scheduled</p>
   </div>
 </ng-template>
+
+<ng-template #cardControls let-cardId>
+  <div class="card-controls">
+    <button
+      pButton
+      type="button"
+      class="btn-icon-sm card-control"
+      icon="pi pi-window-maximize"
+      (click)="toggleCardSize(cardId)"
+      aria-label="Resize card"
+    ></button>
+    <button
+      pButton
+      type="button"
+      class="btn-icon-sm card-control"
+      icon="pi pi-times"
+      (click)="hideCard(cardId)"
+      aria-label="Hide card"
+    ></button>
+    <button
+      pButton
+      type="button"
+      class="btn-icon-sm card-control drag-handle"
+      icon="pi pi-bars"
+      cdkDragHandle
+      aria-label="Reorder card"
+    ></button>
+  </div>
+</ng-template>
+
+<ng-template #resizeHandles let-target>
+  <span class="resize-handle handle-n" (mousedown)="startResize($event, target, 'n')"></span>
+  <span class="resize-handle handle-s" (mousedown)="startResize($event, target, 's')"></span>
+  <span class="resize-handle handle-e" (mousedown)="startResize($event, target, 'e')"></span>
+  <span class="resize-handle handle-w" (mousedown)="startResize($event, target, 'w')"></span>
+  <span class="resize-handle handle-ne" (mousedown)="startResize($event, target, 'ne')"></span>
+  <span class="resize-handle handle-nw" (mousedown)="startResize($event, target, 'nw')"></span>
+  <span class="resize-handle handle-se" (mousedown)="startResize($event, target, 'se')"></span>
+  <span class="resize-handle handle-sw" (mousedown)="startResize($event, target, 'sw')"></span>
+</ng-template>
+
+<p-dialog
+  header="Customize Command Center"
+  [(visible)]="layoutDialogOpen"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [styleClass]="'layout-dialog'"
+>
+  <p>Drag cards to reorder your Command Center view.</p>
+  <p-orderList
+    [value]="layoutDraft"
+    [dragdrop]="true"
+    [listStyle]="{ height: '320px' }"
+    [metaKeySelection]="false"
+  >
+    <ng-template pTemplate="item" let-card>
+      <div class="layout-item">
+        <i class="pi" [class]="card.icon"></i>
+        <span>{{ card.label }}</span>
+      </div>
+    </ng-template>
+  </p-orderList>
+  <ng-template pTemplate="footer">
+    <div class="layout-actions">
+      <button pButton type="button" class="btn-glass" (click)="resetLayout()">Reset to default</button>
+      <button pButton type="button" class="btn-gradient" (click)="saveLayout()">Save layout</button>
+    </div>
+  </ng-template>
+</p-dialog>
 
 <ng-template #loading>
   <div class="page-background">

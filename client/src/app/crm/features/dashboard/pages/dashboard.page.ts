@@ -1,9 +1,13 @@
-import { DatePipe, DecimalPipe, NgFor, NgIf, CurrencyPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { DatePipe, DecimalPipe, NgFor, NgIf, CurrencyPipe, NgSwitch, NgSwitchCase, NgSwitchDefault, NgClass, NgTemplateOutlet, NgStyle } from '@angular/common';
+import { Component, computed, effect, inject, OnInit, PLATFORM_ID } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ChartModule } from 'primeng/chart';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { OrderListModule } from 'primeng/orderlist';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
 import { DashboardSummary } from '../models/dashboard.model';
@@ -15,7 +19,25 @@ import { CommandPaletteService } from '../../../../core/command-palette/command-
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
-  imports: [NgIf, NgFor, DatePipe, DecimalPipe, CurrencyPipe, ChartModule, ButtonModule, BreadcrumbsComponent],
+  imports: [
+    NgIf,
+    NgFor,
+    NgSwitch,
+    NgSwitchCase,
+    NgClass,
+    NgTemplateOutlet,
+    NgStyle,
+    DatePipe,
+    DecimalPipe,
+    CurrencyPipe,
+    FormsModule,
+    DragDropModule,
+    ChartModule,
+    ButtonModule,
+    DialogModule,
+    OrderListModule,
+    BreadcrumbsComponent
+  ],
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.scss'
 })
@@ -99,17 +121,295 @@ export class DashboardPage implements OnInit {
     return pipeline.reduce((sum, stage) => sum + stage.value, 0);
   });
 
+  protected layoutOrder: string[] = [];
+  protected layoutDialogOpen = false;
+  protected layoutDraft: Array<{ id: string; label: string; icon: string }> = [];
+  protected layoutSizes: Record<string, 'sm' | 'md' | 'lg'> = {};
+  protected layoutDimensions: Record<string, { width: number; height: number }> = {};
+  private hasLocalLayoutPreference = false;
+
+  private readonly layoutStorageKey = 'crm.dashboard.command-center.layout';
+  private readonly chartVisibilityStorageKey = 'crm.dashboard.charts.visibility';
+  protected showRevenueChart = true;
+  protected showCustomerGrowthChart = true;
+  private resizeState:
+    | {
+        element: HTMLElement;
+        cardId: string | null;
+        handle: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+        startX: number;
+        startY: number;
+        startWidth: number;
+        startHeight: number;
+        minWidth: number;
+        minHeight: number;
+      }
+    | null = null;
+  private readonly onResizeMove = (event: MouseEvent) => this.handleResizeMove(event);
+  private readonly onResizeEnd = () => this.stopResize();
+
+  protected readonly cardCatalog = [
+    { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
+    { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },
+    { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
+    { id: 'conversion', label: 'Conversion Trend', icon: 'pi pi-percentage' },
+    { id: 'top-performers', label: 'Top Performers', icon: 'pi pi-trophy' },
+    { id: 'my-tasks', label: 'My Tasks', icon: 'pi pi-check-square' },
+    { id: 'timeline', label: 'Activity Timeline', icon: 'pi pi-clock' },
+    { id: 'health', label: 'Business Health', icon: 'pi pi-heart' }
+  ];
+
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
-      this.initCharts();
+      effect(() => {
+        const summary = this.summary();
+        if (!summary) return;
+        this.initCharts(summary);
+      });
     }
+
+    const { order, sizes, dimensions, hasLocalPreference } = this.loadLayoutPreferences();
+    this.layoutOrder = order;
+    this.layoutSizes = sizes;
+    this.layoutDimensions = dimensions;
+    this.hasLocalLayoutPreference = hasLocalPreference;
+    this.loadChartVisibility();
+
+    this.dashboardData.getLayout().subscribe(({ cardOrder }) => {
+      const defaultOrder = this.dashboardData.getDefaultLayout();
+      const normalized = this.normalizeLayout(cardOrder, defaultOrder);
+      if (this.hasLocalLayoutPreference && this.areArraysEqual(normalized, defaultOrder)) {
+        return;
+      }
+      this.layoutOrder = normalized;
+      this.ensureSizeDefaults();
+      this.persistLayoutPreferences();
+    });
   }
 
   protected onQuickAdd(): void {
     this.commandPaletteService.requestQuickAdd('lead');
   }
 
-  private initCharts(): void {
+  protected openLayoutDialog(): void {
+    this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+    this.layoutDialogOpen = true;
+  }
+
+  protected saveLayout(): void {
+    const order = this.layoutDraft.map(item => item.id);
+    const defaultOrder = this.dashboardData.getDefaultLayout();
+    const requested = this.normalizeLayout(order, defaultOrder);
+    this.layoutOrder = requested;
+    this.ensureSizeDefaults();
+    this.persistLayoutPreferences();
+    this.dashboardData.saveLayout(order).subscribe({
+      next: response => {
+        const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
+        this.layoutOrder = this.shouldHonorServerLayout(normalized, requested, defaultOrder)
+          ? normalized
+          : requested;
+        this.ensureSizeDefaults();
+        this.persistLayoutPreferences();
+        this.layoutDialogOpen = false;
+      },
+      error: () => {
+        this.layoutOrder = requested;
+        this.ensureSizeDefaults();
+        this.persistLayoutPreferences();
+        this.layoutDialogOpen = false;
+      }
+    });
+  }
+
+  protected resetLayout(): void {
+    const order = this.dashboardData.getDefaultLayout();
+    this.dashboardData.saveLayout(order).subscribe({
+      next: response => {
+        const defaultOrder = this.dashboardData.getDefaultLayout();
+        this.layoutOrder = this.normalizeLayout(response.cardOrder, defaultOrder);
+        this.layoutSizes = {};
+        this.ensureSizeDefaults();
+        this.persistLayoutPreferences();
+        this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+      },
+      error: () => {
+        this.layoutOrder = this.normalizeLayout(order, order);
+        this.layoutSizes = {};
+        this.ensureSizeDefaults();
+        this.persistLayoutPreferences();
+        this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+      }
+    });
+  }
+
+  protected onCardDrop(event: CdkDragDrop<string[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const nextOrder = [...this.layoutOrder];
+    moveItemInArray(nextOrder, event.previousIndex, event.currentIndex);
+    this.layoutOrder = nextOrder;
+    this.persistLayoutPreferences();
+    this.dashboardData.saveLayout(nextOrder).subscribe({
+      next: response => {
+        const defaultOrder = this.dashboardData.getDefaultLayout();
+        const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
+        this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
+          ? normalized
+          : this.normalizeLayout(nextOrder, defaultOrder);
+        this.persistLayoutPreferences();
+      },
+      error: () => {
+        const defaultOrder = this.dashboardData.getDefaultLayout();
+        this.layoutOrder = this.normalizeLayout(nextOrder, defaultOrder);
+        this.persistLayoutPreferences();
+      }
+    });
+  }
+
+  protected hideCard(cardId: string): void {
+    const nextOrder = this.layoutOrder.filter(id => id !== cardId);
+    this.layoutOrder = nextOrder;
+    delete this.layoutSizes[cardId];
+    this.persistLayoutPreferences();
+    this.dashboardData.saveLayout(nextOrder).subscribe({
+      next: response => {
+        const defaultOrder = this.dashboardData.getDefaultLayout();
+        const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
+        this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
+          ? normalized
+          : this.normalizeLayout(nextOrder, defaultOrder);
+        this.persistLayoutPreferences();
+      },
+      error: () => {
+        const defaultOrder = this.dashboardData.getDefaultLayout();
+        this.layoutOrder = this.normalizeLayout(nextOrder, defaultOrder);
+        this.persistLayoutPreferences();
+      }
+    });
+  }
+
+  protected hideChart(chartKey: 'revenue' | 'growth'): void {
+    if (chartKey === 'revenue') {
+      this.showRevenueChart = false;
+      this.persistChartVisibility();
+      return;
+    }
+    this.showCustomerGrowthChart = false;
+    this.persistChartVisibility();
+  }
+
+  protected startResize(
+    event: MouseEvent,
+    element: HTMLElement,
+    handle: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = element.getBoundingClientRect();
+    const minWidth = Number(element.dataset['minWidth'] ?? 260);
+    const minHeight = Number(element.dataset['minHeight'] ?? 220);
+    const cardId = element.dataset['cardId'] ?? null;
+    this.resizeState = {
+      element,
+      cardId,
+      handle,
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: rect.width,
+      startHeight: rect.height,
+      minWidth,
+      minHeight
+    };
+    element.classList.add('is-resizing');
+    window.addEventListener('mousemove', this.onResizeMove);
+    window.addEventListener('mouseup', this.onResizeEnd);
+  }
+
+  private handleResizeMove(event: MouseEvent): void {
+    if (!this.resizeState) return;
+    const { element, handle, startX, startY, startWidth, startHeight, minWidth, minHeight } = this.resizeState;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    let nextWidth = startWidth;
+    let nextHeight = startHeight;
+
+    if (handle.includes('e')) {
+      nextWidth = startWidth + dx;
+    }
+    if (handle.includes('w')) {
+      nextWidth = startWidth - dx;
+    }
+    if (handle.includes('s')) {
+      nextHeight = startHeight + dy;
+    }
+    if (handle.includes('n')) {
+      nextHeight = startHeight - dy;
+    }
+
+    nextWidth = Math.max(minWidth, nextWidth);
+    nextHeight = Math.max(minHeight, nextHeight);
+
+    element.style.width = `${nextWidth}px`;
+    element.style.height = `${nextHeight}px`;
+  }
+
+  private stopResize(): void {
+    if (!this.resizeState) return;
+    const { element, cardId } = this.resizeState;
+    element.classList.remove('is-resizing');
+    if (cardId) {
+      const rect = element.getBoundingClientRect();
+      this.layoutDimensions = {
+        ...this.layoutDimensions,
+        [cardId]: { width: Math.round(rect.width), height: Math.round(rect.height) }
+      };
+      this.persistLayoutPreferences();
+    }
+    this.resizeState = null;
+    window.removeEventListener('mousemove', this.onResizeMove);
+    window.removeEventListener('mouseup', this.onResizeEnd);
+  }
+
+  private loadChartVisibility(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      const raw = window.localStorage.getItem(this.chartVisibilityStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { revenue?: boolean; growth?: boolean };
+      if (typeof parsed.revenue === 'boolean') this.showRevenueChart = parsed.revenue;
+      if (typeof parsed.growth === 'boolean') this.showCustomerGrowthChart = parsed.growth;
+    } catch {
+      // Ignore invalid local storage values.
+    }
+  }
+
+  private persistChartVisibility(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const payload = {
+      revenue: this.showRevenueChart,
+      growth: this.showCustomerGrowthChart
+    };
+    window.localStorage.setItem(this.chartVisibilityStorageKey, JSON.stringify(payload));
+  }
+
+  protected getCardSizeClass(cardId: string): string {
+    return `size-${this.layoutSizes[cardId] ?? 'md'}`;
+  }
+
+  protected getCardDimensions(cardId: string): { width?: number; height?: number } | null {
+    const dimensions = this.layoutDimensions[cardId];
+    if (!dimensions) return null;
+    return { width: dimensions.width, height: dimensions.height };
+  }
+
+  protected toggleCardSize(cardId: string): void {
+    const current = this.layoutSizes[cardId] ?? 'md';
+    const next = current === 'sm' ? 'md' : current === 'md' ? 'lg' : 'sm';
+    this.layoutSizes = { ...this.layoutSizes, [cardId]: next };
+    this.persistLayoutPreferences();
+  }
+
+  private initCharts(summary: DashboardSummary): void {
     const documentStyle = getComputedStyle(document.documentElement);
     const textColor = '#64748b';
     const textColorSecondary = '#94a3b8';
@@ -122,13 +422,60 @@ export class DashboardPage implements OnInit {
     const successColor = '#22c55e';
     const orangeColor = '#f97316';
 
+    const revenueSeries = summary.revenueByMonth.length
+      ? summary.revenueByMonth
+      : [
+          { label: 'Jul', value: 85000 },
+          { label: 'Aug', value: 98000 },
+          { label: 'Sep', value: 112000 },
+          { label: 'Oct', value: 125000 },
+          { label: 'Nov', value: 142000 },
+          { label: 'Dec', value: 168000 }
+        ];
+    const customerSeries = summary.customerGrowth.length
+      ? summary.customerGrowth
+      : [
+          { label: 'Jul', value: 35 },
+          { label: 'Aug', value: 42 },
+          { label: 'Sep', value: 48 },
+          { label: 'Oct', value: 55 },
+          { label: 'Nov', value: 62 },
+          { label: 'Dec', value: 78 }
+        ];
+    const conversionSeries = summary.conversionTrend.length
+      ? summary.conversionTrend
+      : [
+          { label: 'W1', value: 18 },
+          { label: 'W2', value: 22 },
+          { label: 'W3', value: 20 },
+          { label: 'W4', value: 28 },
+          { label: 'W5', value: 32 },
+          { label: 'W6', value: 38 }
+        ];
+    const pipelineSeries = summary.pipelineValue.length
+      ? summary.pipelineValue
+      : [
+          { stage: 'Qualification', count: 0, value: 125000 },
+          { stage: 'Proposal', count: 0, value: 196000 },
+          { stage: 'Negotiation', count: 0, value: 180000 },
+          { stage: 'Closed Won', count: 0, value: 312000 }
+        ];
+    const activitySeries = summary.activityBreakdown.length
+      ? summary.activityBreakdown
+      : [
+          { type: 'Call', count: 25, percentage: 25 },
+          { type: 'Email', count: 35, percentage: 35 },
+          { type: 'Meeting', count: 20, percentage: 20 },
+          { type: 'Task', count: 20, percentage: 20 }
+        ];
+
     // Revenue Chart (Area)
     this.revenueChartData = {
-      labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      labels: revenueSeries.map(item => item.label),
       datasets: [
         {
           label: 'Revenue',
-          data: [85000, 98000, 112000, 125000, 142000, 168000],
+          data: revenueSeries.map(item => Number(item.value)),
           fill: true,
           borderColor: primaryColor,
           backgroundColor: this.createGradient(primaryColor, 0.3),
@@ -178,11 +525,11 @@ export class DashboardPage implements OnInit {
 
     // Customer Growth (Bar)
     this.customerGrowthData = {
-      labels: ['Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      labels: customerSeries.map(item => item.label),
       datasets: [
         {
           label: 'New Customers',
-          data: [35, 42, 48, 55, 62, 78],
+          data: customerSeries.map(item => Number(item.value)),
           backgroundColor: [
             `${cyanColor}cc`,
             `${primaryColor}cc`,
@@ -224,10 +571,10 @@ export class DashboardPage implements OnInit {
 
     // Activity Donut
     this.activityDonutData = {
-      labels: ['Calls', 'Emails', 'Meetings', 'Tasks'],
+      labels: activitySeries.map(item => `${item.type}${item.type.endsWith('s') ? '' : 's'}`),
       datasets: [
         {
-          data: [25, 35, 20, 20],
+          data: activitySeries.map(item => item.percentage ?? item.count),
           backgroundColor: [cyanColor, purpleColor, primaryColor, successColor],
           borderWidth: 0,
           hoverOffset: 8
@@ -265,11 +612,11 @@ export class DashboardPage implements OnInit {
 
     // Pipeline Chart (Horizontal Bar)
     this.pipelineChartData = {
-      labels: ['Qualification', 'Proposal', 'Negotiation', 'Closed Won'],
+      labels: pipelineSeries.map(item => item.stage),
       datasets: [
         {
           label: 'Value',
-          data: [125000, 196000, 180000, 312000],
+          data: pipelineSeries.map(item => Number(item.value)),
           backgroundColor: [
             cyanColor,
             purpleColor,
@@ -316,11 +663,11 @@ export class DashboardPage implements OnInit {
 
     // Conversion Trend (Line)
     this.conversionChartData = {
-      labels: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'],
+      labels: conversionSeries.map(item => item.label),
       datasets: [
         {
           label: 'Conversion Rate',
-          data: [18, 22, 20, 28, 32, 38],
+          data: conversionSeries.map(item => Number(item.value)),
           fill: false,
           borderColor: successColor,
           tension: 0.4,
@@ -366,6 +713,73 @@ export class DashboardPage implements OnInit {
         }
       }
     };
+  }
+
+  private loadLayoutPreferences(): {
+    order: string[];
+    sizes: Record<string, 'sm' | 'md' | 'lg'>;
+    dimensions: Record<string, { width: number; height: number }>;
+    hasLocalPreference: boolean;
+  } {
+    const defaultOrder = this.dashboardData.getDefaultLayout();
+    if (!isPlatformBrowser(this.platformId)) {
+      return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
+    }
+    try {
+      const raw = localStorage.getItem(this.layoutStorageKey);
+      if (!raw) return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
+      const parsed = JSON.parse(raw) as {
+        order?: string[];
+        sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+        dimensions?: Record<string, { width: number; height: number }>;
+      };
+      return {
+        order: this.normalizeLayout(parsed.order ?? defaultOrder, defaultOrder),
+        sizes: parsed.sizes ?? {},
+        dimensions: parsed.dimensions ?? {},
+        hasLocalPreference: true
+      };
+    } catch {
+      return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
+    }
+  }
+
+  private persistLayoutPreferences(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    const payload = {
+      order: this.layoutOrder,
+      sizes: this.layoutSizes,
+      dimensions: this.layoutDimensions
+    };
+    this.hasLocalLayoutPreference = true;
+    try {
+      localStorage.setItem(this.layoutStorageKey, JSON.stringify(payload));
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  private shouldHonorServerLayout(
+    serverOrder: string[],
+    requestedOrder: string[],
+    defaultOrder: string[]
+  ): boolean {
+    if (!this.hasLocalLayoutPreference) return true;
+    if (this.areArraysEqual(serverOrder, requestedOrder)) return true;
+    return !this.areArraysEqual(serverOrder, defaultOrder);
+  }
+
+  private ensureSizeDefaults(): void {
+    const next: Record<string, 'sm' | 'md' | 'lg'> = { ...this.layoutSizes };
+    this.layoutOrder.forEach(cardId => {
+      if (!next[cardId]) next[cardId] = 'md';
+    });
+    this.layoutSizes = next;
+  }
+
+  private areArraysEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) return false;
+    return a.every((value, index) => value === b[index]);
   }
 
   private createGradient(color: string, alpha: number): string {
@@ -444,5 +858,19 @@ export class DashboardPage implements OnInit {
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
+  }
+
+  private normalizeLayout(order: string[], fallback: string[]): string[] {
+    const allowed = new Set(this.cardCatalog.map(card => card.id));
+    const filtered = order.filter(id => allowed.has(id));
+    if (filtered.length) {
+      return filtered;
+    }
+    return fallback.filter(id => allowed.has(id));
+  }
+
+  private getOrderedCards(order: string[]) {
+    const map = new Map(this.cardCatalog.map(card => [card.id, card]));
+    return order.map(id => map.get(id)).filter(Boolean) as Array<{ id: string; label: string; icon: string }>;
   }
 }

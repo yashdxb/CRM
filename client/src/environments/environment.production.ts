@@ -1,7 +1,7 @@
 export const environment = {
   production: true,
   useMockApi: false,
-  apiUrl: 'http://localhost:5014',
+  apiUrl: 'https://crm-enterprise-api-dev-01122345.azurewebsites.net',
   envLabel: 'PROD',
   theme: 'graphite'
 };

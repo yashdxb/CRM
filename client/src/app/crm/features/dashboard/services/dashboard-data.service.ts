@@ -8,6 +8,17 @@ import { DashboardSummary } from '../models/dashboard.model';
 export class DashboardDataService {
   private readonly http = inject(HttpClient);
 
+  private readonly defaultLayout = [
+    'pipeline',
+    'accounts',
+    'activity-mix',
+    'conversion',
+    'top-performers',
+    'my-tasks',
+    'timeline',
+    'health'
+  ];
+
   getSummary() {
     const url = `${environment.apiUrl}/api/dashboard/summary`;
     const empty: DashboardSummary = {
@@ -42,5 +53,21 @@ export class DashboardDataService {
     };
 
     return this.http.get<DashboardSummary>(url).pipe(catchError(() => of(empty)));
+  }
+
+  getLayout() {
+    const url = `${environment.apiUrl}/api/dashboard/layout`;
+    return this.http
+      .get<{ cardOrder: string[] }>(url)
+      .pipe(catchError(() => of({ cardOrder: this.defaultLayout })));
+  }
+
+  saveLayout(cardOrder: string[]) {
+    const url = `${environment.apiUrl}/api/dashboard/layout`;
+    return this.http.put<{ cardOrder: string[] }>(url, { cardOrder });
+  }
+
+  getDefaultLayout() {
+    return [...this.defaultLayout];
   }
 }

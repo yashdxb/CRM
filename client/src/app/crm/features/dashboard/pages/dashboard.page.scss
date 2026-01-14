@@ -519,31 +519,130 @@
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MAIN GRID
+// MAIN GRID (COMMAND CENTER)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-.dashboard-main-grid {
+.dashboard-card-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: $space-5;
+  align-items: start;
 }
 
-.main-column {
+.dashboard-card {
+  position: relative;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-5;
+
+  &.size-sm {
+    grid-column: span 1;
+  }
+
+  &.size-md {
+    grid-column: span 2;
+  }
+
+  &.size-lg {
+    grid-column: span 3;
+  }
 }
 
-.middle-column {
-  display: flex;
-  flex-direction: column;
-  gap: $space-5;
+.dashboard-card-grid.cdk-drop-list-dragging .dashboard-card:not(.cdk-drag-placeholder) {
+  transition: transform 200ms ease;
 }
 
-.side-column {
+.dashboard-card.cdk-drag-preview {
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+  border-radius: $radius-2xl;
+}
+
+.dashboard-card.cdk-drag-placeholder {
+  opacity: 0.3;
+  border: 1px dashed rgba($primary, 0.35);
+  background: rgba($primary, 0.04);
+}
+
+.dashboard-card.cdk-drag-animating {
+  transition: transform 200ms ease;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LAYOUT DIALOG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+:host ::ng-deep .layout-dialog {
+  .p-dialog-content {
+    padding: $space-4 $space-5;
+  }
+
+  .p-dialog-header {
+    padding: $space-4 $space-5 $space-2;
+  }
+}
+
+:host ::ng-deep .layout-dialog .p-orderlist {
+  background: transparent;
+  border: none;
+}
+
+:host ::ng-deep .layout-dialog .p-orderlist-list {
+  max-height: 360px;
+  border: 1px solid $glass-border;
+  border-radius: $radius-xl;
+  background: rgba(255, 255, 255, 0.7);
+  padding: $space-2;
+}
+
+:host ::ng-deep .layout-dialog .p-orderlist-item {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.layout-item {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  border-radius: $radius-lg;
+  border: 1px solid rgba($glass-border, 0.6);
+  background: rgba($primary, 0.04);
+  transition: all $transition-fast;
+}
+
+.layout-item:hover {
+  background: rgba($primary, 0.08);
+  border-color: rgba($primary, 0.2);
+}
+
+.layout-handle {
+  color: $text-muted;
+  font-size: $font-size-lg;
+}
+
+.layout-meta {
   display: flex;
   flex-direction: column;
-  gap: $space-5;
+  gap: 2px;
+}
+
+.layout-title {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.layout-desc {
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.layout-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-3;
+  margin-top: $space-4;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -558,11 +657,111 @@
 }
 
 .chart-card {
+  position: relative;
+
   &.large {
     .card-body {
       padding: $space-5;
     }
   }
+}
+
+.chart-card--resizable {
+  max-width: 100%;
+  min-width: 280px;
+  min-height: 280px;
+}
+
+.card-resizable {
+  position: relative;
+  overflow: visible;
+}
+
+.resize-handle {
+  position: absolute;
+  opacity: 0;
+  z-index: 10;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  pointer-events: auto;
+}
+
+.card-resizable.is-resizing .resize-handle {
+  opacity: 0;
+}
+
+.card-resizable:hover .resize-handle,
+.card-resizable:focus-within .resize-handle,
+.card-resizable.is-resizing .resize-handle {
+  opacity: 0;
+}
+
+.resize-handle.handle-n,
+.resize-handle.handle-s {
+  left: 0;
+  right: 0;
+  height: 18px;
+  border-radius: 999px;
+  cursor: ns-resize;
+}
+
+.resize-handle.handle-n {
+  top: -9px;
+}
+
+.resize-handle.handle-s {
+  bottom: -9px;
+}
+
+.resize-handle.handle-e,
+.resize-handle.handle-w {
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  border-radius: 999px;
+  cursor: ew-resize;
+}
+
+.resize-handle.handle-e {
+  right: -9px;
+}
+
+.resize-handle.handle-w {
+  left: -9px;
+}
+
+.resize-handle.handle-ne,
+.resize-handle.handle-nw,
+.resize-handle.handle-se,
+.resize-handle.handle-sw {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.resize-handle.handle-ne {
+  top: -13px;
+  right: -13px;
+  cursor: nesw-resize;
+}
+
+.resize-handle.handle-nw {
+  top: -13px;
+  left: -13px;
+  cursor: nwse-resize;
+}
+
+.resize-handle.handle-se {
+  bottom: -13px;
+  right: -13px;
+  cursor: nwse-resize;
+}
+
+.resize-handle.handle-sw {
+  bottom: -13px;
+  left: -13px;
+  cursor: nesw-resize;
 }
 
 .chart-container {
@@ -613,6 +812,10 @@
   overflow: hidden;
 }
 
+.glass-card.card-resizable {
+  overflow: visible;
+}
+
 .card-header {
   padding: $space-4 $space-5;
   border-bottom: 1px solid rgba($glass-border, 0.5);
@@ -620,6 +823,44 @@
   align-items: center;
   justify-content: space-between;
   gap: $space-3;
+  position: relative;
+  padding-right: calc(#{$space-5} + 120px);
+}
+
+.card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.card-controls {
+  position: absolute;
+  top: $space-3;
+  right: $space-3;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  z-index: 2;
+}
+
+.card-control {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba($glass-border, 0.7);
+  color: $text-muted;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba($primary, 0.25);
+    color: $primary;
+  }
+}
+
+.drag-handle {
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
 }
 
 .card-title {
@@ -1610,15 +1851,14 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 @media (max-width: 1400px) {
-  .dashboard-main-grid {
-    grid-template-columns: 1fr 1fr;
+  .dashboard-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  
-  .side-column {
-    grid-column: span 2;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: $space-5;
+
+  .dashboard-card {
+    &.size-lg {
+      grid-column: span 2;
+    }
   }
 }
 
@@ -1647,14 +1887,16 @@
     }
   }
   
-  .dashboard-main-grid {
+  .dashboard-card-grid {
     grid-template-columns: 1fr;
   }
-  
-  .side-column {
-    grid-column: span 1;
-    display: flex;
-    flex-direction: column;
+
+  .dashboard-card {
+    &.size-sm,
+    &.size-md,
+    &.size-lg {
+      grid-column: span 1;
+    }
   }
   
   .pipeline-stats {
