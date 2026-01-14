@@ -3,6 +3,7 @@ name: Deploy Angular Client to Azure Static Web Apps
 on:
   push:
     branches:
+      - master
       - main
     paths:
       - 'client/**'
