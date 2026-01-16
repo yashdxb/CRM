@@ -84,8 +84,8 @@ public class TenantResolutionMiddleware
         if (host.Equals("northedgesystem.com", StringComparison.OrdinalIgnoreCase) ||
             host.EndsWith(".northedgesystem.com", StringComparison.OrdinalIgnoreCase))
         {
-            var parts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length > 0 && parts[0].Equals("www", StringComparison.OrdinalIgnoreCase))
+            var domainParts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
+            if (domainParts.Length > 0 && domainParts[0].Equals("www", StringComparison.OrdinalIgnoreCase))
             {
                 return null;
             }
