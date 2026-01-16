@@ -81,6 +81,12 @@ public class TenantResolutionMiddleware
             }
         }
 
+        if (host.EndsWith(".azurewebsites.net", StringComparison.OrdinalIgnoreCase) ||
+            host.EndsWith(".azurestaticapps.net", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
         var parts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length >= 3)
         {

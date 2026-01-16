@@ -42,7 +42,8 @@ builder.Services.AddCors(options =>
                 "https://localhost:4201",
                 "http://127.0.0.1:4201",
                 "http://localhost:5173",
-                "https://localhost:5173")
+                "https://localhost:5173",
+                "https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net")
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
