@@ -15,6 +15,10 @@ export function resolveTenantKeyFromHost(hostname: string): string | null {
   }
 
   const lower = hostname.toLowerCase();
+  if (lower.endsWith('.azurestaticapps.net') || lower.endsWith('.azurewebsites.net')) {
+    return null;
+  }
+
   if (lower === 'localhost' || lower === '127.0.0.1' || lower === '::1') {
     return null;
   }
@@ -40,5 +44,8 @@ export function initTenantFromHost() {
   const hostKey = resolveTenantKeyFromHost(window.location.hostname);
   if (hostKey && current === DEFAULT_TENANT) {
     setTenantKey(hostKey);
+  }
+  if (!hostKey && current !== DEFAULT_TENANT) {
+    setTenantKey(DEFAULT_TENANT);
   }
 }
