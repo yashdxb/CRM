@@ -1,5 +1,7 @@
 const STORAGE_KEY = 'tenant_key';
 const DEFAULT_TENANT = 'default';
+const NON_TENANT_HOSTS = new Set(['northedgesystem.com']);
+const NON_TENANT_SUBDOMAINS = new Set(['www']);
 
 export function getTenantKey(): string {
   return localStorage.getItem(STORAGE_KEY) || DEFAULT_TENANT;
@@ -24,7 +26,13 @@ export function resolveTenantKeyFromHost(hostname: string): string | null {
   }
 
   const parts = lower.split('.').filter(Boolean);
+  if (NON_TENANT_HOSTS.has(lower)) {
+    return null;
+  }
   if (parts.length >= 3) {
+    if (NON_TENANT_SUBDOMAINS.has(parts[0])) {
+      return null;
+    }
     return parts[0];
   }
 

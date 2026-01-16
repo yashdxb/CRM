@@ -81,6 +81,16 @@ public class TenantResolutionMiddleware
             }
         }
 
+        if (host.Equals("northedgesystem.com", StringComparison.OrdinalIgnoreCase) ||
+            host.EndsWith(".northedgesystem.com", StringComparison.OrdinalIgnoreCase))
+        {
+            var parts = host.Split('.', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 0 && parts[0].Equals("www", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+        }
+
         if (host.EndsWith(".azurewebsites.net", StringComparison.OrdinalIgnoreCase) ||
             host.EndsWith(".azurestaticapps.net", StringComparison.OrdinalIgnoreCase))
         {
