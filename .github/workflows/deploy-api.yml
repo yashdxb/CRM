@@ -35,6 +35,5 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: crm-enterprise-api-dev-01122345
-          slot-name: Production
           publish-profile: ${{ secrets.AZURE_API_PUBLISH_PROFILE }}
           package: ./artifacts/publish
