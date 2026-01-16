@@ -46,8 +46,11 @@ public static class DependencyInjection
         services.AddScoped<IDashboardLayoutService, DashboardLayoutService>();
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<SendGridOptions>(configuration.GetSection(SendGridOptions.SectionName));
+        services.Configure<GraphMailOptions>(configuration.GetSection(GraphMailOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IEmailSender, SendGridEmailSender>();
+        services.AddHttpClient<GraphEmailSender>();
+        services.AddScoped<SendGridEmailSender>();
+        services.AddScoped<IEmailSender, CompositeEmailSender>();
         services.Configure<OpenAiOptions>(configuration.GetSection(OpenAiOptions.SectionName));
         services.AddHttpClient<OpenAiLeadScoringService>((sp, client) =>
         {
