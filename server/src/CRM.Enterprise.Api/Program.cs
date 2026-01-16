@@ -43,7 +43,9 @@ builder.Services.AddCors(options =>
                 "http://127.0.0.1:4201",
                 "http://localhost:5173",
                 "https://localhost:5173",
-                "https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net")
+                "https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net",
+                "https://northedgesystem.com",
+                "https://www.northedgesystem.com")
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
