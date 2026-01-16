@@ -48,6 +48,12 @@ export function initTenantFromHost() {
     return;
   }
 
+  const hostname = window.location.hostname.toLowerCase();
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+    setTenantKey(DEFAULT_TENANT);
+    return;
+  }
+
   const current = getTenantKey();
   const hostKey = resolveTenantKeyFromHost(window.location.hostname);
   if (hostKey && current === DEFAULT_TENANT) {
