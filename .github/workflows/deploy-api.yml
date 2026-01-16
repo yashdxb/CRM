@@ -6,6 +6,7 @@ on:
       - master
     paths:
       - 'server/src/CRM.Enterprise.Api/**'
+      - 'server/src/CRM.Enterprise.Infrastructure/**'
       - '.github/workflows/deploy-api.yml'
 
 jobs:
