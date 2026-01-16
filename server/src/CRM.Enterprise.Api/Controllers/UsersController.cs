@@ -6,12 +6,14 @@ using System.Security.Cryptography;
 using System.Threading;
 using CRM.Enterprise.Api.Contracts.Users;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -22,11 +24,19 @@ public class UsersController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IEmailSender _emailSender;
+    private readonly ILogger<UsersController> _logger;
 
-    public UsersController(CrmDbContext dbContext, IPasswordHasher<User> passwordHasher)
+    public UsersController(
+        CrmDbContext dbContext,
+        IPasswordHasher<User> passwordHasher,
+        IEmailSender emailSender,
+        ILogger<UsersController> logger)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
+        _emailSender = emailSender;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -144,6 +154,8 @@ public class UsersController : ControllerBase
 
         await AssignRolesAsync(user, roleIds, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await SendInviteEmailAsync(user, password, cancellationToken);
 
         var detail = await BuildDetailResponseAsync(user.Id, cancellationToken);
         return CreatedAtAction(nameof(GetUser), new { id = user.Id }, detail);
@@ -350,5 +362,38 @@ public class UsersController : ControllerBase
     private static string NormalizeEmail(string? email)
     {
         return (email ?? string.Empty).Trim().ToLowerInvariant();
+    }
+
+    private async Task SendInviteEmailAsync(User user, string temporaryPassword, CancellationToken cancellationToken)
+    {
+        var origin = Request.Headers.Origin.FirstOrDefault();
+        var baseUrl = string.IsNullOrWhiteSpace(origin)
+            ? $"{Request.Scheme}://{Request.Host}"
+            : origin;
+        var loginUrl = $"{baseUrl.TrimEnd('/')}/login";
+
+        var subject = "You're invited to CRM Enterprise";
+        var htmlBody = $@"
+            <p>Hi {System.Net.WebUtility.HtmlEncode(user.FullName)},</p>
+            <p>You have been invited to CRM Enterprise. Use the credentials below to sign in:</p>
+            <p><strong>Login:</strong> {System.Net.WebUtility.HtmlEncode(user.Email)}<br/>
+            <strong>Temporary password:</strong> {System.Net.WebUtility.HtmlEncode(temporaryPassword)}</p>
+            <p><a href=""{loginUrl}"">Sign in to CRM Enterprise</a></p>
+            <p>If you did not expect this invitation, you can ignore this message.</p>";
+        var textBody = $"Hi {user.FullName},\n\n" +
+                       "You have been invited to CRM Enterprise. Use the credentials below to sign in:\n\n" +
+                       $"Login: {user.Email}\n" +
+                       $"Temporary password: {temporaryPassword}\n\n" +
+                       $"Sign in: {loginUrl}\n\n" +
+                       "If you did not expect this invitation, you can ignore this message.";
+
+        try
+        {
+            await _emailSender.SendAsync(user.Email, subject, htmlBody, textBody, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to send invite email to {Email}.", user.Email);
+        }
     }
 }
