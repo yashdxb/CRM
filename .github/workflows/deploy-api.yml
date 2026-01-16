@@ -31,9 +31,13 @@ jobs:
           rm -rf ./artifacts/publish
           dotnet publish server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj --configuration Release --output ./artifacts/publish --no-build
 
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: crm-enterprise-api-dev-01122345
-          publish-profile: ${{ secrets.AZURE_API_PUBLISH_PROFILE }}
           package: ./artifacts/publish
