@@ -42,20 +42,24 @@ else
 {
     builder.Services.AddSignalR();
 }
+var allowedOrigins = new[]
+{
+    "http://localhost:4200",
+    "https://localhost:4200",
+    "http://localhost:4201",
+    "https://localhost:4201",
+    "http://127.0.0.1:4201",
+    "http://localhost:5173",
+    "https://localhost:5173",
+    "https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net",
+    "https://northedgesystem.com",
+    "https://www.northedgesystem.com"
+};
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.WithOrigins(
-                "http://localhost:4200",
-                "https://localhost:4200",
-                "http://localhost:4201",
-                "https://localhost:4201",
-                "http://127.0.0.1:4201",
-                "http://localhost:5173",
-                "https://localhost:5173",
-                "https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net",
-                "https://northedgesystem.com",
-                "https://www.northedgesystem.com")
+        policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
@@ -139,6 +143,17 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors();
+app.Use(async (context, next) =>
+{
+    var origin = context.Request.Headers.Origin.ToString();
+    if (!string.IsNullOrWhiteSpace(origin) &&
+        allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
+    {
+        context.Response.Headers.TryAdd("Access-Control-Allow-Credentials", "true");
+    }
+
+    await next();
+});
 app.UseHttpsRedirection();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthentication();
