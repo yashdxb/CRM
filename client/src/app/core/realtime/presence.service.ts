@@ -23,7 +23,8 @@ export class PresenceService {
     const accessToken = readTokenContext()?.token ?? localStorage.getItem('auth_token') ?? '';
     this.connection = new HubConnectionBuilder()
       .withUrl(`${environment.apiUrl}/hubs/presence`, {
-        accessTokenFactory: () => accessToken
+        accessTokenFactory: () => accessToken,
+        withCredentials: false
       })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Error)
