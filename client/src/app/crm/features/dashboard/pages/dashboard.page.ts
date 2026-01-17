@@ -52,9 +52,35 @@ export class DashboardPage implements OnInit {
   private readonly dashboardData = inject(DashboardDataService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly commandPaletteService = inject(CommandPaletteService);
-  private readonly summarySignal = toSignal(this.dashboardData.getSummary(), { initialValue: null });
+  private readonly emptySummary: DashboardSummary = {
+    totalCustomers: 0,
+    leads: 0,
+    prospects: 0,
+    activeCustomers: 0,
+    openOpportunities: 0,
+    pipelineValueTotal: 0,
+    tasksDueToday: 0,
+    upcomingActivities: 0,
+    overdueActivities: 0,
+    recentCustomers: [],
+    activitiesNextWeek: [],
+    myTasks: [],
+    revenueByMonth: [],
+    customerGrowth: [],
+    activityBreakdown: [],
+    pipelineValue: [],
+    conversionTrend: [],
+    topPerformers: [],
+    avgDealSize: 0,
+    winRate: 0,
+    avgSalesCycle: 0,
+    monthlyRecurringRevenue: 0,
+    customerLifetimeValue: 0,
+    churnRate: 0
+  };
+  private readonly summarySignal = toSignal(this.dashboardData.getSummary(), { initialValue: this.emptySummary });
 
-  protected readonly summary = computed(() => this.summarySignal());
+  protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
   
   protected readonly greeting = this.getGreeting();
   
