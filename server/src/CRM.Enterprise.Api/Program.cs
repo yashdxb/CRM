@@ -57,7 +57,8 @@ builder.Services.AddCors(options =>
                 "https://northedgesystem.com",
                 "https://www.northedgesystem.com")
             .AllowAnyHeader()
-            .AllowAnyMethod());
+            .AllowAnyMethod()
+            .AllowCredentials());
 });
 
 var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
