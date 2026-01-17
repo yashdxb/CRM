@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using System.Security.Claims;
+using DashboardCardDimensionsResponse = CRM.Enterprise.Api.Contracts.Dashboard.DashboardCardDimensions;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -127,7 +128,10 @@ public class DashboardController : ControllerBase
         }
 
         var layout = await _layoutService.GetLayoutAsync(userId.Value, cancellationToken);
-        return Ok(new DashboardLayoutResponse(layout));
+        var dimensions = layout.Dimensions.ToDictionary(
+            item => item.Key,
+            item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards));
     }
 
     [HttpPut("layout")]
@@ -141,8 +145,17 @@ public class DashboardController : ControllerBase
             return Unauthorized();
         }
 
-        var updated = await _layoutService.UpdateLayoutAsync(userId.Value, request.CardOrder, cancellationToken);
-        return Ok(new DashboardLayoutResponse(updated));
+        var sizes = request.Sizes ?? new Dictionary<string, string>();
+        var dimensions = request.Dimensions?
+            .ToDictionary(item => item.Key, item => new Application.Dashboard.DashboardCardDimensions(item.Value.Width, item.Value.Height))
+            ?? new Dictionary<string, Application.Dashboard.DashboardCardDimensions>();
+        var hidden = request.HiddenCards ?? new List<string>();
+        var state = new Application.Dashboard.DashboardLayoutState(request.CardOrder, sizes, dimensions, hidden);
+        var updated = await _layoutService.UpdateLayoutAsync(userId.Value, state, cancellationToken);
+        var responseDimensions = updated.Dimensions.ToDictionary(
+            item => item.Key,
+            item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
+        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards));
     }
 
     private Guid? GetCurrentUserId()

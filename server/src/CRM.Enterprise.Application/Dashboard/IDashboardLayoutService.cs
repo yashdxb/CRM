@@ -2,6 +2,6 @@ namespace CRM.Enterprise.Application.Dashboard;
 
 public interface IDashboardLayoutService
 {
-    Task<IReadOnlyList<string>> GetLayoutAsync(Guid userId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<string>> UpdateLayoutAsync(Guid userId, IReadOnlyList<string> cardOrder, CancellationToken cancellationToken);
+    Task<DashboardLayoutState> GetLayoutAsync(Guid userId, CancellationToken cancellationToken);
+    Task<DashboardLayoutState> UpdateLayoutAsync(Guid userId, DashboardLayoutState layout, CancellationToken cancellationToken);
 }

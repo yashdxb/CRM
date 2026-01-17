@@ -58,13 +58,28 @@ export class DashboardDataService {
   getLayout() {
     const url = `${environment.apiUrl}/api/dashboard/layout`;
     return this.http
-      .get<{ cardOrder: string[] }>(url)
-      .pipe(catchError(() => of({ cardOrder: this.defaultLayout })));
+      .get<{
+        cardOrder: string[];
+        sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+        dimensions?: Record<string, { width: number; height: number }>;
+        hiddenCards?: string[];
+      }>(url)
+      .pipe(catchError(() => of({ cardOrder: this.defaultLayout, sizes: {}, dimensions: {}, hiddenCards: [] })));
   }
 
-  saveLayout(cardOrder: string[]) {
+  saveLayout(payload: {
+    cardOrder: string[];
+    sizes: Record<string, 'sm' | 'md' | 'lg'>;
+    dimensions: Record<string, { width: number; height: number }>;
+    hiddenCards: string[];
+  }) {
     const url = `${environment.apiUrl}/api/dashboard/layout`;
-    return this.http.put<{ cardOrder: string[] }>(url, { cardOrder });
+    return this.http.put<{
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+    }>(url, payload);
   }
 
   getDefaultLayout() {

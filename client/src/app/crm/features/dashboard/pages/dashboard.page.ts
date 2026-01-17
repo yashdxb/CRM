@@ -214,13 +214,19 @@ export class DashboardPage implements OnInit {
     this.hasLocalLayoutPreference = hasLocalPreference;
     this.loadChartVisibility();
 
-    this.dashboardData.getLayout().subscribe(({ cardOrder }) => {
+    this.dashboardData.getLayout().subscribe(({ cardOrder, sizes, dimensions, hiddenCards }) => {
       const defaultOrder = this.dashboardData.getDefaultLayout();
       const normalized = this.normalizeLayout(cardOrder, defaultOrder);
-      if (this.hasLocalLayoutPreference && this.areArraysEqual(normalized, defaultOrder)) {
+      const serverHasState = (hiddenCards?.length ?? 0) > 0
+        || Object.keys(sizes ?? {}).length > 0
+        || Object.keys(dimensions ?? {}).length > 0
+        || !this.areArraysEqual(normalized, defaultOrder);
+      if (this.hasLocalLayoutPreference && !serverHasState && this.areArraysEqual(normalized, defaultOrder)) {
         return;
       }
       this.layoutOrder = normalized;
+      this.layoutSizes = sizes ?? {};
+      this.layoutDimensions = dimensions ?? {};
       this.ensureSizeDefaults();
       this.persistLayoutPreferences();
     });
@@ -242,12 +248,14 @@ export class DashboardPage implements OnInit {
     this.layoutOrder = requested;
     this.ensureSizeDefaults();
     this.persistLayoutPreferences();
-    this.dashboardData.saveLayout(order).subscribe({
+    this.dashboardData.saveLayout(this.buildLayoutPayload(requested)).subscribe({
       next: response => {
         const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
         this.layoutOrder = this.shouldHonorServerLayout(normalized, requested, defaultOrder)
           ? normalized
           : requested;
+        this.layoutSizes = response.sizes ?? this.layoutSizes;
+        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
         this.ensureSizeDefaults();
         this.persistLayoutPreferences();
         this.layoutDialogOpen = false;
@@ -263,11 +271,12 @@ export class DashboardPage implements OnInit {
 
   protected resetLayout(): void {
     const order = this.dashboardData.getDefaultLayout();
-    this.dashboardData.saveLayout(order).subscribe({
+    this.dashboardData.saveLayout(this.buildLayoutPayload(order)).subscribe({
       next: response => {
         const defaultOrder = this.dashboardData.getDefaultLayout();
         this.layoutOrder = this.normalizeLayout(response.cardOrder, defaultOrder);
-        this.layoutSizes = {};
+        this.layoutSizes = response.sizes ?? {};
+        this.layoutDimensions = response.dimensions ?? {};
         this.ensureSizeDefaults();
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
@@ -288,13 +297,15 @@ export class DashboardPage implements OnInit {
     moveItemInArray(nextOrder, event.previousIndex, event.currentIndex);
     this.layoutOrder = nextOrder;
     this.persistLayoutPreferences();
-    this.dashboardData.saveLayout(nextOrder).subscribe({
+    this.dashboardData.saveLayout(this.buildLayoutPayload(nextOrder)).subscribe({
       next: response => {
         const defaultOrder = this.dashboardData.getDefaultLayout();
         const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
+        this.layoutSizes = response.sizes ?? this.layoutSizes;
+        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
         this.persistLayoutPreferences();
       },
       error: () => {
@@ -310,13 +321,15 @@ export class DashboardPage implements OnInit {
     this.layoutOrder = nextOrder;
     delete this.layoutSizes[cardId];
     this.persistLayoutPreferences();
-    this.dashboardData.saveLayout(nextOrder).subscribe({
+    this.dashboardData.saveLayout(this.buildLayoutPayload(nextOrder)).subscribe({
       next: response => {
         const defaultOrder = this.dashboardData.getDefaultLayout();
         const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
+        this.layoutSizes = response.sizes ?? this.layoutSizes;
+        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
         this.persistLayoutPreferences();
       },
       error: () => {
@@ -411,6 +424,17 @@ export class DashboardPage implements OnInit {
         [cardId]: { width: Math.round(rect.width), height: Math.round(rect.height) }
       };
       this.persistLayoutPreferences();
+      this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe({
+        next: response => {
+          this.layoutOrder = this.normalizeLayout(response.cardOrder, this.layoutOrder);
+          this.layoutSizes = response.sizes ?? this.layoutSizes;
+          this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
+          this.persistLayoutPreferences();
+        },
+        error: () => {
+          // Keep local changes if server update fails.
+        }
+      });
     }
     this.resizeState = null;
     window.removeEventListener('mousemove', this.onResizeMove);
@@ -465,6 +489,17 @@ export class DashboardPage implements OnInit {
     const next = current === 'sm' ? 'md' : current === 'md' ? 'lg' : 'sm';
     this.layoutSizes = { ...this.layoutSizes, [cardId]: next };
     this.persistLayoutPreferences();
+    this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe({
+      next: response => {
+        this.layoutOrder = this.normalizeLayout(response.cardOrder, this.layoutOrder);
+        this.layoutSizes = response.sizes ?? this.layoutSizes;
+        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
+        this.persistLayoutPreferences();
+      },
+      error: () => {
+        // Keep local changes if server update fails.
+      }
+    });
   }
 
   protected isChartVisible(chartId: ChartId): boolean {
@@ -943,5 +978,17 @@ export class DashboardPage implements OnInit {
   private getOrderedCards(order: string[]) {
     const map = new Map(this.cardCatalog.map(card => [card.id, card]));
     return order.map(id => map.get(id)).filter(Boolean) as Array<{ id: string; label: string; icon: string }>;
+  }
+
+  private buildLayoutPayload(orderOverride?: string[]) {
+    const cardOrder = orderOverride ?? this.layoutOrder;
+    const defaultOrder = this.dashboardData.getDefaultLayout();
+    const hiddenCards = defaultOrder.filter(id => !cardOrder.includes(id));
+    return {
+      cardOrder,
+      sizes: this.layoutSizes,
+      dimensions: this.layoutDimensions,
+      hiddenCards
+    };
   }
 }
