@@ -16,12 +16,13 @@ public class SendGridOptions
 public class SendGridEmailSender : IEmailSender
 {
     private readonly SendGridOptions _options;
-    private readonly ISendGridClient _client;
 
     public SendGridEmailSender(IOptions<SendGridOptions> options)
     {
-        _options = options.Value;
-        _client = new SendGridClient(_options.ApiKey);
+        _options = options.Value ?? new SendGridOptions();
+        _options.ApiKey ??= string.Empty;
+        _options.FromEmail ??= string.Empty;
+        _options.FromName ??= "CRM Enterprise";
     }
 
     public async Task SendAsync(string toEmail, string subject, string htmlBody, string? textBody = null, CancellationToken cancellationToken = default)
@@ -33,9 +34,10 @@ public class SendGridEmailSender : IEmailSender
             return;
         }
 
+        var client = new SendGridClient(_options.ApiKey);
         var from = new EmailAddress(_options.FromEmail, _options.FromName);
         var to = new EmailAddress(toEmail);
         var message = MailHelper.CreateSingleEmail(from, to, subject, textBody ?? string.Empty, htmlBody);
-        await _client.SendEmailAsync(message, cancellationToken);
+        await client.SendEmailAsync(message, cancellationToken);
     }
 }

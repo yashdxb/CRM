@@ -600,6 +600,43 @@
   border: none;
 }
 
+.layout-chart-section {
+  margin-top: $space-4;
+
+  h4 {
+    margin: 0 0 $space-2;
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}
+
+.layout-chart-list {
+  display: grid;
+  gap: $space-2;
+}
+
+.layout-chart-item {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: $font-size-sm;
+  color: $text-secondary;
+
+  input {
+    accent-color: $primary;
+  }
+
+  i {
+    color: $primary;
+  }
+}
+
 .layout-item {
   display: flex;
   align-items: center;
@@ -656,6 +693,10 @@
   margin-bottom: $space-5;
 }
 
+.charts-row.cdk-drop-list-dragging .chart-card:not(.cdk-drag-placeholder) {
+  transition: transform 200ms ease;
+}
+
 .chart-card {
   position: relative;
 
@@ -664,12 +705,36 @@
       padding: $space-5;
     }
   }
+
+  &.size-sm,
+  &.size-md {
+    grid-column: span 1;
+  }
+
+  &.size-lg {
+    grid-column: span 2;
+  }
 }
 
 .chart-card--resizable {
   max-width: 100%;
   min-width: 280px;
   min-height: 280px;
+}
+
+.chart-card.cdk-drag-preview {
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+  border-radius: $radius-2xl;
+}
+
+.chart-card.cdk-drag-placeholder {
+  opacity: 0.3;
+  border: 1px dashed rgba($primary, 0.35);
+  background: rgba($primary, 0.04);
+}
+
+.chart-card.cdk-drag-animating {
+  transition: transform 200ms ease;
 }
 
 .card-resizable {

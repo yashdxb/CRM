@@ -16,6 +16,8 @@ import { Activity } from '../../activities/models/activity.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CommandPaletteService } from '../../../../core/command-palette/command-palette.service';
 
+type ChartId = 'revenue' | 'growth';
+
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
@@ -42,6 +44,11 @@ import { CommandPaletteService } from '../../../../core/command-palette/command-
   styleUrl: './dashboard.page.scss'
 })
 export class DashboardPage implements OnInit {
+  protected readonly chartIdKeys = ['revenue', 'growth'] as const;
+  protected readonly chartIdSet = new Set<ChartId>(this.chartIdKeys);
+  protected readonly chartIdDefaultOrder: ChartId[] = [...this.chartIdKeys];
+  protected readonly chartIdTypeGuard = (value: string): value is ChartId =>
+    this.chartIdSet.has(value as ChartId);
   private readonly dashboardData = inject(DashboardDataService);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly commandPaletteService = inject(CommandPaletteService);
@@ -132,6 +139,7 @@ export class DashboardPage implements OnInit {
   private readonly chartVisibilityStorageKey = 'crm.dashboard.charts.visibility';
   protected showRevenueChart = true;
   protected showCustomerGrowthChart = true;
+  protected chartOrder: ChartId[] = [...this.chartIdDefaultOrder];
   private resizeState:
     | {
         element: HTMLElement;
@@ -157,6 +165,10 @@ export class DashboardPage implements OnInit {
     { id: 'my-tasks', label: 'My Tasks', icon: 'pi pi-check-square' },
     { id: 'timeline', label: 'Activity Timeline', icon: 'pi pi-clock' },
     { id: 'health', label: 'Business Health', icon: 'pi pi-heart' }
+  ];
+  protected readonly chartCatalog: Array<{ id: ChartId; label: string; icon: string }> = [
+    { id: 'revenue', label: 'Revenue Trend', icon: 'pi pi-chart-line' },
+    { id: 'growth', label: 'Customer Growth', icon: 'pi pi-users' }
   ];
 
   ngOnInit(): void {
@@ -288,13 +300,21 @@ export class DashboardPage implements OnInit {
     });
   }
 
-  protected hideChart(chartKey: 'revenue' | 'growth'): void {
+  protected hideChart(chartKey: ChartId): void {
     if (chartKey === 'revenue') {
       this.showRevenueChart = false;
       this.persistChartVisibility();
       return;
     }
     this.showCustomerGrowthChart = false;
+    this.persistChartVisibility();
+  }
+
+  protected onChartDrop(event: CdkDragDrop<ChartId[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const nextOrder = [...this.chartOrder];
+    moveItemInArray(nextOrder, event.previousIndex, event.currentIndex);
+    this.chartOrder = nextOrder;
     this.persistChartVisibility();
   }
 
@@ -375,9 +395,15 @@ export class DashboardPage implements OnInit {
     try {
       const raw = window.localStorage.getItem(this.chartVisibilityStorageKey);
       if (!raw) return;
-      const parsed = JSON.parse(raw) as { revenue?: boolean; growth?: boolean };
+      const parsed = JSON.parse(raw) as { revenue?: boolean; growth?: boolean; order?: string[] };
       if (typeof parsed.revenue === 'boolean') this.showRevenueChart = parsed.revenue;
       if (typeof parsed.growth === 'boolean') this.showCustomerGrowthChart = parsed.growth;
+      if (Array.isArray(parsed.order)) {
+        const filtered = parsed.order.filter(item => this.chartIdTypeGuard(item));
+        if (filtered.length) {
+          this.chartOrder = filtered;
+        }
+      }
     } catch {
       // Ignore invalid local storage values.
     }
@@ -387,13 +413,18 @@ export class DashboardPage implements OnInit {
     if (!isPlatformBrowser(this.platformId)) return;
     const payload = {
       revenue: this.showRevenueChart,
-      growth: this.showCustomerGrowthChart
+      growth: this.showCustomerGrowthChart,
+      order: this.chartOrder
     };
     window.localStorage.setItem(this.chartVisibilityStorageKey, JSON.stringify(payload));
   }
 
   protected getCardSizeClass(cardId: string): string {
     return `size-${this.layoutSizes[cardId] ?? 'md'}`;
+  }
+
+  protected getChartSizeClass(chartId: ChartId): string {
+    return `size-${this.layoutSizes[chartId] ?? 'md'}`;
   }
 
   protected getCardDimensions(cardId: string): { width?: number; height?: number } | null {
@@ -407,6 +438,19 @@ export class DashboardPage implements OnInit {
     const next = current === 'sm' ? 'md' : current === 'md' ? 'lg' : 'sm';
     this.layoutSizes = { ...this.layoutSizes, [cardId]: next };
     this.persistLayoutPreferences();
+  }
+
+  protected isChartVisible(chartId: ChartId): boolean {
+    return chartId === 'revenue' ? this.showRevenueChart : this.showCustomerGrowthChart;
+  }
+
+  protected onChartVisibilityChange(chartId: ChartId, visible: boolean): void {
+    if (chartId === 'revenue') {
+      this.showRevenueChart = visible;
+    } else {
+      this.showCustomerGrowthChart = visible;
+    }
+    this.persistChartVisibility();
   }
 
   private initCharts(summary: DashboardSummary): void {

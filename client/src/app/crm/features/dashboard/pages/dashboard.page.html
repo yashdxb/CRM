@@ -109,78 +109,68 @@
     </section>
 
     <!-- Charts Row -->
-    <section class="charts-row">
-      <article
-        class="glass-card chart-card chart-card--resizable card-resizable large"
-        *ngIf="showRevenueChart"
-        #revenueCard
-        data-card-id="revenue"
-        [ngStyle]="getCardDimensions('revenue')"
-        data-min-width="320"
-        data-min-height="320"
-      >
-        <div class="card-header">
-          <h3 class="card-title">
-            <i class="pi pi-chart-line"></i>
-            Revenue Trend
-          </h3>
-          <div class="card-actions">
-            <div class="chart-legend">
-              <span class="legend-item primary">
-                <span class="legend-dot"></span>
-                Revenue
-              </span>
-            </div>
-            <button
-              pButton
-              type="button"
-              class="btn-icon-sm card-control"
-              icon="pi pi-times"
-              aria-label="Hide revenue chart"
-              (click)="hideChart('revenue')"
-            ></button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="chart-container">
-            <p-chart type="line" [data]="revenueChartData" [options]="revenueChartOptions" height="280px"></p-chart>
-          </div>
-        </div>
-        <ng-container *ngTemplateOutlet="resizeHandles; context: { $implicit: revenueCard }"></ng-container>
-      </article>
-
-      <article
-        class="glass-card chart-card chart-card--resizable card-resizable"
-        *ngIf="showCustomerGrowthChart"
-        #growthCard
-        data-card-id="growth"
-        [ngStyle]="getCardDimensions('growth')"
-        data-min-width="280"
-        data-min-height="280"
-      >
-        <div class="card-header">
-          <h3 class="card-title">
-            <i class="pi pi-users"></i>
-            Customer Growth
-          </h3>
-          <div class="card-actions">
-            <button
-              pButton
-              type="button"
-              class="btn-icon-sm card-control"
-              icon="pi pi-times"
-              aria-label="Hide customer growth chart"
-              (click)="hideChart('growth')"
-            ></button>
-          </div>
-        </div>
-        <div class="card-body">
-          <div class="chart-container">
-            <p-chart type="bar" [data]="customerGrowthData" [options]="customerGrowthOptions" height="280px"></p-chart>
-          </div>
-        </div>
-        <ng-container *ngTemplateOutlet="resizeHandles; context: { $implicit: growthCard }"></ng-container>
-      </article>
+    <section
+      class="charts-row"
+      cdkDropList
+      [cdkDropListData]="chartOrder"
+      (cdkDropListDropped)="onChartDrop($event)"
+      cdkDropListOrientation="horizontal"
+    >
+      <ng-container *ngFor="let chartId of chartOrder">
+        <article
+          *ngIf="isChartVisible(chartId)"
+          class="glass-card chart-card chart-card--resizable card-resizable"
+          cdkDrag
+          #chartCard
+          [attr.data-card-id]="chartId"
+          [ngClass]="[getChartSizeClass(chartId), chartId === 'revenue' ? 'large' : '']"
+          [ngStyle]="getCardDimensions(chartId)"
+          [attr.data-min-width]="chartId === 'revenue' ? 320 : 280"
+          [attr.data-min-height]="chartId === 'revenue' ? 320 : 280"
+        >
+          <ng-container [ngSwitch]="chartId">
+            <ng-container *ngSwitchCase="'revenue'">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="pi pi-chart-line"></i>
+                  Revenue Trend
+                </h3>
+                <div class="card-actions">
+                  <div class="chart-legend">
+                    <span class="legend-item primary">
+                      <span class="legend-dot"></span>
+                      Revenue
+                    </span>
+                  </div>
+                  <ng-container *ngTemplateOutlet="chartControls; context: { $implicit: chartId }"></ng-container>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <p-chart type="line" [data]="revenueChartData" [options]="revenueChartOptions" height="280px"></p-chart>
+                </div>
+              </div>
+            </ng-container>
+            <ng-container *ngSwitchCase="'growth'">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="pi pi-users"></i>
+                  Customer Growth
+                </h3>
+                <div class="card-actions">
+                  <ng-container *ngTemplateOutlet="chartControls; context: { $implicit: chartId }"></ng-container>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <p-chart type="bar" [data]="customerGrowthData" [options]="customerGrowthOptions" height="280px"></p-chart>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+          <ng-container *ngTemplateOutlet="resizeHandles; context: { $implicit: chartCard }"></ng-container>
+        </article>
+      </ng-container>
     </section>
 
     <!-- Main Grid: Command Center Cards -->
@@ -570,6 +560,35 @@
   </div>
 </ng-template>
 
+<ng-template #chartControls let-chartId>
+  <div class="card-controls">
+    <button
+      pButton
+      type="button"
+      class="btn-icon-sm card-control"
+      icon="pi pi-window-maximize"
+      (click)="toggleCardSize(chartId)"
+      aria-label="Resize chart"
+    ></button>
+    <button
+      pButton
+      type="button"
+      class="btn-icon-sm card-control"
+      icon="pi pi-times"
+      (click)="hideChart(chartId)"
+      aria-label="Hide chart"
+    ></button>
+    <button
+      pButton
+      type="button"
+      class="btn-icon-sm card-control drag-handle"
+      icon="pi pi-bars"
+      cdkDragHandle
+      aria-label="Reorder chart"
+    ></button>
+  </div>
+</ng-template>
+
 <ng-template #resizeHandles let-target>
   <span class="resize-handle handle-n" (mousedown)="startResize($event, target, 'n')"></span>
   <span class="resize-handle handle-s" (mousedown)="startResize($event, target, 's')"></span>
@@ -588,7 +607,7 @@
   [dismissableMask]="true"
   [draggable]="false"
   [styleClass]="'layout-dialog'"
->
+  >
   <p>Drag cards to reorder your Command Center view.</p>
   <p-orderList
     [value]="layoutDraft"
@@ -603,6 +622,20 @@
       </div>
     </ng-template>
   </p-orderList>
+  <div class="layout-chart-section">
+    <h4>Chart cards</h4>
+    <div class="layout-chart-list">
+      <label class="layout-chart-item" *ngFor="let chart of chartCatalog">
+        <input
+          type="checkbox"
+          [ngModel]="isChartVisible(chart.id)"
+          (ngModelChange)="onChartVisibilityChange(chart.id, $event)"
+        />
+        <i class="pi" [class]="chart.icon"></i>
+        <span>{{ chart.label }}</span>
+      </label>
+    </div>
+  </div>
   <ng-template pTemplate="footer">
     <div class="layout-actions">
       <button pButton type="button" class="btn-glass" (click)="resetLayout()">Reset to default</button>
