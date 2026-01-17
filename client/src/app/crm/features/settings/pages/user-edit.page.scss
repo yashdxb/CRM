@@ -119,6 +119,47 @@
   align-items: center;
 }
 
+.timezone-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.timezone-flag {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #cbd5f5;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+}
+
+.tz-au { background: #2dd4bf; }
+.tz-nz { background: #0ea5e9; }
+.tz-us { background: #6366f1; }
+.tz-ca { background: #ef4444; }
+.tz-uk { background: #3b82f6; }
+.tz-eu { background: #f59e0b; }
+.tz-br { background: #16a34a; }
+.tz-ar { background: #38bdf8; }
+.tz-cl { background: #f97316; }
+.tz-co { background: #facc15; }
+.tz-pe { background: #fb7185; }
+.tz-mx { background: #22c55e; }
+.tz-za { background: #a855f7; }
+.tz-il { background: #60a5fa; }
+.tz-tr { background: #f43f5e; }
+.tz-ru { background: #94a3b8; }
+.tz-kr { background: #fb7185; }
+.tz-jp { background: #ef4444; }
+.tz-sg { background: #22c55e; }
+.tz-hk { background: #f97316; }
+.tz-cn { background: #facc15; }
+.tz-ph { background: #0ea5e9; }
+.tz-id { background: #f59e0b; }
+.tz-in { background: #a855f7; }
+.tz-ae { background: #14b8a6; }
+.tz-sa { background: #16a34a; }
+
 .tz-sa { background: #10b981; }
 .tz-in { background: #f97316; }
 .tz-cn { background: #ef4444; }
