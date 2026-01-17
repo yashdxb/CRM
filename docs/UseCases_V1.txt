@@ -1,0 +1,104 @@
+### Use Case 1: Inbound website lead
+**Scenario**: A visitor fills out your website form asking for a demo.
+**Example**:
+1) Leads -> Add Lead  
+   Name: Sarah Johnson  
+   Email: sarah@techstartup.io  
+   Company: TechStartup Inc  
+   Source: Website  
+   Status: New  
+2) Save.
+3) Add Activity -> Call  
+   Subject: Qualification call  
+   Due: Today  
+   Priority: High  
+**Outcome**: Lead is tracked and a follow-up is scheduled.
+
+### Use Case 2: Qualification call and status update
+**Scenario**: You call Sarah and confirm budget/timeline.
+**Example**:
+1) Lead -> Update Status: New -> Contacted  
+2) Log Activity -> Meeting  
+   Subject: Demo scheduled  
+   Due: Tomorrow  
+3) Update Status: Contacted -> Qualified  
+**Outcome**: Lead is ready for conversion.
+
+### Use Case 3: Convert a qualified lead to opportunity
+**Scenario**: Sarah is a real buyer.
+**Example**:
+1) Lead -> Convert  
+2) Create:
+   - Account: TechStartup Inc
+   - Contact: Sarah Johnson
+   - Opportunity: TechStartup - CRM Pilot  
+**Outcome**: Lead becomes an opportunity in the pipeline.
+
+### Use Case 4: Opportunity progression and proposal
+**Scenario**: Opportunity value is $25,000 and needs a proposal.
+**Example**:
+1) Opportunity -> Update  
+   Amount: $25,000  
+   Stage: Discovery -> Proposal  
+   Close Date: Feb 15, 2026  
+2) Add Activity -> Task  
+   Subject: Send proposal  
+   Due: Tomorrow  
+**Outcome**: Pipeline reflects the active proposal.
+
+### Use Case 5: Won opportunity and onboarding task
+**Scenario**: Sarah agrees to $23,000 and signs.
+**Example**:
+1) Opportunity -> Stage: Closed Won  
+   Amount: $23,000  
+   Win Reason: Price + timing  
+2) Account -> Update Lifecycle: Lead -> Customer  
+3) Add Activity -> Task  
+   Subject: Schedule onboarding call  
+   Due: Next week  
+**Outcome**: Customer is onboarded with a clear next step.
+
+### Use Case 6: Lost opportunity and learning
+**Scenario**: A prospect chooses another vendor.
+**Example**:
+1) Opportunity -> Stage: Closed Lost  
+2) Loss Reason: "Competitor lower price"  
+**Outcome**: Loss data is captured for future strategy.
+
+### Use Case 7: Upsell existing customer
+**Scenario**: 6 months later, customer wants an add-on.
+**Example**:
+1) Account -> New Opportunity  
+   Name: TechStartup - Add-on Module  
+   Amount: $8,000  
+   Stage: Discovery  
+   Close Date: Mar 2026  
+**Outcome**: Multiple opportunities tracked under one account.
+
+### Use Case 8: Support request as activity
+**Scenario**: Customer calls with a service issue.
+**Example**:
+1) Account -> Log Activity  
+   Type: Call  
+   Subject: Support issue  
+   Notes: "Cannot access reports"  
+2) Create follow-up Task  
+**Outcome**: Service request is tracked with visibility.
+
+### Use Case 9: Renewal tracking
+**Scenario**: Contract renews in 60 days.
+**Example**:
+1) Account -> New Opportunity  
+   Name: TechStartup - 2026 Renewal  
+   Close Date: Contract expiry  
+   Stage: Negotiation  
+**Outcome**: Renewal is treated as a formal opportunity.
+
+### Use Case 10: Multi-contact decision team
+**Scenario**: Enterprise opportunity needs multiple stakeholders.
+**Example**:
+1) Account -> Add Contacts  
+   Sarah (Champion), Mike (Budget), Lisa (Technical)  
+2) Opportunity -> Link key contacts  
+3) Activities -> Log meetings per contact  
+**Outcome**: You track influence and decision flow.
