@@ -198,22 +198,16 @@
                   </span>
                 </td>
                 <td>
-                  <div class="status-stack">
-                    <span class="status-badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-warning'">
-                      {{ user.isActive ? 'Active' : 'Inactive' }}
-                    </span>
-                    <span class="online-chip" [ngClass]="isOnline(user) ? 'online' : 'offline'">
-                      <span class="presence-icon"></span>
-                      {{ isOnline(user) ? 'Online' : 'Offline' }}
-                    </span>
-                  </div>
+                  <span class="status-badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-warning'">
+                    {{ user.isActive ? 'Active' : 'Inactive' }}
+                  </span>
                 </td>
                 <td class="text-right">
                   <div class="action-buttons">
-                    <button pButton type="button" class="action-btn" icon="pi pi-pencil" title="Edit user" aria-label="Edit user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); startEdit(user)"></button>
-                    <button pButton type="button" class="action-btn" [icon]="user.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'" [title]="user.isActive ? 'Deactivate' : 'Activate'" [attr.aria-label]="user.isActive ? 'Deactivate user' : 'Activate user'" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); toggleUserStatus(user)"></button>
-                    <button pButton type="button" class="action-btn" icon="pi pi-key" title="Reset password" aria-label="Reset password" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); resetPassword(user)"></button>
-                    <button pButton type="button" class="action-btn danger" icon="pi pi-trash" title="Remove user" aria-label="Remove user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); deleteUser(user)"></button>
+                    <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-pencil" title="Edit user" aria-label="Edit user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); startEdit(user)"></button>
+                    <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" [icon]="user.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'" [title]="user.isActive ? 'Deactivate' : 'Activate'" [attr.aria-label]="user.isActive ? 'Deactivate user' : 'Activate user'" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); toggleUserStatus(user)"></button>
+                    <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-key" title="Reset password" aria-label="Reset password" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); resetPassword(user)"></button>
+                    <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-trash" title="Remove user" aria-label="Remove user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); deleteUser(user)"></button>
                   </div>
                 </td>
               </tr>
