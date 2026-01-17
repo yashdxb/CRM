@@ -742,6 +742,21 @@
   overflow: visible;
 }
 
+.card-resizable .card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.card-resizable {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-resizable .chart-container {
+  height: 100%;
+}
+
 .resize-handle {
   position: absolute;
   opacity: 0;

@@ -147,7 +147,7 @@
               </div>
               <div class="card-body">
                 <div class="chart-container">
-                  <p-chart type="line" [data]="revenueChartData" [options]="revenueChartOptions" height="280px"></p-chart>
+                  <p-chart type="line" [data]="revenueChartData" [options]="revenueChartOptions" height="100%"></p-chart>
                 </div>
               </div>
             </ng-container>
@@ -163,7 +163,7 @@
               </div>
               <div class="card-body">
                 <div class="chart-container">
-                  <p-chart type="bar" [data]="customerGrowthData" [options]="customerGrowthOptions" height="280px"></p-chart>
+                  <p-chart type="bar" [data]="customerGrowthData" [options]="customerGrowthOptions" height="100%"></p-chart>
                 </div>
               </div>
             </ng-container>
@@ -206,7 +206,7 @@
           </div>
           <div class="card-body">
             <div class="chart-container medium">
-              <p-chart type="bar" [data]="pipelineChartData" [options]="pipelineChartOptions" height="220px"></p-chart>
+              <p-chart type="bar" [data]="pipelineChartData" [options]="pipelineChartOptions" height="100%"></p-chart>
             </div>
             <div class="pipeline-stats">
               <div class="pipeline-stat" *ngFor="let stage of pipelineValue()">

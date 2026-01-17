@@ -321,6 +321,7 @@ export class DashboardPage implements OnInit {
     const nextOrder = this.layoutOrder.filter(id => id !== cardId);
     this.layoutOrder = nextOrder;
     delete this.layoutSizes[cardId];
+    delete this.layoutDimensions[cardId];
     this.persistLayoutPreferences();
     this.dashboardData.saveLayout(this.buildLayoutPayload(nextOrder)).subscribe({
       next: response => {
