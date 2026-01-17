@@ -87,7 +87,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/presence"))
+                if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/api/hubs/presence"))
                 {
                     context.Token = accessToken;
                 }
@@ -151,7 +151,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<PresenceHub>("/hubs/presence").RequireCors(CorsPolicyName);
+app.MapHub<PresenceHub>("/api/hubs/presence").RequireCors(CorsPolicyName);
 app.MapGet("/health", () => Results.Ok(new
 {
     Status = "ok",
