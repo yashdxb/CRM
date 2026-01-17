@@ -56,9 +56,10 @@ var allowedOrigins = new[]
     "https://www.northedgesystem.com"
 };
 
+const string CorsPolicyName = "AppCors";
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    options.AddPolicy(CorsPolicyName, policy =>
         policy.WithOrigins(allowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -142,25 +143,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors();
-app.Use(async (context, next) =>
-{
-    var origin = context.Request.Headers.Origin.ToString();
-    if (!string.IsNullOrWhiteSpace(origin) &&
-        allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
-    {
-        context.Response.Headers.TryAdd("Access-Control-Allow-Credentials", "true");
-    }
-
-    await next();
-});
+app.UseCors(CorsPolicyName);
 app.UseHttpsRedirection();
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<PresenceHub>("/hubs/presence");
+app.MapHub<PresenceHub>("/hubs/presence").RequireCors(CorsPolicyName);
 app.MapGet("/health", () => Results.Ok(new
 {
     Status = "ok",
