@@ -26,17 +26,20 @@ public class UsersController : ControllerBase
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IEmailSender _emailSender;
     private readonly ILogger<UsersController> _logger;
+    private readonly CRM.Enterprise.Infrastructure.Presence.IPresenceTracker _presenceTracker;
 
     public UsersController(
         CrmDbContext dbContext,
         IPasswordHasher<User> passwordHasher,
         IEmailSender emailSender,
-        ILogger<UsersController> logger)
+        ILogger<UsersController> logger,
+        CRM.Enterprise.Infrastructure.Presence.IPresenceTracker presenceTracker)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _emailSender = emailSender;
         _logger = logger;
+        _presenceTracker = presenceTracker;
     }
 
     [HttpGet]
@@ -89,6 +92,7 @@ public class UsersController : ControllerBase
             })
             .ToListAsync(cancellationToken);
 
+        var onlineUsers = new HashSet<string>(_presenceTracker.GetOnlineUsers(), StringComparer.OrdinalIgnoreCase);
         var items = data.Select(u => new UserListItem(
             u.Id,
             u.FullName,
@@ -99,7 +103,8 @@ public class UsersController : ControllerBase
             u.LastLoginAtUtc,
             u.TimeZone,
             u.LastLoginLocation,
-            u.LastLoginIp)).ToList();
+            u.LastLoginIp,
+            onlineUsers.Contains(u.Id.ToString()))).ToList();
 
         return Ok(new UserSearchResponse(items, total));
     }
@@ -128,7 +133,6 @@ public class UsersController : ControllerBase
         }
 
         var exists = await _dbContext.Users
-            .IgnoreQueryFilters()
             .AnyAsync(u =>
                 !u.IsDeleted &&
                 (u.EmailNormalized == normalizedEmail ||
@@ -190,7 +194,6 @@ public class UsersController : ControllerBase
         }
 
         var exists = await _dbContext.Users
-            .IgnoreQueryFilters()
             .AnyAsync(u =>
                 u.Id != user.Id &&
                 !u.IsDeleted &&

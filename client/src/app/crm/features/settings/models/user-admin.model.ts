@@ -23,6 +23,7 @@ export interface UserListItem {
   lastLoginLocation?: string | null;
   lastLoginIp?: string | null;
   timeZone?: string | null;
+  isOnline?: boolean | null;
 }
 
 export interface UserSearchResponse {

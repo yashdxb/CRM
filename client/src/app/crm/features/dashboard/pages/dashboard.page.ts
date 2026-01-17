@@ -216,7 +216,7 @@ export class DashboardPage implements OnInit {
 
     this.dashboardData.getLayout().subscribe(({ cardOrder, sizes, dimensions, hiddenCards }) => {
       const defaultOrder = this.dashboardData.getDefaultLayout();
-      const normalized = this.normalizeLayout(cardOrder, defaultOrder);
+      const normalized = this.normalizeLayoutWithHidden(cardOrder, hiddenCards, defaultOrder);
       const serverHasState = (hiddenCards?.length ?? 0) > 0
         || Object.keys(sizes ?? {}).length > 0
         || Object.keys(dimensions ?? {}).length > 0
@@ -251,7 +251,7 @@ export class DashboardPage implements OnInit {
     this.persistLayoutPreferences();
     this.dashboardData.saveLayout(this.buildLayoutPayload(requested)).subscribe({
       next: response => {
-        const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
+        const normalized = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutOrder = this.shouldHonorServerLayout(normalized, requested, defaultOrder)
           ? normalized
           : requested;
@@ -275,7 +275,7 @@ export class DashboardPage implements OnInit {
     this.dashboardData.saveLayout(this.buildLayoutPayload(order)).subscribe({
       next: response => {
         const defaultOrder = this.dashboardData.getDefaultLayout();
-        this.layoutOrder = this.normalizeLayout(response.cardOrder, defaultOrder);
+        this.layoutOrder = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutSizes = response.sizes ?? {};
         this.layoutDimensions = response.dimensions ?? {};
         this.ensureSizeDefaults();
@@ -301,7 +301,7 @@ export class DashboardPage implements OnInit {
     this.dashboardData.saveLayout(this.buildLayoutPayload(nextOrder)).subscribe({
       next: response => {
         const defaultOrder = this.dashboardData.getDefaultLayout();
-        const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
+        const normalized = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
@@ -326,7 +326,7 @@ export class DashboardPage implements OnInit {
     this.dashboardData.saveLayout(this.buildLayoutPayload(nextOrder)).subscribe({
       next: response => {
         const defaultOrder = this.dashboardData.getDefaultLayout();
-        const normalized = this.normalizeLayout(response.cardOrder, defaultOrder);
+        const normalized = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
@@ -428,7 +428,11 @@ export class DashboardPage implements OnInit {
       this.persistLayoutPreferences();
       this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe({
         next: response => {
-          this.layoutOrder = this.normalizeLayout(response.cardOrder, this.layoutOrder);
+          this.layoutOrder = this.normalizeLayoutWithHidden(
+            response.cardOrder,
+            response.hiddenCards,
+            this.layoutOrder
+          );
           this.layoutSizes = response.sizes ?? this.layoutSizes;
           this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
           this.persistLayoutPreferences();
@@ -493,7 +497,11 @@ export class DashboardPage implements OnInit {
     this.persistLayoutPreferences();
     this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe({
       next: response => {
-        this.layoutOrder = this.normalizeLayout(response.cardOrder, this.layoutOrder);
+        this.layoutOrder = this.normalizeLayoutWithHidden(
+          response.cardOrder,
+          response.hiddenCards,
+          this.layoutOrder
+        );
         this.layoutSizes = response.sizes ?? this.layoutSizes;
         this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
         this.persistLayoutPreferences();
@@ -975,6 +983,17 @@ export class DashboardPage implements OnInit {
       return filtered;
     }
     return fallback.filter(id => allowed.has(id));
+  }
+
+  private normalizeLayoutWithHidden(
+    order: string[] | undefined,
+    hiddenCards: string[] | undefined,
+    fallback: string[]
+  ): string[] {
+    const hidden = new Set(hiddenCards ?? []);
+    const visibleFallback = fallback.filter(id => !hidden.has(id));
+    const visibleOrder = (order ?? []).filter(id => !hidden.has(id));
+    return this.normalizeLayout(visibleOrder, visibleFallback);
   }
 
   private getOrderedCards(order: string[]) {

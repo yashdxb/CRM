@@ -13,4 +13,5 @@ public record UserListItem(
     DateTime? LastLoginAtUtc,
     string? TimeZone,
     string? LastLoginLocation,
-    string? LastLoginIp);
+    string? LastLoginIp,
+    bool IsOnline);

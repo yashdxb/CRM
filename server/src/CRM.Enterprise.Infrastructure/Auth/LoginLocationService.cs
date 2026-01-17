@@ -73,12 +73,23 @@ public sealed class LoginLocationService
             return null;
         }
 
-        var forwardedFor = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(forwardedFor))
+        var headers = context.Request.Headers;
+        var forwardedFor = headers["X-Forwarded-For"].FirstOrDefault();
+        var forwarded = headers["Forwarded"].FirstOrDefault();
+        var candidates = new[]
         {
-            var candidate = forwardedFor.Split(',')
-                .Select(value => value.Trim())
-                .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+            forwardedFor,
+            headers["X-Azure-ClientIP"].FirstOrDefault(),
+            headers["X-Client-IP"].FirstOrDefault(),
+            headers["True-Client-IP"].FirstOrDefault(),
+            headers["CF-Connecting-IP"].FirstOrDefault(),
+            headers["X-Original-For"].FirstOrDefault(),
+            headers["X-Real-IP"].FirstOrDefault(),
+            ParseForwardedFor(forwarded)
+        };
+
+        foreach (var candidate in candidates)
+        {
             var normalized = NormalizeForwardedIp(candidate);
             if (!string.IsNullOrWhiteSpace(normalized))
             {
@@ -86,13 +97,18 @@ public sealed class LoginLocationService
             }
         }
 
-        var realIp = context.Request.Headers["X-Real-IP"].FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(realIp))
+        var remoteIp = context.Connection.RemoteIpAddress;
+        if (remoteIp is null)
         {
-            return NormalizeForwardedIp(realIp);
+            return null;
         }
 
-        return context.Connection.RemoteIpAddress?.ToString();
+        if (remoteIp.IsIPv4MappedToIPv6)
+        {
+            remoteIp = remoteIp.MapToIPv4();
+        }
+
+        return remoteIp.ToString();
     }
 
     private static string? NormalizeForwardedIp(string? value)
@@ -103,12 +119,58 @@ public sealed class LoginLocationService
         }
 
         var candidate = value.Trim();
-        if (candidate.Contains(':') && candidate.Contains('.'))
+        if (candidate.Contains(','))
+        {
+            candidate = candidate.Split(',')
+                .Select(item => item.Trim())
+                .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item)) ?? candidate;
+        }
+
+        if (candidate.StartsWith('[') && candidate.Contains(']'))
+        {
+            candidate = candidate.TrimStart('[');
+            candidate = candidate[..candidate.IndexOf(']')];
+        }
+        else if (candidate.Contains(':') && candidate.Contains('.'))
         {
             candidate = candidate.Split(':')[0];
         }
 
+        if (IPAddress.TryParse(candidate, out var address) && address.IsIPv4MappedToIPv6)
+        {
+            candidate = address.MapToIPv4().ToString();
+        }
+
         return candidate;
+    }
+
+    private static string? ParseForwardedFor(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var segments = value.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        foreach (var segment in segments)
+        {
+            var part = segment.Trim();
+            var forIndex = part.IndexOf("for=", StringComparison.OrdinalIgnoreCase);
+            if (forIndex < 0)
+            {
+                continue;
+            }
+
+            var forValue = part[(forIndex + 4)..].Trim();
+            if (forValue.StartsWith('"') && forValue.EndsWith('"'))
+            {
+                forValue = forValue.Trim('"');
+            }
+
+            return forValue;
+        }
+
+        return null;
     }
 
     private static bool IsPrivateIp(string ip)

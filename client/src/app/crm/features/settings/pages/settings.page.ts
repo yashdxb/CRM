@@ -14,6 +14,7 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { AppToastService } from '../../../../core/app-toast.service';
+import { PresenceService } from '../../../../core/realtime/presence.service';
 
 @Component({
   selector: 'app-settings-page',
@@ -38,6 +39,7 @@ export class SettingsPage {
   private readonly dataService = inject(UserAdminDataService);
   private readonly router = inject(Router);
   private readonly toastService = inject(AppToastService);
+  private readonly presenceService = inject(PresenceService);
 
   protected readonly users = signal<UserListItem[]>([]);
   protected readonly totalUsers = signal(0);
@@ -101,7 +103,17 @@ export class SettingsPage {
   ]);
   private readonly formatters = new Map<string, Intl.DateTimeFormat>();
   private readonly userLocale = navigator.language || 'en-US';
-  private readonly currentUserEmail = readTokenContext()?.payload?.['email'] as string | undefined;
+  protected readonly onlineUsers = signal<Set<string>>(new Set());
+  private readonly avatarTones = [
+    'avatar-tone-1',
+    'avatar-tone-2',
+    'avatar-tone-3',
+    'avatar-tone-4',
+    'avatar-tone-5',
+    'avatar-tone-6',
+    'avatar-tone-7',
+    'avatar-tone-8'
+  ];
 
   private searchDebounceId: number | null = null;
 
@@ -112,6 +124,10 @@ export class SettingsPage {
     }
     this.loadRoles();
     this.loadUsers();
+    this.presenceService.connect();
+    this.presenceService.onlineUsers$.subscribe((users) => {
+      this.onlineUsers.set(users);
+    });
   }
 
   protected loadUsers() {
@@ -124,6 +140,13 @@ export class SettingsPage {
         next: (response) => {
           this.users.set(response.items);
           this.totalUsers.set(response.total);
+          const merged = new Set(this.onlineUsers());
+          response.items
+            .filter((user) => user.isOnline)
+            .forEach((user) => merged.add(user.id));
+          if (merged.size) {
+            this.onlineUsers.set(merged);
+          }
           this.loadingUsers.set(false);
         },
         error: () => {
@@ -232,8 +255,26 @@ export class SettingsPage {
   }
 
   protected isOnline(user: UserListItem): boolean {
-    if (!this.currentUserEmail) return false;
-    return user.email.trim().toLowerCase() === this.currentUserEmail.trim().toLowerCase();
+    return this.onlineUsers().has(user.id);
+  }
+
+  protected getAvatarTone(user: UserListItem): string {
+    const seed = (user.email || user.fullName || '').trim().toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+    }
+    const index = Math.abs(hash) % this.avatarTones.length;
+    return this.avatarTones[index];
+  }
+
+  protected getAvatarClasses(user: UserListItem): Record<string, boolean> {
+    return {
+      'avatar-active': user.isActive,
+      'avatar-inactive': !user.isActive,
+      'avatar-online': this.isOnline(user),
+      [this.getAvatarTone(user)]: true
+    };
   }
 
   protected formatLoginTime(user: UserListItem): string {

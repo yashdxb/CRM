@@ -156,11 +156,7 @@
                   <div class="user-cell">
                     <div
                       class="user-avatar"
-                      [ngClass]="{
-                        'avatar-active': user.isActive,
-                        'avatar-inactive': !user.isActive,
-                        'avatar-online': isOnline(user)
-                      }"
+                      [ngClass]="getAvatarClasses(user)"
                     >
                       {{ user.fullName.slice(0, 1) }}
                       <span class="presence-dot" [ngClass]="isOnline(user) ? 'online' : 'offline'"></span>

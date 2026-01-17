@@ -453,13 +453,15 @@
   color: white;
   position: relative;
   overflow: hidden;
+  background: var(--avatar-gradient, $primary-gradient);
 
   &.avatar-active {
-    background: $primary-gradient;
+    background: var(--avatar-gradient, $primary-gradient);
   }
 
   &.avatar-inactive {
     background: linear-gradient(135deg, #94a3b8, #64748b);
+    filter: grayscale(0.2);
   }
 
   &.avatar-online::after {
@@ -472,6 +474,15 @@
     animation: online-pulse 2s ease-in-out infinite;
   }
 }
+
+.user-avatar.avatar-tone-1 { --avatar-gradient: linear-gradient(135deg, #6366f1, #38bdf8); }
+.user-avatar.avatar-tone-2 { --avatar-gradient: linear-gradient(135deg, #f97316, #f43f5e); }
+.user-avatar.avatar-tone-3 { --avatar-gradient: linear-gradient(135deg, #22c55e, #16a34a); }
+.user-avatar.avatar-tone-4 { --avatar-gradient: linear-gradient(135deg, #a855f7, #6366f1); }
+.user-avatar.avatar-tone-5 { --avatar-gradient: linear-gradient(135deg, #06b6d4, #0ea5e9); }
+.user-avatar.avatar-tone-6 { --avatar-gradient: linear-gradient(135deg, #eab308, #f59e0b); }
+.user-avatar.avatar-tone-7 { --avatar-gradient: linear-gradient(135deg, #ec4899, #f472b6); }
+.user-avatar.avatar-tone-8 { --avatar-gradient: linear-gradient(135deg, #14b8a6, #22d3ee); }
 
 .user-info {
   display: flex;

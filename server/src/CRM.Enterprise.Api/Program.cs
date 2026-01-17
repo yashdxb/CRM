@@ -4,6 +4,7 @@ using CRM.Enterprise.Infrastructure;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Auth;
 using CRM.Enterprise.Api.Middleware;
+using CRM.Enterprise.Api.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -32,6 +33,7 @@ builder.Services.AddControllers()
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -121,6 +123,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<PresenceHub>("/hubs/presence");
 app.MapGet("/health", () => Results.Ok(new
 {
     Status = "ok",

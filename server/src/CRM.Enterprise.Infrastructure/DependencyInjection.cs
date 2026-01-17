@@ -1,5 +1,6 @@
 using System;
 using CRM.Enterprise.Infrastructure.Auth;
+using CRM.Enterprise.Infrastructure.Presence;
 using CRM.Enterprise.Infrastructure.Audit;
 using CRM.Enterprise.Infrastructure.Dashboard;
 using CRM.Enterprise.Infrastructure.Tenants;
@@ -48,6 +49,7 @@ public static class DependencyInjection
         services.Configure<GraphMailOptions>(configuration.GetSection(GraphMailOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
         services.AddHttpContextAccessor();
+        services.AddSingleton<IPresenceTracker, PresenceTracker>();
         services.AddHttpClient<LoginLocationService>();
         services.AddScoped<LoginLocationService>();
         services.AddHttpClient<GraphEmailSender>();
