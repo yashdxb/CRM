@@ -143,8 +143,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors(CorsPolicyName);
 app.UseHttpsRedirection();
+app.UseRouting();
+app.UseCors(CorsPolicyName);
 app.UseMiddleware<TenantResolutionMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
