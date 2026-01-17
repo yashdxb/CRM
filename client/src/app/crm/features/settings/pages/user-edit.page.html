@@ -56,29 +56,12 @@
               [options]="timezoneOptions"
               optionLabel="label"
               optionValue="value"
-              optionGroupLabel="label"
-              optionGroupChildren="items"
               appendTo="body"
               styleClass="w-full"
+              [filter]="true"
+              filterBy="label"
+              filterPlaceholder="Search time zones"
             >
-              <ng-template pTemplate="group" let-group>
-                <div class="timezone-group">
-                  <span class="timezone-group-label">{{ group.label }}</span>
-                  <span class="timezone-group-count">{{ group.items?.length || 0 }}</span>
-                </div>
-              </ng-template>
-              <ng-template pTemplate="item" let-option>
-                <div class="timezone-option">
-                  <span class="timezone-flag" [ngClass]="option.iconClass"></span>
-                  <span>{{ option.label }}</span>
-                </div>
-              </ng-template>
-              <ng-template pTemplate="selectedItem" let-option>
-                <div class="timezone-option">
-                  <span class="timezone-flag" [ngClass]="option?.iconClass"></span>
-                  <span>{{ option?.label }}</span>
-                </div>
-              </ng-template>
             </p-select>
           </div>
           <div class="field">

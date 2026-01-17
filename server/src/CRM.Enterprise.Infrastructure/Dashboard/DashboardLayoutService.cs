@@ -43,7 +43,14 @@ public class DashboardLayoutService : IDashboardLayoutService
             {
                 return NormalizePayload(document);
             }
+        }
+        catch (JsonException)
+        {
+            // Fall through to legacy array handling.
+        }
 
+        try
+        {
             var stored = JsonSerializer.Deserialize<List<string>>(user.CommandCenterLayoutJson);
             return new DashboardLayoutState(
                 NormalizeOrder(stored, Array.Empty<string>()),

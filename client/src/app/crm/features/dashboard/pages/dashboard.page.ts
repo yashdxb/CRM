@@ -221,7 +221,8 @@ export class DashboardPage implements OnInit {
         || Object.keys(sizes ?? {}).length > 0
         || Object.keys(dimensions ?? {}).length > 0
         || !this.areArraysEqual(normalized, defaultOrder);
-      if (this.hasLocalLayoutPreference && !serverHasState && this.areArraysEqual(normalized, defaultOrder)) {
+      if (this.hasLocalLayoutPreference && !serverHasState) {
+        this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe();
         return;
       }
       this.layoutOrder = normalized;
