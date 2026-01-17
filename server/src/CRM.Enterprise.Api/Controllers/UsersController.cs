@@ -82,6 +82,9 @@ public class UsersController : ControllerBase
                 u.IsActive,
                 u.CreatedAtUtc,
                 u.LastLoginAtUtc,
+                u.LastLoginLocation,
+                u.LastLoginIp,
+                u.TimeZone,
                 Roles = u.Roles.Where(ur => ur.Role != null).Select(ur => ur.Role!.Name)
             })
             .ToListAsync(cancellationToken);
@@ -93,7 +96,10 @@ public class UsersController : ControllerBase
             u.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).ToList(),
             u.IsActive,
             u.CreatedAtUtc,
-            u.LastLoginAtUtc)).ToList();
+            u.LastLoginAtUtc,
+            u.TimeZone,
+            u.LastLoginLocation,
+            u.LastLoginIp)).ToList();
 
         return Ok(new UserSearchResponse(items, total));
     }

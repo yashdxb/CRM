@@ -451,6 +451,8 @@
   font-weight: 700;
   font-size: $font-size-lg;
   color: white;
+  position: relative;
+  overflow: hidden;
 
   &.avatar-active {
     background: $primary-gradient;
@@ -458,6 +460,16 @@
 
   &.avatar-inactive {
     background: linear-gradient(135deg, #94a3b8, #64748b);
+  }
+
+  &.avatar-online::after {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: inherit;
+    border: 2px solid rgba($success, 0.35);
+    opacity: 0.8;
+    animation: online-pulse 2s ease-in-out infinite;
   }
 }
 
@@ -474,6 +486,51 @@
 .user-email {
   font-size: $font-size-xs;
   color: $text-muted;
+}
+
+.user-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  color: $text-muted;
+  margin-top: 2px;
+
+  &.is-online {
+    color: $success;
+  }
+}
+
+.presence-icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $gray-400;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+}
+
+.user-presence.is-online .presence-icon {
+  background: $success;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08), 0 0 10px rgba($success, 0.6);
+  animation: status-glow 1.6s ease-in-out infinite;
+}
+
+.presence-dot {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(white, 0.9);
+  background: #94a3b8;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+
+  &.online {
+    background: $success;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08), 0 0 10px rgba($success, 0.6);
+    animation: status-glow 1.6s ease-in-out infinite;
+  }
 }
 
 // Role Badges
@@ -498,12 +555,52 @@
 .login-date {
   font-size: $font-size-sm;
   color: $text-secondary;
+  display: block;
+}
+
+.login-duration {
+  font-size: $font-size-xs;
+  color: $text-muted;
+  display: block;
+  margin-top: 2px;
+}
+
+.login-location {
+  font-size: $font-size-xs;
+  color: $text-secondary;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+
+  i {
+    font-size: 0.75rem;
+    color: rgba($purple, 0.8);
+  }
+
+  &.location-muted {
+    color: $text-muted;
+
+    i {
+      color: rgba($text-muted, 0.8);
+    }
+  }
 }
 
 .login-never {
   font-size: $font-size-sm;
   color: $text-muted;
   font-style: italic;
+}
+
+@keyframes online-pulse {
+  0%, 100% { transform: scale(0.95); opacity: 0.6; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+
+@keyframes status-glow {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
 }
 
 // Status Badge
@@ -522,6 +619,25 @@
   &.badge-warning {
     background: rgba($orange, 0.12);
     color: $orange;
+  }
+}
+
+.status-stack {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.online-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  color: $text-muted;
+
+  &.online {
+    color: $success;
   }
 }
 

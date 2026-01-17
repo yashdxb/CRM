@@ -47,6 +47,9 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<GraphMailOptions>(configuration.GetSection(GraphMailOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
+        services.AddHttpContextAccessor();
+        services.AddHttpClient<LoginLocationService>();
+        services.AddScoped<LoginLocationService>();
         services.AddHttpClient<GraphEmailSender>();
         services.AddScoped<IEmailSender, GraphEmailSender>();
         services.Configure<OpenAiOptions>(configuration.GetSection(OpenAiOptions.SectionName));

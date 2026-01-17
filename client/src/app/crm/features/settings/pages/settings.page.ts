@@ -1,4 +1,4 @@
-import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -19,7 +19,6 @@ import { AppToastService } from '../../../../core/app-toast.service';
   selector: 'app-settings-page',
   standalone: true,
   imports: [
-    DatePipe,
     RouterLink,
     SelectModule,
     ButtonModule,
@@ -94,6 +93,15 @@ export class SettingsPage {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
   });
+
+  private readonly timeZoneByEmail = new Map<string, string>([
+    ['jay.dissa@gmail.com', 'America/Toronto'],
+    ['yasser.ahamed@live.com', 'America/Toronto'],
+    ['davidjreggio@gmail.com', 'America/Sao_Paulo']
+  ]);
+  private readonly formatters = new Map<string, Intl.DateTimeFormat>();
+  private readonly userLocale = navigator.language || 'en-US';
+  private readonly currentUserEmail = readTokenContext()?.payload?.['email'] as string | undefined;
 
   private searchDebounceId: number | null = null;
 
@@ -223,6 +231,44 @@ export class SettingsPage {
     this.toastService.clear();
   }
 
+  protected isOnline(user: UserListItem): boolean {
+    if (!this.currentUserEmail) return false;
+    return user.email.trim().toLowerCase() === this.currentUserEmail.trim().toLowerCase();
+  }
+
+  protected formatLoginTime(user: UserListItem): string {
+    if (!user.lastLoginAtUtc) {
+      return '';
+    }
+    const zone = this.getTimeZoneForUser(user);
+    const formatter = this.getFormatter(zone);
+    return formatter.format(new Date(user.lastLoginAtUtc));
+  }
+
+  protected formatLoginDuration(user: UserListItem, isOnline: boolean): string {
+    if (!user.lastLoginAtUtc) {
+      return '';
+    }
+    const deltaMs = Date.now() - new Date(user.lastLoginAtUtc).getTime();
+    if (!Number.isFinite(deltaMs) || deltaMs < 0) {
+      return '';
+    }
+    const minutes = Math.floor(deltaMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    let value = '';
+    if (days > 0) {
+      value = `${days}d ${hours % 24}h`;
+    } else if (hours > 0) {
+      value = `${hours}h ${minutes % 60}m`;
+    } else {
+      value = `${Math.max(minutes, 1)}m`;
+    }
+
+    return isOnline ? `Online for ${value}` : `Last seen ${value} ago`;
+  }
+
   private generatePasswordValue() {
     const alphabet = 'abcdefghijklmnopqrstuvwxyz';
     const upper = alphabet.toUpperCase();
@@ -239,5 +285,33 @@ export class SettingsPage {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
+  }
+
+  protected getTimeZoneForUser(user: UserListItem): string {
+    const userZone = user.timeZone?.trim();
+    if (userZone) {
+      return userZone;
+    }
+    const key = user.email.trim().toLowerCase();
+    return this.timeZoneByEmail.get(key) ?? 'UTC';
+  }
+
+  private getFormatter(timeZone: string): Intl.DateTimeFormat {
+    const key = `${this.userLocale}|${timeZone}`;
+    if (!this.formatters.has(key)) {
+      this.formatters.set(
+        key,
+        new Intl.DateTimeFormat(this.userLocale, {
+          timeZone,
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+      );
+    }
+    return this.formatters.get(key)!;
   }
 }

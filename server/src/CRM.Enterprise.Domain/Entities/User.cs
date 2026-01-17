@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using CRM.Enterprise.Domain.Common;
 
 namespace CRM.Enterprise.Domain.Entities;
@@ -14,6 +15,10 @@ public class User : AuditableEntity
     public string? CommandCenterLayoutJson { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAtUtc { get; set; }
+    [MaxLength(64)]
+    public string? LastLoginIp { get; set; }
+    [MaxLength(256)]
+    public string? LastLoginLocation { get; set; }
 
     public ICollection<UserRole> Roles { get; set; } = new List<UserRole>();
 }

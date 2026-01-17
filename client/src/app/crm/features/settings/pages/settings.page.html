@@ -154,12 +154,24 @@
               <tr class="user-row" (click)="startEdit(user)">
                 <td>
                   <div class="user-cell">
-                    <div class="user-avatar" [ngClass]="user.isActive ? 'avatar-active' : 'avatar-inactive'">
+                    <div
+                      class="user-avatar"
+                      [ngClass]="{
+                        'avatar-active': user.isActive,
+                        'avatar-inactive': !user.isActive,
+                        'avatar-online': isOnline(user)
+                      }"
+                    >
                       {{ user.fullName.slice(0, 1) }}
+                      <span class="presence-dot" [ngClass]="isOnline(user) ? 'online' : 'offline'"></span>
                     </div>
                     <div class="user-info">
                       <span class="user-name">{{ user.fullName }}</span>
                       <span class="user-email">{{ user.email }}</span>
+                      <span class="user-presence" [ngClass]="isOnline(user) ? 'is-online' : 'is-offline'">
+                        <span class="presence-icon"></span>
+                        {{ isOnline(user) ? 'Online now' : 'Offline' }}
+                      </span>
                     </div>
                   </div>
                 </td>
@@ -169,17 +181,32 @@
                   </div>
                 </td>
                 <td>
-                  <span *ngIf="user.lastLoginAtUtc; else neverLogged" class="login-date">
-                    {{ user.lastLoginAtUtc | date: 'MMM d, y • h:mm a' }}
-                  </span>
+                  <ng-container *ngIf="user.lastLoginAtUtc; else neverLogged">
+                    <span class="login-date">
+                      {{ formatLoginTime(user) }}
+                    </span>
+                    <span class="login-duration">
+                      {{ formatLoginDuration(user, isOnline(user)) }}
+                    </span>
+                  </ng-container>
                   <ng-template #neverLogged>
                     <span class="login-never">Never logged in</span>
                   </ng-template>
+                  <span class="login-location" [ngClass]="user.lastLoginLocation ? '' : 'location-muted'">
+                    <i class="pi pi-map-marker"></i>
+                    {{ user.lastLoginLocation || (user.lastLoginIp ? ('IP ' + user.lastLoginIp) : 'Location unavailable') }}
+                  </span>
                 </td>
                 <td>
-                  <span class="status-badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-warning'">
-                    {{ user.isActive ? 'Active' : 'Inactive' }}
-                  </span>
+                  <div class="status-stack">
+                    <span class="status-badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-warning'">
+                      {{ user.isActive ? 'Active' : 'Inactive' }}
+                    </span>
+                    <span class="online-chip" [ngClass]="isOnline(user) ? 'online' : 'offline'">
+                      <span class="presence-icon"></span>
+                      {{ isOnline(user) ? 'Online' : 'Offline' }}
+                    </span>
+                  </div>
                 </td>
                 <td class="text-right">
                   <div class="action-buttons">

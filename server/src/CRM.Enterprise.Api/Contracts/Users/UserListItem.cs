@@ -10,4 +10,7 @@ public record UserListItem(
     IReadOnlyList<string> Roles,
     bool IsActive,
     DateTime CreatedAtUtc,
-    DateTime? LastLoginAtUtc);
+    DateTime? LastLoginAtUtc,
+    string? TimeZone,
+    string? LastLoginLocation,
+    string? LastLoginIp);

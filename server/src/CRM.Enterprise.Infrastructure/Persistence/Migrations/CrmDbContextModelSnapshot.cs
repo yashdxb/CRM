@@ -3684,6 +3684,14 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("LastLoginAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("LastLoginIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("LastLoginLocation")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("Locale")
                         .HasColumnType("nvarchar(max)");
 

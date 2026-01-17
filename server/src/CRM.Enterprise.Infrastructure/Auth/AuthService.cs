@@ -19,17 +19,20 @@ public class AuthService : IAuthService
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly JwtOptions _options;
     private readonly ITenantProvider _tenantProvider;
+    private readonly LoginLocationService _loginLocationService;
 
     public AuthService(
         CrmDbContext dbContext,
         IPasswordHasher<User> passwordHasher,
         IOptions<JwtOptions> options,
-        ITenantProvider tenantProvider)
+        ITenantProvider tenantProvider,
+        LoginLocationService loginLocationService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _options = options.Value;
         _tenantProvider = tenantProvider;
+        _loginLocationService = loginLocationService;
     }
 
     public async Task<AuthResult?> SignInAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -132,7 +135,11 @@ public class AuthService : IAuthService
             .Where(t => t.Id == user.TenantId)
             .Select(t => t.Key)
             .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
+
+        var loginInfo = await _loginLocationService.ResolveAsync(cancellationToken);
         user.LastLoginAtUtc = DateTime.UtcNow;
+        user.LastLoginIp = loginInfo.Ip;
+        user.LastLoginLocation = loginInfo.Location;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new AuthResult(token, expiresAtUtc, user.Email, user.FullName, roleNames, permissionKeys, tenantKey);

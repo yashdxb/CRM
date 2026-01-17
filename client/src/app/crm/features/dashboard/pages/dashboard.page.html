@@ -22,19 +22,19 @@
         <div class="hero-stats">
           <div class="hero-stat-pill">
             <i class="pi pi-building"></i>
-            <span><strong>{{ summary()?.totalCustomers || 0 }}</strong> accounts</span>
+            <span><strong>{{ summary().totalCustomers || 0 }}</strong> accounts</span>
           </div>
           <div class="hero-stat-pill">
             <i class="pi pi-bolt"></i>
-            <span><strong>{{ summary()?.tasksDueToday || 0 }}</strong> tasks today</span>
+            <span><strong>{{ summary().tasksDueToday || 0 }}</strong> tasks today</span>
           </div>
-          <div class="hero-stat-pill success" *ngIf="summary()?.overdueActivities === 0">
+          <div class="hero-stat-pill success" *ngIf="summary().overdueActivities === 0">
             <i class="pi pi-check-circle"></i>
             <span>All caught up!</span>
           </div>
-          <div class="hero-stat-pill danger" *ngIf="(summary()?.overdueActivities || 0) > 0">
+          <div class="hero-stat-pill danger" *ngIf="(summary().overdueActivities || 0) > 0">
             <i class="pi pi-exclamation-triangle"></i>
-            <span><strong>{{ summary()?.overdueActivities }}</strong> overdue</span>
+            <span><strong>{{ summary().overdueActivities }}</strong> overdue</span>
           </div>
         </div>
       </div>
@@ -310,11 +310,11 @@
             </div>
             <div class="conversion-summary">
               <div class="summary-stat">
-                <span class="stat-value success">{{ summary()?.winRate }}%</span>
+                      <span class="stat-value success">{{ summary().winRate }}%</span>
                 <span class="stat-label">Win Rate</span>
               </div>
               <div class="summary-stat">
-                <span class="stat-value">{{ summary()?.avgSalesCycle }}d</span>
+                    <span class="stat-value">{{ summary().avgSalesCycle }}d</span>
                 <span class="stat-label">Avg Cycle</span>
               </div>
             </div>
@@ -481,14 +481,14 @@
               <div class="health-metric">
                 <i class="pi pi-heart-fill"></i>
                 <div class="metric-content">
-                  <span class="metric-value">{{ summary()?.customerLifetimeValue | currency:'USD':'symbol':'1.0-0' }}</span>
+                    <span class="metric-value">{{ summary().customerLifetimeValue | currency:'USD':'symbol':'1.0-0' }}</span>
                   <span class="metric-label">Avg CLV</span>
                 </div>
               </div>
               <div class="health-metric">
                 <i class="pi pi-sync"></i>
                 <div class="metric-content">
-                  <span class="metric-value">{{ summary()?.churnRate }}%</span>
+                    <span class="metric-value">{{ summary().churnRate }}%</span>
                   <span class="metric-label">Churn Rate</span>
                 </div>
               </div>

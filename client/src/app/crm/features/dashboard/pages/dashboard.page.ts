@@ -81,7 +81,7 @@ export class DashboardPage implements OnInit {
   private readonly summarySignal = toSignal(this.dashboardData.getSummary(), { initialValue: this.emptySummary });
 
   protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
-  
+
   protected readonly greeting = this.getGreeting();
   
   // Chart configurations
@@ -197,15 +197,16 @@ export class DashboardPage implements OnInit {
     { id: 'growth', label: 'Customer Growth', icon: 'pi pi-users' }
   ];
 
-  ngOnInit(): void {
+  constructor() {
     if (isPlatformBrowser(this.platformId)) {
       effect(() => {
         const summary = this.summary();
-        if (!summary) return;
         this.initCharts(summary);
       });
     }
+  }
 
+  ngOnInit(): void {
     const { order, sizes, dimensions, hasLocalPreference } = this.loadLayoutPreferences();
     this.layoutOrder = order;
     this.layoutSizes = sizes;
