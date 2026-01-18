@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CRM.Enterprise.Infrastructure.Presence;
 
@@ -56,6 +57,6 @@ public sealed class PresenceTracker : IPresenceTracker
 
     public IReadOnlyCollection<string> GetOnlineUsers()
     {
-        return _connections.Keys;
+        return _connections.Keys.ToArray();
     }
 }
