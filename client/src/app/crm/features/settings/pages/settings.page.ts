@@ -284,14 +284,14 @@ export class SettingsPage {
       return '';
     }
     const formatter = this.getFormatter(this.currentUserTimeZone());
-    return formatter.format(new Date(user.lastLoginAtUtc));
+    return formatter.format(this.parseUtcDate(user.lastLoginAtUtc));
   }
 
   protected formatLoginDuration(user: UserListItem, isOnline: boolean): string {
     if (!user.lastLoginAtUtc) {
       return '';
     }
-    const deltaMs = Date.now() - new Date(user.lastLoginAtUtc).getTime();
+    const deltaMs = Date.now() - this.parseUtcDate(user.lastLoginAtUtc).getTime();
     if (!Number.isFinite(deltaMs) || deltaMs < 0) {
       return '';
     }
@@ -372,5 +372,10 @@ export class SettingsPage {
       );
     }
     return this.formatters.get(key)!;
+  }
+
+  private parseUtcDate(value: string): Date {
+    // Ensure UTC interpretation when the API omits a timezone offset.
+    return /Z|[+-]\d{2}:?\d{2}$/.test(value) ? new Date(value) : new Date(`${value}Z`);
   }
 }
