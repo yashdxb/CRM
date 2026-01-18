@@ -1187,6 +1187,44 @@
   gap: $space-3;
 }
 
+.task-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  margin-bottom: $space-3;
+}
+
+.summary-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: $space-1 $space-2;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  border-radius: $radius-full;
+  border: 1px solid rgba($glass-border, 0.6);
+  background: rgba($primary, 0.08);
+  color: $text-secondary;
+
+  &.overdue {
+    background: rgba($danger, 0.12);
+    color: $danger;
+    border-color: rgba($danger, 0.2);
+  }
+
+  &.today {
+    background: rgba($warning, 0.14);
+    color: $warning;
+    border-color: rgba($warning, 0.2);
+  }
+
+  &.week {
+    background: rgba($primary, 0.12);
+    color: $primary;
+    border-color: rgba($primary, 0.2);
+  }
+}
+
 .task-item {
   display: flex;
   align-items: flex-start;
@@ -1244,6 +1282,49 @@
   i {
     color: $primary;
   }
+}
+
+.task-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  margin-top: $space-2;
+}
+
+.task-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: $space-1 $space-2;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  border-radius: $radius-full;
+  background: rgba($primary, 0.08);
+  color: $text-secondary;
+
+  &.status-pill {
+    text-transform: capitalize;
+  }
+}
+
+.task-pill.due-overdue {
+  background: rgba($danger, 0.12);
+  color: $danger;
+}
+
+.task-pill.due-today {
+  background: rgba($warning, 0.14);
+  color: $warning;
+}
+
+.task-pill.due-soon {
+  background: rgba($primary, 0.12);
+  color: $primary;
+}
+
+.task-pill.due-upcoming,
+.task-pill.due-neutral {
+  background: rgba($glass-border, 0.4);
+  color: $text-muted;
 }
 
 .task-status {

@@ -370,6 +370,20 @@
             </div>
           </div>
           <div class="card-body" *ngIf="myTasks().length; else emptyMyTasks">
+            <div class="task-summary">
+              <span class="summary-pill overdue" *ngIf="getTaskSummaryCounts().overdue">
+                <i class="pi pi-exclamation-circle"></i>
+                {{ getTaskSummaryCounts().overdue }} overdue
+              </span>
+              <span class="summary-pill today" *ngIf="getTaskSummaryCounts().today">
+                <i class="pi pi-calendar"></i>
+                {{ getTaskSummaryCounts().today }} due today
+              </span>
+              <span class="summary-pill week" *ngIf="getTaskSummaryCounts().week">
+                <i class="pi pi-clock"></i>
+                {{ getTaskSummaryCounts().week }} this week
+              </span>
+            </div>
             <div class="task-list">
               <div class="task-item" *ngFor="let task of myTasks()">
                 <div class="task-marker" [class.overdue]="task.status === 'Overdue'">
@@ -382,10 +396,31 @@
                       <i class="pi pi-link"></i>
                       {{ task.relatedEntityName }}
                     </span>
-                    <span *ngIf="task.dueDateUtc">{{ task.dueDateUtc | date: 'MMM d, h:mm a' }}</span>
+                    <span *ngIf="task.dueDateUtc">
+                      <i class="pi pi-calendar"></i>
+                      {{ task.dueDateUtc | date: 'MMM d, h:mm a' }}
+                    </span>
+                    <span>
+                      <i class="pi pi-flag"></i>
+                      {{ getTaskPriorityLabel(task) }}
+                    </span>
+                    <span *ngIf="task.ownerName">
+                      <i class="pi pi-user"></i>
+                      {{ task.ownerName }}
+                    </span>
+                  </div>
+                  <div class="task-badges">
+                    <span class="task-pill" [ngClass]="getTaskDueClass(task)">
+                      {{ getTaskDueLabel(task) }}
+                    </span>
+                    <span class="task-pill status-pill" [class.overdue]="task.status === 'Overdue'">
+                      {{ task.status }}
+                    </span>
                   </div>
                 </div>
-                <span class="task-status" [class.overdue]="task.status === 'Overdue'">{{ task.status }}</span>
+                <span class="task-status" [class.overdue]="task.status === 'Overdue'">
+                  {{ task.status }}
+                </span>
               </div>
             </div>
           </div>

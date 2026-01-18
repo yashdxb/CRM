@@ -1010,12 +1010,73 @@ export class DashboardPage implements OnInit {
     };
     return colors[type] || 'primary';
   }
+
+  protected getTaskDueLabel(task: Activity): string {
+    if (!task.dueDateUtc) {
+      return 'No due date';
+    }
+    const due = this.parseUtcDate(task.dueDateUtc);
+    const today = new Date();
+    const dueDate = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diffDays = Math.round((dueDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'Overdue';
+    if (diffDays === 0) return 'Due today';
+    if (diffDays === 1) return 'Due tomorrow';
+    if (diffDays <= 7) return `Due in ${diffDays} days`;
+    return `Due ${due.toLocaleDateString()}`;
+  }
+
+  protected getTaskDueClass(task: Activity): string {
+    if (!task.dueDateUtc) {
+      return 'due-neutral';
+    }
+    const due = this.parseUtcDate(task.dueDateUtc);
+    const today = new Date();
+    const dueDate = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diffDays = Math.round((dueDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) return 'due-overdue';
+    if (diffDays === 0) return 'due-today';
+    if (diffDays <= 7) return 'due-soon';
+    return 'due-upcoming';
+  }
+
+  protected getTaskPriorityLabel(task: Activity): string {
+    return task.priority ?? 'Normal';
+  }
+
+  protected getTaskSummaryCounts(): { overdue: number; today: number; week: number } {
+    // Use UTC parsing to keep date buckets consistent across browsers.
+    const today = new Date();
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return this.myTasks().reduce(
+      (acc, task) => {
+        if (!task.dueDateUtc) return acc;
+        const due = this.parseUtcDate(task.dueDateUtc);
+        const dueDate = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+        const diffDays = Math.round((dueDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) acc.overdue += 1;
+        else if (diffDays === 0) acc.today += 1;
+        else if (diffDays <= 7) acc.week += 1;
+        return acc;
+      },
+      { overdue: 0, today: 0, week: 0 }
+    );
+  }
   
   private getGreeting(): string {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
+  }
+
+  private parseUtcDate(value: string): Date {
+    // Ensure UTC interpretation when the API omits a timezone offset.
+    return /Z|[+-]\d{2}:?\d{2}$/.test(value) ? new Date(value) : new Date(`${value}Z`);
   }
 
   private normalizeLayout(order: string[], fallback: string[]): string[] {
