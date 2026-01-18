@@ -12,7 +12,7 @@ import { ResetPasswordRequest, RoleSummary, UserListItem } from '../models/user-
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
-import { readTokenContext, readUserEmail, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { PresenceService } from '../../../../core/realtime/presence.service';
 
@@ -340,15 +340,19 @@ export class SettingsPage {
 
   private resolveCurrentUserTimeZone(users: UserListItem[]) {
     const email = readUserEmail();
+    const userId = readUserId();
     const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (!email) {
+    if (!email && !userId) {
       this.currentUserTimeZone.set(browserZone || 'UTC');
       return;
     }
 
-    const match = users.find((item) => item.email?.trim().toLowerCase() === email);
-    const zone = match?.timeZone?.trim() || this.timeZoneByEmail.get(email) || browserZone || 'UTC';
-    this.currentUserTimeZone.set(zone);
+    const match = users.find((item) => item.id === userId)
+      ?? users.find((item) => item.email?.trim().toLowerCase() === email);
+    const zone = match?.timeZone?.trim();
+    const mappedZone = email ? this.timeZoneByEmail.get(email) : undefined;
+    const resolved = zone && zone !== 'UTC' ? zone : mappedZone ?? browserZone ?? 'UTC';
+    this.currentUserTimeZone.set(resolved);
   }
 
   private getFormatter(timeZone: string): Intl.DateTimeFormat {
