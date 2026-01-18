@@ -523,10 +523,11 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 .dashboard-card-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  // Use a wrapped flex layout so CDK horizontal sorting can reorder across rows.
+  display: flex;
+  flex-wrap: wrap;
   gap: $space-5;
-  align-items: start;
+  align-items: stretch;
 }
 
 .dashboard-card {
@@ -535,17 +536,18 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  flex: 1 1 auto;
 
   &.size-sm {
-    grid-column: span 1;
+    width: calc(33.333% - #{$space-5});
   }
 
   &.size-md {
-    grid-column: span 2;
+    width: calc(66.666% - #{$space-5});
   }
 
   &.size-lg {
-    grid-column: span 3;
+    width: 100%;
   }
 }
 
@@ -2040,12 +2042,20 @@
 
 @media (max-width: 1400px) {
   .dashboard-card-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-4;
   }
 
   .dashboard-card {
     &.size-lg {
-      grid-column: span 2;
+      width: 100%;
+    }
+    
+    &.size-md {
+      width: calc(50% - #{$space-4});
+    }
+    
+    &.size-sm {
+      width: calc(50% - #{$space-4});
     }
   }
 }
@@ -2076,14 +2086,14 @@
   }
   
   .dashboard-card-grid {
-    grid-template-columns: 1fr;
+    gap: $space-4;
   }
 
   .dashboard-card {
     &.size-sm,
     &.size-md,
     &.size-lg {
-      grid-column: span 1;
+      width: 100%;
     }
   }
   
@@ -2109,6 +2119,23 @@
       flex: 1;
       justify-content: center;
     }
+  }
+
+  // Stack header controls and period toggle to keep the metrics section readable on mobile.
+  .metrics-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-3;
+  }
+
+  .metrics-period {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .period-btn {
+    flex: 1 1 0;
+    text-align: center;
   }
   
   .metrics-grid {
@@ -2137,5 +2164,20 @@
   .conversion-summary {
     flex-direction: column;
     gap: $space-3;
+  }
+}
+
+@media (max-width: 640px) {
+  // Prevent hero pills and chart cards from overflowing narrow screens.
+  .hero-stats {
+    flex-direction: column;
+  }
+
+  .hero-stat-pill {
+    width: 100%;
+  }
+
+  .charts-row {
+    gap: $space-4;
   }
 }

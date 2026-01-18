@@ -51,6 +51,24 @@
   }
 }
 
+/* Match the global time zone selector with flag icons. */
+.timezone-option {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.timezone-flag {
+  width: 18px;
+  height: 12px;
+  border-radius: 2px;
+  object-fit: cover;
+  background: #e2e8f0;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.1);
+}
+
 .select-placeholder {
   color: $text-muted;
   font-weight: 500;

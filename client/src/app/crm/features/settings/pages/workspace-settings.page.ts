@@ -14,6 +14,7 @@ import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
+import { STANDARD_TIMEZONE_OPTIONS, getTimeZoneFlagUrl } from '../models/timezone-options';
 
 interface Option<T = string> {
   label: string;
@@ -50,14 +51,9 @@ export class WorkspaceSettingsPage {
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
 
-  protected readonly timeZoneOptions: Option[] = [
-    { label: 'UTC', value: 'UTC' },
-    { label: 'America/New_York', value: 'America/New_York' },
-    { label: 'America/Chicago', value: 'America/Chicago' },
-    { label: 'America/Los_Angeles', value: 'America/Los_Angeles' },
-    { label: 'Europe/London', value: 'Europe/London' },
-    { label: 'Asia/Kolkata', value: 'Asia/Kolkata' }
-  ];
+  // Shared time zone catalog keeps labels and flags consistent across settings screens.
+  protected readonly timeZoneOptions = STANDARD_TIMEZONE_OPTIONS;
+  protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
   protected readonly currencyOptions: Option[] = [
     { label: 'USD', value: 'USD' },

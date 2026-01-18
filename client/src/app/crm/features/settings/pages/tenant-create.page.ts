@@ -16,12 +16,13 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { CreateTenantRequest } from '../models/tenant-admin.model';
 import { TenantAdminDataService } from '../services/tenant-admin-data.service';
+import { STANDARD_TIMEZONE_OPTIONS, getTimeZoneFlagUrl } from '../models/timezone-options';
 
 interface Option<T = string> {
   label: string;
   value: T;
-  icon: string;
-  iconClass: string;
+  icon?: string;
+  iconClass?: string;
 }
 
 interface IndustryModuleOption {
@@ -178,14 +179,9 @@ export class TenantCreatePage {
     modules: this.modulesForm
   });
 
-  protected readonly timeZoneOptions: Option[] = [
-    { label: 'UTC', value: 'UTC', icon: 'pi-clock', iconClass: 'icon-blue' },
-    { label: 'America/New_York', value: 'America/New_York', icon: 'pi-globe', iconClass: 'icon-teal' },
-    { label: 'America/Chicago', value: 'America/Chicago', icon: 'pi-map', iconClass: 'icon-indigo' },
-    { label: 'America/Los_Angeles', value: 'America/Los_Angeles', icon: 'pi-map-marker', iconClass: 'icon-rose' },
-    { label: 'Europe/London', value: 'Europe/London', icon: 'pi-compass', iconClass: 'icon-amber' },
-    { label: 'Asia/Kolkata', value: 'Asia/Kolkata', icon: 'pi-globe', iconClass: 'icon-green' }
-  ];
+  // Shared time zone catalog keeps labels and flags consistent across settings screens.
+  protected readonly timeZoneOptions = STANDARD_TIMEZONE_OPTIONS;
+  protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
   protected readonly currencyOptions: Option[] = [
     { label: 'USD', value: 'USD', icon: 'pi-dollar', iconClass: 'icon-green' },

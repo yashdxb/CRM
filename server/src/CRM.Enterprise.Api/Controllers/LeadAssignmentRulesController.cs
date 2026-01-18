@@ -26,7 +26,13 @@ public class LeadAssignmentRulesController : ControllerBase
             .OrderBy(r => r.Name)
             .ToListAsync(cancellationToken);
 
-        var userIds = rules
+        // Collapse duplicate rules that share the same definition within a tenant.
+        var uniqueRules = rules
+            .GroupBy(r => new { r.Name, r.Type, r.IsActive, r.Territory, r.AssignedUserId })
+            .Select(g => g.OrderByDescending(rule => rule.UpdatedAtUtc ?? rule.CreatedAtUtc).First())
+            .ToList();
+
+        var userIds = uniqueRules
             .SelectMany(r => new[] { r.AssignedUserId, r.LastAssignedUserId })
             .Where(id => id.HasValue && id.Value != Guid.Empty)
             .Select(id => id!.Value)
@@ -38,7 +44,7 @@ public class LeadAssignmentRulesController : ControllerBase
             .Select(u => new { u.Id, u.FullName })
             .ToListAsync(cancellationToken);
 
-        var dtos = rules.Select(r => new LeadAssignmentRuleDto(
+        var dtos = uniqueRules.Select(r => new LeadAssignmentRuleDto(
             r.Id,
             r.Name,
             r.Type,
@@ -56,6 +62,18 @@ public class LeadAssignmentRulesController : ControllerBase
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<ActionResult<LeadAssignmentRuleDto>> Create([FromBody] UpsertLeadAssignmentRuleRequest request, CancellationToken cancellationToken)
     {
+        // Prevent accidental duplicates when a matching rule already exists.
+        var exists = await _dbContext.LeadAssignmentRules.AnyAsync(rule =>
+            rule.Name == request.Name &&
+            rule.Type == request.Type &&
+            rule.Territory == request.Territory &&
+            rule.AssignedUserId == request.AssignedUserId,
+            cancellationToken);
+        if (exists)
+        {
+            return Conflict("A matching assignment rule already exists.");
+        }
+
         var rule = new Domain.Entities.LeadAssignmentRule
         {
             Name = request.Name,

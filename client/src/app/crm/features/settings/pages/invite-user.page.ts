@@ -13,6 +13,7 @@ import { RoleSummary, UpsertUserRequest } from '../models/user-admin.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
+import { STANDARD_TIMEZONE_OPTIONS, getTimeZoneFlagUrl } from '../models/timezone-options';
 
 @Component({
   selector: 'app-invite-user-page',
@@ -45,15 +46,9 @@ export class InviteUserPage {
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
 
-  protected readonly timezoneOptions = [
-    { label: 'UTC', value: 'UTC' },
-    { label: 'New York (ET)', value: 'America/New_York' },
-    { label: 'Chicago (CT)', value: 'America/Chicago' },
-    { label: 'Los Angeles (PT)', value: 'America/Los_Angeles' },
-    { label: 'London', value: 'Europe/London' },
-    { label: 'Berlin', value: 'Europe/Berlin' },
-    { label: 'Bangalore', value: 'Asia/Kolkata' }
-  ];
+  // Shared time zone catalog keeps labels and flags consistent across settings screens.
+  protected readonly timezoneOptions = STANDARD_TIMEZONE_OPTIONS;
+  protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
   protected readonly localeOptions = [
     { label: 'English (US)', value: 'en-US' },

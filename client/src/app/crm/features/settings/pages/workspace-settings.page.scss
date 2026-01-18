@@ -773,6 +773,22 @@
   margin-top: 0.35rem;
 }
 
+/* Keep time zone option rows aligned with flag icons. */
+:host ::ng-deep .timezone-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+:host ::ng-deep .timezone-flag {
+  width: 18px;
+  height: 12px;
+  border-radius: 2px;
+  object-fit: cover;
+  background: #e2e8f0;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.1);
+}
+
 // PrimeNG overrides with premium focus effects
 :host ::ng-deep {
   .p-select,
