@@ -415,30 +415,45 @@
 
 /* Mobile responsive */
 @media (max-width: 840px) {
+  // Mobile off-canvas sidebar to keep navigation usable on small screens.
   .sidebar {
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 12;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    min-height: auto;
+    left: 0;
+    bottom: 0;
+    z-index: 20;
+    width: min(86vw, 320px);
+    max-width: 100%;
+    transform: translateX(0);
+    transition: transform 0.25s ease;
+    overflow-y: auto;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
   }
 
   .nav {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
+    flex-wrap: nowrap;
   }
 
   .nav__item {
-    padding: var(--md-space-2) var(--md-space-3);
+    padding: var(--md-space-2) var(--md-space-4);
   }
 
   .sidebar__footer {
-    margin-top: 0;
-    padding-top: 0;
-    border-top: none;
-    padding-left: var(--md-space-4);
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: auto;
+    padding-top: var(--md-space-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-left: 0;
+    border-left: none;
+  }
+}
+
+@media (max-width: 840px) {
+  :host-context(.shell--collapsed) {
+    .sidebar {
+      transform: translateX(-110%);
+    }
   }
 }

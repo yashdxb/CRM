@@ -526,10 +526,11 @@ export class DashboardPage implements OnInit {
     return `size-${this.layoutSizes[chartId] ?? 'md'}`;
   }
 
-  protected getCardDimensions(cardId: string): { width?: number; height?: number } | null {
+  protected getCardDimensions(cardId: string): { width?: string; height?: string } | null {
     const dimensions = this.layoutDimensions[cardId];
     if (!dimensions) return null;
-    return { width: dimensions.width, height: dimensions.height };
+    // Apply explicit pixel units so restored sizes are honored after reload.
+    return { width: `${dimensions.width}px`, height: `${dimensions.height}px` };
   }
 
   protected toggleCardSize(cardId: string): void {
@@ -883,38 +884,13 @@ export class DashboardPage implements OnInit {
     if (!isPlatformBrowser(this.platformId)) {
       return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
     }
-    try {
-      const raw = localStorage.getItem(this.layoutStorageKey);
-      if (!raw) return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
-      const parsed = JSON.parse(raw) as {
-        order?: string[];
-        sizes?: Record<string, 'sm' | 'md' | 'lg'>;
-        dimensions?: Record<string, { width: number; height: number }>;
-      };
-      return {
-        order: this.normalizeLayout(parsed.order ?? defaultOrder, defaultOrder),
-        sizes: parsed.sizes ?? {},
-        dimensions: parsed.dimensions ?? {},
-        hasLocalPreference: true
-      };
-    } catch {
-      return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
-    }
+    // Keep layout state server-driven so it follows the user across devices.
+    return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
   }
 
   private persistLayoutPreferences(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    const payload = {
-      order: this.layoutOrder,
-      sizes: this.layoutSizes,
-      dimensions: this.layoutDimensions
-    };
-    this.hasLocalLayoutPreference = true;
-    try {
-      localStorage.setItem(this.layoutStorageKey, JSON.stringify(payload));
-    } catch {
-      // Ignore storage errors
-    }
+    // No-op: layout persistence is handled by the API for cross-device consistency.
+    this.hasLocalLayoutPreference = false;
   }
 
   private shouldHonorServerLayout(
