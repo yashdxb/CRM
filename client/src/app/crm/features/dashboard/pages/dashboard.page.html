@@ -623,6 +623,20 @@
     </ng-template>
   </p-orderList>
   <div class="layout-chart-section">
+    <h4>Command Center cards</h4>
+    <div class="layout-chart-list">
+      <label class="layout-chart-item" *ngFor="let card of cardCatalog">
+        <input
+          type="checkbox"
+          [ngModel]="isCardVisible(card.id)"
+          (ngModelChange)="onCardVisibilityChange(card.id, $event)"
+        />
+        <i class="pi" [class]="card.icon"></i>
+        <span>{{ card.label }}</span>
+      </label>
+    </div>
+  </div>
+  <div class="layout-chart-section">
     <h4>Chart cards</h4>
     <div class="layout-chart-list">
       <label class="layout-chart-item" *ngFor="let chart of chartCatalog">

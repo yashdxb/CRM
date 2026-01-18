@@ -242,6 +242,48 @@ export class DashboardPage implements OnInit {
     this.layoutDialogOpen = true;
   }
 
+  protected isCardVisible(cardId: string): boolean {
+    return this.layoutOrder.includes(cardId);
+  }
+
+  protected onCardVisibilityChange(cardId: string, visible: boolean): void {
+    // Keep the layout list as the single source of truth for which cards are displayed.
+    const defaultOrder = this.dashboardData.getDefaultLayout();
+    const nextOrder = visible
+      ? this.normalizeLayout([...this.layoutOrder, cardId], defaultOrder)
+      : this.layoutOrder.filter(id => id !== cardId);
+
+    this.layoutOrder = nextOrder;
+    if (!visible) {
+      delete this.layoutSizes[cardId];
+      delete this.layoutDimensions[cardId];
+    }
+
+    this.ensureSizeDefaults();
+    this.persistLayoutPreferences();
+    this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+
+    this.dashboardData.saveLayout(this.buildLayoutPayload(nextOrder)).subscribe({
+      next: response => {
+        const normalized = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
+        this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
+          ? normalized
+          : this.normalizeLayout(nextOrder, defaultOrder);
+        this.layoutSizes = response.sizes ?? this.layoutSizes;
+        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
+        this.ensureSizeDefaults();
+        this.persistLayoutPreferences();
+        this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+      },
+      error: () => {
+        this.layoutOrder = this.normalizeLayout(nextOrder, defaultOrder);
+        this.ensureSizeDefaults();
+        this.persistLayoutPreferences();
+        this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+      }
+    });
+  }
+
   protected saveLayout(): void {
     const order = this.layoutDraft.map(item => item.id);
     const defaultOrder = this.dashboardData.getDefaultLayout();
