@@ -228,11 +228,14 @@ export class ActivitiesPage {
   protected load() {
     this.loading.set(true);
     const status = this.statusFilter === 'all' ? undefined : this.statusFilter;
-    const ownerId = this.myView()
+    // Calendar view is personal-only to avoid leaking other owners' schedules.
+    const ownerId = this.currentView() === 'calendar'
       ? this.myOwnerId() ?? undefined
-      : this.activeOwnerFilter !== 'all'
-        ? this.activeOwnerFilter
-        : undefined;
+      : this.myView()
+        ? this.myOwnerId() ?? undefined
+        : this.activeOwnerFilter !== 'all'
+          ? this.activeOwnerFilter
+          : undefined;
     const type = this.typeFilter === 'all' ? undefined : this.typeFilter;
 
     this.activityData
@@ -325,6 +328,10 @@ export class ActivitiesPage {
       return;
     }
     this.currentView.set(view);
+    if (view === 'calendar') {
+      this.myView.set(true);
+      this.activeOwnerFilter = this.myOwnerId() ?? 'all';
+    }
     if (view === 'tasks') {
       this.typeFilter = 'Task';
     } else if (this.typeFilter === 'Task') {
