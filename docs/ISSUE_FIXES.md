@@ -23,3 +23,44 @@ This file tracks recurring UI/data issues and how to fix them quickly.
 **Why this is safe**
 - It keeps the selected value visible even when the API list is delayed.
 - It avoids duplicates by checking existing options before inserting.
+
+## 2) Activity Edit date/time shows UTC instead of user local time
+**Symptoms**
+- Activity Edit date/time fields render in UTC even when the user is in a different time zone.
+- The stored value looks correct in the API response, but the picker displays the wrong hour.
+
+**Root cause**
+- The API returns UTC timestamps without a timezone suffix (e.g. `"2026-01-18T12:30:00"`).
+- `new Date(value)` treats this as local time, which shifts the displayed time.
+
+**Fix pattern**
+1) When pre-filling edit forms, parse timestamps as UTC if the string lacks a timezone offset.
+2) Use a helper to append `Z` when needed before constructing the Date.
+
+**Example implementation**
+- File: `client/src/app/crm/features/activities/pages/activity-form.page.ts`
+- Added `parseUtcDate()` and used it for `dueDateUtc` and `completedDateUtc`.
+
+**Why this is safe**
+- It preserves UTC storage while displaying the correct local time.
+- It only changes how the edit form parses dates; payloads remain unchanged.
+
+## 3) Activity list timestamps show UTC instead of user local time
+**Symptoms**
+- Activity list rows and task views display UTC timestamps.
+- The same record renders correctly after editing.
+
+**Root cause**
+- The list templates pass raw UTC strings to Angular `date` pipe.
+- When the string lacks a timezone suffix, `date` assumes local time.
+
+**Fix pattern**
+1) Normalize activity timestamps with the same UTC parsing helper used in edit forms.
+2) Pass the parsed `Date` to the `date` pipe in list templates.
+
+**Example implementation**
+- Files: `client/src/app/crm/features/activities/pages/activities.page.ts`, `client/src/app/crm/features/activities/pages/activities.page.html`
+- Added `parseUtcDate()` + `asLocalDate()` and applied to list/task rendering.
+
+**Why this is safe**
+- Keeps the storage format unchanged and fixes display only.

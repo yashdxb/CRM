@@ -194,7 +194,7 @@
                       </span>
                     </td>
                     <td>
-                      <span class="date-text">{{ row.dueDateUtc | date: 'MMM d, h:mm a' }}</span>
+                      <span class="date-text">{{ asLocalDate(row.dueDateUtc) | date: 'MMM d, h:mm a' }}</span>
                     </td>
                     <td>
                       <span class="status-chip"
@@ -337,7 +337,7 @@
             <div class="task-item" *ngFor="let task of openTasksPreview()">
               <div>
                 <strong>{{ task.subject }}</strong>
-                <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
+                <small>{{ task.dueDateUtc ? (asLocalDate(task.dueDateUtc) | date: 'MMM d, h:mm a') : 'No due date' }}</small>
               </div>
               <span class="task-type">{{ task.type }}</span>
             </div>
@@ -371,7 +371,7 @@
           <button pButton type="button" class="task-card" *ngFor="let task of tasksToday()" [disabled]="!canManage()" (click)="onEdit(task)">
             <div>
               <strong>{{ task.subject }}</strong>
-              <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
+              <small>{{ task.dueDateUtc ? (asLocalDate(task.dueDateUtc) | date: 'MMM d, h:mm a') : 'No due date' }}</small>
             </div>
             <span class="status-tag status-tag--today">Today</span>
           </button>
@@ -386,7 +386,7 @@
           <button pButton type="button" class="task-card" *ngFor="let task of tasksOverdue()" [disabled]="!canManage()" (click)="onEdit(task)">
             <div>
               <strong>{{ task.subject }}</strong>
-              <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
+              <small>{{ task.dueDateUtc ? (asLocalDate(task.dueDateUtc) | date: 'MMM d, h:mm a') : 'No due date' }}</small>
             </div>
             <span class="status-tag status-tag--overdue">Overdue</span>
           </button>
@@ -401,7 +401,7 @@
           <button pButton type="button" class="task-card" *ngFor="let task of tasksUpcoming()" [disabled]="!canManage()" (click)="onEdit(task)">
             <div>
               <strong>{{ task.subject }}</strong>
-              <small>{{ task.dueDateUtc ? (task.dueDateUtc | date: 'MMM d, h:mm a') : 'No due date' }}</small>
+              <small>{{ task.dueDateUtc ? (asLocalDate(task.dueDateUtc) | date: 'MMM d, h:mm a') : 'No due date' }}</small>
             </div>
             <span class="status-tag status-tag--upcoming">Upcoming</span>
           </button>
@@ -416,7 +416,7 @@
           <button pButton type="button" class="task-card" *ngFor="let task of tasksCompleted()" [disabled]="!canManage()" (click)="onEdit(task)">
             <div>
               <strong>{{ task.subject }}</strong>
-              <small>{{ task.completedDateUtc ? (task.completedDateUtc | date: 'MMM d, h:mm a') : 'Completed' }}</small>
+              <small>{{ task.completedDateUtc ? (asLocalDate(task.completedDateUtc) | date: 'MMM d, h:mm a') : 'Completed' }}</small>
             </div>
             <span class="status-tag status-tag--done">Done</span>
           </button>

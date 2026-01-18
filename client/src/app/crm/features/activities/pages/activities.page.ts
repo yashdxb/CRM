@@ -310,6 +310,16 @@ export class ActivitiesPage {
     return type;
   }
 
+  protected asLocalDate(value?: Date | string | null): Date | null {
+    if (!value) {
+      return null;
+    }
+    if (value instanceof Date) {
+      return value;
+    }
+    return this.parseUtcDate(value);
+  }
+
   protected setView(view: 'table' | 'calendar' | 'tasks') {
     if (this.currentView() === view) {
       return;
@@ -448,10 +458,15 @@ export class ActivitiesPage {
     if (!value) {
       return null;
     }
-    const date = typeof value === 'string' ? new Date(value) : value;
+    const date = typeof value === 'string' ? this.parseUtcDate(value) : value;
     if (Number.isNaN(date.getTime())) {
       return null;
     }
     return date.toISOString().split('T')[0];
+  }
+
+  private parseUtcDate(value: string): Date {
+    // Normalize API timestamps to UTC when the offset is missing.
+    return /Z|[+-]\d{2}:?\d{2}$/.test(value) ? new Date(value) : new Date(`${value}Z`);
   }
 }

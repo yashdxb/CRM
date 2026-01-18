@@ -572,6 +572,13 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 :host ::ng-deep .layout-dialog {
+  .p-dialog {
+    width: min(960px, 94vw);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+  }
+
   .p-dialog-content {
     padding: $space-4 $space-5;
     // Keep the full layout editor accessible without truncation on shorter viewports.
