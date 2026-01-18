@@ -48,6 +48,7 @@ export class UserEditPage implements OnInit {
   );
 
   protected readonly timezoneOptions = [
+    { label: 'UTC (GMT+00:00)', value: 'UTC', flagCode: 'un' },
     { label: 'Auckland, New Zealand (GMT+13:00)', value: 'Pacific/Auckland', flagCode: 'nz' },
     { label: 'Sydney, Australia (GMT+12:00)', value: 'Australia/Sydney', flagCode: 'au' },
     { label: 'Melbourne, Australia (GMT+12:00)', value: 'Australia/Melbourne', flagCode: 'au' },
