@@ -366,8 +366,8 @@ export class ActivityFormPage implements OnInit {
   }
 
   private prefill(activity: Activity) {
-    const dueDate = activity.dueDateUtc ? new Date(activity.dueDateUtc) : undefined;
-    const completedDate = activity.completedDateUtc ? new Date(activity.completedDateUtc) : undefined;
+    const dueDate = activity.dueDateUtc ? this.parseUtcDate(activity.dueDateUtc) : undefined;
+    const completedDate = activity.completedDateUtc ? this.parseUtcDate(activity.completedDateUtc) : undefined;
     this.form = {
       subject: activity.subject,
       description: activity.description,
@@ -428,6 +428,11 @@ export class ActivityFormPage implements OnInit {
       this.pendingOpportunityOption = option;
     }
     queueMicrotask(() => this.cdr.markForCheck());
+  }
+
+  private parseUtcDate(value: string): Date {
+    // Ensure UTC interpretation when the API omits a timezone suffix.
+    return /Z|[+-]\d{2}:?\d{2}$/.test(value) ? new Date(value) : new Date(`${value}Z`);
   }
 
   private createEmptyForm(): UpsertActivityRequest {
