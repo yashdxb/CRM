@@ -5,6 +5,10 @@ const USER_ID_CLAIMS = [
   'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier',
   'sub'
 ];
+const EMAIL_CLAIMS = [
+  'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress',
+  'email'
+];
 
 export interface TokenPayload {
   exp?: number;
@@ -63,6 +67,23 @@ export function readUserId(): string | null {
     const value = payload[claim];
     if (typeof value === 'string' && value.trim()) {
       return value;
+    }
+  }
+
+  return null;
+}
+
+export function readUserEmail(): string | null {
+  const context = readTokenContext();
+  if (!context) {
+    return null;
+  }
+
+  const payload = context.payload;
+  for (const claim of EMAIL_CLAIMS) {
+    const value = payload[claim];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim().toLowerCase();
     }
   }
 

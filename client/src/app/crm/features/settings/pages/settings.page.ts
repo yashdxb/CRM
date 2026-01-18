@@ -12,7 +12,7 @@ import { ResetPasswordRequest, RoleSummary, UserListItem } from '../models/user-
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
-import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, readUserEmail, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { PresenceService } from '../../../../core/realtime/presence.service';
 
@@ -103,6 +103,7 @@ export class SettingsPage {
   ]);
   private readonly formatters = new Map<string, Intl.DateTimeFormat>();
   private readonly userLocale = navigator.language || 'en-US';
+  private readonly currentUserTimeZone = signal('UTC');
   protected readonly onlineUsers = signal<Set<string>>(new Set());
   private readonly avatarTones = [
     'avatar-tone-1',
@@ -140,6 +141,7 @@ export class SettingsPage {
         next: (response) => {
           this.users.set(response.items);
           this.totalUsers.set(response.total);
+          this.resolveCurrentUserTimeZone(response.items);
           const merged = new Set(this.onlineUsers());
           response.items
             .filter((user) => user.isOnline)
@@ -281,8 +283,7 @@ export class SettingsPage {
     if (!user.lastLoginAtUtc) {
       return '';
     }
-    const zone = this.getTimeZoneForUser(user);
-    const formatter = this.getFormatter(zone);
+    const formatter = this.getFormatter(this.currentUserTimeZone());
     return formatter.format(new Date(user.lastLoginAtUtc));
   }
 
@@ -335,6 +336,18 @@ export class SettingsPage {
     }
     const key = user.email.trim().toLowerCase();
     return this.timeZoneByEmail.get(key) ?? 'UTC';
+  }
+
+  private resolveCurrentUserTimeZone(users: UserListItem[]) {
+    const email = readUserEmail();
+    if (!email) {
+      this.currentUserTimeZone.set('UTC');
+      return;
+    }
+
+    const match = users.find((item) => item.email?.trim().toLowerCase() === email);
+    const zone = match?.timeZone?.trim() || this.timeZoneByEmail.get(email) || 'UTC';
+    this.currentUserTimeZone.set(zone);
   }
 
   private getFormatter(timeZone: string): Intl.DateTimeFormat {
