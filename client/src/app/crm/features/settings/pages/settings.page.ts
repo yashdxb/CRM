@@ -340,13 +340,14 @@ export class SettingsPage {
 
   private resolveCurrentUserTimeZone(users: UserListItem[]) {
     const email = readUserEmail();
+    const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (!email) {
-      this.currentUserTimeZone.set('UTC');
+      this.currentUserTimeZone.set(browserZone || 'UTC');
       return;
     }
 
     const match = users.find((item) => item.email?.trim().toLowerCase() === email);
-    const zone = match?.timeZone?.trim() || this.timeZoneByEmail.get(email) || 'UTC';
+    const zone = match?.timeZone?.trim() || this.timeZoneByEmail.get(email) || browserZone || 'UTC';
     this.currentUserTimeZone.set(zone);
   }
 
