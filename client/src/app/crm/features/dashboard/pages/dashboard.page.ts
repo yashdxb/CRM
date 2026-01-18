@@ -1004,6 +1004,14 @@ export class DashboardPage implements OnInit {
     return `Due ${due.toLocaleDateString()}`;
   }
 
+  protected asLocalDate(value?: string | Date | null): Date | null {
+    if (!value) {
+      return null;
+    }
+    // Normalize backend timestamps before DatePipe renders them in local time.
+    return value instanceof Date ? value : this.parseUtcDate(value);
+  }
+
   protected getTaskDueClass(task: Activity): string {
     if (!task.dueDateUtc) {
       return 'due-neutral';

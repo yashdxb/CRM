@@ -398,7 +398,7 @@
                     </span>
                     <span *ngIf="task.dueDateUtc">
                       <i class="pi pi-calendar"></i>
-                      {{ task.dueDateUtc | date: 'MMM d, h:mm a' }}
+                      {{ asLocalDate(task.dueDateUtc) | date: 'MMM d, h:mm a' }}
                     </span>
                     <span>
                       <i class="pi pi-flag"></i>
@@ -462,7 +462,7 @@
                   <div class="timeline-header">
                     <span class="timeline-type">{{ activity.type }}</span>
                     <span class="timeline-time" [class.overdue]="activity.status === 'Overdue'">
-                      {{ activity.dueDateUtc | date: 'MMM d, h:mm a' }}
+                      {{ asLocalDate(activity.dueDateUtc) | date: 'MMM d, h:mm a' }}
                     </span>
                   </div>
                   <div class="timeline-subject">{{ activity.subject }}</div>
