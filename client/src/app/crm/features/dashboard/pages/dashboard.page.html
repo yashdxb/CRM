@@ -605,7 +605,11 @@
   [(visible)]="layoutDialogOpen"
   [modal]="true"
   [dismissableMask]="true"
-  [draggable]="false"
+  [draggable]="true"
+  [resizable]="true"
+  [maximizable]="true"
+  [style]="{ width: 'min(960px, 92vw)' }"
+  [contentStyle]="{ maxHeight: '70vh', overflow: 'auto' }"
   [styleClass]="'layout-dialog'"
   >
   <p>Drag cards to reorder your Command Center view.</p>
