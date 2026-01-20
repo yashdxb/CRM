@@ -7,6 +7,7 @@ using System.Threading;
 using CRM.Enterprise.Api.Contracts.Users;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Notifications;
+using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -28,6 +29,7 @@ public class UsersController : ControllerBase
     private readonly IEmailSender _emailSender;
     private readonly ILogger<UsersController> _logger;
     private readonly CRM.Enterprise.Infrastructure.Presence.IPresenceTracker _presenceTracker;
+    private readonly ITenantProvider _tenantProvider;
     private readonly string? _brandLogoUrl;
     private readonly string? _brandWebsiteUrl;
 
@@ -36,6 +38,7 @@ public class UsersController : ControllerBase
         IPasswordHasher<User> passwordHasher,
         IEmailSender emailSender,
         IConfiguration configuration,
+        ITenantProvider tenantProvider,
         ILogger<UsersController> logger,
         CRM.Enterprise.Infrastructure.Presence.IPresenceTracker presenceTracker)
     {
@@ -44,6 +47,7 @@ public class UsersController : ControllerBase
         _emailSender = emailSender;
         _brandLogoUrl = configuration["Branding:LogoUrl"];
         _brandWebsiteUrl = configuration["Branding:WebsiteUrl"];
+        _tenantProvider = tenantProvider;
         _logger = logger;
         _presenceTracker = presenceTracker;
     }
@@ -394,6 +398,18 @@ public class UsersController : ControllerBase
         var logoUrl = string.IsNullOrWhiteSpace(_brandLogoUrl) ? null : _brandLogoUrl;
         var encodedWebsiteUrl = System.Net.WebUtility.HtmlEncode(websiteUrl);
         var encodedLogoUrl = logoUrl is null ? null : System.Net.WebUtility.HtmlEncode(logoUrl);
+        var tenantName = "your workspace";
+        if (_tenantProvider.TenantId != Guid.Empty)
+        {
+            var tenant = await _dbContext.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == _tenantProvider.TenantId, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(tenant?.Name))
+            {
+                tenantName = tenant.Name.Trim();
+            }
+        }
+        var encodedTenantName = System.Net.WebUtility.HtmlEncode(tenantName);
         var logoSection = encodedLogoUrl is null
             ? string.Empty
             : $@"
@@ -405,53 +421,100 @@ public class UsersController : ControllerBase
                   </td>
                 </tr>";
 
-        var subject = "You're invited to CRM Enterprise";
+        var subject = $"You're invited to join {tenantName} on North Edge CRM";
         // Keep the invite template self-contained so it renders consistently across email clients.
         var htmlBody = $@"
-            <div style=""font-family: 'Segoe UI', Arial, sans-serif; background:#f5f7fb; padding:24px;"">
-              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width:600px; margin:0 auto; background:#ffffff; border-radius:12px; box-shadow:0 8px 24px rgba(15,23,42,0.08);"">
-                {logoSection}
+            <div style=""font-family: 'Segoe UI', Arial, sans-serif; background:radial-gradient(1200px 640px at 15% -20%, #e0eaff 0%, #e6f2ff 38%, #f8fafc 75%); padding:36px 16px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width:660px; margin:0 auto;"">
                 <tr>
-                  <td style=""padding:28px 32px 12px;"">
-                    <h2 style=""margin:0; font-size:22px; color:#111827;"">CRM Enterprise invite</h2>
-                    <p style=""margin:8px 0 0; color:#6b7280; font-size:14px;"">Your workspace access is ready.</p>
+                  <td style=""padding:0 0 14px;"">
+                    <div style=""height:8px; width:100%; border-radius:999px; background:linear-gradient(90deg, #0ea5e9 0%, #3b82f6 50%, #6366f1 100%);""></div>
                   </td>
                 </tr>
                 <tr>
-                  <td style=""padding:8px 32px 0;"">
-                    <p style=""margin:0 0 12px; color:#111827; font-size:15px;"">
-                      Hi {System.Net.WebUtility.HtmlEncode(user.FullName)},
-                    </p>
-                    <p style=""margin:0 0 16px; color:#4b5563; font-size:14px;"">
-                      You have been invited to CRM Enterprise. Use the credentials below to sign in:
-                    </p>
-                    <div style=""background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:14px 16px; font-size:14px;"">
-                      <div style=""margin-bottom:8px;""><strong>Login:</strong> {System.Net.WebUtility.HtmlEncode(user.Email)}</div>
-                      <div><strong>Temporary password:</strong> {System.Net.WebUtility.HtmlEncode(temporaryPassword)}</div>
-                    </div>
+                  <td style=""background:rgba(255,255,255,0.84); border:1px solid rgba(255,255,255,0.6); border-radius:20px; box-shadow:0 18px 50px rgba(15, 23, 42, 0.16); padding:32px 36px 28px;"">
+                    <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"">
+                      {logoSection}
+                      <tr>
+                        <td style=""padding:0 0 8px;"">
+                          <div style=""font-size:12px; letter-spacing:0.2em; text-transform:uppercase; color:#64748b;"">Invitation</div>
+                          <h1 style=""margin:8px 0 0; font-size:24px; color:#0f172a;"">Join {encodedTenantName} on North Edge CRM</h1>
+                          <p style=""margin:10px 0 0; color:#475569; font-size:14px;"">
+                            Dear {System.Net.WebUtility.HtmlEncode(user.FullName)},<br />
+                            You are invited to join the {encodedTenantName} workspace. Activate your access and complete your profile to get started.
+                          </p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=""padding:18px 0 0;"">
+                          <div style=""background:linear-gradient(140deg, rgba(59, 130, 246, 0.08), rgba(14, 165, 233, 0.16)); border:1px solid rgba(148, 163, 184, 0.35); border-radius:16px; padding:16px 18px; font-size:14px; box-shadow:inset 0 1px 0 rgba(255,255,255,0.7), 0 10px 24px rgba(15, 23, 42, 0.06);"">
+                            <div style=""display:flex; align-items:center; gap:10px; margin-bottom:10px; color:#0f172a;"">
+                              <span style=""display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.7); border:1px solid rgba(148,163,184,0.35);"">
+                                <svg width=""14"" height=""14"" viewBox=""0 0 24 24"" fill=""none"" xmlns=""http://www.w3.org/2000/svg"">
+                                  <path d=""M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"" stroke=""#2563eb"" stroke-width=""1.5""/>
+                                  <path d=""m4 8 8 5 8-5"" stroke=""#2563eb"" stroke-width=""1.5""/>
+                                </svg>
+                              </span>
+                              <span style=""font-weight:600; min-width:64px;"">Email</span>
+                              <span>{System.Net.WebUtility.HtmlEncode(user.Email)}</span>
+                            </div>
+                            <div style=""display:flex; align-items:center; gap:10px; color:#0f172a;"">
+                              <span style=""display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.7); border:1px solid rgba(148,163,184,0.35);"">
+                                <svg width=""14"" height=""14"" viewBox=""0 0 24 24"" fill=""none"" xmlns=""http://www.w3.org/2000/svg"">
+                                  <path d=""M7 11V8a5 5 0 0 1 10 0v3"" stroke=""#0f766e"" stroke-width=""1.5""/>
+                                  <rect x=""5"" y=""11"" width=""14"" height=""9"" rx=""2"" stroke=""#0f766e"" stroke-width=""1.5""/>
+                                  <path d=""M12 15v2"" stroke=""#0f766e"" stroke-width=""1.5""/>
+                                </svg>
+                              </span>
+                              <span style=""font-weight:600; min-width:64px;"">Password</span>
+                              <span>{System.Net.WebUtility.HtmlEncode(temporaryPassword)}</span>
+                            </div>
+                            <div style=""margin-top:12px; color:#475569; font-size:12px;"">This invite link expires in <strong>24 hours</strong>.</div>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=""padding:20px 0 0;"">
+                          <a href=""{loginUrl}"" style=""display:inline-block; background:linear-gradient(120deg, #2563eb 0%, #4f46e5 60%, #0ea5e9 100%); color:#ffffff; text-decoration:none; padding:12px 20px; border-radius:10px; font-size:14px; font-weight:600;"">Activate your access</a>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=""padding:18px 0 0;"">
+                          <p style=""margin:0; color:#64748b; font-size:12px;"">If you did not expect this invitation, you can ignore this message.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style=""padding:20px 0 0;"">
+                          <p style=""margin:0 0 10px; color:#475569; font-size:13px;"">Need help? Reply to this email or contact your workspace administrator.</p>
+                          <p style=""margin:0 0 4px; color:#94a3b8; font-size:12px;"">
+                            <a href=""https://northedgesystem.com"" style=""color:#2563eb; text-decoration:none;"">North Edge System</a>
+                          </p>
+                          <p style=""margin:0 0 4px; color:#94a3b8; font-size:12px;"">Toronto, ON, Canada</p>
+                          <p style=""margin:0; color:#94a3b8; font-size:12px;"">
+                            <a href=""mailto:contact@northedgesystem.com"" style=""color:#2563eb; text-decoration:none;"">contact@northedgesystem.com</a>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
                 <tr>
-                  <td style=""padding:20px 32px 8px;"">
-                    <a href=""{loginUrl}"" style=""display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:8px; font-size:14px; font-weight:600;"">
-                      Sign in to CRM Enterprise
-                    </a>
-                  </td>
-                </tr>
-                <tr>
-                  <td style=""padding:6px 32px 24px;"">
-                    <p style=""margin:0; color:#6b7280; font-size:12px;"">
-                      If you did not expect this invitation, you can ignore this message.
-                    </p>
+                  <td style=""padding:14px 8px 0; text-align:center; color:#94a3b8; font-size:11px;"">
+                    North Edge CRM • Secure workspace invite
                   </td>
                 </tr>
               </table>
             </div>";
-        var textBody = $"Hi {user.FullName},\n\n" +
-                       "You have been invited to CRM Enterprise. Use the credentials below to sign in:\n\n" +
-                       $"Login: {user.Email}\n" +
-                       $"Temporary password: {temporaryPassword}\n\n" +
-                       $"Sign in: {loginUrl}\n\n" +
+        var textBody = $"Dear {user.FullName},\n\n" +
+                       $"You are invited to join the {tenantName} workspace on North Edge CRM.\n\n" +
+                       $"Email: {user.Email}\n" +
+                       $"Temporary password: {temporaryPassword}\n" +
+                       "This invite link expires in 24 hours.\n\n" +
+                       $"Activate your access: {loginUrl}\n\n" +
+                       "Need help? Reply to this email or contact your workspace administrator.\n" +
+                       "North Edge System\n" +
+                       "Toronto, ON, Canada\n" +
+                       "contact@northedgesystem.com\n\n" +
                        "If you did not expect this invitation, you can ignore this message.";
 
         try
