@@ -497,24 +497,20 @@ public class UsersController : ControllerBase
                                 <td style=""font-weight:600; color:#0f172a; width:90px;"">Email</td>
                                 <td style=""color:#0f172a;"">{System.Net.WebUtility.HtmlEncode(user.Email)}</td>
                               </tr>
-                              <tr>
-                                <td style=""width:32px;"">
-                                  <div style=""width:28px; height:28px; border-radius:8px; background:rgba(15,118,110,0.12); border:1px solid rgba(15,118,110,0.35); text-align:center; line-height:28px; font-weight:700; color:#0f766e;"">
-                                    P
-                                  </div>
-                                </td>
-                                <td style=""font-weight:600; color:#0f172a; width:90px;"">Password</td>
-                                <td style=""color:#0f172a;"">{System.Net.WebUtility.HtmlEncode(temporaryPassword)}</td>
-                              </tr>
                             </table>
-                            <div style=""margin-top:8px; color:#475569; font-size:12px;"">This is a temporary password for login. Once you log in, you will have to change it.</div>
                             <div style=""margin-top:8px; color:#475569; font-size:12px;"">This invite link expires in <strong>24 hours</strong>.</div>
                           </div>
                         </td>
                       </tr>
                       <tr>
                         <td style=""padding:20px 0 0;"">
-                          <a href=""{inviteUrl}"" style=""display:inline-block; background:linear-gradient(120deg, #2563eb 0%, #4f46e5 60%, #0ea5e9 100%); color:#ffffff; text-decoration:none; padding:12px 20px; border-radius:10px; font-size:14px; font-weight:600;"">Activate your access</a>
+                          <table role=""presentation"" cellpadding=""0"" cellspacing=""0"">
+                            <tr>
+                              <td style=""background:#2563eb; border-radius:10px;"">
+                                <a href=""{inviteUrl}"" style=""display:inline-block; padding:12px 20px; color:#ffffff; text-decoration:none; font-size:14px; font-weight:600;"">Join workspace</a>
+                              </td>
+                            </tr>
+                          </table>
                         </td>
                       </tr>
                       <tr>
@@ -547,10 +543,8 @@ public class UsersController : ControllerBase
         var textBody = $"Dear {user.FullName},\n\n" +
                        $"You are invited to join the {tenantName} workspace on North Edge CRM.\n\n" +
                        $"Email: {user.Email}\n" +
-                       $"Temporary password: {temporaryPassword}\n" +
-                       "This is a temporary password for login. Once you log in, you will have to change it.\n" +
                        "This invite link expires in 24 hours.\n\n" +
-                       $"Activate your access: {inviteUrl}\n\n" +
+                       $"Join workspace: {inviteUrl}\n\n" +
                        "Need help? Reply to this email or contact your workspace administrator.\n" +
                        "North Edge System\n" +
                        "Toronto, ON, Canada\n" +
