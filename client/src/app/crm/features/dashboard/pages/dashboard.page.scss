@@ -425,6 +425,35 @@
   }
 }
 
+.kpi-drag-handle {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid rgba($primary, 0.18);
+  background: rgba(255, 255, 255, 0.65);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-muted;
+  cursor: grab;
+  transition: transform $transition-fast, color $transition-fast, border-color $transition-fast;
+
+  i {
+    font-size: 0.85rem;
+  }
+
+  &:hover {
+    color: $primary;
+    border-color: rgba($primary, 0.35);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    cursor: grabbing;
+    transform: translateY(0);
+  }
+}
+
 .metric-card.cdk-drag-preview {
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.2);
   border-radius: $radius-xl;
@@ -870,9 +899,12 @@
   height: 100%;
 }
 
-// Resizing is disabled; hide resize handles while keeping layout rules intact.
+// Resize handles for command center card sizing.
 .resize-handle {
-  display: none;
+  display: block;
+  position: absolute;
+  background: rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(15, 23, 42, 0.15);
 }
 
 .resize-handle.handle-n,

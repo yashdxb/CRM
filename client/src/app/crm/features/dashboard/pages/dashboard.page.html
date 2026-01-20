@@ -95,6 +95,9 @@
 
         <article class="metric-card" *ngFor="let metric of secondaryKpis(); let i = index" cdkDrag>
           <div class="metric-header">
+            <button type="button" class="kpi-drag-handle" cdkDragHandle aria-label="Reorder KPI">
+              <i class="pi pi-bars"></i>
+            </button>
             <div class="metric-icon" [class]="metric.color" cdkDragHandle>
               <i class="pi" [class]="metric.icon"></i>
             </div>
@@ -200,6 +203,11 @@
         data-min-width="280"
         data-min-height="220"
       >
+        <span
+          class="resize-handle handle-se"
+          (mousedown)="startResize($event, dashboardCard, 'se')"
+          aria-hidden="true"
+        ></span>
         <!-- Pipeline Value Chart -->
         <ng-container *ngSwitchCase="'pipeline'">
           <div class="card-header">

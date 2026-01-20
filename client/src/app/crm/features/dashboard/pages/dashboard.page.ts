@@ -1,5 +1,5 @@
 import { DatePipe, DecimalPipe, NgFor, NgIf, CurrencyPipe, NgSwitch, NgSwitchCase, NgSwitchDefault, NgClass, NgTemplateOutlet, NgStyle } from '@angular/common';
-import { Component, computed, effect, inject, OnInit, PLATFORM_ID } from '@angular/core';
+import { Component, computed, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -119,7 +119,9 @@ export class DashboardPage implements OnInit {
     ];
     const order = this.kpiOrder().length ? this.kpiOrder() : this.defaultKpiOrder;
     const lookup = new Map(items.map(item => [item.id, item]));
-    return order.map(id => lookup.get(id)).filter((item): item is (typeof items)[number] => !!item);
+    return order
+      .map((id: string) => lookup.get(id))
+      .filter((item): item is (typeof items)[number] => !!item);
   });
   
   protected readonly customerBreakdown = computed(() => {
@@ -235,7 +237,7 @@ export class DashboardPage implements OnInit {
     const { order, sizes, dimensions, hasLocalPreference } = this.loadLayoutPreferences();
     this.layoutOrder = order;
     this.layoutSizes = this.buildDefaultSizeMap();
-    this.layoutDimensions = {};
+    this.layoutDimensions = dimensions ?? {};
     this.hasLocalLayoutPreference = hasLocalPreference;
     this.loadChartVisibility();
 
@@ -252,7 +254,7 @@ export class DashboardPage implements OnInit {
       }
       this.layoutOrder = normalized;
       this.layoutSizes = this.buildDefaultSizeMap();
-      this.layoutDimensions = {};
+      this.layoutDimensions = dimensions ?? {};
       this.persistLayoutPreferences();
     });
   }
@@ -294,7 +296,7 @@ export class DashboardPage implements OnInit {
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = {};
+        this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
       },
@@ -321,7 +323,7 @@ export class DashboardPage implements OnInit {
           ? normalized
           : requested;
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = {};
+        this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
         this.layoutDialogOpen = false;
       },
@@ -341,7 +343,7 @@ export class DashboardPage implements OnInit {
         const defaultOrder = this.dashboardData.getDefaultLayout();
         this.layoutOrder = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = {};
+        this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
       },
@@ -369,7 +371,7 @@ export class DashboardPage implements OnInit {
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = {};
+        this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
       },
       error: () => {
@@ -394,7 +396,7 @@ export class DashboardPage implements OnInit {
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = {};
+        this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
       },
       error: () => {
@@ -451,8 +453,6 @@ export class DashboardPage implements OnInit {
     element: HTMLElement,
     handle: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
   ): void {
-    // Resizing is disabled to keep card dimensions consistent across devices.
-    return;
     event.preventDefault();
     event.stopPropagation();
     const rect = element.getBoundingClientRect();
@@ -533,7 +533,7 @@ export class DashboardPage implements OnInit {
             this.layoutOrder
           );
           this.layoutSizes = this.buildDefaultSizeMap();
-          this.layoutDimensions = {};
+          this.layoutDimensions = response.dimensions ?? {};
           this.persistLayoutPreferences();
         },
         error: () => {
@@ -617,8 +617,14 @@ export class DashboardPage implements OnInit {
   }
 
   protected getCardDimensions(cardId: string): { width?: string; height?: string } | null {
-    // Resizing is disabled, so ignore persisted dimensions to keep cards consistent.
-    return null;
+    const dimensions = this.layoutDimensions[cardId];
+    if (!dimensions) {
+      return null;
+    }
+    return {
+      width: `${dimensions.width}px`,
+      height: `${dimensions.height}px`
+    };
   }
 
   protected toggleCardSize(cardId: string): void {
@@ -1161,9 +1167,8 @@ export class DashboardPage implements OnInit {
     const hiddenCards = defaultOrder.filter(id => !cardOrder.includes(id));
     return {
       cardOrder,
-      // Persist only default sizes since resizing is disabled.
       sizes: this.buildDefaultSizeMap(),
-      dimensions: {},
+      dimensions: this.layoutDimensions,
       hiddenCards
     };
   }
