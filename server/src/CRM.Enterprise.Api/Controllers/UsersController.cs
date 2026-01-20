@@ -411,12 +411,19 @@ public class UsersController : ControllerBase
         }
         var encodedTenantName = System.Net.WebUtility.HtmlEncode(tenantName);
         var logoSection = encodedLogoUrl is null
-            ? string.Empty
+            ? $@"
+                <tr>
+                  <td style=""padding:0 0 18px;"">
+                    <a href=""{encodedWebsiteUrl}"" style=""display:inline-block; text-decoration:none; color:#0f172a; font-size:18px; font-weight:700;"">
+                      North Edge CRM
+                    </a>
+                  </td>
+                </tr>"
             : $@"
                 <tr>
-                  <td style=""padding:28px 32px 4px;"">
+                  <td style=""padding:0 0 18px;"">
                     <a href=""{encodedWebsiteUrl}"" style=""display:inline-block; text-decoration:none;"">
-                      <img src=""{encodedLogoUrl}"" alt=""CRM Enterprise"" style=""height:32px; display:block; border:0;"" />
+                      <img src=""{encodedLogoUrl}"" alt=""North Edge CRM"" style=""height:68px; display:block; border:0;"" />
                     </a>
                   </td>
                 </tr>";
@@ -448,28 +455,28 @@ public class UsersController : ControllerBase
                       <tr>
                         <td style=""padding:18px 0 0;"">
                           <div style=""background:linear-gradient(140deg, rgba(59, 130, 246, 0.08), rgba(14, 165, 233, 0.16)); border:1px solid rgba(148, 163, 184, 0.35); border-radius:16px; padding:16px 18px; font-size:14px; box-shadow:inset 0 1px 0 rgba(255,255,255,0.7), 0 10px 24px rgba(15, 23, 42, 0.06);"">
-                            <div style=""display:flex; align-items:center; gap:10px; margin-bottom:10px; color:#0f172a;"">
-                              <span style=""display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.7); border:1px solid rgba(148,163,184,0.35);"">
-                                <svg width=""14"" height=""14"" viewBox=""0 0 24 24"" fill=""none"" xmlns=""http://www.w3.org/2000/svg"">
-                                  <path d=""M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"" stroke=""#2563eb"" stroke-width=""1.5""/>
-                                  <path d=""m4 8 8 5 8-5"" stroke=""#2563eb"" stroke-width=""1.5""/>
-                                </svg>
-                              </span>
-                              <span style=""font-weight:600; min-width:64px;"">Email</span>
-                              <span>{System.Net.WebUtility.HtmlEncode(user.Email)}</span>
-                            </div>
-                            <div style=""display:flex; align-items:center; gap:10px; color:#0f172a;"">
-                              <span style=""display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,0.7); border:1px solid rgba(148,163,184,0.35);"">
-                                <svg width=""14"" height=""14"" viewBox=""0 0 24 24"" fill=""none"" xmlns=""http://www.w3.org/2000/svg"">
-                                  <path d=""M7 11V8a5 5 0 0 1 10 0v3"" stroke=""#0f766e"" stroke-width=""1.5""/>
-                                  <rect x=""5"" y=""11"" width=""14"" height=""9"" rx=""2"" stroke=""#0f766e"" stroke-width=""1.5""/>
-                                  <path d=""M12 15v2"" stroke=""#0f766e"" stroke-width=""1.5""/>
-                                </svg>
-                              </span>
-                              <span style=""font-weight:600; min-width:64px;"">Password</span>
-                              <span>{System.Net.WebUtility.HtmlEncode(temporaryPassword)}</span>
-                            </div>
-                            <div style=""margin-top:12px; color:#475569; font-size:12px;"">This invite link expires in <strong>24 hours</strong>.</div>
+                            <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""border-collapse:separate; border-spacing:0 10px;"">
+                              <tr>
+                                <td style=""width:32px;"">
+                                  <div style=""width:28px; height:28px; border-radius:8px; background:rgba(37,99,235,0.12); border:1px solid rgba(37,99,235,0.35); text-align:center; line-height:28px; font-weight:700; color:#2563eb;"">
+                                    E
+                                  </div>
+                                </td>
+                                <td style=""font-weight:600; color:#0f172a; width:90px;"">Email</td>
+                                <td style=""color:#0f172a;"">{System.Net.WebUtility.HtmlEncode(user.Email)}</td>
+                              </tr>
+                              <tr>
+                                <td style=""width:32px;"">
+                                  <div style=""width:28px; height:28px; border-radius:8px; background:rgba(15,118,110,0.12); border:1px solid rgba(15,118,110,0.35); text-align:center; line-height:28px; font-weight:700; color:#0f766e;"">
+                                    P
+                                  </div>
+                                </td>
+                                <td style=""font-weight:600; color:#0f172a; width:90px;"">Password</td>
+                                <td style=""color:#0f172a;"">{System.Net.WebUtility.HtmlEncode(temporaryPassword)}</td>
+                              </tr>
+                            </table>
+                            <div style=""margin-top:8px; color:#475569; font-size:12px;"">This is a temporary password for login. Once you log in, you will have to change it.</div>
+                            <div style=""margin-top:8px; color:#475569; font-size:12px;"">This invite link expires in <strong>24 hours</strong>.</div>
                           </div>
                         </td>
                       </tr>
@@ -509,6 +516,7 @@ public class UsersController : ControllerBase
                        $"You are invited to join the {tenantName} workspace on North Edge CRM.\n\n" +
                        $"Email: {user.Email}\n" +
                        $"Temporary password: {temporaryPassword}\n" +
+                       "This is a temporary password for login. Once you log in, you will have to change it.\n" +
                        "This invite link expires in 24 hours.\n\n" +
                        $"Activate your access: {loginUrl}\n\n" +
                        "Need help? Reply to this email or contact your workspace administrator.\n" +

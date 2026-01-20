@@ -19,7 +19,8 @@ public class TenantResolutionMiddleware
     public async Task InvokeAsync(HttpContext context, CrmDbContext dbContext, ITenantProvider tenantProvider)
     {
         var path = context.Request.Path.Value ?? string.Empty;
-        if (path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
+        if (HttpMethods.IsOptions(context.Request.Method) ||
+            path.StartsWith("/health", StringComparison.OrdinalIgnoreCase) ||
             path.StartsWith("/swagger", StringComparison.OrdinalIgnoreCase))
         {
             await _next(context);
