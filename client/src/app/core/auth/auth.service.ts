@@ -61,6 +61,22 @@ export class AuthService {
     );
   }
 
+  acceptInvite(token: string, newPassword: string) {
+    const url = `${environment.apiUrl}/api/auth/accept-invite`;
+    return this.http.post<LoginResponse>(url, { token, newPassword }).pipe(
+      tap((res) => {
+        if (!res?.accessToken) {
+          throw new Error('Missing access token.');
+        }
+        this.currentUserSignal.set(res);
+        saveToken(res.accessToken);
+        if (res.tenantKey) {
+          setTenantKey(res.tenantKey);
+        }
+      })
+    );
+  }
+
   logout() {
     const url = `${environment.apiUrl}/api/auth/logout`;
     this.http.post<void>(url, {}).subscribe({ error: () => {} });

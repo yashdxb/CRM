@@ -7,6 +7,7 @@ using System.Threading;
 using CRM.Enterprise.Api.Contracts.Users;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Notifications;
+using CRM.Enterprise.Application.Auth;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
@@ -170,6 +171,9 @@ public class UsersController : ControllerBase
             ? PasswordGenerator.CreateStrongPassword()
             : request.TemporaryPassword;
         user.PasswordHash = _passwordHasher.HashPassword(user, password);
+        var inviteToken = InviteTokenHelper.GenerateToken();
+        user.InviteTokenHash = InviteTokenHelper.HashToken(inviteToken);
+        user.InviteTokenExpiresAtUtc = DateTime.UtcNow.AddHours(24);
 
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -177,7 +181,7 @@ public class UsersController : ControllerBase
         await AssignRolesAsync(user, roleIds, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await SendInviteEmailAsync(user, password, cancellationToken);
+        await SendInviteEmailAsync(user, password, inviteToken, cancellationToken);
 
         var detail = await BuildDetailResponseAsync(user.Id, cancellationToken);
         return CreatedAtAction(nameof(GetUser), new { id = user.Id }, detail);
@@ -265,17 +269,15 @@ public class UsersController : ControllerBase
             return BadRequest("User is inactive. Reactivate before resending the invite.");
         }
 
-        if (user.LastLoginAtUtc is not null)
-        {
-            return BadRequest("Invite can only be resent before the first login.");
-        }
-
         var password = PasswordGenerator.CreateStrongPassword();
         user.PasswordHash = _passwordHasher.HashPassword(user, password);
         user.MustChangePassword = true;
+        var inviteToken = InviteTokenHelper.GenerateToken();
+        user.InviteTokenHash = InviteTokenHelper.HashToken(inviteToken);
+        user.InviteTokenExpiresAtUtc = DateTime.UtcNow.AddHours(24);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await SendInviteEmailAsync(user, password, cancellationToken);
+        await SendInviteEmailAsync(user, password, inviteToken, cancellationToken);
         return NoContent();
     }
 
@@ -416,13 +418,14 @@ public class UsersController : ControllerBase
         return (email ?? string.Empty).Trim().ToLowerInvariant();
     }
 
-    private async Task SendInviteEmailAsync(User user, string temporaryPassword, CancellationToken cancellationToken)
+    private async Task SendInviteEmailAsync(User user, string temporaryPassword, string inviteToken, CancellationToken cancellationToken)
     {
         var origin = Request.Headers.Origin.FirstOrDefault();
         var baseUrl = string.IsNullOrWhiteSpace(origin)
             ? $"{Request.Scheme}://{Request.Host}"
             : origin;
         var loginUrl = $"{baseUrl.TrimEnd('/')}/login";
+        var inviteUrl = $"{baseUrl.TrimEnd('/')}/accept-invite?token={Uri.EscapeDataString(inviteToken)}";
         var websiteUrl = string.IsNullOrWhiteSpace(_brandWebsiteUrl) ? baseUrl : _brandWebsiteUrl;
         var logoUrl = string.IsNullOrWhiteSpace(_brandLogoUrl) ? null : _brandLogoUrl;
         var encodedWebsiteUrl = System.Net.WebUtility.HtmlEncode(websiteUrl);
@@ -511,7 +514,7 @@ public class UsersController : ControllerBase
                       </tr>
                       <tr>
                         <td style=""padding:20px 0 0;"">
-                          <a href=""{loginUrl}"" style=""display:inline-block; background:linear-gradient(120deg, #2563eb 0%, #4f46e5 60%, #0ea5e9 100%); color:#ffffff; text-decoration:none; padding:12px 20px; border-radius:10px; font-size:14px; font-weight:600;"">Activate your access</a>
+                          <a href=""{inviteUrl}"" style=""display:inline-block; background:linear-gradient(120deg, #2563eb 0%, #4f46e5 60%, #0ea5e9 100%); color:#ffffff; text-decoration:none; padding:12px 20px; border-radius:10px; font-size:14px; font-weight:600;"">Activate your access</a>
                         </td>
                       </tr>
                       <tr>
@@ -547,7 +550,7 @@ public class UsersController : ControllerBase
                        $"Temporary password: {temporaryPassword}\n" +
                        "This is a temporary password for login. Once you log in, you will have to change it.\n" +
                        "This invite link expires in 24 hours.\n\n" +
-                       $"Activate your access: {loginUrl}\n\n" +
+                       $"Activate your access: {inviteUrl}\n\n" +
                        "Need help? Reply to this email or contact your workspace administrator.\n" +
                        "North Edge System\n" +
                        "Toronto, ON, Canada\n" +

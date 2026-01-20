@@ -24,6 +24,10 @@ export const routes: Routes = [
     loadComponent: () => import('./public/auth/change-password.page').then((m) => m.ChangePasswordPage)
   },
   {
+    path: 'accept-invite',
+    loadComponent: () => import('./public/auth/accept-invite.page').then((m) => m.AcceptInvitePage)
+  },
+  {
     path: 'supplier/onboard',
     loadComponent: () =>
       import('./public/supplier/supplier-onboarding.page').then((m) => m.SupplierOnboardingPage)

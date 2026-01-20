@@ -78,6 +78,70 @@ public class AuthService : IAuthService
             user.EmailNormalized = normalizedEmail;
         }
 
+        return await BuildAuthResultAsync(user, cancellationToken);
+    }
+
+    public async Task<PasswordChangeResult?> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsActive && !u.IsDeleted, cancellationToken);
+        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash))
+        {
+            return null;
+        }
+
+        var currentCheck = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
+        if (currentCheck == PasswordVerificationResult.Failed)
+        {
+            return null;
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        // Clear the change-password flag so the user can access the app normally.
+        user.MustChangePassword = false;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new PasswordChangeResult(user.Email, user.FullName);
+    }
+
+    public async Task<AuthResult?> AcceptInviteAsync(string token, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var normalizedToken = token?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedToken) || string.IsNullOrWhiteSpace(newPassword))
+        {
+            return null;
+        }
+
+        var tokenHash = InviteTokenHelper.HashToken(normalizedToken);
+        var now = DateTime.UtcNow;
+        var user = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u =>
+                    !u.IsDeleted &&
+                    u.InviteTokenHash == tokenHash &&
+                    u.InviteTokenExpiresAtUtc != null &&
+                    u.InviteTokenExpiresAtUtc > now,
+                cancellationToken);
+        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash))
+        {
+            return null;
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        user.MustChangePassword = false;
+        user.InviteTokenHash = null;
+        user.InviteTokenExpiresAtUtc = null;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return await BuildAuthResultAsync(user, cancellationToken);
+    }
+
+    private static string NormalizeEmail(string? email)
+    {
+        return (email ?? string.Empty).Trim().ToLowerInvariant();
+    }
+
+    private async Task<AuthResult> BuildAuthResultAsync(User user, CancellationToken cancellationToken)
+    {
         var userRoles = await _dbContext.UserRoles
             .IgnoreQueryFilters()
             .Where(ur => ur.UserId == user.Id)
@@ -129,7 +193,7 @@ public class AuthService : IAuthService
             .ToList();
 
         var expiresAtUtc = DateTime.UtcNow.AddMinutes(_options.ExpiresMinutes);
-        var token = CreateToken(user, roleNames, permissionKeys, expiresAtUtc);
+        var accessToken = CreateToken(user, roleNames, permissionKeys, expiresAtUtc);
         var tenantKey = await _dbContext.Tenants
             .AsNoTracking()
             .Where(t => t.Id == user.TenantId)
@@ -142,34 +206,7 @@ public class AuthService : IAuthService
         user.LastLoginLocation = loginInfo.Location;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new AuthResult(token, expiresAtUtc, user.Email, user.FullName, roleNames, permissionKeys, tenantKey, user.MustChangePassword);
-    }
-
-    public async Task<PasswordChangeResult?> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default)
-    {
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsActive && !u.IsDeleted, cancellationToken);
-        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash))
-        {
-            return null;
-        }
-
-        var currentCheck = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
-        if (currentCheck == PasswordVerificationResult.Failed)
-        {
-            return null;
-        }
-
-        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
-        // Clear the change-password flag so the user can access the app normally.
-        user.MustChangePassword = false;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return new PasswordChangeResult(user.Email, user.FullName);
-    }
-
-    private static string NormalizeEmail(string? email)
-    {
-        return (email ?? string.Empty).Trim().ToLowerInvariant();
+        return new AuthResult(accessToken, expiresAtUtc, user.Email, user.FullName, roleNames, permissionKeys, tenantKey, user.MustChangePassword);
     }
 
     private string CreateToken(User user, IReadOnlyCollection<string> roles, IReadOnlyCollection<string> permissions, DateTime expiresAtUtc)

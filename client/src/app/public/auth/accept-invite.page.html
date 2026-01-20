@@ -1,0 +1,28 @@
+<div class="accept-invite-page">
+  <div class="accept-invite-card">
+    <div class="card-header">
+      <h1>Activate your access</h1>
+      <p>Set your password to join your workspace.</p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="submit()" class="accept-invite-form">
+      <div class="form-field">
+        <label for="newPassword">New password</label>
+        <input pInputText id="newPassword" type="password" formControlName="newPassword" />
+      </div>
+      <div class="form-field">
+        <label for="confirmPassword">Confirm new password</label>
+        <input pInputText id="confirmPassword" type="password" formControlName="confirmPassword" />
+      </div>
+
+      <div *ngIf="status" class="status-pill" [class]="status.tone">
+        {{ status.message }}
+      </div>
+
+      <button pButton type="submit" class="btn-submit" [disabled]="loading">
+        <span *ngIf="!loading">Activate account</span>
+        <span *ngIf="loading">Activating...</span>
+      </button>
+    </form>
+  </div>
+</div>

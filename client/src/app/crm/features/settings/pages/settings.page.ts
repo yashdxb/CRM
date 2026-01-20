@@ -239,7 +239,7 @@ export class SettingsPage {
   }
 
   protected canResendInvite(user: UserListItem): boolean {
-    return user.isActive && !user.lastLoginAtUtc;
+    return user.isActive;
   }
 
   protected resendInvite(user: UserListItem) {
