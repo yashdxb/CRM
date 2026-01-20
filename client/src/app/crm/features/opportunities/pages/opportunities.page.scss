@@ -974,6 +974,21 @@
   overflow-x: hidden;
 }
 
+@media (max-width: 768px) {
+  // Allow horizontal scrolling on dense tables without clipping.
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .data-table .p-datatable-table {
+    min-width: 860px;
+  }
+
+  :host ::ng-deep .data-table .p-datatable-wrapper {
+    overflow-x: auto;
+  }
+}
+
 .table-row {
   &.row-stalled {
     background: rgba(245, 158, 11, 0.06);

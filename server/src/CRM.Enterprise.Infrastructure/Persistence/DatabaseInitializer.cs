@@ -1671,6 +1671,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         await _dbContext.Database.MigrateAsync(cancellationToken);
 
         await SeedPermissionCatalogAsync(cancellationToken);
+        await SeedTimeZonesAsync(cancellationToken);
 
         var defaultTenant = await EnsureDefaultTenantAsync(cancellationToken);
         var seedTenants = await EnsureSeedTenantsAsync(defaultTenant.Key, cancellationToken);
@@ -1725,6 +1726,71 @@ public class DatabaseInitializer : IDatabaseInitializer
             var role = await EnsureRoleAsync(name, description, cancellationToken);
             await SyncRolePermissionsAsync(role, permissions, cancellationToken);
         }
+    }
+
+    private async Task SeedTimeZonesAsync(CancellationToken cancellationToken)
+    {
+        if (await _dbContext.TimeZones.AnyAsync(cancellationToken))
+        {
+            return;
+        }
+
+        // Canonical list used by the client selectors (ordered for consistent display).
+        var timeZones = new[]
+        {
+            new TimeZoneDefinition { IanaId = "UTC", Label = "UTC (GMT+00:00)", UtcOffsetMinutes = 0, FlagCode = "un", IsActive = true, SortOrder = 1 },
+            new TimeZoneDefinition { IanaId = "Pacific/Auckland", Label = "Auckland, New Zealand (GMT+13:00)", UtcOffsetMinutes = 780, FlagCode = "nz", IsActive = true, SortOrder = 2 },
+            new TimeZoneDefinition { IanaId = "Australia/Sydney", Label = "Sydney, Australia (GMT+12:00)", UtcOffsetMinutes = 720, FlagCode = "au", IsActive = true, SortOrder = 3 },
+            new TimeZoneDefinition { IanaId = "Australia/Melbourne", Label = "Melbourne, Australia (GMT+12:00)", UtcOffsetMinutes = 720, FlagCode = "au", IsActive = true, SortOrder = 4 },
+            new TimeZoneDefinition { IanaId = "Australia/Hobart", Label = "Hobart, Australia (GMT+10:30)", UtcOffsetMinutes = 630, FlagCode = "au", IsActive = true, SortOrder = 5 },
+            new TimeZoneDefinition { IanaId = "Australia/Brisbane", Label = "Brisbane, Australia (GMT+10:00)", UtcOffsetMinutes = 600, FlagCode = "au", IsActive = true, SortOrder = 6 },
+            new TimeZoneDefinition { IanaId = "Australia/Darwin", Label = "Darwin, Australia (GMT+10:00)", UtcOffsetMinutes = 600, FlagCode = "au", IsActive = true, SortOrder = 7 },
+            new TimeZoneDefinition { IanaId = "Asia/Seoul", Label = "Seoul, South Korea (GMT+10:00)", UtcOffsetMinutes = 600, FlagCode = "kr", IsActive = true, SortOrder = 8 },
+            new TimeZoneDefinition { IanaId = "Asia/Tokyo", Label = "Tokyo, Japan (GMT+10:00)", UtcOffsetMinutes = 600, FlagCode = "jp", IsActive = true, SortOrder = 9 },
+            new TimeZoneDefinition { IanaId = "Australia/Adelaide", Label = "Adelaide, Australia (GMT+09:30)", UtcOffsetMinutes = 570, FlagCode = "au", IsActive = true, SortOrder = 10 },
+            new TimeZoneDefinition { IanaId = "Australia/Perth", Label = "Perth, Australia (GMT+08:00)", UtcOffsetMinutes = 480, FlagCode = "au", IsActive = true, SortOrder = 11 },
+            new TimeZoneDefinition { IanaId = "Asia/Singapore", Label = "Singapore (GMT+08:00)", UtcOffsetMinutes = 480, FlagCode = "sg", IsActive = true, SortOrder = 12 },
+            new TimeZoneDefinition { IanaId = "Asia/Hong_Kong", Label = "Hong Kong (GMT+08:00)", UtcOffsetMinutes = 480, FlagCode = "hk", IsActive = true, SortOrder = 13 },
+            new TimeZoneDefinition { IanaId = "Asia/Shanghai", Label = "Shanghai, China (GMT+08:00)", UtcOffsetMinutes = 480, FlagCode = "cn", IsActive = true, SortOrder = 14 },
+            new TimeZoneDefinition { IanaId = "Asia/Manila", Label = "Manila, Philippines (GMT+08:00)", UtcOffsetMinutes = 480, FlagCode = "ph", IsActive = true, SortOrder = 15 },
+            new TimeZoneDefinition { IanaId = "Asia/Jakarta", Label = "Jakarta, Indonesia (GMT+07:00)", UtcOffsetMinutes = 420, FlagCode = "id", IsActive = true, SortOrder = 16 },
+            new TimeZoneDefinition { IanaId = "Asia/Kolkata", Label = "Kolkata, India (GMT+05:30)", UtcOffsetMinutes = 330, FlagCode = "in", IsActive = true, SortOrder = 17 },
+            new TimeZoneDefinition { IanaId = "Asia/Dubai", Label = "Dubai, United Arab Emirates (GMT+04:00)", UtcOffsetMinutes = 240, FlagCode = "ae", IsActive = true, SortOrder = 18 },
+            new TimeZoneDefinition { IanaId = "Europe/Istanbul", Label = "Istanbul, Turkey (GMT+03:00)", UtcOffsetMinutes = 180, FlagCode = "tr", IsActive = true, SortOrder = 19 },
+            new TimeZoneDefinition { IanaId = "Asia/Riyadh", Label = "Riyadh, Saudi Arabia (GMT+03:00)", UtcOffsetMinutes = 180, FlagCode = "sa", IsActive = true, SortOrder = 20 },
+            new TimeZoneDefinition { IanaId = "Europe/Moscow", Label = "Moscow, Russia (GMT+03:00)", UtcOffsetMinutes = 180, FlagCode = "ru", IsActive = true, SortOrder = 21 },
+            new TimeZoneDefinition { IanaId = "Africa/Johannesburg", Label = "Johannesburg, South Africa (GMT+02:00)", UtcOffsetMinutes = 120, FlagCode = "za", IsActive = true, SortOrder = 22 },
+            new TimeZoneDefinition { IanaId = "Asia/Jerusalem", Label = "Jerusalem, Israel (GMT+02:00)", UtcOffsetMinutes = 120, FlagCode = "il", IsActive = true, SortOrder = 23 },
+            new TimeZoneDefinition { IanaId = "Europe/Berlin", Label = "Berlin, Germany (GMT+01:00)", UtcOffsetMinutes = 60, FlagCode = "de", IsActive = true, SortOrder = 24 },
+            new TimeZoneDefinition { IanaId = "Europe/Rome", Label = "Rome, Italy (GMT+01:00)", UtcOffsetMinutes = 60, FlagCode = "it", IsActive = true, SortOrder = 25 },
+            new TimeZoneDefinition { IanaId = "Europe/Paris", Label = "Paris, France (GMT+01:00)", UtcOffsetMinutes = 60, FlagCode = "fr", IsActive = true, SortOrder = 26 },
+            new TimeZoneDefinition { IanaId = "Europe/Madrid", Label = "Madrid, Spain (GMT+01:00)", UtcOffsetMinutes = 60, FlagCode = "es", IsActive = true, SortOrder = 27 },
+            new TimeZoneDefinition { IanaId = "Europe/Amsterdam", Label = "Amsterdam, Netherlands (GMT+01:00)", UtcOffsetMinutes = 60, FlagCode = "nl", IsActive = true, SortOrder = 28 },
+            new TimeZoneDefinition { IanaId = "Europe/Stockholm", Label = "Stockholm, Sweden (GMT+01:00)", UtcOffsetMinutes = 60, FlagCode = "se", IsActive = true, SortOrder = 29 },
+            new TimeZoneDefinition { IanaId = "Europe/Oslo", Label = "Oslo, Norway (GMT+01:00)", UtcOffsetMinutes = 60, FlagCode = "no", IsActive = true, SortOrder = 30 },
+            new TimeZoneDefinition { IanaId = "Europe/London", Label = "London, United Kingdom (GMT+00:00)", UtcOffsetMinutes = 0, FlagCode = "gb", IsActive = true, SortOrder = 31 },
+            new TimeZoneDefinition { IanaId = "America/Sao_Paulo", Label = "Sao Paulo, Brazil (GMT-03:00)", UtcOffsetMinutes = -180, FlagCode = "br", IsActive = true, SortOrder = 32 },
+            new TimeZoneDefinition { IanaId = "America/Argentina/Buenos_Aires", Label = "Buenos Aires, Argentina (GMT-03:00)", UtcOffsetMinutes = -180, FlagCode = "ar", IsActive = true, SortOrder = 33 },
+            new TimeZoneDefinition { IanaId = "America/St_Johns", Label = "St. John's, Canada (GMT-03:30)", UtcOffsetMinutes = -210, FlagCode = "ca", IsActive = true, SortOrder = 34 },
+            new TimeZoneDefinition { IanaId = "America/Halifax", Label = "Halifax, Canada (GMT-04:00)", UtcOffsetMinutes = -240, FlagCode = "ca", IsActive = true, SortOrder = 35 },
+            new TimeZoneDefinition { IanaId = "America/Santiago", Label = "Santiago, Chile (GMT-04:00)", UtcOffsetMinutes = -240, FlagCode = "cl", IsActive = true, SortOrder = 36 },
+            new TimeZoneDefinition { IanaId = "America/Toronto", Label = "Toronto, Canada (GMT-05:00)", UtcOffsetMinutes = -300, FlagCode = "ca", IsActive = true, SortOrder = 37 },
+            new TimeZoneDefinition { IanaId = "America/New_York", Label = "New York, United States (GMT-05:00)", UtcOffsetMinutes = -300, FlagCode = "us", IsActive = true, SortOrder = 38 },
+            new TimeZoneDefinition { IanaId = "America/Bogota", Label = "Bogota, Colombia (GMT-05:00)", UtcOffsetMinutes = -300, FlagCode = "co", IsActive = true, SortOrder = 39 },
+            new TimeZoneDefinition { IanaId = "America/Lima", Label = "Lima, Peru (GMT-05:00)", UtcOffsetMinutes = -300, FlagCode = "pe", IsActive = true, SortOrder = 40 },
+            new TimeZoneDefinition { IanaId = "America/Winnipeg", Label = "Winnipeg, Canada (GMT-06:00)", UtcOffsetMinutes = -360, FlagCode = "ca", IsActive = true, SortOrder = 41 },
+            new TimeZoneDefinition { IanaId = "America/Chicago", Label = "Chicago, United States (GMT-06:00)", UtcOffsetMinutes = -360, FlagCode = "us", IsActive = true, SortOrder = 42 },
+            new TimeZoneDefinition { IanaId = "America/Mexico_City", Label = "Mexico City, Mexico (GMT-06:00)", UtcOffsetMinutes = -360, FlagCode = "mx", IsActive = true, SortOrder = 43 },
+            new TimeZoneDefinition { IanaId = "America/Edmonton", Label = "Edmonton, Canada (GMT-07:00)", UtcOffsetMinutes = -420, FlagCode = "ca", IsActive = true, SortOrder = 44 },
+            new TimeZoneDefinition { IanaId = "America/Denver", Label = "Denver, United States (GMT-07:00)", UtcOffsetMinutes = -420, FlagCode = "us", IsActive = true, SortOrder = 45 },
+            new TimeZoneDefinition { IanaId = "America/Vancouver", Label = "Vancouver, Canada (GMT-08:00)", UtcOffsetMinutes = -480, FlagCode = "ca", IsActive = true, SortOrder = 46 },
+            new TimeZoneDefinition { IanaId = "America/Los_Angeles", Label = "Los Angeles, United States (GMT-08:00)", UtcOffsetMinutes = -480, FlagCode = "us", IsActive = true, SortOrder = 47 },
+            new TimeZoneDefinition { IanaId = "America/Anchorage", Label = "Anchorage, United States (GMT-09:00)", UtcOffsetMinutes = -540, FlagCode = "us", IsActive = true, SortOrder = 48 },
+            new TimeZoneDefinition { IanaId = "Pacific/Honolulu", Label = "Honolulu, United States (GMT-10:00)", UtcOffsetMinutes = -600, FlagCode = "us", IsActive = true, SortOrder = 49 }
+        };
+
+        _dbContext.TimeZones.AddRange(timeZones);
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SeedPermissionCatalogAsync(CancellationToken cancellationToken)

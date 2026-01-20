@@ -11,9 +11,10 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { RoleSummary, UpsertUserRequest } from '../models/user-admin.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
-import { STANDARD_TIMEZONE_OPTIONS, getTimeZoneFlagUrl } from '../models/timezone-options';
+import { TimeZoneService } from '../../../../core/services/time-zone.service';
+import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
 
 @Component({
   selector: 'app-invite-user-page',
@@ -36,18 +37,46 @@ export class InviteUserPage {
   private readonly dataService = inject(UserAdminDataService);
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
+  private readonly timeZoneService = inject(TimeZoneService);
+  private readonly fieldLabels: Record<string, string> = {
+    fullName: 'Full name',
+    email: 'Email',
+    timeZone: 'Time zone',
+    locale: 'Locale',
+    roleIds: 'Roles'
+  };
 
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly loadingRoles = signal(true);
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
   protected readonly status = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
-  protected readonly canManageAdmin = signal(
-    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
-  );
+  // Re-evaluate permissions from storage so freshly issued tokens unlock the button without reloads.
+  protected readonly canManageAdmin = computed(() => {
+    const payload = readTokenContext()?.payload ?? null;
+    return (
+      tokenHasPermission(payload, PERMISSION_KEYS.administrationManage) ||
+      tokenHasRole(payload, 'Admin')
+    );
+  });
+  protected readonly inviteDisabledReason = computed(() => {
+    if (!readTokenContext()) {
+      return 'Your session has expired. Please sign in again.';
+    }
+    if (!this.canManageAdmin()) {
+      return 'You do not have permission to invite users.';
+    }
+    if (this.saving()) {
+      return 'Invite is already sending.';
+    }
+    if (this.form.invalid) {
+      return 'Complete the required fields before sending the invite.';
+    }
+    return null;
+  });
 
   // Shared time zone catalog keeps labels and flags consistent across settings screens.
-  protected readonly timezoneOptions = STANDARD_TIMEZONE_OPTIONS;
+  protected timezoneOptions: TimeZoneOption[] = [];
   protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
   protected readonly localeOptions = [
@@ -71,6 +100,15 @@ export class InviteUserPage {
   protected readonly canSubmit = computed(() => this.form.valid && !this.saving() && this.canManageAdmin());
 
   constructor() {
+    this.timeZoneService.getTimeZones().subscribe((options) => {
+      this.timezoneOptions = options;
+    });
+    // Clear the manual "roles required" error once the user selects at least one role.
+    this.form.get('roleIds')?.valueChanges.subscribe((roles) => {
+      if ((roles ?? []).length > 0) {
+        this.form.get('roleIds')?.setErrors(null);
+      }
+    });
     this.loadRoles();
   }
 
@@ -93,8 +131,16 @@ export class InviteUserPage {
   }
 
   protected handleSubmit() {
+    this.syncRoleErrors();
+    if (!this.canManageAdmin()) {
+      // Block unauthorized sends while still surfacing a clear UI message.
+      this.raiseStatus('error', 'You do not have permission to invite users.');
+      return;
+    }
     if (this.form.invalid) {
+      // Give immediate feedback when required fields are missing so the button doesn't feel unresponsive.
       this.form.markAllAsTouched();
+      this.raiseStatus('error', this.buildMissingFieldsMessage());
       return;
     }
 
@@ -141,6 +187,43 @@ export class InviteUserPage {
     const value = this.generatePasswordValue();
     this.form.patchValue({ temporaryPassword: value });
     this.generatedPassword.set(value);
+  }
+
+  protected handleInviteClick(event: Event) {
+    this.syncRoleErrors();
+    if (!readTokenContext()) {
+      event.preventDefault();
+      this.raiseStatus('error', 'Your session has expired. Please sign in again.');
+      return;
+    }
+    if (!this.canManageAdmin()) {
+      event.preventDefault();
+      this.raiseStatus('error', 'You do not have permission to invite users.');
+      return;
+    }
+    if (this.form.invalid) {
+      event.preventDefault();
+      this.form.markAllAsTouched();
+      this.raiseStatus('error', this.buildMissingFieldsMessage());
+    }
+  }
+
+  private syncRoleErrors() {
+    // Normalize any stale role validation errors to keep the form state accurate.
+    const roles = (this.form.get('roleIds')?.value ?? []) as string[];
+    if (roles.length > 0) {
+      this.form.get('roleIds')?.setErrors(null);
+    }
+  }
+
+  private buildMissingFieldsMessage() {
+    const missing = Object.entries(this.fieldLabels)
+      .filter(([key]) => this.form.get(key)?.invalid)
+      .map(([, label]) => label);
+    if (missing.length === 0) {
+      return 'Complete the required fields before sending the invite.';
+    }
+    return `Complete the required fields: ${missing.join(', ')}.`;
   }
 
   protected navigateBack() {

@@ -813,6 +813,17 @@
     margin-top: $space-3;
   }
 
+  @media (max-width: 600px) {
+    // Preserve table readability on small screens without truncation.
+    .table-card {
+      overflow-x: auto;
+    }
+
+    .contacts-table {
+      min-width: 760px;
+    }
+  }
+
   .import-dialog {
     display: flex;
     flex-direction: column;

@@ -14,7 +14,8 @@ import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
-import { STANDARD_TIMEZONE_OPTIONS, getTimeZoneFlagUrl } from '../models/timezone-options';
+import { TimeZoneService } from '../../../../core/services/time-zone.service';
+import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
 
 interface Option<T = string> {
   label: string;
@@ -44,6 +45,7 @@ export class WorkspaceSettingsPage {
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly toastService = inject(AppToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly timeZoneService = inject(TimeZoneService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -52,7 +54,7 @@ export class WorkspaceSettingsPage {
   );
 
   // Shared time zone catalog keeps labels and flags consistent across settings screens.
-  protected readonly timeZoneOptions = STANDARD_TIMEZONE_OPTIONS;
+  protected timeZoneOptions: TimeZoneOption[] = [];
   protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
   protected readonly currencyOptions: Option[] = [
@@ -72,6 +74,9 @@ export class WorkspaceSettingsPage {
   });
 
   constructor() {
+    this.timeZoneService.getTimeZones().subscribe((options) => {
+      this.timeZoneOptions = options;
+    });
     this.loadSettings();
   }
 

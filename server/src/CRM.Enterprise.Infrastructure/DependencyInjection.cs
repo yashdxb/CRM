@@ -22,6 +22,7 @@ using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Notifications;
 using CRM.Enterprise.Infrastructure.Leads;
+using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -47,13 +48,36 @@ public static class DependencyInjection
         services.AddScoped<IDashboardLayoutService, DashboardLayoutService>();
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<GraphMailOptions>(configuration.GetSection(GraphMailOptions.SectionName));
+        services.Configure<AcsEmailOptions>(configuration.GetSection(AcsEmailOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
         services.AddHttpContextAccessor();
         services.AddSingleton<IPresenceTracker, PresenceTracker>();
         services.AddHttpClient<LoginLocationService>();
         services.AddScoped<LoginLocationService>();
         services.AddHttpClient<GraphEmailSender>();
-        services.AddScoped<IEmailSender, GraphEmailSender>();
+        services.AddSingleton<AcsEmailSender>();
+        services.AddSingleton<ServiceBusClient?>(sp =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AcsEmailOptions>>().Value;
+            if (string.IsNullOrWhiteSpace(options.ServiceBusConnectionString))
+            {
+                return null;
+            }
+
+            return new ServiceBusClient(options.ServiceBusConnectionString);
+        });
+        services.AddSingleton<ServiceBusEmailQueue>();
+        services.AddHostedService<EmailQueueWorker>();
+        services.AddSingleton<IEmailSender>(sp =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AcsEmailOptions>>().Value;
+            if (options.UseQueue && !string.IsNullOrWhiteSpace(options.ServiceBusConnectionString))
+            {
+                return new QueuedEmailSender(sp.GetRequiredService<ServiceBusEmailQueue>());
+            }
+
+            return sp.GetRequiredService<AcsEmailSender>();
+        });
         services.Configure<OpenAiOptions>(configuration.GetSection(OpenAiOptions.SectionName));
         services.AddHttpClient<OpenAiLeadScoringService>((sp, client) =>
         {

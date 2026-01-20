@@ -1096,8 +1096,23 @@
     min-width: 70px;
   }
 
+  // Keep primary actions reachable without horizontal scrolling.
+  .hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
   .form-card {
     padding: $space-4;
+  }
+
+  .form-card.editor-card {
+    position: static;
   }
 
   .rule-item {

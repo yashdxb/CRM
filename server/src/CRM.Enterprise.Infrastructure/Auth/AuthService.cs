@@ -142,7 +142,29 @@ public class AuthService : IAuthService
         user.LastLoginLocation = loginInfo.Location;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new AuthResult(token, expiresAtUtc, user.Email, user.FullName, roleNames, permissionKeys, tenantKey);
+        return new AuthResult(token, expiresAtUtc, user.Email, user.FullName, roleNames, permissionKeys, tenantKey, user.MustChangePassword);
+    }
+
+    public async Task<PasswordChangeResult?> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId && u.IsActive && !u.IsDeleted, cancellationToken);
+        if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash))
+        {
+            return null;
+        }
+
+        var currentCheck = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, currentPassword);
+        if (currentCheck == PasswordVerificationResult.Failed)
+        {
+            return null;
+        }
+
+        user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+        // Clear the change-password flag so the user can access the app normally.
+        user.MustChangePassword = false;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new PasswordChangeResult(user.Email, user.FullName);
     }
 
     private static string NormalizeEmail(string? email)

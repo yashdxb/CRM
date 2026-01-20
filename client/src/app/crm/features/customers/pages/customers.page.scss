@@ -1031,6 +1031,13 @@
   }
 }
 
+@media (max-width: 600px) {
+  // Keep dense tables usable on mobile with horizontal scroll.
+  .data-table {
+    min-width: 760px;
+  }
+}
+
 .table-row {
   transition: background $transition-fast;
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);

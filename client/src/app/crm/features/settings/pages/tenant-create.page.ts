@@ -16,7 +16,8 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { CreateTenantRequest } from '../models/tenant-admin.model';
 import { TenantAdminDataService } from '../services/tenant-admin-data.service';
-import { STANDARD_TIMEZONE_OPTIONS, getTimeZoneFlagUrl } from '../models/timezone-options';
+import { TimeZoneService } from '../../../../core/services/time-zone.service';
+import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
 
 interface Option<T = string> {
   label: string;
@@ -59,6 +60,7 @@ export class TenantCreatePage {
   private readonly dataService = inject(TenantAdminDataService);
   private readonly formBuilder = inject(FormBuilder);
   private readonly toastService = inject(AppToastService);
+  private readonly timeZoneService = inject(TimeZoneService);
   protected readonly router = inject(Router);
 
   protected readonly saving = signal(false);
@@ -180,7 +182,7 @@ export class TenantCreatePage {
   });
 
   // Shared time zone catalog keeps labels and flags consistent across settings screens.
-  protected readonly timeZoneOptions = STANDARD_TIMEZONE_OPTIONS;
+  protected timeZoneOptions: TimeZoneOption[] = [];
   protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
   protected readonly currencyOptions: Option[] = [
@@ -190,6 +192,12 @@ export class TenantCreatePage {
     { label: 'GBP', value: 'GBP', icon: 'pi-pound', iconClass: 'icon-rose' },
     { label: 'INR', value: 'INR', icon: 'pi-credit-card', iconClass: 'icon-amber' }
   ];
+
+  constructor() {
+    this.timeZoneService.getTimeZones().subscribe((options) => {
+      this.timeZoneOptions = options;
+    });
+  }
 
   protected onSupplyChainToggle() {
     if (!this.tenantForm.controls.supplyChainEnabled.value) {

@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace CRM.Enterprise.Api.Controllers;
@@ -27,17 +28,22 @@ public class UsersController : ControllerBase
     private readonly IEmailSender _emailSender;
     private readonly ILogger<UsersController> _logger;
     private readonly CRM.Enterprise.Infrastructure.Presence.IPresenceTracker _presenceTracker;
+    private readonly string? _brandLogoUrl;
+    private readonly string? _brandWebsiteUrl;
 
     public UsersController(
         CrmDbContext dbContext,
         IPasswordHasher<User> passwordHasher,
         IEmailSender emailSender,
+        IConfiguration configuration,
         ILogger<UsersController> logger,
         CRM.Enterprise.Infrastructure.Presence.IPresenceTracker presenceTracker)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _emailSender = emailSender;
+        _brandLogoUrl = configuration["Branding:LogoUrl"];
+        _brandWebsiteUrl = configuration["Branding:WebsiteUrl"];
         _logger = logger;
         _presenceTracker = presenceTracker;
     }
@@ -151,6 +157,8 @@ public class UsersController : ControllerBase
             TimeZone = string.IsNullOrWhiteSpace(request.TimeZone) ? "UTC" : request.TimeZone,
             Locale = string.IsNullOrWhiteSpace(request.Locale) ? "en-US" : request.Locale,
             IsActive = request.IsActive,
+            // Invited users must replace the temporary password on first sign-in.
+            MustChangePassword = true,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -232,6 +240,8 @@ public class UsersController : ControllerBase
             ? PasswordGenerator.CreateStrongPassword()
             : request.TemporaryPassword;
         user.PasswordHash = _passwordHasher.HashPassword(user, password);
+        // Enforce a reset on the next login when admins issue a temporary password.
+        user.MustChangePassword = true;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return NoContent();
     }
@@ -380,15 +390,63 @@ public class UsersController : ControllerBase
             ? $"{Request.Scheme}://{Request.Host}"
             : origin;
         var loginUrl = $"{baseUrl.TrimEnd('/')}/login";
+        var websiteUrl = string.IsNullOrWhiteSpace(_brandWebsiteUrl) ? baseUrl : _brandWebsiteUrl;
+        var logoUrl = string.IsNullOrWhiteSpace(_brandLogoUrl) ? null : _brandLogoUrl;
+        var encodedWebsiteUrl = System.Net.WebUtility.HtmlEncode(websiteUrl);
+        var encodedLogoUrl = logoUrl is null ? null : System.Net.WebUtility.HtmlEncode(logoUrl);
+        var logoSection = encodedLogoUrl is null
+            ? string.Empty
+            : $@"
+                <tr>
+                  <td style=""padding:28px 32px 4px;"">
+                    <a href=""{encodedWebsiteUrl}"" style=""display:inline-block; text-decoration:none;"">
+                      <img src=""{encodedLogoUrl}"" alt=""CRM Enterprise"" style=""height:32px; display:block; border:0;"" />
+                    </a>
+                  </td>
+                </tr>";
 
         var subject = "You're invited to CRM Enterprise";
+        // Keep the invite template self-contained so it renders consistently across email clients.
         var htmlBody = $@"
-            <p>Hi {System.Net.WebUtility.HtmlEncode(user.FullName)},</p>
-            <p>You have been invited to CRM Enterprise. Use the credentials below to sign in:</p>
-            <p><strong>Login:</strong> {System.Net.WebUtility.HtmlEncode(user.Email)}<br/>
-            <strong>Temporary password:</strong> {System.Net.WebUtility.HtmlEncode(temporaryPassword)}</p>
-            <p><a href=""{loginUrl}"">Sign in to CRM Enterprise</a></p>
-            <p>If you did not expect this invitation, you can ignore this message.</p>";
+            <div style=""font-family: 'Segoe UI', Arial, sans-serif; background:#f5f7fb; padding:24px;"">
+              <table role=""presentation"" cellpadding=""0"" cellspacing=""0"" width=""100%"" style=""max-width:600px; margin:0 auto; background:#ffffff; border-radius:12px; box-shadow:0 8px 24px rgba(15,23,42,0.08);"">
+                {logoSection}
+                <tr>
+                  <td style=""padding:28px 32px 12px;"">
+                    <h2 style=""margin:0; font-size:22px; color:#111827;"">CRM Enterprise invite</h2>
+                    <p style=""margin:8px 0 0; color:#6b7280; font-size:14px;"">Your workspace access is ready.</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style=""padding:8px 32px 0;"">
+                    <p style=""margin:0 0 12px; color:#111827; font-size:15px;"">
+                      Hi {System.Net.WebUtility.HtmlEncode(user.FullName)},
+                    </p>
+                    <p style=""margin:0 0 16px; color:#4b5563; font-size:14px;"">
+                      You have been invited to CRM Enterprise. Use the credentials below to sign in:
+                    </p>
+                    <div style=""background:#f8fafc; border:1px solid #e5e7eb; border-radius:10px; padding:14px 16px; font-size:14px;"">
+                      <div style=""margin-bottom:8px;""><strong>Login:</strong> {System.Net.WebUtility.HtmlEncode(user.Email)}</div>
+                      <div><strong>Temporary password:</strong> {System.Net.WebUtility.HtmlEncode(temporaryPassword)}</div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style=""padding:20px 32px 8px;"">
+                    <a href=""{loginUrl}"" style=""display:inline-block; background:#2563eb; color:#ffffff; text-decoration:none; padding:12px 18px; border-radius:8px; font-size:14px; font-weight:600;"">
+                      Sign in to CRM Enterprise
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style=""padding:6px 32px 24px;"">
+                    <p style=""margin:0; color:#6b7280; font-size:12px;"">
+                      If you did not expect this invitation, you can ignore this message.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </div>";
         var textBody = $"Hi {user.FullName},\n\n" +
                        "You have been invited to CRM Enterprise. Use the credentials below to sign in:\n\n" +
                        $"Login: {user.Email}\n" +

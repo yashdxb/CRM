@@ -168,7 +168,6 @@
               </div>
             </ng-container>
           </ng-container>
-          <ng-container *ngTemplateOutlet="resizeHandles; context: { $implicit: chartCard }"></ng-container>
         </article>
       </ng-container>
     </section>
@@ -187,6 +186,8 @@
         [ngSwitch]="cardId"
         [ngClass]="getCardSizeClass(cardId)"
         cdkDrag
+        (cdkDragStarted)="onCardDragStart($event)"
+        (cdkDragEnded)="onCardDragEnd($event)"
         #dashboardCard
         [attr.data-card-id]="cardId"
         [ngStyle]="getCardDimensions(cardId)"
@@ -531,7 +532,7 @@
             </div>
           </div>
         </ng-container>
-        <ng-container *ngTemplateOutlet="resizeHandles; context: { $implicit: dashboardCard }"></ng-container>
+        <!-- Resizing disabled: keep cards at consistent sizes, allow only drag ordering. -->
       </article>
     </section>
   </div>
@@ -573,14 +574,6 @@
       pButton
       type="button"
       class="btn-icon-sm card-control"
-      icon="pi pi-window-maximize"
-      (click)="toggleCardSize(cardId)"
-      aria-label="Resize card"
-    ></button>
-    <button
-      pButton
-      type="button"
-      class="btn-icon-sm card-control"
       icon="pi pi-times"
       (click)="hideCard(cardId)"
       aria-label="Hide card"
@@ -602,14 +595,6 @@
       pButton
       type="button"
       class="btn-icon-sm card-control"
-      icon="pi pi-window-maximize"
-      (click)="toggleCardSize(chartId)"
-      aria-label="Resize chart"
-    ></button>
-    <button
-      pButton
-      type="button"
-      class="btn-icon-sm card-control"
       icon="pi pi-times"
       (click)="hideChart(chartId)"
       aria-label="Hide chart"
@@ -625,16 +610,6 @@
   </div>
 </ng-template>
 
-<ng-template #resizeHandles let-target>
-  <span class="resize-handle handle-n" (mousedown)="startResize($event, target, 'n')"></span>
-  <span class="resize-handle handle-s" (mousedown)="startResize($event, target, 's')"></span>
-  <span class="resize-handle handle-e" (mousedown)="startResize($event, target, 'e')"></span>
-  <span class="resize-handle handle-w" (mousedown)="startResize($event, target, 'w')"></span>
-  <span class="resize-handle handle-ne" (mousedown)="startResize($event, target, 'ne')"></span>
-  <span class="resize-handle handle-nw" (mousedown)="startResize($event, target, 'nw')"></span>
-  <span class="resize-handle handle-se" (mousedown)="startResize($event, target, 'se')"></span>
-  <span class="resize-handle handle-sw" (mousedown)="startResize($event, target, 'sw')"></span>
-</ng-template>
 
 <p-dialog
   header="Customize Command Center"

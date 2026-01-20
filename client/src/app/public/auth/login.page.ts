@@ -56,6 +56,12 @@ export class LoginPage {
           this.error = 'Login failed to start a session. Please try again.';
           return;
         }
+        const profile = this.auth.currentUser();
+        if (profile?.mustChangePassword) {
+          // Force invited users to replace their temporary password before entering the app.
+          this.router.navigate(['/change-password']);
+          return;
+        }
         const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo');
         const target = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/app/dashboard';
         this.router.navigateByUrl(target);

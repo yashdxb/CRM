@@ -30,6 +30,7 @@ public class CrmDbContext : DbContext
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<TimeZoneDefinition> TimeZones => Set<TimeZoneDefinition>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
@@ -108,6 +109,23 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Activity>().ToTable("Activities", CrmSchema);
         modelBuilder.Entity<Attachment>().ToTable("Attachments", CrmSchema);
         modelBuilder.Entity<ImportJob>().ToTable("ImportJobs", CrmSchema);
+        // System-wide time zone catalog (not tenant-scoped).
+        modelBuilder.Entity<TimeZoneDefinition>().ToTable("TimeZones", CrmSchema);
+        modelBuilder.Entity<TimeZoneDefinition>()
+            .HasIndex(zone => zone.IanaId)
+            .IsUnique();
+        modelBuilder.Entity<TimeZoneDefinition>()
+            .Property(zone => zone.IanaId)
+            .HasMaxLength(80)
+            .IsRequired();
+        modelBuilder.Entity<TimeZoneDefinition>()
+            .Property(zone => zone.Label)
+            .HasMaxLength(160)
+            .IsRequired();
+        modelBuilder.Entity<TimeZoneDefinition>()
+            .Property(zone => zone.FlagCode)
+            .HasMaxLength(8)
+            .IsRequired();
         modelBuilder.Entity<CustomFieldDefinition>().ToTable("CustomFieldDefinitions", CrmSchema);
         modelBuilder.Entity<CustomFieldValue>().ToTable("CustomFieldValues", CrmSchema);
         modelBuilder.Entity<Supplier>().ToTable("Suppliers", SupplyChainSchema);
@@ -169,6 +187,10 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<User>()
             .Property(u => u.EmailNormalized)
             .HasMaxLength(320);
+        // Keep the change-password flag explicit for predictable onboarding.
+        modelBuilder.Entity<User>()
+            .Property(u => u.MustChangePassword)
+            .HasDefaultValue(false);
         modelBuilder.Entity<User>()
             .HasIndex(u => new { u.TenantId, u.EmailNormalized })
             .HasFilter("[EmailNormalized] IS NOT NULL AND [IsDeleted] = 0")

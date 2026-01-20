@@ -143,7 +143,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// Enforce HTTPS only for non-local traffic to prevent 307 CORS preflight failures during local dev.
+app.UseWhen(
+    context =>
+        !app.Environment.IsDevelopment() &&
+        !string.Equals(context.Request.Host.Host, "localhost", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(context.Request.Host.Host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) &&
+        !string.Equals(context.Request.Host.Host, "::1", StringComparison.OrdinalIgnoreCase),
+    branch => branch.UseHttpsRedirection());
 app.UseRouting();
 app.UseCors(CorsPolicyName);
 app.UseMiddleware<TenantResolutionMiddleware>();
@@ -210,7 +217,7 @@ static void EnsureSqlServerAvailable(string connectionString)
         catch (Exception ex)
         {
             throw new InvalidOperationException(
-                "SQL Server is not reachable. Start Docker Desktop and run `docker compose up -d sqlserver`, " +
+                "yooo, Habeebi SQL Server is not reachable. Start Docker Desktop and run `docker compose up -d sqlserver`, " +
                 "or update ConnectionStrings:SqlServer to a reachable instance.",
                 ex);
         }

@@ -13,6 +13,8 @@ public class User : AuditableEntity
     public string? Locale { get; set; }
     public string? NotificationPreferencesJson { get; set; }
     public string? CommandCenterLayoutJson { get; set; }
+    // Forces a password update after invitation or admin reset.
+    public bool MustChangePassword { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAtUtc { get; set; }
     [MaxLength(64)]

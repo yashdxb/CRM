@@ -3,7 +3,7 @@ import { Component, computed, effect, inject, OnInit, PLATFORM_ID } from '@angul
 import { toSignal } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CdkDragDrop, CdkDragEnd, CdkDragStart, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ChartModule } from 'primeng/chart';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
@@ -160,6 +160,21 @@ export class DashboardPage implements OnInit {
   protected layoutSizes: Record<string, 'sm' | 'md' | 'lg'> = {};
   protected layoutDimensions: Record<string, { width: number; height: number }> = {};
   private hasLocalLayoutPreference = false;
+  // Locked size map so customize layout never inflates card heights.
+  private readonly defaultCardSizes: Record<string, 'sm' | 'md' | 'lg'> = {
+    pipeline: 'lg',
+    accounts: 'md',
+    'activity-mix': 'sm',
+    conversion: 'sm',
+    'top-performers': 'md',
+    'my-tasks': 'md',
+    timeline: 'lg',
+    health: 'md'
+  };
+  private readonly defaultChartSizes: Record<ChartId, 'sm' | 'md' | 'lg'> = {
+    revenue: 'lg',
+    growth: 'md'
+  };
 
   private readonly layoutStorageKey = 'crm.dashboard.command-center.layout';
   private readonly chartVisibilityStorageKey = 'crm.dashboard.charts.visibility';
@@ -177,6 +192,8 @@ export class DashboardPage implements OnInit {
         startHeight: number;
         minWidth: number;
         minHeight: number;
+        maxWidth: number;
+        maxHeight: number;
       }
     | null = null;
   private readonly onResizeMove = (event: MouseEvent) => this.handleResizeMove(event);
@@ -209,8 +226,8 @@ export class DashboardPage implements OnInit {
   ngOnInit(): void {
     const { order, sizes, dimensions, hasLocalPreference } = this.loadLayoutPreferences();
     this.layoutOrder = order;
-    this.layoutSizes = sizes;
-    this.layoutDimensions = dimensions;
+    this.layoutSizes = this.buildDefaultSizeMap();
+    this.layoutDimensions = {};
     this.hasLocalLayoutPreference = hasLocalPreference;
     this.loadChartVisibility();
 
@@ -226,9 +243,8 @@ export class DashboardPage implements OnInit {
         return;
       }
       this.layoutOrder = normalized;
-      this.layoutSizes = sizes ?? {};
-      this.layoutDimensions = dimensions ?? {};
-      this.ensureSizeDefaults();
+      this.layoutSizes = this.buildDefaultSizeMap();
+      this.layoutDimensions = {};
       this.persistLayoutPreferences();
     });
   }
@@ -269,9 +285,8 @@ export class DashboardPage implements OnInit {
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
-        this.layoutSizes = response.sizes ?? this.layoutSizes;
-        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
-        this.ensureSizeDefaults();
+        this.layoutSizes = this.buildDefaultSizeMap();
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
       },
@@ -297,9 +312,8 @@ export class DashboardPage implements OnInit {
         this.layoutOrder = this.shouldHonorServerLayout(normalized, requested, defaultOrder)
           ? normalized
           : requested;
-        this.layoutSizes = response.sizes ?? this.layoutSizes;
-        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
-        this.ensureSizeDefaults();
+        this.layoutSizes = this.buildDefaultSizeMap();
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
         this.layoutDialogOpen = false;
       },
@@ -318,9 +332,8 @@ export class DashboardPage implements OnInit {
       next: response => {
         const defaultOrder = this.dashboardData.getDefaultLayout();
         this.layoutOrder = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
-        this.layoutSizes = response.sizes ?? {};
-        this.layoutDimensions = response.dimensions ?? {};
-        this.ensureSizeDefaults();
+        this.layoutSizes = this.buildDefaultSizeMap();
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
       },
@@ -347,8 +360,8 @@ export class DashboardPage implements OnInit {
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
-        this.layoutSizes = response.sizes ?? this.layoutSizes;
-        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
+        this.layoutSizes = this.buildDefaultSizeMap();
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
       },
       error: () => {
@@ -372,8 +385,8 @@ export class DashboardPage implements OnInit {
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
-        this.layoutSizes = response.sizes ?? this.layoutSizes;
-        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
+        this.layoutSizes = this.buildDefaultSizeMap();
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
       },
       error: () => {
@@ -402,16 +415,42 @@ export class DashboardPage implements OnInit {
     this.persistChartVisibility();
   }
 
+  protected onCardDragStart(event: CdkDragStart<string>): void {
+    const element = event.source.element.nativeElement;
+    const rect = element.getBoundingClientRect();
+    // Freeze preview size so cards don't inflate while dragging.
+    element.style.setProperty('--drag-width', `${Math.round(rect.width)}px`);
+    element.style.setProperty('--drag-height', `${Math.round(rect.height)}px`);
+  }
+
+  protected onCardDragEnd(event: CdkDragEnd<string>): void {
+    const element = event.source.element.nativeElement;
+    // Clean up drag sizing vars after drop so layout stays responsive.
+    element.style.removeProperty('--drag-width');
+    element.style.removeProperty('--drag-height');
+  }
+
   protected startResize(
     event: MouseEvent,
     element: HTMLElement,
     handle: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
   ): void {
+    // Resizing is disabled to keep card dimensions consistent across devices.
+    return;
     event.preventDefault();
     event.stopPropagation();
     const rect = element.getBoundingClientRect();
-    const minWidth = Number(element.dataset['minWidth'] ?? 260);
-    const minHeight = Number(element.dataset['minHeight'] ?? 220);
+    const baseMinWidth = Number(element.dataset['minWidth'] ?? 260);
+    const baseMinHeight = Number(element.dataset['minHeight'] ?? 220);
+    // Respect the rendered content so cards cannot be resized smaller than what they display.
+    const contentConstraints = this.getCardContentConstraints(element);
+    const minWidth = Math.max(baseMinWidth, contentConstraints.minWidth);
+    const minHeight = Math.max(baseMinHeight, contentConstraints.minHeight);
+    // Cap growth to 50% above content height and the available grid width.
+    const grid = element.closest('.dashboard-card-grid') as HTMLElement | null;
+    const gridRect = grid?.getBoundingClientRect();
+    const maxWidth = Math.max(minWidth, Math.floor(gridRect?.width ?? window.innerWidth));
+    const maxHeight = Math.max(minHeight, Math.floor(minHeight * 1.5));
     const cardId = element.dataset['cardId'] ?? null;
     this.resizeState = {
       element,
@@ -422,7 +461,9 @@ export class DashboardPage implements OnInit {
       startWidth: rect.width,
       startHeight: rect.height,
       minWidth,
-      minHeight
+      minHeight,
+      maxWidth,
+      maxHeight
     };
     element.classList.add('is-resizing');
     window.addEventListener('mousemove', this.onResizeMove);
@@ -431,7 +472,7 @@ export class DashboardPage implements OnInit {
 
   private handleResizeMove(event: MouseEvent): void {
     if (!this.resizeState) return;
-    const { element, handle, startX, startY, startWidth, startHeight, minWidth, minHeight } = this.resizeState;
+    const { element, handle, startX, startY, startWidth, startHeight, minWidth, minHeight, maxWidth, maxHeight } = this.resizeState;
     const dx = event.clientX - startX;
     const dy = event.clientY - startY;
     let nextWidth = startWidth;
@@ -450,8 +491,8 @@ export class DashboardPage implements OnInit {
       nextHeight = startHeight - dy;
     }
 
-    nextWidth = Math.max(minWidth, nextWidth);
-    nextHeight = Math.max(minHeight, nextHeight);
+    nextWidth = Math.min(maxWidth, Math.max(minWidth, nextWidth));
+    nextHeight = Math.min(maxHeight, Math.max(minHeight, nextHeight));
 
     element.style.width = `${nextWidth}px`;
     element.style.height = `${nextHeight}px`;
@@ -475,8 +516,8 @@ export class DashboardPage implements OnInit {
             response.hiddenCards,
             this.layoutOrder
           );
-          this.layoutSizes = response.sizes ?? this.layoutSizes;
-          this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
+          this.layoutSizes = this.buildDefaultSizeMap();
+          this.layoutDimensions = {};
           this.persistLayoutPreferences();
         },
         error: () => {
@@ -487,6 +528,19 @@ export class DashboardPage implements OnInit {
     this.resizeState = null;
     window.removeEventListener('mousemove', this.onResizeMove);
     window.removeEventListener('mouseup', this.onResizeEnd);
+  }
+
+  private getCardContentConstraints(element: HTMLElement) {
+    // Measure header + body so cards keep enough room for their visible content.
+    const header = element.querySelector('.card-header') as HTMLElement | null;
+    const body = element.querySelector('.card-body') as HTMLElement | null;
+    const headerWidth = header?.scrollWidth ?? 0;
+    const bodyWidth = body?.scrollWidth ?? 0;
+    const minWidth = Math.ceil(Math.max(headerWidth, bodyWidth, element.scrollWidth));
+    const headerHeight = header?.scrollHeight ?? 0;
+    const bodyHeight = body?.scrollHeight ?? 0;
+    const minHeight = Math.ceil(Math.max(headerHeight + bodyHeight, element.scrollHeight));
+    return { minWidth, minHeight };
   }
 
   private loadChartVisibility(): void {
@@ -519,40 +573,20 @@ export class DashboardPage implements OnInit {
   }
 
   protected getCardSizeClass(cardId: string): string {
-    return `size-${this.layoutSizes[cardId] ?? 'md'}`;
+    return `size-${this.layoutSizes[cardId] ?? this.defaultCardSizes[cardId] ?? 'md'}`;
   }
 
   protected getChartSizeClass(chartId: ChartId): string {
-    return `size-${this.layoutSizes[chartId] ?? 'md'}`;
+    return `size-${this.layoutSizes[chartId] ?? this.defaultChartSizes[chartId] ?? 'md'}`;
   }
 
   protected getCardDimensions(cardId: string): { width?: string; height?: string } | null {
-    const dimensions = this.layoutDimensions[cardId];
-    if (!dimensions) return null;
-    // Apply explicit pixel units so restored sizes are honored after reload.
-    return { width: `${dimensions.width}px`, height: `${dimensions.height}px` };
+    // Resizing is disabled, so ignore persisted dimensions to keep cards consistent.
+    return null;
   }
 
   protected toggleCardSize(cardId: string): void {
-    const current = this.layoutSizes[cardId] ?? 'md';
-    const next = current === 'sm' ? 'md' : current === 'md' ? 'lg' : 'sm';
-    this.layoutSizes = { ...this.layoutSizes, [cardId]: next };
-    this.persistLayoutPreferences();
-    this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe({
-      next: response => {
-        this.layoutOrder = this.normalizeLayoutWithHidden(
-          response.cardOrder,
-          response.hiddenCards,
-          this.layoutOrder
-        );
-        this.layoutSizes = response.sizes ?? this.layoutSizes;
-        this.layoutDimensions = response.dimensions ?? this.layoutDimensions;
-        this.persistLayoutPreferences();
-      },
-      error: () => {
-        // Keep local changes if server update fails.
-      }
-    });
+    // Resizing/maximizing is disabled; keep sizes locked to defaults.
   }
 
   protected isChartVisible(chartId: ChartId): boolean {
@@ -904,11 +938,8 @@ export class DashboardPage implements OnInit {
   }
 
   private ensureSizeDefaults(): void {
-    const next: Record<string, 'sm' | 'md' | 'lg'> = { ...this.layoutSizes };
-    this.layoutOrder.forEach(cardId => {
-      if (!next[cardId]) next[cardId] = 'md';
-    });
-    this.layoutSizes = next;
+    // Force locked sizes regardless of previous server data.
+    this.layoutSizes = this.buildDefaultSizeMap();
   }
 
   private areArraysEqual(a: string[], b: string[]): boolean {
@@ -1094,9 +1125,17 @@ export class DashboardPage implements OnInit {
     const hiddenCards = defaultOrder.filter(id => !cardOrder.includes(id));
     return {
       cardOrder,
-      sizes: this.layoutSizes,
-      dimensions: this.layoutDimensions,
+      // Persist only default sizes since resizing is disabled.
+      sizes: this.buildDefaultSizeMap(),
+      dimensions: {},
       hiddenCards
+    };
+  }
+
+  private buildDefaultSizeMap() {
+    return {
+      ...this.defaultCardSizes,
+      ...this.defaultChartSizes
     };
   }
 }

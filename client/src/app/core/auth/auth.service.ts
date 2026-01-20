@@ -19,6 +19,7 @@ interface LoginResponse {
   roles: string[];
   permissions: string[];
   tenantKey: string;
+  mustChangePassword: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -42,6 +43,19 @@ export class AuthService {
         saveToken(res.accessToken);
         if (res.tenantKey) {
           setTenantKey(res.tenantKey);
+        }
+      })
+    );
+  }
+
+  changePassword(currentPassword: string, newPassword: string) {
+    const url = `${environment.apiUrl}/api/auth/change-password`;
+    return this.http.post<void>(url, { currentPassword, newPassword }).pipe(
+      tap(() => {
+        // Keep local auth state in sync after the forced change-password flow.
+        const current = this.currentUserSignal();
+        if (current) {
+          this.currentUserSignal.set({ ...current, mustChangePassword: false });
         }
       })
     );

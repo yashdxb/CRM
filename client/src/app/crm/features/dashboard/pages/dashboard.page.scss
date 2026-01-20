@@ -523,9 +523,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 .dashboard-card-grid {
-  // Use a wrapped flex layout so CDK horizontal sorting can reorder across rows.
-  display: flex;
-  flex-wrap: wrap;
+  // Keep every command-center row at two cards for a balanced, standard layout.
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-5;
   align-items: stretch;
 }
@@ -537,18 +537,70 @@
   flex-direction: column;
   min-height: 0;
   flex: 1 1 auto;
+  width: 100%;
 
   &.size-sm {
-    width: calc(33.333% - #{$space-5});
+    width: 100%;
   }
 
   &.size-md {
-    width: calc(66.666% - #{$space-5});
+    width: 100%;
   }
 
   &.size-lg {
     width: 100%;
   }
+
+  // Default card heights tuned to each card's content to avoid overflows or oversized layouts.
+  &[data-card-id="pipeline"] {
+    min-height: 420px;
+  }
+
+  &[data-card-id="accounts"] {
+    min-height: 360px;
+  }
+
+  &[data-card-id="activity-mix"],
+  &[data-card-id="conversion"] {
+    min-height: 320px;
+  }
+
+  &[data-card-id="top-performers"] {
+    min-height: 360px;
+  }
+
+  &[data-card-id="my-tasks"] {
+    min-height: 340px;
+  }
+
+  &[data-card-id="timeline"] {
+    min-height: 380px;
+  }
+
+  &[data-card-id="health"] {
+    min-height: 340px;
+  }
+}
+
+// Liquid Glass: add a subtle highlight layer and richer blur for dashboard cards.
+.dashboard-card.glass-card,
+.chart-card.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.38));
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(26px) saturate(160%);
+  overflow: hidden;
+}
+
+.dashboard-card.glass-card::before,
+.chart-card.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.55), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.15), transparent 50%);
+  pointer-events: none;
 }
 
 .dashboard-card-grid.cdk-drop-list-dragging .dashboard-card:not(.cdk-drag-placeholder) {
@@ -558,6 +610,14 @@
 .dashboard-card.cdk-drag-preview {
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
   border-radius: $radius-2xl;
+  // Lock drag preview sizing so cards keep their intended dimensions while moving.
+  width: var(--drag-width, auto);
+  height: var(--drag-height, auto);
+  min-width: var(--drag-width, auto);
+  min-height: var(--drag-height, auto);
+  max-width: var(--drag-width, auto);
+  max-height: var(--drag-height, auto);
+  overflow: hidden;
 }
 
 .dashboard-card.cdk-drag-placeholder {
@@ -715,8 +775,9 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 .charts-row {
+  // Match the standard two-card row layout for charts.
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-5;
   margin-bottom: $space-5;
 }
@@ -735,12 +796,9 @@
   }
 
   &.size-sm,
-  &.size-md {
-    grid-column: span 1;
-  }
-
+  &.size-md,
   &.size-lg {
-    grid-column: span 2;
+    grid-column: span 1;
   }
 }
 
@@ -748,6 +806,15 @@
   max-width: 100%;
   min-width: 280px;
   min-height: 280px;
+}
+
+// Chart cards now use fixed content-driven heights to match the rest of the dashboard.
+.chart-card[data-card-id="revenue"] {
+  min-height: 360px;
+}
+
+.chart-card[data-card-id="growth"] {
+  min-height: 320px;
 }
 
 .chart-card.cdk-drag-preview {
@@ -768,12 +835,14 @@
 .card-resizable {
   position: relative;
   overflow: visible;
+  max-width: 100%;
 }
 
 .card-resizable .card-body {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
+  // Let cards grow naturally so content never gets clipped or scrolls internally.
+  overflow: visible;
 }
 
 .card-resizable {
@@ -785,24 +854,9 @@
   height: 100%;
 }
 
+// Resizing is disabled; hide resize handles while keeping layout rules intact.
 .resize-handle {
-  position: absolute;
-  opacity: 0;
-  z-index: 10;
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  pointer-events: auto;
-}
-
-.card-resizable.is-resizing .resize-handle {
-  opacity: 0;
-}
-
-.card-resizable:hover .resize-handle,
-.card-resizable:focus-within .resize-handle,
-.card-resizable.is-resizing .resize-handle {
-  opacity: 0;
+  display: none;
 }
 
 .resize-handle.handle-n,
@@ -2044,24 +2098,11 @@
   .dashboard-card-grid {
     gap: $space-4;
   }
-
-  .dashboard-card {
-    &.size-lg {
-      width: 100%;
-    }
-    
-    &.size-md {
-      width: calc(50% - #{$space-4});
-    }
-    
-    &.size-sm {
-      width: calc(50% - #{$space-4});
-    }
-  }
 }
 
 @media (max-width: 1200px) {
-  .charts-row {
+  .charts-row,
+  .dashboard-card-grid {
     grid-template-columns: 1fr;
   }
   
@@ -2164,6 +2205,25 @@
   .conversion-summary {
     flex-direction: column;
     gap: $space-3;
+  }
+
+  // Stack card header content so controls stay visible without overlap.
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-right: $space-5;
+  }
+
+  .card-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .card-controls {
+    position: static;
+    align-self: flex-end;
+    margin-top: $space-2;
   }
 }
 

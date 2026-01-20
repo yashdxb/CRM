@@ -159,7 +159,8 @@
             label="Send Invite"
             icon="pi pi-send"
             class="crm-button--primary"
-            [disabled]="!canSubmit()"
+            [attr.aria-disabled]="!!inviteDisabledReason()"
+            (click)="handleInviteClick($event)"
           ></button>
         </div>
       </form>

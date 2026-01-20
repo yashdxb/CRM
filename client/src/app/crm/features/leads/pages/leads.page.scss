@@ -1404,7 +1404,8 @@ $status-lost: #ef4444;
   }
 
   .header-right {
-    justify-content: flex-end;
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .kpi-strip {
@@ -1431,6 +1432,15 @@ $status-lost: #ef4444;
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  // Allow the table to scroll horizontally on narrow screens.
+  .table-container {
+    overflow-x: auto;
+  }
+
+  .leads-table {
+    min-width: 760px;
   }
 }
 

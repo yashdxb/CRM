@@ -14,7 +14,8 @@ import { UserAdminDataService } from '../services/user-admin-data.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
-import { STANDARD_TIMEZONE_OPTIONS, getTimeZoneFlagUrl } from '../models/timezone-options';
+import { TimeZoneService } from '../../../../core/services/time-zone.service';
+import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
 
 @Component({
   selector: 'app-user-edit-page',
@@ -39,6 +40,7 @@ export class UserEditPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toastService = inject(AppToastService);
+  private readonly timeZoneService = inject(TimeZoneService);
   protected readonly user = signal<UserDetailResponse | null>(null);
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly loading = signal(true);
@@ -49,7 +51,7 @@ export class UserEditPage implements OnInit {
   );
 
   // Shared time zone catalog keeps labels and flags consistent across settings screens.
-  protected readonly timezoneOptions = STANDARD_TIMEZONE_OPTIONS;
+  protected timezoneOptions: TimeZoneOption[] = [];
   protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
   protected readonly localeOptions = [
@@ -76,6 +78,10 @@ export class UserEditPage implements OnInit {
       this.router.navigate(['/app/settings/users']);
       return;
     }
+
+    this.timeZoneService.getTimeZones().subscribe((options) => {
+      this.timezoneOptions = options;
+    });
 
     this.loading.set(true);
     this.dataService.getRoles().subscribe({
