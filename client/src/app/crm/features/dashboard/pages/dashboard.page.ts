@@ -111,12 +111,15 @@ export class DashboardPage implements OnInit {
   protected readonly secondaryKpis = computed(() => {
     const data = this.summary();
     if (!data) return [];
-    return [
-      { label: 'Accounts', value: data.totalCustomers, trend: 0, percentage: 100, icon: 'pi-building', color: 'cyan' },
-      { label: 'Open Opps', value: data.openOpportunities, trend: 0, percentage: 100, icon: 'pi-briefcase', color: 'purple' },
-      { label: 'Tasks Due', value: data.tasksDueToday, trend: 0, percentage: 100, icon: 'pi-calendar', color: 'success' },
-      { label: 'Next 7 Days', value: data.upcomingActivities, trend: 0, percentage: 100, icon: 'pi-clock', color: 'orange' }
+    const items = [
+      { id: 'accounts', label: 'Accounts', value: data.totalCustomers, trend: 0, percentage: 100, icon: 'pi-building', color: 'cyan' },
+      { id: 'open-opps', label: 'Open Opps', value: data.openOpportunities, trend: 0, percentage: 100, icon: 'pi-briefcase', color: 'purple' },
+      { id: 'tasks-due', label: 'Tasks Due', value: data.tasksDueToday, trend: 0, percentage: 100, icon: 'pi-calendar', color: 'success' },
+      { id: 'next-7-days', label: 'Next 7 Days', value: data.upcomingActivities, trend: 0, percentage: 100, icon: 'pi-clock', color: 'orange' }
     ];
+    const order = this.kpiOrder().length ? this.kpiOrder() : this.defaultKpiOrder;
+    const lookup = new Map(items.map(item => [item.id, item]));
+    return order.map(id => lookup.get(id)).filter((item): item is (typeof items)[number] => !!item);
   });
   
   protected readonly customerBreakdown = computed(() => {
@@ -176,6 +179,10 @@ export class DashboardPage implements OnInit {
     growth: 'md'
   };
 
+  private readonly defaultKpiOrder = ['accounts', 'open-opps', 'tasks-due', 'next-7-days'];
+  private readonly kpiOrderStorageKey = 'crm.dashboard.kpi.order';
+  protected readonly kpiOrder = signal<string[]>([]);
+
   private readonly layoutStorageKey = 'crm.dashboard.command-center.layout';
   private readonly chartVisibilityStorageKey = 'crm.dashboard.charts.visibility';
   protected showRevenueChart = true;
@@ -221,6 +228,7 @@ export class DashboardPage implements OnInit {
         this.initCharts(summary);
       });
     }
+    this.kpiOrder.set(this.loadKpiOrder());
   }
 
   ngOnInit(): void {
@@ -415,6 +423,14 @@ export class DashboardPage implements OnInit {
     this.persistChartVisibility();
   }
 
+  protected onKpiDrop(event: CdkDragDrop<string[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const nextOrder = [...this.kpiOrder()];
+    moveItemInArray(nextOrder, event.previousIndex, event.currentIndex);
+    this.kpiOrder.set(nextOrder);
+    this.persistKpiOrder();
+  }
+
   protected onCardDragStart(event: CdkDragStart<string>): void {
     const element = event.source.element.nativeElement;
     const rect = element.getBoundingClientRect();
@@ -570,6 +586,26 @@ export class DashboardPage implements OnInit {
       order: this.chartOrder
     };
     window.localStorage.setItem(this.chartVisibilityStorageKey, JSON.stringify(payload));
+  }
+
+  private loadKpiOrder(): string[] {
+    if (!isPlatformBrowser(this.platformId)) return [...this.defaultKpiOrder];
+    try {
+      const stored = window.localStorage.getItem(this.kpiOrderStorageKey);
+      if (!stored) return [...this.defaultKpiOrder];
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+        return parsed;
+      }
+    } catch {
+      // Ignore invalid local storage values.
+    }
+    return [...this.defaultKpiOrder];
+  }
+
+  private persistKpiOrder(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    window.localStorage.setItem(this.kpiOrderStorageKey, JSON.stringify(this.kpiOrder()));
   }
 
   protected getCardSizeClass(cardId: string): string {

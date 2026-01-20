@@ -358,6 +358,7 @@
   border: 1px solid $glass-border;
   transition: all $transition-base;
   overflow: hidden;
+  min-height: 160px;
   
   &:hover {
     transform: translateY(-4px);
@@ -422,6 +423,21 @@
       }
     }
   }
+}
+
+.metric-card.cdk-drag-preview {
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.2);
+  border-radius: $radius-xl;
+}
+
+.metric-card.cdk-drag-placeholder {
+  opacity: 0.35;
+  border: 1px dashed rgba($primary, 0.35);
+  background: rgba($primary, 0.06);
+}
+
+.metrics-grid.cdk-drop-list-dragging .metric-card:not(.cdk-drag-placeholder) {
+  transition: transform 180ms ease;
 }
 
 .metric-glow {

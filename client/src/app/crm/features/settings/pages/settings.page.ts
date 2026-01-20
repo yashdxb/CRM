@@ -238,6 +238,24 @@ export class SettingsPage {
       });
   }
 
+  protected canResendInvite(user: UserListItem): boolean {
+    return user.isActive && !user.lastLoginAtUtc;
+  }
+
+  protected resendInvite(user: UserListItem) {
+    if (!this.canResendInvite(user)) {
+      return;
+    }
+    if (!confirm(`Resend invite to ${user.fullName}?`)) {
+      return;
+    }
+
+    this.dataService.resendInvite(user.id).subscribe({
+      next: () => this.raiseToast('success', 'Invite resent'),
+      error: () => this.raiseToast('error', 'Unable to resend invite')
+    });
+  }
+
   protected deleteUser(user: UserListItem) {
     if (!confirm(`Remove ${user.fullName} from the workspace?`)) {
       return;

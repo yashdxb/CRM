@@ -71,7 +71,13 @@
           <button pButton type="button" class="period-btn">Month</button>
         </div>
       </div>
-      <div class="metrics-grid">
+      <div
+        class="metrics-grid"
+        cdkDropList
+        [cdkDropListData]="kpiOrder()"
+        (cdkDropListDropped)="onKpiDrop($event)"
+        cdkDropListOrientation="horizontal"
+      >
         <article class="metric-card featured" *ngIf="summary()">
           <div class="metric-glow primary"></div>
           <div class="metric-icon-large primary">
@@ -87,9 +93,9 @@
           </div>
         </article>
 
-        <article class="metric-card" *ngFor="let metric of secondaryKpis(); let i = index">
+        <article class="metric-card" *ngFor="let metric of secondaryKpis(); let i = index" cdkDrag>
           <div class="metric-header">
-            <div class="metric-icon" [class]="metric.color">
+            <div class="metric-icon" [class]="metric.color" cdkDragHandle>
               <i class="pi" [class]="metric.icon"></i>
             </div>
             <div class="metric-trend" [class.up]="metric.trend > 0" [class.down]="metric.trend < 0">

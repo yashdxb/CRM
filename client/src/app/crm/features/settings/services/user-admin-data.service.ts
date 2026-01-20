@@ -92,6 +92,10 @@ export class UserAdminDataService {
     return this.http.post<void>(`${this.baseUrl}/api/users/${id}/reset-password`, payload);
   }
 
+  resendInvite(id: string) {
+    return this.http.post<void>(`${this.baseUrl}/api/users/${id}/resend-invite`, {});
+  }
+
   activate(id: string) {
     return this.http.post<void>(`${this.baseUrl}/api/users/${id}/activate`, {});
   }

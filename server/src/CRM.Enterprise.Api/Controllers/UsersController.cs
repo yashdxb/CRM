@@ -250,6 +250,35 @@ public class UsersController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id:guid}/resend-invite")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<IActionResult> ResendInvite(Guid id, CancellationToken cancellationToken = default)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        if (!user.IsActive)
+        {
+            return BadRequest("User is inactive. Reactivate before resending the invite.");
+        }
+
+        if (user.LastLoginAtUtc is not null)
+        {
+            return BadRequest("Invite can only be resent before the first login.");
+        }
+
+        var password = PasswordGenerator.CreateStrongPassword();
+        user.PasswordHash = _passwordHasher.HashPassword(user, password);
+        user.MustChangePassword = true;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await SendInviteEmailAsync(user, password, cancellationToken);
+        return NoContent();
+    }
+
     [HttpPost("{id:guid}/activate")]
     [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken = default)
