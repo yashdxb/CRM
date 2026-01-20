@@ -254,7 +254,7 @@ export class DashboardPage implements OnInit {
       }
       this.layoutOrder = normalized;
       this.layoutSizes = this.buildDefaultSizeMap();
-      this.layoutDimensions = dimensions ?? {};
+      this.layoutDimensions = {};
       this.persistLayoutPreferences();
     });
   }
@@ -323,7 +323,7 @@ export class DashboardPage implements OnInit {
           ? normalized
           : requested;
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = response.dimensions ?? {};
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
         this.layoutDialogOpen = false;
       },
@@ -343,7 +343,7 @@ export class DashboardPage implements OnInit {
         const defaultOrder = this.dashboardData.getDefaultLayout();
         this.layoutOrder = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = response.dimensions ?? {};
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
       },
@@ -371,7 +371,7 @@ export class DashboardPage implements OnInit {
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = response.dimensions ?? {};
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
       },
       error: () => {
@@ -396,7 +396,7 @@ export class DashboardPage implements OnInit {
           ? normalized
           : this.normalizeLayout(nextOrder, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = response.dimensions ?? {};
+        this.layoutDimensions = {};
         this.persistLayoutPreferences();
       },
       error: () => {
@@ -453,6 +453,8 @@ export class DashboardPage implements OnInit {
     element: HTMLElement,
     handle: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
   ): void {
+    // Resizing disabled: keep cards at fixed dimensions.
+    return;
     event.preventDefault();
     event.stopPropagation();
     const rect = element.getBoundingClientRect();
@@ -533,7 +535,7 @@ export class DashboardPage implements OnInit {
             this.layoutOrder
           );
           this.layoutSizes = this.buildDefaultSizeMap();
-          this.layoutDimensions = response.dimensions ?? {};
+          this.layoutDimensions = {};
           this.persistLayoutPreferences();
         },
         error: () => {
@@ -617,12 +619,7 @@ export class DashboardPage implements OnInit {
   }
 
   protected getCardDimensions(cardId: string): { width?: string; height?: string } | null {
-    const dimensions = this.normalizeDimensions(cardId, this.layoutDimensions[cardId]);
-    if (!dimensions) return null;
-    return {
-      width: `${dimensions.width}px`,
-      height: `${dimensions.height}px`
-    };
+    return null;
   }
 
   protected toggleCardSize(cardId: string): void {
@@ -1166,48 +1163,9 @@ export class DashboardPage implements OnInit {
     return {
       cardOrder,
       sizes: this.buildDefaultSizeMap(),
-      dimensions: this.normalizeDimensionMap(this.layoutDimensions),
+      dimensions: {},
       hiddenCards
     };
-  }
-
-  private normalizeDimensionMap(input: Record<string, { width: number; height: number }>) {
-    const output: Record<string, { width: number; height: number }> = {};
-    Object.entries(input).forEach(([cardId, dimensions]) => {
-      const normalized = this.normalizeDimensions(cardId, dimensions);
-      if (normalized) {
-        output[cardId] = normalized;
-      }
-    });
-    return output;
-  }
-
-  private normalizeDimensions(
-    cardId: string,
-    dimensions?: { width: number; height: number }
-  ): { width: number; height: number } | null {
-    if (!dimensions) return null;
-    const grid = document.querySelector('.dashboard-card-grid') as HTMLElement | null;
-    const gridWidth = grid?.getBoundingClientRect().width ?? window.innerWidth;
-    const maxWidth = Math.max(280, Math.floor(gridWidth / 2) - 16);
-    const minWidth = 280;
-
-    const minHeights: Record<string, number> = {
-      pipeline: 420,
-      accounts: 360,
-      'activity-mix': 320,
-      conversion: 320,
-      'top-performers': 360,
-      'my-tasks': 340,
-      timeline: 380,
-      health: 340
-    };
-    const minHeight = minHeights[cardId] ?? 320;
-    const maxHeight = Math.max(minHeight, Math.floor(minHeight * 1.5));
-
-    const width = Math.min(maxWidth, Math.max(minWidth, Math.round(dimensions.width)));
-    const height = Math.min(maxHeight, Math.max(minHeight, Math.round(dimensions.height)));
-    return { width, height };
   }
 
   private buildDefaultSizeMap() {

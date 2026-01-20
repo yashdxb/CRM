@@ -583,6 +583,7 @@
   min-height: 0;
   flex: 1 1 auto;
   width: 100%;
+  height: 360px;
 
   &.size-sm {
     width: 100%;
@@ -597,33 +598,8 @@
   }
 
   // Default card heights tuned to each card's content to avoid overflows or oversized layouts.
-  &[data-card-id="pipeline"] {
-    min-height: 420px;
-  }
-
-  &[data-card-id="accounts"] {
+  &[data-card-id] {
     min-height: 360px;
-  }
-
-  &[data-card-id="activity-mix"],
-  &[data-card-id="conversion"] {
-    min-height: 320px;
-  }
-
-  &[data-card-id="top-performers"] {
-    min-height: 360px;
-  }
-
-  &[data-card-id="my-tasks"] {
-    min-height: 340px;
-  }
-
-  &[data-card-id="timeline"] {
-    min-height: 380px;
-  }
-
-  &[data-card-id="health"] {
-    min-height: 340px;
   }
 }
 
@@ -901,10 +877,7 @@
 
 // Resize handles for command center card sizing.
 .resize-handle {
-  display: block;
-  position: absolute;
-  background: rgba(15, 23, 42, 0.08);
-  border: 1px solid rgba(15, 23, 42, 0.15);
+  display: none;
 }
 
 .resize-handle.handle-n,
