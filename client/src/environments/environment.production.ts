@@ -1,4 +1,4 @@
-// Trigger redeployment: dummy change
+// Trigger redeployment: dummy change (client)
 const resolveApiUrl = () => {
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
