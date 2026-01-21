@@ -20,7 +20,15 @@
       <p class="subtitle">Set your password to join your workspace.</p>
     </div>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" class="accept-invite-form">
+    <div *ngIf="checkingInvite" class="status-pill">
+      Checking invitation...
+    </div>
+
+    <div *ngIf="precheckMessage" class="status-pill error">
+      {{ precheckMessage }}
+    </div>
+
+    <form *ngIf="!precheckMessage" [formGroup]="form" (ngSubmit)="submit()" class="accept-invite-form">
       <div class="form-field">
         <label for="newPassword">New password</label>
         <p-inputgroup class="input-group">
@@ -46,8 +54,32 @@
 
       <button pButton type="submit" class="btn-submit" [disabled]="loading">
         <span *ngIf="!loading">Activate account</span>
-        <span *ngIf="loading">Activating...</span>
+        <span *ngIf="loading" class="loading-state">
+          <p-progressSpinner
+            styleClass="inline-spinner"
+            strokeWidth="6"
+            animationDuration="0.8s"
+          ></p-progressSpinner>
+          Activating...
+        </span>
       </button>
     </form>
   </div>
+
+  <p-dialog
+    [(visible)]="showSuccessDialog"
+    [modal]="true"
+    [closable]="false"
+    [draggable]="false"
+    [resizable]="false"
+    styleClass="invite-success-dialog"
+    header="Password updated"
+  >
+    <div class="dialog-body">
+      <p>Your password has been set successfully. Please sign in to access your workspace.</p>
+    </div>
+    <ng-template pTemplate="footer">
+      <button pButton type="button" class="btn-submit" (click)="goToLogin()">Go to login</button>
+    </ng-template>
+  </p-dialog>
 </div>

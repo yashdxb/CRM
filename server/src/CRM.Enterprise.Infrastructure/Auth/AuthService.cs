@@ -103,12 +103,12 @@ public class AuthService : IAuthService
         return new PasswordChangeResult(user.Email, user.FullName);
     }
 
-    public async Task<AuthResult?> AcceptInviteAsync(string token, string newPassword, CancellationToken cancellationToken = default)
+    public async Task<bool> AcceptInviteAsync(string token, string newPassword, CancellationToken cancellationToken = default)
     {
         var normalizedToken = token?.Trim();
         if (string.IsNullOrWhiteSpace(normalizedToken) || string.IsNullOrWhiteSpace(newPassword))
         {
-            return null;
+            return false;
         }
 
         var tokenHash = InviteTokenHelper.HashToken(normalizedToken);
@@ -123,7 +123,7 @@ public class AuthService : IAuthService
                 cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash))
         {
-            return null;
+            return false;
         }
 
         user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
@@ -132,7 +132,29 @@ public class AuthService : IAuthService
         user.InviteTokenExpiresAtUtc = null;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return await BuildAuthResultAsync(user, cancellationToken);
+        return true;
+    }
+
+    public async Task<InviteTokenStatus> GetInviteStatusAsync(string token, CancellationToken cancellationToken = default)
+    {
+        var normalizedToken = token?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedToken))
+        {
+            return InviteTokenStatus.Invalid;
+        }
+
+        var tokenHash = InviteTokenHelper.HashToken(normalizedToken);
+        var user = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => !u.IsDeleted && u.InviteTokenHash == tokenHash, cancellationToken);
+        if (user is null || user.InviteTokenExpiresAtUtc is null)
+        {
+            return InviteTokenStatus.Invalid;
+        }
+
+        return user.InviteTokenExpiresAtUtc > DateTime.UtcNow
+            ? InviteTokenStatus.Valid
+            : InviteTokenStatus.Expired;
     }
 
     private static string NormalizeEmail(string? email)

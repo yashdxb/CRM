@@ -64,3 +64,27 @@ This file tracks recurring UI/data issues and how to fix them quickly.
 
 **Why this is safe**
 - Keeps the storage format unchanged and fixes display only.
+
+## 4) Lead create fails in production with CORS error
+**Symptoms**
+- Creating a lead in production shows `Origin ... is not allowed by Access-Control-Allow-Origin`.
+- Browser console shows `Status code: 500` and `net::ERR_FAILED`.
+
+**Root cause**
+- Production frontend is calling a dev API host that does not return CORS headers for `https://www.northedgesystem.com`.
+- The API response is a 500 and does not include CORS headers, so the browser reports it as a CORS error.
+
+**Fix pattern**
+1) Ensure the production frontend points to the production API host.
+2) Allow `northedgesystem.com` and subdomains in API CORS policy.
+3) Redeploy the API so the updated CORS policy is active.
+4) Validate with the production E2E test.
+
+**Example implementation**
+- CORS policy update: `server/src/CRM.Enterprise.Api/Program.cs`
+- Production API URL: `client/src/environments/environment.production.ts`
+- Production E2E test: `client/e2e/lead-create-prod.spec.ts`
+
+**Why this is safe**
+- It keeps CORS locked to the company domain while unblocking production traffic.
+- The E2E test verifies lead creation without exposing sensitive logs.

@@ -12,6 +12,25 @@ $glass-border-light: rgba(255, 255, 255, 0.5);
 $glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 $glass-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 
+// Liquid glass surfaces (iOS-style)
+$liquid-glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.65));
+$liquid-glass-tint: linear-gradient(135deg, rgba(14, 165, 233, 0.08), rgba(99, 102, 241, 0.12));
+$liquid-glass-border: rgba(255, 255, 255, 0.7);
+$liquid-glass-shadow: 0 24px 60px rgba(15, 23, 42, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.75);
+
+.liquid-glass-surface {
+  background-image: $liquid-glass-bg, $liquid-glass-tint;
+  backdrop-filter: blur(26px) saturate(170%);
+  border: 1px solid $liquid-glass-border;
+  box-shadow: $liquid-glass-shadow;
+}
+
+.liquid-glass-surface--soft {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.6)),
+    linear-gradient(135deg, rgba(14, 165, 233, 0.06), rgba(99, 102, 241, 0.1));
+  backdrop-filter: blur(22px) saturate(160%);
+}
+
 // Hero Section
 .hero-section {
   display: grid;

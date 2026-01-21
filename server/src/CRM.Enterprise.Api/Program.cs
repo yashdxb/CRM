@@ -42,7 +42,7 @@ else
 {
     builder.Services.AddSignalR();
 }
-var allowedOrigins = new[]
+var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
 {
     "http://localhost:4200",
     "https://localhost:4200",
@@ -56,11 +56,33 @@ var allowedOrigins = new[]
     "https://www.northedgesystem.com"
 };
 
+static bool IsAllowedOrigin(HashSet<string> origins, string? origin)
+{
+    if (string.IsNullOrWhiteSpace(origin))
+    {
+        return false;
+    }
+
+    if (origins.Contains(origin))
+    {
+        return true;
+    }
+
+    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+    {
+        return false;
+    }
+
+    return uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase) &&
+           (uri.Host.Equals("northedgesystem.com", StringComparison.OrdinalIgnoreCase) ||
+            uri.Host.EndsWith(".northedgesystem.com", StringComparison.OrdinalIgnoreCase));
+}
+
 const string CorsPolicyName = "AppCors";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(CorsPolicyName, policy =>
-        policy.WithOrigins(allowedOrigins)
+        policy.SetIsOriginAllowed(origin => IsAllowedOrigin(allowedOrigins, origin))
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());

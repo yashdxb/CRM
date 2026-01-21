@@ -113,19 +113,39 @@ public class AuthController : ControllerBase
 
     [HttpPost("accept-invite")]
     [AllowAnonymous]
-    public async Task<ActionResult<LoginResponse>> AcceptInvite([FromBody] AcceptInviteRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> AcceptInvite([FromBody] AcceptInviteRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Token) || string.IsNullOrWhiteSpace(request.NewPassword))
         {
             return BadRequest("Token and new password are required.");
         }
 
-        var result = await _authService.AcceptInviteAsync(request.Token.Trim(), request.NewPassword.Trim(), cancellationToken);
-        if (result is null)
+        var success = await _authService.AcceptInviteAsync(request.Token.Trim(), request.NewPassword.Trim(), cancellationToken);
+        if (!success)
         {
             return BadRequest("Invalid or expired invite.");
         }
 
-        return Ok(new LoginResponse(result.AccessToken, result.ExpiresAtUtc, result.Email, result.FullName, result.Roles, result.Permissions, result.TenantKey, result.MustChangePassword));
+        return NoContent();
+    }
+
+    [HttpGet("invite-status")]
+    [AllowAnonymous]
+    public async Task<ActionResult<InviteStatusResponse>> InviteStatus([FromQuery] string token, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return BadRequest("Token is required.");
+        }
+
+        var status = await _authService.GetInviteStatusAsync(token, cancellationToken);
+        var response = status switch
+        {
+            InviteTokenStatus.Valid => new InviteStatusResponse("valid", "Invite is valid."),
+            InviteTokenStatus.Expired => new InviteStatusResponse("expired", "Invitation expired. Ask your administrator to resend the invite."),
+            _ => new InviteStatusResponse("invalid", "Invitation is invalid or already used. Please sign in or request a new invite.")
+        };
+
+        return Ok(response);
     }
 }

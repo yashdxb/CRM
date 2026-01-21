@@ -22,6 +22,11 @@ interface LoginResponse {
   mustChangePassword: boolean;
 }
 
+interface InviteStatusResponse {
+  status: 'valid' | 'expired' | 'invalid';
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
@@ -63,18 +68,12 @@ export class AuthService {
 
   acceptInvite(token: string, newPassword: string) {
     const url = `${environment.apiUrl}/api/auth/accept-invite`;
-    return this.http.post<LoginResponse>(url, { token, newPassword }).pipe(
-      tap((res) => {
-        if (!res?.accessToken) {
-          throw new Error('Missing access token.');
-        }
-        this.currentUserSignal.set(res);
-        saveToken(res.accessToken);
-        if (res.tenantKey) {
-          setTenantKey(res.tenantKey);
-        }
-      })
-    );
+    return this.http.post<void>(url, { token, newPassword });
+  }
+
+  getInviteStatus(token: string) {
+    const url = `${environment.apiUrl}/api/auth/invite-status`;
+    return this.http.get<InviteStatusResponse>(url, { params: { token } });
   }
 
   logout() {
