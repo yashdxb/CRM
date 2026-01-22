@@ -140,7 +140,16 @@
         </div>
 
         <div class="table-wrapper">
-          <p-table class="data-table" [value]="filteredUsers()">
+          <p-table
+            class="data-table"
+            [value]="filteredUsers()"
+            [paginator]="true"
+            [rows]="pageSize()"
+            [rowsPerPageOptions]="pageSizeOptions"
+            [totalRecords]="totalUsers()"
+            [first]="(page() - 1) * pageSize()"
+            (onPage)="handlePage($event)"
+          >
             <ng-template pTemplate="header">
               <tr>
                 <th>User</th>

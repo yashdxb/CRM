@@ -83,6 +83,10 @@ export class SettingsPage {
     this.users().filter(u => !u.isActive).length
   );
 
+  protected readonly page = signal(1);
+  protected readonly pageSize = signal(50);
+  protected readonly pageSizeOptions = [25, 50, 100];
+
   protected readonly canManageTenants = computed(() => {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.tenantsManage);
@@ -131,16 +135,20 @@ export class SettingsPage {
     });
   }
 
-  protected loadUsers() {
+  protected loadUsers(options: { page?: number; pageSize?: number } = {}) {
     this.loadingUsers.set(true);
     const includeInactive = this.statusFilter() === 'inactive' ? true : this.includeInactive();
     const search = this.searchTerm().trim() || undefined;
+    const requestedPage = options.page ?? this.page();
+    const requestedPageSize = options.pageSize ?? this.pageSize();
     this.dataService
-      .search({ includeInactive, search, page: 1, pageSize: 50 })
+      .search({ includeInactive, search, page: requestedPage, pageSize: requestedPageSize })
       .subscribe({
         next: (response) => {
           this.users.set(response.items);
           this.totalUsers.set(response.total);
+          this.page.set(requestedPage);
+          this.pageSize.set(requestedPageSize);
           this.resolveCurrentUserTimeZone(response.items);
           const merged = new Set(this.onlineUsers());
           response.items
@@ -172,17 +180,25 @@ export class SettingsPage {
     });
   }
 
+  protected handlePage(event: { rows?: number; page?: number }) {
+    const nextPage = (event.page ?? 0) + 1;
+    const nextPageSize = event.rows ?? this.pageSize();
+    this.loadUsers({ page: nextPage, pageSize: nextPageSize });
+  }
+
   protected toggleIncludeInactive(nextValue: boolean) {
     this.includeInactive.set(nextValue);
-    this.loadUsers();
+    this.page.set(1);
+    this.loadUsers({ page: 1 });
   }
 
   protected onSearchChange(term: string) {
     this.searchTerm.set(term);
+    this.page.set(1);
     if (this.searchDebounceId) {
       window.clearTimeout(this.searchDebounceId);
     }
-    this.searchDebounceId = window.setTimeout(() => this.loadUsers(), 250);
+    this.searchDebounceId = window.setTimeout(() => this.loadUsers({ page: 1 }), 250);
   }
 
   protected onRoleFilterChange(value: string | null) {
@@ -191,14 +207,16 @@ export class SettingsPage {
 
   protected onStatusFilterChange(value: 'all' | 'active' | 'inactive' | null) {
     this.statusFilter.set(value ?? 'all');
-    this.loadUsers();
+    this.page.set(1);
+    this.loadUsers({ page: 1 });
   }
 
   protected resetFilters() {
     this.searchTerm.set('');
     this.roleFilter.set('all');
     this.statusFilter.set('all');
-    this.loadUsers();
+    this.page.set(1);
+    this.loadUsers({ page: 1 });
   }
 
   protected startEdit(user: UserListItem) {
