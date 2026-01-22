@@ -16,14 +16,23 @@ export class PresenceService {
   }
 
   connect() {
-    if (this.connection?.state === HubConnectionState.Connected) {
+    const token = readTokenContext()?.token ?? localStorage.getItem('auth_token') ?? '';
+    if (!token) {
       return;
     }
 
-    const accessToken = readTokenContext()?.token ?? localStorage.getItem('auth_token') ?? '';
+    if (
+      this.connection &&
+      (this.connection.state === HubConnectionState.Connected ||
+        this.connection.state === HubConnectionState.Connecting ||
+        this.connection.state === HubConnectionState.Reconnecting)
+    ) {
+      return;
+    }
+
     this.connection = new HubConnectionBuilder()
       .withUrl(`${environment.apiUrl}/api/hubs/presence`, {
-        accessTokenFactory: () => accessToken,
+        accessTokenFactory: () => readTokenContext()?.token ?? localStorage.getItem('auth_token') ?? '',
         withCredentials: false
       })
       .withAutomaticReconnect()
@@ -51,5 +60,15 @@ export class PresenceService {
     this.connection.start().catch(() => {
       // Swallow connection errors; UI falls back to server snapshot.
     });
+  }
+
+  disconnect() {
+    if (this.connection) {
+      this.connection.stop().catch(() => {
+        // Ignore errors during shutdown.
+      });
+      this.connection = null;
+    }
+    this.onlineUsersSubject.next(new Set());
   }
 }

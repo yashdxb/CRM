@@ -5,6 +5,7 @@ import { tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { clearToken, saveToken } from './token.utils';
 import { setTenantKey } from '../tenant/tenant.utils';
+import { PresenceService } from '../realtime/presence.service';
 
 interface LoginRequest {
   email: string;
@@ -32,6 +33,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
   private readonly currentUserSignal = signal<LoginResponse | null>(null);
+  private readonly presenceService = inject(PresenceService);
 
   get currentUser() {
     return this.currentUserSignal.asReadonly();
@@ -49,6 +51,7 @@ export class AuthService {
         if (res.tenantKey) {
           setTenantKey(res.tenantKey);
         }
+        this.presenceService.connect();
       })
     );
   }
@@ -80,6 +83,7 @@ export class AuthService {
     const url = `${environment.apiUrl}/api/auth/logout`;
     this.http.post<void>(url, {}).subscribe({ error: () => {} });
     this.currentUserSignal.set(null);
+    this.presenceService.disconnect();
     clearToken();
     this.router.navigate(['/login']);
   }
