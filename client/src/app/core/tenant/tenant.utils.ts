@@ -54,12 +54,18 @@ export function initTenantFromHost() {
     return;
   }
 
+  const stored = localStorage.getItem(STORAGE_KEY);
   const current = getTenantKey();
   const hostKey = resolveTenantKeyFromHost(window.location.hostname);
-  if (hostKey && current === DEFAULT_TENANT) {
+  if (hostKey && (!stored || stored === DEFAULT_TENANT)) {
     setTenantKey(hostKey);
+    return;
   }
-  if (!hostKey && current !== DEFAULT_TENANT) {
+
+  if (!hostKey && !stored) {
     setTenantKey(DEFAULT_TENANT);
+  } else if (!hostKey && stored) {
+    // Keep the previously-selected tenant key when we revisit the root domain.
+    setTenantKey(stored);
   }
 }
