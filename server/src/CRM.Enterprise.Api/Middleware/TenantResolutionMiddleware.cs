@@ -27,6 +27,13 @@ public class TenantResolutionMiddleware
             return;
         }
 
+        if (path.StartsWith("/api/auth/login", StringComparison.OrdinalIgnoreCase))
+        {
+            // Let login resolve the user across tenants so root-domain logins don't fail on a stale tenant header.
+            await _next(context);
+            return;
+        }
+
         var host = context.Request.Host.Host;
         var tenantKey = context.Request.Headers[TenantHeader].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(tenantKey))
