@@ -24,7 +24,7 @@ This document defines the binding technical, UX, and delivery rules for the curr
 - Azure SignalR: `Microsoft.Azure.SignalR 1.32.0`
 - Azure Communication Email: `1.0.2`
 - Azure Service Bus: `7.17.4`
-- SendGrid: `9.29.3`
+- SendGrid: removed (no longer used)
 
 ## Repository Structure Rules
 

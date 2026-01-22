@@ -38,7 +38,8 @@ public class AuthController : ControllerBase
     [Authorize]
     public IActionResult Logout()
     {
-        return NoContent();
+        // Return a JSON payload to avoid Safari hanging on 204 responses for CORS requests.
+        return Ok(new { status = "ok" });
     }
 
     [HttpPost("change-password")]
@@ -108,7 +109,8 @@ public class AuthController : ControllerBase
             // Avoid blocking the password change flow if email delivery fails.
         }
 
-        return NoContent();
+        // Return a JSON payload to avoid Safari hanging on 204 responses for CORS requests.
+        return Ok(new { status = "ok" });
     }
 
     [HttpPost("accept-invite")]

@@ -9,6 +9,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { DialogModule } from 'primeng/dialog';
 import { AuthService } from '../../core/auth/auth.service';
+import { finalize, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-accept-invite-page',
@@ -54,18 +55,25 @@ export class AcceptInvitePage implements OnInit {
     }
 
     this.checkingInvite = true;
-    this.auth.getInviteStatus(token).subscribe({
-      next: (res) => {
-        this.checkingInvite = false;
-        if (res.status !== 'valid') {
-          this.precheckMessage = res.message;
+    this.auth
+      .getInviteStatus(token)
+      // Avoid keeping the page in a loading state if the network stalls.
+      .pipe(
+        timeout(12000),
+        finalize(() => {
+          this.checkingInvite = false;
+        })
+      )
+      .subscribe({
+        next: (res) => {
+          if (res.status !== 'valid') {
+            this.precheckMessage = res.message;
+          }
+        },
+        error: () => {
+          this.precheckMessage = 'Invite link is invalid or expired.';
         }
-      },
-      error: () => {
-        this.checkingInvite = false;
-        this.precheckMessage = 'Invite link is invalid or expired.';
-      }
-    });
+      });
   }
 
   submit() {
@@ -82,17 +90,24 @@ export class AcceptInvitePage implements OnInit {
 
     this.loading = true;
     const { newPassword } = this.form.value;
-    this.auth.acceptInvite(token, String(newPassword)).subscribe({
-      next: () => {
-        this.loading = false;
-        this.status = null;
-        this.showSuccessDialog = true;
-      },
-      error: () => {
-        this.loading = false;
-        this.status = { tone: 'error', message: 'Invite link is invalid or expired.' };
-      }
-    });
+    this.auth
+      .acceptInvite(token, String(newPassword))
+      // Ensure the submit button is re-enabled if the request hangs.
+      .pipe(
+        timeout(15000),
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.status = null;
+          this.showSuccessDialog = true;
+        },
+        error: () => {
+          this.status = { tone: 'error', message: 'Invite link is invalid or expired.' };
+        }
+      });
   }
 
   private passwordMatchValidator(group: any) {

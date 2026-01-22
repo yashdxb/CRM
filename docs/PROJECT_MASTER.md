@@ -25,7 +25,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Azure SignalR: `Microsoft.Azure.SignalR 1.32.0`
 - Azure Communication Email: `1.0.2`
 - Azure Service Bus: `7.17.4`
-- SendGrid: `9.29.3`
+- SendGrid: removed (no longer used)
 
 ---
 
@@ -240,6 +240,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Azure SignalR (presence and realtime features)
 - Azure Communication Email (transactional email)
 - Azure Service Bus (email queue and async processing)
+ - SendGrid: removed (deprecated in this codebase)
 
 ### Operational Rules
 - CORS must be configured in both API code and App Service settings.
@@ -534,4 +535,3 @@ The following documents are superseded by this master file and should only be us
 - `docs/TEST_PLAN.md`
 - `docs/COMPETITIVE_GAP.md`
 - `docs/login-cors-fix.md`
-

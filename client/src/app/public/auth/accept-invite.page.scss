@@ -1,3 +1,10 @@
+@keyframes orb-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -30px) scale(1.05); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(25px, 10px) scale(1.02); }
+}
+
 .accept-invite-page {
   min-height: 100vh;
   display: flex;
@@ -20,40 +27,43 @@
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(102, 126, 234, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(102, 126, 234, 0.04) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(rgba(102, 126, 234, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(102, 126, 234, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
 
 .invite-orb {
   position: absolute;
-  border-radius: 999px;
+  border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.35;
+  opacity: 0.4;
+  animation: orb-float 25s ease-in-out infinite;
 }
 
 .invite-orb.orb-1 {
-  width: 420px;
-  height: 420px;
-  background: linear-gradient(120deg, rgba(59, 130, 246, 0.4), rgba(14, 165, 233, 0.4));
-  top: -140px;
-  left: -120px;
+  width: 500px;
+  height: 500px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.45), rgba(14, 165, 233, 0.45));
+  top: -150px;
+  left: -100px;
 }
 
 .invite-orb.orb-2 {
-  width: 360px;
-  height: 360px;
-  background: linear-gradient(120deg, rgba(99, 102, 241, 0.35), rgba(236, 72, 153, 0.25));
-  bottom: -120px;
-  right: -120px;
+  width: 400px;
+  height: 400px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.4), rgba(59, 130, 246, 0.4));
+  top: 40%;
+  right: -100px;
+  animation-delay: -8s;
 }
 
 .invite-orb.orb-3 {
-  width: 280px;
-  height: 280px;
-  background: linear-gradient(120deg, rgba(14, 165, 233, 0.25), rgba(59, 130, 246, 0.3));
-  top: 35%;
-  right: 10%;
+  width: 350px;
+  height: 350px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(236, 72, 153, 0.3));
+  bottom: -50px;
+  left: 40%;
+  animation-delay: -16s;
 }
 
 .accept-invite-card {
