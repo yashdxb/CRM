@@ -2,13 +2,14 @@ import { Injectable, NgZone } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { readTokenContext } from '../auth/token.utils';
+import { readTokenContext, readUserId } from '../auth/token.utils';
 import { getTenantKey, resolveTenantKeyFromHost } from '../tenant/tenant.utils';
 
 @Injectable({ providedIn: 'root' })
 export class PresenceService {
   private readonly onlineUsersSubject = new BehaviorSubject<Set<string>>(new Set());
   private connection: HubConnection | null = null;
+  private localUserId: string | null = null;
 
   constructor(private readonly zone: NgZone) {}
 
@@ -21,6 +22,8 @@ export class PresenceService {
     if (!token) {
       return;
     }
+
+    this.localUserId = readUserId();
 
     if (
       this.connection &&
@@ -50,7 +53,11 @@ export class PresenceService {
 
     this.connection.on('presenceSnapshot', (users: string[]) => {
       this.zone.run(() => {
-        this.onlineUsersSubject.next(new Set(users ?? []));
+        const next = new Set(users ?? []);
+        if (this.localUserId) {
+          next.add(this.localUserId);
+        }
+        this.onlineUsersSubject.next(next);
       });
     });
 
@@ -61,6 +68,14 @@ export class PresenceService {
           next.add(userId);
         } else {
           next.delete(userId);
+        }
+        if (
+          this.localUserId &&
+          userId === this.localUserId &&
+          !isOnline &&
+          this.connection?.state === HubConnectionState.Connected
+        ) {
+          next.add(this.localUserId);
         }
         this.onlineUsersSubject.next(next);
       });
@@ -78,6 +93,7 @@ export class PresenceService {
       });
       this.connection = null;
     }
+    this.localUserId = null;
     this.onlineUsersSubject.next(new Set());
   }
 }

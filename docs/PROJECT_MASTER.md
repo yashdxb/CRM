@@ -156,6 +156,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - User directory tables must page through API results in production so Azure-hosted builds can see every tenant user; the component now tracks pagination state and forwards `page`/`pageSize` along with `totalUsers`.
 - Presence status requires a SignalR connection that includes the tenant header plus the stored JWT even before any user interaction; the root app now starts that connection so online indicators survive refreshes.
 - Tenant keys persisted from login now survive returning to the root host, so the realtime connection always carries the proper `X-Tenant-Key` instead of falling back to `default`.
+- Presence service now treats the locally-authenticated user as online immediately so the green dot isn’t erased while the hub snapshot finishes after a refresh.
 
 ---
 
