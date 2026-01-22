@@ -256,7 +256,13 @@ public class LeadsController : ControllerBase
     public async Task<ActionResult<LeadListItem>> Create([FromBody] UpsertLeadRequest request, CancellationToken cancellationToken)
     {
         var ownerId = await ResolveOwnerIdAsync(request.OwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
-        var statusId = await ResolveLeadStatusIdAsync(request.Status, cancellationToken);
+        var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
+        var ownerExists = await _dbContext.Users.AnyAsync(u => u.Id == ownerId && u.IsActive && !u.IsDeleted, cancellationToken);
+        if (!ownerExists)
+        {
+            // Prevent invalid owner references from causing a 500 response and missing CORS headers.
+            return BadRequest("Unable to assign an active owner for this lead. Please select a valid owner.");
+        }
 
         var score = ResolveLeadScore(request);
         var lead = new Lead
@@ -267,7 +273,7 @@ public class LeadsController : ControllerBase
             Phone = request.Phone,
             CompanyName = request.CompanyName,
             JobTitle = request.JobTitle,
-            LeadStatusId = statusId,
+            LeadStatusId = status.Id,
             OwnerId = ownerId,
             Source = request.Source,
             Territory = request.Territory,
@@ -277,10 +283,13 @@ public class LeadsController : ControllerBase
             CreatedAtUtc = DateTime.UtcNow
         };
 
+        // Bind the status entity so EF can insert a newly created status before the lead.
+        lead.Status = status;
+
         _dbContext.Leads.Add(lead);
-        var resolvedStatusName = await ResolveLeadStatusNameAsync(statusId, cancellationToken);
+        var resolvedStatusName = await ResolveLeadStatusNameAsync(status.Id, cancellationToken);
         ApplyStatusSideEffects(lead, resolvedStatusName);
-        AddStatusHistory(lead, statusId, null);
+        AddStatusHistory(lead, status.Id, null);
         await _auditEvents.TrackAsync(
             CreateAuditEntry(lead.Id, "Created", null, null, null),
             cancellationToken);
@@ -358,7 +367,7 @@ public class LeadsController : ControllerBase
             var territory = CsvImportHelper.ReadValue(row, "territory");
 
             var statusName = CsvImportHelper.ReadValue(row, "status");
-            var statusId = await ResolveLeadStatusIdAsync(statusName, cancellationToken);
+            var status = await ResolveLeadStatusAsync(statusName, cancellationToken);
 
             var request = new UpsertLeadRequest
             {
@@ -388,7 +397,7 @@ public class LeadsController : ControllerBase
                 Phone = request.Phone,
                 CompanyName = request.CompanyName,
                 JobTitle = request.JobTitle,
-                LeadStatusId = statusId,
+                LeadStatusId = status.Id,
                 OwnerId = resolvedOwnerId,
                 Source = request.Source,
                 Territory = territory,
@@ -396,10 +405,13 @@ public class LeadsController : ControllerBase
                 CreatedAtUtc = DateTime.UtcNow
             };
 
+            // Attach the status entity so the FK is valid even when the status is created on demand.
+            lead.Status = status;
+
             _dbContext.Leads.Add(lead);
-            var resolvedStatusName = await ResolveLeadStatusNameAsync(statusId, cancellationToken);
+            var resolvedStatusName = await ResolveLeadStatusNameAsync(status.Id, cancellationToken);
             ApplyStatusSideEffects(lead, resolvedStatusName);
-            AddStatusHistory(lead, statusId, "Imported lead");
+            AddStatusHistory(lead, status.Id, "Imported lead");
             imported++;
         }
 
@@ -467,7 +479,10 @@ public class LeadsController : ControllerBase
         lead.Phone = request.Phone;
         lead.CompanyName = request.CompanyName;
         lead.JobTitle = request.JobTitle;
-        lead.LeadStatusId = await ResolveLeadStatusIdAsync(request.Status, cancellationToken);
+        var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
+        lead.LeadStatusId = status.Id;
+        // Keep the status navigation in sync in case a new status was created.
+        lead.Status = status;
         var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
         var requestedOwnerId = request.OwnerId ?? lead.OwnerId;
         lead.OwnerId = await ResolveOwnerIdAsync(requestedOwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
@@ -605,7 +620,10 @@ public class LeadsController : ControllerBase
         lead.ContactId = contactId;
         lead.ConvertedOpportunityId = opportunityId;
         var previousStatusId = lead.LeadStatusId;
-        lead.LeadStatusId = await ResolveLeadStatusIdAsync("Converted", cancellationToken);
+        var convertedStatus = await ResolveLeadStatusAsync("Converted", cancellationToken);
+        lead.LeadStatusId = convertedStatus.Id;
+        // Ensure the relationship is tracked if the status is created on the fly.
+        lead.Status = convertedStatus;
         lead.ConvertedAtUtc = now;
         lead.UpdatedAtUtc = now;
 
@@ -681,7 +699,10 @@ public class LeadsController : ControllerBase
         if (lead is null) return NotFound();
 
         var previousStatusId = lead.LeadStatusId;
-        lead.LeadStatusId = await ResolveLeadStatusIdAsync(request.Status, cancellationToken);
+        var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
+        lead.LeadStatusId = status.Id;
+        // Track the resolved status entity to avoid FK conflicts when it was created on demand.
+        lead.Status = status;
         var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
         lead.UpdatedAtUtc = DateTime.UtcNow;
 
@@ -757,7 +778,10 @@ public class LeadsController : ControllerBase
         foreach (var lead in leads)
         {
             var previousStatusId = lead.LeadStatusId;
-            lead.LeadStatusId = await ResolveLeadStatusIdAsync(request.Status, cancellationToken);
+            var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
+            lead.LeadStatusId = status.Id;
+            // Preserve the status relationship if we had to create it for this tenant.
+            lead.Status = status;
             var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
             lead.UpdatedAtUtc = DateTime.UtcNow;
 
@@ -773,12 +797,26 @@ public class LeadsController : ControllerBase
         return NoContent();
     }
 
-    private async Task<Guid> ResolveLeadStatusIdAsync(string? statusName, CancellationToken cancellationToken)
+    private async Task<LeadStatus> ResolveLeadStatusAsync(string? statusName, CancellationToken cancellationToken)
     {
         var name = string.IsNullOrWhiteSpace(statusName) ? "New" : statusName;
         var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == name, cancellationToken)
                      ?? await _dbContext.LeadStatuses.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
-        return status?.Id ?? Guid.NewGuid();
+        if (status is not null)
+        {
+            return status;
+        }
+
+        // Seed a default status on the fly if the tenant has no lead statuses yet.
+        status = new LeadStatus
+        {
+            Name = "New",
+            Order = 1,
+            IsDefault = true,
+            IsClosed = false
+        };
+        _dbContext.LeadStatuses.Add(status);
+        return status;
     }
 
     private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, string? territory, string? assignmentStrategy, CancellationToken cancellationToken)
