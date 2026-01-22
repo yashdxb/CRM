@@ -154,6 +154,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Activity edit/list time: parse API timestamps as UTC (append `Z` when missing) and display in user local time.
 - Lead status resolution: resolve `LeadStatus` entities and attach to `Lead` before save to avoid FK insert order issues.
 - User directory tables must page through API results in production so Azure-hosted builds can see every tenant user; the component now tracks pagination state and forwards `page`/`pageSize` along with `totalUsers`.
+- Presence status requires a SignalR connection that includes the tenant header plus the stored JWT even before any user interaction; the root app now starts that connection so online indicators survive refreshes.
 
 ---
 

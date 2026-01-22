@@ -3,6 +3,7 @@ import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } fro
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { readTokenContext } from '../auth/token.utils';
+import { getTenantKey, resolveTenantKeyFromHost } from '../tenant/tenant.utils';
 
 @Injectable({ providedIn: 'root' })
 export class PresenceService {
@@ -30,10 +31,18 @@ export class PresenceService {
       return;
     }
 
+    const tenantKey = getTenantKey();
+    const hostKey = typeof window !== 'undefined' ? resolveTenantKeyFromHost(window.location.hostname) : null;
+    const headers: Record<string, string> = {};
+    if (tenantKey && !(tenantKey === 'default' && hostKey === null)) {
+      headers['X-Tenant-Key'] = tenantKey;
+    }
+
     this.connection = new HubConnectionBuilder()
       .withUrl(`${environment.apiUrl}/api/hubs/presence`, {
         accessTokenFactory: () => readTokenContext()?.token ?? localStorage.getItem('auth_token') ?? '',
-        withCredentials: false
+        withCredentials: false,
+        headers
       })
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Error)
