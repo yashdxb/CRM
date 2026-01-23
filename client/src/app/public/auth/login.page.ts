@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { BreadcrumbsComponent } from '../../core/breadcrumbs';
 import { readTokenContext } from '../../core/auth/token.utils';
 import { HttpErrorResponse } from '@angular/common/http';
+import { finalize, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-login-page',
@@ -25,6 +26,7 @@ export class LoginPage {
   error: string | null = null;
   emailFocused = false;
   passwordFocused = false;
+  showErrors = false;
 
   constructor(
     private fb: FormBuilder,
@@ -41,18 +43,27 @@ export class LoginPage {
 
   submit(): void {
     if (this.form.invalid) {
+      this.showErrors = true;
       this.form.markAllAsTouched();
       return;
     }
+    this.showErrors = false;
     this.error = null;
     this.loading = true;
     const { email, password } = this.form.value;
     const normalizedEmail = String(email ?? '').trim().toLowerCase();
     const normalizedPassword = String(password ?? '');
 
-    this.auth.login({ email: normalizedEmail, password: normalizedPassword }).subscribe({
-      next: () => {
-        this.loading = false;
+    this.auth
+      .login({ email: normalizedEmail, password: normalizedPassword })
+      .pipe(
+        timeout(15000),
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: () => {
         if (!readTokenContext()) {
           this.error = 'Login failed to start a session. Please try again.';
           return;
@@ -66,17 +77,30 @@ export class LoginPage {
         const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo');
         const target = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/app/dashboard';
         this.router.navigateByUrl(target);
-      },
-      error: (err: HttpErrorResponse) => {
-        this.loading = false;
-        const messageBody = err.error?.message || err.error?.error || null;
-        this.error = this.buildErrorText(normalizedEmail, messageBody);
-      }
-    });
+        },
+        error: (err: unknown) => {
+          if ((err as { name?: string })?.name === 'TimeoutError') {
+            this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
+            return;
+          }
+          const httpError = err as HttpErrorResponse | null;
+          const messageBody = httpError?.error?.message || httpError?.error?.error || null;
+          this.error = this.buildErrorText(normalizedEmail, messageBody, httpError?.status);
+        }
+      });
   }
 
-  private buildErrorText(email: string, serverMessage: string | null) {
+  private buildErrorText(email: string, serverMessage: string | null, status?: number) {
     const base = `Unable to sign in as ${email || 'the requested user'}.`;
+    if (status === 0) {
+      return `${base} Network error. Please check your connection and try again.`;
+    }
+    if (status === 401) {
+      return `${base} Invalid email or password.`;
+    }
+    if (status === 400 && serverMessage?.toLowerCase().includes('tenant')) {
+      return `${base} Invalid tenant key.`;
+    }
     return serverMessage ? `${base} ${serverMessage}` : `${base} Please check your credentials and try again.`;
   }
 }

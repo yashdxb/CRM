@@ -359,6 +359,9 @@
   transition: all $transition-base;
   overflow: hidden;
   min-height: 160px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
   
   &:hover {
     transform: translateY(-4px);
@@ -395,6 +398,7 @@
       flex: 1;
       display: flex;
       flex-direction: column;
+      min-width: 0;
     }
     
     .metric-value-large {
@@ -403,12 +407,16 @@
       color: $text-primary;
       line-height: 1;
       margin-bottom: $space-2;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }
     
     .metric-label {
       font-size: $font-size-base;
       color: $text-muted;
       margin-bottom: auto;
+      max-width: 100%;
+      overflow-wrap: anywhere;
     }
     
     .metric-trend {
@@ -417,6 +425,8 @@
       background: rgba($success, 0.1);
       border-radius: $radius-lg;
       width: fit-content;
+      max-width: 100%;
+      overflow-wrap: anywhere;
       
       &.up {
         color: $success;
@@ -487,6 +497,9 @@
   align-items: flex-start;
   justify-content: space-between;
   margin-bottom: $space-3;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: $space-2;
 }
 
 .metric-icon {
@@ -524,6 +537,8 @@
   gap: 3px;
   font-size: $font-size-xs;
   font-weight: 600;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   
   &.up { color: $success; }
   &.down { color: $danger; }
@@ -537,12 +552,16 @@
   color: $text-primary;
   line-height: 1;
   margin-bottom: $space-1;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .metric-label {
   font-size: $font-size-xs;
   color: $text-muted;
   margin-bottom: $space-3;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .metric-bar {
@@ -2260,5 +2279,13 @@
 
   .charts-row {
     gap: $space-4;
+  }
+
+  .metric-value-large {
+    font-size: clamp(1.9rem, 8vw, 2.6rem);
+  }
+
+  .metric-value {
+    font-size: clamp(1.2rem, 6vw, 1.6rem);
   }
 }
