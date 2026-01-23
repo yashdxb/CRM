@@ -30,11 +30,11 @@ public class TenantResolutionMiddleware
         if (path.StartsWith("/api/auth/login", StringComparison.OrdinalIgnoreCase))
         {
             // Allow login to proceed even if the tenant header is stale, but set it if we can resolve it.
-            var host = context.Request.Host.Host;
+            var loginHost = context.Request.Host.Host;
             var loginTenantKey = context.Request.Headers[TenantHeader].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(loginTenantKey))
             {
-                loginTenantKey = GetTenantFromHost(host);
+                loginTenantKey = GetTenantFromHost(loginHost);
             }
 
             if (!string.IsNullOrWhiteSpace(loginTenantKey))

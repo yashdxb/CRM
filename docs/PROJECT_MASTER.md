@@ -146,6 +146,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - CORS is controlled in `CRM.Enterprise.Api/Program.cs` and App Service CORS settings.
 - Production frontend must target the production API host (do not point to dev API in prod builds).
 - SignalR hub is mapped to `/api/hubs/presence` and uses the same CORS policy.
+- **Deployment gate:** before any deploy, verify both client and API builds succeed.
 
 ---
 
