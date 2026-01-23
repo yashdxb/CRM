@@ -9,6 +9,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import { Router } from '@angular/router';
 import { BreadcrumbsComponent } from '../../core/breadcrumbs';
 import { readTokenContext } from '../../core/auth/token.utils';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-login-page',
@@ -66,10 +67,16 @@ export class LoginPage {
         const target = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/app/dashboard';
         this.router.navigateByUrl(target);
       },
-      error: () => {
+      error: (err: HttpErrorResponse) => {
         this.loading = false;
-        this.error = 'Invalid credentials. Please try again.';
+        const messageBody = err.error?.message || err.error?.error || null;
+        this.error = this.buildErrorText(normalizedEmail, messageBody);
       }
     });
+  }
+
+  private buildErrorText(email: string, serverMessage: string | null) {
+    const base = `Unable to sign in as ${email || 'the requested user'}.`;
+    return serverMessage ? `${base} ${serverMessage}` : `${base} Please check your credentials and try again.`;
   }
 }
