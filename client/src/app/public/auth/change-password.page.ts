@@ -37,7 +37,7 @@ export class ChangePasswordPage {
       newPassword: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', [Validators.required, Validators.minLength(8)]]
     },
-    { validators: this.passwordMatchValidator }
+    { validators: [this.passwordMatchValidator, this.passwordDifferentValidator] }
   );
 
   constructor(private auth: AuthService, private router: Router) {}
@@ -45,7 +45,7 @@ export class ChangePasswordPage {
   submit() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.status = { tone: 'error', message: 'Please complete all fields and confirm your new password.' };
+      this.status = { tone: 'error', message: this.getValidationMessage() };
       return;
     }
 
@@ -75,5 +75,34 @@ export class ChangePasswordPage {
     const next = group?.get('newPassword')?.value;
     const confirm = group?.get('confirmPassword')?.value;
     return next && confirm && next !== confirm ? { passwordMismatch: true } : null;
+  }
+
+  private passwordDifferentValidator(group: any) {
+    const current = group?.get('currentPassword')?.value;
+    const next = group?.get('newPassword')?.value;
+    return current && next && current === next ? { passwordSame: true } : null;
+  }
+
+  private getValidationMessage(): string {
+    const current = this.form.get('currentPassword');
+    const next = this.form.get('newPassword');
+    const confirm = this.form.get('confirmPassword');
+
+    if (current?.hasError('required') || next?.hasError('required') || confirm?.hasError('required')) {
+      return 'Please fill out all required fields.';
+    }
+    if (current?.hasError('minlength')) {
+      return 'Current password must be at least 6 characters.';
+    }
+    if (next?.hasError('minlength') || confirm?.hasError('minlength')) {
+      return 'New password must be at least 8 characters.';
+    }
+    if (this.form.hasError('passwordSame')) {
+      return 'New password must be different from the current password.';
+    }
+    if (this.form.hasError('passwordMismatch')) {
+      return 'New password and confirmation do not match.';
+    }
+    return 'Please confirm your new password.';
   }
 }
