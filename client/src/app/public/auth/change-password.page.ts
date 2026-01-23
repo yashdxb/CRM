@@ -3,13 +3,25 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { AuthService } from '../../core/auth/auth.service';
+import { finalize, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-change-password-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    ButtonModule,
+    InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
+    ProgressSpinnerModule
+  ],
   templateUrl: './change-password.page.html',
   styleUrls: ['./change-password.page.scss']
 })
@@ -39,18 +51,24 @@ export class ChangePasswordPage {
 
     this.loading = true;
     const { currentPassword, newPassword } = this.form.value;
-    this.auth.changePassword(String(currentPassword), String(newPassword)).subscribe({
-      next: () => {
-        this.loading = false;
-        this.status = { tone: 'success', message: 'Password updated successfully.' };
-        // Send the user into the app after a successful change.
-        this.router.navigate(['/app/dashboard']);
-      },
-      error: () => {
-        this.loading = false;
-        this.status = { tone: 'error', message: 'Unable to change password. Verify your current password.' };
-      }
-    });
+    this.auth
+      .changePassword(String(currentPassword), String(newPassword))
+      .pipe(
+        timeout(15000),
+        finalize(() => {
+          this.loading = false;
+        })
+      )
+      .subscribe({
+        next: () => {
+          this.status = { tone: 'success', message: 'Password updated successfully.' };
+          // Send the user into the app after a successful change.
+          this.router.navigate(['/app/dashboard']);
+        },
+        error: () => {
+          this.status = { tone: 'error', message: 'Unable to change password. Verify your current password.' };
+        }
+      });
   }
 
   private passwordMatchValidator(group: any) {

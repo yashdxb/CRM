@@ -158,6 +158,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Presence status requires a SignalR connection that includes the tenant header plus the stored JWT even before any user interaction; the root app now starts that connection so online indicators survive refreshes.
 - Tenant keys persisted from login now survive returning to the root host, so the realtime connection always carries the proper `X-Tenant-Key` instead of falling back to `default`.
 - Presence service now treats the locally-authenticated user as online immediately so the green dot isn’t erased while the hub snapshot finishes after a refresh.
+- Login issue note: if a user cannot sign in after tenant changes, verify the stored password hash matches the current login (passwords may be generated/reset alongside tenant provisioning or tenant key changes). Reset the user password in the target tenant if needed.
 
 ---
 
