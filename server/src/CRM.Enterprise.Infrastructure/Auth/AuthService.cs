@@ -8,6 +8,7 @@ using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -19,6 +20,7 @@ public class AuthService : IAuthService
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly JwtOptions _options;
     private readonly ITenantProvider _tenantProvider;
+    private readonly string _defaultTenantKey;
     private readonly LoginLocationService _loginLocationService;
 
     public AuthService(
@@ -26,12 +28,14 @@ public class AuthService : IAuthService
         IPasswordHasher<User> passwordHasher,
         IOptions<JwtOptions> options,
         ITenantProvider tenantProvider,
+        IConfiguration configuration,
         LoginLocationService loginLocationService)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _options = options.Value;
         _tenantProvider = tenantProvider;
+        _defaultTenantKey = configuration["Tenant:DefaultKey"] ?? "default";
         _loginLocationService = loginLocationService;
     }
 
@@ -44,20 +48,26 @@ public class AuthService : IAuthService
         }
 
         var tenantId = _tenantProvider.TenantId;
-        var query = _dbContext.Users
-            .IgnoreQueryFilters()
-            .Where(u => u.IsActive && !u.IsDeleted);
-
-        if (tenantId != Guid.Empty)
+        if (tenantId == Guid.Empty)
         {
-            query = query.Where(u => u.TenantId == tenantId);
+            tenantId = await ResolveDefaultTenantIdAsync(cancellationToken);
+            if (tenantId == Guid.Empty)
+            {
+                return null;
+            }
+
+            _tenantProvider.SetTenant(tenantId, _defaultTenantKey);
         }
 
-        var user = await query.FirstOrDefaultAsync(u =>
-                    (u.EmailNormalized == normalizedEmail ||
-                     (u.EmailNormalized == null && u.Email.ToLower() == normalizedEmail)) &&
-                    u.IsActive && !u.IsDeleted,
-                cancellationToken);
+        var user = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .Where(u =>
+                u.TenantId == tenantId &&
+                u.IsActive &&
+                !u.IsDeleted &&
+                (u.EmailNormalized == normalizedEmail ||
+                 (u.EmailNormalized == null && u.Email.ToLower() == normalizedEmail)))
+            .FirstOrDefaultAsync(cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.PasswordHash))
         {
             return null;
@@ -160,6 +170,15 @@ public class AuthService : IAuthService
     private static string NormalizeEmail(string? email)
     {
         return (email ?? string.Empty).Trim().ToLowerInvariant();
+    }
+
+    private Task<Guid> ResolveDefaultTenantIdAsync(CancellationToken cancellationToken)
+    {
+        return _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Key == _defaultTenantKey)
+            .Select(t => t.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task<AuthResult> BuildAuthResultAsync(User user, CancellationToken cancellationToken)
