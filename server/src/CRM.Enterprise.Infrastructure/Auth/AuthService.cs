@@ -50,13 +50,23 @@ public class AuthService : IAuthService
         var tenantId = _tenantProvider.TenantId;
         if (tenantId == Guid.Empty)
         {
-            tenantId = await ResolveDefaultTenantIdAsync(cancellationToken);
-            if (tenantId == Guid.Empty)
+            var resolvedTenant = await ResolveTenantForLoginAsync(normalizedEmail, cancellationToken);
+            tenantId = resolvedTenant.TenantId;
+            if (tenantId == Guid.Empty && resolvedTenant.HasMatches)
             {
                 return null;
             }
 
-            _tenantProvider.SetTenant(tenantId, _defaultTenantKey);
+            if (tenantId == Guid.Empty)
+            {
+                tenantId = await ResolveDefaultTenantIdAsync(cancellationToken);
+                if (tenantId == Guid.Empty)
+                {
+                    return null;
+                }
+
+                _tenantProvider.SetTenant(tenantId, _defaultTenantKey);
+            }
         }
 
         var user = await _dbContext.Users
@@ -179,6 +189,45 @@ public class AuthService : IAuthService
             .Where(t => t.Key == _defaultTenantKey)
             .Select(t => t.Id)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<(Guid TenantId, bool HasMatches)> ResolveTenantForLoginAsync(string normalizedEmail, CancellationToken cancellationToken)
+    {
+        var tenantIds = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .Where(u =>
+                u.IsActive &&
+                !u.IsDeleted &&
+                (u.EmailNormalized == normalizedEmail ||
+                 (u.EmailNormalized == null && u.Email.ToLower() == normalizedEmail)))
+            .Select(u => u.TenantId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        if (tenantIds.Count == 0)
+        {
+            return (Guid.Empty, false);
+        }
+
+        if (tenantIds.Count != 1)
+        {
+            return (Guid.Empty, true);
+        }
+
+        var resolvedTenantId = tenantIds[0];
+        var resolvedTenantKey = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == resolvedTenantId)
+            .Select(t => t.Key)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(resolvedTenantKey))
+        {
+            return (Guid.Empty, true);
+        }
+
+        _tenantProvider.SetTenant(resolvedTenantId, resolvedTenantKey);
+        return (resolvedTenantId, true);
     }
 
     private async Task<AuthResult> BuildAuthResultAsync(User user, CancellationToken cancellationToken)
