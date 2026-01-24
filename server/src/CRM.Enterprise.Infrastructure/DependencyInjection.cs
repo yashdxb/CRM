@@ -88,6 +88,7 @@ public static class DependencyInjection
             }
         });
         services.AddScoped<ILeadScoringService>(sp => sp.GetRequiredService<OpenAiLeadScoringService>());
+        services.AddScoped<ILeadService, LeadService>();
         services.AddScoped<IAuditEventService, AuditEventService>();
         services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IItemMasterService, ItemMasterService>();

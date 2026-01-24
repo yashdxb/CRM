@@ -3,12 +3,11 @@ import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { InputGroupModule } from 'primeng/inputgroup';
-import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { DialogModule } from 'primeng/dialog';
 import { AuthService } from '../../core/auth/auth.service';
+import { AuthShellComponent } from './auth-shell.component';
 import { finalize, timeout } from 'rxjs';
 
 @Component({
@@ -19,10 +18,9 @@ import { finalize, timeout } from 'rxjs';
     ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
-    InputGroupModule,
-    InputGroupAddonModule,
     ProgressSpinnerModule,
-    DialogModule
+    DialogModule,
+    AuthShellComponent
   ],
   templateUrl: './accept-invite.page.html',
   styleUrls: ['./accept-invite.page.scss']

@@ -1,5 +1,7 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Leads;
+using ApiLeadConversionRequest = CRM.Enterprise.Api.Contracts.Leads.LeadConversionRequest;
+using AppLeadConversionRequest = CRM.Enterprise.Application.Leads.LeadConversionRequest;
 using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Domain.Entities;
@@ -7,7 +9,6 @@ using CRM.Enterprise.Api.Utilities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Leads;
-using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Api.Contracts.Imports;
 // using CRM.Enterprise.Api.Jobs; // Removed Hangfire
 using Microsoft.AspNetCore.Hosting;
@@ -23,26 +24,21 @@ namespace CRM.Enterprise.Api.Controllers;
 [Route("api/leads")]
 public class LeadsController : ControllerBase
 {
-    private const string LeadEntityType = "Lead";
+    private readonly ILeadService _leadService;
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IWebHostEnvironment _environment;
 
-    private readonly ILeadScoringService _leadScoringService;
-    private readonly IAuditEventService _auditEvents;
-
     public LeadsController(
+        ILeadService leadService,
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
-        IWebHostEnvironment environment,
-        ILeadScoringService leadScoringService,
-        IAuditEventService auditEvents)
+        IWebHostEnvironment environment)
     {
+        _leadService = leadService;
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _environment = environment;
-        _leadScoringService = leadScoringService;
-        _auditEvents = auditEvents;
     }
 
     [HttpGet]
@@ -53,176 +49,44 @@ public class LeadsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        page = Math.Max(page, 1);
-        pageSize = Math.Clamp(pageSize, 1, 100);
-
-        var query = _dbContext.Leads
-            .Include(l => l.Status)
-            .AsNoTracking()
-            .Where(l => !l.IsDeleted);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.ToLower();
-            query = query.Where(l =>
-                (l.FirstName + " " + l.LastName).ToLower().Contains(term) ||
-                (l.Email ?? string.Empty).ToLower().Contains(term) ||
-                (l.Phone ?? string.Empty).ToLower().Contains(term) ||
-                (l.CompanyName ?? string.Empty).ToLower().Contains(term));
-        }
-
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            query = query.Where(l => l.Status != null && l.Status.Name == status);
-        }
-
-        var total = await query.CountAsync(cancellationToken);
-
-        var leads = await query
-            .OrderByDescending(l => l.CreatedAtUtc)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(l => new
-            {
-                l.Id,
-                l.FirstName,
-                l.LastName,
-                l.CompanyName,
-                Status = l.Status != null ? l.Status.Name : "New",
-                l.Email,
-                l.Phone,
-                l.OwnerId,
-                l.Score,
-                l.CreatedAtUtc,
-                l.Source,
-                l.Territory,
-                l.JobTitle,
-                l.AccountId,
-                l.ContactId,
-                l.ConvertedOpportunityId
-            })
-            .ToListAsync(cancellationToken);
-
-        var ownerIds = leads.Select(l => l.OwnerId).Distinct().ToList();
-        var owners = await _dbContext.Users
-            .Where(u => ownerIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.FullName })
-            .ToListAsync(cancellationToken);
-
-        var items = leads.Select(l => new LeadListItem(
-            l.Id,
-            $"{l.FirstName} {l.LastName}".Trim(),
-            l.CompanyName ?? string.Empty,
-            l.Status,
-            l.Email,
-            l.Phone,
-            l.OwnerId,
-            owners.FirstOrDefault(o => o.Id == l.OwnerId)?.FullName ?? "Unassigned",
-            l.Score,
-            l.CreatedAtUtc,
-            l.Source,
-            l.Territory,
-            l.JobTitle,
-            l.AccountId,
-            l.ContactId,
-            l.ConvertedOpportunityId));
-
-        return Ok(new LeadSearchResponse(items, total));
+        var result = await _leadService.SearchAsync(new LeadSearchRequest(search, status, page, pageSize), cancellationToken);
+        var items = result.Items.Select(ToApiItem);
+        return Ok(new LeadSearchResponse(items, result.Total));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<LeadListItem>> GetLead(Guid id, CancellationToken cancellationToken)
     {
-        var lead = await _dbContext.Leads
-            .Include(l => l.Status)
-            .AsNoTracking()
-            .FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-
+        var lead = await _leadService.GetAsync(id, cancellationToken);
         if (lead is null) return NotFound();
-
-        var ownerName = await _dbContext.Users
-            .Where(u => u.Id == lead.OwnerId)
-            .Select(u => u.FullName)
-            .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
-
-        var item = new LeadListItem(
-            lead.Id,
-            $"{lead.FirstName} {lead.LastName}".Trim(),
-            lead.CompanyName ?? string.Empty,
-            lead.Status?.Name ?? "New",
-            lead.Email,
-            lead.Phone,
-            lead.OwnerId,
-            ownerName,
-            lead.Score,
-            lead.CreatedAtUtc,
-            lead.Source,
-            lead.Territory,
-            lead.JobTitle,
-            lead.AccountId,
-            lead.ContactId,
-            lead.ConvertedOpportunityId);
-
-        return Ok(item);
+        return Ok(ToApiItem(lead));
     }
 
     [HttpGet("{id:guid}/status-history")]
     public async Task<ActionResult<IEnumerable<LeadStatusHistoryItem>>> GetLeadStatusHistory(Guid id, CancellationToken cancellationToken)
     {
-        var exists = await _dbContext.Leads
-            .AsNoTracking()
-            .AnyAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-
-        if (!exists)
-        {
-            return NotFound();
-        }
-
-        var history = await _dbContext.LeadStatusHistories
-            .AsNoTracking()
-            .Include(h => h.LeadStatus)
-            .Where(h => h.LeadId == id)
-            .OrderByDescending(h => h.ChangedAtUtc)
-            .Select(h => new LeadStatusHistoryItem(
-                h.Id,
-                h.LeadStatus != null ? h.LeadStatus.Name : "Unknown",
-                h.ChangedAtUtc,
-                h.ChangedBy,
-                h.Notes))
-            .ToListAsync(cancellationToken);
-
-        return Ok(history);
+        var history = await _leadService.GetStatusHistoryAsync(id, cancellationToken);
+        if (history is null) return NotFound();
+        var items = history.Select(h => new LeadStatusHistoryItem(h.Id, h.Status, h.ChangedAtUtc, h.ChangedBy, h.Notes));
+        return Ok(items);
     }
 
     [HttpGet("{id:guid}/audit")]
     public async Task<ActionResult<IEnumerable<AuditEventItem>>> GetLeadAudit(Guid id, CancellationToken cancellationToken)
     {
-        var exists = await _dbContext.Leads
-            .AsNoTracking()
-            .AnyAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-
-        if (!exists)
-        {
-            return NotFound();
-        }
-
-        var items = await _dbContext.AuditEvents
-            .AsNoTracking()
-            .Where(a => a.EntityType == LeadEntityType && a.EntityId == id)
-            .OrderByDescending(a => a.CreatedAtUtc)
-            .Select(a => new AuditEventItem(
-                a.Id,
-                a.EntityType,
-                a.EntityId,
-                a.Action,
-                a.Field,
-                a.OldValue,
-                a.NewValue,
-                a.ChangedByUserId,
-                a.ChangedByName,
-                a.CreatedAtUtc))
-            .ToListAsync(cancellationToken);
-
+        var audit = await _leadService.GetAuditAsync(id, cancellationToken);
+        if (audit is null) return NotFound();
+        var items = audit.Select(a => new AuditEventItem(
+            a.Id,
+            a.EntityType,
+            a.EntityId,
+            a.Action,
+            a.Field,
+            a.OldValue,
+            a.NewValue,
+            a.ChangedByUserId,
+            a.ChangedByName,
+            a.CreatedAtUtc));
         return Ok(items);
     }
 
@@ -230,100 +94,22 @@ public class LeadsController : ControllerBase
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<ActionResult<LeadAiScoreResponse>> ScoreLead(Guid id, CancellationToken cancellationToken)
     {
-        var lead = await _dbContext.Leads
-            .Include(l => l.Status)
-            .FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-
-        if (lead is null)
-        {
-            return NotFound();
-        }
-
-        var score = await _leadScoringService.ScoreAsync(lead, cancellationToken);
-        lead.AiScore = score.Score;
-        lead.AiConfidence = score.Confidence;
-        lead.AiRationale = score.Rationale;
-        lead.AiScoredAtUtc = DateTime.UtcNow;
-        lead.Score = score.Score;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return Ok(new LeadAiScoreResponse(score.Score, score.Confidence, score.Rationale, lead.AiScoredAtUtc.Value));
+        var result = await _leadService.ScoreAsync(id, cancellationToken);
+        if (result is null) return NotFound();
+        return Ok(new LeadAiScoreResponse(result.Score, result.Confidence, result.Rationale, result.ScoredAtUtc));
     }
 
     [HttpPost]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<ActionResult<LeadListItem>> Create([FromBody] UpsertLeadRequest request, CancellationToken cancellationToken)
     {
-        var ownerId = await ResolveOwnerIdAsync(request.OwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
-        var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
-        var ownerExists = await _dbContext.Users.AnyAsync(u => u.Id == ownerId && u.IsActive && !u.IsDeleted, cancellationToken);
-        if (!ownerExists)
+        var result = await _leadService.CreateAsync(MapUpsertRequest(request), GetActor(), cancellationToken);
+        if (!result.Success)
         {
-            // Prevent invalid owner references from causing a 500 response and missing CORS headers.
-            return BadRequest("Unable to assign an active owner for this lead. Please select a valid owner.");
+            return BadRequest(result.Error);
         }
 
-        var score = ResolveLeadScore(request);
-        var lead = new Lead
-        {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Email = request.Email,
-            Phone = request.Phone,
-            CompanyName = request.CompanyName,
-            JobTitle = request.JobTitle,
-            LeadStatusId = status.Id,
-            OwnerId = ownerId,
-            Source = request.Source,
-            Territory = request.Territory,
-            Score = score,
-            AccountId = request.AccountId,
-            ContactId = request.ContactId,
-            CreatedAtUtc = DateTime.UtcNow
-        };
-
-        // Bind the status entity so EF can insert a newly created status before the lead.
-        lead.Status = status;
-
-        _dbContext.Leads.Add(lead);
-        var resolvedStatusName = await ResolveLeadStatusNameAsync(status.Id, cancellationToken);
-        ApplyStatusSideEffects(lead, resolvedStatusName);
-        AddStatusHistory(lead, status.Id, null);
-        await _auditEvents.TrackAsync(
-            CreateAuditEntry(lead.Id, "Created", null, null, null),
-            cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        if (HasAiSignals(request))
-        {
-            // Hangfire removed: scoring jobs must be triggered directly or via another mechanism if needed
-        }
-
-        var ownerName = await _dbContext.Users
-            .Where(u => u.Id == ownerId)
-            .Select(u => u.FullName)
-            .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
-
-        var dto = new LeadListItem(
-            lead.Id,
-            $"{lead.FirstName} {lead.LastName}".Trim(),
-            lead.CompanyName ?? string.Empty,
-            resolvedStatusName ?? "New",
-            lead.Email,
-            lead.Phone,
-            ownerId,
-            ownerName,
-            lead.Score,
-            lead.CreatedAtUtc,
-            lead.Source,
-            lead.Territory,
-            lead.JobTitle,
-            lead.AccountId,
-            lead.ContactId,
-            lead.ConvertedOpportunityId);
-
-        return CreatedAtAction(nameof(GetLead), new { id = lead.Id }, dto);
+        return CreatedAtAction(nameof(GetLead), new { id = result.Value!.Id }, ToApiItem(result.Value!));
     }
 
     [HttpPost("import")]
@@ -466,198 +252,30 @@ public class LeadsController : ControllerBase
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpsertLeadRequest request, CancellationToken cancellationToken)
     {
-        var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-        if (lead is null) return NotFound();
-
-        var previousStatusId = lead.LeadStatusId;
-        var previousOwnerId = lead.OwnerId;
-        var shouldAiScore = HasAiSignalChanges(lead, request);
-
-        lead.FirstName = request.FirstName;
-        lead.LastName = request.LastName;
-        lead.Email = request.Email;
-        lead.Phone = request.Phone;
-        lead.CompanyName = request.CompanyName;
-        lead.JobTitle = request.JobTitle;
-        var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
-        lead.LeadStatusId = status.Id;
-        // Keep the status navigation in sync in case a new status was created.
-        lead.Status = status;
-        var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
-        var requestedOwnerId = request.OwnerId ?? lead.OwnerId;
-        lead.OwnerId = await ResolveOwnerIdAsync(requestedOwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
-        lead.Source = request.Source;
-        lead.Territory = request.Territory;
-        lead.Score = ResolveLeadScore(request, lead.Score);
-        lead.AccountId = request.AccountId;
-        lead.ContactId = request.ContactId;
-        lead.UpdatedAtUtc = DateTime.UtcNow;
-
-        if (lead.LeadStatusId != previousStatusId)
-        {
-            ApplyStatusSideEffects(lead, statusName);
-            await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, cancellationToken);
-            AddStatusHistory(lead, lead.LeadStatusId, null);
-
-            var oldStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
-            await _auditEvents.TrackAsync(
-                CreateAuditEntry(lead.Id, "StatusChanged", "Status", oldStatusName, statusName),
-                cancellationToken);
-        }
-
-        if (previousOwnerId != lead.OwnerId)
-        {
-            await _auditEvents.TrackAsync(
-                CreateAuditEntry(lead.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), lead.OwnerId.ToString()),
-                cancellationToken);
-        }
-
-        await _auditEvents.TrackAsync(
-            CreateAuditEntry(lead.Id, "Updated", null, null, null),
-            cancellationToken);
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        if (shouldAiScore && HasAiSignals(request))
-        {
-            // Hangfire removed: scoring jobs must be triggered directly or via another mechanism if needed
-        }
-
+        var result = await _leadService.UpdateAsync(id, MapUpsertRequest(request), GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/convert")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
-    public async Task<ActionResult<LeadConversionResponse>> Convert(Guid id, [FromBody] LeadConversionRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<LeadConversionResponse>> Convert(Guid id, [FromBody] ApiLeadConversionRequest request, CancellationToken cancellationToken)
     {
-        var lead = await _dbContext.Leads
-            .Include(l => l.Status)
-            .FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-
-        if (lead is null) return NotFound();
-
-        if (lead.Status?.Name == "Converted")
-        {
-            return BadRequest("Lead is already converted.");
-        }
-
-        var ownerId = await ResolveOwnerIdAsync(lead.OwnerId, lead.Territory, "Manual", cancellationToken);
-        var now = DateTime.UtcNow;
-
-        Guid? accountId = lead.AccountId;
-        if (request.CreateOpportunity && accountId is null && !request.CreateAccount)
-        {
-            return BadRequest("Account is required to create an opportunity.");
-        }
-
-        if (request.CreateAccount && accountId is null)
-        {
-            var accountName = string.IsNullOrWhiteSpace(request.AccountName)
-                ? (string.IsNullOrWhiteSpace(lead.CompanyName) ? $"{lead.FirstName} {lead.LastName}".Trim() : lead.CompanyName)
-                : request.AccountName;
-
-            var account = new Account
-            {
-                Name = accountName ?? $"{lead.FirstName} {lead.LastName}".Trim(),
-                Phone = lead.Phone,
-                LifecycleStage = "Customer",
-                OwnerId = ownerId,
-                Territory = lead.Territory,
-                CreatedAtUtc = now
-            };
-
-            _dbContext.Accounts.Add(account);
-            accountId = account.Id;
-        }
-
-        Guid? contactId = lead.ContactId;
-        if (request.CreateContact && contactId is null)
-        {
-            var contact = new Contact
-            {
-                FirstName = lead.FirstName,
-                LastName = lead.LastName,
-                Email = lead.Email,
-                Phone = lead.Phone,
-                JobTitle = lead.JobTitle,
-                AccountId = accountId,
-                OwnerId = ownerId,
-                LifecycleStage = "Customer",
-                CreatedAtUtc = now
-            };
-
-            _dbContext.Contacts.Add(contact);
-            contactId = contact.Id;
-        }
-
-        Guid? opportunityId = lead.ConvertedOpportunityId;
-        if (request.CreateOpportunity && opportunityId is null)
-        {
-            var stageId = await ResolveOpportunityStageIdAsync(cancellationToken);
-            var oppName = string.IsNullOrWhiteSpace(request.OpportunityName)
-                ? $"{(lead.CompanyName ?? lead.FirstName)} Opportunity"
-                : request.OpportunityName;
-
-            var opportunity = new Opportunity
-            {
-                Name = oppName,
-                AccountId = accountId ?? Guid.NewGuid(),
-                PrimaryContactId = contactId,
-                StageId = stageId,
-                OwnerId = ownerId,
-                Amount = request.Amount ?? 0,
-                Currency = "USD",
-                Probability = 0,
-                ExpectedCloseDate = request.ExpectedCloseDate,
-                CreatedAtUtc = now
-            };
-
-            _dbContext.Opportunities.Add(opportunity);
-            opportunityId = opportunity.Id;
-        }
-
-        lead.AccountId = accountId;
-        lead.ContactId = contactId;
-        lead.ConvertedOpportunityId = opportunityId;
-        var previousStatusId = lead.LeadStatusId;
-        var convertedStatus = await ResolveLeadStatusAsync("Converted", cancellationToken);
-        lead.LeadStatusId = convertedStatus.Id;
-        // Ensure the relationship is tracked if the status is created on the fly.
-        lead.Status = convertedStatus;
-        lead.ConvertedAtUtc = now;
-        lead.UpdatedAtUtc = now;
-
-        ApplyStatusSideEffects(lead, "Converted");
-        await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, "Converted", cancellationToken);
-        AddStatusHistory(lead, lead.LeadStatusId, "Converted lead");
-
-        await _auditEvents.TrackAsync(
-            CreateAuditEntry(
-                lead.Id,
-                "Converted",
-                null,
-                null,
-                $"AccountId={accountId};ContactId={contactId};OpportunityId={opportunityId}"),
-            cancellationToken);
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return Ok(new LeadConversionResponse(lead.Id, accountId, contactId, opportunityId));
+        var result = await _leadService.ConvertAsync(id, MapConversionRequest(request), GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        var value = result.Value!;
+        return Ok(new LeadConversionResponse(value.LeadId, value.AccountId, value.ContactId, value.OpportunityId));
     }
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-        if (lead is null) return NotFound();
-
-        lead.IsDeleted = true;
-        lead.DeletedAtUtc = DateTime.UtcNow;
-        await _auditEvents.TrackAsync(
-            CreateAuditEntry(lead.Id, "Deleted", null, null, null),
-            cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _leadService.DeleteAsync(id, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -669,21 +287,9 @@ public class LeadsController : ControllerBase
             return BadRequest("Owner id is required.");
         }
 
-        var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-        if (lead is null) return NotFound();
-
-        var previousOwnerId = lead.OwnerId;
-        lead.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, lead.Territory, null, cancellationToken);
-        lead.UpdatedAtUtc = DateTime.UtcNow;
-
-        if (previousOwnerId != lead.OwnerId)
-        {
-            await _auditEvents.TrackAsync(
-                CreateAuditEntry(lead.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), lead.OwnerId.ToString()),
-                cancellationToken);
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _leadService.UpdateOwnerAsync(id, request.OwnerId, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -695,30 +301,9 @@ public class LeadsController : ControllerBase
             return BadRequest("Status is required.");
         }
 
-        var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
-        if (lead is null) return NotFound();
-
-        var previousStatusId = lead.LeadStatusId;
-        var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
-        lead.LeadStatusId = status.Id;
-        // Track the resolved status entity to avoid FK conflicts when it was created on demand.
-        lead.Status = status;
-        var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
-        lead.UpdatedAtUtc = DateTime.UtcNow;
-
-        if (lead.LeadStatusId != previousStatusId)
-        {
-            ApplyStatusSideEffects(lead, statusName);
-            await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, cancellationToken);
-            AddStatusHistory(lead, lead.LeadStatusId, null);
-
-            var oldStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
-            await _auditEvents.TrackAsync(
-                CreateAuditEntry(lead.Id, "StatusChanged", "Status", oldStatusName, statusName),
-                cancellationToken);
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _leadService.UpdateStatusAsync(id, request.Status, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -736,24 +321,8 @@ public class LeadsController : ControllerBase
             return BadRequest("Owner id is required.");
         }
 
-        var ownerExists = await _dbContext.Users
-            .AnyAsync(u => u.Id == request.OwnerId && u.IsActive && !u.IsDeleted, cancellationToken);
-        if (!ownerExists)
-        {
-            return BadRequest("Owner not found.");
-        }
-
-        var leads = await _dbContext.Leads
-            .Where(l => request.Ids.Contains(l.Id) && !l.IsDeleted)
-            .ToListAsync(cancellationToken);
-
-        foreach (var lead in leads)
-        {
-            lead.OwnerId = request.OwnerId;
-            lead.UpdatedAtUtc = DateTime.UtcNow;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _leadService.BulkAssignOwnerAsync(request.Ids, request.OwnerId, cancellationToken);
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -771,30 +340,70 @@ public class LeadsController : ControllerBase
             return BadRequest("Status is required.");
         }
 
-        var leads = await _dbContext.Leads
-            .Where(l => request.Ids.Contains(l.Id) && !l.IsDeleted)
-            .ToListAsync(cancellationToken);
-
-        foreach (var lead in leads)
-        {
-            var previousStatusId = lead.LeadStatusId;
-            var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
-            lead.LeadStatusId = status.Id;
-            // Preserve the status relationship if we had to create it for this tenant.
-            lead.Status = status;
-            var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
-            lead.UpdatedAtUtc = DateTime.UtcNow;
-
-            if (lead.LeadStatusId != previousStatusId)
-            {
-                ApplyStatusSideEffects(lead, statusName);
-                await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, cancellationToken);
-                AddStatusHistory(lead, lead.LeadStatusId, "Bulk status update");
-            }
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _leadService.BulkUpdateStatusAsync(request.Ids, request.Status, cancellationToken);
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
+    }
+
+    private static LeadListItem ToApiItem(LeadListItemDto dto)
+    {
+        return new LeadListItem(
+            dto.Id,
+            dto.Name,
+            dto.CompanyName,
+            dto.Status,
+            dto.Email,
+            dto.Phone,
+            dto.OwnerId,
+            dto.OwnerName,
+            dto.Score,
+            dto.CreatedAtUtc,
+            dto.Source,
+            dto.Territory,
+            dto.JobTitle,
+            dto.AccountId,
+            dto.ContactId,
+            dto.ConvertedOpportunityId);
+    }
+
+    private static LeadUpsertRequest MapUpsertRequest(UpsertLeadRequest request)
+    {
+        return new LeadUpsertRequest(
+            request.FirstName,
+            request.LastName,
+            request.Email,
+            request.Phone,
+            request.CompanyName,
+            request.JobTitle,
+            request.Status,
+            request.OwnerId,
+            request.AssignmentStrategy,
+            request.Source,
+            request.Territory,
+            request.AutoScore,
+            request.Score,
+            request.AccountId,
+            request.ContactId);
+    }
+
+    private static AppLeadConversionRequest MapConversionRequest(ApiLeadConversionRequest request)
+    {
+        return new CRM.Enterprise.Application.Leads.LeadConversionRequest(
+            request.CreateAccount,
+            request.AccountName,
+            request.CreateContact,
+            request.CreateOpportunity,
+            request.OpportunityName,
+            request.Amount,
+            request.ExpectedCloseDate);
+    }
+
+    private LeadActor GetActor()
+    {
+        var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
+        var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
+        return new LeadActor(userId, name);
     }
 
     private async Task<LeadStatus> ResolveLeadStatusAsync(string? statusName, CancellationToken cancellationToken)
@@ -1057,23 +666,5 @@ public class LeadsController : ControllerBase
         return Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
     }
 
-    private AuditEventEntry CreateAuditEntry(
-        Guid entityId,
-        string action,
-        string? field,
-        string? oldValue,
-        string? newValue)
-    {
-        var userId = GetUserId();
-        var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
-        return new AuditEventEntry(
-            LeadEntityType,
-            entityId,
-            action,
-            field,
-            oldValue,
-            newValue,
-            userId == Guid.Empty ? null : userId,
-            name);
-    }
+    
 }

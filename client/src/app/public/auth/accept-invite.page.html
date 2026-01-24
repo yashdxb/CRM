@@ -1,24 +1,15 @@
-<div class="accept-invite-page">
-  <div class="invite-bg">
-    <div class="invite-grid"></div>
-    <div class="invite-orb orb-1"></div>
-    <div class="invite-orb orb-2"></div>
-    <div class="invite-orb orb-3"></div>
-    <div class="invite-orb orb-4"></div>
-  </div>
-  <div class="accept-invite-card">
+<app-auth-shell>
+  <div class="login-card">
     <div class="card-header">
-      <div class="brand">
+      <div class="signal"></div>
+      <div class="brand-logo">
         <img
-          class="brand-logo"
           src="https://nedgtdal2.blob.core.windows.net/assets/branding/logo-v2.png"
           alt="North Edge CRM"
         />
       </div>
-      <h1 class="card-title">
-        <span class="title-gradient">Activate</span> your license
-      </h1>
-      <p class="subtitle">Set your password to join your workspace.</p>
+      <h1 class="card-title">Activate your license</h1>
+      <p class="card-subtitle">Set your password to join your workspace.</p>
     </div>
 
     <div *ngIf="checkingInvite" class="status-pill">
@@ -29,24 +20,18 @@
       {{ precheckMessage }}
     </div>
 
-    <form *ngIf="!precheckMessage" [formGroup]="form" (ngSubmit)="submit()" class="accept-invite-form">
-      <div class="form-field">
-        <label for="newPassword">New password</label>
-        <p-inputgroup class="input-group">
-          <p-inputgroup-addon class="icon-addon icon-addon--password">
-            <i class="pi pi-lock"></i>
-          </p-inputgroup-addon>
-          <input pInputText id="newPassword" type="password" formControlName="newPassword" />
-        </p-inputgroup>
+    <form *ngIf="!precheckMessage" [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+      <div class="form-group">
+        <label class="form-label" for="newPassword">New password</label>
+        <div class="input-wrapper">
+          <input pInputText id="newPassword" type="password" formControlName="newPassword" placeholder="Enter your password" />
+        </div>
       </div>
-      <div class="form-field">
-        <label for="confirmPassword">Confirm new password</label>
-        <p-inputgroup class="input-group">
-          <p-inputgroup-addon class="icon-addon icon-addon--confirm">
-            <i class="pi pi-key"></i>
-          </p-inputgroup-addon>
-          <input pInputText id="confirmPassword" type="password" formControlName="confirmPassword" />
-        </p-inputgroup>
+      <div class="form-group">
+        <label class="form-label" for="confirmPassword">Confirm new password</label>
+        <div class="input-wrapper">
+          <input pInputText id="confirmPassword" type="password" formControlName="confirmPassword" placeholder="Confirm your password" />
+        </div>
       </div>
 
       <div *ngIf="status" class="status-pill" [class]="status.tone">
@@ -56,11 +41,7 @@
       <button pButton type="submit" class="btn-submit" [disabled]="loading">
         <span *ngIf="!loading">Activate account</span>
         <span *ngIf="loading" class="loading-state">
-          <p-progressSpinner
-            styleClass="inline-spinner"
-            strokeWidth="6"
-            animationDuration="0.8s"
-          ></p-progressSpinner>
+          <p-progressSpinner styleClass="inline-spinner" strokeWidth="6" animationDuration="0.8s"></p-progressSpinner>
           Activating...
         </span>
       </button>
@@ -83,4 +64,4 @@
       <button pButton type="button" class="btn-submit" (click)="goToLogin()">Go to login</button>
     </ng-template>
   </p-dialog>
-</div>
+</app-auth-shell>

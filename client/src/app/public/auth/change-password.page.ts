@@ -3,11 +3,10 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { InputGroupModule } from 'primeng/inputgroup';
-import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { AuthService } from '../../core/auth/auth.service';
+import { AuthShellComponent } from './auth-shell.component';
 import { finalize, timeout } from 'rxjs';
 
 @Component({
@@ -18,9 +17,8 @@ import { finalize, timeout } from 'rxjs';
     ReactiveFormsModule,
     ButtonModule,
     InputTextModule,
-    InputGroupModule,
-    InputGroupAddonModule,
-    ProgressSpinnerModule
+    ProgressSpinnerModule,
+    AuthShellComponent
   ],
   templateUrl: './change-password.page.html',
   styleUrls: ['./change-password.page.scss']

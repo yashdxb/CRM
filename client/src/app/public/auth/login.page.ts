@@ -8,6 +8,7 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { AuthService } from '../../core/auth/auth.service';
 import { Router } from '@angular/router';
 import { BreadcrumbsComponent } from '../../core/breadcrumbs';
+import { AuthShellComponent } from './auth-shell.component';
 import { readTokenContext } from '../../core/auth/token.utils';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize, timeout } from 'rxjs';
@@ -15,8 +16,16 @@ import { finalize, timeout } from 'rxjs';
 @Component({
   selector: 'app-login-page',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink, ButtonModule, InputTextModule, CheckboxModule, NgIf, BreadcrumbsComponent,
-],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    ButtonModule,
+    InputTextModule,
+    CheckboxModule,
+    NgIf,
+    BreadcrumbsComponent,
+    AuthShellComponent
+  ],
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss']
 })
@@ -53,17 +62,31 @@ export class LoginPage {
     const { email, password } = this.form.value;
     const normalizedEmail = String(email ?? '').trim().toLowerCase();
     const normalizedPassword = String(password ?? '');
+    let timedOut = false;
+    const timeoutId = window.setTimeout(() => {
+      if (!this.loading) {
+        return;
+      }
+      timedOut = true;
+      this.loading = false;
+      this.showErrors = true;
+      this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
+    }, 15000);
 
     this.auth
       .login({ email: normalizedEmail, password: normalizedPassword })
       .pipe(
         timeout(15000),
         finalize(() => {
+          window.clearTimeout(timeoutId);
           this.loading = false;
         })
       )
       .subscribe({
         next: () => {
+        if (timedOut) {
+          return;
+        }
         if (!readTokenContext()) {
           this.error = 'Login failed to start a session. Please try again.';
           return;
@@ -79,12 +102,17 @@ export class LoginPage {
         this.router.navigateByUrl(target);
         },
         error: (err: unknown) => {
+          if (timedOut) {
+            return;
+          }
           if ((err as { name?: string })?.name === 'TimeoutError') {
+            this.showErrors = true;
             this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
             return;
           }
           const httpError = err as HttpErrorResponse | null;
           const messageBody = httpError?.error?.message || httpError?.error?.error || null;
+          this.showErrors = true;
           this.error = this.buildErrorText(normalizedEmail, messageBody, httpError?.status);
         }
       });
