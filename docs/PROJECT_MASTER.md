@@ -87,6 +87,10 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Premium glass/gradient styling is required; do not create one-off themes.
 - Button styles must use the global CRM button classes.
 - List pages and form pages follow the Component Style Guide templates.
+- Login page uses the branded logo, glass card, orb + grid background, and noise overlay to match the prototype look.
+- **Login UI lock:** The current login screen visual design is approved/locked. Do not change its styles without explicit approval.
+- **Auth screens parity:** All public auth pages (login, accept-invite, change-password, password reset) must match the login screen’s visual system: same background (orbs + grid + noise), glass card treatment, typography, spacing, and button styling.
+- **Auth shell component:** Public auth pages must use the shared `AuthShellComponent` to ensure visual parity and avoid style drift.
 
 ### Global Style Files (Source of Truth)
 - `client/src/styles.scss`
@@ -147,6 +151,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Production frontend must target the production API host (do not point to dev API in prod builds).
 - SignalR hub is mapped to `/api/hubs/presence` and uses the same CORS policy.
 - **Deployment gate:** before any deploy, verify both client and API builds succeed.
+- **Daily ops log:** record daily issues and fixes in `docs/DAILY_OPERATIONS_LOG.md`, and only merge verified outcomes into this master file.
 
 ---
 
@@ -192,6 +197,240 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Conversion to opportunity and pipeline progression
 - Win/loss capture and renewal tracking
 - Multi-contact decision team management
+
+---
+
+## 13.1) Sales Rep Full B2B Flow (Future-Ready)
+
+**Principle:** The CRM is an execution system, not a database. It enforces next steps, protects forecast accuracy, and drives continuous momentum.
+
+### Start of Day – Sales Home (Command Center)
+**System must show:**
+- Overdue + due-today tasks, newly assigned leads, at-risk deals (no activity in X days)
+- Today’s meetings, personal forecast snapshot, and deals closing within 30 days
+**Sales rep actions:**
+- Prioritize tasks, open the highest-impact lead/opportunity, log missed activity
+
+### Lead Handling – Top of Funnel
+**System actions (auto):**
+- Assign lead owner, start SLA timer, create first follow-up task, set routing reason
+**Sales rep actions:**
+- First-touch call/email, log outcome, schedule next step
+**Qualification gate:**
+- Fit, need, authority, timeline (BANT-style or MEDDIC-lite)
+- Outcome required: Disqualified (reason), Nurture, or Qualified (Sales Accepted)
+
+### Lead Conversion – Transition to Sales
+**On qualification:**
+- Create Account + Contact + Opportunity
+- Transfer activities/notes; lock lead as “Converted”
+**Required data:**
+- Opportunity name, value, close date, initial stage
+
+### Account + Contact Strategy
+**Sales rep actions:**
+- Verify account ownership and parent-child relationships
+- Add account notes, attach stakeholders, and classify roles:
+  Decision Maker / Champion / Influencer / Procurement / Technical
+
+### Opportunity Execution – Stage System (Full B2B)
+**Stages (default):**
+1) Qualification
+2) Discovery
+3) Solution Design
+4) Demo / Validation
+5) Proposal
+6) Security / Legal Review
+7) Negotiation
+8) Commit
+9) Closed Won / Closed Lost
+
+**Exit criteria (must be enforced per stage):**
+- Qualification: problem confirmed, decision maker identified, discovery scheduled
+- Discovery: requirements captured, buying process known, success criteria set
+- Solution Design: scope defined, pre-sales engaged, risks logged
+- Demo/Validation: demo/POC completed, champion confirmed
+- Proposal: quote created, approvals logged, proposal sent
+- Security/Legal: questionnaires + legal steps tracked
+- Negotiation: pricing + terms confirmed, close date updated
+- Commit: verbal yes + expected signature date + kickoff date
+
+### Activity Discipline (Mandatory)
+**Rules:**
+- Every activity has an outcome
+- Every activity defines a next step + due date
+- Opportunity must show last activity date + next scheduled action
+**System enforcement:**
+- Block stage progression without next-step
+- Flag idle opportunities and at-risk deals
+
+### Manager Interaction (Sales Rep View)
+**Sales rep actions:**
+- Submit discount/approval requests with justification
+**Visibility:**
+- Approval status, manager comments, forecast category changes
+
+### Deal Closure
+**Closed Won:**
+- Lock opportunity, create contract/order, create onboarding tasks
+- Assign delivery/CS owner, set renewal date
+- Sales rep provides handoff notes + intro email
+**Closed Lost:**
+- Require loss reason + competitor + notes
+- Remove from forecast; feed win/loss analytics
+
+### Post-Sale + Expansion
+- Attend kickoff, support early success
+- Detect expansion signals (usage, requests, new departments)
+- Create Expansion Opportunity with linked account context
+
+### Renewals
+**System actions:**
+- Auto-create renewal opportunity at 90/60/30 days
+**Sales rep actions:**
+- Renewal discovery, proposal, close renewal
+
+### Reporting + Self-Management
+- Personal pipeline health, deals without next step, activity volume, close rate
+
+### Governance + Data Integrity (Future-Ready)
+- Stage exit criteria enforced by validation rules
+- Required fields and controlled vocabularies (loss reasons, competitors, outcomes)
+- SLA and escalation rules for first-touch and follow-ups
+- AI guidance allowed only if explainable and overrideable
+
+### Current vs. Future Mapping (Snapshot)
+**Currently supported (based on existing modules):**
+- Leads CRUD + assignment rules + conversion to Account/Contact/Opportunity
+- Opportunities with stages + win/loss capture
+- Activities with outcomes + due dates
+- Dashboard KPI surface for pipeline and tasks
+- Approval thresholds (single-level)
+- Notifications (in-app + preferences)
+
+**Future/Gap items to implement:**
+- Stage exit validation gates
+- SLA timers + escalation paths for leads
+- Controlled vocabularies for loss reasons/competitors/activity outcomes
+- Security/legal step tracking checklist per opportunity
+- Renewal automation (90/60/30-day triggers)
+- Expansion signals and expansion opportunity templates
+
+---
+
+## 13.2) B2B CRM – Extended Flows by Role (Future-Ready)
+
+These workflows define how non‑rep roles operate in the same CRM, with clear ownership, inputs/outputs, and enforcement points. They are designed to be build‑ready and align with enterprise CRM expectations.
+
+### SDR / BDR (Lead Qualification)
+**Purpose:** Convert raw leads into sales‑accepted opportunities.
+**Daily view:** New leads, SLA timers, outreach cadence queue, meetings booked.
+**Flow:**
+- First touch within SLA → multi‑touch cadence (call/email/LinkedIn).
+- Log every outcome with next step + due date.
+- Qualify for: company fit, role relevance, interest, timing.
+**Outcomes (required):**
+- Disqualified (reason required)
+- Nurture (future follow‑up)
+- Qualified → handoff to Sales Rep with notes + booked discovery meeting
+
+### Sales Manager
+**Purpose:** Forecast accuracy, deal governance, rep performance.
+**Manager view:** Team pipeline, commit vs target, at‑risk deals, approvals.
+**Flow:**
+- Review pipeline weekly + critical deals daily.
+- Inspect: no next step, stage stuck, large/late‑stage deals.
+- Coach reps via comments/tasks; enforce stage exit criteria.
+- Approve/deny discounts and non‑standard terms.
+- Adjust forecast categories and reassign ownership when required.
+
+### Sales Ops / CRM Admin
+**Purpose:** Process integrity, data quality, automation, and scale.
+**Core responsibilities:**
+- Configure stages + exit criteria, required fields, and SLAs.
+- Manage roles/permissions; maintain products/pricing/templates.
+- Automations: lead routing, idle‑deal alerts, task auto‑creation.
+- Data quality: duplicate detection, merge rules, field validation.
+- Reporting enablement + audit/compliance logging.
+**Output:** A governed system that enforces workflow without manual policing.
+
+### Pre‑Sales / Solution Consultant
+**Purpose:** Technical validation and solution alignment.
+**Flow:**
+- Added to opportunity team on Discovery or Solution Design.
+- Review requirements; support discovery calls.
+- Design solution scope; deliver demo/POC.
+- Capture technical risks/constraints; update opportunity notes.
+- Support proposal, security review, and validation stages.
+
+### Finance
+**Purpose:** Protect margin, pricing consistency, billing accuracy.
+**Flow:**
+- Receive pricing/discount approvals with margin visibility.
+- Approve/deny with comments; define billing schedule + payment terms.
+- Validate tax/invoicing rules before Closed Won.
+- Trigger billing/ERP handoff once contract is signed.
+
+### Legal
+**Purpose:** Contract compliance and risk management.
+**Flow:**
+- Intake contract request → review redlines/clauses.
+- Track negotiation status and deviations from standards.
+- Approve final language; mark ready for signature.
+- Maintain contract audit trail.
+
+### Delivery / Implementation
+**Purpose:** Successful onboarding and solution delivery.
+**Flow:**
+- Auto‑assigned on Closed Won.
+- Review handoff package (scope, stakeholders, risks, timeline).
+- Schedule kickoff; execute onboarding checklist.
+- Track milestones + dependencies; sync status to CRM.
+- Mark implementation complete and hand over to CSM.
+
+### Customer Success Manager (CSM)
+**Purpose:** Retention, adoption, expansion.
+**Flow:**
+- Own post‑onboarding relationship.
+- Monitor health indicators, usage, NPS/feedback.
+- Trigger playbooks for risk or low adoption.
+- Identify expansion signals and open Expansion Opportunity.
+- Coordinate renewals with Sales.
+
+### Support / Service Agent
+**Purpose:** Issue resolution + SLA compliance.
+**Flow:**
+- Intake case (email/portal/phone) → identify account/contact.
+- Classify priority/SLA → resolve or escalate.
+- Record resolution notes; close case.
+- Feed insights into account health and renewal risk.
+
+### Cross‑Role Governance (Required)
+- Shared Account + Contact record; single source of truth.
+- Role‑based permissions with shared visibility (no data silos).
+- SLA + escalation rules across lead and case workflows.
+- Required outcomes + next steps for all activities.
+
+**Final principle:** Role specialization with shared data is the foundation of a true B2B CRM.
+
+---
+
+## 13.3) Recommended Delivery Order (Advisor Notes)
+
+**Priority 1 (P2, pipeline discipline):**
+1) Lead SLA timers + first-touch enforcement
+2) Activity outcome + next-step enforcement
+3) Opportunity stage exit criteria gates
+4) At-risk deal alerts + dashboard widgets
+
+**Priority 2 (P2, governance + manager visibility):**
+5) Approval workflow visibility + comments/audit trail
+6) Deal review workflow for stuck/late-stage opportunities
+
+**Priority 3 (P3, revenue expansion + retention):**
+7) Renewal automation (90/60/30 day triggers)
+8) Expansion signals + expansion opportunity templates
+9) Health scoring + NPS + risk alerts (CSM)
 
 ---
 
@@ -280,6 +519,26 @@ Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant 
 ## 18) Project Phases (Merged)
 
 The full phase checklists are included below to keep one source of truth.
+
+# Current Execution Plan (Approved)
+
+Goal: deliver the Sales Rep end-to-end flow first while adding microservice-ready seams without splitting services yet.
+
+**Near-term build order (MVP backbone)**
+- Leads: capture, assign, qualify, SLA timers, and required outcomes.
+- Lead conversion: account + contact + opportunity creation with history transfer.
+- Opportunities: stages, next-step enforcement, and stage history.
+- Activities: calls/emails/meetings with outcomes and follow-ups.
+- Manager guardrails: stale deals, missing next steps, and approvals.
+
+**Architecture seams to add while building (no microservices yet)**
+- Controllers must delegate to Application services (no direct DbContext logic).
+- Introduce domain events (in-process now) for lead qualified, stage changes, activity completion.
+- Avoid cross-module joins in controllers; use read models or snapshots.
+- Optional: split DbContexts by module while keeping a single database.
+
+**Explicit decision**
+- Do not extract microservices yet; prioritize flow completeness and seam isolation.
 
 # Phase 1 Checklist (Draft)
 
@@ -502,6 +761,112 @@ Legend:
 
 16) Recently viewed lists in each module
 - Status: DONE
+
+---
+
+## Phase 2 vs Full B2B Sales Rep Flow (Gap Check)
+
+**Covered in Phase 2 (Sales Rep flow):**
+- Multi-tenancy + workspace settings
+- Lead lifecycle (CRUD + workflow + conversion + assignment rules)
+- Opportunity enhancements
+- Activity templates
+- Saved filters/views per user
+- Bulk actions + inline edit
+- Notification center + preferences (in-app)
+- Ops hardening (background jobs, retries, health checks)
+
+**Missing vs full Sales Rep flow (must add):**
+1) [P2] Lead SLA timers + escalation rules for first-touch  
+   - Acceptance: SLA starts on lead assignment; overdue triggers alert + task.
+2) [P2] Mandatory next-step + due date enforcement on every activity  
+   - Acceptance: activity cannot save without outcome + next step.
+3) [P2] Stage exit criteria gates (Qualification → Discovery → …)  
+   - Acceptance: stage change blocked until required fields completed.
+4) [P2] At-risk deal detection (no activity in X days) surfaced in dashboard  
+   - Acceptance: deals with inactivity threshold flagged + filterable.
+5) [P3] Forecast category controls + commit discipline  
+   - Acceptance: required forecast category before close; manager override logged.
+6) [P3] Security/Legal checklist tracking per opportunity stage  
+   - Acceptance: checklist required to move past Security/Legal stage.
+7) [P3] Renewal automation (90/60/30 day triggers)  
+   - Acceptance: renewal opportunity auto‑created with reminders.
+8) [P3] Expansion opportunity creation + signals  
+   - Acceptance: expansion signal creates draft opportunity with account link.
+
+## Phase 2 vs Full B2B Role Flows (Other Roles)
+
+**SDR / BDR gaps:**
+1) [P2] SLA timer + first-touch enforcement  
+   - Acceptance: SLA visible in lead list; overdue = alert + task.
+2) [P2] Multi-touch cadence tracking (call/email/LinkedIn sequences)  
+   - Acceptance: cadence step logging + auto-next-step task.
+3) [P2] Handoff package standard (notes + meeting booked + outcome)  
+   - Acceptance: handoff requires meeting + summary note.
+
+**Sales Manager gaps:**
+1) [P2] Deal review workflow (no next step, stuck stage, late-stage alerts)  
+   - Acceptance: review queue + comment task to rep.
+2) [P3] Forecast category governance + commit tracking  
+   - Acceptance: commit changes require manager approval + audit.
+3) [P2] Approval workflow visibility with comments and audit trail  
+   - Acceptance: approval request includes status + comment log.
+
+**Sales Ops / CRM Admin gaps:**
+1) [P3] Stage exit criteria configuration UI  
+   - Acceptance: configurable per stage in admin UI.
+2) [P3] Required-field rules per stage in UI  
+   - Acceptance: admin can set per-stage required fields.
+3) [P3] Data quality tooling (duplicate detection/merge)  
+   - Acceptance: duplicate merge UI with audit trail.
+
+**Pre‑Sales / Solution Consultant gaps:**
+1) [P2] Opportunity team membership + role tracking  
+   - Acceptance: add/remove team members with role.
+2) [P2] Demo/POC tracking with outcomes  
+   - Acceptance: demo activity template + outcome required.
+3) [P2] Technical risk/constraint capture fields  
+   - Acceptance: risk/constraint section on opportunity.
+
+**Finance gaps:**
+1) [P3] Discount approval queue + margin visibility  
+   - Acceptance: approval includes margin + impact.
+2) [P3] Billing schedule/payment term configuration  
+   - Acceptance: billing terms required before Closed Won.
+3) [P3] ERP/invoicing handoff trigger  
+   - Acceptance: handoff event on contract signature.
+
+**Legal gaps:**
+1) [P3] Contract review request flow  
+   - Acceptance: request captured with owner + SLA.
+2) [P3] Clause/redline tracking  
+   - Acceptance: redline status visible on opportunity.
+3) [P3] Signature readiness status  
+   - Acceptance: stage cannot close without legal ready flag.
+
+**Delivery / Implementation gaps:**
+1) [P2] Onboarding checklist + milestone tracking  
+   - Acceptance: checklist tasks created on Closed Won.
+2) [P2] Handoff package template (scope/risks/timeline)  
+   - Acceptance: required handoff notes before kickoff.
+3) [P2] Implementation completion signal  
+   - Acceptance: completion status updates account.
+
+**CSM gaps:**
+1) [P3] Health scoring model + automated risk alerts  
+   - Acceptance: health score visible + alert on drop.
+2) [P3] NPS capture + feedback log  
+   - Acceptance: NPS survey result stored per account.
+3) [P3] Renewal workflow + expansion trigger  
+   - Acceptance: renewal playbook + expansion suggestion.
+
+**Support / Service gaps:**
+1) [P3] Case intake + SLA timers  
+   - Acceptance: SLA clock + breach alerts.
+2) [P3] Priority classification + escalation  
+   - Acceptance: priority → queue + escalation rules.
+3) [P3] Case-to-account health feedback loop  
+   - Acceptance: case trends affect account health.
 
 # Phase 3 Candidate Backlog (Draft)
 
