@@ -26,6 +26,7 @@ using CRM.Enterprise.Infrastructure.Notifications;
 using CRM.Enterprise.Infrastructure.Leads;
 using CRM.Enterprise.Infrastructure.Activities;
 using CRM.Enterprise.Infrastructure.Opportunities;
+using MediatR;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -38,6 +39,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddMediatR(typeof(LeadQualifiedEventHandler).Assembly);
+
         var connectionString = configuration.GetConnectionString("SqlServer")
             ?? throw new InvalidOperationException("Connection string 'SqlServer' was not found.");
 
