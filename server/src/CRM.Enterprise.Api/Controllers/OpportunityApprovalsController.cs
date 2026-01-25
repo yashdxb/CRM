@@ -1,0 +1,113 @@
+using System.Security.Claims;
+using CRM.Enterprise.Api.Contracts.Opportunities;
+using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Opportunities;
+using CRM.Enterprise.Security;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace CRM.Enterprise.Api.Controllers;
+
+[Authorize(Policy = Permissions.Policies.OpportunitiesView)]
+[ApiController]
+public class OpportunityApprovalsController : ControllerBase
+{
+    private readonly IOpportunityApprovalService _approvalService;
+
+    public OpportunityApprovalsController(IOpportunityApprovalService approvalService)
+    {
+        _approvalService = approvalService;
+    }
+
+    [HttpGet("api/opportunities/{id:guid}/approvals")]
+    public async Task<ActionResult<IEnumerable<OpportunityApprovalItem>>> GetApprovals(Guid id, CancellationToken cancellationToken)
+    {
+        var items = await _approvalService.GetForOpportunityAsync(id, cancellationToken);
+        if (items is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(items.Select(ToApiItem));
+    }
+
+    [HttpPost("api/opportunities/{id:guid}/approvals")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityApprovalItem>> RequestApproval(
+        Guid id,
+        [FromBody] OpportunityApprovalRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _approvalService.RequestAsync(
+            id,
+            request.Amount,
+            request.Currency ?? "USD",
+            GetActor(),
+            cancellationToken);
+
+        if (result.NotFound)
+        {
+            return NotFound();
+        }
+
+        if (!result.Success)
+        {
+            return BadRequest(result.Error);
+        }
+
+        return Ok(ToApiItem(result.Value!));
+    }
+
+    [HttpPatch("api/opportunity-approvals/{approvalId:guid}")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityApprovalItem>> Decide(
+        Guid approvalId,
+        [FromBody] OpportunityApprovalDecisionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _approvalService.DecideAsync(
+            approvalId,
+            request.Approved,
+            request.Notes,
+            GetActor(),
+            cancellationToken);
+
+        if (result.NotFound)
+        {
+            return NotFound();
+        }
+
+        if (!result.Success)
+        {
+            return BadRequest(result.Error);
+        }
+
+        return Ok(ToApiItem(result.Value!));
+    }
+
+    private static OpportunityApprovalItem ToApiItem(OpportunityApprovalDto dto)
+    {
+        return new OpportunityApprovalItem(
+            dto.Id,
+            dto.OpportunityId,
+            dto.Status,
+            dto.ApproverRole,
+            dto.ApproverUserId,
+            dto.ApproverName,
+            dto.RequestedByUserId,
+            dto.RequestedByName,
+            dto.RequestedOn,
+            dto.DecisionOn,
+            dto.Notes,
+            dto.Amount,
+            dto.Currency);
+    }
+
+    private ActorContext GetActor()
+    {
+        var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Guid.TryParse(subject, out var parsed) ? parsed : (Guid?)null;
+        var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
+        return new ActorContext(userId, name);
+    }
+}

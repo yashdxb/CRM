@@ -30,6 +30,7 @@ using CRM.Enterprise.Infrastructure.Activities;
 using CRM.Enterprise.Infrastructure.Opportunities;
 using CRM.Enterprise.Infrastructure.Customers;
 using CRM.Enterprise.Infrastructure.Contacts;
+using CRM.Enterprise.Infrastructure.Approvals;
 using MediatR;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Identity;
@@ -60,6 +61,7 @@ public static class DependencyInjection
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<GraphMailOptions>(configuration.GetSection(GraphMailOptions.SectionName));
         services.Configure<AcsEmailOptions>(configuration.GetSection(AcsEmailOptions.SectionName));
+        services.Configure<ApprovalQueueOptions>(configuration.GetSection(ApprovalQueueOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
         services.AddHttpContextAccessor();
         services.AddSingleton<IPresenceTracker, PresenceTracker>();
@@ -78,6 +80,7 @@ public static class DependencyInjection
             return new ServiceBusClient(options.ServiceBusConnectionString);
         });
         services.AddSingleton<ServiceBusEmailQueue>();
+        services.AddSingleton<ServiceBusApprovalQueue>();
         services.AddHostedService<EmailQueueWorker>();
         services.AddSingleton<IEmailSender>(sp =>
         {
@@ -103,6 +106,7 @@ public static class DependencyInjection
         services.AddScoped<ILeadImportService, LeadImportService>();
         services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IOpportunityService, OpportunityService>();
+        services.AddScoped<IOpportunityApprovalService, OpportunityApprovalService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ICustomerImportService, CustomerImportService>();
         services.AddScoped<IContactService, ContactService>();

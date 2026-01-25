@@ -47,3 +47,18 @@ public sealed record OpportunityOperationResult<T>(bool Success, T? Value, strin
     public static OpportunityOperationResult<T> Fail(string error) => new(false, default, error, false);
     public static OpportunityOperationResult<T> NotFoundResult() => new(false, default, null, true);
 }
+
+public sealed record OpportunityApprovalDto(
+    Guid Id,
+    Guid OpportunityId,
+    string Status,
+    string ApproverRole,
+    Guid? ApproverUserId,
+    string? ApproverName,
+    Guid? RequestedByUserId,
+    string? RequestedByName,
+    DateTime RequestedOn,
+    DateTime? DecisionOn,
+    string? Notes,
+    decimal Amount,
+    string Currency);

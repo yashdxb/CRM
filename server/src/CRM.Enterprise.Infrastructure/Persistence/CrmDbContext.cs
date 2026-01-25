@@ -26,6 +26,7 @@ public class CrmDbContext : DbContext
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityStage> OpportunityStages => Set<OpportunityStage>();
     public DbSet<OpportunityStageHistory> OpportunityStageHistories => Set<OpportunityStageHistory>();
+    public DbSet<OpportunityApproval> OpportunityApprovals => Set<OpportunityApproval>();
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
@@ -106,6 +107,7 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Opportunity>().ToTable("Opportunities", CrmSchema);
         modelBuilder.Entity<OpportunityStage>().ToTable("OpportunityStages", CrmSchema);
         modelBuilder.Entity<OpportunityStageHistory>().ToTable("OpportunityStageHistories", CrmSchema);
+        modelBuilder.Entity<OpportunityApproval>().ToTable("OpportunityApprovals", CrmSchema);
         modelBuilder.Entity<Activity>().ToTable("Activities", CrmSchema);
         modelBuilder.Entity<Attachment>().ToTable("Attachments", CrmSchema);
         modelBuilder.Entity<ImportJob>().ToTable("ImportJobs", CrmSchema);
@@ -209,6 +211,10 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Tenant>()
             .Property(t => t.ApprovalApproverRole)
             .HasMaxLength(200);
+
+        modelBuilder.Entity<OpportunityApproval>()
+            .Property(a => a.Amount)
+            .HasPrecision(18, 2);
 
         modelBuilder.Entity<PermissionCatalogEntry>()
             .HasIndex(entry => entry.Key)

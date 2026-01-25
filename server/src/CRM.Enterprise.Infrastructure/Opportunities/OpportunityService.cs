@@ -44,17 +44,20 @@ public sealed class OpportunityService : IOpportunityService
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
+    private readonly IOpportunityApprovalService _approvalService;
 
     public OpportunityService(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
         IAuditEventService auditEvents,
-        IMediator mediator)
+        IMediator mediator,
+        IOpportunityApprovalService approvalService)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _auditEvents = auditEvents;
         _mediator = mediator;
+        _approvalService = approvalService;
     }
 
     public async Task<OpportunitySearchResultDto> SearchAsync(OpportunitySearchRequest request, CancellationToken cancellationToken = default)
@@ -286,7 +289,7 @@ public sealed class OpportunityService : IOpportunityService
             return OpportunityOperationResult<OpportunityListItemDto>.Fail("Win/Loss reason is required when closing an opportunity.");
         }
 
-        var approvalError = await ValidateApprovalAsync(request, actor, cancellationToken);
+        var approvalError = await ValidateApprovalAsync(request, actor, null, cancellationToken);
         if (approvalError is not null)
         {
             return OpportunityOperationResult<OpportunityListItemDto>.Fail(approvalError);
@@ -358,7 +361,7 @@ public sealed class OpportunityService : IOpportunityService
             return OpportunityOperationResult<bool>.Fail("Win/Loss reason is required when closing an opportunity.");
         }
 
-        var approvalError = await ValidateApprovalAsync(request, actor, cancellationToken);
+        var approvalError = await ValidateApprovalAsync(request, actor, id, cancellationToken);
         if (approvalError is not null)
         {
             return OpportunityOperationResult<bool>.Fail(approvalError);
@@ -778,7 +781,11 @@ public sealed class OpportunityService : IOpportunityService
         });
     }
 
-    private async Task<string?> ValidateApprovalAsync(OpportunityUpsertRequest request, ActorContext actor, CancellationToken cancellationToken)
+    private async Task<string?> ValidateApprovalAsync(
+        OpportunityUpsertRequest request,
+        ActorContext actor,
+        Guid? opportunityId,
+        CancellationToken cancellationToken)
     {
         if (!request.IsClosed)
         {
@@ -813,20 +820,31 @@ public sealed class OpportunityService : IOpportunityService
             return "Approval role must be configured before closing high-value opportunities.";
         }
 
-        if (!actor.UserId.HasValue)
+        if (!opportunityId.HasValue || opportunityId.Value == Guid.Empty)
         {
-            return "Approval required to close this opportunity.";
+            return "Approval required to close this opportunity. Save it first, then request approval.";
         }
 
-        var isApprover = await _dbContext.UserRoles
-            .Include(ur => ur.Role)
+        var approved = await _dbContext.OpportunityApprovals
+            .AsNoTracking()
             .AnyAsync(
-                ur => ur.UserId == actor.UserId.Value &&
-                      ur.Role != null &&
-                      ur.Role.Name == tenant.ApprovalApproverRole,
+                a => a.OpportunityId == opportunityId.Value &&
+                     a.Status == "Approved",
                 cancellationToken);
 
-        return isApprover ? null : "Approval required to close this opportunity.";
+        if (approved)
+        {
+            return null;
+        }
+
+        await _approvalService.RequestAsync(
+            opportunityId.Value,
+            request.Amount,
+            request.Currency,
+            actor,
+            cancellationToken);
+
+        return "Approval required. Request submitted for review.";
     }
 
     private AuditEventEntry CreateAuditEntry(
