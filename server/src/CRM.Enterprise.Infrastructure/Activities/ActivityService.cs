@@ -4,6 +4,7 @@ using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Infrastructure.Activities;
@@ -13,11 +14,13 @@ public sealed class ActivityService : IActivityService
     private const string ActivityEntityType = "Activity";
     private readonly CrmDbContext _dbContext;
     private readonly IAuditEventService _auditEvents;
+    private readonly IMediator _mediator;
 
-    public ActivityService(CrmDbContext dbContext, IAuditEventService auditEvents)
+    public ActivityService(CrmDbContext dbContext, IAuditEventService auditEvents, IMediator mediator)
     {
         _dbContext = dbContext;
         _auditEvents = auditEvents;
+        _mediator = mediator;
     }
 
     public async Task<ActivitySearchResultDto> SearchAsync(ActivitySearchRequest request, CancellationToken cancellationToken = default)
@@ -266,6 +269,18 @@ public sealed class ActivityService : IActivityService
             CreateAuditEntry(activity.Id, "Created", null, null, null, actor),
             cancellationToken);
 
+        if (activity.CompletedDateUtc.HasValue)
+        {
+            await _mediator.Publish(new ActivityCompletedEvent(
+                activity.Id,
+                activity.RelatedEntityType,
+                activity.RelatedEntityId,
+                activity.OwnerId,
+                activity.CompletedDateUtc.Value,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var dto = await MapToListItemAsync(activity.Id, cancellationToken);
@@ -302,7 +317,8 @@ public sealed class ActivityService : IActivityService
                 cancellationToken);
         }
 
-        if (previousCompletedAt != activity.CompletedDateUtc && activity.CompletedDateUtc.HasValue)
+        var completedNow = previousCompletedAt != activity.CompletedDateUtc && activity.CompletedDateUtc.HasValue;
+        if (completedNow)
         {
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(
@@ -325,6 +341,18 @@ public sealed class ActivityService : IActivityService
         await _auditEvents.TrackAsync(
             CreateAuditEntry(activity.Id, "Updated", null, null, null, actor),
             cancellationToken);
+
+        if (completedNow)
+        {
+            await _mediator.Publish(new ActivityCompletedEvent(
+                activity.Id,
+                activity.RelatedEntityType,
+                activity.RelatedEntityId,
+                activity.OwnerId,
+                activity.CompletedDateUtc!.Value,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ActivityOperationResult<bool>.Ok(true);

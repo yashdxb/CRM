@@ -4,6 +4,7 @@ using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Infrastructure.Opportunities;
@@ -14,15 +15,18 @@ public sealed class OpportunityService : IOpportunityService
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditEventService _auditEvents;
+    private readonly IMediator _mediator;
 
     public OpportunityService(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
-        IAuditEventService auditEvents)
+        IAuditEventService auditEvents,
+        IMediator mediator)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _auditEvents = auditEvents;
+        _mediator = mediator;
     }
 
     public async Task<OpportunitySearchResultDto> SearchAsync(OpportunitySearchRequest request, CancellationToken cancellationToken = default)
@@ -310,6 +314,12 @@ public sealed class OpportunityService : IOpportunityService
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(opp.Id, "StageChanged", "Stage", previousStageName, nextStageName, actor),
                 cancellationToken);
+            await _mediator.Publish(new OpportunityStageChangedEvent(
+                opp.Id,
+                previousStageName,
+                nextStageName,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
         }
 
         if (previousOwnerId != opp.OwnerId)
@@ -427,6 +437,12 @@ public sealed class OpportunityService : IOpportunityService
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(opp.Id, "StageChanged", "Stage", previousStageName, nextStageName, actor),
                 cancellationToken);
+            await _mediator.Publish(new OpportunityStageChangedEvent(
+                opp.Id,
+                previousStageName,
+                nextStageName,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
