@@ -156,7 +156,10 @@ public class OpportunitiesController : ControllerBase
             dto.Status,
             dto.WinLossReason,
             dto.CreatedAtUtc,
-            dto.UpdatedAtUtc);
+            dto.UpdatedAtUtc,
+            dto.LastActivityAtUtc,
+            dto.NextStepDueAtUtc,
+            dto.IsAtRisk);
     }
 
     private static AppOpportunityUpsertRequest MapUpsertRequest(ApiOpportunityUpsertRequest request)

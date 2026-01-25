@@ -15,7 +15,10 @@ public sealed record OpportunityListItemDto(
     string Status,
     string? WinLossReason,
     DateTime CreatedAtUtc,
-    DateTime? UpdatedAtUtc);
+    DateTime? UpdatedAtUtc,
+    DateTime? LastActivityAtUtc,
+    DateTime? NextStepDueAtUtc,
+    bool IsAtRisk);
 
 public sealed record OpportunitySearchResultDto(IReadOnlyList<OpportunityListItemDto> Items, int Total);
 

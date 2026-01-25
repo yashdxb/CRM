@@ -3,6 +3,7 @@ using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,19 @@ namespace CRM.Enterprise.Infrastructure.Opportunities;
 public sealed class OpportunityService : IOpportunityService
 {
     private const string OpportunityEntityType = "Opportunity";
+    private const int AtRiskDays = 30;
+    private static readonly HashSet<string> StagesRequiringAmount = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Qualification",
+        "Proposal",
+        "Negotiation"
+    };
+    private static readonly HashSet<string> StagesRequiringCloseDate = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Qualification",
+        "Proposal",
+        "Negotiation"
+    };
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditEventService _auditEvents;
@@ -84,28 +98,72 @@ public sealed class OpportunityService : IOpportunityService
             })
             .ToListAsync(cancellationToken);
 
+        var opportunityIds = data.Select(o => o.Id).ToList();
+        var activityLookup = new Dictionary<Guid, (DateTime? lastActivityAtUtc, DateTime? nextStepDueAtUtc)>();
+        if (opportunityIds.Count > 0)
+        {
+            var activitySnapshot = await _dbContext.Activities
+                .AsNoTracking()
+                .Where(a => !a.IsDeleted
+                            && a.RelatedEntityType == ActivityRelationType.Opportunity
+                            && opportunityIds.Contains(a.RelatedEntityId))
+                .Select(a => new
+                {
+                    a.RelatedEntityId,
+                    a.DueDateUtc,
+                    a.CompletedDateUtc,
+                    a.CreatedAtUtc
+                })
+                .ToListAsync(cancellationToken);
+
+            activityLookup = activitySnapshot
+                .GroupBy(a => a.RelatedEntityId)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    {
+                        var lastActivityAtUtc = g.Max(a => (DateTime?)(a.CompletedDateUtc ?? a.CreatedAtUtc));
+                        var nextStepDueAtUtc = g
+                            .Where(a => a.CompletedDateUtc == null && a.DueDateUtc.HasValue)
+                            .OrderBy(a => a.DueDateUtc)
+                            .Select(a => a.DueDateUtc)
+                            .FirstOrDefault();
+                        return (lastActivityAtUtc, nextStepDueAtUtc);
+                    });
+        }
+
         var ownerIds = data.Select(o => o.OwnerId).Distinct().ToList();
         var owners = await _dbContext.Users
             .Where(u => ownerIds.Contains(u.Id))
             .Select(u => new { u.Id, u.FullName })
             .ToListAsync(cancellationToken);
 
-        var items = data.Select(o => new OpportunityListItemDto(
-            o.Id,
-            o.Name,
-            o.AccountId,
-            o.Account,
-            o.Stage,
-            o.Amount,
-            o.Probability,
-            o.Currency,
-            o.ExpectedCloseDate,
-            o.OwnerId,
-            owners.FirstOrDefault(own => own.Id == o.OwnerId)?.FullName ?? "Unassigned",
-            ComputeStatus(o.IsClosed, o.IsWon),
-            o.WinLossReason,
-            o.CreatedAtUtc,
-            o.UpdatedAtUtc));
+        var items = data.Select(o =>
+        {
+            activityLookup.TryGetValue(o.Id, out var activityInfo);
+            var lastActivityAtUtc = activityInfo.lastActivityAtUtc;
+            var nextStepDueAtUtc = activityInfo.nextStepDueAtUtc;
+
+            return new OpportunityListItemDto(
+                o.Id,
+                o.Name,
+                o.AccountId,
+                o.Account,
+                o.Stage,
+                o.Amount,
+                o.Probability,
+                o.Currency,
+                o.ExpectedCloseDate,
+                o.OwnerId,
+                owners.FirstOrDefault(own => own.Id == o.OwnerId)?.FullName ?? "Unassigned",
+                ComputeStatus(o.IsClosed, o.IsWon),
+                o.WinLossReason,
+                o.CreatedAtUtc,
+                o.UpdatedAtUtc,
+                lastActivityAtUtc,
+                nextStepDueAtUtc,
+                ComputeAtRisk(lastActivityAtUtc, nextStepDueAtUtc));
+        });
 
         return new OpportunitySearchResultDto(items.ToList(), total);
     }
@@ -128,6 +186,9 @@ public sealed class OpportunityService : IOpportunityService
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
 
+        var lastActivityAtUtc = await GetLastActivityAtUtcAsync(opp.Id, cancellationToken);
+        var nextStepDueAtUtc = await GetNextStepDueAtUtcAsync(opp.Id, cancellationToken);
+
         return new OpportunityListItemDto(
             opp.Id,
             opp.Name,
@@ -143,7 +204,10 @@ public sealed class OpportunityService : IOpportunityService
             ComputeStatus(opp.IsClosed, opp.IsWon),
             opp.WinLossReason,
             opp.CreatedAtUtc,
-            opp.UpdatedAtUtc);
+            opp.UpdatedAtUtc,
+            lastActivityAtUtc,
+            nextStepDueAtUtc,
+            ComputeAtRisk(lastActivityAtUtc, nextStepDueAtUtc));
     }
 
     public async Task<IReadOnlyList<OpportunityStageHistoryDto>?> GetHistoryAsync(Guid id, CancellationToken cancellationToken = default)
@@ -259,7 +323,10 @@ public sealed class OpportunityService : IOpportunityService
             ComputeStatus(opp.IsClosed, opp.IsWon),
             opp.WinLossReason,
             opp.CreatedAtUtc,
-            opp.UpdatedAtUtc);
+            opp.UpdatedAtUtc,
+            null,
+            null,
+            ComputeAtRisk(null, null));
 
         return OpportunityOperationResult<OpportunityListItemDto>.Ok(dto);
     }
@@ -291,10 +358,20 @@ public sealed class OpportunityService : IOpportunityService
         var previousAmount = opp.Amount;
         var previousExpectedClose = opp.ExpectedCloseDate;
 
+        var nextStageId = await ResolveStageIdAsync(request.StageId, request.StageName, cancellationToken);
+        var nextStageName = await ResolveStageNameAsync(nextStageId, cancellationToken) ?? request.StageName ?? "Prospecting";
+        if (previousStageId != nextStageId)
+        {
+            var stageError = await ValidateStageChangeAsync(opp, nextStageName, request, cancellationToken);
+            if (stageError is not null)
+            {
+                return OpportunityOperationResult<bool>.Fail(stageError);
+            }
+        }
+
         opp.Name = request.Name;
         opp.AccountId = await ResolveAccountIdAsync(request.AccountId, cancellationToken);
         opp.PrimaryContactId = request.PrimaryContactId;
-        var nextStageId = await ResolveStageIdAsync(request.StageId, request.StageName, cancellationToken);
         opp.StageId = nextStageId;
         opp.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
         opp.Amount = request.Amount;
@@ -310,7 +387,6 @@ public sealed class OpportunityService : IOpportunityService
         if (previousStageId != nextStageId)
         {
             AddStageHistory(opp, nextStageId, "Stage updated", actor);
-            var nextStageName = await ResolveStageNameAsync(nextStageId, cancellationToken);
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(opp.Id, "StageChanged", "Stage", previousStageName, nextStageName, actor),
                 cancellationToken);
@@ -424,6 +500,12 @@ public sealed class OpportunityService : IOpportunityService
             return OpportunityOperationResult<bool>.NotFoundResult();
         }
 
+        var stageError = await ValidateStageChangeAsync(opp, stageName, null, cancellationToken);
+        if (stageError is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(stageError);
+        }
+
         var nextStageId = await ResolveStageIdAsync(null, stageName, cancellationToken);
         if (nextStageId != opp.StageId)
         {
@@ -453,6 +535,102 @@ public sealed class OpportunityService : IOpportunityService
     {
         if (isClosed) return isWon ? "Closed Won" : "Closed Lost";
         return "Open";
+    }
+
+    private static bool ComputeAtRisk(DateTime? lastActivityAtUtc, DateTime? nextStepDueAtUtc)
+    {
+        var now = DateTime.UtcNow;
+        if (!nextStepDueAtUtc.HasValue)
+        {
+            return true;
+        }
+
+        if (nextStepDueAtUtc.Value.Date < now.Date)
+        {
+            return true;
+        }
+
+        if (lastActivityAtUtc.HasValue && (now - lastActivityAtUtc.Value).TotalDays > AtRiskDays)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task<DateTime?> GetLastActivityAtUtcAsync(Guid opportunityId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Opportunity
+                        && a.RelatedEntityId == opportunityId)
+            .OrderByDescending(a => a.CompletedDateUtc ?? a.CreatedAtUtc)
+            .Select(a => (DateTime?)(a.CompletedDateUtc ?? a.CreatedAtUtc))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<DateTime?> GetNextStepDueAtUtcAsync(Guid opportunityId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Opportunity
+                        && a.RelatedEntityId == opportunityId
+                        && a.CompletedDateUtc == null
+                        && a.DueDateUtc.HasValue)
+            .OrderBy(a => a.DueDateUtc)
+            .Select(a => a.DueDateUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<string?> ValidateStageChangeAsync(
+        Opportunity opportunity,
+        string nextStageName,
+        OpportunityUpsertRequest? request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(nextStageName))
+        {
+            return "Stage is required.";
+        }
+
+        if (nextStageName.StartsWith("Closed", StringComparison.OrdinalIgnoreCase))
+        {
+            if (request is null)
+            {
+                return "Use the full edit flow to close opportunities.";
+            }
+
+            if (!request.IsClosed)
+            {
+                return "Opportunity status must be closed before selecting a closed stage.";
+            }
+        }
+
+        var amount = request?.Amount ?? opportunity.Amount;
+        var expectedCloseDate = request?.ExpectedCloseDate ?? opportunity.ExpectedCloseDate;
+
+        if (StagesRequiringAmount.Contains(nextStageName) && amount <= 0)
+        {
+            return $"Amount is required before moving to {nextStageName}.";
+        }
+
+        if (StagesRequiringCloseDate.Contains(nextStageName) && !expectedCloseDate.HasValue)
+        {
+            return $"Expected close date is required before moving to {nextStageName}.";
+        }
+
+        if (!nextStageName.StartsWith("Closed", StringComparison.OrdinalIgnoreCase))
+        {
+            var nextStepDueAtUtc = await GetNextStepDueAtUtcAsync(opportunity.Id, cancellationToken);
+            if (!nextStepDueAtUtc.HasValue)
+            {
+                return "Next step is required before changing stage. Schedule an activity with a due date.";
+            }
+        }
+
+        return null;
     }
 
     private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, ActorContext actor, CancellationToken cancellationToken)

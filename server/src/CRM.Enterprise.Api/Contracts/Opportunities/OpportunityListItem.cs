@@ -17,4 +17,7 @@ public record OpportunityListItem(
     string Status,
     string? WinLossReason,
     DateTime CreatedAtUtc,
-    DateTime? UpdatedAtUtc);
+    DateTime? UpdatedAtUtc,
+    DateTime? LastActivityAtUtc,
+    DateTime? NextStepDueAtUtc,
+    bool IsAtRisk);

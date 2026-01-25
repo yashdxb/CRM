@@ -396,9 +396,9 @@
               <td>
                 <span class="risk-badge" *ngIf="isStalled(row)">
                   <i class="pi pi-exclamation-triangle"></i>
-                  Stalled {{ stalledAge(row) }}d
+                  {{ nextStepLabel(row) }}
                 </span>
-                <span *ngIf="!isStalled(row)">—</span>
+                <span *ngIf="!isStalled(row)">On track</span>
               </td>
               <td>
                 <span class="status-badge" 

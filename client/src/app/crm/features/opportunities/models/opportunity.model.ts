@@ -16,6 +16,9 @@ export interface Opportunity {
   winLossReason?: string | null;
   createdAtUtc: string;
   updatedAtUtc?: string | null;
+  lastActivityAtUtc?: string | null;
+  nextStepDueAtUtc?: string | null;
+  isAtRisk?: boolean;
 }
 
 export interface OpportunitySearchRequest {

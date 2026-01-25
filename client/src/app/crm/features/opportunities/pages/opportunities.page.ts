@@ -223,9 +223,13 @@ export class OpportunitiesPage {
 
   protected isStalled(row: Opportunity): boolean {
     if (row.status !== 'Open') return false;
-    const date = this.resolveLastTouched(row);
-    if (!date) return false;
-    return this.daysSince(date) > 30;
+    if (row.isAtRisk !== undefined) return row.isAtRisk;
+    const lastTouched = this.resolveLastTouched(row);
+    const nextStepDue = this.resolveNextStepDue(row);
+    if (!nextStepDue) return true;
+    if (this.isPastDue(nextStepDue)) return true;
+    if (!lastTouched) return false;
+    return this.daysSince(lastTouched) > 30;
   }
 
   protected stalledAge(row: Opportunity): number {
@@ -233,8 +237,22 @@ export class OpportunitiesPage {
     return date ? this.daysSince(date) : 0;
   }
 
+  protected nextStepLabel(row: Opportunity): string {
+    const nextStepDue = this.resolveNextStepDue(row);
+    if (!nextStepDue) return 'No next step';
+    if (this.isPastDue(nextStepDue)) return `Overdue ${this.daysSince(nextStepDue)}d`;
+    return `Due in ${Math.max(0, this.daysUntil(nextStepDue))}d`;
+  }
+
   private resolveLastTouched(row: Opportunity): Date | null {
-    const raw = row.updatedAtUtc || row.createdAtUtc || row.closeDate;
+    const raw = row.lastActivityAtUtc || row.updatedAtUtc || row.createdAtUtc || row.closeDate;
+    if (!raw) return null;
+    const date = new Date(raw);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private resolveNextStepDue(row: Opportunity): Date | null {
+    const raw = row.nextStepDueAtUtc;
     if (!raw) return null;
     const date = new Date(raw);
     return Number.isNaN(date.getTime()) ? null : date;
@@ -243,6 +261,15 @@ export class OpportunitiesPage {
   private daysSince(date: Date): number {
     const ms = Date.now() - date.getTime();
     return Math.floor(ms / (1000 * 60 * 60 * 24));
+  }
+
+  private daysUntil(date: Date): number {
+    const ms = date.getTime() - Date.now();
+    return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  }
+
+  private isPastDue(date: Date): boolean {
+    return date.getTime() < Date.now();
   }
 
   private loadOwners() {
