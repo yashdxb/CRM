@@ -4,18 +4,12 @@ using ApiLeadConversionRequest = CRM.Enterprise.Api.Contracts.Leads.LeadConversi
 using AppLeadConversionRequest = CRM.Enterprise.Application.Leads.LeadConversionRequest;
 using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
-using CRM.Enterprise.Domain.Entities;
-using CRM.Enterprise.Api.Utilities;
-using CRM.Enterprise.Infrastructure.Persistence;
-using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Api.Contracts.Imports;
 // using CRM.Enterprise.Api.Jobs; // Removed Hangfire
-using Microsoft.AspNetCore.Hosting;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -25,20 +19,14 @@ namespace CRM.Enterprise.Api.Controllers;
 public class LeadsController : ControllerBase
 {
     private readonly ILeadService _leadService;
-    private readonly CrmDbContext _dbContext;
-    private readonly ITenantProvider _tenantProvider;
-    private readonly IWebHostEnvironment _environment;
+    private readonly ILeadImportService _leadImportService;
 
     public LeadsController(
         ILeadService leadService,
-        CrmDbContext dbContext,
-        ITenantProvider tenantProvider,
-        IWebHostEnvironment environment)
+        ILeadImportService leadImportService)
     {
         _leadService = leadService;
-        _dbContext = dbContext;
-        _tenantProvider = tenantProvider;
-        _environment = environment;
+        _leadImportService = leadImportService;
     }
 
     [HttpGet]
@@ -121,92 +109,10 @@ public class LeadsController : ControllerBase
             return BadRequest("CSV file is required.");
         }
 
-        var rows = await CsvImportHelper.ReadAsync(file, cancellationToken);
-        if (rows.Count == 0)
-        {
-            return Ok(new CsvImportResult(0, 0, 0, Array.Empty<CsvImportError>()));
-        }
-
-        var errors = new List<CsvImportError>();
-        var imported = 0;
-
-        for (var i = 0; i < rows.Count; i++)
-        {
-            var row = rows[i];
-            var fullName = CsvImportHelper.ReadValue(row, "name", "fullname", "full_name");
-            var firstName = CsvImportHelper.ReadValue(row, "firstname", "first_name");
-            var lastName = CsvImportHelper.ReadValue(row, "lastname", "last_name");
-            if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName) && !string.IsNullOrWhiteSpace(fullName))
-            {
-                (firstName, lastName) = CsvImportHelper.SplitName(fullName);
-            }
-
-            if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
-            {
-                errors.Add(new CsvImportError(i + 2, "Lead name is required."));
-                continue;
-            }
-
-            var ownerEmail = CsvImportHelper.ReadValue(row, "owner", "owneremail", "owner_email");
-            var ownerId = await ResolveOwnerIdFromEmailAsync(ownerEmail, cancellationToken);
-            var assignmentStrategy = CsvImportHelper.ReadValue(row, "assignment", "assignmentstrategy");
-            var territory = CsvImportHelper.ReadValue(row, "territory");
-
-            var statusName = CsvImportHelper.ReadValue(row, "status");
-            var status = await ResolveLeadStatusAsync(statusName, cancellationToken);
-
-            var request = new UpsertLeadRequest
-            {
-                FirstName = firstName ?? string.Empty,
-                LastName = lastName ?? string.Empty,
-                Email = CsvImportHelper.ReadValue(row, "email"),
-                Phone = CsvImportHelper.ReadValue(row, "phone"),
-                CompanyName = CsvImportHelper.ReadValue(row, "company", "companyname"),
-                JobTitle = CsvImportHelper.ReadValue(row, "jobtitle", "title"),
-                Status = statusName,
-                OwnerId = ownerId,
-                AssignmentStrategy = assignmentStrategy,
-                Source = CsvImportHelper.ReadValue(row, "source"),
-                Territory = territory,
-                AutoScore = CsvImportHelper.ReadBool(row, "autoscore"),
-                Score = CsvImportHelper.ReadInt(row, "score") ?? 0
-            };
-
-            var resolvedOwnerId = await ResolveOwnerIdAsync(ownerId, territory, assignmentStrategy, cancellationToken);
-            var score = ResolveLeadScore(request);
-
-            var lead = new Lead
-            {
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                Email = request.Email,
-                Phone = request.Phone,
-                CompanyName = request.CompanyName,
-                JobTitle = request.JobTitle,
-                LeadStatusId = status.Id,
-                OwnerId = resolvedOwnerId,
-                Source = request.Source,
-                Territory = territory,
-                Score = score,
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            // Attach the status entity so the FK is valid even when the status is created on demand.
-            lead.Status = status;
-
-            _dbContext.Leads.Add(lead);
-            var resolvedStatusName = await ResolveLeadStatusNameAsync(status.Id, cancellationToken);
-            ApplyStatusSideEffects(lead, resolvedStatusName);
-            AddStatusHistory(lead, status.Id, "Imported lead");
-            imported++;
-        }
-
-        if (imported > 0)
-        {
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        return Ok(new CsvImportResult(rows.Count, imported, rows.Count - imported, errors));
+        await using var stream = file.OpenReadStream();
+        var result = await _leadImportService.ImportAsync(stream, GetActor(), cancellationToken);
+        var errors = result.Errors.Select(error => new CsvImportError(error.RowNumber, error.Message)).ToList();
+        return Ok(new CsvImportResult(result.Total, result.Imported, result.Failed, errors));
     }
 
     [HttpPost("import/queue")]
@@ -218,34 +124,11 @@ public class LeadsController : ControllerBase
             return BadRequest("CSV file is required.");
         }
 
-        var tenantKey = _tenantProvider.TenantKey;
-        var storageRoot = Path.Combine(_environment.ContentRootPath, "uploads", "imports", tenantKey.ToLowerInvariant());
-        Directory.CreateDirectory(storageRoot);
-
-        var safeName = Path.GetFileName(file.FileName);
-        var importJob = new ImportJob
-        {
-            EntityType = "Leads",
-            FileName = safeName,
-            Status = "Queued",
-            RequestedById = GetUserId()
-        };
-        _dbContext.ImportJobs.Add(importJob);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        var storedName = $"{importJob.Id:N}_{safeName}";
-        var storagePath = Path.Combine(storageRoot, storedName);
-        await using (var stream = System.IO.File.Create(storagePath))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        importJob.FilePath = storagePath;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        // Hangfire removed: import jobs must be processed directly or via another mechanism if needed
-
-        return Accepted(new ImportJobResponse(importJob.Id, importJob.EntityType, importJob.Status));
+        await using var stream = file.OpenReadStream();
+        var result = await _leadImportService.QueueImportAsync(stream, file.FileName, GetActor(), cancellationToken);
+        if (!result.Success) return BadRequest(result.Error);
+        var value = result.Value!;
+        return Accepted(new ImportJobResponse(value.ImportJobId, value.EntityType, value.Status));
     }
 
     [HttpPut("{id:guid}")]
@@ -406,265 +289,4 @@ public class LeadsController : ControllerBase
         return new LeadActor(userId, name);
     }
 
-    private async Task<LeadStatus> ResolveLeadStatusAsync(string? statusName, CancellationToken cancellationToken)
-    {
-        var name = string.IsNullOrWhiteSpace(statusName) ? "New" : statusName;
-        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == name, cancellationToken)
-                     ?? await _dbContext.LeadStatuses.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
-        if (status is not null)
-        {
-            return status;
-        }
-
-        // Seed a default status on the fly if the tenant has no lead statuses yet.
-        status = new LeadStatus
-        {
-            Name = "New",
-            Order = 1,
-            IsDefault = true,
-            IsClosed = false
-        };
-        _dbContext.LeadStatuses.Add(status);
-        return status;
-    }
-
-    private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, string? territory, string? assignmentStrategy, CancellationToken cancellationToken)
-    {
-        var strategy = string.IsNullOrWhiteSpace(assignmentStrategy) ? string.Empty : assignmentStrategy.Trim();
-
-        if (string.Equals(strategy, "Manual", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(strategy))
-        {
-            if (requestedOwnerId.HasValue && requestedOwnerId.Value != Guid.Empty)
-            {
-                var exists = await _dbContext.Users.AnyAsync(u => u.Id == requestedOwnerId.Value && u.IsActive && !u.IsDeleted, cancellationToken);
-                if (exists) return requestedOwnerId.Value;
-            }
-        }
-
-        if (string.Equals(strategy, "Territory", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(territory))
-        {
-            var territoryRule = await _dbContext.LeadAssignmentRules
-                .FirstOrDefaultAsync(r => r.IsActive && r.Type == "Territory" && r.Territory == territory, cancellationToken);
-
-            if (territoryRule?.AssignedUserId is Guid territoryOwner && territoryOwner != Guid.Empty)
-            {
-                var exists = await _dbContext.Users.AnyAsync(u => u.Id == territoryOwner && u.IsActive && !u.IsDeleted, cancellationToken);
-                if (exists) return territoryOwner;
-            }
-        }
-
-        if (string.Equals(strategy, "RoundRobin", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(strategy, "Territory", StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrWhiteSpace(strategy))
-        {
-            var rule = await _dbContext.LeadAssignmentRules
-                .FirstOrDefaultAsync(r => r.IsActive && r.Type == "RoundRobin", cancellationToken);
-
-            var activeUsers = await _dbContext.Users
-                .Where(u => u.IsActive && !u.IsDeleted)
-                .OrderBy(u => u.CreatedAtUtc)
-                .Select(u => u.Id)
-                .ToListAsync(cancellationToken);
-
-            if (activeUsers.Count > 0)
-            {
-                var nextOwner = activeUsers[0];
-                if (rule?.LastAssignedUserId is Guid lastAssigned && activeUsers.Contains(lastAssigned))
-                {
-                    var index = activeUsers.IndexOf(lastAssigned);
-                    nextOwner = activeUsers[(index + 1) % activeUsers.Count];
-                }
-
-                if (rule is not null)
-                {
-                    rule.LastAssignedUserId = nextOwner;
-                }
-
-                return nextOwner;
-            }
-        }
-
-        var fallbackUserId = await _dbContext.Users
-            .Where(u => u.IsActive && !u.IsDeleted)
-            .OrderBy(u => u.CreatedAtUtc)
-            .Select(u => u.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return fallbackUserId == Guid.Empty ? Guid.NewGuid() : fallbackUserId;
-    }
-
-    private async Task<Guid?> ResolveOwnerIdFromEmailAsync(string? ownerEmail, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(ownerEmail))
-        {
-            var ownerId = await _dbContext.Users
-                .Where(u => u.Email == ownerEmail && u.IsActive && !u.IsDeleted)
-                .Select(u => u.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (ownerId != Guid.Empty)
-            {
-                return ownerId;
-            }
-        }
-
-        return null;
-    }
-
-    private async Task<Guid> ResolveOpportunityStageIdAsync(CancellationToken cancellationToken)
-    {
-        var stage = await _dbContext.OpportunityStages.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
-        return stage?.Id ?? Guid.NewGuid();
-    }
-
-    private void AddStatusHistory(Lead lead, Guid statusId, string? notes)
-    {
-        _dbContext.LeadStatusHistories.Add(new LeadStatusHistory
-        {
-            LeadId = lead.Id,
-            LeadStatusId = statusId,
-            ChangedAtUtc = DateTime.UtcNow,
-            ChangedBy = User?.Identity?.Name ?? "system",
-            Notes = notes
-        });
-    }
-
-    private async Task AddAutoContactedHistoryAsync(
-        Lead lead,
-        Guid previousStatusId,
-        Guid targetStatusId,
-        string? targetStatusName,
-        CancellationToken cancellationToken)
-    {
-        if (previousStatusId == targetStatusId)
-        {
-            return;
-        }
-
-        var previousName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
-        if (!string.Equals(previousName, "New", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (string.Equals(targetStatusName, "New", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(targetStatusName, "Contacted", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (!string.Equals(targetStatusName, "Qualified", StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(targetStatusName, "Converted", StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        var contactedId = await _dbContext.LeadStatuses
-            .Where(s => s.Name == "Contacted")
-            .Select(s => s.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (contactedId == Guid.Empty)
-        {
-            return;
-        }
-
-        var alreadyLogged = await _dbContext.LeadStatusHistories
-            .AnyAsync(h => h.LeadId == lead.Id && h.LeadStatusId == contactedId, cancellationToken);
-
-        if (alreadyLogged)
-        {
-            return;
-        }
-
-        AddStatusHistory(lead, contactedId, "Auto: Contacted");
-    }
-
-    private async Task<string?> ResolveLeadStatusNameAsync(Guid statusId, CancellationToken cancellationToken)
-    {
-        var status = await _dbContext.LeadStatuses
-            .Where(s => s.Id == statusId)
-            .Select(s => s.Name)
-            .FirstOrDefaultAsync(cancellationToken);
-        return status;
-    }
-
-    private void ApplyStatusSideEffects(Lead lead, string? statusName)
-    {
-        if (string.Equals(statusName, "Qualified", StringComparison.OrdinalIgnoreCase))
-        {
-            lead.QualifiedAtUtc = DateTime.UtcNow;
-        }
-
-        if (string.Equals(statusName, "Converted", StringComparison.OrdinalIgnoreCase))
-        {
-            lead.ConvertedAtUtc = DateTime.UtcNow;
-        }
-    }
-
-    private static int ResolveLeadScore(UpsertLeadRequest request, int? currentScore = null)
-    {
-        var autoScore = request.AutoScore ?? true;
-        if (!autoScore)
-        {
-            return Math.Clamp(request.Score, 0, 100);
-        }
-
-        var score = 20;
-        if (!string.IsNullOrWhiteSpace(request.Email)) score += 20;
-        if (!string.IsNullOrWhiteSpace(request.Phone)) score += 15;
-        if (!string.IsNullOrWhiteSpace(request.CompanyName)) score += 10;
-        if (!string.IsNullOrWhiteSpace(request.JobTitle)) score += 10;
-        if (!string.IsNullOrWhiteSpace(request.Source)) score += 10;
-        if (!string.IsNullOrWhiteSpace(request.Territory)) score += 5;
-        if (request.AccountId.HasValue) score += 5;
-        if (request.ContactId.HasValue) score += 5;
-
-        if (score == 20 && currentScore.HasValue && currentScore.Value > 0)
-        {
-            return currentScore.Value;
-        }
-
-        return Math.Clamp(score, 0, 100);
-    }
-
-    private static bool HasAiSignals(UpsertLeadRequest request)
-    {
-        var signals = 0;
-        if (!string.IsNullOrWhiteSpace(request.Email)) signals++;
-        if (!string.IsNullOrWhiteSpace(request.Phone)) signals++;
-        if (!string.IsNullOrWhiteSpace(request.CompanyName)) signals++;
-        if (!string.IsNullOrWhiteSpace(request.JobTitle)) signals++;
-        if (!string.IsNullOrWhiteSpace(request.Source)) signals++;
-        if (!string.IsNullOrWhiteSpace(request.Territory)) signals++;
-        if (request.AccountId.HasValue) signals++;
-        if (request.ContactId.HasValue) signals++;
-
-        return signals >= 2;
-    }
-
-    private static bool HasAiSignalChanges(Lead lead, UpsertLeadRequest request)
-    {
-        return !string.Equals(Normalize(lead.Email), Normalize(request.Email), StringComparison.OrdinalIgnoreCase)
-               || !string.Equals(Normalize(lead.Phone), Normalize(request.Phone), StringComparison.OrdinalIgnoreCase)
-               || !string.Equals(Normalize(lead.CompanyName), Normalize(request.CompanyName), StringComparison.OrdinalIgnoreCase)
-               || !string.Equals(Normalize(lead.JobTitle), Normalize(request.JobTitle), StringComparison.OrdinalIgnoreCase)
-               || !string.Equals(Normalize(lead.Source), Normalize(request.Source), StringComparison.OrdinalIgnoreCase)
-               || !string.Equals(Normalize(lead.Territory), Normalize(request.Territory), StringComparison.OrdinalIgnoreCase)
-               || lead.AccountId != request.AccountId
-               || lead.ContactId != request.ContactId;
-    }
-
-    private static string? Normalize(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    }
-
-    private Guid GetUserId()
-    {
-        var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
-    }
-
-    
 }
