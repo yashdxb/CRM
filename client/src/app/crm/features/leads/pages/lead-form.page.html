@@ -190,6 +190,14 @@
               mode="indeterminate"
             ></p-progressBar>
             <div class="form-grid">
+              <div class="field full-row" *ngIf="isEditMode()">
+                <p class="status-note" *ngIf="firstTouchDueAtUtc()">
+                  First touch due: {{ firstTouchDueAtUtc() | date:'medium' }}
+                </p>
+                <p class="status-note" *ngIf="firstTouchedAtUtc()">
+                  First touched: {{ firstTouchedAtUtc() | date:'medium' }}
+                </p>
+              </div>
               <div class="field score-field">
                 <label>Lead score</label>
                 <p-inputNumber
@@ -231,13 +239,35 @@
                 <input pInputText name="territory" [(ngModel)]="form.territory" placeholder="West, EMEA, APAC" class="w-full" />
               </div>
               <div class="field full-row">
-                <label>Notes</label>
+                <label>Qualification notes <span class="required" *ngIf="form.status === 'Qualified'">*</span></label>
                 <textarea
                   pTextarea
-                  name="notes"
+                  name="qualifiedNotes"
                   rows="5"
                   placeholder="Key context, objections, next steps"
                   class="w-full"
+                  [(ngModel)]="form.qualifiedNotes"
+                ></textarea>
+              </div>
+              <div class="field" *ngIf="form.status === 'Nurture'">
+                <label>Nurture follow-up date <span class="required">*</span></label>
+                <input
+                  pInputText
+                  type="date"
+                  name="nurtureFollowUpAtUtc"
+                  [(ngModel)]="form.nurtureFollowUpAtUtc"
+                  class="w-full"
+                />
+              </div>
+              <div class="field full-row" *ngIf="form.status === 'Lost' || form.status === 'Disqualified'">
+                <label>Disqualified reason <span class="required">*</span></label>
+                <textarea
+                  pTextarea
+                  name="disqualifiedReason"
+                  rows="4"
+                  placeholder="Reason for disqualification"
+                  class="w-full"
+                  [(ngModel)]="form.disqualifiedReason"
                 ></textarea>
               </div>
             </div>

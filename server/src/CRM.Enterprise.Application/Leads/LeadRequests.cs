@@ -17,7 +17,10 @@ public sealed record LeadUpsertRequest(
     bool? AutoScore,
     int Score,
     Guid? AccountId,
-    Guid? ContactId);
+    Guid? ContactId,
+    string? DisqualifiedReason,
+    DateTime? NurtureFollowUpAtUtc,
+    string? QualifiedNotes);
 
 public sealed record LeadConversionRequest(
     bool CreateAccount,

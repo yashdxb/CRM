@@ -1,6 +1,7 @@
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ namespace CRM.Enterprise.Infrastructure.Leads;
 public sealed class LeadService : ILeadService
 {
     private const string LeadEntityType = "Lead";
+    private static readonly TimeSpan FirstTouchSla = TimeSpan.FromHours(24);
     private readonly CrmDbContext _dbContext;
     private readonly ILeadScoringService _leadScoringService;
     private readonly IAuditEventService _auditEvents;
@@ -75,7 +77,12 @@ public sealed class LeadService : ILeadService
                 l.JobTitle,
                 l.AccountId,
                 l.ContactId,
-                l.ConvertedOpportunityId
+                l.ConvertedOpportunityId,
+                l.DisqualifiedReason,
+                l.NurtureFollowUpAtUtc,
+                l.QualifiedNotes,
+                l.FirstTouchDueAtUtc,
+                l.FirstTouchedAtUtc
             })
             .ToListAsync(cancellationToken);
 
@@ -101,7 +108,12 @@ public sealed class LeadService : ILeadService
             l.JobTitle,
             l.AccountId,
             l.ContactId,
-            l.ConvertedOpportunityId));
+            l.ConvertedOpportunityId,
+            l.DisqualifiedReason,
+            l.NurtureFollowUpAtUtc,
+            l.QualifiedNotes,
+            l.FirstTouchDueAtUtc,
+            l.FirstTouchedAtUtc));
 
         return new LeadSearchResultDto(items.ToList(), total);
     }
@@ -139,7 +151,12 @@ public sealed class LeadService : ILeadService
             lead.JobTitle,
             lead.AccountId,
             lead.ContactId,
-            lead.ConvertedOpportunityId);
+            lead.ConvertedOpportunityId,
+            lead.DisqualifiedReason,
+            lead.NurtureFollowUpAtUtc,
+            lead.QualifiedNotes,
+            lead.FirstTouchDueAtUtc,
+            lead.FirstTouchedAtUtc);
     }
 
     public async Task<IReadOnlyList<LeadStatusHistoryDto>?> GetStatusHistoryAsync(Guid id, CancellationToken cancellationToken = default)
@@ -233,6 +250,13 @@ public sealed class LeadService : ILeadService
             return LeadOperationResult<LeadListItemDto>.Fail("Unable to assign an active owner for this lead. Please select a valid owner.");
         }
 
+        var statusNameForValidation = await ResolveLeadStatusNameAsync(status.Id, cancellationToken) ?? "New";
+        var validationError = ValidateOutcome(statusNameForValidation, request);
+        if (validationError is not null)
+        {
+            return LeadOperationResult<LeadListItemDto>.Fail(validationError);
+        }
+
         var score = ResolveLeadScore(request);
         var lead = new Lead
         {
@@ -249,18 +273,23 @@ public sealed class LeadService : ILeadService
             Score = score,
             AccountId = request.AccountId,
             ContactId = request.ContactId,
+            DisqualifiedReason = request.DisqualifiedReason,
+            NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc,
+            QualifiedNotes = request.QualifiedNotes,
             CreatedAtUtc = DateTime.UtcNow
         };
 
         lead.Status = status;
 
         _dbContext.Leads.Add(lead);
-        var resolvedStatusName = await ResolveLeadStatusNameAsync(status.Id, cancellationToken);
+        var resolvedStatusName = statusNameForValidation;
         ApplyStatusSideEffects(lead, resolvedStatusName);
         AddStatusHistory(lead, status.Id, null, actor);
         await _auditEvents.TrackAsync(
             CreateAuditEntry(lead.Id, "Created", null, null, null, actor),
             cancellationToken);
+
+        await EnsureFirstTouchTaskAsync(lead, actor, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         if (HasAiSignals(request))
@@ -289,7 +318,12 @@ public sealed class LeadService : ILeadService
             lead.JobTitle,
             lead.AccountId,
             lead.ContactId,
-            lead.ConvertedOpportunityId);
+            lead.ConvertedOpportunityId,
+            lead.DisqualifiedReason,
+            lead.NurtureFollowUpAtUtc,
+            lead.QualifiedNotes,
+            lead.FirstTouchDueAtUtc,
+            lead.FirstTouchedAtUtc);
 
         return LeadOperationResult<LeadListItemDto>.Ok(dto);
     }
@@ -323,7 +357,16 @@ public sealed class LeadService : ILeadService
         lead.Score = ResolveLeadScore(request, lead.Score);
         lead.AccountId = request.AccountId;
         lead.ContactId = request.ContactId;
+        lead.DisqualifiedReason = request.DisqualifiedReason;
+        lead.NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc;
+        lead.QualifiedNotes = request.QualifiedNotes;
         lead.UpdatedAtUtc = DateTime.UtcNow;
+
+        var validationError = ValidateOutcome(statusName ?? "New", request);
+        if (validationError is not null)
+        {
+            return LeadOperationResult<bool>.Fail(validationError);
+        }
 
         var statusChanged = lead.LeadStatusId != previousStatusId;
         if (statusChanged)
@@ -344,6 +387,7 @@ public sealed class LeadService : ILeadService
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(lead.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), lead.OwnerId.ToString(), actor),
                 cancellationToken);
+            await EnsureFirstTouchTaskAsync(lead, actor, cancellationToken);
         }
 
         await _auditEvents.TrackAsync(
@@ -563,6 +607,11 @@ public sealed class LeadService : ILeadService
 
     public async Task<LeadOperationResult<bool>> UpdateStatusAsync(Guid id, string statusName, LeadActor actor, CancellationToken cancellationToken = default)
     {
+        if (RequiresOutcome(statusName))
+        {
+            return LeadOperationResult<bool>.Fail("Status requires outcome details. Update the lead from the full edit form.");
+        }
+
         var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
         if (lead is null)
         {
@@ -640,6 +689,11 @@ public sealed class LeadService : ILeadService
 
     public async Task<LeadOperationResult<int>> BulkUpdateStatusAsync(IReadOnlyCollection<Guid> ids, string statusName, CancellationToken cancellationToken = default)
     {
+        if (RequiresOutcome(statusName))
+        {
+            return LeadOperationResult<int>.Fail("Bulk status updates are not allowed for statuses that require outcome details. Update leads individually.");
+        }
+
         var leads = await _dbContext.Leads
             .Where(l => ids.Contains(l.Id) && !l.IsDeleted)
             .ToListAsync(cancellationToken);
@@ -669,8 +723,29 @@ public sealed class LeadService : ILeadService
     private async Task<LeadStatus> ResolveLeadStatusAsync(string? statusName, CancellationToken cancellationToken)
     {
         var name = string.IsNullOrWhiteSpace(statusName) ? "New" : statusName;
-        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == name, cancellationToken)
-                     ?? await _dbContext.LeadStatuses.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
+        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == name, cancellationToken);
+        if (status is not null)
+        {
+            return status;
+        }
+
+        if (!string.IsNullOrWhiteSpace(statusName))
+        {
+            var maxOrder = await _dbContext.LeadStatuses.MaxAsync(s => (int?)s.Order, cancellationToken) ?? 0;
+            status = new LeadStatus
+            {
+                Name = name,
+                Order = maxOrder + 1,
+                IsDefault = false,
+                IsClosed = string.Equals(name, "Lost", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(name, "Disqualified", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(name, "Converted", StringComparison.OrdinalIgnoreCase)
+            };
+            _dbContext.LeadStatuses.Add(status);
+            return status;
+        }
+
+        status = await _dbContext.LeadStatuses.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
         if (status is not null)
         {
             return status;
@@ -829,6 +904,93 @@ public sealed class LeadService : ILeadService
             .Select(s => s.Name)
             .FirstOrDefaultAsync(cancellationToken);
         return status;
+    }
+
+    private static bool RequiresOutcome(string statusName)
+    {
+        return string.Equals(statusName, "Disqualified", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(statusName, "Lost", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(statusName, "Nurture", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(statusName, "Qualified", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string? ValidateOutcome(string statusName, LeadUpsertRequest request)
+    {
+        if (string.Equals(statusName, "Disqualified", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(statusName, "Lost", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.IsNullOrWhiteSpace(request.DisqualifiedReason)
+                ? "Disqualified reason is required when closing a lead."
+                : null;
+        }
+
+        if (string.Equals(statusName, "Nurture", StringComparison.OrdinalIgnoreCase))
+        {
+            return request.NurtureFollowUpAtUtc.HasValue
+                ? null
+                : "Nurture follow-up date is required when setting a lead to Nurture.";
+        }
+
+        if (string.Equals(statusName, "Qualified", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.IsNullOrWhiteSpace(request.QualifiedNotes)
+                ? "Qualification notes are required when qualifying a lead."
+                : null;
+        }
+
+        return null;
+    }
+
+    private async Task EnsureFirstTouchTaskAsync(Lead lead, LeadActor actor, CancellationToken cancellationToken)
+    {
+        if (lead.FirstTouchedAtUtc.HasValue)
+        {
+            return;
+        }
+
+        if (!lead.FirstTouchDueAtUtc.HasValue)
+        {
+            lead.FirstTouchDueAtUtc = DateTime.UtcNow.Add(FirstTouchSla);
+        }
+
+        var existingTask = await _dbContext.Activities
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Lead
+                        && a.RelatedEntityId == lead.Id
+                        && !a.CompletedDateUtc.HasValue
+                        && a.Subject.StartsWith("First touch", StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingTask is not null)
+        {
+            if (existingTask.OwnerId != lead.OwnerId)
+            {
+                existingTask.OwnerId = lead.OwnerId;
+                existingTask.UpdatedAtUtc = DateTime.UtcNow;
+            }
+
+            if (!existingTask.DueDateUtc.HasValue)
+            {
+                existingTask.DueDateUtc = lead.FirstTouchDueAtUtc;
+            }
+
+            return;
+        }
+
+        var fullName = $"{lead.FirstName} {lead.LastName}".Trim();
+        var subject = string.IsNullOrWhiteSpace(fullName) ? "First touch" : $"First touch: {fullName}";
+
+        _dbContext.Activities.Add(new Activity
+        {
+            Subject = subject,
+            Type = ActivityType.Task,
+            RelatedEntityType = ActivityRelationType.Lead,
+            RelatedEntityId = lead.Id,
+            OwnerId = lead.OwnerId,
+            DueDateUtc = lead.FirstTouchDueAtUtc,
+            Priority = "High",
+            CreatedAtUtc = DateTime.UtcNow
+        });
     }
 
     private void ApplyStatusSideEffects(Lead lead, string? statusName)

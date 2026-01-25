@@ -61,9 +61,11 @@ export class LeadFormPage implements OnInit {
   protected readonly statusOptions: StatusOption[] = [
     { label: 'New', value: 'New', icon: 'pi-star' },
     { label: 'Contacted', value: 'Contacted', icon: 'pi-comments' },
+    { label: 'Nurture', value: 'Nurture', icon: 'pi-clock' },
     { label: 'Qualified', value: 'Qualified', icon: 'pi-check' },
     { label: 'Converted', value: 'Converted', icon: 'pi-verified' },
-    { label: 'Lost', value: 'Lost', icon: 'pi-times' }
+    { label: 'Lost', value: 'Lost', icon: 'pi-times' },
+    { label: 'Disqualified', value: 'Disqualified', icon: 'pi-ban' }
   ];
   protected readonly assignmentOptions: AssignmentOption[] = [
     { label: 'Manual', value: 'Manual' },
@@ -81,6 +83,8 @@ export class LeadFormPage implements OnInit {
   protected linkedAccountId = signal<string | null>(null);
   protected linkedContactId = signal<string | null>(null);
   protected linkedOpportunityId = signal<string | null>(null);
+  protected firstTouchDueAtUtc = signal<string | null>(null);
+  protected firstTouchedAtUtc = signal<string | null>(null);
   private readonly toastService = inject(AppToastService);
 
   private readonly leadData = inject(LeadDataService);
@@ -170,6 +174,12 @@ export class LeadFormPage implements OnInit {
       return;
     }
 
+    const outcomeError = this.validateOutcome();
+    if (outcomeError) {
+      this.raiseToast('error', outcomeError);
+      return;
+    }
+
     const resolvedScore = this.form.autoScore ? this.computeAutoScore() : (this.form.score ?? 0);
     const payload: SaveLeadRequest = {
       ...this.form,
@@ -218,11 +228,16 @@ export class LeadFormPage implements OnInit {
       jobTitle: lead.jobTitle ?? '',
       ownerId: lead.ownerId,
       assignmentStrategy: 'Manual',
-      territory: lead.territory ?? ''
+      territory: lead.territory ?? '',
+      disqualifiedReason: lead.disqualifiedReason ?? '',
+      nurtureFollowUpAtUtc: this.toDateInputValue(lead.nurtureFollowUpAtUtc),
+      qualifiedNotes: lead.qualifiedNotes ?? ''
     };
     this.linkedAccountId.set(lead.accountId ?? null);
     this.linkedContactId.set(lead.contactId ?? null);
     this.linkedOpportunityId.set(lead.convertedOpportunityId ?? null);
+    this.firstTouchDueAtUtc.set(lead.firstTouchDueAtUtc ?? null);
+    this.firstTouchedAtUtc.set(lead.firstTouchedAtUtc ?? null);
   }
 
   private loadStatusHistory(leadId: string) {
@@ -245,7 +260,10 @@ export class LeadFormPage implements OnInit {
       status: 'New',
       score: 0,
       autoScore: true,
-      assignmentStrategy: 'RoundRobin'
+      assignmentStrategy: 'RoundRobin',
+      disqualifiedReason: '',
+      nurtureFollowUpAtUtc: '',
+      qualifiedNotes: ''
     };
   }
 
@@ -343,11 +361,36 @@ export class LeadFormPage implements OnInit {
       case 'Converted':
         return 'success';
       case 'Contacted':
+      case 'Nurture':
         return 'info';
+      case 'Disqualified':
       case 'Lost':
         return 'danger';
       default:
         return 'warn';
     }
+  }
+
+  private validateOutcome(): string | null {
+    if (this.form.status === 'Qualified' && !this.form.qualifiedNotes?.trim()) {
+      return 'Qualification notes are required when qualifying a lead.';
+    }
+
+    if (this.form.status === 'Nurture' && !this.form.nurtureFollowUpAtUtc) {
+      return 'Nurture follow-up date is required when setting a lead to Nurture.';
+    }
+
+    if ((this.form.status === 'Lost' || this.form.status === 'Disqualified') && !this.form.disqualifiedReason?.trim()) {
+      return 'Disqualified reason is required when closing a lead.';
+    }
+
+    return null;
+  }
+
+  private toDateInputValue(value?: string): string | undefined {
+    if (!value) return undefined;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return undefined;
+    return date.toISOString().slice(0, 10);
   }
 }

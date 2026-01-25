@@ -246,7 +246,12 @@ public class LeadsController : ControllerBase
             dto.JobTitle,
             dto.AccountId,
             dto.ContactId,
-            dto.ConvertedOpportunityId);
+            dto.ConvertedOpportunityId,
+            dto.DisqualifiedReason,
+            dto.NurtureFollowUpAtUtc,
+            dto.QualifiedNotes,
+            dto.FirstTouchDueAtUtc,
+            dto.FirstTouchedAtUtc);
     }
 
     private static LeadUpsertRequest MapUpsertRequest(UpsertLeadRequest request)
@@ -266,7 +271,10 @@ public class LeadsController : ControllerBase
             request.AutoScore,
             request.Score,
             request.AccountId,
-            request.ContactId);
+            request.ContactId,
+            request.DisqualifiedReason,
+            request.NurtureFollowUpAtUtc,
+            request.QualifiedNotes);
     }
 
     private static AppLeadConversionRequest MapConversionRequest(ApiLeadConversionRequest request)

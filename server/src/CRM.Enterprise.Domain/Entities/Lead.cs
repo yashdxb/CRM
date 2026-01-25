@@ -24,6 +24,11 @@ public class Lead : AuditableEntity
     public Guid? ConvertedOpportunityId { get; set; }
     public DateTime? QualifiedAtUtc { get; set; }
     public DateTime? ConvertedAtUtc { get; set; }
+    public string? DisqualifiedReason { get; set; }
+    public DateTime? NurtureFollowUpAtUtc { get; set; }
+    public string? QualifiedNotes { get; set; }
+    public DateTime? FirstTouchDueAtUtc { get; set; }
+    public DateTime? FirstTouchedAtUtc { get; set; }
 
     public LeadStatus? Status { get; set; }
     public Account? Account { get; set; }

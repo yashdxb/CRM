@@ -4,6 +4,40 @@ Purpose: A module-by-module feature backlog for Phase 2. Each item is scoped for
 
 ---
 
+# Execution Queue (Approved)
+
+Order: execute sequentially, build + verify after each task.
+
+## Task 1 — Leads MVP flow completion
+- Scope:
+  - Lead list + detail + qualification actions
+  - SLA timers + first‑touch task auto-creation
+  - Enforced outcomes (Disqualified reason, Nurture follow‑up, Qualified handoff)
+- Acceptance:
+  - Lead cannot be closed without required outcome fields
+  - SLA timer starts on assignment and creates first-touch task
+  - Qualification sets next steps and handoff readiness
+
+## Task 2 — Opportunity stage enforcement
+- Scope:
+  - Stage exit criteria gates
+  - Next-step required before stage advance
+  - At‑risk flag when no activity in X days
+- Acceptance:
+  - Stage changes blocked until required fields complete
+  - Next-step scheduled is required for stage changes
+  - At‑risk status visible in list + dashboard
+
+## Task 3 — Activity discipline
+- Scope:
+  - Enforce outcome + next step + due date on completion
+  - Templates aligned to stages
+  - Idle opportunity detection hook
+- Acceptance:
+  - Activity cannot complete without outcome + next step date
+  - Templates selectable per stage
+  - Idle deals flagged after inactivity threshold
+
 ## Leads
 - Lead SLA timer (first-touch) with escalation  
   - Acceptance: SLA clock starts on assignment; overdue triggers alert + task.

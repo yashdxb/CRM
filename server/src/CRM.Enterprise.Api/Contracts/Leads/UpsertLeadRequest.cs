@@ -19,4 +19,7 @@ public class UpsertLeadRequest
     public int Score { get; set; }
     public Guid? AccountId { get; set; }
     public Guid? ContactId { get; set; }
+    public string? DisqualifiedReason { get; set; }
+    public DateTime? NurtureFollowUpAtUtc { get; set; }
+    public string? QualifiedNotes { get; set; }
 }

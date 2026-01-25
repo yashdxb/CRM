@@ -1,4 +1,4 @@
-export type LeadStatus = 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
+export type LeadStatus = 'New' | 'Contacted' | 'Nurture' | 'Qualified' | 'Converted' | 'Lost' | 'Disqualified';
 export type LeadAssignmentStrategy = 'Manual' | 'RoundRobin' | 'Territory';
 
 export interface Lead {
@@ -18,6 +18,11 @@ export interface Lead {
   accountId?: string;
   contactId?: string;
   convertedOpportunityId?: string;
+  disqualifiedReason?: string;
+  nurtureFollowUpAtUtc?: string;
+  qualifiedNotes?: string;
+  firstTouchDueAtUtc?: string;
+  firstTouchedAtUtc?: string;
 }
 
 export interface LeadSearchRequest {

@@ -27,6 +27,9 @@ export interface SaveLeadRequest {
   territory?: string;
   autoScore?: boolean;
   score?: number;
+  disqualifiedReason?: string;
+  nurtureFollowUpAtUtc?: string | Date;
+  qualifiedNotes?: string;
 }
 
 export interface LeadAiScoreResponse {

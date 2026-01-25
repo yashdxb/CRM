@@ -64,9 +64,11 @@ export class LeadsPage {
     { label: 'All', value: 'all', icon: 'pi-inbox' },
     { label: 'New', value: 'New', icon: 'pi-star' },
     { label: 'Contacted', value: 'Contacted', icon: 'pi-comments' },
+    { label: 'Nurture', value: 'Nurture', icon: 'pi-clock' },
     { label: 'Qualified', value: 'Qualified', icon: 'pi-check' },
     { label: 'Converted', value: 'Converted', icon: 'pi-verified' },
-    { label: 'Lost', value: 'Lost', icon: 'pi-times' }
+    { label: 'Lost', value: 'Lost', icon: 'pi-times' },
+    { label: 'Disqualified', value: 'Disqualified', icon: 'pi-ban' }
   ];
   protected readonly filteredStatusOptions = this.statusOptions.filter((o) => o.value !== 'all');
 
@@ -77,9 +79,11 @@ export class LeadsPage {
     const rows = this.leads();
     const newLeads = rows.filter((l) => l.status === 'New').length;
     const contacted = rows.filter((l) => l.status === 'Contacted').length;
+    const nurture = rows.filter((l) => l.status === 'Nurture').length;
     const qualified = rows.filter((l) => l.status === 'Qualified').length;
     const converted = rows.filter((l) => l.status === 'Converted').length;
     const lost = rows.filter((l) => l.status === 'Lost').length;
+    const disqualified = rows.filter((l) => l.status === 'Disqualified').length;
     const avgScore = rows.length
       ? Math.round(rows.reduce((sum, lead) => sum + (lead.score ?? 0), 0) / rows.length)
       : 0;
@@ -88,9 +92,11 @@ export class LeadsPage {
       total: this.total(),
       newLeads,
       contacted,
+      nurture,
       qualified,
       converted,
       lost,
+      disqualified,
       avgScore
     };
   });
@@ -503,11 +509,15 @@ export class LeadsPage {
         return 'info';
       case 'Contacted':
         return 'info';
+      case 'Nurture':
+        return 'info';
       case 'Qualified':
         return 'info';
       case 'Converted':
         return 'info';
       case 'Lost':
+        return 'warn';
+      case 'Disqualified':
         return 'warn';
       default:
         return 'info';
@@ -520,11 +530,15 @@ export class LeadsPage {
         return 'avatar-new';
       case 'Contacted':
         return 'avatar-contacted';
+      case 'Nurture':
+        return 'avatar-contacted';
       case 'Qualified':
         return 'avatar-qualified';
       case 'Converted':
         return 'avatar-converted';
       case 'Lost':
+        return 'avatar-lost';
+      case 'Disqualified':
         return 'avatar-lost';
       default:
         return 'avatar-new';
@@ -537,11 +551,15 @@ export class LeadsPage {
         return 'badge-info';
       case 'Contacted':
         return 'badge-warning';
+      case 'Nurture':
+        return 'badge-warning';
       case 'Qualified':
         return 'badge-purple';
       case 'Converted':
         return 'badge-success';
       case 'Lost':
+        return 'badge-warning';
+      case 'Disqualified':
         return 'badge-warning';
       default:
         return 'badge-info';

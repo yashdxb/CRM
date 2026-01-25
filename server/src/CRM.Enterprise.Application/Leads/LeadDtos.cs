@@ -16,7 +16,12 @@ public sealed record LeadListItemDto(
     string? JobTitle,
     Guid? AccountId,
     Guid? ContactId,
-    Guid? ConvertedOpportunityId);
+    Guid? ConvertedOpportunityId,
+    string? DisqualifiedReason,
+    DateTime? NurtureFollowUpAtUtc,
+    string? QualifiedNotes,
+    DateTime? FirstTouchDueAtUtc,
+    DateTime? FirstTouchedAtUtc);
 
 public sealed record LeadSearchResultDto(IReadOnlyList<LeadListItemDto> Items, int Total);
 

@@ -79,6 +79,9 @@ public sealed class LeadImportService : ILeadImportService
                 LeadCsvImportHelper.ReadBool(row, "autoscore"),
                 LeadCsvImportHelper.ReadInt(row, "score") ?? 0,
                 null,
+                null,
+                null,
+                null,
                 null);
 
             var resolvedOwnerId = await ResolveOwnerIdAsync(ownerId, territory, assignmentStrategy, cancellationToken);
@@ -161,8 +164,29 @@ public sealed class LeadImportService : ILeadImportService
     private async Task<LeadStatus> ResolveLeadStatusAsync(string? statusName, CancellationToken cancellationToken)
     {
         var name = string.IsNullOrWhiteSpace(statusName) ? "New" : statusName;
-        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == name, cancellationToken)
-                     ?? await _dbContext.LeadStatuses.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
+        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == name, cancellationToken);
+        if (status is not null)
+        {
+            return status;
+        }
+
+        if (!string.IsNullOrWhiteSpace(statusName))
+        {
+            var maxOrder = await _dbContext.LeadStatuses.MaxAsync(s => (int?)s.Order, cancellationToken) ?? 0;
+            status = new LeadStatus
+            {
+                Name = name,
+                Order = maxOrder + 1,
+                IsDefault = false,
+                IsClosed = string.Equals(name, "Lost", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(name, "Disqualified", StringComparison.OrdinalIgnoreCase)
+                           || string.Equals(name, "Converted", StringComparison.OrdinalIgnoreCase)
+            };
+            _dbContext.LeadStatuses.Add(status);
+            return status;
+        }
+
+        status = await _dbContext.LeadStatuses.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
         if (status is not null)
         {
             return status;

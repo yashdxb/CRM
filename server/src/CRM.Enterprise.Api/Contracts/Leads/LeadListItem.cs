@@ -18,4 +18,9 @@ public record LeadListItem(
     string? JobTitle,
     Guid? AccountId,
     Guid? ContactId,
-    Guid? ConvertedOpportunityId);
+    Guid? ConvertedOpportunityId,
+    string? DisqualifiedReason,
+    DateTime? NurtureFollowUpAtUtc,
+    string? QualifiedNotes,
+    DateTime? FirstTouchDueAtUtc,
+    DateTime? FirstTouchedAtUtc);
