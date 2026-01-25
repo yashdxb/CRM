@@ -2,6 +2,7 @@ using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Infrastructure.Leads;
@@ -12,15 +13,18 @@ public sealed class LeadService : ILeadService
     private readonly CrmDbContext _dbContext;
     private readonly ILeadScoringService _leadScoringService;
     private readonly IAuditEventService _auditEvents;
+    private readonly IMediator _mediator;
 
     public LeadService(
         CrmDbContext dbContext,
         ILeadScoringService leadScoringService,
-        IAuditEventService auditEvents)
+        IAuditEventService auditEvents,
+        IMediator mediator)
     {
         _dbContext = dbContext;
         _leadScoringService = leadScoringService;
         _auditEvents = auditEvents;
+        _mediator = mediator;
     }
 
     public async Task<LeadSearchResultDto> SearchAsync(LeadSearchRequest request, CancellationToken cancellationToken = default)
@@ -321,7 +325,8 @@ public sealed class LeadService : ILeadService
         lead.ContactId = request.ContactId;
         lead.UpdatedAtUtc = DateTime.UtcNow;
 
-        if (lead.LeadStatusId != previousStatusId)
+        var statusChanged = lead.LeadStatusId != previousStatusId;
+        if (statusChanged)
         {
             ApplyStatusSideEffects(lead, statusName);
             await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, actor, cancellationToken);
@@ -333,7 +338,8 @@ public sealed class LeadService : ILeadService
                 cancellationToken);
         }
 
-        if (previousOwnerId != lead.OwnerId)
+        var ownerChanged = previousOwnerId != lead.OwnerId;
+        if (ownerChanged)
         {
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(lead.Id, "OwnerChanged", "OwnerId", previousOwnerId.ToString(), lead.OwnerId.ToString(), actor),
@@ -345,6 +351,37 @@ public sealed class LeadService : ILeadService
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (ownerChanged)
+        {
+            await _mediator.Publish(new LeadOwnerChangedEvent(
+                lead.Id,
+                previousOwnerId,
+                lead.OwnerId,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
+        }
+
+        if (statusChanged && string.Equals(statusName, "Qualified", StringComparison.OrdinalIgnoreCase))
+        {
+            await _mediator.Publish(new LeadQualifiedEvent(
+                lead.Id,
+                lead.OwnerId,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
+        }
+
+        if (statusChanged && string.Equals(statusName, "Converted", StringComparison.OrdinalIgnoreCase))
+        {
+            await _mediator.Publish(new LeadConvertedEvent(
+                lead.Id,
+                lead.AccountId,
+                lead.ContactId,
+                lead.ConvertedOpportunityId,
+                lead.OwnerId,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
+        }
 
         if (shouldAiScore && HasAiSignals(request))
         {
@@ -471,6 +508,15 @@ public sealed class LeadService : ILeadService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await _mediator.Publish(new LeadConvertedEvent(
+            lead.Id,
+            accountId,
+            contactId,
+            opportunityId,
+            lead.OwnerId,
+            actor.UserId == Guid.Empty ? null : actor.UserId,
+            DateTime.UtcNow), cancellationToken);
+
         return LeadOperationResult<LeadConversionResultDto>.Ok(new LeadConversionResultDto(lead.Id, accountId, contactId, opportunityId));
     }
 
@@ -488,6 +534,7 @@ public sealed class LeadService : ILeadService
             CreateAuditEntry(lead.Id, "Deleted", null, null, null, actor),
             cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
         return LeadOperationResult<bool>.Ok(true);
     }
 
@@ -529,7 +576,8 @@ public sealed class LeadService : ILeadService
         var resolvedStatusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
         lead.UpdatedAtUtc = DateTime.UtcNow;
 
-        if (lead.LeadStatusId != previousStatusId)
+        var statusChanged = lead.LeadStatusId != previousStatusId;
+        if (statusChanged)
         {
             ApplyStatusSideEffects(lead, resolvedStatusName);
             await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, resolvedStatusName, actor, cancellationToken);
@@ -542,6 +590,28 @@ public sealed class LeadService : ILeadService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (statusChanged && string.Equals(resolvedStatusName, "Qualified", StringComparison.OrdinalIgnoreCase))
+        {
+            await _mediator.Publish(new LeadQualifiedEvent(
+                lead.Id,
+                lead.OwnerId,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
+        }
+
+        if (statusChanged && string.Equals(resolvedStatusName, "Converted", StringComparison.OrdinalIgnoreCase))
+        {
+            await _mediator.Publish(new LeadConvertedEvent(
+                lead.Id,
+                lead.AccountId,
+                lead.ContactId,
+                lead.ConvertedOpportunityId,
+                lead.OwnerId,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
+        }
+
         return LeadOperationResult<bool>.Ok(true);
     }
 
