@@ -712,6 +712,8 @@ export function buildDashboardSummary(): DashboardSummary {
     tasksDueToday,
     upcomingActivities,
     overdueActivities,
+    atRiskOpportunities: Math.max(0, Math.floor(openOpportunities * 0.2)),
+    opportunitiesWithoutNextStep: Math.max(0, Math.floor(openOpportunities * 0.12)),
     recentCustomers,
     activitiesNextWeek,
     myTasks: [],

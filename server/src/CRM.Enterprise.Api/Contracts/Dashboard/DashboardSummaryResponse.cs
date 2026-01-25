@@ -14,6 +14,8 @@ public record DashboardSummaryResponse(
     int TasksDueToday,
     int UpcomingActivities,
     int OverdueActivities,
+    int AtRiskOpportunities,
+    int OpportunitiesWithoutNextStep,
     IEnumerable<CustomerListItem> RecentCustomers,
     IEnumerable<ActivityListItem> ActivitiesNextWeek,
     IEnumerable<ActivityListItem> MyTasks,

@@ -62,6 +62,8 @@ export class DashboardPage implements OnInit {
     tasksDueToday: 0,
     upcomingActivities: 0,
     overdueActivities: 0,
+    atRiskOpportunities: 0,
+    opportunitiesWithoutNextStep: 0,
     recentCustomers: [],
     activitiesNextWeek: [],
     myTasks: [],
@@ -114,6 +116,8 @@ export class DashboardPage implements OnInit {
     const items = [
       { id: 'accounts', label: 'Accounts', value: data.totalCustomers, trend: 0, percentage: 100, icon: 'pi-building', color: 'cyan' },
       { id: 'open-opps', label: 'Open Opps', value: data.openOpportunities, trend: 0, percentage: 100, icon: 'pi-briefcase', color: 'purple' },
+      { id: 'at-risk', label: 'At-risk deals', value: data.atRiskOpportunities, trend: 0, percentage: 100, icon: 'pi-exclamation-triangle', color: 'danger' },
+      { id: 'no-next-step', label: 'No next step', value: data.opportunitiesWithoutNextStep, trend: 0, percentage: 100, icon: 'pi-calendar-times', color: 'warning' },
       { id: 'tasks-due', label: 'Tasks Due', value: data.tasksDueToday, trend: 0, percentage: 100, icon: 'pi-calendar', color: 'success' },
       { id: 'next-7-days', label: 'Next 7 Days', value: data.upcomingActivities, trend: 0, percentage: 100, icon: 'pi-clock', color: 'orange' }
     ];
@@ -181,7 +185,7 @@ export class DashboardPage implements OnInit {
     growth: 'md'
   };
 
-  private readonly defaultKpiOrder = ['accounts', 'open-opps', 'tasks-due', 'next-7-days'];
+  private readonly defaultKpiOrder = ['accounts', 'open-opps', 'at-risk', 'no-next-step', 'tasks-due', 'next-7-days'];
   private readonly kpiOrderStorageKey = 'crm.dashboard.kpi.order';
   protected readonly kpiOrder = signal<string[]>([]);
 

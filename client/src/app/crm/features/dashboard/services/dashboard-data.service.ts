@@ -31,6 +31,8 @@ export class DashboardDataService {
       tasksDueToday: 0,
       upcomingActivities: 0,
       overdueActivities: 0,
+      atRiskOpportunities: 0,
+      opportunitiesWithoutNextStep: 0,
       recentCustomers: [],
       activitiesNextWeek: [],
       myTasks: [],

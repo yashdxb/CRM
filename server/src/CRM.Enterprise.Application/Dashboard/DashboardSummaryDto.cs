@@ -13,6 +13,8 @@ public record DashboardSummaryDto(
     int TasksDueToday,
     int UpcomingActivities,
     int OverdueActivities,
+    int AtRiskOpportunities,
+    int OpportunitiesWithoutNextStep,
     IReadOnlyList<RecentAccountDto> RecentAccounts,
     IReadOnlyList<UpcomingActivityDto> ActivitiesNextWeek,
     IReadOnlyList<UpcomingActivityDto> MyTasks,

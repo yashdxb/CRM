@@ -74,6 +74,72 @@ public class DashboardReadService : IDashboardReadService
             a => !a.IsDeleted && !a.CompletedDateUtc.HasValue && a.DueDateUtc < now,
             cancellationToken);
 
+        var openOpportunityIds = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && !o.IsClosed)
+            .Select(o => o.Id)
+            .ToListAsync(cancellationToken);
+
+        var atRiskOpportunities = 0;
+        var opportunitiesWithoutNextStep = 0;
+        if (openOpportunityIds.Count > 0)
+        {
+            var opportunityActivityRows = await _dbContext.Activities
+                .AsNoTracking()
+                .Where(a => !a.IsDeleted
+                            && a.RelatedEntityType == ActivityRelationType.Opportunity
+                            && openOpportunityIds.Contains(a.RelatedEntityId))
+                .Select(a => new
+                {
+                    a.RelatedEntityId,
+                    a.DueDateUtc,
+                    a.CompletedDateUtc,
+                    a.CreatedAtUtc
+                })
+                .ToListAsync(cancellationToken);
+
+            var activityLookup = opportunityActivityRows
+                .GroupBy(a => a.RelatedEntityId)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    {
+                        var lastActivityAtUtc = g.Max(a => (DateTime?)(a.CompletedDateUtc ?? a.CreatedAtUtc));
+                        var nextStepDueAtUtc = g
+                            .Where(a => a.CompletedDateUtc == null && a.DueDateUtc.HasValue)
+                            .OrderBy(a => a.DueDateUtc)
+                            .Select(a => a.DueDateUtc)
+                            .FirstOrDefault();
+                        return (lastActivityAtUtc, nextStepDueAtUtc);
+                    });
+
+            foreach (var opportunityId in openOpportunityIds)
+            {
+                activityLookup.TryGetValue(opportunityId, out var info);
+                var nextStepDueAtUtc = info.nextStepDueAtUtc;
+                var lastActivityAtUtc = info.lastActivityAtUtc;
+
+                var hasNextStep = nextStepDueAtUtc.HasValue;
+                if (!hasNextStep)
+                {
+                    opportunitiesWithoutNextStep++;
+                    atRiskOpportunities++;
+                    continue;
+                }
+
+                if (nextStepDueAtUtc.Value < now)
+                {
+                    atRiskOpportunities++;
+                    continue;
+                }
+
+                if (lastActivityAtUtc.HasValue && (now - lastActivityAtUtc.Value).TotalDays > 30)
+                {
+                    atRiskOpportunities++;
+                }
+            }
+        }
+
         var recentCustomersRaw = await _dbContext.Accounts
             .Include(a => a.Contacts)
             .Where(a => !a.IsDeleted)
@@ -454,6 +520,8 @@ public class DashboardReadService : IDashboardReadService
             tasksDueToday,
             upcomingActivitiesCount,
             overdueActivitiesCount,
+            atRiskOpportunities,
+            opportunitiesWithoutNextStep,
             recentCustomers,
             activitiesNextWeek,
             myTasks,

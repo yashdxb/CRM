@@ -11,6 +11,8 @@ export interface DashboardSummary {
   tasksDueToday: number;
   upcomingActivities: number;
   overdueActivities: number;
+  atRiskOpportunities: number;
+  opportunitiesWithoutNextStep: number;
   recentCustomers: Customer[];
   activitiesNextWeek: Activity[];
   myTasks: Activity[];

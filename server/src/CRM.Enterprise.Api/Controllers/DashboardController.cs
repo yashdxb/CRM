@@ -93,6 +93,8 @@ public class DashboardController : ControllerBase
             summary.TasksDueToday,
             summary.UpcomingActivities,
             summary.OverdueActivities,
+            summary.AtRiskOpportunities,
+            summary.OpportunitiesWithoutNextStep,
             recentCustomers,
             activitiesNextWeek,
             myTasks,
