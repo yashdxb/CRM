@@ -26,6 +26,8 @@ export interface UpsertActivityRequest {
   priority?: 'High' | 'Normal' | 'Low';
   dueDateUtc?: string | Date;
   completedDateUtc?: string | Date;
+  nextStepSubject?: string;
+  nextStepDueDateUtc?: string | Date;
   relatedEntityType?: 'Account' | 'Contact' | 'Opportunity' | 'Lead';
   relatedEntityId?: string;
   ownerId?: string;

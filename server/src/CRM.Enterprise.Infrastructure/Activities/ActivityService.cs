@@ -249,6 +249,12 @@ public sealed class ActivityService : IActivityService
 
     public async Task<ActivityOperationResult<ActivityListItemDto>> CreateAsync(ActivityUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
+        var validationError = ValidateCompletionRequirements(request);
+        if (validationError is not null)
+        {
+            return ActivityOperationResult<ActivityListItemDto>.Fail(validationError);
+        }
+
         var activity = new Activity
         {
             Subject = request.Subject,
@@ -271,6 +277,7 @@ public sealed class ActivityService : IActivityService
 
         if (activity.CompletedDateUtc.HasValue)
         {
+            await CreateNextStepActivityAsync(activity, request, actor, cancellationToken);
             await _mediator.Publish(new ActivityCompletedEvent(
                 activity.Id,
                 activity.RelatedEntityType,
@@ -320,6 +327,15 @@ public sealed class ActivityService : IActivityService
         var completedNow = previousCompletedAt != activity.CompletedDateUtc && activity.CompletedDateUtc.HasValue;
         if (completedNow)
         {
+            var validationError = ValidateCompletionRequirements(request);
+            if (validationError is not null)
+            {
+                return ActivityOperationResult<bool>.Fail(validationError);
+            }
+        }
+
+        if (completedNow)
+        {
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(
                     activity.Id,
@@ -344,6 +360,7 @@ public sealed class ActivityService : IActivityService
 
         if (completedNow)
         {
+            await CreateNextStepActivityAsync(activity, request, actor, cancellationToken);
             await _mediator.Publish(new ActivityCompletedEvent(
                 activity.Id,
                 activity.RelatedEntityType,
@@ -380,6 +397,76 @@ public sealed class ActivityService : IActivityService
         if (completedDateUtc.HasValue) return "Completed";
         if (dueDateUtc.HasValue && dueDateUtc.Value < DateTime.UtcNow) return "Overdue";
         return "Upcoming";
+    }
+
+    private static string? ValidateCompletionRequirements(ActivityUpsertRequest request)
+    {
+        if (!request.CompletedDateUtc.HasValue)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Outcome))
+        {
+            return "Outcome is required to complete an activity.";
+        }
+
+        if (!request.DueDateUtc.HasValue)
+        {
+            return "Due date is required to complete an activity.";
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NextStepSubject))
+        {
+            return "Next step subject is required to complete an activity.";
+        }
+
+        if (!request.NextStepDueDateUtc.HasValue)
+        {
+            return "Next step due date is required to complete an activity.";
+        }
+
+        if (request.NextStepDueDateUtc.Value.Date < DateTime.UtcNow.Date)
+        {
+            return "Next step due date must be today or later.";
+        }
+
+        return null;
+    }
+
+    private async Task CreateNextStepActivityAsync(
+        Activity completedActivity,
+        ActivityUpsertRequest request,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        if (!request.CompletedDateUtc.HasValue)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NextStepSubject) || !request.NextStepDueDateUtc.HasValue)
+        {
+            return;
+        }
+
+        var followUp = new Activity
+        {
+            Subject = request.NextStepSubject.Trim(),
+            Description = "Auto-created next step.",
+            Type = ActivityType.Task,
+            Priority = "Normal",
+            DueDateUtc = request.NextStepDueDateUtc,
+            RelatedEntityType = completedActivity.RelatedEntityType,
+            RelatedEntityId = completedActivity.RelatedEntityId,
+            OwnerId = completedActivity.OwnerId,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _dbContext.Activities.Add(followUp);
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(followUp.Id, "Created", "Source", "NextStep", request.NextStepSubject, actor),
+            cancellationToken);
     }
 
     private static string ResolveCustomerName(

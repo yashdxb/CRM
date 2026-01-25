@@ -252,6 +252,7 @@
                   optionValue="value"
                   name="relatedEntityId"
                   [(ngModel)]="form.relatedEntityId"
+                  (ngModelChange)="onRelatedEntityChange($event)"
                   placeholder="Select account"
                   styleClass="w-full"
                 >
@@ -281,6 +282,7 @@
                   optionValue="value"
                   name="relatedEntityId"
                   [(ngModel)]="form.relatedEntityId"
+                  (ngModelChange)="onRelatedEntityChange($event)"
                   placeholder="Select contact"
                   styleClass="w-full"
                 >
@@ -310,6 +312,7 @@
                   optionValue="value"
                   name="relatedEntityId"
                   [(ngModel)]="form.relatedEntityId"
+                  (ngModelChange)="onRelatedEntityChange($event)"
                   placeholder="Select opportunity"
                   styleClass="w-full"
                 >
@@ -339,6 +342,7 @@
                   optionValue="value"
                   name="relatedEntityId"
                   [(ngModel)]="form.relatedEntityId"
+                  (ngModelChange)="onRelatedEntityChange($event)"
                   placeholder="Select lead"
                   styleClass="w-full"
                 >
@@ -366,6 +370,28 @@
               <div class="field full">
                 <label>Outcome</label>
                 <textarea pTextarea name="outcome" [(ngModel)]="form.outcome" rows="3" placeholder="Capture call outcome and next steps"></textarea>
+              </div>
+              <div class="field full" *ngIf="activityStatus === 'Completed'">
+                <label>Next step subject <span class="required">*</span></label>
+                <input
+                  pInputText
+                  name="nextStepSubject"
+                  [(ngModel)]="form.nextStepSubject"
+                  placeholder="e.g., Follow-up call with procurement"
+                  class="w-full"
+                />
+              </div>
+              <div class="field" *ngIf="activityStatus === 'Completed'">
+                <label>Next step due date <span class="required">*</span></label>
+                <p-datePicker
+                  name="nextStepDueDateUtc"
+                  appendTo="body"
+                  [(ngModel)]="form.nextStepDueDateUtc"
+                  [showIcon]="true"
+                  [showTime]="true"
+                  hourFormat="12"
+                  styleClass="w-full"
+                ></p-datePicker>
               </div>
             </div>
           </section>

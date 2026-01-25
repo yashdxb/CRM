@@ -129,6 +129,8 @@ public class ActivitiesController : ControllerBase
             request.Priority,
             request.DueDateUtc,
             request.CompletedDateUtc,
+            request.NextStepSubject,
+            request.NextStepDueDateUtc,
             request.RelatedEntityType,
             request.RelatedEntityId,
             request.OwnerId);

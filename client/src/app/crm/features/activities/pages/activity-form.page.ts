@@ -34,6 +34,8 @@ interface Option<T = string> {
 interface ActivityTemplate {
   id: string;
   label: string;
+  icon: string;
+  stages?: string[];
   defaults: Partial<UpsertActivityRequest>;
 }
 
@@ -79,16 +81,13 @@ export class ActivityFormPage implements OnInit {
     { label: 'Opportunity', value: 'Opportunity', icon: 'pi-briefcase' },
     { label: 'Lead', value: 'Lead', icon: 'pi-user' }
   ];
-  protected readonly templateOptions: Option<string>[] = [
-    { label: 'No template', value: 'none', icon: 'pi-sliders-h' },
-    { label: 'Discovery call', value: 'call-discovery', icon: 'pi-phone' },
-    { label: 'Stakeholder meeting', value: 'meeting-stakeholder', icon: 'pi-users' },
-    { label: 'Follow-up task', value: 'follow-up', icon: 'pi-check-square' }
-  ];
+  protected templateOptions: Option<string>[] = [];
   private readonly activityTemplates: ActivityTemplate[] = [
     {
       id: 'call-discovery',
       label: 'Discovery call',
+      icon: 'pi-phone',
+      stages: ['Prospecting', 'Qualification'],
       defaults: {
         subject: 'Discovery call',
         type: 'Call',
@@ -97,8 +96,22 @@ export class ActivityFormPage implements OnInit {
       }
     },
     {
+      id: 'qualification-email',
+      label: 'Qualification email',
+      icon: 'pi-envelope',
+      stages: ['Prospecting', 'Qualification'],
+      defaults: {
+        subject: 'Qualification follow-up',
+        type: 'Email',
+        priority: 'Normal',
+        description: 'Summarize needs, confirm stakeholders, and propose next step.'
+      }
+    },
+    {
       id: 'meeting-stakeholder',
       label: 'Stakeholder meeting',
+      icon: 'pi-users',
+      stages: ['Qualification', 'Proposal'],
       defaults: {
         subject: 'Stakeholder sync',
         type: 'Meeting',
@@ -107,8 +120,33 @@ export class ActivityFormPage implements OnInit {
       }
     },
     {
+      id: 'proposal-review',
+      label: 'Proposal review',
+      icon: 'pi-file',
+      stages: ['Proposal'],
+      defaults: {
+        subject: 'Proposal review',
+        type: 'Meeting',
+        priority: 'High',
+        description: 'Walk through proposal, confirm scope, and address objections.'
+      }
+    },
+    {
+      id: 'negotiation-call',
+      label: 'Negotiation call',
+      icon: 'pi-phone',
+      stages: ['Negotiation'],
+      defaults: {
+        subject: 'Negotiation call',
+        type: 'Call',
+        priority: 'High',
+        description: 'Review terms, pricing, and confirm path to signature.'
+      }
+    },
+    {
       id: 'follow-up',
       label: 'Follow-up task',
+      icon: 'pi-check-square',
       defaults: {
         subject: 'Follow-up',
         type: 'Task',
@@ -133,6 +171,7 @@ export class ActivityFormPage implements OnInit {
   private pendingOpportunityOption: Option<string> | null = null;
   private pendingLeadOption: Option<string> | null = null;
   private pendingOwnerOption: Option<string> | null = null;
+  private opportunityStage: string | null = null;
 
   private readonly activityData = inject(ActivityDataService);
   private readonly customerData = inject(CustomerDataService);
@@ -160,6 +199,7 @@ export class ActivityFormPage implements OnInit {
     if (!this.editingId) {
       this.applyContextFromQuery();
     }
+    this.updateTemplateOptions();
     this.loadOwners();
     this.loadLookups();
   }
@@ -218,6 +258,22 @@ export class ActivityFormPage implements OnInit {
 
   protected onRelationTypeChange(_value?: UpsertActivityRequest['relatedEntityType']) {
     this.form.relatedEntityId = undefined;
+    if (this.form.relatedEntityType !== 'Opportunity') {
+      this.opportunityStage = null;
+      this.updateTemplateOptions();
+    }
+  }
+
+  protected onRelatedEntityChange(value?: string | null) {
+    if (this.form.relatedEntityType !== 'Opportunity') {
+      return;
+    }
+    if (!value) {
+      this.opportunityStage = null;
+      this.updateTemplateOptions();
+      return;
+    }
+    this.updateOpportunityStage(value);
   }
 
   protected onTemplateChange(value?: string | null) {
@@ -258,10 +314,31 @@ export class ActivityFormPage implements OnInit {
       return;
     }
 
+    if (this.activityStatus === 'Completed') {
+      if (!this.form.outcome || !this.form.outcome.trim()) {
+        this.raiseToast('error', 'Outcome is required to complete an activity.');
+        return;
+      }
+      if (!this.form.dueDateUtc) {
+        this.raiseToast('error', 'Due date is required to complete an activity.');
+        return;
+      }
+      if (!this.form.nextStepSubject || !this.form.nextStepSubject.trim()) {
+        this.raiseToast('error', 'Next step subject is required to complete an activity.');
+        return;
+      }
+      if (!this.form.nextStepDueDateUtc) {
+        this.raiseToast('error', 'Next step due date is required to complete an activity.');
+        return;
+      }
+    }
+
     this.saving.set(true);
     const payload: UpsertActivityRequest = {
       ...this.form,
-      completedDateUtc: this.activityStatus === 'Completed' ? (this.form.completedDateUtc ?? new Date()) : undefined
+      completedDateUtc: this.activityStatus === 'Completed' ? (this.form.completedDateUtc ?? new Date()) : undefined,
+      nextStepSubject: this.activityStatus === 'Completed' ? this.form.nextStepSubject : undefined,
+      nextStepDueDateUtc: this.activityStatus === 'Completed' ? this.form.nextStepDueDateUtc : undefined
     };
     const request$ = this.editingId
       ? this.activityData.update(this.editingId, payload).pipe(map(() => null))
@@ -273,9 +350,10 @@ export class ActivityFormPage implements OnInit {
         const message = this.editingId ? 'Activity updated.' : 'Activity created.';
         this.raiseToast('success', message);
       },
-      error: () => {
+      error: (err) => {
         this.saving.set(false);
-        this.raiseToast('error', this.editingId ? 'Unable to update activity.' : 'Unable to create activity.');
+        const message = err?.error ?? (this.editingId ? 'Unable to update activity.' : 'Unable to create activity.');
+        this.raiseToast('error', message);
       }
     });
   }
@@ -376,6 +454,8 @@ export class ActivityFormPage implements OnInit {
       priority: activity.priority ?? 'Normal',
       dueDateUtc: dueDate,
       completedDateUtc: completedDate,
+      nextStepSubject: '',
+      nextStepDueDateUtc: undefined,
       relatedEntityType: activity.relatedEntityType ?? 'Account',
       relatedEntityId: activity.relatedEntityId,
       ownerId: activity.ownerId
@@ -419,6 +499,7 @@ export class ActivityFormPage implements OnInit {
       }
       this.pendingContactOption = option;
     } else if (activity.relatedEntityType === 'Opportunity' && activity.relatedEntityId) {
+      this.updateOpportunityStage(activity.relatedEntityId);
       const label = activity.relatedEntityName?.trim() || 'Opportunity';
       const option = { label, value: activity.relatedEntityId, icon: 'pi-briefcase' };
       const exists = this.opportunityOptions.some((item) => item.value === option.value);
@@ -443,6 +524,8 @@ export class ActivityFormPage implements OnInit {
       type: 'Task',
       priority: 'Normal',
       dueDateUtc: undefined,
+      nextStepSubject: '',
+      nextStepDueDateUtc: undefined,
       relatedEntityType: 'Account',
       relatedEntityId: undefined,
       ownerId: readUserId() ?? undefined
@@ -491,10 +574,48 @@ export class ActivityFormPage implements OnInit {
 
     if (relatedId) {
       this.form.relatedEntityId = relatedId;
+      if (relatedType === 'Opportunity') {
+        this.updateOpportunityStage(relatedId);
+      }
     }
 
     if (subject && !this.form.subject) {
       this.form.subject = subject;
+    }
+  }
+
+  private updateOpportunityStage(opportunityId: string) {
+    this.opportunityData.getById(opportunityId).subscribe({
+      next: (opportunity) => {
+        this.opportunityStage = opportunity.stage ?? null;
+        this.updateTemplateOptions();
+      },
+      error: () => {
+        this.opportunityStage = null;
+        this.updateTemplateOptions();
+      }
+    });
+  }
+
+  private updateTemplateOptions() {
+    const templates = this.opportunityStage
+      ? this.activityTemplates.filter((template) => !template.stages || template.stages.includes(this.opportunityStage!))
+      : this.activityTemplates;
+
+    this.templateOptions = [
+      { label: 'No template', value: 'none', icon: 'pi-sliders-h' },
+      ...templates.map((template) => ({
+        label: template.label,
+        value: template.id,
+        icon: template.icon
+      }))
+    ];
+
+    if (this.selectedTemplate !== 'none') {
+      const stillAvailable = templates.some((template) => template.id === this.selectedTemplate);
+      if (!stillAvailable) {
+        this.selectedTemplate = 'none';
+      }
     }
   }
 }

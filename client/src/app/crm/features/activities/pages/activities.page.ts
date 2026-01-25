@@ -426,26 +426,8 @@ export class ActivitiesPage {
     if (!this.canManage()) {
       return;
     }
-
-    const payload = {
-      subject: row.subject,
-      description: row.description,
-      type: row.type,
-      priority: row.priority,
-      dueDateUtc: row.dueDateUtc,
-      completedDateUtc: new Date().toISOString(),
-      relatedEntityType: row.relatedEntityType,
-      relatedEntityId: row.relatedEntityId,
-      ownerId: row.ownerId
-    };
-
-    this.activityData.update(row.id, payload).subscribe({
-      next: () => {
-        this.raiseToast('success', 'Activity marked completed.');
-        this.load();
-      },
-      error: () => this.raiseToast('error', 'Unable to mark activity completed.')
-    });
+    this.raiseToast('error', 'Complete this activity from the edit screen to capture outcome and next step.');
+    this.onEdit(row);
   }
 
   protected clearToast() {
