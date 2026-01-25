@@ -540,6 +540,12 @@ Goal: deliver the Sales Rep end-to-end flow first while adding microservice-read
 **Explicit decision**
 - Do not extract microservices yet; prioritize flow completeness and seam isolation.
 
+**Execution options (approved on January 25, 2026)**
+- Option 1 (active): move import/queue logic into module-level ImportServices so controllers have zero DbContext access.
+  - Status: DONE for Leads; IN PROGRESS for Customers/Contacts; queued for remaining modules.
+- Option 2 (scheduled next): expand in-process domain events beyond Leads (OpportunityStageChanged, ActivityCompleted) and wire handlers for audit/notifications.
+- Option 3 (scheduled after Option 2): apply the same service seam pattern to any remaining controllers still touching DbContext directly.
+
 # Phase 1 Checklist (Draft)
 
 Legend:

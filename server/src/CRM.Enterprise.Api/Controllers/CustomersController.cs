@@ -1,17 +1,14 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Customers;
-using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Api.Contracts.Shared;
-using CRM.Enterprise.Api.Utilities;
-using CRM.Enterprise.Infrastructure.Persistence;
-using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Api.Contracts.Imports;
-// using CRM.Enterprise.Api.Jobs; // Removed Hangfire
-using Microsoft.AspNetCore.Hosting;
+using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Customers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using ApiUpsertCustomerRequest = CRM.Enterprise.Api.Contracts.Customers.UpsertCustomerRequest;
+using AppCustomerUpsertRequest = CRM.Enterprise.Application.Customers.CustomerUpsertRequest;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -20,19 +17,15 @@ namespace CRM.Enterprise.Api.Controllers;
 [Route("api/customers")]
 public class CustomersController : ControllerBase
 {
-    private readonly CrmDbContext _dbContext;
-    private readonly ITenantProvider _tenantProvider;
-    private readonly IWebHostEnvironment _environment;
-
+    private readonly ICustomerService _customerService;
+    private readonly ICustomerImportService _customerImportService;
 
     public CustomersController(
-        CrmDbContext dbContext,
-        ITenantProvider tenantProvider,
-        IWebHostEnvironment environment)
+        ICustomerService customerService,
+        ICustomerImportService customerImportService)
     {
-        _dbContext = dbContext;
-        _tenantProvider = tenantProvider;
-        _environment = environment;
+        _customerService = customerService;
+        _customerImportService = customerImportService;
     }
 
     [HttpGet]
@@ -43,131 +36,30 @@ public class CustomersController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        page = Math.Max(page, 1);
-        pageSize = Math.Clamp(pageSize, 1, 100);
-
-        var query = _dbContext.Accounts
-            .Include(a => a.Contacts)
-            .AsNoTracking()
-            .Where(a => !a.IsDeleted);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.ToLower();
-            query = query.Where(a =>
-                a.Name.ToLower().Contains(term) ||
-                (a.Phone ?? string.Empty).ToLower().Contains(term) ||
-                a.Contacts.Any(c => (c.Email ?? string.Empty).ToLower().Contains(term)));
-        }
-
-        if (!string.IsNullOrWhiteSpace(status))
-        {
-            query = query.Where(a => a.LifecycleStage == status);
-        }
-
-        var total = await query.CountAsync(cancellationToken);
-
-        var items = await query
-            .OrderBy(a => a.Name)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(a => new
-            {
-                a.Id,
-                a.Name,
-                Email = a.Contacts.Select(c => c.Email).FirstOrDefault(email => !string.IsNullOrEmpty(email)),
-                a.Phone,
-                Status = a.LifecycleStage ?? "Customer",
-                a.OwnerId,
-                a.CreatedAtUtc
-            })
-            .ToListAsync(cancellationToken);
-
-        var ownerIds = items.Select(i => i.OwnerId).Distinct().ToList();
-        var owners = await _dbContext.Users
-            .Where(u => ownerIds.Contains(u.Id))
-            .Select(u => new { u.Id, u.FullName })
-            .ToListAsync(cancellationToken);
-
-        var result = items.Select(i =>
-        {
-            var ownerName = owners.FirstOrDefault(o => o.Id == i.OwnerId)?.FullName ?? "Unassigned";
-            return new CustomerListItem(i.Id, i.Name, i.Name, i.Email, i.Phone, i.Status, i.OwnerId, ownerName, i.CreatedAtUtc);
-        });
-
-        return Ok(new CustomerSearchResponse(result, total));
+        var result = await _customerService.SearchAsync(new CustomerSearchRequest(search, status, page, pageSize), cancellationToken);
+        var items = result.Items.Select(ToApiItem);
+        return Ok(new CustomerSearchResponse(items, result.Total));
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<CustomerListItem>> GetCustomer(Guid id, CancellationToken cancellationToken)
     {
-        var account = await _dbContext.Accounts
-            .Include(a => a.Contacts)
-            .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
-
-        if (account is null) return NotFound();
-
-        account.LastViewedAtUtc = DateTime.UtcNow;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        var ownerName = await _dbContext.Users
-            .Where(u => u.Id == account.OwnerId)
-            .Select(u => u.FullName)
-            .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
-
-        var dto = new CustomerListItem(
-            account.Id,
-            account.Name,
-            account.Name,
-            account.Contacts.Select(c => c.Email).FirstOrDefault(email => !string.IsNullOrEmpty(email)),
-            account.Phone,
-            account.LifecycleStage ?? "Customer",
-            account.OwnerId,
-            ownerName,
-            account.CreatedAtUtc);
-
-        return Ok(dto);
+        var customer = await _customerService.GetAsync(id, cancellationToken);
+        if (customer is null) return NotFound();
+        return Ok(ToApiItem(customer));
     }
 
     [HttpPost]
     [Authorize(Policy = Permissions.Policies.CustomersManage)]
-    public async Task<ActionResult<CustomerListItem>> Create([FromBody] UpsertCustomerRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<CustomerListItem>> Create([FromBody] ApiUpsertCustomerRequest request, CancellationToken cancellationToken)
     {
-        var ownerId = await ResolveOwnerIdAsync(request.OwnerId, cancellationToken);
-
-        var account = new Account
+        var result = await _customerService.CreateAsync(MapUpsertRequest(request), GetActor(), cancellationToken);
+        if (!result.Success)
         {
-            Name = request.Name,
-            AccountNumber = request.AccountNumber,
-            Industry = request.Industry,
-            Website = request.Website,
-            Phone = request.Phone,
-            LifecycleStage = request.LifecycleStage,
-            OwnerId = ownerId,
-            Territory = request.Territory,
-            Description = request.Description,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+            return BadRequest(result.Error);
+        }
 
-        _dbContext.Accounts.Add(account);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        var ownerName = await _dbContext.Users
-            .Where(u => u.Id == ownerId)
-            .Select(u => u.FullName)
-            .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
-
-        var dto = new CustomerListItem(
-            account.Id,
-            account.Name,
-            account.Name,
-            null,
-            account.Phone,
-            account.LifecycleStage ?? "Customer",
-            account.OwnerId,
-            ownerName,
-            account.CreatedAtUtc);
-        return CreatedAtAction(nameof(GetCustomer), new { id = account.Id }, dto);
+        return CreatedAtAction(nameof(GetCustomer), new { id = result.Value!.Id }, ToApiItem(result.Value!));
     }
 
     [HttpPost("import")]
@@ -179,52 +71,10 @@ public class CustomersController : ControllerBase
             return BadRequest("CSV file is required.");
         }
 
-        var rows = await CsvImportHelper.ReadAsync(file, cancellationToken);
-        if (rows.Count == 0)
-        {
-            return Ok(new CsvImportResult(0, 0, 0, Array.Empty<CsvImportError>()));
-        }
-
-        var errors = new List<CsvImportError>();
-        var imported = 0;
-
-        for (var i = 0; i < rows.Count; i++)
-        {
-            var row = rows[i];
-            var name = CsvImportHelper.ReadValue(row, "name", "account", "accountname", "company");
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                errors.Add(new CsvImportError(i + 2, "Name is required."));
-                continue;
-            }
-
-            var ownerEmail = CsvImportHelper.ReadValue(row, "owner", "owneremail", "owner_email");
-            var ownerId = await ResolveOwnerIdFromEmailAsync(ownerEmail, cancellationToken);
-
-            var account = new Account
-            {
-                Name = name,
-                AccountNumber = CsvImportHelper.ReadValue(row, "accountnumber", "account_number"),
-                Industry = CsvImportHelper.ReadValue(row, "industry"),
-                Website = CsvImportHelper.ReadValue(row, "website"),
-                Phone = CsvImportHelper.ReadValue(row, "phone"),
-                LifecycleStage = CsvImportHelper.ReadValue(row, "lifecycle", "lifecyclestage", "status"),
-                OwnerId = ownerId,
-                Territory = CsvImportHelper.ReadValue(row, "territory"),
-                Description = CsvImportHelper.ReadValue(row, "description", "notes"),
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            _dbContext.Accounts.Add(account);
-            imported++;
-        }
-
-        if (imported > 0)
-        {
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        return Ok(new CsvImportResult(rows.Count, imported, rows.Count - imported, errors));
+        await using var stream = file.OpenReadStream();
+        var result = await _customerImportService.ImportAsync(stream, GetActor(), cancellationToken);
+        var errors = result.Errors.Select(error => new CsvImportError(error.RowNumber, error.Message)).ToList();
+        return Ok(new CsvImportResult(result.Total, result.Imported, result.Failed, errors));
     }
 
     [HttpPost("import/queue")]
@@ -236,56 +86,20 @@ public class CustomersController : ControllerBase
             return BadRequest("CSV file is required.");
         }
 
-        var tenantKey = _tenantProvider.TenantKey;
-        var storageRoot = Path.Combine(_environment.ContentRootPath, "uploads", "imports", tenantKey.ToLowerInvariant());
-        Directory.CreateDirectory(storageRoot);
-
-        var safeName = Path.GetFileName(file.FileName);
-        var importJob = new ImportJob
-        {
-            EntityType = "Customers",
-            FileName = safeName,
-            Status = "Queued",
-            RequestedById = GetUserId()
-        };
-        _dbContext.ImportJobs.Add(importJob);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        var storedName = $"{importJob.Id:N}_{safeName}";
-        var storagePath = Path.Combine(storageRoot, storedName);
-        await using (var stream = System.IO.File.Create(storagePath))
-        {
-            await file.CopyToAsync(stream, cancellationToken);
-        }
-
-        importJob.FilePath = storagePath;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-
-        // Directly mark as queued, but do not enqueue background job (Hangfire removed)
-
-        return Accepted(new ImportJobResponse(importJob.Id, importJob.EntityType, importJob.Status));
+        await using var stream = file.OpenReadStream();
+        var result = await _customerImportService.QueueImportAsync(stream, file.FileName, GetActor(), cancellationToken);
+        if (!result.Success) return BadRequest(result.Error);
+        var value = result.Value!;
+        return Accepted(new ImportJobResponse(value.ImportJobId, value.EntityType, value.Status));
     }
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = Permissions.Policies.CustomersManage)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpsertCustomerRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(Guid id, [FromBody] ApiUpsertCustomerRequest request, CancellationToken cancellationToken)
     {
-        var account = await _dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
-        if (account is null) return NotFound();
-
-        account.Name = request.Name;
-        account.AccountNumber = request.AccountNumber;
-        account.Industry = request.Industry;
-        account.Website = request.Website;
-        account.Phone = request.Phone;
-        account.LifecycleStage = request.LifecycleStage;
-        account.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, cancellationToken);
-        account.Territory = request.Territory;
-        account.Description = request.Description;
-        account.UpdatedAtUtc = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _customerService.UpdateAsync(id, MapUpsertRequest(request), GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -293,12 +107,9 @@ public class CustomersController : ControllerBase
     [Authorize(Policy = Permissions.Policies.CustomersManage)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var account = await _dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
-        if (account is null) return NotFound();
-
-        account.IsDeleted = true;
-        account.DeletedAtUtc = DateTime.UtcNow;
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _customerService.DeleteAsync(id, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -310,13 +121,9 @@ public class CustomersController : ControllerBase
             return BadRequest("Owner id is required.");
         }
 
-        var account = await _dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
-        if (account is null) return NotFound();
-
-        account.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, cancellationToken);
-        account.UpdatedAtUtc = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _customerService.UpdateOwnerAsync(id, request.OwnerId, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -328,13 +135,9 @@ public class CustomersController : ControllerBase
             return BadRequest("Lifecycle status is required.");
         }
 
-        var account = await _dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
-        if (account is null) return NotFound();
-
-        account.LifecycleStage = request.Status;
-        account.UpdatedAtUtc = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _customerService.UpdateLifecycleAsync(id, request.Status, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -352,24 +155,8 @@ public class CustomersController : ControllerBase
             return BadRequest("Owner id is required.");
         }
 
-        var ownerExists = await _dbContext.Users
-            .AnyAsync(u => u.Id == request.OwnerId && u.IsActive && !u.IsDeleted, cancellationToken);
-        if (!ownerExists)
-        {
-            return BadRequest("Owner not found.");
-        }
-
-        var accounts = await _dbContext.Accounts
-            .Where(a => request.Ids.Contains(a.Id) && !a.IsDeleted)
-            .ToListAsync(cancellationToken);
-
-        foreach (var account in accounts)
-        {
-            account.OwnerId = request.OwnerId;
-            account.UpdatedAtUtc = DateTime.UtcNow;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _customerService.BulkAssignOwnerAsync(request.Ids, request.OwnerId, cancellationToken);
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
@@ -387,61 +174,44 @@ public class CustomersController : ControllerBase
             return BadRequest("Lifecycle status is required.");
         }
 
-        var accounts = await _dbContext.Accounts
-            .Where(a => request.Ids.Contains(a.Id) && !a.IsDeleted)
-            .ToListAsync(cancellationToken);
-
-        foreach (var account in accounts)
-        {
-            account.LifecycleStage = request.Status;
-            account.UpdatedAtUtc = DateTime.UtcNow;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var result = await _customerService.BulkUpdateLifecycleAsync(request.Ids, request.Status, cancellationToken);
+        if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
 
-    private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, CancellationToken cancellationToken)
+    private static CustomerListItem ToApiItem(CustomerListItemDto dto)
     {
-        if (requestedOwnerId.HasValue && requestedOwnerId.Value != Guid.Empty)
-        {
-            var exists = await _dbContext.Users.AnyAsync(u => u.Id == requestedOwnerId.Value && u.IsActive && !u.IsDeleted, cancellationToken);
-            if (exists)
-            {
-                return requestedOwnerId.Value;
-            }
-        }
-
-        var fallbackUserId = await _dbContext.Users
-            .Where(u => u.IsActive && !u.IsDeleted)
-            .OrderBy(u => u.CreatedAtUtc)
-            .Select(u => u.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return fallbackUserId == Guid.Empty ? Guid.NewGuid() : fallbackUserId;
+        return new CustomerListItem(
+            dto.Id,
+            dto.Name,
+            dto.DisplayName,
+            dto.Email,
+            dto.Phone,
+            dto.Status,
+            dto.OwnerId,
+            dto.OwnerName,
+            dto.CreatedAtUtc);
     }
 
-    private async Task<Guid> ResolveOwnerIdFromEmailAsync(string? ownerEmail, CancellationToken cancellationToken)
+    private static AppCustomerUpsertRequest MapUpsertRequest(ApiUpsertCustomerRequest request)
     {
-        if (!string.IsNullOrWhiteSpace(ownerEmail))
-        {
-            var ownerId = await _dbContext.Users
-                .Where(u => u.Email == ownerEmail && u.IsActive && !u.IsDeleted)
-                .Select(u => u.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (ownerId != Guid.Empty)
-            {
-                return ownerId;
-            }
-        }
-
-        return await ResolveOwnerIdAsync(null, cancellationToken);
+        return new AppCustomerUpsertRequest(
+            request.Name,
+            request.AccountNumber,
+            request.Industry,
+            request.Website,
+            request.Phone,
+            request.LifecycleStage,
+            request.OwnerId,
+            request.Territory,
+            request.Description);
     }
 
-    private Guid GetUserId()
+    private ActorContext GetActor()
     {
         var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return Guid.TryParse(id, out var parsed) ? parsed : Guid.Empty;
+        var name = User.FindFirstValue(ClaimTypes.Name);
+        var parsed = Guid.TryParse(id, out var value) ? value : (Guid?)null;
+        return new ActorContext(parsed, name);
     }
 }
