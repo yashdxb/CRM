@@ -13,6 +13,7 @@ export interface SaveCustomerRequest {
   lifecycleStage?: CustomerStatus;
   description?: string;
   ownerId?: string;
+  parentAccountId?: string;
 }
 
 @Injectable({ providedIn: 'root' })

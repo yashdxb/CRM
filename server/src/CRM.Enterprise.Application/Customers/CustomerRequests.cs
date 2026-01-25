@@ -14,5 +14,6 @@ public sealed record CustomerUpsertRequest(
     string? Phone,
     string? LifecycleStage,
     Guid? OwnerId,
+    Guid? ParentAccountId,
     string? Territory,
     string? Description);

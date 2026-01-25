@@ -71,6 +71,20 @@
                     styleClass="w-full"
                   ></p-select>
                 </div>
+                
+                <div class="field">
+                  <label for="parentAccountId">Parent account</label>
+                  <p-select
+                    id="parentAccountId"
+                    [options]="parentAccountOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    name="parentAccountId"
+                    [(ngModel)]="form.parentAccountId"
+                    placeholder="Select parent account"
+                    styleClass="w-full"
+                  ></p-select>
+                </div>
 
                 <div class="field">
                   <label for="customerIndustry">Industry</label>

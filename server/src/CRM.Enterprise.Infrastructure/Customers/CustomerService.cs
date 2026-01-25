@@ -22,6 +22,7 @@ public sealed class CustomerService : ICustomerService
 
         var query = _dbContext.Accounts
             .Include(a => a.Contacts)
+            .Include(a => a.ParentAccount)
             .AsNoTracking()
             .Where(a => !a.IsDeleted);
 
@@ -53,6 +54,8 @@ public sealed class CustomerService : ICustomerService
                 a.Phone,
                 Status = a.LifecycleStage ?? "Customer",
                 a.OwnerId,
+                a.ParentAccountId,
+                ParentAccountName = a.ParentAccount != null ? a.ParentAccount.Name : null,
                 a.CreatedAtUtc
             })
             .ToListAsync(cancellationToken);
@@ -66,7 +69,18 @@ public sealed class CustomerService : ICustomerService
         var result = items.Select(i =>
         {
             var ownerName = owners.FirstOrDefault(o => o.Id == i.OwnerId)?.FullName ?? "Unassigned";
-            return new CustomerListItemDto(i.Id, i.Name, i.Name, i.Email, i.Phone, i.Status, i.OwnerId, ownerName, i.CreatedAtUtc);
+            return new CustomerListItemDto(
+                i.Id,
+                i.Name,
+                i.Name,
+                i.Email,
+                i.Phone,
+                i.Status,
+                i.OwnerId,
+                ownerName,
+                i.ParentAccountId,
+                i.ParentAccountName,
+                i.CreatedAtUtc);
         }).ToList();
 
         return new CustomerSearchResultDto(result, total);
@@ -76,6 +90,7 @@ public sealed class CustomerService : ICustomerService
     {
         var account = await _dbContext.Accounts
             .Include(a => a.Contacts)
+            .Include(a => a.ParentAccount)
             .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
 
         if (account is null)
@@ -100,12 +115,27 @@ public sealed class CustomerService : ICustomerService
             account.LifecycleStage ?? "Customer",
             account.OwnerId,
             ownerName,
+            account.ParentAccountId,
+            account.ParentAccount?.Name,
             account.CreatedAtUtc);
     }
 
     public async Task<CustomerOperationResult<CustomerListItemDto>> CreateAsync(CustomerUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
         var ownerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
+        if (!await OwnerExistsAsync(ownerId, cancellationToken))
+        {
+            return CustomerOperationResult<CustomerListItemDto>.Fail("Owner is required for accounts.");
+        }
+
+        if (request.ParentAccountId.HasValue && request.ParentAccountId.Value != Guid.Empty)
+        {
+            var parentError = await ValidateParentAccountAsync(null, request.ParentAccountId.Value, cancellationToken);
+            if (parentError is not null)
+            {
+                return CustomerOperationResult<CustomerListItemDto>.Fail(parentError);
+            }
+        }
 
         var account = new Account
         {
@@ -116,6 +146,7 @@ public sealed class CustomerService : ICustomerService
             Phone = request.Phone,
             LifecycleStage = request.LifecycleStage,
             OwnerId = ownerId,
+            ParentAccountId = request.ParentAccountId,
             Territory = request.Territory,
             Description = request.Description,
             CreatedAtUtc = DateTime.UtcNow
@@ -138,6 +169,10 @@ public sealed class CustomerService : ICustomerService
             account.LifecycleStage ?? "Customer",
             account.OwnerId,
             ownerName,
+            account.ParentAccountId,
+            account.ParentAccountId.HasValue
+                ? await _dbContext.Accounts.Where(a => a.Id == account.ParentAccountId.Value).Select(a => a.Name).FirstOrDefaultAsync(cancellationToken)
+                : null,
             account.CreatedAtUtc);
 
         return CustomerOperationResult<CustomerListItemDto>.Ok(dto);
@@ -151,13 +186,29 @@ public sealed class CustomerService : ICustomerService
             return CustomerOperationResult<bool>.NotFoundResult();
         }
 
+        var ownerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
+        if (!await OwnerExistsAsync(ownerId, cancellationToken))
+        {
+            return CustomerOperationResult<bool>.Fail("Owner is required for accounts.");
+        }
+
+        if (request.ParentAccountId.HasValue && request.ParentAccountId.Value != Guid.Empty)
+        {
+            var parentError = await ValidateParentAccountAsync(id, request.ParentAccountId.Value, cancellationToken);
+            if (parentError is not null)
+            {
+                return CustomerOperationResult<bool>.Fail(parentError);
+            }
+        }
+
         account.Name = request.Name;
         account.AccountNumber = request.AccountNumber;
         account.Industry = request.Industry;
         account.Website = request.Website;
         account.Phone = request.Phone;
         account.LifecycleStage = request.LifecycleStage;
-        account.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
+        account.OwnerId = ownerId;
+        account.ParentAccountId = request.ParentAccountId;
         account.Territory = request.Territory;
         account.Description = request.Description;
         account.UpdatedAtUtc = DateTime.UtcNow;
@@ -270,5 +321,66 @@ public sealed class CustomerService : ICustomerService
             .FirstOrDefaultAsync(cancellationToken);
 
         return fallbackUserId == Guid.Empty ? Guid.NewGuid() : fallbackUserId;
+    }
+
+    private async Task<bool> OwnerExistsAsync(Guid ownerId, CancellationToken cancellationToken)
+    {
+        if (ownerId == Guid.Empty)
+        {
+            return false;
+        }
+
+        return await _dbContext.Users.AnyAsync(
+            u => u.Id == ownerId && u.IsActive && !u.IsDeleted,
+            cancellationToken);
+    }
+
+    private async Task<string?> ValidateParentAccountAsync(Guid? accountId, Guid parentAccountId, CancellationToken cancellationToken)
+    {
+        if (parentAccountId == Guid.Empty)
+        {
+            return null;
+        }
+
+        if (accountId.HasValue && accountId.Value == parentAccountId)
+        {
+            return "Parent account cannot be the same as the account.";
+        }
+
+        var parentExists = await _dbContext.Accounts
+            .AnyAsync(a => a.Id == parentAccountId && !a.IsDeleted, cancellationToken);
+        if (!parentExists)
+        {
+            return "Parent account was not found.";
+        }
+
+        if (!accountId.HasValue)
+        {
+            return null;
+        }
+
+        var visited = new HashSet<Guid> { accountId.Value };
+        var current = parentAccountId;
+        while (current != Guid.Empty)
+        {
+            if (!visited.Add(current))
+            {
+                return "Parent account selection creates a cycle.";
+            }
+
+            var next = await _dbContext.Accounts
+                .Where(a => a.Id == current && !a.IsDeleted)
+                .Select(a => a.ParentAccountId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (!next.HasValue)
+            {
+                break;
+            }
+
+            current = next.Value;
+        }
+
+        return null;
     }
 }

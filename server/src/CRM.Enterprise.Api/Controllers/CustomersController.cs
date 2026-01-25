@@ -190,6 +190,8 @@ public class CustomersController : ControllerBase
             dto.Status,
             dto.OwnerId,
             dto.OwnerName,
+            dto.ParentAccountId,
+            dto.ParentAccountName,
             dto.CreatedAtUtc);
     }
 
@@ -203,6 +205,7 @@ public class CustomersController : ControllerBase
             request.Phone,
             request.LifecycleStage,
             request.OwnerId,
+            request.ParentAccountId,
             request.Territory,
             request.Description);
     }

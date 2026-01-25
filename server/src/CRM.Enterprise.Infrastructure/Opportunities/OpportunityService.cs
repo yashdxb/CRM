@@ -26,6 +26,20 @@ public sealed class OpportunityService : IOpportunityService
         "Proposal",
         "Negotiation"
     };
+    private static readonly HashSet<string> StagesRequiringBuyingRole = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Proposal",
+        "Negotiation",
+        "Commit"
+    };
+    private static readonly HashSet<string> BuyingRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Decision Maker",
+        "Champion",
+        "Influencer",
+        "Procurement",
+        "Technical Evaluator"
+    };
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditEventService _auditEvents;
@@ -584,6 +598,39 @@ public sealed class OpportunityService : IOpportunityService
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    private async Task<bool> HasBuyingRoleAsync(Opportunity opportunity, CancellationToken cancellationToken)
+    {
+        if (opportunity.PrimaryContactId.HasValue)
+        {
+            var primaryHasRole = await _dbContext.Contacts
+                .AsNoTracking()
+                .AnyAsync(
+                    c => c.Id == opportunity.PrimaryContactId.Value
+                         && !c.IsDeleted
+                         && c.BuyingRole != null
+                         && BuyingRoles.Contains(c.BuyingRole),
+                    cancellationToken);
+            if (primaryHasRole)
+            {
+                return true;
+            }
+        }
+
+        if (opportunity.AccountId == Guid.Empty)
+        {
+            return false;
+        }
+
+        return await _dbContext.Contacts
+            .AsNoTracking()
+            .AnyAsync(
+                c => c.AccountId == opportunity.AccountId
+                     && !c.IsDeleted
+                     && c.BuyingRole != null
+                     && BuyingRoles.Contains(c.BuyingRole),
+                cancellationToken);
+    }
+
     private async Task<string?> ValidateStageChangeAsync(
         Opportunity opportunity,
         string nextStageName,
@@ -619,6 +666,15 @@ public sealed class OpportunityService : IOpportunityService
         if (StagesRequiringCloseDate.Contains(nextStageName) && !expectedCloseDate.HasValue)
         {
             return $"Expected close date is required before moving to {nextStageName}.";
+        }
+
+        if (StagesRequiringBuyingRole.Contains(nextStageName))
+        {
+            var hasBuyingRole = await HasBuyingRoleAsync(opportunity, cancellationToken);
+            if (!hasBuyingRole)
+            {
+                return "Buying group role is required before moving to late-stage opportunities.";
+            }
         }
 
         if (!nextStageName.StartsWith("Closed", StringComparison.OrdinalIgnoreCase))

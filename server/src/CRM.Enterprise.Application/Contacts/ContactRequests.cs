@@ -13,6 +13,7 @@ public sealed record ContactUpsertRequest(
     string? Phone,
     string? Mobile,
     string? JobTitle,
+    string? BuyingRole,
     Guid? AccountId,
     Guid? OwnerId,
     string? LinkedInProfile,

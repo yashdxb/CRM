@@ -8,6 +8,14 @@ namespace CRM.Enterprise.Infrastructure.Contacts;
 
 public sealed class ContactService : IContactService
 {
+    private static readonly HashSet<string> AllowedBuyingRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Decision Maker",
+        "Champion",
+        "Influencer",
+        "Procurement",
+        "Technical Evaluator"
+    };
     private readonly CrmDbContext _dbContext;
 
     public ContactService(CrmDbContext dbContext)
@@ -54,6 +62,7 @@ public sealed class ContactService : IContactService
                 c.Phone,
                 c.Mobile,
                 c.JobTitle,
+                c.BuyingRole,
                 c.AccountId,
                 AccountName = c.Account != null ? c.Account.Name : null,
                 c.OwnerId,
@@ -77,6 +86,7 @@ public sealed class ContactService : IContactService
             c.Phone,
             c.Mobile,
             c.JobTitle,
+            c.BuyingRole,
             c.AccountId,
             c.AccountName,
             c.OwnerId,
@@ -113,6 +123,7 @@ public sealed class ContactService : IContactService
             contact.Phone,
             contact.Mobile,
             contact.JobTitle,
+            contact.BuyingRole,
             contact.AccountId,
             contact.Account?.Name,
             contact.OwnerId,
@@ -126,6 +137,12 @@ public sealed class ContactService : IContactService
 
     public async Task<ContactOperationResult<ContactDetailDto>> CreateAsync(ContactUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
+        var roleError = ValidateBuyingRole(request.BuyingRole);
+        if (roleError is not null)
+        {
+            return ContactOperationResult<ContactDetailDto>.Fail(roleError);
+        }
+
         var contact = new Contact
         {
             FirstName = request.FirstName,
@@ -134,6 +151,7 @@ public sealed class ContactService : IContactService
             Phone = request.Phone,
             Mobile = request.Mobile,
             JobTitle = request.JobTitle,
+            BuyingRole = NormalizeBuyingRole(request.BuyingRole),
             AccountId = request.AccountId,
             OwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken),
             LinkedInProfile = request.LinkedInProfile,
@@ -162,6 +180,7 @@ public sealed class ContactService : IContactService
             contact.Phone,
             contact.Mobile,
             contact.JobTitle,
+            contact.BuyingRole,
             contact.AccountId,
             accountName,
             contact.OwnerId,
@@ -183,12 +202,19 @@ public sealed class ContactService : IContactService
             return ContactOperationResult<bool>.NotFoundResult();
         }
 
+        var roleError = ValidateBuyingRole(request.BuyingRole);
+        if (roleError is not null)
+        {
+            return ContactOperationResult<bool>.Fail(roleError);
+        }
+
         contact.FirstName = request.FirstName;
         contact.LastName = request.LastName;
         contact.Email = request.Email;
         contact.Phone = request.Phone;
         contact.Mobile = request.Mobile;
         contact.JobTitle = request.JobTitle;
+        contact.BuyingRole = NormalizeBuyingRole(request.BuyingRole);
         contact.AccountId = request.AccountId;
         contact.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
         contact.LinkedInProfile = request.LinkedInProfile;
@@ -305,5 +331,27 @@ public sealed class ContactService : IContactService
             .FirstOrDefaultAsync(cancellationToken);
 
         return fallback == Guid.Empty ? Guid.NewGuid() : fallback;
+    }
+
+    private static string? NormalizeBuyingRole(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return AllowedBuyingRoles.FirstOrDefault(role => role.Equals(value.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string? ValidateBuyingRole(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return AllowedBuyingRoles.Any(role => role.Equals(value.Trim(), StringComparison.OrdinalIgnoreCase))
+            ? null
+            : "Buying role is invalid.";
     }
 }

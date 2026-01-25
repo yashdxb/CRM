@@ -5,6 +5,7 @@ export interface Contact {
   phone?: string;
   mobile?: string;
   jobTitle?: string;
+  buyingRole?: string;
   accountId?: string;
   accountName?: string;
   ownerId?: string;
@@ -33,6 +34,7 @@ export interface SaveContactRequest {
   phone?: string;
   mobile?: string;
   jobTitle?: string;
+  buyingRole?: string;
   accountId?: string;
   ownerId?: string;
   lifecycleStage?: string;

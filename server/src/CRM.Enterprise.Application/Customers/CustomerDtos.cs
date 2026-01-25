@@ -9,6 +9,8 @@ public sealed record CustomerListItemDto(
     string Status,
     Guid OwnerId,
     string OwnerName,
+    Guid? ParentAccountId,
+    string? ParentAccountName,
     DateTime CreatedAtUtc);
 
 public sealed record CustomerSearchResultDto(IReadOnlyList<CustomerListItemDto> Items, int Total);

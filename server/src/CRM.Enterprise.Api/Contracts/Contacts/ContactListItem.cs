@@ -9,6 +9,7 @@ public record ContactListItem(
     string? Phone,
     string? Mobile,
     string? JobTitle,
+    string? BuyingRole,
     Guid? AccountId,
     string? AccountName,
     Guid OwnerId,

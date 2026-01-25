@@ -74,6 +74,7 @@ export class CustomerFormPage implements OnInit {
   protected readonly attachments = signal<AttachmentItem[]>([]);
   protected readonly timelineLoading = signal(false);
   protected readonly noteSaving = signal(false);
+  protected parentAccountOptions: { label: string; value: string }[] = [];
 
   protected noteText = '';
 
@@ -86,7 +87,8 @@ export class CustomerFormPage implements OnInit {
     description: '',
     email: '',
     company: '',
-    address: ''
+    address: '',
+    parentAccountId: undefined
   };
 
   constructor(
@@ -102,6 +104,13 @@ export class CustomerFormPage implements OnInit {
       this.loadCustomer();
       this.loadDetailData();
     }
+
+    this.customerData.search({ page: 1, pageSize: 200 }).subscribe((res) => {
+      const items = res.items
+        .filter((item) => item.id !== this.customerId)
+        .map((item) => ({ label: item.name, value: item.id }));
+      this.parentAccountOptions = items;
+    });
   }
 
   private loadCustomer() {
@@ -118,7 +127,8 @@ export class CustomerFormPage implements OnInit {
           description: customer.notes?.join(', ') || '',
           email: customer.email || '',
           company: customer.company || '',
-          address: customer.address || ''
+          address: customer.address || '',
+          parentAccountId: customer.parentAccountId
         };
         this.loading.set(false);
       },
@@ -139,7 +149,8 @@ export class CustomerFormPage implements OnInit {
       phone: this.form.phone,
       website: this.form.website,
       industry: this.form.industry,
-      description: this.form.description
+      description: this.form.description,
+      parentAccountId: this.form.parentAccountId
     };
 
     if (this.customerId) {

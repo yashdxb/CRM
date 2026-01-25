@@ -57,6 +57,13 @@ export class ContactFormPage implements OnInit {
     { label: 'Prospect', value: 'Prospect' },
     { label: 'Customer', value: 'Customer' }
   ];
+  protected readonly buyingRoleOptions: Option<string>[] = [
+    { label: 'Decision Maker', value: 'Decision Maker' },
+    { label: 'Champion', value: 'Champion' },
+    { label: 'Influencer', value: 'Influencer' },
+    { label: 'Procurement', value: 'Procurement' },
+    { label: 'Technical Evaluator', value: 'Technical Evaluator' }
+  ];
 
   protected accountOptions: Option<string>[] = [];
   protected readonly accounts = signal<Customer[]>([]);
@@ -148,6 +155,7 @@ export class ContactFormPage implements OnInit {
       phone: contact.phone,
       mobile: contact.mobile,
       jobTitle: contact.jobTitle,
+      buyingRole: contact.buyingRole,
       accountId: contact.accountId,
       ownerId: undefined,
       lifecycleStage: contact.lifecycleStage ?? 'Lead',
@@ -165,6 +173,7 @@ export class ContactFormPage implements OnInit {
       phone: '',
       mobile: '',
       jobTitle: '',
+      buyingRole: undefined,
       accountId: undefined,
       ownerId: undefined,
       lifecycleStage: 'Lead',

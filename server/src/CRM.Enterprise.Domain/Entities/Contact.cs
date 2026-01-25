@@ -10,6 +10,7 @@ public class Contact : AuditableEntity
     public string? Phone { get; set; }
     public string? Mobile { get; set; }
     public string? JobTitle { get; set; }
+    public string? BuyingRole { get; set; }
     public Guid? AccountId { get; set; }
     public Guid OwnerId { get; set; }
     public string? LinkedInProfile { get; set; }

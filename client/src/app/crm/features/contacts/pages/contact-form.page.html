@@ -66,6 +66,18 @@
                 <input pInputText name="jobTitle" [(ngModel)]="form.jobTitle" placeholder="Role or title" class="w-full" />
               </div>
               <div class="field">
+                <label>Buying role</label>
+                <p-select
+                  [options]="buyingRoleOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="buyingRole"
+                  [(ngModel)]="form.buyingRole"
+                  placeholder="Select buying role"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
                 <label>Phone</label>
                 <input pInputText name="phone" [(ngModel)]="form.phone" placeholder="+1 555-0101" class="w-full" />
               </div>

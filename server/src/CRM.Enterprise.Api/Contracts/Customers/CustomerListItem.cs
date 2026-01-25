@@ -11,4 +11,6 @@ public record CustomerListItem(
     string Status,
     Guid OwnerId,
     string Owner,
+    Guid? ParentAccountId,
+    string? ParentAccountName,
     DateTime CreatedAt);

@@ -40,6 +40,8 @@ public class DashboardController : ControllerBase
                 rc.Status,
                 rc.OwnerId,
                 rc.OwnerName,
+                null,
+                null,
                 rc.CreatedAtUtc))
             .ToList();
 

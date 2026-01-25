@@ -11,6 +11,7 @@ public class UpsertCustomerRequest
     public string? Phone { get; set; }
     public string? LifecycleStage { get; set; }
     public Guid? OwnerId { get; set; }
+    public Guid? ParentAccountId { get; set; }
     public string? Territory { get; set; }
     public string? Description { get; set; }
 }

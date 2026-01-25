@@ -10,6 +10,14 @@ namespace CRM.Enterprise.Infrastructure.Contacts;
 
 public sealed class ContactImportService : IContactImportService
 {
+    private static readonly HashSet<string> AllowedBuyingRoles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Decision Maker",
+        "Champion",
+        "Influencer",
+        "Procurement",
+        "Technical Evaluator"
+    };
     private readonly CrmDbContext _dbContext;
     private readonly IWebHostEnvironment _environment;
     private readonly ITenantProvider _tenantProvider;
@@ -82,6 +90,7 @@ public sealed class ContactImportService : IContactImportService
                 Phone = ContactCsvImportHelper.ReadValue(row, "phone"),
                 Mobile = ContactCsvImportHelper.ReadValue(row, "mobile"),
                 JobTitle = ContactCsvImportHelper.ReadValue(row, "jobtitle", "title"),
+                BuyingRole = NormalizeBuyingRole(ContactCsvImportHelper.ReadValue(row, "buyingrole", "buying_role", "role")),
                 AccountId = accountId,
                 OwnerId = ownerId,
                 LinkedInProfile = ContactCsvImportHelper.ReadValue(row, "linkedin", "linkedinprofile"),
@@ -186,5 +195,15 @@ public sealed class ContactImportService : IContactImportService
             .FirstOrDefaultAsync(cancellationToken);
 
         return fallback == Guid.Empty ? Guid.NewGuid() : fallback;
+    }
+
+    private static string? NormalizeBuyingRole(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return AllowedBuyingRoles.FirstOrDefault(role => role.Equals(value.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 }

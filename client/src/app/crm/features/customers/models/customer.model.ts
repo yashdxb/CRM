@@ -10,6 +10,8 @@ export interface Customer {
   status: CustomerStatus;
   ownerId?: string;
   owner: string;
+  parentAccountId?: string;
+  parentAccountName?: string;
   createdAt: string;
   notes?: string[];
 }
