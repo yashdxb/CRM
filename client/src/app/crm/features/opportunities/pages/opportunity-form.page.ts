@@ -75,6 +75,8 @@ export class OpportunityFormPage implements OnInit {
   protected legalChecklist: OpportunityReviewChecklistItem[] = [];
   protected newSecurityItem = '';
   protected newLegalItem = '';
+  protected checklistSavingIds = new Set<string>();
+  protected checklistSavedIds = new Set<string>();
   private editingId: string | null = null;
   private pendingOpportunity: Opportunity | null = null;
   private pendingAccountName: string | null = null;
@@ -231,13 +233,26 @@ export class OpportunityFormPage implements OnInit {
   }
 
   protected saveChecklistItem(item: OpportunityReviewChecklistItem) {
+    if (this.checklistSavingIds.has(item.id)) {
+      return;
+    }
+    this.checklistSavingIds.add(item.id);
     this.checklistService
       .update(item.id, {
         title: item.title,
         status: item.status,
         notes: item.notes ?? null
       })
-      .subscribe();
+      .subscribe({
+        next: () => {
+          this.checklistSavingIds.delete(item.id);
+          this.checklistSavedIds.add(item.id);
+          window.setTimeout(() => this.checklistSavedIds.delete(item.id), 1200);
+        },
+        error: () => {
+          this.checklistSavingIds.delete(item.id);
+        }
+      });
   }
 
   protected deleteChecklistItem(item: OpportunityReviewChecklistItem) {
@@ -248,6 +263,14 @@ export class OpportunityFormPage implements OnInit {
         this.legalChecklist = this.legalChecklist.filter((i) => i.id !== item.id);
       }
     });
+  }
+
+  protected isChecklistSaving(item: OpportunityReviewChecklistItem): boolean {
+    return this.checklistSavingIds.has(item.id);
+  }
+
+  protected isChecklistSaved(item: OpportunityReviewChecklistItem): boolean {
+    return this.checklistSavedIds.has(item.id);
   }
 
   private applyOpportunity(opp: Opportunity) {

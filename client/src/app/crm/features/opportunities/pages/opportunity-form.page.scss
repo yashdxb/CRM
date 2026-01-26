@@ -208,6 +208,16 @@
   border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
+.checklist-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(71, 85, 105, 0.8);
+}
+
+.checklist-status.saved {
+  color: #16a34a;
+}
+
 .helper-text {
   margin: 0;
   font-size: 0.85rem;

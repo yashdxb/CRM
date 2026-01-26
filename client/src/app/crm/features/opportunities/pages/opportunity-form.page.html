@@ -279,7 +279,13 @@
                 </div>
                 <div class="checklist-list" *ngIf="securityChecklist.length; else emptySecurityChecklist">
                   <div class="checklist-item" *ngFor="let item of securityChecklist">
-                    <input pInputText [(ngModel)]="item.title" name="securityTitle{{item.id}}" class="w-full" />
+                    <input
+                      pInputText
+                      [(ngModel)]="item.title"
+                      name="securityTitle{{item.id}}"
+                      (blur)="saveChecklistItem(item)"
+                      class="w-full"
+                    />
                     <p-select
                       appendTo="body"
                       [options]="reviewStatusOptions"
@@ -287,6 +293,7 @@
                       optionValue="value"
                       [(ngModel)]="item.status"
                       name="securityStatus{{item.id}}"
+                      (onChange)="saveChecklistItem(item)"
                       styleClass="w-full"
                     ></p-select>
                     <input
@@ -294,11 +301,15 @@
                       [(ngModel)]="item.notes"
                       name="securityNotes{{item.id}}"
                       placeholder="Notes (optional)"
+                      (blur)="saveChecklistItem(item)"
                       class="w-full"
                     />
-                    <button pButton type="button" class="btn-glass btn-sm" (click)="saveChecklistItem(item)">
-                      <i class="pi pi-save"></i>
-                    </button>
+                    <span class="checklist-status" *ngIf="isChecklistSaving(item)">
+                      Saving…
+                    </span>
+                    <span class="checklist-status saved" *ngIf="isChecklistSaved(item)">
+                      Saved
+                    </span>
                     <button pButton type="button" class="btn-glass btn-sm" (click)="deleteChecklistItem(item)">
                       <i class="pi pi-trash"></i>
                     </button>
@@ -328,7 +339,13 @@
                 </div>
                 <div class="checklist-list" *ngIf="legalChecklist.length; else emptyLegalChecklist">
                   <div class="checklist-item" *ngFor="let item of legalChecklist">
-                    <input pInputText [(ngModel)]="item.title" name="legalTitle{{item.id}}" class="w-full" />
+                    <input
+                      pInputText
+                      [(ngModel)]="item.title"
+                      name="legalTitle{{item.id}}"
+                      (blur)="saveChecklistItem(item)"
+                      class="w-full"
+                    />
                     <p-select
                       appendTo="body"
                       [options]="reviewStatusOptions"
@@ -336,6 +353,7 @@
                       optionValue="value"
                       [(ngModel)]="item.status"
                       name="legalStatus{{item.id}}"
+                      (onChange)="saveChecklistItem(item)"
                       styleClass="w-full"
                     ></p-select>
                     <input
@@ -343,11 +361,15 @@
                       [(ngModel)]="item.notes"
                       name="legalNotes{{item.id}}"
                       placeholder="Notes (optional)"
+                      (blur)="saveChecklistItem(item)"
                       class="w-full"
                     />
-                    <button pButton type="button" class="btn-glass btn-sm" (click)="saveChecklistItem(item)">
-                      <i class="pi pi-save"></i>
-                    </button>
+                    <span class="checklist-status" *ngIf="isChecklistSaving(item)">
+                      Saving…
+                    </span>
+                    <span class="checklist-status saved" *ngIf="isChecklistSaved(item)">
+                      Saved
+                    </span>
                     <button pButton type="button" class="btn-glass btn-sm" (click)="deleteChecklistItem(item)">
                       <i class="pi pi-trash"></i>
                     </button>
