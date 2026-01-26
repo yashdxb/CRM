@@ -156,6 +156,13 @@ export const routes: Routes = [
           import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
       },
       {
+        path: 'opportunities/approvals',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Approvals', icon: 'pi-check-circle' },
+        loadComponent: () =>
+          import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+      },
+      {
         path: 'opportunities/:id/edit',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Edit Opportunity', icon: 'pi-pencil' },

@@ -1,0 +1,128 @@
+<div class="page-container approvals-page">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Approval Queue</span>
+      </div>
+      <h1 class="hero-title">
+        <span class="title-gradient">Opportunity</span>
+        <span class="title-light">Approvals</span>
+      </h1>
+      <p class="hero-description">
+        Review pending approvals, handle discounts, and keep deals moving.
+      </p>
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-secondary" (click)="load()">
+          <i class="pi pi-refresh"></i>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="filters">
+    <div class="filter-field">
+      <label>Status</label>
+      <p-select
+        appendTo="body"
+        [options]="statusOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="statusFilter"
+        (onChange)="load()"
+        styleClass="w-full"
+      ></p-select>
+    </div>
+    <div class="filter-field">
+      <label>Purpose</label>
+      <p-select
+        appendTo="body"
+        [options]="purposeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="purposeFilter"
+        (onChange)="load()"
+        styleClass="w-full"
+      ></p-select>
+    </div>
+  </section>
+
+  <section class="table-container glass-card">
+    <p-table
+      [value]="approvals()"
+      [loading]="loading()"
+      responsiveLayout="scroll"
+      [tableStyle]="{ 'min-width': '72rem' }">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Opportunity</th>
+          <th>Account</th>
+          <th>Requested By</th>
+          <th>Purpose</th>
+          <th>Status</th>
+          <th>Amount</th>
+          <th>Requested</th>
+          <th style="width: 240px">Action</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-item>
+        <tr>
+          <td>
+            <button class="link" type="button" (click)="openOpportunity(item)">
+              {{ item.opportunityName }}
+            </button>
+          </td>
+          <td>{{ item.accountName }}</td>
+          <td>{{ item.requestedByName || '—' }}</td>
+          <td>{{ item.purpose }}</td>
+          <td>
+            <p-tag [value]="item.status" [severity]="statusSeverity(item.status)"></p-tag>
+          </td>
+          <td>{{ item.amount | number:'1.0-2' }} {{ item.currency }}</td>
+          <td>{{ item.requestedOn | date:'medium' }}</td>
+          <td class="row-actions">
+            <input
+              pInputText
+              class="notes"
+              placeholder="Notes (optional)"
+              [disabled]="!canManage() || item.status !== 'Pending' || isActioning(item.id)"
+              [(ngModel)]="noteInputs[item.id]"
+            />
+            <button
+              pButton
+              type="button"
+              class="btn btn-primary btn-sm"
+              [disabled]="!canManage() || item.status !== 'Pending' || isActioning(item.id)"
+              (click)="decide(item, true)">
+              Approve
+            </button>
+            <button
+              pButton
+              type="button"
+              class="btn btn-ghost btn-sm"
+              [disabled]="!canManage() || item.status !== 'Pending' || isActioning(item.id)"
+              (click)="decide(item, false)">
+              Reject
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">No approvals match the selected filters.</div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+</div>

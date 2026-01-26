@@ -70,3 +70,21 @@ public sealed record OpportunityApprovalDto(
     string? Notes,
     decimal Amount,
     string Currency);
+
+public sealed record OpportunityApprovalInboxItemDto(
+    Guid Id,
+    Guid OpportunityId,
+    string OpportunityName,
+    string AccountName,
+    string Status,
+    string Purpose,
+    string ApproverRole,
+    Guid? ApproverUserId,
+    string? ApproverName,
+    Guid? RequestedByUserId,
+    string? RequestedByName,
+    DateTime RequestedOn,
+    DateTime? DecisionOn,
+    string? Notes,
+    decimal Amount,
+    string Currency);

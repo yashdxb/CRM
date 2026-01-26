@@ -31,6 +31,16 @@ public class OpportunityApprovalsController : ControllerBase
         return Ok(items.Select(ToApiItem));
     }
 
+    [HttpGet("api/opportunity-approvals")]
+    public async Task<ActionResult<IEnumerable<OpportunityApprovalInboxItem>>> GetInbox(
+        [FromQuery] string? status,
+        [FromQuery] string? purpose,
+        CancellationToken cancellationToken)
+    {
+        var items = await _approvalService.GetInboxAsync(status, purpose, cancellationToken);
+        return Ok(items.Select(ToInboxItem));
+    }
+
     [HttpPost("api/opportunities/{id:guid}/approvals")]
     [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<ActionResult<OpportunityApprovalItem>> RequestApproval(
@@ -91,6 +101,27 @@ public class OpportunityApprovalsController : ControllerBase
         return new OpportunityApprovalItem(
             dto.Id,
             dto.OpportunityId,
+            dto.Status,
+            dto.Purpose,
+            dto.ApproverRole,
+            dto.ApproverUserId,
+            dto.ApproverName,
+            dto.RequestedByUserId,
+            dto.RequestedByName,
+            dto.RequestedOn,
+            dto.DecisionOn,
+            dto.Notes,
+            dto.Amount,
+            dto.Currency);
+    }
+
+    private static OpportunityApprovalInboxItem ToInboxItem(OpportunityApprovalInboxItemDto dto)
+    {
+        return new OpportunityApprovalInboxItem(
+            dto.Id,
+            dto.OpportunityId,
+            dto.OpportunityName,
+            dto.AccountName,
             dto.Status,
             dto.Purpose,
             dto.ApproverRole,

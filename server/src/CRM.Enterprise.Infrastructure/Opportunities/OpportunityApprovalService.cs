@@ -75,6 +75,75 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             a.Currency)).ToList();
     }
 
+    public async Task<IReadOnlyList<OpportunityApprovalInboxItemDto>> GetInboxAsync(
+        string? status = null,
+        string? purpose = null,
+        CancellationToken cancellationToken = default)
+    {
+        var approvalsQuery = _dbContext.OpportunityApprovals
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted);
+
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            approvalsQuery = approvalsQuery.Where(a => a.Status == status);
+        }
+
+        if (!string.IsNullOrWhiteSpace(purpose))
+        {
+            approvalsQuery = approvalsQuery.Where(a => a.Purpose == purpose);
+        }
+
+        var approvals = await approvalsQuery
+            .Join(
+                _dbContext.Opportunities.AsNoTracking().Where(o => !o.IsDeleted),
+                approval => approval.OpportunityId,
+                opportunity => opportunity.Id,
+                (approval, opportunity) => new { approval, opportunity })
+            .Join(
+                _dbContext.Accounts.AsNoTracking(),
+                item => item.opportunity.AccountId,
+                account => account.Id,
+                (item, account) => new
+                {
+                    item.approval,
+                    item.opportunity,
+                    AccountName = account.Name
+                })
+            .OrderByDescending(item => item.approval.RequestedOn)
+            .ToListAsync(cancellationToken);
+
+        var userIds = approvals
+            .SelectMany(a => new[] { a.approval.RequestedByUserId, a.approval.ApproverUserId })
+            .Where(id => id.HasValue && id.Value != Guid.Empty)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        var users = await _dbContext.Users
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+
+        return approvals.Select(item => new OpportunityApprovalInboxItemDto(
+            item.approval.Id,
+            item.approval.OpportunityId,
+            item.opportunity.Name,
+            item.AccountName,
+            item.approval.Status,
+            item.approval.Purpose,
+            item.approval.ApproverRole,
+            item.approval.ApproverUserId,
+            item.approval.ApproverUserId.HasValue && users.TryGetValue(item.approval.ApproverUserId.Value, out var approverName) ? approverName : null,
+            item.approval.RequestedByUserId,
+            item.approval.RequestedByUserId.HasValue && users.TryGetValue(item.approval.RequestedByUserId.Value, out var requesterName) ? requesterName : null,
+            item.approval.RequestedOn,
+            item.approval.DecisionOn,
+            item.approval.Notes,
+            item.approval.Amount,
+            item.approval.Currency)).ToList();
+    }
+
     public async Task<OpportunityOperationResult<OpportunityApprovalDto>> RequestAsync(
         Guid opportunityId,
         decimal amount,

@@ -88,3 +88,22 @@ export interface OpportunityApprovalDecisionRequest {
   approved: boolean;
   notes?: string | null;
 }
+
+export interface OpportunityApprovalInboxItem {
+  id: string;
+  opportunityId: string;
+  opportunityName: string;
+  accountName: string;
+  status: OpportunityApprovalStatus;
+  purpose: string;
+  approverRole: string;
+  approverUserId?: string | null;
+  approverName?: string | null;
+  requestedByUserId?: string | null;
+  requestedByName?: string | null;
+  requestedOn: string;
+  decisionOn?: string | null;
+  notes?: string | null;
+  amount: number;
+  currency: string;
+}

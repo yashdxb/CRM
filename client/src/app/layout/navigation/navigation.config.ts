@@ -32,7 +32,8 @@ export const NAV_LINKS: NavLink[] = [
     permission: PERMISSION_KEYS.opportunitiesView,
     children: [
       { label: 'All Opportunities', icon: 'pi-list', path: '/app/opportunities', permission: PERMISSION_KEYS.opportunitiesView },
-      { label: 'Add Opportunity', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage }
+      { label: 'Add Opportunity', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage },
+      { label: 'Approvals', icon: 'pi-check-circle', path: '/app/opportunities/approvals', permission: PERMISSION_KEYS.opportunitiesManage }
     ]
   },
   { 
