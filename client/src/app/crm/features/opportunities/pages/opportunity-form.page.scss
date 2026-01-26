@@ -162,6 +162,64 @@
   }
 }
 
+.review-checklist {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.checklist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+
+  h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: rgba(30, 41, 59, 0.9);
+  }
+}
+
+.checklist-add {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+
+  input {
+    flex: 1;
+  }
+}
+
+.checklist-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.checklist-item {
+  display: grid;
+  grid-template-columns: 2fr 1fr 2fr auto auto;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.helper-text {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(71, 85, 105, 0.75);
+}
+
+@media (max-width: 900px) {
+  .checklist-item {
+    grid-template-columns: 1fr;
+  }
+}
+
 :host ::ng-deep .p-inputtext,
 :host ::ng-deep .p-inputnumber .p-inputtext,
 :host ::ng-deep .p-dropdown,

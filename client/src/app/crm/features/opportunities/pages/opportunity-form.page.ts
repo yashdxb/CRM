@@ -11,9 +11,10 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { map } from 'rxjs';
 
 import { OpportunityDataService, SaveOpportunityRequest } from '../services/opportunity-data.service';
+import { OpportunityReviewChecklistService } from '../services/opportunity-review-checklist.service';
 import { CustomerDataService } from '../../customers/services/customer-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { Opportunity } from '../models/opportunity.model';
+import { Opportunity, OpportunityReviewChecklistItem } from '../models/opportunity.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 
 interface Option<T = string> {
@@ -70,11 +71,16 @@ export class OpportunityFormPage implements OnInit {
   protected form: SaveOpportunityRequest = this.createEmptyForm();
   protected saving = signal(false);
   protected readonly isEditMode = signal(false);
+  protected securityChecklist: OpportunityReviewChecklistItem[] = [];
+  protected legalChecklist: OpportunityReviewChecklistItem[] = [];
+  protected newSecurityItem = '';
+  protected newLegalItem = '';
   private editingId: string | null = null;
   private pendingOpportunity: Opportunity | null = null;
   private pendingAccountName: string | null = null;
 
   private readonly opportunityData = inject(OpportunityDataService);
+  private readonly checklistService = inject(OpportunityReviewChecklistService);
   protected readonly router = inject(Router);
   protected readonly customerData = inject(CustomerDataService);
   private readonly toastService = inject(AppToastService);
@@ -89,9 +95,12 @@ export class OpportunityFormPage implements OnInit {
       this.isEditMode.set(!!id);
       if (id) {
         this.loadOpportunity(id);
+        this.loadChecklists(id);
       } else {
         this.form = this.createEmptyForm();
         this.selectedStage = this.form.stageName ?? 'Prospecting';
+        this.securityChecklist = [];
+        this.legalChecklist = [];
       }
     });
   }
@@ -183,6 +192,60 @@ export class OpportunityFormPage implements OnInit {
       },
       error: () => {
         this.router.navigate(['/app/opportunities']);
+      }
+    });
+  }
+
+  private loadChecklists(opportunityId: string) {
+    this.checklistService.get(opportunityId, 'Security').subscribe({
+      next: (items) => {
+        this.securityChecklist = items;
+        this.cdr.detectChanges();
+      }
+    });
+    this.checklistService.get(opportunityId, 'Legal').subscribe({
+      next: (items) => {
+        this.legalChecklist = items;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  protected addChecklistItem(type: 'Security' | 'Legal') {
+    const title = (type === 'Security' ? this.newSecurityItem : this.newLegalItem).trim();
+    if (!title || !this.editingId) {
+      return;
+    }
+
+    this.checklistService
+      .create(this.editingId, { title, type, status: 'Pending' })
+      .subscribe((item) => {
+        if (type === 'Security') {
+          this.securityChecklist = [...this.securityChecklist, item];
+          this.newSecurityItem = '';
+        } else {
+          this.legalChecklist = [...this.legalChecklist, item];
+          this.newLegalItem = '';
+        }
+      });
+  }
+
+  protected saveChecklistItem(item: OpportunityReviewChecklistItem) {
+    this.checklistService
+      .update(item.id, {
+        title: item.title,
+        status: item.status,
+        notes: item.notes ?? null
+      })
+      .subscribe();
+  }
+
+  protected deleteChecklistItem(item: OpportunityReviewChecklistItem) {
+    this.checklistService.delete(item.id).subscribe(() => {
+      if (item.type === 'Security') {
+        this.securityChecklist = this.securityChecklist.filter((i) => i.id !== item.id);
+      } else {
+        this.legalChecklist = this.legalChecklist.filter((i) => i.id !== item.id);
       }
     });
   }

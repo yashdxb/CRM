@@ -48,3 +48,13 @@ export interface OpportunityStageHistoryItem {
   changedBy?: string | null;
   notes?: string | null;
 }
+
+export interface OpportunityReviewChecklistItem {
+  id: string;
+  opportunityId: string;
+  type: 'Security' | 'Legal';
+  title: string;
+  status: string;
+  notes?: string | null;
+  completedAtUtc?: string | null;
+}

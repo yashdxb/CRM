@@ -107,6 +107,7 @@ public static class DependencyInjection
         services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IOpportunityService, OpportunityService>();
         services.AddScoped<IOpportunityApprovalService, OpportunityApprovalService>();
+        services.AddScoped<IOpportunityReviewChecklistService, OpportunityReviewChecklistService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ICustomerImportService, CustomerImportService>();
         services.AddScoped<IContactService, ContactService>();

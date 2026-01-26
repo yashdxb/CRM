@@ -26,6 +26,7 @@ public class CrmDbContext : DbContext
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityStage> OpportunityStages => Set<OpportunityStage>();
     public DbSet<OpportunityStageHistory> OpportunityStageHistories => Set<OpportunityStageHistory>();
+    public DbSet<OpportunityReviewChecklistItem> OpportunityReviewChecklistItems => Set<OpportunityReviewChecklistItem>();
     public DbSet<OpportunityApproval> OpportunityApprovals => Set<OpportunityApproval>();
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
@@ -108,6 +109,7 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<OpportunityStage>().ToTable("OpportunityStages", CrmSchema);
         modelBuilder.Entity<OpportunityStageHistory>().ToTable("OpportunityStageHistories", CrmSchema);
         modelBuilder.Entity<OpportunityApproval>().ToTable("OpportunityApprovals", CrmSchema);
+        modelBuilder.Entity<OpportunityReviewChecklistItem>().ToTable("OpportunityReviewChecklistItems", CrmSchema);
         modelBuilder.Entity<Activity>().ToTable("Activities", CrmSchema);
         modelBuilder.Entity<Attachment>().ToTable("Attachments", CrmSchema);
         modelBuilder.Entity<ImportJob>().ToTable("ImportJobs", CrmSchema);
@@ -217,6 +219,15 @@ public class CrmDbContext : DbContext
             .HasPrecision(18, 2);
         modelBuilder.Entity<OpportunityApproval>()
             .Property(a => a.Purpose)
+            .HasMaxLength(40);
+        modelBuilder.Entity<OpportunityReviewChecklistItem>()
+            .Property(i => i.Type)
+            .HasMaxLength(40);
+        modelBuilder.Entity<OpportunityReviewChecklistItem>()
+            .Property(i => i.Title)
+            .HasMaxLength(240);
+        modelBuilder.Entity<OpportunityReviewChecklistItem>()
+            .Property(i => i.Status)
             .HasMaxLength(40);
 
         modelBuilder.Entity<Opportunity>()

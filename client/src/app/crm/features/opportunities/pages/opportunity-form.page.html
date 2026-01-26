@@ -260,29 +260,102 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field full">
-                <label for="oppSecurityNotes">Security notes</label>
-                <textarea
-                  pTextarea
-                  id="oppSecurityNotes"
-                  rows="3"
-                  name="securityNotes"
-                  [(ngModel)]="form.securityNotes"
-                  placeholder="Security questionnaire or review notes"
-                  class="w-full"
-                ></textarea>
+              <div class="field full review-checklist">
+                <div class="checklist-header">
+                  <h4>Security checklist</h4>
+                  <div class="checklist-add">
+                    <input
+                      pInputText
+                      name="newSecurityItem"
+                      [(ngModel)]="newSecurityItem"
+                      placeholder="Add security task"
+                      class="w-full"
+                    />
+                    <button pButton type="button" class="btn-glass btn-sm" (click)="addChecklistItem('Security')">
+                      <i class="pi pi-plus"></i>
+                      Add
+                    </button>
+                  </div>
+                </div>
+                <div class="checklist-list" *ngIf="securityChecklist.length; else emptySecurityChecklist">
+                  <div class="checklist-item" *ngFor="let item of securityChecklist">
+                    <input pInputText [(ngModel)]="item.title" name="securityTitle{{item.id}}" class="w-full" />
+                    <p-select
+                      appendTo="body"
+                      [options]="reviewStatusOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="item.status"
+                      name="securityStatus{{item.id}}"
+                      styleClass="w-full"
+                    ></p-select>
+                    <input
+                      pInputText
+                      [(ngModel)]="item.notes"
+                      name="securityNotes{{item.id}}"
+                      placeholder="Notes (optional)"
+                      class="w-full"
+                    />
+                    <button pButton type="button" class="btn-glass btn-sm" (click)="saveChecklistItem(item)">
+                      <i class="pi pi-save"></i>
+                    </button>
+                    <button pButton type="button" class="btn-glass btn-sm" (click)="deleteChecklistItem(item)">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <ng-template #emptySecurityChecklist>
+                  <p class="helper-text">No security checklist items yet.</p>
+                </ng-template>
               </div>
-              <div class="field full">
-                <label for="oppLegalNotes">Legal notes</label>
-                <textarea
-                  pTextarea
-                  id="oppLegalNotes"
-                  rows="3"
-                  name="legalNotes"
-                  [(ngModel)]="form.legalNotes"
-                  placeholder="Contract redlines or legal approval notes"
-                  class="w-full"
-                ></textarea>
+
+              <div class="field full review-checklist">
+                <div class="checklist-header">
+                  <h4>Legal checklist</h4>
+                  <div class="checklist-add">
+                    <input
+                      pInputText
+                      name="newLegalItem"
+                      [(ngModel)]="newLegalItem"
+                      placeholder="Add legal task"
+                      class="w-full"
+                    />
+                    <button pButton type="button" class="btn-glass btn-sm" (click)="addChecklistItem('Legal')">
+                      <i class="pi pi-plus"></i>
+                      Add
+                    </button>
+                  </div>
+                </div>
+                <div class="checklist-list" *ngIf="legalChecklist.length; else emptyLegalChecklist">
+                  <div class="checklist-item" *ngFor="let item of legalChecklist">
+                    <input pInputText [(ngModel)]="item.title" name="legalTitle{{item.id}}" class="w-full" />
+                    <p-select
+                      appendTo="body"
+                      [options]="reviewStatusOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="item.status"
+                      name="legalStatus{{item.id}}"
+                      styleClass="w-full"
+                    ></p-select>
+                    <input
+                      pInputText
+                      [(ngModel)]="item.notes"
+                      name="legalNotes{{item.id}}"
+                      placeholder="Notes (optional)"
+                      class="w-full"
+                    />
+                    <button pButton type="button" class="btn-glass btn-sm" (click)="saveChecklistItem(item)">
+                      <i class="pi pi-save"></i>
+                    </button>
+                    <button pButton type="button" class="btn-glass btn-sm" (click)="deleteChecklistItem(item)">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <ng-template #emptyLegalChecklist>
+                  <p class="helper-text">No legal checklist items yet.</p>
+                </ng-template>
               </div>
             </div>
           </section>
