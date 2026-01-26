@@ -58,3 +58,33 @@ export interface OpportunityReviewChecklistItem {
   notes?: string | null;
   completedAtUtc?: string | null;
 }
+
+export type OpportunityApprovalStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface OpportunityApprovalItem {
+  id: string;
+  opportunityId: string;
+  status: OpportunityApprovalStatus;
+  purpose: string;
+  approverRole: string;
+  approverUserId?: string | null;
+  approverName?: string | null;
+  requestedByUserId?: string | null;
+  requestedByName?: string | null;
+  requestedOn: string;
+  decisionOn?: string | null;
+  notes?: string | null;
+  amount: number;
+  currency: string;
+}
+
+export interface OpportunityApprovalRequest {
+  amount: number;
+  currency?: string | null;
+  purpose?: string | null;
+}
+
+export interface OpportunityApprovalDecisionRequest {
+  approved: boolean;
+  notes?: string | null;
+}

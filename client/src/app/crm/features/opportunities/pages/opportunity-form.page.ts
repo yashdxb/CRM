@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -11,11 +11,18 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { map } from 'rxjs';
 
 import { OpportunityDataService, SaveOpportunityRequest } from '../services/opportunity-data.service';
+import { OpportunityApprovalService } from '../services/opportunity-approval.service';
 import { OpportunityReviewChecklistService } from '../services/opportunity-review-checklist.service';
 import { CustomerDataService } from '../../customers/services/customer-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { Opportunity, OpportunityReviewChecklistItem } from '../models/opportunity.model';
+import {
+  Opportunity,
+  OpportunityApprovalItem,
+  OpportunityReviewChecklistItem
+} from '../models/opportunity.model';
 import { AppToastService } from '../../../../core/app-toast.service';
+import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 
 interface Option<T = string> {
   label: string;
@@ -71,17 +78,37 @@ export class OpportunityFormPage implements OnInit {
   protected form: SaveOpportunityRequest = this.createEmptyForm();
   protected saving = signal(false);
   protected readonly isEditMode = signal(false);
+  protected readonly canManage = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesManage);
+  });
   protected securityChecklist: OpportunityReviewChecklistItem[] = [];
   protected legalChecklist: OpportunityReviewChecklistItem[] = [];
   protected newSecurityItem = '';
   protected newLegalItem = '';
   protected checklistSavingIds = new Set<string>();
   protected checklistSavedIds = new Set<string>();
+  protected approvals: OpportunityApprovalItem[] = [];
+  protected readonly approvalPurposeOptions: Option[] = [
+    { label: 'Close', value: 'Close' },
+    { label: 'Discount', value: 'Discount' }
+  ];
+  protected approvalRequest = {
+    purpose: 'Close',
+    amount: 0,
+    currency: 'USD'
+  };
+  protected approvalRequesting = signal(false);
+  protected approvalDecisionNotes: Record<string, string> = {};
+  protected approvalDecidingIds = new Set<string>();
+  private approvalAmountLocked = false;
+  private syncingApprovalAmount = false;
   private editingId: string | null = null;
   private pendingOpportunity: Opportunity | null = null;
   private pendingAccountName: string | null = null;
 
   private readonly opportunityData = inject(OpportunityDataService);
+  private readonly approvalService = inject(OpportunityApprovalService);
   private readonly checklistService = inject(OpportunityReviewChecklistService);
   protected readonly router = inject(Router);
   protected readonly customerData = inject(CustomerDataService);
@@ -98,11 +125,13 @@ export class OpportunityFormPage implements OnInit {
       if (id) {
         this.loadOpportunity(id);
         this.loadChecklists(id);
+        this.loadApprovals(id);
       } else {
         this.form = this.createEmptyForm();
         this.selectedStage = this.form.stageName ?? 'Prospecting';
         this.securityChecklist = [];
         this.legalChecklist = [];
+        this.approvals = [];
       }
     });
   }
@@ -213,6 +242,113 @@ export class OpportunityFormPage implements OnInit {
     });
   }
 
+  private loadApprovals(opportunityId: string) {
+    this.approvalService.getForOpportunity(opportunityId).subscribe({
+      next: (items) => {
+        this.approvals = items ?? [];
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.approvals = [];
+      }
+    });
+  }
+
+  protected requestApproval() {
+    if (!this.editingId || this.approvalRequesting()) {
+      return;
+    }
+    const amount = Number(this.approvalRequest.amount ?? 0);
+    if (!amount || amount <= 0) {
+      this.toastService.show('error', 'Approval amount must be greater than zero.', 3000);
+      return;
+    }
+
+    this.approvalRequesting.set(true);
+    this.approvalService
+      .requestApproval(this.editingId, {
+        amount,
+        currency: this.approvalRequest.currency ?? 'USD',
+        purpose: this.approvalRequest.purpose
+      })
+      .subscribe({
+        next: (item) => {
+          this.upsertApproval(item);
+          this.approvalRequesting.set(false);
+          this.toastService.show('success', 'Approval request sent.', 2500);
+        },
+        error: (err) => {
+          this.approvalRequesting.set(false);
+          const message = typeof err?.error === 'string' ? err.error : 'Unable to request approval.';
+          this.toastService.show('error', message, 3500);
+        }
+      });
+  }
+
+  protected decideApproval(item: OpportunityApprovalItem, approved: boolean) {
+    if (this.approvalDecidingIds.has(item.id)) {
+      return;
+    }
+    this.approvalDecidingIds.add(item.id);
+    this.approvalService
+      .decide(item.id, {
+        approved,
+        notes: this.approvalDecisionNotes[item.id] || null
+      })
+      .subscribe({
+        next: (updated) => {
+          this.upsertApproval(updated);
+          this.approvalDecidingIds.delete(item.id);
+          this.toastService.show('success', 'Approval updated.', 2500);
+        },
+        error: (err) => {
+          this.approvalDecidingIds.delete(item.id);
+          const message = typeof err?.error === 'string' ? err.error : 'Unable to update approval.';
+          this.toastService.show('error', message, 3500);
+        }
+      });
+  }
+
+  protected isApprovalsLoading(): boolean {
+    return this.approvalRequesting();
+  }
+
+  protected approvalStatusClass(status: string): string {
+    return `approval-status approval-status--${status.toLowerCase()}`;
+  }
+
+  protected onApprovalPurposeChange(purpose: string) {
+    this.approvalRequest.purpose = purpose;
+    this.approvalAmountLocked = false;
+    this.syncApprovalAmount();
+  }
+
+  protected onApprovalAmountEdited() {
+    if (!this.syncingApprovalAmount) {
+      this.approvalAmountLocked = true;
+    }
+  }
+
+  protected syncApprovalAmount() {
+    if (this.approvalAmountLocked) {
+      return;
+    }
+    this.syncingApprovalAmount = true;
+    try {
+      const amount = this.approvalRequest.purpose === 'Discount'
+        ? (this.form.discountAmount ?? 0)
+        : (this.form.amount ?? 0);
+      this.approvalRequest.amount = amount ?? 0;
+    } finally {
+      this.syncingApprovalAmount = false;
+    }
+  }
+
+  protected onCurrencyChange(currency: string) {
+    this.form.currency = currency;
+    this.approvalRequest.currency = currency;
+  }
+
   protected addChecklistItem(type: 'Security' | 'Legal') {
     const title = (type === 'Security' ? this.newSecurityItem : this.newLegalItem).trim();
     if (!title || !this.editingId) {
@@ -301,6 +437,13 @@ export class OpportunityFormPage implements OnInit {
       isWon: opp.status === 'Closed Won',
       winLossReason: opp.winLossReason ?? ''
     });
+    this.approvalRequest = {
+      ...this.approvalRequest,
+      amount: opp.amount ?? this.approvalRequest.amount,
+      currency: opp.currency ?? this.approvalRequest.currency
+    };
+    this.approvalAmountLocked = false;
+    this.syncApprovalAmount();
     this.cdr.detectChanges();
   }
 
@@ -325,6 +468,17 @@ export class OpportunityFormPage implements OnInit {
       isWon: false,
       winLossReason: ''
     };
+  }
+
+  private upsertApproval(item: OpportunityApprovalItem) {
+    const existingIndex = this.approvals.findIndex((approval) => approval.id === item.id);
+    if (existingIndex >= 0) {
+      const updated = [...this.approvals];
+      updated[existingIndex] = item;
+      this.approvals = updated;
+    } else {
+      this.approvals = [item, ...this.approvals];
+    }
   }
 
   private estimateProbability(stage: string) {

@@ -123,6 +123,7 @@
                   inputId="oppAmount"
                   [(ngModel)]="form.amount"
                   name="amount"
+                  (ngModelChange)="syncApprovalAmount()"
                   mode="currency"
                   [currency]="form.currency"
                   placeholder="0"
@@ -139,6 +140,7 @@
                   optionValue="value"
                   name="currency"
                   [(ngModel)]="form.currency"
+                  (ngModelChange)="onCurrencyChange($event)"
                   placeholder="Currency"
                   styleClass="w-full"
                 ></p-select>
@@ -205,6 +207,7 @@
                   inputId="oppDiscountAmount"
                   [(ngModel)]="form.discountAmount"
                   name="discountAmount"
+                  (ngModelChange)="syncApprovalAmount()"
                   mode="currency"
                   [currency]="form.currency"
                   placeholder="0"
@@ -224,6 +227,121 @@
                 ></textarea>
               </div>
             </div>
+          </section>
+
+          <section class="form-card" *ngIf="isEditMode()">
+            <h3 class="section-title">
+              <i class="pi pi-check-circle"></i>
+              Approval Workflow
+            </h3>
+            <div class="approval-request">
+              <div class="approval-request-row">
+                <div class="field">
+                  <label>Purpose</label>
+                  <p-select
+                    appendTo="body"
+                    [options]="approvalPurposeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    name="approvalPurpose"
+                    [(ngModel)]="approvalRequest.purpose"
+                    (ngModelChange)="onApprovalPurposeChange($event)"
+                    placeholder="Purpose"
+                    styleClass="w-full"
+                  ></p-select>
+                </div>
+                <div class="field">
+                  <label>Amount</label>
+                  <p-inputNumber
+                    [(ngModel)]="approvalRequest.amount"
+                    name="approvalAmount"
+                    mode="currency"
+                    [currency]="approvalRequest.currency"
+                    class="w-full"
+                    (ngModelChange)="onApprovalAmountEdited()"
+                  ></p-inputNumber>
+                </div>
+                <div class="field">
+                  <label>Currency</label>
+                  <p-select
+                    appendTo="body"
+                    [options]="currencyOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    name="approvalCurrency"
+                    [(ngModel)]="approvalRequest.currency"
+                    placeholder="Currency"
+                    styleClass="w-full"
+                  ></p-select>
+                </div>
+                <div class="field approval-action">
+                  <label>&nbsp;</label>
+                  <button
+                    pButton
+                    type="button"
+                    class="crm-button--primary"
+                    [disabled]="!canManage() || approvalRequesting()"
+                    (click)="requestApproval()"
+                  >
+                    <span *ngIf="!approvalRequesting()">Request approval</span>
+                    <span *ngIf="approvalRequesting()">Requesting…</span>
+                  </button>
+                </div>
+              </div>
+              <p class="helper-text">Request approval before closing or applying large discounts.</p>
+            </div>
+
+            <div class="approval-list" *ngIf="approvals.length; else noApprovals">
+              <div class="approval-item" *ngFor="let approval of approvals">
+                <div class="approval-meta">
+                  <span [class]="approvalStatusClass(approval.status)">{{ approval.status }}</span>
+                  <span class="approval-purpose">{{ approval.purpose }}</span>
+                  <span class="approval-amount">
+                    {{ approval.amount | number:'1.0-2' }} {{ approval.currency }}
+                  </span>
+                </div>
+                <div class="approval-details">
+                  <span>Requested by {{ approval.requestedByName || 'Unknown' }}</span>
+                  <span>{{ approval.requestedOn | date:'medium' }}</span>
+                  <span *ngIf="approval.approverRole">Approver role: {{ approval.approverRole }}</span>
+                  <span *ngIf="approval.approverName">Approved by: {{ approval.approverName }}</span>
+                  <span *ngIf="approval.decisionOn">Decision: {{ approval.decisionOn | date:'medium' }}</span>
+                </div>
+                <div class="approval-notes" *ngIf="approval.status !== 'Pending' && approval.notes">
+                  {{ approval.notes }}
+                </div>
+                <div class="approval-actions" *ngIf="approval.status === 'Pending'">
+                  <input
+                    pInputText
+                    [(ngModel)]="approvalDecisionNotes[approval.id]"
+                    name="approvalNotes{{approval.id}}"
+                    placeholder="Decision notes (optional)"
+                    class="w-full"
+                  />
+                  <button
+                    pButton
+                    type="button"
+                    class="crm-button--primary"
+                    [disabled]="!canManage() || approvalDecidingIds.has(approval.id)"
+                    (click)="decideApproval(approval, true)"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    pButton
+                    type="button"
+                    class="crm-button--ghost"
+                    [disabled]="!canManage() || approvalDecidingIds.has(approval.id)"
+                    (click)="decideApproval(approval, false)"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+            <ng-template #noApprovals>
+              <p class="helper-text">No approvals requested yet.</p>
+            </ng-template>
           </section>
 
           <section class="form-card">
