@@ -290,6 +290,7 @@ public sealed class LeadService : ILeadService
             cancellationToken);
 
         await EnsureFirstTouchTaskAsync(lead, actor, cancellationToken);
+        await EnsureNurtureFollowUpTaskAsync(lead, resolvedStatusName, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         if (HasAiSignals(request))
@@ -390,6 +391,7 @@ public sealed class LeadService : ILeadService
             await EnsureFirstTouchTaskAsync(lead, actor, cancellationToken);
         }
 
+        await EnsureNurtureFollowUpTaskAsync(lead, statusName, cancellationToken);
         await _auditEvents.TrackAsync(
             CreateAuditEntry(lead.Id, "Updated", null, null, null, actor),
             cancellationToken);
@@ -989,6 +991,64 @@ public sealed class LeadService : ILeadService
             OwnerId = lead.OwnerId,
             DueDateUtc = lead.FirstTouchDueAtUtc,
             Priority = "High",
+            CreatedAtUtc = DateTime.UtcNow
+        });
+    }
+
+    private async Task EnsureNurtureFollowUpTaskAsync(
+        Lead lead,
+        string? statusName,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(statusName, "Nurture", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        if (!lead.NurtureFollowUpAtUtc.HasValue)
+        {
+            return;
+        }
+
+        var existingTask = await _dbContext.Activities
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Lead
+                        && a.RelatedEntityId == lead.Id
+                        && !a.CompletedDateUtc.HasValue
+                        && a.Subject.StartsWith("Nurture follow-up", StringComparison.OrdinalIgnoreCase))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingTask is not null)
+        {
+            if (existingTask.OwnerId != lead.OwnerId)
+            {
+                existingTask.OwnerId = lead.OwnerId;
+                existingTask.UpdatedAtUtc = DateTime.UtcNow;
+            }
+
+            if (existingTask.DueDateUtc != lead.NurtureFollowUpAtUtc)
+            {
+                existingTask.DueDateUtc = lead.NurtureFollowUpAtUtc;
+                existingTask.UpdatedAtUtc = DateTime.UtcNow;
+            }
+
+            return;
+        }
+
+        var fullName = $"{lead.FirstName} {lead.LastName}".Trim();
+        var subject = string.IsNullOrWhiteSpace(fullName)
+            ? "Nurture follow-up"
+            : $"Nurture follow-up: {fullName}";
+
+        _dbContext.Activities.Add(new Activity
+        {
+            Subject = subject,
+            Type = ActivityType.Task,
+            RelatedEntityType = ActivityRelationType.Lead,
+            RelatedEntityId = lead.Id,
+            OwnerId = lead.OwnerId,
+            DueDateUtc = lead.NurtureFollowUpAtUtc,
+            Priority = "Normal",
             CreatedAtUtc = DateTime.UtcNow
         });
     }
