@@ -121,6 +121,28 @@ public class OpportunityApprovalsControllerTests
     }
 
     [Fact]
+    public async Task RequestApproval_ReturnsBadRequest_WhenApproverRoleMissing()
+    {
+        using var factory = new TestWebApplicationFactory();
+        var client = factory.CreateClient();
+        var context = factory.Services.GetRequiredService<CrmDbContext>();
+
+        var tenant = SeedTenant(context, "default", null);
+        var opportunity = SeedOpportunity(context, tenant.Id);
+        await context.SaveChangesAsync();
+
+        client.DefaultRequestHeaders.Add("X-Tenant-Key", tenant.Key);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/opportunities/{opportunity.Id}/approvals",
+            new { amount = 1000m, currency = "USD", purpose = "Close" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Approval role must be configured", error);
+    }
+
+    [Fact]
     public async Task GetApprovals_ReturnsOpportunityApprovals()
     {
         using var factory = new TestWebApplicationFactory();
