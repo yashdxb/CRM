@@ -19,6 +19,13 @@ public sealed record OpportunityUpsertRequest(
     decimal Probability,
     DateTime? ExpectedCloseDate,
     string? Summary,
+    decimal? DiscountPercent,
+    decimal? DiscountAmount,
+    string? PricingNotes,
+    string? SecurityReviewStatus,
+    string? SecurityNotes,
+    string? LegalReviewStatus,
+    string? LegalNotes,
     bool IsClosed,
     bool IsWon,
     string? WinLossReason);

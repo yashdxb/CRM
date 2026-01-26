@@ -216,6 +216,13 @@ public class CrmDbContext : DbContext
             .Property(a => a.Amount)
             .HasPrecision(18, 2);
 
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.DiscountPercent)
+            .HasPrecision(5, 2);
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.DiscountAmount)
+            .HasPrecision(18, 2);
+
         modelBuilder.Entity<PermissionCatalogEntry>()
             .HasIndex(entry => entry.Key)
             .IsUnique();

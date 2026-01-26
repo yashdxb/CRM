@@ -15,6 +15,13 @@ public class UpsertOpportunityRequest
     public decimal Probability { get; set; }
     public DateTime? ExpectedCloseDate { get; set; }
     public string? Summary { get; set; }
+    public decimal? DiscountPercent { get; set; }
+    public decimal? DiscountAmount { get; set; }
+    public string? PricingNotes { get; set; }
+    public string? SecurityReviewStatus { get; set; }
+    public string? SecurityNotes { get; set; }
+    public string? LegalReviewStatus { get; set; }
+    public string? LegalNotes { get; set; }
     public bool IsClosed { get; set; }
     public bool IsWon { get; set; }
     public string? WinLossReason { get; set; }

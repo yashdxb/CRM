@@ -44,7 +44,9 @@ export class OpportunityFormPage implements OnInit {
     { label: 'Prospecting', value: 'Prospecting' },
     { label: 'Qualification', value: 'Qualification' },
     { label: 'Proposal', value: 'Proposal' },
+    { label: 'Security / Legal Review', value: 'Security / Legal Review' },
     { label: 'Negotiation', value: 'Negotiation' },
+    { label: 'Commit', value: 'Commit' },
     { label: 'Closed Won', value: 'Closed Won' },
     { label: 'Closed Lost', value: 'Closed Lost' }
   ];
@@ -54,6 +56,13 @@ export class OpportunityFormPage implements OnInit {
     { label: 'CAD', value: 'CAD' },
     { label: 'EUR', value: 'EUR' },
     { label: 'GBP', value: 'GBP' }
+  ];
+
+  protected readonly reviewStatusOptions: Option[] = [
+    { label: 'Not Started', value: 'Not Started' },
+    { label: 'In Progress', value: 'In Progress' },
+    { label: 'Approved', value: 'Approved' },
+    { label: 'Blocked', value: 'Blocked' }
   ];
 
   protected accountOptions: Option<string | undefined>[] = [];
@@ -195,6 +204,13 @@ export class OpportunityFormPage implements OnInit {
       probability: opp.probability ?? this.estimateProbability(stage),
       expectedCloseDate: opp.closeDate ? new Date(opp.closeDate) : undefined,
       summary: this.form.summary ?? '',
+      discountPercent: opp.discountPercent ?? undefined,
+      discountAmount: opp.discountAmount ?? undefined,
+      pricingNotes: opp.pricingNotes ?? '',
+      securityReviewStatus: opp.securityReviewStatus ?? 'Not Started',
+      securityNotes: opp.securityNotes ?? '',
+      legalReviewStatus: opp.legalReviewStatus ?? 'Not Started',
+      legalNotes: opp.legalNotes ?? '',
       isClosed: opp.status !== 'Open',
       isWon: opp.status === 'Closed Won',
       winLossReason: opp.winLossReason ?? ''
@@ -212,6 +228,13 @@ export class OpportunityFormPage implements OnInit {
       probability: this.estimateProbability('Prospecting'),
       expectedCloseDate: undefined,
       summary: '',
+      discountPercent: undefined,
+      discountAmount: undefined,
+      pricingNotes: '',
+      securityReviewStatus: 'Not Started',
+      securityNotes: '',
+      legalReviewStatus: 'Not Started',
+      legalNotes: '',
       isClosed: false,
       isWon: false,
       winLossReason: ''
@@ -223,7 +246,9 @@ export class OpportunityFormPage implements OnInit {
       Prospecting: 20,
       Qualification: 35,
       Proposal: 55,
+      'Security / Legal Review': 65,
       Negotiation: 75,
+      Commit: 85,
       'Closed Won': 100,
       'Closed Lost': 0
     };
@@ -246,6 +271,12 @@ export class OpportunityFormPage implements OnInit {
 
     if (buyingRoleRequired) {
       return 'A buying role contact is required before moving to late-stage opportunities.';
+    }
+
+    if (stage === 'Commit') {
+      if (this.form.securityReviewStatus !== 'Approved' || this.form.legalReviewStatus !== 'Approved') {
+        return 'Security and legal reviews must be approved before moving to Commit.';
+      }
     }
 
     return null;

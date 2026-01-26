@@ -19,6 +19,13 @@ export interface SaveOpportunityRequest {
   probability?: number;
   expectedCloseDate?: string;
   summary?: string;
+  discountPercent?: number | null;
+  discountAmount?: number | null;
+  pricingNotes?: string | null;
+  securityReviewStatus?: string | null;
+  securityNotes?: string | null;
+  legalReviewStatus?: string | null;
+  legalNotes?: string | null;
   isClosed?: boolean;
   isWon?: boolean;
   winLossReason?: string | null;

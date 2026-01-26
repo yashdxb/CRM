@@ -181,6 +181,112 @@
             </div>
           </section>
 
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-percentage"></i>
+              Pricing & Discounts
+            </h3>
+            <div class="form-grid">
+              <div class="field">
+                <label for="oppDiscountPercent">Discount (%)</label>
+                <p-inputNumber
+                  inputId="oppDiscountPercent"
+                  [(ngModel)]="form.discountPercent"
+                  name="discountPercent"
+                  suffix="%"
+                  [min]="0"
+                  [max]="100"
+                  class="w-full"
+                ></p-inputNumber>
+              </div>
+              <div class="field">
+                <label for="oppDiscountAmount">Discount Amount</label>
+                <p-inputNumber
+                  inputId="oppDiscountAmount"
+                  [(ngModel)]="form.discountAmount"
+                  name="discountAmount"
+                  mode="currency"
+                  [currency]="form.currency"
+                  placeholder="0"
+                  class="w-full"
+                ></p-inputNumber>
+              </div>
+              <div class="field full">
+                <label for="oppPricingNotes">Pricing notes</label>
+                <textarea
+                  pTextarea
+                  id="oppPricingNotes"
+                  rows="3"
+                  name="pricingNotes"
+                  [(ngModel)]="form.pricingNotes"
+                  placeholder="Discount rationale, approvals, or constraints"
+                  class="w-full"
+                ></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-shield"></i>
+              Security & Legal Review
+            </h3>
+            <div class="form-grid">
+              <div class="field">
+                <label for="oppSecurityStatus">Security status</label>
+                <p-select
+                  inputId="oppSecurityStatus"
+                  appendTo="body"
+                  [options]="reviewStatusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="securityReviewStatus"
+                  [(ngModel)]="form.securityReviewStatus"
+                  placeholder="Select status"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label for="oppLegalStatus">Legal status</label>
+                <p-select
+                  inputId="oppLegalStatus"
+                  appendTo="body"
+                  [options]="reviewStatusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="legalReviewStatus"
+                  [(ngModel)]="form.legalReviewStatus"
+                  placeholder="Select status"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field full">
+                <label for="oppSecurityNotes">Security notes</label>
+                <textarea
+                  pTextarea
+                  id="oppSecurityNotes"
+                  rows="3"
+                  name="securityNotes"
+                  [(ngModel)]="form.securityNotes"
+                  placeholder="Security questionnaire or review notes"
+                  class="w-full"
+                ></textarea>
+              </div>
+              <div class="field full">
+                <label for="oppLegalNotes">Legal notes</label>
+                <textarea
+                  pTextarea
+                  id="oppLegalNotes"
+                  rows="3"
+                  name="legalNotes"
+                  [(ngModel)]="form.legalNotes"
+                  placeholder="Contract redlines or legal approval notes"
+                  class="w-full"
+                ></textarea>
+              </div>
+            </div>
+          </section>
+
           <div class="form-actions">
             <button
               type="button"

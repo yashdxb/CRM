@@ -106,6 +106,13 @@ public sealed class OpportunityService : IOpportunityService
                 o.Probability,
                 o.Currency,
                 o.ExpectedCloseDate,
+                o.DiscountPercent,
+                o.DiscountAmount,
+                o.PricingNotes,
+                o.SecurityReviewStatus,
+                o.SecurityNotes,
+                o.LegalReviewStatus,
+                o.LegalNotes,
                 o.OwnerId,
                 o.IsClosed,
                 o.IsWon,
@@ -171,6 +178,13 @@ public sealed class OpportunityService : IOpportunityService
                 o.Probability,
                 o.Currency,
                 o.ExpectedCloseDate,
+                o.DiscountPercent,
+                o.DiscountAmount,
+                o.PricingNotes,
+                o.SecurityReviewStatus,
+                o.SecurityNotes,
+                o.LegalReviewStatus,
+                o.LegalNotes,
                 o.OwnerId,
                 owners.FirstOrDefault(own => own.Id == o.OwnerId)?.FullName ?? "Unassigned",
                 ComputeStatus(o.IsClosed, o.IsWon),
@@ -216,6 +230,13 @@ public sealed class OpportunityService : IOpportunityService
             opp.Probability,
             opp.Currency,
             opp.ExpectedCloseDate,
+            opp.DiscountPercent,
+            opp.DiscountAmount,
+            opp.PricingNotes,
+            opp.SecurityReviewStatus,
+            opp.SecurityNotes,
+            opp.LegalReviewStatus,
+            opp.LegalNotes,
             opp.OwnerId,
             ownerName,
             ComputeStatus(opp.IsClosed, opp.IsWon),
@@ -312,6 +333,13 @@ public sealed class OpportunityService : IOpportunityService
             ExpectedCloseDate = request.ExpectedCloseDate,
             ForecastCategory = null,
             Summary = request.Summary,
+            DiscountPercent = request.DiscountPercent,
+            DiscountAmount = request.DiscountAmount,
+            PricingNotes = request.PricingNotes,
+            SecurityReviewStatus = string.IsNullOrWhiteSpace(request.SecurityReviewStatus) ? "Not Started" : request.SecurityReviewStatus,
+            SecurityNotes = request.SecurityNotes,
+            LegalReviewStatus = string.IsNullOrWhiteSpace(request.LegalReviewStatus) ? "Not Started" : request.LegalReviewStatus,
+            LegalNotes = request.LegalNotes,
             WinLossReason = request.WinLossReason,
             IsClosed = request.IsClosed,
             IsWon = request.IsWon,
@@ -335,6 +363,13 @@ public sealed class OpportunityService : IOpportunityService
             opp.Probability,
             opp.Currency,
             opp.ExpectedCloseDate,
+            opp.DiscountPercent,
+            opp.DiscountAmount,
+            opp.PricingNotes,
+            opp.SecurityReviewStatus,
+            opp.SecurityNotes,
+            opp.LegalReviewStatus,
+            opp.LegalNotes,
             ownerId,
             await _dbContext.Users.Where(u => u.Id == ownerId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken) ?? "Unassigned",
             ComputeStatus(opp.IsClosed, opp.IsWon),
@@ -396,6 +431,34 @@ public sealed class OpportunityService : IOpportunityService
         opp.Probability = request.Probability;
         opp.ExpectedCloseDate = request.ExpectedCloseDate;
         opp.Summary = request.Summary;
+        if (request.DiscountPercent.HasValue)
+        {
+            opp.DiscountPercent = request.DiscountPercent;
+        }
+        if (request.DiscountAmount.HasValue)
+        {
+            opp.DiscountAmount = request.DiscountAmount;
+        }
+        if (request.PricingNotes is not null)
+        {
+            opp.PricingNotes = request.PricingNotes;
+        }
+        if (request.SecurityReviewStatus is not null)
+        {
+            opp.SecurityReviewStatus = request.SecurityReviewStatus;
+        }
+        if (request.SecurityNotes is not null)
+        {
+            opp.SecurityNotes = request.SecurityNotes;
+        }
+        if (request.LegalReviewStatus is not null)
+        {
+            opp.LegalReviewStatus = request.LegalReviewStatus;
+        }
+        if (request.LegalNotes is not null)
+        {
+            opp.LegalNotes = request.LegalNotes;
+        }
         opp.WinLossReason = request.WinLossReason;
         opp.IsClosed = request.IsClosed;
         opp.IsWon = request.IsWon;
@@ -677,6 +740,17 @@ public sealed class OpportunityService : IOpportunityService
             if (!hasBuyingRole)
             {
                 return "Buying group role is required before moving to late-stage opportunities.";
+            }
+        }
+
+        if (string.Equals(nextStageName, "Commit", StringComparison.OrdinalIgnoreCase))
+        {
+            var securityStatus = request?.SecurityReviewStatus ?? opportunity.SecurityReviewStatus ?? "Not Started";
+            var legalStatus = request?.LegalReviewStatus ?? opportunity.LegalReviewStatus ?? "Not Started";
+            if (!string.Equals(securityStatus, "Approved", StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(legalStatus, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Security and legal reviews must be approved before moving to Commit.";
             }
         }
 

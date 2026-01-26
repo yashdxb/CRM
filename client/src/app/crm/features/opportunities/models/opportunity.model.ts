@@ -10,6 +10,13 @@ export interface Opportunity {
   probability: number;
   currency: string;
   closeDate?: string;
+  discountPercent?: number | null;
+  discountAmount?: number | null;
+  pricingNotes?: string | null;
+  securityReviewStatus?: string | null;
+  securityNotes?: string | null;
+  legalReviewStatus?: string | null;
+  legalNotes?: string | null;
   ownerId?: string;
   owner: string;
   status: OpportunityStatus;

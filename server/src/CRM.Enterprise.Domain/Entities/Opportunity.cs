@@ -18,6 +18,13 @@ public class Opportunity : AuditableEntity
     public string? WinLossReason { get; set; }
     public bool IsClosed { get; set; }
     public bool IsWon { get; set; }
+    public decimal? DiscountPercent { get; set; }
+    public decimal? DiscountAmount { get; set; }
+    public string? PricingNotes { get; set; }
+    public string? SecurityReviewStatus { get; set; }
+    public string? SecurityNotes { get; set; }
+    public string? LegalReviewStatus { get; set; }
+    public string? LegalNotes { get; set; }
 
     public Account? Account { get; set; }
     public Contact? PrimaryContact { get; set; }
