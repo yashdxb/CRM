@@ -25,6 +25,8 @@ public record DashboardSummaryDto(
     IReadOnlyList<ActivityBreakdownItemDto> ActivityBreakdown,
     IReadOnlyList<ChartDataPointDto> ConversionTrend,
     IReadOnlyList<PerformerSummaryDto> TopPerformers,
+    IReadOnlyList<DashboardLeadDto> NewlyAssignedLeads,
+    IReadOnlyList<DashboardOpportunityDto> AtRiskDeals,
     decimal AvgDealSize,
     int WinRate,
     int AvgSalesCycle,
@@ -69,3 +71,21 @@ public record ChartDataPointDto(string Label, decimal Value);
 public record ActivityBreakdownItemDto(string Type, int Count, int Percentage);
 
 public record PerformerSummaryDto(string Name, int Deals, decimal Revenue, string? Avatar);
+
+public record DashboardLeadDto(
+    Guid Id,
+    string Name,
+    string Company,
+    string Status,
+    string? Email,
+    DateTime CreatedAtUtc);
+
+public record DashboardOpportunityDto(
+    Guid Id,
+    string Name,
+    string AccountName,
+    string Stage,
+    decimal Amount,
+    string Reason,
+    DateTime? NextStepDueAtUtc,
+    DateTime? LastActivityAtUtc);

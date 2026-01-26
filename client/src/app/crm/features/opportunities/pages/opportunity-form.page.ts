@@ -14,6 +14,7 @@ import { OpportunityDataService, SaveOpportunityRequest } from '../services/oppo
 import { CustomerDataService } from '../../customers/services/customer-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { Opportunity } from '../models/opportunity.model';
+import { AppToastService } from '../../../../core/app-toast.service';
 
 interface Option<T = string> {
   label: string;
@@ -67,6 +68,7 @@ export class OpportunityFormPage implements OnInit {
   private readonly opportunityData = inject(OpportunityDataService);
   protected readonly router = inject(Router);
   protected readonly customerData = inject(CustomerDataService);
+  private readonly toastService = inject(AppToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -95,6 +97,11 @@ export class OpportunityFormPage implements OnInit {
 
   protected onSave() {
     if (!this.form.name) return;
+    const validationError = this.validateStageRequirements();
+    if (validationError) {
+      this.toastService.show('error', validationError, 4000);
+      return;
+    }
     this.saving.set(true);
 
     const rawCloseDate = this.form.expectedCloseDate as unknown;
@@ -116,7 +123,11 @@ export class OpportunityFormPage implements OnInit {
       next: () => {
         this.saving.set(false);
       },
-      error: () => this.saving.set(false)
+      error: (err) => {
+        this.saving.set(false);
+        const message = typeof err?.error === 'string' ? err.error : 'Unable to save opportunity.';
+        this.toastService.show('error', message, 4000);
+      }
     });
   }
 
@@ -217,5 +228,26 @@ export class OpportunityFormPage implements OnInit {
       'Closed Lost': 0
     };
     return map[stage] ?? 0;
+  }
+
+  private validateStageRequirements(): string | null {
+    const stage = this.selectedStage;
+    const amountRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);
+    const closeDateRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);
+    const buyingRoleRequired = ['Proposal', 'Negotiation', 'Commit'].includes(stage);
+
+    if (amountRequired && (!this.form.amount || this.form.amount <= 0)) {
+      return `Amount is required before moving to ${stage}.`;
+    }
+
+    if (closeDateRequired && !this.form.expectedCloseDate) {
+      return `Expected close date is required before moving to ${stage}.`;
+    }
+
+    if (buyingRoleRequired) {
+      return 'A buying role contact is required before moving to late-stage opportunities.';
+    }
+
+    return null;
   }
 }

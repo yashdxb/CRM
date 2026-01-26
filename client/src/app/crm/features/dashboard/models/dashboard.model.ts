@@ -24,6 +24,8 @@ export interface DashboardSummary {
   pipelineValue: PipelineStage[];
   conversionTrend: ChartDataPoint[];
   topPerformers: PerformerData[];
+  newlyAssignedLeads: DashboardLead[];
+  atRiskDeals: DashboardOpportunity[];
   
   // Additional metrics
   avgDealSize: number;
@@ -56,4 +58,24 @@ export interface PerformerData {
   deals: number;
   revenue: number;
   avatar?: string;
+}
+
+export interface DashboardLead {
+  id: string;
+  name: string;
+  company: string;
+  status: string;
+  email?: string;
+  createdAtUtc: string;
+}
+
+export interface DashboardOpportunity {
+  id: string;
+  name: string;
+  accountName: string;
+  stage: string;
+  amount: number;
+  reason: string;
+  nextStepDueAtUtc?: string;
+  lastActivityAtUtc?: string;
 }

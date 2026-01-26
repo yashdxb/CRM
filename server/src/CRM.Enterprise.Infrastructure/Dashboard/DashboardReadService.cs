@@ -19,6 +19,7 @@ public class DashboardReadService : IDashboardReadService
     {
         var now = DateTime.UtcNow;
         var nextWeek = now.AddDays(7);
+        var newlyAssignedCutoff = now.AddDays(-1);
         var startOfToday = now.Date;
         var endOfToday = startOfToday.AddDays(1);
         var userEmail = userId.HasValue
@@ -82,6 +83,7 @@ public class DashboardReadService : IDashboardReadService
 
         var atRiskOpportunities = 0;
         var opportunitiesWithoutNextStep = 0;
+        var atRiskDetails = new List<DashboardOpportunityDto>();
         if (openOpportunityIds.Count > 0)
         {
             var opportunityActivityRows = await _dbContext.Activities
@@ -124,18 +126,45 @@ public class DashboardReadService : IDashboardReadService
                 {
                     opportunitiesWithoutNextStep++;
                     atRiskOpportunities++;
+                    if (atRiskDetails.Count < 6)
+                    {
+                        atRiskDetails.Add(await BuildAtRiskDetailAsync(
+                            opportunityId,
+                            "Missing next step",
+                            nextStepDueAtUtc,
+                            lastActivityAtUtc,
+                            cancellationToken));
+                    }
                     continue;
                 }
 
                 if (nextStepDueAtUtc.Value < now)
                 {
                     atRiskOpportunities++;
+                    if (atRiskDetails.Count < 6)
+                    {
+                        atRiskDetails.Add(await BuildAtRiskDetailAsync(
+                            opportunityId,
+                            "Next step overdue",
+                            nextStepDueAtUtc,
+                            lastActivityAtUtc,
+                            cancellationToken));
+                    }
                     continue;
                 }
 
                 if (lastActivityAtUtc.HasValue && (now - lastActivityAtUtc.Value).TotalDays > 30)
                 {
                     atRiskOpportunities++;
+                    if (atRiskDetails.Count < 6)
+                    {
+                        atRiskDetails.Add(await BuildAtRiskDetailAsync(
+                            opportunityId,
+                            "No recent activity",
+                            nextStepDueAtUtc,
+                            lastActivityAtUtc,
+                            cancellationToken));
+                    }
                 }
             }
         }
@@ -216,6 +245,25 @@ public class DashboardReadService : IDashboardReadService
                     a.CompletedDateUtc))
                 .ToListAsync(cancellationToken)
             : new List<DashboardActivityRaw>();
+
+        var newlyAssignedLeads = userId.HasValue
+            ? await _dbContext.Leads
+                .AsNoTracking()
+                .Include(l => l.Status)
+                .Where(l => !l.IsDeleted
+                            && l.OwnerId == userId.Value
+                            && ((l.UpdatedAtUtc ?? l.CreatedAtUtc) >= newlyAssignedCutoff))
+                .OrderByDescending(l => l.UpdatedAtUtc ?? l.CreatedAtUtc)
+                .Take(6)
+                .Select(l => new DashboardLeadDto(
+                    l.Id,
+                    (l.FirstName + " " + l.LastName).Trim(),
+                    l.CompanyName ?? string.Empty,
+                    l.Status != null ? l.Status.Name : "New",
+                    l.Email,
+                    l.CreatedAtUtc))
+                .ToListAsync(cancellationToken)
+            : new List<DashboardLeadDto>();
 
         var activityLookups = activitiesNextWeekRaw.Concat(myTasksRaw).ToList();
 
@@ -532,12 +580,60 @@ public class DashboardReadService : IDashboardReadService
             activityBreakdown,
             conversionTrend,
             topPerformers,
+            newlyAssignedLeads,
+            atRiskDetails,
             avgDealSize,
             winRate,
             avgSalesCycle,
             0,
             0,
             0);
+    }
+
+    private async Task<DashboardOpportunityDto> BuildAtRiskDetailAsync(
+        Guid opportunityId,
+        string reason,
+        DateTime? nextStepDueAtUtc,
+        DateTime? lastActivityAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var record = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Include(o => o.Account)
+            .Include(o => o.Stage)
+            .Where(o => o.Id == opportunityId)
+            .Select(o => new
+            {
+                o.Id,
+                o.Name,
+                AccountName = o.Account != null ? o.Account.Name : string.Empty,
+                Stage = o.Stage != null ? o.Stage.Name : "Prospecting",
+                o.Amount
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (record is null)
+        {
+            return new DashboardOpportunityDto(
+                opportunityId,
+                "Unknown opportunity",
+                string.Empty,
+                string.Empty,
+                0,
+                reason,
+                nextStepDueAtUtc,
+                lastActivityAtUtc);
+        }
+
+        return new DashboardOpportunityDto(
+            record.Id,
+            record.Name,
+            record.AccountName,
+            record.Stage,
+            record.Amount,
+            reason,
+            nextStepDueAtUtc,
+            lastActivityAtUtc);
     }
 
     private static string ComputeStatus(DateTime? dueDateUtc, DateTime? completedDateUtc)

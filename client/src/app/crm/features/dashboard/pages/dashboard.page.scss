@@ -1292,6 +1292,104 @@
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// NEW LEADS & AT-RISK DEALS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.lead-list,
+.risk-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.lead-row,
+.risk-row {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3;
+  border-radius: $radius-lg;
+  transition: all $transition-fast;
+
+  &:hover {
+    background: rgba($primary, 0.03);
+  }
+}
+
+.lead-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-lg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: $font-size-sm;
+  color: white;
+  background: $primary-gradient;
+}
+
+.lead-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.lead-name {
+  font-weight: 600;
+  color: $text-primary;
+  font-size: $font-size-sm;
+}
+
+.lead-meta {
+  font-size: $font-size-xs;
+  color: $text-muted;
+  display: flex;
+  gap: $space-1;
+
+  .separator { opacity: 0.5; }
+}
+
+.lead-time {
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.risk-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.risk-name {
+  font-weight: 600;
+  color: $text-primary;
+  font-size: $font-size-sm;
+}
+
+.risk-meta {
+  font-size: $font-size-xs;
+  color: $text-muted;
+  display: flex;
+  gap: $space-1;
+
+  .separator { opacity: 0.5; }
+}
+
+.risk-reason {
+  margin-top: $space-1;
+  font-size: $font-size-xs;
+  color: $danger;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+}
+
+.risk-amount {
+  font-weight: 600;
+  color: $text-primary;
+  font-size: $font-size-sm;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TIMELINE
 // ═══════════════════════════════════════════════════════════════════════════════
 

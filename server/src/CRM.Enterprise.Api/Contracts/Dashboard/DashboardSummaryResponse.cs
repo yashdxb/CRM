@@ -26,6 +26,8 @@ public record DashboardSummaryResponse(
     IEnumerable<ActivityBreakdownItem> ActivityBreakdown,
     IEnumerable<ChartDataPoint> ConversionTrend,
     IEnumerable<PerformerSummary> TopPerformers,
+    IEnumerable<DashboardLeadItem> NewlyAssignedLeads,
+    IEnumerable<DashboardOpportunityItem> AtRiskDeals,
     decimal AvgDealSize,
     int WinRate,
     int AvgSalesCycle,
@@ -49,3 +51,21 @@ public record TeamMonthlyKpiSummary(
     int OpportunitiesCreated,
     int DealsWon,
     decimal RevenueWon);
+
+public record DashboardLeadItem(
+    Guid Id,
+    string Name,
+    string Company,
+    string Status,
+    string? Email,
+    DateTime CreatedAtUtc);
+
+public record DashboardOpportunityItem(
+    Guid Id,
+    string Name,
+    string AccountName,
+    string Stage,
+    decimal Amount,
+    string Reason,
+    DateTime? NextStepDueAtUtc,
+    DateTime? LastActivityAtUtc);

@@ -11,6 +11,8 @@ export class DashboardDataService {
   private readonly defaultLayout = [
     'pipeline',
     'accounts',
+    'new-leads',
+    'at-risk-deals',
     'activity-mix',
     'conversion',
     'top-performers',
@@ -44,6 +46,8 @@ export class DashboardDataService {
       pipelineValue: [],
       conversionTrend: [],
       topPerformers: [],
+      newlyAssignedLeads: [],
+      atRiskDeals: [],
       
       // Additional metrics
       avgDealSize: 0,

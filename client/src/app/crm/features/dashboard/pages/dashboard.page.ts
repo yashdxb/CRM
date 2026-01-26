@@ -73,6 +73,8 @@ export class DashboardPage implements OnInit {
     pipelineValue: [],
     conversionTrend: [],
     topPerformers: [],
+    newlyAssignedLeads: [],
+    atRiskDeals: [],
     avgDealSize: 0,
     winRate: 0,
     avgSalesCycle: 0,
@@ -142,6 +144,8 @@ export class DashboardPage implements OnInit {
   protected readonly upcomingActivities = computed(() => this.summary()?.activitiesNextWeek?.slice(0, 6) ?? []);
   protected readonly myTasks = computed(() => this.summary()?.myTasks?.slice(0, 6) ?? []);
   protected readonly topPerformers = computed(() => this.summary()?.topPerformers ?? []);
+  protected readonly newlyAssignedLeads = computed(() => this.summary()?.newlyAssignedLeads?.slice(0, 6) ?? []);
+  protected readonly atRiskDeals = computed(() => this.summary()?.atRiskDeals?.slice(0, 6) ?? []);
   protected readonly activityBreakdown = computed(() => this.summary()?.activityBreakdown ?? []);
   protected readonly pipelineValue = computed(() => this.summary()?.pipelineValue ?? []);
   
@@ -173,6 +177,8 @@ export class DashboardPage implements OnInit {
   private readonly defaultCardSizes: Record<string, 'sm' | 'md' | 'lg'> = {
     pipeline: 'lg',
     accounts: 'md',
+    'new-leads': 'md',
+    'at-risk-deals': 'md',
     'activity-mix': 'sm',
     conversion: 'sm',
     'top-performers': 'md',
@@ -215,6 +221,8 @@ export class DashboardPage implements OnInit {
   protected readonly cardCatalog = [
     { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
     { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },
+    { id: 'new-leads', label: 'Newly Assigned Leads', icon: 'pi pi-user-plus' },
+    { id: 'at-risk-deals', label: 'At-Risk Deals', icon: 'pi pi-exclamation-triangle' },
     { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
     { id: 'conversion', label: 'Conversion Trend', icon: 'pi pi-percentage' },
     { id: 'top-performers', label: 'Top Performers', icon: 'pi pi-trophy' },

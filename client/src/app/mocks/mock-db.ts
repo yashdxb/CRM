@@ -702,6 +702,32 @@ export function buildDashboardSummary(): DashboardSummary {
     { name: 'Omar Ali', deals: 7, revenue: 154000 }
   ];
 
+  const newlyAssignedLeads = mockCustomers
+    .filter((c) => c.status === 'Lead')
+    .slice(0, 6)
+    .map((lead) => ({
+      id: lead.id,
+      name: lead.name,
+      company: lead.company,
+      status: lead.status,
+      email: lead.email,
+      createdAtUtc: lead.createdAt
+    }));
+
+  const atRiskDeals = mockOpportunities
+    .filter((opp) => opp.status === 'Open')
+    .slice(0, 6)
+    .map((opp, index) => ({
+      id: opp.id,
+      name: opp.name,
+      accountName: opp.account,
+      stage: opp.stage,
+      amount: opp.amount ?? 0,
+      reason: index % 2 === 0 ? 'Missing next step' : 'Next step overdue',
+      nextStepDueAtUtc: undefined,
+      lastActivityAtUtc: undefined
+    }));
+
   return {
     totalCustomers: mockCustomers.length,
     leads,
@@ -725,6 +751,8 @@ export function buildDashboardSummary(): DashboardSummary {
     pipelineValue,
     conversionTrend,
     topPerformers,
+    newlyAssignedLeads,
+    atRiskDeals,
     
     // Additional metrics
     avgDealSize: 42500,
