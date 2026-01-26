@@ -215,6 +215,9 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<OpportunityApproval>()
             .Property(a => a.Amount)
             .HasPrecision(18, 2);
+        modelBuilder.Entity<OpportunityApproval>()
+            .Property(a => a.Purpose)
+            .HasMaxLength(40);
 
         modelBuilder.Entity<Opportunity>()
             .Property(o => o.DiscountPercent)

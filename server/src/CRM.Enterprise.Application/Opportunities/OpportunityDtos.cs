@@ -59,6 +59,7 @@ public sealed record OpportunityApprovalDto(
     Guid Id,
     Guid OpportunityId,
     string Status,
+    string Purpose,
     string ApproverRole,
     Guid? ApproverUserId,
     string? ApproverName,

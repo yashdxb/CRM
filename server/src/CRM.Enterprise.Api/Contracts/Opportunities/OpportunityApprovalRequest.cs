@@ -1,3 +1,3 @@
 namespace CRM.Enterprise.Api.Contracts.Opportunities;
 
-public record OpportunityApprovalRequest(decimal Amount, string? Currency);
+public record OpportunityApprovalRequest(decimal Amount, string? Currency, string? Purpose);

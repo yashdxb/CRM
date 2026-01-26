@@ -14,6 +14,8 @@ public sealed class OpportunityService : IOpportunityService
 {
     private const string OpportunityEntityType = "Opportunity";
     private const int AtRiskDays = 30;
+    private const decimal DiscountPercentApprovalThreshold = 10m;
+    private const decimal DiscountAmountApprovalThreshold = 1000m;
     private static readonly HashSet<string> StagesRequiringAmount = new(StringComparer.OrdinalIgnoreCase)
     {
         "Qualification",
@@ -315,6 +317,11 @@ public sealed class OpportunityService : IOpportunityService
         {
             return OpportunityOperationResult<OpportunityListItemDto>.Fail(approvalError);
         }
+        var discountApprovalError = await ValidateDiscountApprovalAsync(request, actor, null, cancellationToken);
+        if (discountApprovalError is not null)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail(discountApprovalError);
+        }
 
         var ownerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
         var stageId = await ResolveStageIdAsync(request.StageId, request.StageName, cancellationToken);
@@ -400,6 +407,11 @@ public sealed class OpportunityService : IOpportunityService
         if (approvalError is not null)
         {
             return OpportunityOperationResult<bool>.Fail(approvalError);
+        }
+        var discountApprovalError = await ValidateDiscountApprovalAsync(request, actor, id, cancellationToken);
+        if (discountApprovalError is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(discountApprovalError);
         }
 
         var previousStageId = opp.StageId;
@@ -915,10 +927,56 @@ public sealed class OpportunityService : IOpportunityService
             opportunityId.Value,
             request.Amount,
             request.Currency,
+            "Close",
             actor,
             cancellationToken);
 
         return "Approval required. Request submitted for review.";
+    }
+
+    private async Task<string?> ValidateDiscountApprovalAsync(
+        OpportunityUpsertRequest request,
+        ActorContext actor,
+        Guid? opportunityId,
+        CancellationToken cancellationToken)
+    {
+        var discountPercent = request.DiscountPercent ?? 0m;
+        var discountAmount = request.DiscountAmount ?? 0m;
+        var requiresApproval = discountPercent >= DiscountPercentApprovalThreshold
+                               || discountAmount >= DiscountAmountApprovalThreshold;
+        if (!requiresApproval)
+        {
+            return null;
+        }
+
+        if (!opportunityId.HasValue || opportunityId.Value == Guid.Empty)
+        {
+            return "Discount approval required. Save the opportunity first to request approval.";
+        }
+
+        var approved = await _dbContext.OpportunityApprovals
+            .AsNoTracking()
+            .AnyAsync(
+                a => a.OpportunityId == opportunityId.Value
+                     && a.Purpose == "Discount"
+                     && a.Status == "Approved",
+                cancellationToken);
+
+        if (approved)
+        {
+            return null;
+        }
+
+        var amount = discountAmount > 0 ? discountAmount : request.Amount;
+        await _approvalService.RequestAsync(
+            opportunityId.Value,
+            amount,
+            request.Currency,
+            "Discount",
+            actor,
+            cancellationToken);
+
+        return "Discount approval required. Request submitted for review.";
     }
 
     private AuditEventEntry CreateAuditEntry(

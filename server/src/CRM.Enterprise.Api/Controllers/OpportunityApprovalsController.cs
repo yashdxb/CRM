@@ -42,6 +42,7 @@ public class OpportunityApprovalsController : ControllerBase
             id,
             request.Amount,
             request.Currency ?? "USD",
+            string.IsNullOrWhiteSpace(request.Purpose) ? "Close" : request.Purpose,
             GetActor(),
             cancellationToken);
 
@@ -91,6 +92,7 @@ public class OpportunityApprovalsController : ControllerBase
             dto.Id,
             dto.OpportunityId,
             dto.Status,
+            dto.Purpose,
             dto.ApproverRole,
             dto.ApproverUserId,
             dto.ApproverName,

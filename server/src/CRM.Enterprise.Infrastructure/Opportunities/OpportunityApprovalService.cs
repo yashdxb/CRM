@@ -62,6 +62,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             a.Id,
             a.OpportunityId,
             a.Status,
+            a.Purpose,
             a.ApproverRole,
             a.ApproverUserId,
             a.ApproverUserId.HasValue && users.TryGetValue(a.ApproverUserId.Value, out var approverName) ? approverName : null,
@@ -78,6 +79,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         Guid opportunityId,
         decimal amount,
         string currency,
+        string purpose,
         ActorContext actor,
         CancellationToken cancellationToken = default)
     {
@@ -100,9 +102,15 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval role must be configured before requesting approval.");
         }
 
+        var normalizedPurpose = string.IsNullOrWhiteSpace(purpose) ? "Close" : purpose.Trim();
+
         var existingPending = await _dbContext.OpportunityApprovals
             .AsNoTracking()
-            .FirstOrDefaultAsync(a => a.OpportunityId == opportunityId && a.Status == "Pending", cancellationToken);
+            .FirstOrDefaultAsync(
+                a => a.OpportunityId == opportunityId
+                     && a.Status == "Pending"
+                     && a.Purpose == normalizedPurpose,
+                cancellationToken);
 
         if (existingPending is not null)
         {
@@ -116,6 +124,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             ApproverRole = approverRole,
             RequestedByUserId = actor.UserId,
             Status = "Pending",
+            Purpose = normalizedPurpose,
             RequestedOn = DateTime.UtcNow,
             Amount = amount,
             Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency
@@ -153,7 +162,8 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 approval.Amount,
                 approval.Currency,
                 approval.RequestedOn,
-                approval.ApproverRole),
+                approval.ApproverRole,
+                approval.Purpose),
             cancellationToken);
 
         var approvalDto = await MapDtoAsync(approval, cancellationToken);
@@ -235,6 +245,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             approval.Id,
             approval.OpportunityId,
             approval.Status,
+            approval.Purpose,
             approval.ApproverRole,
             approval.ApproverUserId,
             approval.ApproverUserId.HasValue && users.TryGetValue(approval.ApproverUserId.Value, out var approverName) ? approverName : null,

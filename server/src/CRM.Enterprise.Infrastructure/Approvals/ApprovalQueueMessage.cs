@@ -6,4 +6,5 @@ public record ApprovalQueueMessage(
     decimal Amount,
     string Currency,
     DateTime RequestedOn,
-    string ApproverRole);
+    string ApproverRole,
+    string Purpose);
