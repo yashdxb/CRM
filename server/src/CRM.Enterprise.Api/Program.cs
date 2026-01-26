@@ -17,9 +17,12 @@ using System.Threading;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var sqlConnectionString = builder.Configuration.GetConnectionString("SqlServer")
-    ?? throw new InvalidOperationException("Connection string 'SqlServer' was not found.");
-EnsureSqlServerAvailable(sqlConnectionString);
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    var sqlConnectionString = builder.Configuration.GetConnectionString("SqlServer")
+        ?? throw new InvalidOperationException("Connection string 'SqlServer' was not found.");
+    EnsureSqlServerAvailable(sqlConnectionString);
+}
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -88,8 +91,21 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
-var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
-var jwtOptions = jwtSection.Get<JwtOptions>() ?? throw new InvalidOperationException("Jwt configuration missing.");
+JwtOptions jwtOptions;
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    jwtOptions = new JwtOptions
+    {
+        Key = "test-key-test-key-test-key-test-key",
+        Issuer = "test-issuer",
+        Audience = "test-audience"
+    };
+}
+else
+{
+    var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+    jwtOptions = jwtSection.Get<JwtOptions>() ?? throw new InvalidOperationException("Jwt configuration missing.");
+}
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -207,8 +223,9 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
     }
 }).AllowAnonymous();
 
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsEnvironment("Testing"))
 {
+    using var scope = app.Services.CreateScope();
     var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
     await initializer.InitializeAsync();
 }
