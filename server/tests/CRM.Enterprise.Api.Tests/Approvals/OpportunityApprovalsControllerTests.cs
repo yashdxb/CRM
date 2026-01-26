@@ -18,7 +18,8 @@ public class OpportunityApprovalsControllerTests
         var context = factory.Services.GetRequiredService<CrmDbContext>();
 
         var tenant = SeedTenant(context, "default", "Sales Manager");
-        var opportunity = SeedOpportunity(context, tenant.Id);
+        var account = SeedAccount(context, tenant.Id);
+        var opportunity = SeedOpportunity(context, tenant.Id, account.Id);
         await context.SaveChangesAsync();
 
         client.DefaultRequestHeaders.Add("X-Tenant-Key", tenant.Key);
@@ -43,7 +44,8 @@ public class OpportunityApprovalsControllerTests
         var context = factory.Services.GetRequiredService<CrmDbContext>();
 
         var tenant = SeedTenant(context, "default", "Sales Manager");
-        var opportunity = SeedOpportunity(context, tenant.Id);
+        var account = SeedAccount(context, tenant.Id);
+        var opportunity = SeedOpportunity(context, tenant.Id, account.Id);
         var approver = SeedUser(context, tenant.Id, "Approver");
         var role = SeedRole(context, tenant.Id, "Sales Manager");
         SeedUserRole(context, tenant.Id, approver.Id, role.Id);
@@ -87,7 +89,8 @@ public class OpportunityApprovalsControllerTests
         var context = factory.Services.GetRequiredService<CrmDbContext>();
 
         var tenant = SeedTenant(context, "default", "Sales Manager");
-        var opportunity = SeedOpportunity(context, tenant.Id);
+        var account = SeedAccount(context, tenant.Id);
+        var opportunity = SeedOpportunity(context, tenant.Id, account.Id);
         var approverRole = SeedRole(context, tenant.Id, "Sales Manager");
         var approverUser = SeedUser(context, tenant.Id, "Approver");
         SeedUserRole(context, tenant.Id, approverUser.Id, approverRole.Id);
@@ -128,7 +131,8 @@ public class OpportunityApprovalsControllerTests
         var context = factory.Services.GetRequiredService<CrmDbContext>();
 
         var tenant = SeedTenant(context, "default", null);
-        var opportunity = SeedOpportunity(context, tenant.Id);
+        var account = SeedAccount(context, tenant.Id);
+        var opportunity = SeedOpportunity(context, tenant.Id, account.Id);
         await context.SaveChangesAsync();
 
         client.DefaultRequestHeaders.Add("X-Tenant-Key", tenant.Key);
@@ -143,6 +147,59 @@ public class OpportunityApprovalsControllerTests
     }
 
     [Fact]
+    public async Task GetInbox_ReturnsFilteredApprovals()
+    {
+        using var factory = new TestWebApplicationFactory();
+        var client = factory.CreateClient();
+        var context = factory.Services.GetRequiredService<CrmDbContext>();
+
+        var tenant = SeedTenant(context, "default", "Sales Manager");
+        var account = SeedAccount(context, tenant.Id);
+        var opportunity = SeedOpportunity(context, tenant.Id, account.Id);
+        var requester = SeedUser(context, tenant.Id, "Requester");
+
+        context.OpportunityApprovals.AddRange(
+            new OpportunityApproval
+            {
+                TenantId = tenant.Id,
+                OpportunityId = opportunity.Id,
+                ApproverRole = "Sales Manager",
+                RequestedByUserId = requester.Id,
+                Status = "Pending",
+                Purpose = "Close",
+                Amount = 1000m,
+                Currency = "USD",
+                RequestedOn = DateTime.UtcNow.AddMinutes(-10)
+            },
+            new OpportunityApproval
+            {
+                TenantId = tenant.Id,
+                OpportunityId = opportunity.Id,
+                ApproverRole = "Sales Manager",
+                RequestedByUserId = requester.Id,
+                Status = "Approved",
+                Purpose = "Discount",
+                Amount = 250m,
+                Currency = "USD",
+                RequestedOn = DateTime.UtcNow.AddMinutes(-20),
+                DecisionOn = DateTime.UtcNow.AddMinutes(-5)
+            });
+
+        await context.SaveChangesAsync();
+
+        client.DefaultRequestHeaders.Add("X-Tenant-Key", tenant.Key);
+
+        var response = await client.GetAsync("/api/opportunity-approvals?status=Pending&purpose=Close");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var payload = await response.Content.ReadFromJsonAsync<List<ApprovalItem>>();
+        Assert.NotNull(payload);
+        Assert.Single(payload!);
+        Assert.Equal("Pending", payload![0].Status);
+        Assert.Equal("Close", payload![0].Purpose);
+    }
+
+    [Fact]
     public async Task GetApprovals_ReturnsOpportunityApprovals()
     {
         using var factory = new TestWebApplicationFactory();
@@ -150,7 +207,8 @@ public class OpportunityApprovalsControllerTests
         var context = factory.Services.GetRequiredService<CrmDbContext>();
 
         var tenant = SeedTenant(context, "default", "Sales Manager");
-        var opportunity = SeedOpportunity(context, tenant.Id);
+        var account = SeedAccount(context, tenant.Id);
+        var opportunity = SeedOpportunity(context, tenant.Id, account.Id);
         context.OpportunityApprovals.Add(new OpportunityApproval
         {
             TenantId = tenant.Id,
@@ -188,13 +246,13 @@ public class OpportunityApprovalsControllerTests
         return tenant;
     }
 
-    private static Opportunity SeedOpportunity(CrmDbContext context, Guid tenantId)
+    private static Opportunity SeedOpportunity(CrmDbContext context, Guid tenantId, Guid accountId)
     {
         var opportunity = new Opportunity
         {
             TenantId = tenantId,
             Name = "Test Opportunity",
-            AccountId = Guid.NewGuid(),
+            AccountId = accountId,
             StageId = Guid.NewGuid(),
             OwnerId = Guid.NewGuid(),
             Amount = 1000m,
@@ -205,6 +263,18 @@ public class OpportunityApprovalsControllerTests
         };
         context.Opportunities.Add(opportunity);
         return opportunity;
+    }
+
+    private static Account SeedAccount(CrmDbContext context, Guid tenantId)
+    {
+        var account = new Account
+        {
+            TenantId = tenantId,
+            Name = "Test Account",
+            OwnerId = Guid.NewGuid()
+        };
+        context.Accounts.Add(account);
+        return account;
     }
 
     private static User SeedUser(CrmDbContext context, Guid tenantId, string fullName)
