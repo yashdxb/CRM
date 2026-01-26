@@ -80,6 +80,47 @@ public class OpportunityApprovalsControllerTests
     }
 
     [Fact]
+    public async Task DecideApproval_ReturnsBadRequest_WhenUserIsNotApprover()
+    {
+        using var factory = new TestWebApplicationFactory();
+        var client = factory.CreateClient();
+        var context = factory.Services.GetRequiredService<CrmDbContext>();
+
+        var tenant = SeedTenant(context, "default", "Sales Manager");
+        var opportunity = SeedOpportunity(context, tenant.Id);
+        var approverRole = SeedRole(context, tenant.Id, "Sales Manager");
+        var approverUser = SeedUser(context, tenant.Id, "Approver");
+        SeedUserRole(context, tenant.Id, approverUser.Id, approverRole.Id);
+
+        var nonApprover = SeedUser(context, tenant.Id, "Non Approver");
+
+        var approval = new OpportunityApproval
+        {
+            TenantId = tenant.Id,
+            OpportunityId = opportunity.Id,
+            ApproverRole = "Sales Manager",
+            RequestedByUserId = SeedUser(context, tenant.Id, "Requester").Id,
+            Status = "Pending",
+            Purpose = "Close",
+            Amount = 1500m,
+            Currency = "USD",
+            RequestedOn = DateTime.UtcNow.AddMinutes(-3)
+        };
+        context.OpportunityApprovals.Add(approval);
+        await context.SaveChangesAsync();
+
+        client.DefaultRequestHeaders.Add("X-Tenant-Key", tenant.Key);
+        client.DefaultRequestHeaders.Add("X-Test-UserId", nonApprover.Id.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-UserName", nonApprover.FullName);
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/opportunity-approvals/{approval.Id}",
+            new { approved = true, notes = "Should fail" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetApprovals_ReturnsOpportunityApprovals()
     {
         using var factory = new TestWebApplicationFactory();
