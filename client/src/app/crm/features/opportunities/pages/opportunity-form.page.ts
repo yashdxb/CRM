@@ -103,6 +103,8 @@ export class OpportunityFormPage implements OnInit {
   protected approvalDecidingIds = new Set<string>();
   private approvalAmountLocked = false;
   private syncingApprovalAmount = false;
+  protected nextStepDueAtUtc: Date | null = null;
+  private originalStage: string | null = null;
   private editingId: string | null = null;
   private pendingOpportunity: Opportunity | null = null;
   private pendingAccountName: string | null = null;
@@ -171,6 +173,7 @@ export class OpportunityFormPage implements OnInit {
     request$.subscribe({
       next: () => {
         this.saving.set(false);
+        this.originalStage = this.selectedStage;
       },
       error: (err) => {
         this.saving.set(false);
@@ -417,6 +420,7 @@ export class OpportunityFormPage implements OnInit {
     const resolvedAccountId = opp.accountId ?? accountIdFromName ?? this.form.accountId;
     const stage = opp.stage || 'Prospecting';
     this.selectedStage = stage;
+    this.originalStage = stage;
     Object.assign(this.form, {
       name: opp.name,
       accountId: resolvedAccountId,
@@ -437,6 +441,7 @@ export class OpportunityFormPage implements OnInit {
       isWon: opp.status === 'Closed Won',
       winLossReason: opp.winLossReason ?? ''
     });
+    this.nextStepDueAtUtc = opp.nextStepDueAtUtc ? new Date(opp.nextStepDueAtUtc) : null;
     this.approvalRequest = {
       ...this.approvalRequest,
       amount: opp.amount ?? this.approvalRequest.amount,
@@ -516,6 +521,12 @@ export class OpportunityFormPage implements OnInit {
     if (stage === 'Commit') {
       if (this.form.securityReviewStatus !== 'Approved' || this.form.legalReviewStatus !== 'Approved') {
         return 'Security and legal reviews must be approved before moving to Commit.';
+      }
+    }
+
+    if (this.isEditMode() && this.originalStage && stage !== this.originalStage && !stage.startsWith('Closed')) {
+      if (!this.nextStepDueAtUtc) {
+        return 'Next step is required before changing stage. Log an activity with a due date.';
       }
     }
 

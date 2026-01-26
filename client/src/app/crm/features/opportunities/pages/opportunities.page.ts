@@ -195,10 +195,15 @@ export class OpportunitiesPage {
     if (!stage || row.stage === stage) {
       return;
     }
+    if (!stage.startsWith('Closed') && !row.nextStepDueAtUtc) {
+      this.toastService.show('error', 'Next step is required before changing stage. Log an activity with a due date.', 4000);
+      return;
+    }
     this.opportunityData.updateStage(row.id, stage).subscribe({
       next: () => this.load(),
       error: (err) => {
-        alert(err?.error ?? 'Stage update failed. Please try again.');
+        const message = err?.error ?? 'Stage update failed. Please try again.';
+        this.toastService.show('error', message, 4000);
       }
     });
   }
