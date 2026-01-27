@@ -13,7 +13,7 @@ import { TagModule } from 'primeng/tag';
 
 import { map } from 'rxjs';
 
-import { Lead, LeadAssignmentStrategy, LeadStatus, LeadStatusHistoryItem } from '../models/lead.model';
+import { Lead, LeadAssignmentStrategy, LeadCadenceChannel, LeadCadenceTouch, LeadStatus, LeadStatusHistoryItem } from '../models/lead.model';
 import { LeadDataService, SaveLeadRequest } from '../services/lead-data.service';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { UserListItem } from '../../settings/models/user-admin.model';
@@ -80,6 +80,11 @@ export class LeadFormPage implements OnInit {
   protected aiScoreNote = signal<string | null>(null);
   protected aiScoreSeverity = signal<'success' | 'info' | 'warn' | 'error'>('info');
   protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
+  protected cadenceTouches = signal<LeadCadenceTouch[]>([]);
+  protected cadenceChannel: LeadCadenceChannel = 'Call';
+  protected cadenceOutcome = '';
+  protected cadenceNextStepLocal = '';
+  protected cadenceSubmitting = signal(false);
   protected linkedAccountId = signal<string | null>(null);
   protected linkedContactId = signal<string | null>(null);
   protected linkedOpportunityId = signal<string | null>(null);
@@ -96,16 +101,19 @@ export class LeadFormPage implements OnInit {
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
+    this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
     if (this.editingId && lead) {
       this.prefillFromLead(lead);
       this.loadStatusHistory(this.editingId);
+      this.loadCadenceTouches(this.editingId);
     } else if (this.editingId) {
       this.leadData.get(this.editingId).subscribe({
         next: (data) => {
           this.prefillFromLead(data);
           this.loadStatusHistory(this.editingId!);
+          this.loadCadenceTouches(this.editingId!);
         },
         error: () => this.router.navigate(['/app/leads'])
       });
@@ -245,6 +253,65 @@ export class LeadFormPage implements OnInit {
       next: (history) => this.statusHistory.set(history),
       error: () => this.statusHistory.set([])
     });
+  }
+
+  private loadCadenceTouches(leadId: string) {
+    this.leadData.getCadenceTouches(leadId).subscribe({
+      next: (touches) => this.cadenceTouches.set(touches),
+      error: () => this.cadenceTouches.set([])
+    });
+  }
+
+  protected logCadenceTouch() {
+    if (!this.editingId || this.cadenceSubmitting()) {
+      return;
+    }
+
+    const outcome = this.cadenceOutcome.trim();
+    if (!outcome) {
+      this.raiseToast('error', 'Cadence outcome is required.');
+      return;
+    }
+
+    const dueIso = this.localToUtcIso(this.cadenceNextStepLocal);
+    if (!dueIso) {
+      this.raiseToast('error', 'Next step due date is required.');
+      return;
+    }
+
+    this.cadenceSubmitting.set(true);
+    this.leadData
+      .logCadenceTouch(this.editingId, {
+        channel: this.cadenceChannel,
+        outcome,
+        nextStepDueAtUtc: dueIso
+      })
+      .subscribe({
+        next: () => {
+          this.cadenceSubmitting.set(false);
+          this.cadenceOutcome = '';
+          this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
+          this.loadCadenceTouches(this.editingId!);
+          this.raiseToast('success', 'Cadence touch logged and next step scheduled.');
+        },
+        error: () => {
+          this.cadenceSubmitting.set(false);
+          this.raiseToast('error', 'Unable to log cadence touch.');
+        }
+      });
+  }
+
+  private defaultCadenceDueLocal() {
+    const due = new Date();
+    due.setDate(due.getDate() + 2);
+    due.setMinutes(due.getMinutes() - due.getTimezoneOffset());
+    return due.toISOString().slice(0, 16);
+  }
+
+  private localToUtcIso(localValue: string): string | null {
+    if (!localValue) return null;
+    const parsed = new Date(localValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
   private createEmptyForm(): SaveLeadRequest & { autoScore: boolean } {

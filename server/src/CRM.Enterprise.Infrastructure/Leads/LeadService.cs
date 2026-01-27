@@ -1,3 +1,4 @@
+using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Domain.Entities;
@@ -16,17 +17,20 @@ public sealed class LeadService : ILeadService
     private readonly ILeadScoringService _leadScoringService;
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
+    private readonly IActivityService _activityService;
 
     public LeadService(
         CrmDbContext dbContext,
         ILeadScoringService leadScoringService,
         IAuditEventService auditEvents,
-        IMediator mediator)
+        IMediator mediator,
+        IActivityService activityService)
     {
         _dbContext = dbContext;
         _leadScoringService = leadScoringService;
         _auditEvents = auditEvents;
         _mediator = mediator;
+        _activityService = activityService;
     }
 
     public async Task<LeadSearchResultDto> SearchAsync(LeadSearchRequest request, CancellationToken cancellationToken = default)
@@ -351,6 +355,7 @@ public sealed class LeadService : ILeadService
         lead.LeadStatusId = status.Id;
         lead.Status = status;
         var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
+        var resolvedStatusName = statusName ?? request.Status ?? "New";
         var requestedOwnerId = request.OwnerId ?? lead.OwnerId;
         lead.OwnerId = await ResolveOwnerIdAsync(requestedOwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
         lead.Source = request.Source;
@@ -363,22 +368,33 @@ public sealed class LeadService : ILeadService
         lead.QualifiedNotes = request.QualifiedNotes;
         lead.UpdatedAtUtc = DateTime.UtcNow;
 
-        var validationError = ValidateOutcome(statusName ?? "New", request);
+        var validationError = ValidateOutcome(resolvedStatusName, request);
         if (validationError is not null)
         {
             return LeadOperationResult<bool>.Fail(validationError);
         }
 
         var statusChanged = lead.LeadStatusId != previousStatusId;
+        if (statusChanged
+            && actor.UserId != Guid.Empty
+            && string.Equals(resolvedStatusName, "Qualified", StringComparison.OrdinalIgnoreCase))
+        {
+            var handoffError = await ValidateQualifiedHandoffAsync(lead.Id, lead.QualifiedNotes, cancellationToken);
+            if (handoffError is not null)
+            {
+                return LeadOperationResult<bool>.Fail(handoffError);
+            }
+        }
+
         if (statusChanged)
         {
-            ApplyStatusSideEffects(lead, statusName);
-            await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, statusName, actor, cancellationToken);
+            ApplyStatusSideEffects(lead, resolvedStatusName);
+            await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, resolvedStatusName, actor, cancellationToken);
             AddStatusHistory(lead, lead.LeadStatusId, null, actor);
 
             var oldStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
             await _auditEvents.TrackAsync(
-                CreateAuditEntry(lead.Id, "StatusChanged", "Status", oldStatusName, statusName, actor),
+                CreateAuditEntry(lead.Id, "StatusChanged", "Status", oldStatusName, resolvedStatusName, actor),
                 cancellationToken);
         }
 
@@ -391,7 +407,7 @@ public sealed class LeadService : ILeadService
             await EnsureFirstTouchTaskAsync(lead, actor, cancellationToken);
         }
 
-        await EnsureNurtureFollowUpTaskAsync(lead, statusName, cancellationToken);
+        await EnsureNurtureFollowUpTaskAsync(lead, resolvedStatusName, cancellationToken);
         await _auditEvents.TrackAsync(
             CreateAuditEntry(lead.Id, "Updated", null, null, null, actor),
             cancellationToken);
@@ -408,7 +424,7 @@ public sealed class LeadService : ILeadService
                 DateTime.UtcNow), cancellationToken);
         }
 
-        if (statusChanged && string.Equals(statusName, "Qualified", StringComparison.OrdinalIgnoreCase))
+        if (statusChanged && string.Equals(resolvedStatusName, "Qualified", StringComparison.OrdinalIgnoreCase))
         {
             await _mediator.Publish(new LeadQualifiedEvent(
                 lead.Id,
@@ -720,6 +736,180 @@ public sealed class LeadService : ILeadService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return LeadOperationResult<int>.Ok(leads.Count);
+    }
+
+
+    public async Task<IReadOnlyList<LeadCadenceTouchDto>?> GetCadenceTouchesAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var exists = await _dbContext.Leads
+            .AsNoTracking()
+            .AnyAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
+        if (!exists)
+        {
+            return null;
+        }
+
+        var touches = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Lead
+                        && a.RelatedEntityId == id
+                        && a.Subject.StartsWith("Cadence ", StringComparison.OrdinalIgnoreCase)
+                        && a.CompletedDateUtc.HasValue)
+            .OrderByDescending(a => a.CompletedDateUtc)
+            .Take(20)
+            .Select(a => new
+            {
+                a.Id,
+                a.Subject,
+                a.Outcome,
+                a.CompletedDateUtc,
+                a.Description,
+                a.OwnerId
+            })
+            .ToListAsync(cancellationToken);
+
+        var ownerIds = touches.Select(t => t.OwnerId).Where(id => id != Guid.Empty).Distinct().ToList();
+        var owners = ownerIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => ownerIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+
+        return touches.Select(t => new LeadCadenceTouchDto(
+                t.Id,
+                ResolveCadenceChannel(t.Subject),
+                string.IsNullOrWhiteSpace(t.Outcome) ? "Logged" : t.Outcome,
+                t.CompletedDateUtc!.Value,
+                TryParseNextStepDue(t.Description),
+                owners.TryGetValue(t.OwnerId, out var ownerName) ? ownerName : "Unassigned"))
+            .ToList();
+    }
+
+    public async Task<LeadOperationResult<LeadCadenceTouchDto>> LogCadenceTouchAsync(Guid id, LeadCadenceTouchRequest request, LeadActor actor, CancellationToken cancellationToken = default)
+    {
+        var lead = await _dbContext.Leads
+            .AsNoTracking()
+            .FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
+        if (lead is null)
+        {
+            return LeadOperationResult<LeadCadenceTouchDto>.NotFoundResult();
+        }
+
+        var channel = string.IsNullOrWhiteSpace(request.Channel) ? string.Empty : request.Channel.Trim();
+        var outcome = string.IsNullOrWhiteSpace(request.Outcome) ? string.Empty : request.Outcome.Trim();
+        if (string.IsNullOrWhiteSpace(channel) || string.IsNullOrWhiteSpace(outcome))
+        {
+            return LeadOperationResult<LeadCadenceTouchDto>.Fail("Channel and outcome are required.");
+        }
+
+        if (!request.NextStepDueAtUtc.HasValue)
+        {
+            return LeadOperationResult<LeadCadenceTouchDto>.Fail("Next step due date is required.");
+        }
+
+        var activityType = channel.ToLowerInvariant() switch
+        {
+            "call" => ActivityType.Call,
+            "email" => ActivityType.Email,
+            "linkedin" => ActivityType.Task,
+            _ => ActivityType.Task
+        };
+
+        var leadName = ($"{lead.FirstName} {lead.LastName}").Trim();
+        var subject = string.IsNullOrWhiteSpace(leadName)
+            ? $"Cadence {channel}"
+            : $"Cadence {channel}: {leadName}";
+        var nextStepSubject = $"Follow-up ({channel})";
+        var description = $"Cadence touch logged via SDR workflow.{Environment.NewLine}NextStepDueAtUtc={request.NextStepDueAtUtc.Value:o}";
+
+        var activityResult = await _activityService.CreateAsync(
+            new ActivityUpsertRequest(
+                subject,
+                description,
+                outcome,
+                activityType,
+                "Medium",
+                request.NextStepDueAtUtc,
+                DateTime.UtcNow,
+                nextStepSubject,
+                request.NextStepDueAtUtc,
+                ActivityRelationType.Lead,
+                lead.Id,
+                lead.OwnerId),
+            new CRM.Enterprise.Application.Common.ActorContext(actor.UserId == Guid.Empty ? null : actor.UserId, actor.UserName),
+            cancellationToken);
+
+        if (!activityResult.Success || activityResult.Value is null)
+        {
+            return LeadOperationResult<LeadCadenceTouchDto>.Fail(activityResult.Error ?? "Unable to log cadence touch.");
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(lead.Id, "CadenceTouchLogged", "Cadence", null, subject, actor),
+            cancellationToken);
+
+        var dto = new LeadCadenceTouchDto(
+            activityResult.Value.Id,
+            channel,
+            outcome,
+            activityResult.Value.CompletedDateUtc ?? DateTime.UtcNow,
+            request.NextStepDueAtUtc,
+            activityResult.Value.OwnerName ?? "Unassigned");
+        return LeadOperationResult<LeadCadenceTouchDto>.Ok(dto);
+    }
+
+    private async Task<string?> ValidateQualifiedHandoffAsync(Guid leadId, string? qualifiedNotes, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(qualifiedNotes))
+        {
+            return "Qualified notes are required before handoff.";
+        }
+
+        var hasMeeting = await _dbContext.Activities
+            .AsNoTracking()
+            .AnyAsync(a => !a.IsDeleted
+                           && a.RelatedEntityType == ActivityRelationType.Lead
+                           && a.RelatedEntityId == leadId
+                           && a.Type == ActivityType.Meeting
+                           && (a.CompletedDateUtc.HasValue
+                               || (a.DueDateUtc.HasValue && a.DueDateUtc.Value >= DateTime.UtcNow.AddDays(-1))),
+                cancellationToken);
+        return hasMeeting
+            ? null
+            : "Book or log a discovery meeting before qualifying this lead.";
+    }
+
+    private static string ResolveCadenceChannel(string subject)
+    {
+        var prefix = "Cadence ";
+        if (!subject.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return "Touch";
+        }
+
+        var remainder = subject.Substring(prefix.Length);
+        var parts = remainder.Split(':', 2, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 0 ? "Touch" : parts[0];
+    }
+
+    private static DateTime? TryParseNextStepDue(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            return null;
+        }
+
+        var marker = "NextStepDueAtUtc=";
+        var start = description.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        var value = description.Substring(start + marker.Length).Trim();
+        return DateTime.TryParse(value, out var parsed) ? parsed : null;
     }
 
     private async Task<LeadStatus> ResolveLeadStatusAsync(string? statusName, CancellationToken cancellationToken)

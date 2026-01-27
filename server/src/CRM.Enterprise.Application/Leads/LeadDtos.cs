@@ -56,6 +56,14 @@ public sealed record LeadConversionResultDto(
     Guid? ContactId,
     Guid? OpportunityId);
 
+public sealed record LeadCadenceTouchDto(
+    Guid ActivityId,
+    string Channel,
+    string Outcome,
+    DateTime CompletedAtUtc,
+    DateTime? NextStepDueAtUtc,
+    string OwnerName);
+
 public sealed record LeadOperationResult<T>(bool Success, T? Value, string? Error, bool NotFound = false)
 {
     public static LeadOperationResult<T> Ok(T value) => new(true, value, null, false);

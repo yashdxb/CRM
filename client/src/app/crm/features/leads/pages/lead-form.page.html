@@ -273,6 +273,68 @@
             </div>
           </section>
 
+          <section class="form-section cadence-section" *ngIf="isEditMode()">
+            <h2 class="section-title">
+              <i class="pi pi-bullseye"></i>
+              SDR Cadence
+            </h2>
+            <div class="cadence-grid">
+              <div class="field">
+                <label>Channel</label>
+                <select class="cadence-input" [(ngModel)]="cadenceChannel" name="cadenceChannel">
+                  <option value="Call">Call</option>
+                  <option value="Email">Email</option>
+                  <option value="LinkedIn">LinkedIn</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Next step due date</label>
+                <input
+                  class="cadence-input"
+                  type="datetime-local"
+                  name="cadenceNextStepLocal"
+                  [(ngModel)]="cadenceNextStepLocal"
+                />
+              </div>
+              <div class="field full-row">
+                <label>Outcome</label>
+                <input
+                  pInputText
+                  class="cadence-input"
+                  name="cadenceOutcome"
+                  [(ngModel)]="cadenceOutcome"
+                  placeholder="Connected, voicemail, no response, meeting booked..."
+                />
+              </div>
+            </div>
+            <div class="cadence-actions">
+              <button
+                pButton
+                type="button"
+                label="Log cadence touch"
+                icon="pi pi-check"
+                class="crm-button crm-button--primary"
+                (click)="logCadenceTouch()"
+                [disabled]="cadenceSubmitting() || !cadenceOutcome.trim()"
+              ></button>
+            </div>
+            <div class="cadence-history" *ngIf="cadenceTouches().length; else noCadenceTouches">
+              <div class="cadence-item" *ngFor="let touch of cadenceTouches()">
+                <div class="cadence-item__meta">
+                  <strong>{{ touch.channel }}</strong>
+                  <span>{{ touch.completedAtUtc | date:'medium' }}</span>
+                </div>
+                <div class="cadence-item__outcome">{{ touch.outcome }}</div>
+                <div class="cadence-item__next" *ngIf="touch.nextStepDueAtUtc">
+                  Next step due {{ touch.nextStepDueAtUtc | date:'mediumDate' }}
+                </div>
+              </div>
+            </div>
+            <ng-template #noCadenceTouches>
+              <div class="history-empty">No cadence touches logged yet.</div>
+            </ng-template>
+          </section>
+
           <section class="form-section" *ngIf="isEditMode()">
             <h2 class="section-title">
               <i class="pi pi-history"></i>

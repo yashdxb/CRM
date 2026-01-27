@@ -50,7 +50,7 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: lead cannot close without required outcome fields.
 - Handoff package validator (notes + booked meeting + outcome)  
   - Acceptance: handoff blocked unless meeting + notes exist.
- - Status: Lead outcomes + SLA + nurture follow-up task completed; cadence + handoff validator pending.
+ - Status: Lead outcomes + SLA + nurture follow-up task completed; cadence tracking + handoff validator now implemented.
 
 ## Activities
 - Enforce activity outcome + next step + due date  
@@ -129,6 +129,7 @@ Order: execute sequentially, build + verify after each task.
 - Lead service seam + lead domain events + handlers
 - Lead import service seam
 - Lead outcomes + first-touch SLA + nurture follow-up task
+- Lead cadence touch logging + auto next-step task + qualified handoff validator (meeting + notes)
 - Activity and opportunity service seams + domain events
 - Opportunity stage enforcement + at-risk + no-next-step flags
 - Activity discipline enforcement (outcome + next step)
@@ -141,6 +142,7 @@ Order: execute sequentially, build + verify after each task.
 - Stage-change next-step requirement tests
 - Manager pipeline health API + dashboard review queue card
 - Manager coaching task API + dashboard coaching dialog + tests
+- Lead cadence + qualified handoff API tests
 
 ---
 

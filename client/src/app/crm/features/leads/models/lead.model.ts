@@ -1,5 +1,6 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Nurture' | 'Qualified' | 'Converted' | 'Lost' | 'Disqualified';
 export type LeadAssignmentStrategy = 'Manual' | 'RoundRobin' | 'Territory';
+export type LeadCadenceChannel = 'Call' | 'Email' | 'LinkedIn';
 
 export interface Lead {
   id: string;
@@ -60,4 +61,13 @@ export interface LeadStatusHistoryItem {
   changedAtUtc: string;
   changedBy?: string;
   notes?: string;
+}
+
+export interface LeadCadenceTouch {
+  activityId: string;
+  channel: string;
+  outcome: string;
+  completedAtUtc: string;
+  nextStepDueAtUtc?: string;
+  ownerName: string;
 }

@@ -7,6 +7,8 @@ import {
   LeadAssignmentStrategy,
   LeadConversionRequest,
   LeadConversionResponse,
+  LeadCadenceChannel,
+  LeadCadenceTouch,
   LeadSearchRequest,
   LeadSearchResponse,
   LeadStatus,
@@ -62,6 +64,10 @@ export class LeadDataService {
     return this.http.get<LeadStatusHistoryItem[]>(`${this.baseUrl}/api/leads/${id}/status-history`);
   }
 
+  getCadenceTouches(id: string) {
+    return this.http.get<LeadCadenceTouch[]>(`${this.baseUrl}/api/leads/${id}/cadence-touches`);
+  }
+
   create(payload: SaveLeadRequest) {
     return this.http.post<Lead>(`${this.baseUrl}/api/leads`, payload);
   }
@@ -98,6 +104,10 @@ export class LeadDataService {
     return this.http.patch<void>(`${this.baseUrl}/api/leads/${id}/status`, {
       status
     });
+  }
+
+  logCadenceTouch(id: string, payload: { channel: LeadCadenceChannel; outcome: string; nextStepDueAtUtc: string | Date }) {
+    return this.http.post<LeadCadenceTouch>(`${this.baseUrl}/api/leads/${id}/cadence-touch`, payload);
   }
 
   aiScore(id: string) {

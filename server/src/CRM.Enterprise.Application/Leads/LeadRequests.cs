@@ -30,3 +30,8 @@ public sealed record LeadConversionRequest(
     string? OpportunityName,
     decimal? Amount,
     DateTime? ExpectedCloseDate);
+
+public sealed record LeadCadenceTouchRequest(
+    string Channel,
+    string Outcome,
+    DateTime? NextStepDueAtUtc);

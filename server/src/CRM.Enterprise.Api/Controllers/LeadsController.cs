@@ -1,7 +1,9 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Leads;
 using ApiLeadConversionRequest = CRM.Enterprise.Api.Contracts.Leads.LeadConversionRequest;
+using ApiLeadCadenceTouchRequest = CRM.Enterprise.Api.Contracts.Leads.LeadCadenceTouchRequest;
 using AppLeadConversionRequest = CRM.Enterprise.Application.Leads.LeadConversionRequest;
+using AppLeadCadenceTouchRequest = CRM.Enterprise.Application.Leads.LeadCadenceTouchRequest;
 using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Application.Leads;
@@ -57,6 +59,47 @@ public class LeadsController : ControllerBase
         if (history is null) return NotFound();
         var items = history.Select(h => new LeadStatusHistoryItem(h.Id, h.Status, h.ChangedAtUtc, h.ChangedBy, h.Notes));
         return Ok(items);
+    }
+
+    [HttpGet("{id:guid}/cadence-touches")]
+    public async Task<ActionResult<IEnumerable<LeadCadenceTouchItem>>> GetCadenceTouches(Guid id, CancellationToken cancellationToken)
+    {
+        var touches = await _leadService.GetCadenceTouchesAsync(id, cancellationToken);
+        if (touches is null) return NotFound();
+        var items = touches.Select(t => new LeadCadenceTouchItem(
+            t.ActivityId,
+            t.Channel,
+            t.Outcome,
+            t.CompletedAtUtc,
+            t.NextStepDueAtUtc,
+            t.OwnerName));
+        return Ok(items);
+    }
+
+    [HttpPost("{id:guid}/cadence-touch")]
+    [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    public async Task<ActionResult<LeadCadenceTouchItem>> LogCadenceTouch(Guid id, [FromBody] ApiLeadCadenceTouchRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Channel) || string.IsNullOrWhiteSpace(request.Outcome))
+        {
+            return BadRequest("Channel and outcome are required.");
+        }
+
+        var result = await _leadService.LogCadenceTouchAsync(
+            id,
+            new AppLeadCadenceTouchRequest(request.Channel, request.Outcome, request.NextStepDueAtUtc),
+            GetActor(),
+            cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        var value = result.Value!;
+        return Ok(new LeadCadenceTouchItem(
+            value.ActivityId,
+            value.Channel,
+            value.Outcome,
+            value.CompletedAtUtc,
+            value.NextStepDueAtUtc,
+            value.OwnerName));
     }
 
     [HttpGet("{id:guid}/audit")]

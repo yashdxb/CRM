@@ -797,9 +797,9 @@ Legend:
 ## Phase 2 vs Full B2B Role Flows (Other Roles)
 
 **SDR / BDR gaps:**
-1) [P2] Multi-touch cadence tracking (call/email/LinkedIn sequences)  
+1) [P2] Multi-touch cadence tracking (call/email/LinkedIn sequences) — Implemented on January 27, 2026  
    - Acceptance: cadence step logging + auto-next-step task.
-2) [P2] Handoff package standard (notes + meeting booked + outcome)  
+2) [P2] Handoff package standard (notes + meeting booked + outcome) — Implemented on January 27, 2026  
    - Acceptance: handoff requires meeting + summary note.
 
 **Sales Manager gaps:**
