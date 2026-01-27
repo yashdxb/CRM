@@ -17,6 +17,12 @@ public sealed class OpportunityService : IOpportunityService
     private const int AtRiskDays = 30;
     private const decimal DiscountPercentApprovalThreshold = 10m;
     private const decimal DiscountAmountApprovalThreshold = 1000m;
+    private const string ReviewSubjectPrefix = "Review:";
+    private const string ReviewAcknowledgmentSubjectPrefix = "Review acknowledgment:";
+    private const string ReviewOutcomeApproved = "Approved";
+    private const string ReviewOutcomeNeedsWork = "Needs Work";
+    private const string ReviewOutcomeEscalated = "Escalated";
+    private const string ReviewOutcomeAcknowledged = "Acknowledged";
     private static readonly HashSet<string> ForecastCategories = new(StringComparer.OrdinalIgnoreCase)
     {
         "Pipeline",
@@ -30,6 +36,12 @@ public sealed class OpportunityService : IOpportunityService
         "New",
         "Renewal",
         "Expansion"
+    };
+    private static readonly HashSet<string> ReviewOutcomes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ReviewOutcomeApproved,
+        ReviewOutcomeNeedsWork,
+        ReviewOutcomeEscalated
     };
     private static readonly HashSet<string> StagesRequiringAmount = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -1079,6 +1091,251 @@ public sealed class OpportunityService : IOpportunityService
         return dto is null
             ? OpportunityOperationResult<OpportunityListItemDto>.Fail("Expansion opportunity created but could not be loaded.")
             : OpportunityOperationResult<OpportunityListItemDto>.Ok(dto);
+    }
+
+    public async Task<IReadOnlyList<OpportunityReviewThreadItemDto>?> GetReviewThreadAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var opportunity = await _dbContext.Opportunities
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (opportunity is null)
+        {
+            return null;
+        }
+
+        var activities = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Opportunity
+                        && a.RelatedEntityId == id
+                        && (a.Subject.StartsWith(ReviewSubjectPrefix)
+                            || a.Subject.StartsWith(ReviewAcknowledgmentSubjectPrefix)))
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Take(50)
+            .ToListAsync(cancellationToken);
+
+        if (activities.Count == 0)
+        {
+            return Array.Empty<OpportunityReviewThreadItemDto>();
+        }
+
+        var ownerIds = activities.Select(a => a.OwnerId).Distinct().ToList();
+        var ownerNames = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => ownerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+
+        var requiresAck = activities.Any(a =>
+            a.Subject.StartsWith(ReviewAcknowledgmentSubjectPrefix, StringComparison.OrdinalIgnoreCase)
+            && !a.CompletedDateUtc.HasValue);
+
+        return activities.Select(a =>
+        {
+            var kind = a.Subject.StartsWith(ReviewAcknowledgmentSubjectPrefix, StringComparison.OrdinalIgnoreCase)
+                ? "Acknowledgment"
+                : "Review";
+            var outcome = string.IsNullOrWhiteSpace(a.Outcome) ? kind : a.Outcome!;
+            var ownerName = ownerNames.TryGetValue(a.OwnerId, out var name) ? name : "User";
+            return new OpportunityReviewThreadItemDto(
+                a.Id,
+                kind,
+                outcome,
+                a.Subject,
+                a.Description,
+                a.OwnerId,
+                ownerName,
+                a.CreatedAtUtc,
+                a.DueDateUtc,
+                a.CompletedDateUtc,
+                requiresAck);
+        }).ToList();
+    }
+
+    public async Task<OpportunityOperationResult<OpportunityReviewThreadItemDto>> AddReviewOutcomeAsync(Guid id, OpportunityReviewOutcomeRequest request, ActorContext actor, CancellationToken cancellationToken = default)
+    {
+        var opportunity = await _dbContext.Opportunities
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (opportunity is null)
+        {
+            return OpportunityOperationResult<OpportunityReviewThreadItemDto>.NotFoundResult();
+        }
+
+        var outcome = request.Outcome?.Trim();
+        if (string.IsNullOrWhiteSpace(outcome) || !ReviewOutcomes.Contains(outcome))
+        {
+            return OpportunityOperationResult<OpportunityReviewThreadItemDto>.Fail("Review outcome is invalid.");
+        }
+
+        var subject = $"{ReviewSubjectPrefix} {outcome}";
+        var description = string.IsNullOrWhiteSpace(request.Comment)
+            ? $"Manager review outcome: {outcome}."
+            : request.Comment.Trim();
+
+        var reviewActivityResult = await _activityService.CreateAsync(
+            new ActivityUpsertRequest(
+                subject,
+                description,
+                outcome,
+                ActivityType.Note,
+                "Normal",
+                DateTime.UtcNow,
+                DateTime.UtcNow,
+                null,
+                null,
+                ActivityRelationType.Opportunity,
+                id,
+                actor.UserId ?? opportunity.OwnerId),
+            actor,
+            cancellationToken);
+
+        if (!reviewActivityResult.Success || reviewActivityResult.Value is null)
+        {
+            return OpportunityOperationResult<OpportunityReviewThreadItemDto>.Fail(reviewActivityResult.Error ?? "Unable to add review outcome.");
+        }
+
+        var requiresAck = string.Equals(outcome, ReviewOutcomeNeedsWork, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(outcome, ReviewOutcomeEscalated, StringComparison.OrdinalIgnoreCase);
+        if (requiresAck)
+        {
+            var dueDate = request.AcknowledgmentDueAtUtc ?? DateTime.UtcNow.AddDays(2);
+            var ackSubject = $"{ReviewAcknowledgmentSubjectPrefix} {outcome}";
+            var ackDescription = $"Acknowledge manager review outcome: {outcome}.{Environment.NewLine}{description}";
+            await _activityService.CreateAsync(
+                new ActivityUpsertRequest(
+                    ackSubject,
+                    ackDescription,
+                    null,
+                    ActivityType.Task,
+                    "High",
+                    dueDate,
+                    null,
+                    null,
+                    null,
+                    ActivityRelationType.Opportunity,
+                    id,
+                    opportunity.OwnerId),
+                actor,
+                cancellationToken);
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(
+                id,
+                "ReviewOutcomeAdded",
+                "ReviewOutcome",
+                null,
+                outcome,
+                actor),
+            cancellationToken);
+
+        var ownerName = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == reviewActivityResult.Value.OwnerId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(cancellationToken) ?? "Manager";
+
+        var threadItem = new OpportunityReviewThreadItemDto(
+            reviewActivityResult.Value.Id,
+            "Review",
+            outcome,
+            subject,
+            description,
+            reviewActivityResult.Value.OwnerId ?? opportunity.OwnerId,
+            ownerName,
+            reviewActivityResult.Value.CreatedAtUtc,
+            reviewActivityResult.Value.DueDateUtc,
+            reviewActivityResult.Value.CompletedDateUtc,
+            requiresAck);
+
+        return OpportunityOperationResult<OpportunityReviewThreadItemDto>.Ok(threadItem);
+    }
+
+    public async Task<OpportunityOperationResult<OpportunityReviewThreadItemDto>> AcknowledgeReviewAsync(Guid id, ActorContext actor, CancellationToken cancellationToken = default)
+    {
+        var opportunity = await _dbContext.Opportunities
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (opportunity is null)
+        {
+            return OpportunityOperationResult<OpportunityReviewThreadItemDto>.NotFoundResult();
+        }
+
+        var userId = actor.UserId;
+        if (!userId.HasValue || userId.Value == Guid.Empty)
+        {
+            return OpportunityOperationResult<OpportunityReviewThreadItemDto>.Fail("User context is required to acknowledge review.");
+        }
+
+        var pendingAck = await _dbContext.Activities
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Opportunity
+                        && a.RelatedEntityId == id
+                        && a.OwnerId == userId.Value
+                        && a.CompletedDateUtc == null
+                        && a.Subject.StartsWith(ReviewAcknowledgmentSubjectPrefix))
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (pendingAck is null)
+        {
+            return OpportunityOperationResult<OpportunityReviewThreadItemDto>.Fail("No pending review acknowledgment found.");
+        }
+
+        var ackResult = await _activityService.UpdateAsync(
+            pendingAck.Id,
+            new ActivityUpsertRequest(
+                pendingAck.Subject,
+                pendingAck.Description,
+                ReviewOutcomeAcknowledged,
+                pendingAck.Type,
+                pendingAck.Priority,
+                pendingAck.DueDateUtc,
+                DateTime.UtcNow,
+                null,
+                null,
+                pendingAck.RelatedEntityType,
+                pendingAck.RelatedEntityId,
+                pendingAck.OwnerId),
+            actor,
+            cancellationToken);
+
+        if (!ackResult.Success)
+        {
+            return OpportunityOperationResult<OpportunityReviewThreadItemDto>.Fail(ackResult.Error ?? "Unable to acknowledge review.");
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(
+                id,
+                "ReviewAcknowledged",
+                "ReviewAcknowledgment",
+                null,
+                pendingAck.Id.ToString(),
+                actor),
+            cancellationToken);
+
+        var ownerName = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == pendingAck.OwnerId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(cancellationToken) ?? "Rep";
+
+        var threadItem = new OpportunityReviewThreadItemDto(
+            pendingAck.Id,
+            "Acknowledgment",
+            ReviewOutcomeAcknowledged,
+            pendingAck.Subject,
+            pendingAck.Description,
+            pendingAck.OwnerId,
+            ownerName,
+            pendingAck.CreatedAtUtc,
+            pendingAck.DueDateUtc,
+            DateTime.UtcNow,
+            false);
+
+        return OpportunityOperationResult<OpportunityReviewThreadItemDto>.Ok(threadItem);
     }
 
     private static string ComputeStatus(bool isClosed, bool isWon)

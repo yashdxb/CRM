@@ -47,6 +47,19 @@ public sealed record ExpansionSignalDto(
     int SignalCount,
     bool HasExpansionOpportunity);
 
+public sealed record OpportunityReviewThreadItemDto(
+    Guid ActivityId,
+    string Kind,
+    string Outcome,
+    string Subject,
+    string? Comment,
+    Guid OwnerId,
+    string OwnerName,
+    DateTime CreatedAtUtc,
+    DateTime? DueDateUtc,
+    DateTime? CompletedDateUtc,
+    bool RequiresAcknowledgment);
+
 public sealed record OpportunityStageHistoryDto(
     Guid Id,
     string Stage,

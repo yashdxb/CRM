@@ -550,6 +550,114 @@
             </div>
           </section>
 
+          <section class="form-card review-thread-card" *ngIf="isEditMode()">
+            <h3 class="section-title">
+              <i class="pi pi-comments"></i>
+              Deal Review Thread
+            </h3>
+
+            <div class="review-thread-controls" *ngIf="isManager(); else repAckBlock">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="reviewOutcome">Review outcome</label>
+                  <p-select
+                    inputId="reviewOutcome"
+                    appendTo="body"
+                    [options]="reviewOutcomeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [(ngModel)]="reviewOutcome"
+                    name="reviewOutcome"
+                    styleClass="w-full"
+                  ></p-select>
+                </div>
+                <div class="field" *ngIf="reviewOutcome !== 'Approved'">
+                  <label for="reviewDue">Acknowledgment due</label>
+                  <input
+                    id="reviewDue"
+                    type="datetime-local"
+                    class="review-input"
+                    [(ngModel)]="reviewAckDueLocal"
+                    name="reviewAckDueLocal"
+                  />
+                </div>
+                <div class="field full">
+                  <label for="reviewComment">Manager comment</label>
+                  <textarea
+                    id="reviewComment"
+                    pTextarea
+                    rows="3"
+                    class="w-full"
+                    [(ngModel)]="reviewComment"
+                    name="reviewComment"
+                    placeholder="Explain what needs to change, or confirm approval."
+                  ></textarea>
+                </div>
+              </div>
+              <div class="review-actions">
+                <button
+                  pButton
+                  type="button"
+                  class="btn-gradient"
+                  (click)="submitReviewOutcome()"
+                  [disabled]="reviewSubmitting"
+                >
+                  {{ reviewSubmitting ? 'Saving...' : 'Save review outcome' }}
+                </button>
+              </div>
+            </div>
+
+            <ng-template #repAckBlock>
+              <div class="review-thread-controls review-thread-controls--rep">
+                <p class="helper-text" *ngIf="hasPendingAcknowledgment(); else noAckNeeded">
+                  A manager has requested acknowledgment on this deal review.
+                </p>
+                <ng-template #noAckNeeded>
+                  <p class="helper-text">No manager acknowledgment is required right now.</p>
+                </ng-template>
+                <div class="review-actions" *ngIf="hasPendingAcknowledgment()">
+                  <button
+                    pButton
+                    type="button"
+                    class="btn-gradient"
+                    (click)="acknowledgeReview()"
+                    [disabled]="ackSubmitting"
+                  >
+                    {{ ackSubmitting ? 'Acknowledging...' : 'Acknowledge review' }}
+                  </button>
+                </div>
+              </div>
+            </ng-template>
+
+            <div class="review-thread-list" *ngIf="reviewThread().length; else emptyReviewThread">
+              <div class="review-thread-item" *ngFor="let item of reviewThread()">
+                <div class="review-thread-item__header">
+                  <span class="review-badge" [ngClass]="item.kind === 'Acknowledgment' ? 'ack' : 'review'">
+                    {{ item.kind }}
+                  </span>
+                  <strong class="review-outcome">{{ item.outcome }}</strong>
+                  <span class="review-meta">
+                    {{ item.ownerName }} · {{ item.createdAtUtc | date: 'MMM d, y, h:mm a' }}
+                  </span>
+                </div>
+                <div class="review-thread-item__comment" *ngIf="item.comment">
+                  {{ item.comment }}
+                </div>
+                <div class="review-thread-item__dates" *ngIf="item.dueDateUtc || item.completedDateUtc">
+                  <span *ngIf="item.dueDateUtc">
+                    Due: {{ item.dueDateUtc | date: 'MMM d, y, h:mm a' }}
+                  </span>
+                  <span *ngIf="item.completedDateUtc">
+                    Completed: {{ item.completedDateUtc | date: 'MMM d, y, h:mm a' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <ng-template #emptyReviewThread>
+              <p class="helper-text">No manager review comments yet.</p>
+            </ng-template>
+          </section>
+
           <div class="form-actions">
             <button
               type="button"

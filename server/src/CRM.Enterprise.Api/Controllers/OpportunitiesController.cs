@@ -1,9 +1,11 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Opportunities;
 using ApiOpportunityCoachingRequest = CRM.Enterprise.Api.Contracts.Opportunities.OpportunityCoachingRequest;
+using ApiOpportunityReviewOutcomeRequest = CRM.Enterprise.Api.Contracts.Opportunities.OpportunityReviewOutcomeRequest;
 using ApiOpportunityUpsertRequest = CRM.Enterprise.Api.Contracts.Opportunities.UpsertOpportunityRequest;
 using AppOpportunityUpsertRequest = CRM.Enterprise.Application.Opportunities.OpportunityUpsertRequest;
 using AppOpportunityCoachingRequest = CRM.Enterprise.Application.Opportunities.OpportunityCoachingRequest;
+using AppOpportunityReviewOutcomeRequest = CRM.Enterprise.Application.Opportunities.OpportunityReviewOutcomeRequest;
 using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Application.Common;
@@ -167,6 +169,49 @@ public class OpportunitiesController : ControllerBase
         return Ok(new OpportunityCoachingResponse(result.Value!));
     }
 
+    [HttpGet("{id:guid}/review-thread")]
+    public async Task<ActionResult<IReadOnlyList<OpportunityReviewThreadItem>>> GetReviewThread(Guid id, CancellationToken cancellationToken)
+    {
+        var thread = await _opportunityService.GetReviewThreadAsync(id, cancellationToken);
+        if (thread is null) return NotFound();
+        return Ok(thread.Select(ToReviewThreadItem).ToList());
+    }
+
+    [HttpPost("{id:guid}/review-outcome")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityReviewThreadItem>> AddReviewOutcome(Guid id, [FromBody] ApiOpportunityReviewOutcomeRequest request, CancellationToken cancellationToken)
+    {
+        if (!IsManagerActor())
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Outcome))
+        {
+            return BadRequest("Review outcome is required.");
+        }
+
+        var result = await _opportunityService.AddReviewOutcomeAsync(
+            id,
+            new AppOpportunityReviewOutcomeRequest(request.Outcome, request.Comment, request.AcknowledgmentDueAtUtc),
+            GetActor(),
+            cancellationToken);
+
+        if (result.NotFound) return NotFound();
+        if (!result.Success || result.Value is null) return BadRequest(result.Error);
+        return Ok(ToReviewThreadItem(result.Value));
+    }
+
+    [HttpPost("{id:guid}/review-ack")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityReviewThreadItem>> AcknowledgeReview(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _opportunityService.AcknowledgeReviewAsync(id, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success || result.Value is null) return BadRequest(result.Error);
+        return Ok(ToReviewThreadItem(result.Value));
+    }
+
     [HttpPost("renewal-automation")]
     [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<ActionResult<RenewalAutomationResponse>> RunRenewalAutomation(CancellationToken cancellationToken)
@@ -239,6 +284,22 @@ public class OpportunitiesController : ControllerBase
             dto.LastSignalAtUtc,
             dto.SignalCount,
             dto.HasExpansionOpportunity);
+    }
+
+    private static OpportunityReviewThreadItem ToReviewThreadItem(OpportunityReviewThreadItemDto dto)
+    {
+        return new OpportunityReviewThreadItem(
+            dto.ActivityId,
+            dto.Kind,
+            dto.Outcome,
+            dto.Subject,
+            dto.Comment,
+            dto.OwnerId,
+            dto.OwnerName,
+            dto.CreatedAtUtc,
+            dto.DueDateUtc,
+            dto.CompletedDateUtc,
+            dto.RequiresAcknowledgment);
     }
 
     private static AppOpportunityUpsertRequest MapUpsertRequest(ApiOpportunityUpsertRequest request)

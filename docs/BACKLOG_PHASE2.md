@@ -100,7 +100,9 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: queue filters + drill-down view.
 - Comment + coaching tasks to reps  
   - Acceptance: manager comment generates rep task.
- - Status: Partial (pipeline health review queue + manager coaching task creation implemented; deeper coaching workflow pending).
+- Deal review workflow depth (review thread + outcomes + rep acknowledgment)  
+  - Acceptance: manager can post review outcomes (Approve / Needs Work / Escalate), reps must acknowledge with due date tracking.
+ - Status: Partial (pipeline health review queue + manager coaching task creation + review thread/outcomes/acknowledgment implemented; deeper coaching automation/reporting still pending).
 
 ## Pre-Sales
 - Opportunity team role tracking  
@@ -144,6 +146,7 @@ Order: execute sequentially, build + verify after each task.
 - Stage-change next-step requirement tests
 - Manager pipeline health API + dashboard review queue card
 - Manager coaching task API + dashboard coaching dialog + tests
+- Manager deal review thread API + outcomes + rep acknowledgment tracking (API + UI)
 - Lead cadence + qualified handoff API tests
 - Forecast category controls + commit discipline (API + UI) + tests
 - Renewal automation (90/60/30) + expansion signals/creation (P3 follow-ons)

@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../../../environments/environment';
 import {
   Opportunity,
+  OpportunityReviewThreadItem,
   OpportunityStageHistoryItem,
   OpportunitySearchRequest,
   OpportunitySearchResponse
@@ -33,6 +34,12 @@ export interface SaveOpportunityRequest {
   isClosed?: boolean;
   isWon?: boolean;
   winLossReason?: string | null;
+}
+
+export interface OpportunityReviewOutcomeRequest {
+  outcome: 'Approved' | 'Needs Work' | 'Escalated';
+  comment?: string | null;
+  acknowledgmentDueAtUtc?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -81,5 +88,17 @@ export class OpportunityDataService {
 
   getById(id: string) {
     return this.http.get<Opportunity>(`${this.baseUrl}/api/opportunities/${id}`);
+  }
+
+  getReviewThread(id: string) {
+    return this.http.get<OpportunityReviewThreadItem[]>(`${this.baseUrl}/api/opportunities/${id}/review-thread`);
+  }
+
+  addReviewOutcome(id: string, payload: OpportunityReviewOutcomeRequest) {
+    return this.http.post<OpportunityReviewThreadItem>(`${this.baseUrl}/api/opportunities/${id}/review-outcome`, payload);
+  }
+
+  acknowledgeReview(id: string) {
+    return this.http.post<OpportunityReviewThreadItem>(`${this.baseUrl}/api/opportunities/${id}/review-ack`, {});
   }
 }

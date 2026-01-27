@@ -113,3 +113,19 @@ export interface OpportunityApprovalInboxItem {
   amount: number;
   currency: string;
 }
+
+export type OpportunityReviewKind = 'Review' | 'Acknowledgment';
+
+export interface OpportunityReviewThreadItem {
+  activityId: string;
+  kind: OpportunityReviewKind;
+  outcome: string;
+  subject: string;
+  comment?: string | null;
+  ownerId: string;
+  ownerName: string;
+  createdAtUtc: string;
+  dueDateUtc?: string | null;
+  completedDateUtc?: string | null;
+  requiresAcknowledgment: boolean;
+}

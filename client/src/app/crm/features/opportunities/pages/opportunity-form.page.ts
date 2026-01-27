@@ -10,7 +10,7 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { map } from 'rxjs';
 
-import { OpportunityDataService, SaveOpportunityRequest } from '../services/opportunity-data.service';
+import { OpportunityDataService, OpportunityReviewOutcomeRequest, SaveOpportunityRequest } from '../services/opportunity-data.service';
 import { OpportunityApprovalService } from '../services/opportunity-approval.service';
 import { OpportunityReviewChecklistService } from '../services/opportunity-review-checklist.service';
 import { CustomerDataService } from '../../customers/services/customer-data.service';
@@ -18,10 +18,11 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import {
   Opportunity,
   OpportunityApprovalItem,
-  OpportunityReviewChecklistItem
+  OpportunityReviewChecklistItem,
+  OpportunityReviewThreadItem
 } from '../models/opportunity.model';
 import { AppToastService } from '../../../../core/app-toast.service';
-import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 
 interface Option<T = string> {
@@ -94,6 +95,13 @@ export class OpportunityFormPage implements OnInit {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesManage);
   });
+  protected readonly isManager = computed(() => {
+    const payload = readTokenContext()?.payload ?? null;
+    return tokenHasRole(payload, 'Sales Manager') || tokenHasRole(payload, 'System Administrator');
+  });
+  protected readonly hasPendingAcknowledgment = computed(() =>
+    this.reviewThread().some((item) => item.kind === 'Acknowledgment' && !item.completedDateUtc)
+  );
   protected securityChecklist: OpportunityReviewChecklistItem[] = [];
   protected legalChecklist: OpportunityReviewChecklistItem[] = [];
   protected newSecurityItem = '';
@@ -115,6 +123,17 @@ export class OpportunityFormPage implements OnInit {
   protected approvalDecidingIds = new Set<string>();
   private approvalAmountLocked = false;
   private syncingApprovalAmount = false;
+  protected readonly reviewOutcomeOptions: Option[] = [
+    { label: 'Approved', value: 'Approved' },
+    { label: 'Needs Work', value: 'Needs Work' },
+    { label: 'Escalated', value: 'Escalated' }
+  ];
+  protected reviewThread = signal<OpportunityReviewThreadItem[]>([]);
+  protected reviewOutcome: OpportunityReviewOutcomeRequest['outcome'] = 'Needs Work';
+  protected reviewComment = '';
+  protected reviewAckDueLocal = '';
+  protected reviewSubmitting = false;
+  protected ackSubmitting = false;
   protected nextStepDueAtUtc: Date | null = null;
   private originalStage: string | null = null;
   private editingId: string | null = null;
@@ -132,6 +151,7 @@ export class OpportunityFormPage implements OnInit {
 
   ngOnInit() {
     this.loadAccounts();
+    this.reviewAckDueLocal = this.defaultReviewDueLocal();
     this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
       this.editingId = id;
@@ -140,12 +160,14 @@ export class OpportunityFormPage implements OnInit {
         this.loadOpportunity(id);
         this.loadChecklists(id);
         this.loadApprovals(id);
+        this.loadReviewThread(id);
       } else {
         this.form = this.createEmptyForm();
         this.selectedStage = this.form.stageName ?? 'Prospecting';
         this.securityChecklist = [];
         this.legalChecklist = [];
         this.approvals = [];
+        this.reviewThread.set([]);
       }
     });
   }
@@ -279,6 +301,74 @@ export class OpportunityFormPage implements OnInit {
       },
       error: () => {
         this.approvals = [];
+      }
+    });
+  }
+
+  private loadReviewThread(opportunityId: string) {
+    this.opportunityData.getReviewThread(opportunityId).subscribe({
+      next: (items) => {
+        this.reviewThread.set(items ?? []);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.reviewThread.set([]);
+      }
+    });
+  }
+
+  protected submitReviewOutcome() {
+    if (!this.editingId || this.reviewSubmitting || !this.isManager()) {
+      return;
+    }
+
+    const comment = this.reviewComment.trim();
+    const requiresDue = this.reviewOutcome !== 'Approved';
+    const acknowledgmentDueAtUtc = requiresDue ? this.localToUtcIso(this.reviewAckDueLocal) : null;
+    if (requiresDue && !acknowledgmentDueAtUtc) {
+      this.toastService.show('error', 'Acknowledgment due date is required for Needs Work or Escalated.', 4000);
+      return;
+    }
+
+    this.reviewSubmitting = true;
+    this.opportunityData
+      .addReviewOutcome(this.editingId, {
+        outcome: this.reviewOutcome,
+        comment: comment || null,
+        acknowledgmentDueAtUtc
+      })
+      .subscribe({
+        next: () => {
+          this.reviewSubmitting = false;
+          this.reviewComment = '';
+          this.reviewAckDueLocal = this.defaultReviewDueLocal();
+          this.loadReviewThread(this.editingId!);
+          this.toastService.show('success', 'Review outcome saved.', 2500);
+        },
+        error: (err) => {
+          this.reviewSubmitting = false;
+          const message = typeof err?.error === 'string' ? err.error : 'Unable to save review outcome.';
+          this.toastService.show('error', message, 4000);
+        }
+      });
+  }
+
+  protected acknowledgeReview() {
+    if (!this.editingId || this.ackSubmitting || this.isManager()) {
+      return;
+    }
+
+    this.ackSubmitting = true;
+    this.opportunityData.acknowledgeReview(this.editingId).subscribe({
+      next: () => {
+        this.ackSubmitting = false;
+        this.loadReviewThread(this.editingId!);
+        this.toastService.show('success', 'Review acknowledged.', 2500);
+      },
+      error: (err) => {
+        this.ackSubmitting = false;
+        const message = typeof err?.error === 'string' ? err.error : 'Unable to acknowledge review.';
+        this.toastService.show('error', message, 4000);
       }
     });
   }
@@ -546,6 +636,23 @@ export class OpportunityFormPage implements OnInit {
       'Closed Lost': 'Omitted'
     };
     return map[stage] ?? 'Pipeline';
+  }
+
+  private defaultReviewDueLocal(): string {
+    const due = new Date();
+    due.setDate(due.getDate() + 2);
+    due.setSeconds(0, 0);
+    const tzOffset = due.getTimezoneOffset();
+    const local = new Date(due.getTime() - tzOffset * 60_000);
+    return local.toISOString().slice(0, 16);
+  }
+
+  private localToUtcIso(localValue: string): string | null {
+    if (!localValue?.trim()) {
+      return null;
+    }
+    const parsed = new Date(localValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
   private validateStageRequirements(): string | null {

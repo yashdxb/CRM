@@ -33,3 +33,8 @@ public sealed record OpportunityUpsertRequest(
     bool IsClosed,
     bool IsWon,
     string? WinLossReason);
+
+public sealed record OpportunityReviewOutcomeRequest(
+    string Outcome,
+    string? Comment,
+    DateTime? AcknowledgmentDueAtUtc);

@@ -804,8 +804,8 @@ Legend:
 
 **Sales Manager gaps:**
 1) [P2] Deal review workflow (no next step, stuck stage, late-stage alerts)  
-   - Status: PARTIAL (pipeline health review queue + manager coaching task creation implemented; coaching workflows still missing depth).
-   - Acceptance: review queue + comment task to rep.
+   - Status: PARTIAL (pipeline health review queue + manager coaching task creation + review thread/outcomes + rep acknowledgment with due dates implemented; deeper coaching automation/reporting still pending).
+   - Acceptance: review queue + review outcomes (Approve / Needs Work / Escalate) + rep acknowledgment tracking.
 2) [P3] Forecast category governance + commit tracking  
    - Acceptance: commit changes require manager approval + audit.
 

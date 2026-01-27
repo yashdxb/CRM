@@ -17,4 +17,7 @@ public interface IOpportunityService
     Task<RenewalAutomationResultDto> RunRenewalAutomationAsync(ActorContext actor, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<ExpansionSignalDto>> GetExpansionSignalsAsync(CancellationToken cancellationToken = default);
     Task<OpportunityOperationResult<OpportunityListItemDto>> CreateExpansionAsync(Guid sourceOpportunityId, ActorContext actor, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OpportunityReviewThreadItemDto>?> GetReviewThreadAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<OpportunityOperationResult<OpportunityReviewThreadItemDto>> AddReviewOutcomeAsync(Guid id, OpportunityReviewOutcomeRequest request, ActorContext actor, CancellationToken cancellationToken = default);
+    Task<OpportunityOperationResult<OpportunityReviewThreadItemDto>> AcknowledgeReviewAsync(Guid id, ActorContext actor, CancellationToken cancellationToken = default);
 }

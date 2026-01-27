@@ -167,6 +167,107 @@
   gap: 0.75rem;
 }
 
+.review-thread-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.review-thread-controls {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(14, 165, 233, 0.08));
+}
+
+.review-thread-controls--rep {
+  align-items: start;
+}
+
+.review-input {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: rgba(255, 255, 255, 0.9);
+  color: inherit;
+}
+
+.review-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.review-thread-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.review-thread-item {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+}
+
+.review-thread-item__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.6rem;
+}
+
+.review-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.review-badge.review {
+  background: rgba(14, 116, 144, 0.12);
+  border-color: rgba(14, 116, 144, 0.28);
+  color: rgba(14, 116, 144, 0.95);
+}
+
+.review-badge.ack {
+  background: rgba(79, 70, 229, 0.12);
+  border-color: rgba(79, 70, 229, 0.28);
+  color: rgba(79, 70, 229, 0.95);
+}
+
+.review-outcome {
+  font-size: 0.95rem;
+}
+
+.review-meta {
+  font-size: 0.82rem;
+  color: rgba(71, 85, 105, 0.9);
+}
+
+.review-thread-item__comment {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: rgba(15, 23, 42, 0.9);
+}
+
+.review-thread-item__dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.8rem;
+  font-size: 0.8rem;
+  color: rgba(71, 85, 105, 0.85);
+}
+
 .approval-request {
   display: grid;
   gap: 0.75rem;
