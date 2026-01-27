@@ -14,6 +14,7 @@ public class UpsertOpportunityRequest
     public string Currency { get; set; } = "USD";
     public decimal Probability { get; set; }
     public DateTime? ExpectedCloseDate { get; set; }
+    public string? ForecastCategory { get; set; }
     public string? Summary { get; set; }
     public decimal? DiscountPercent { get; set; }
     public decimal? DiscountAmount { get; set; }

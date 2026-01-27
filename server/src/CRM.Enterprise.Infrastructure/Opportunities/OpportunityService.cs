@@ -17,6 +17,14 @@ public sealed class OpportunityService : IOpportunityService
     private const int AtRiskDays = 30;
     private const decimal DiscountPercentApprovalThreshold = 10m;
     private const decimal DiscountAmountApprovalThreshold = 1000m;
+    private static readonly HashSet<string> ForecastCategories = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Pipeline",
+        "Best Case",
+        "Commit",
+        "Closed",
+        "Omitted"
+    };
     private static readonly HashSet<string> StagesRequiringAmount = new(StringComparer.OrdinalIgnoreCase)
     {
         "Qualification",
@@ -112,6 +120,7 @@ public sealed class OpportunityService : IOpportunityService
                 o.Probability,
                 o.Currency,
                 o.ExpectedCloseDate,
+                o.ForecastCategory,
                 o.DiscountPercent,
                 o.DiscountAmount,
                 o.PricingNotes,
@@ -184,6 +193,7 @@ public sealed class OpportunityService : IOpportunityService
                 o.Probability,
                 o.Currency,
                 o.ExpectedCloseDate,
+                o.ForecastCategory,
                 o.DiscountPercent,
                 o.DiscountAmount,
                 o.PricingNotes,
@@ -236,6 +246,7 @@ public sealed class OpportunityService : IOpportunityService
             opp.Probability,
             opp.Currency,
             opp.ExpectedCloseDate,
+            opp.ForecastCategory,
             opp.DiscountPercent,
             opp.DiscountAmount,
             opp.PricingNotes,
@@ -315,6 +326,10 @@ public sealed class OpportunityService : IOpportunityService
         {
             return OpportunityOperationResult<OpportunityListItemDto>.Fail("Win/Loss reason is required when closing an opportunity.");
         }
+        if (request.IsClosed && string.IsNullOrWhiteSpace(request.ForecastCategory))
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Forecast category is required before closing an opportunity.");
+        }
 
         var approvalError = await ValidateApprovalAsync(request, actor, null, cancellationToken);
         if (approvalError is not null)
@@ -330,6 +345,14 @@ public sealed class OpportunityService : IOpportunityService
         var ownerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
         var stageId = await ResolveStageIdAsync(request.StageId, request.StageName, cancellationToken);
         var accountId = await ResolveAccountIdAsync(request.AccountId, cancellationToken);
+        var stageName = await ResolveStageNameAsync(stageId, cancellationToken) ?? request.StageName ?? "Prospecting";
+        var stageForecastCategory = await ResolveStageForecastCategoryAsync(stageId, cancellationToken);
+        var resolvedForecastCategory = ResolveForecastCategory(request.ForecastCategory, stageForecastCategory);
+        var forecastError = ValidateForecastCategory(stageName, resolvedForecastCategory, request.IsClosed, request.IsWon);
+        if (forecastError is not null)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail(forecastError);
+        }
 
         var opp = new Opportunity
         {
@@ -342,7 +365,7 @@ public sealed class OpportunityService : IOpportunityService
             Currency = string.IsNullOrWhiteSpace(request.Currency) ? "USD" : request.Currency,
             Probability = request.Probability,
             ExpectedCloseDate = request.ExpectedCloseDate,
-            ForecastCategory = null,
+            ForecastCategory = resolvedForecastCategory,
             Summary = request.Summary,
             DiscountPercent = request.DiscountPercent,
             DiscountAmount = request.DiscountAmount,
@@ -369,11 +392,12 @@ public sealed class OpportunityService : IOpportunityService
             opp.Name,
             opp.AccountId,
             await _dbContext.Accounts.Where(a => a.Id == opp.AccountId).Select(a => a.Name).FirstOrDefaultAsync(cancellationToken) ?? string.Empty,
-            await _dbContext.OpportunityStages.Where(s => s.Id == opp.StageId).Select(s => s.Name).FirstOrDefaultAsync(cancellationToken) ?? "Prospecting",
+            stageName,
             opp.Amount,
             opp.Probability,
             opp.Currency,
             opp.ExpectedCloseDate,
+            opp.ForecastCategory,
             opp.DiscountPercent,
             opp.DiscountAmount,
             opp.PricingNotes,
@@ -406,6 +430,10 @@ public sealed class OpportunityService : IOpportunityService
         {
             return OpportunityOperationResult<bool>.Fail("Win/Loss reason is required when closing an opportunity.");
         }
+        if (request.IsClosed && string.IsNullOrWhiteSpace(request.ForecastCategory))
+        {
+            return OpportunityOperationResult<bool>.Fail("Forecast category is required before closing an opportunity.");
+        }
 
         var approvalError = await ValidateApprovalAsync(request, actor, id, cancellationToken);
         if (approvalError is not null)
@@ -425,12 +453,20 @@ public sealed class OpportunityService : IOpportunityService
         var previousOwnerId = opp.OwnerId;
         var previousAmount = opp.Amount;
         var previousExpectedClose = opp.ExpectedCloseDate;
+        var previousForecastCategory = opp.ForecastCategory;
 
         var nextStageId = await ResolveStageIdAsync(request.StageId, request.StageName, cancellationToken);
         var nextStageName = await ResolveStageNameAsync(nextStageId, cancellationToken) ?? request.StageName ?? "Prospecting";
+        var stageForecastCategory = await ResolveStageForecastCategoryAsync(nextStageId, cancellationToken);
+        var resolvedForecastCategory = ResolveForecastCategory(request.ForecastCategory, stageForecastCategory, opp.ForecastCategory);
+        var forecastError = ValidateForecastCategory(nextStageName, resolvedForecastCategory, request.IsClosed, request.IsWon);
+        if (forecastError is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(forecastError);
+        }
         if (previousStageId != nextStageId)
         {
-            var stageError = await ValidateStageChangeAsync(opp, nextStageName, request, cancellationToken);
+            var stageError = await ValidateStageChangeAsync(opp, nextStageName, resolvedForecastCategory, request, cancellationToken);
             if (stageError is not null)
             {
                 return OpportunityOperationResult<bool>.Fail(stageError);
@@ -446,6 +482,7 @@ public sealed class OpportunityService : IOpportunityService
         opp.Currency = string.IsNullOrWhiteSpace(request.Currency) ? "USD" : request.Currency;
         opp.Probability = request.Probability;
         opp.ExpectedCloseDate = request.ExpectedCloseDate;
+        opp.ForecastCategory = resolvedForecastCategory;
         opp.Summary = request.Summary;
         if (request.DiscountPercent.HasValue)
         {
@@ -517,6 +554,19 @@ public sealed class OpportunityService : IOpportunityService
                     "ExpectedCloseDate",
                     previousExpectedClose?.ToString("u"),
                     opp.ExpectedCloseDate?.ToString("u"),
+                    actor),
+                cancellationToken);
+        }
+
+        if (!string.Equals(previousForecastCategory, opp.ForecastCategory, StringComparison.OrdinalIgnoreCase))
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(
+                    opp.Id,
+                    "ForecastCategoryChanged",
+                    "ForecastCategory",
+                    previousForecastCategory,
+                    opp.ForecastCategory,
                     actor),
                 cancellationToken);
         }
@@ -595,26 +645,48 @@ public sealed class OpportunityService : IOpportunityService
         {
             return OpportunityOperationResult<bool>.NotFoundResult();
         }
+        var previousForecastCategory = opp.ForecastCategory;
 
-        var stageError = await ValidateStageChangeAsync(opp, stageName, null, cancellationToken);
+        var nextStageId = await ResolveStageIdAsync(null, stageName, cancellationToken);
+        var stageForecastCategory = await ResolveStageForecastCategoryAsync(nextStageId, cancellationToken);
+        var resolvedForecastCategory = ResolveForecastCategory(null, stageForecastCategory, opp.ForecastCategory);
+        var forecastError = ValidateForecastCategory(stageName, resolvedForecastCategory, opp.IsClosed, opp.IsWon);
+        if (forecastError is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(forecastError);
+        }
+
+        var stageError = await ValidateStageChangeAsync(opp, stageName, resolvedForecastCategory, null, cancellationToken);
         if (stageError is not null)
         {
             return OpportunityOperationResult<bool>.Fail(stageError);
         }
 
-        var nextStageId = await ResolveStageIdAsync(null, stageName, cancellationToken);
         if (nextStageId != opp.StageId)
         {
             var previousStageName = await ResolveStageNameAsync(opp.StageId, cancellationToken);
             opp.StageId = nextStageId;
             opp.IsClosed = false;
             opp.IsWon = false;
+            opp.ForecastCategory = resolvedForecastCategory;
             opp.UpdatedAtUtc = DateTime.UtcNow;
             AddStageHistory(opp, nextStageId, "Stage updated", actor);
             var nextStageName = await ResolveStageNameAsync(nextStageId, cancellationToken);
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(opp.Id, "StageChanged", "Stage", previousStageName, nextStageName, actor),
                 cancellationToken);
+            if (!string.Equals(previousForecastCategory, opp.ForecastCategory, StringComparison.OrdinalIgnoreCase))
+            {
+                await _auditEvents.TrackAsync(
+                    CreateAuditEntry(
+                        opp.Id,
+                        "ForecastCategoryChanged",
+                        "ForecastCategory",
+                        previousForecastCategory,
+                        opp.ForecastCategory,
+                        actor),
+                    cancellationToken);
+            }
             await _mediator.Publish(new OpportunityStageChangedEvent(
                 opp.Id,
                 previousStageName,
@@ -776,6 +848,7 @@ public sealed class OpportunityService : IOpportunityService
     private async Task<string?> ValidateStageChangeAsync(
         Opportunity opportunity,
         string nextStageName,
+        string? forecastCategory,
         OpportunityUpsertRequest? request,
         CancellationToken cancellationToken)
     {
@@ -827,6 +900,11 @@ public sealed class OpportunityService : IOpportunityService
                 || !string.Equals(legalStatus, "Approved", StringComparison.OrdinalIgnoreCase))
             {
                 return "Security and legal reviews must be approved before moving to Commit.";
+            }
+
+            if (!string.Equals(forecastCategory, "Commit", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Forecast category must be Commit before moving to the Commit stage.";
             }
         }
 
@@ -905,6 +983,62 @@ public sealed class OpportunityService : IOpportunityService
             .Where(s => s.Id == stageId)
             .Select(s => s.Name)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<string?> ResolveStageForecastCategoryAsync(Guid stageId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.OpportunityStages
+            .Where(s => s.Id == stageId)
+            .Select(s => s.ForecastCategory)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private static string? ResolveForecastCategory(string? requested, string? stageDefault, string? current = null)
+    {
+        var candidate = !string.IsNullOrWhiteSpace(requested)
+            ? requested
+            : !string.IsNullOrWhiteSpace(stageDefault)
+                ? stageDefault
+                : current;
+
+        return string.IsNullOrWhiteSpace(candidate) ? null : candidate.Trim();
+    }
+
+    private static string? ValidateForecastCategory(string stageName, string? forecastCategory, bool isClosed, bool isWon)
+    {
+        var isClosedStage = stageName.StartsWith("Closed", StringComparison.OrdinalIgnoreCase);
+        var requiresClosedForecast = isClosed || isClosedStage;
+
+        if (requiresClosedForecast && string.IsNullOrWhiteSpace(forecastCategory))
+        {
+            return "Forecast category is required before closing an opportunity.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(forecastCategory) && !ForecastCategories.Contains(forecastCategory))
+        {
+            return "Forecast category is invalid.";
+        }
+
+        if (string.Equals(stageName, "Commit", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(forecastCategory, "Commit", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Forecast category must be Commit before moving to the Commit stage.";
+        }
+
+        if (requiresClosedForecast)
+        {
+            if (isWon && !string.Equals(forecastCategory, "Closed", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Closed won opportunities must use the Closed forecast category.";
+            }
+
+            if (!isWon && !string.Equals(forecastCategory, "Omitted", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Closed lost opportunities must use the Omitted forecast category.";
+            }
+        }
+
+        return null;
     }
 
     private async Task<Guid> ResolveAccountIdAsync(Guid? requestedAccountId, CancellationToken cancellationToken)

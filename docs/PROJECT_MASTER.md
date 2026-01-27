@@ -787,7 +787,7 @@ Legend:
 - Ops hardening (background jobs, retries, health checks)
 
 **Missing vs full Sales Rep flow (must add):**
-1) [P3] Forecast category controls + commit discipline  
+1) [P3] Forecast category controls + commit discipline — Implemented on January 27, 2026  
    - Acceptance: required forecast category before close; manager override logged.
 2) [P3] Renewal automation (90/60/30 day triggers)  
    - Acceptance: renewal opportunity auto‑created with reminders.

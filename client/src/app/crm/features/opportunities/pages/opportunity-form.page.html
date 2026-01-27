@@ -158,6 +158,20 @@
                 ></p-inputNumber>
               </div>
               <div class="field">
+                <label for="oppForecast">Forecast category</label>
+                <p-select
+                  inputId="oppForecast"
+                  appendTo="body"
+                  [options]="forecastCategoryOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="forecastCategory"
+                  [(ngModel)]="form.forecastCategory"
+                  placeholder="Select forecast"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
                 <label for="oppReason">Win/Loss reason</label>
                 <input
                   pInputText

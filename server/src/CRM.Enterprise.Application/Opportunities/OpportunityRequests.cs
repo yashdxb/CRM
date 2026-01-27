@@ -18,6 +18,7 @@ public sealed record OpportunityUpsertRequest(
     string Currency,
     decimal Probability,
     DateTime? ExpectedCloseDate,
+    string? ForecastCategory,
     string? Summary,
     decimal? DiscountPercent,
     decimal? DiscountAmount,

@@ -10,6 +10,7 @@ public sealed record OpportunityListItemDto(
     decimal Probability,
     string Currency,
     DateTime? ExpectedCloseDate,
+    string? ForecastCategory,
     decimal? DiscountPercent,
     decimal? DiscountAmount,
     string? PricingNotes,

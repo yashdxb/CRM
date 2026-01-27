@@ -12,6 +12,7 @@ public record OpportunityListItem(
     decimal Probability,
     string Currency,
     DateTime? CloseDate,
+    string? ForecastCategory,
     decimal? DiscountPercent,
     decimal? DiscountAmount,
     string? PricingNotes,

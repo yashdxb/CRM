@@ -72,6 +72,13 @@ export class OpportunityFormPage implements OnInit {
     { label: 'Approved', value: 'Approved' },
     { label: 'Blocked', value: 'Blocked' }
   ];
+  protected readonly forecastCategoryOptions: Option[] = [
+    { label: 'Pipeline', value: 'Pipeline' },
+    { label: 'Best Case', value: 'Best Case' },
+    { label: 'Commit', value: 'Commit' },
+    { label: 'Closed', value: 'Closed' },
+    { label: 'Omitted', value: 'Omitted' }
+  ];
 
   protected accountOptions: Option<string | undefined>[] = [];
   protected selectedStage = 'Prospecting';
@@ -144,6 +151,10 @@ export class OpportunityFormPage implements OnInit {
     this.form.probability = this.estimateProbability(stage);
     this.form.isClosed = stage.startsWith('Closed');
     this.form.isWon = stage === 'Closed Won';
+    const defaultForecast = this.estimateForecastCategory(stage);
+    if (!this.form.forecastCategory || stage.startsWith('Closed') || stage === 'Commit') {
+      this.form.forecastCategory = defaultForecast;
+    }
   }
 
   protected onSave() {
@@ -428,6 +439,7 @@ export class OpportunityFormPage implements OnInit {
       amount: opp.amount ?? 0,
       currency: opp.currency ?? 'USD',
       probability: opp.probability ?? this.estimateProbability(stage),
+      forecastCategory: opp.forecastCategory ?? this.estimateForecastCategory(stage),
       expectedCloseDate: opp.closeDate ? new Date(opp.closeDate) : undefined,
       summary: this.form.summary ?? '',
       discountPercent: opp.discountPercent ?? undefined,
@@ -460,6 +472,7 @@ export class OpportunityFormPage implements OnInit {
       amount: 0,
       currency: 'USD',
       probability: this.estimateProbability('Prospecting'),
+      forecastCategory: this.estimateForecastCategory('Prospecting'),
       expectedCloseDate: undefined,
       summary: '',
       discountPercent: undefined,
@@ -500,6 +513,20 @@ export class OpportunityFormPage implements OnInit {
     return map[stage] ?? 0;
   }
 
+  private estimateForecastCategory(stage: string) {
+    const map: Record<string, string> = {
+      Prospecting: 'Pipeline',
+      Qualification: 'Pipeline',
+      Proposal: 'Best Case',
+      'Security / Legal Review': 'Best Case',
+      Negotiation: 'Commit',
+      Commit: 'Commit',
+      'Closed Won': 'Closed',
+      'Closed Lost': 'Omitted'
+    };
+    return map[stage] ?? 'Pipeline';
+  }
+
   private validateStageRequirements(): string | null {
     const stage = this.selectedStage;
     const amountRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);
@@ -521,6 +548,21 @@ export class OpportunityFormPage implements OnInit {
     if (stage === 'Commit') {
       if (this.form.securityReviewStatus !== 'Approved' || this.form.legalReviewStatus !== 'Approved') {
         return 'Security and legal reviews must be approved before moving to Commit.';
+      }
+      if (this.form.forecastCategory !== 'Commit') {
+        return 'Forecast category must be Commit before moving to the Commit stage.';
+      }
+    }
+
+    if (this.form.isClosed) {
+      if (!this.form.forecastCategory) {
+        return 'Forecast category is required before closing an opportunity.';
+      }
+      if (this.form.isWon && this.form.forecastCategory !== 'Closed') {
+        return 'Closed won opportunities must use the Closed forecast category.';
+      }
+      if (!this.form.isWon && this.form.forecastCategory !== 'Omitted') {
+        return 'Closed lost opportunities must use the Omitted forecast category.';
       }
     }
 

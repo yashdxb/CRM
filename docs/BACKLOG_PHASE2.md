@@ -68,7 +68,9 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: at‑risk status visible in list + dashboard.
 - Opportunity next-step required before stage advance  
   - Acceptance: stage advance requires scheduled next step.
- - Status: Completed (stage rules + risk indicators + next-step requirement with tests).
+- Forecast category controls + commit discipline  
+  - Acceptance: forecast category required before close; Commit stage requires Commit category.
+ - Status: Completed (stage rules + risk indicators + next-step requirement with tests + forecast controls).
 
 ## Accounts & Contacts
 - Buying group roles required (Decision Maker, Champion, Influencer, Procurement, Technical)  
@@ -143,6 +145,7 @@ Order: execute sequentially, build + verify after each task.
 - Manager pipeline health API + dashboard review queue card
 - Manager coaching task API + dashboard coaching dialog + tests
 - Lead cadence + qualified handoff API tests
+- Forecast category controls + commit discipline (API + UI) + tests
 
 ---
 

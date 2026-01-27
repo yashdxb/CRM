@@ -10,6 +10,7 @@ export interface Opportunity {
   probability: number;
   currency: string;
   closeDate?: string;
+  forecastCategory?: string | null;
   discountPercent?: number | null;
   discountAmount?: number | null;
   pricingNotes?: string | null;
