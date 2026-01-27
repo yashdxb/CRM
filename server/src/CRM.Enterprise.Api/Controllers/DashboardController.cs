@@ -138,6 +138,34 @@ public class DashboardController : ControllerBase
         return Ok(response);
     }
 
+    [HttpGet("manager/pipeline-health")]
+    public async Task<ActionResult<ManagerPipelineHealthResponse>> GetManagerPipelineHealth(CancellationToken cancellationToken)
+    {
+        var health = await _mediator.Send(new GetManagerPipelineHealthQuery(), cancellationToken);
+        var response = new ManagerPipelineHealthResponse(
+            health.OpenOpportunities,
+            health.PipelineValueTotal,
+            health.MissingNextStepCount,
+            health.NextStepOverdueCount,
+            health.NoRecentActivityCount,
+            health.CloseDateOverdueCount,
+            health.StuckStageCount,
+            health.PipelineByStage.Select(stage => new PipelineStageSummary(stage.Stage, stage.Count, stage.Value)).ToList(),
+            health.ReviewQueue.Select(item => new ManagerReviewDealItem(
+                item.Id,
+                item.Name,
+                item.AccountName,
+                item.Stage,
+                item.Amount,
+                item.OwnerName,
+                item.Reason,
+                item.NextStepDueAtUtc,
+                item.LastActivityAtUtc,
+                item.ExpectedCloseDate)).ToList());
+
+        return Ok(response);
+    }
+
     [HttpGet("layout")]
     public async Task<ActionResult<DashboardLayoutResponse>> GetLayout(CancellationToken cancellationToken)
     {

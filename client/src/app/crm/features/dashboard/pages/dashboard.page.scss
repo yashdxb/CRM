@@ -1389,6 +1389,125 @@
   font-size: $font-size-sm;
 }
 
+.manager-health {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.manager-health__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.health-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $space-2 $space-3;
+  border-radius: $radius-lg;
+  background: rgba($primary, 0.06);
+  border: 1px solid rgba($primary, 0.12);
+  min-height: 64px;
+
+  &.danger {
+    background: rgba($danger, 0.10);
+    border-color: rgba($danger, 0.22);
+  }
+
+  &.warn {
+    background: rgba($warning, 0.12);
+    border-color: rgba($warning, 0.24);
+  }
+
+  &.muted {
+    background: rgba($glass-border, 0.5);
+    border-color: rgba($glass-border, 0.9);
+  }
+}
+
+.health-pill__value {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $text-primary;
+  line-height: 1;
+}
+
+.health-pill__label {
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.manager-health__queue {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.manager-deal {
+  display: flex;
+  gap: $space-3;
+  align-items: center;
+  padding: $space-3;
+  border-radius: $radius-lg;
+  border: 1px solid rgba($primary, 0.10);
+  background: rgba($primary, 0.04);
+}
+
+.manager-deal__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.manager-deal__name {
+  font-weight: 600;
+  color: $text-primary;
+  font-size: $font-size-sm;
+}
+
+.manager-deal__meta {
+  margin-top: 2px;
+  font-size: $font-size-xs;
+  color: $text-muted;
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-1;
+
+  .separator { opacity: 0.45; }
+}
+
+.manager-deal__reason {
+  margin-top: $space-1;
+  font-size: $font-size-xs;
+  color: $danger;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+}
+
+.manager-deal__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 110px;
+}
+
+.manager-deal__amount {
+  font-weight: 700;
+  color: $text-primary;
+  font-size: $font-size-sm;
+}
+
+.manager-deal__dates {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIMELINE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2345,6 +2464,20 @@
     gap: $space-3;
   }
 
+  .manager-health__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .manager-deal {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .manager-deal__side,
+  .manager-deal__dates {
+    align-items: flex-start;
+  }
+
   // Stack card header content so controls stay visible without overlap.
   .card-header {
     flex-direction: column;
@@ -2385,5 +2518,9 @@
 
   .metric-value {
     font-size: clamp(1.2rem, 6vw, 1.6rem);
+  }
+
+  .manager-health__stats {
+    grid-template-columns: 1fr;
   }
 }

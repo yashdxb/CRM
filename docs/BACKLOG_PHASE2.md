@@ -17,6 +17,7 @@ Order: execute sequentially, build + verify after each task.
   - Lead cannot be closed without required outcome fields
   - SLA timer starts on assignment and creates first-touch task
   - Qualification sets next steps and handoff readiness
+ - Status: Completed
 
 ## Task 2 — Opportunity stage enforcement
 - Scope:
@@ -27,6 +28,7 @@ Order: execute sequentially, build + verify after each task.
   - Stage changes blocked until required fields complete
   - Next-step scheduled is required for stage changes
   - At‑risk status visible in list + dashboard
+ - Status: Completed
 
 ## Task 3 — Activity discipline
 - Scope:
@@ -37,6 +39,7 @@ Order: execute sequentially, build + verify after each task.
   - Activity cannot complete without outcome + next step date
   - Templates selectable per stage
   - Idle deals flagged after inactivity threshold
+ - Status: Completed (discipline + idle hooks)
 
 ## Leads
 - Lead SLA timer (first-touch) with escalation  
@@ -47,6 +50,7 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: lead cannot close without required outcome fields.
 - Handoff package validator (notes + booked meeting + outcome)  
   - Acceptance: handoff blocked unless meeting + notes exist.
+ - Status: Lead outcomes + SLA + nurture follow-up task completed; cadence + handoff validator pending.
 
 ## Activities
 - Enforce activity outcome + next step + due date  
@@ -55,6 +59,7 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: templates selectable per stage with prefilled defaults.
 - Inactivity detection hook (no activity in X days)  
   - Acceptance: idle opportunities flagged at X days.
+ - Status: Discipline enforced + inactivity hook implemented; templates pending.
 
 ## Opportunities
 - Stage exit criteria gates  
@@ -63,18 +68,21 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: at‑risk status visible in list + dashboard.
 - Opportunity next-step required before stage advance  
   - Acceptance: stage advance requires scheduled next step.
+ - Status: Completed (stage rules + risk indicators + next-step requirement with tests).
 
 ## Accounts & Contacts
 - Buying group roles required (Decision Maker, Champion, Influencer, Procurement, Technical)  
   - Acceptance: at least one role required for late-stage deals.
 - Account ownership + parent/child validation  
   - Acceptance: ownership must be set; parent/child link validated.
+ - Status: Completed.
 
 ## Approvals
 - Approval visibility with comments + audit trail  
   - Acceptance: approval status + comments visible to rep/manager.
 - Single-level approval thresholds enforcement (existing, ensure surfaced)  
   - Acceptance: threshold breach triggers approval flow.
+ - Status: Approval workflow, inbox queue, and integration tests completed; thresholds surfaced.
 
 ## Dashboard / Command Center
 - At-risk deal widget  
@@ -83,18 +91,21 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: shows deals without next step.
 - Pipeline discipline KPIs (last activity, next step due)  
   - Acceptance: KPIs visible per rep.
+ - Status: Completed.
 
 ## Sales Manager
 - Deal review queue (stuck stage, late-stage, no next step)  
   - Acceptance: queue filters + drill-down view.
 - Comment + coaching tasks to reps  
   - Acceptance: manager comment generates rep task.
+ - Status: Partial (pipeline health + review queue view implemented; coaching tasks pending).
 
 ## Pre-Sales
 - Opportunity team role tracking  
   - Acceptance: team members have role tags.
 - Demo/POC activity with required outcomes  
   - Acceptance: demo outcome required before stage advance.
+ - Status: Pending.
 
 ## Delivery / Implementation
 - Handoff package template (scope/risks/timeline)  
@@ -103,12 +114,32 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: tasks auto-created on Closed Won.
 - Implementation completion status  
   - Acceptance: completion updates account state.
+ - Status: Pending.
 
 ## Notifications
 - Escalation alerts for SLA breaches  
   - Acceptance: alerts delivered + logged.
 - Idle deal alert notifications  
   - Acceptance: triggered after inactivity threshold.
+ - Status: Pending.
+
+---
+
+# Completed Work (to date)
+- Lead service seam + lead domain events + handlers
+- Lead import service seam
+- Lead outcomes + first-touch SLA + nurture follow-up task
+- Activity and opportunity service seams + domain events
+- Opportunity stage enforcement + at-risk + no-next-step flags
+- Activity discipline enforcement (outcome + next step)
+- Account ownership + parent/child validation + buying roles
+- Opportunity approval workflow + queue (API + UI)
+- Security/legal review + pricing/discount approval tracking
+- Opportunity review checklist auto-save
+- Dashboard KPIs (at-risk, no next step)
+- Approval API/inbox integration tests + non-approver guards
+- Stage-change next-step requirement tests
+- Manager pipeline health API + dashboard review queue card
 
 ---
 

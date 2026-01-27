@@ -79,3 +79,28 @@ export interface DashboardOpportunity {
   nextStepDueAtUtc?: string;
   lastActivityAtUtc?: string;
 }
+
+export interface ManagerPipelineHealth {
+  openOpportunities: number;
+  pipelineValueTotal: number;
+  missingNextStepCount: number;
+  nextStepOverdueCount: number;
+  noRecentActivityCount: number;
+  closeDateOverdueCount: number;
+  stuckStageCount: number;
+  pipelineByStage: PipelineStage[];
+  reviewQueue: ManagerReviewDeal[];
+}
+
+export interface ManagerReviewDeal {
+  id: string;
+  name: string;
+  accountName: string;
+  stage: string;
+  amount: number;
+  ownerName: string;
+  reason: string;
+  nextStepDueAtUtc?: string;
+  lastActivityAtUtc?: string;
+  expectedCloseDate?: string;
+}

@@ -9,6 +9,8 @@ namespace CRM.Enterprise.Infrastructure.Dashboard;
 public class DashboardReadService : IDashboardReadService
 {
     private readonly CrmDbContext _dbContext;
+    private const int InactivityThresholdDays = 30;
+    private const int StuckStageThresholdDays = 21;
 
     public DashboardReadService(CrmDbContext dbContext)
     {
@@ -588,6 +590,188 @@ public class DashboardReadService : IDashboardReadService
             0,
             0,
             0);
+    }
+
+    public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+
+        var openOpportunities = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Include(o => o.Stage)
+            .Include(o => o.Account)
+            .Where(o => !o.IsDeleted && !o.IsClosed)
+            .Select(o => new
+            {
+                o.Id,
+                o.Name,
+                AccountName = o.Account != null ? o.Account.Name : "Unassigned",
+                Stage = o.Stage != null ? o.Stage.Name : "Prospecting",
+                o.Amount,
+                o.OwnerId,
+                o.ExpectedCloseDate,
+                o.CreatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        if (openOpportunities.Count == 0)
+        {
+            return new ManagerPipelineHealthDto(
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                new List<PipelineStageDto>(),
+                new List<ManagerReviewDealDto>());
+        }
+
+        var opportunityIds = openOpportunities.Select(o => o.Id).ToList();
+
+        var activityRows = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Opportunity
+                        && opportunityIds.Contains(a.RelatedEntityId))
+            .Select(a => new
+            {
+                a.RelatedEntityId,
+                a.DueDateUtc,
+                a.CompletedDateUtc,
+                a.CreatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var activityLookup = activityRows
+            .GroupBy(a => a.RelatedEntityId)
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                {
+                    var lastActivityAtUtc = g.Max(a => (DateTime?)(a.CompletedDateUtc ?? a.CreatedAtUtc));
+                    var nextStepDueAtUtc = g
+                        .Where(a => a.CompletedDateUtc == null && a.DueDateUtc.HasValue)
+                        .OrderBy(a => a.DueDateUtc)
+                        .Select(a => a.DueDateUtc)
+                        .FirstOrDefault();
+                    return (lastActivityAtUtc, nextStepDueAtUtc);
+                });
+
+        var stageHistoryRows = await _dbContext.OpportunityStageHistories
+            .AsNoTracking()
+            .Where(h => opportunityIds.Contains(h.OpportunityId))
+            .GroupBy(h => h.OpportunityId)
+            .Select(g => new { OpportunityId = g.Key, LastStageChange = g.Max(x => x.ChangedAtUtc) })
+            .ToListAsync(cancellationToken);
+
+        var stageHistoryLookup = stageHistoryRows.ToDictionary(x => x.OpportunityId, x => x.LastStageChange);
+
+        var ownerIds = openOpportunities.Select(o => o.OwnerId).Distinct().ToList();
+        var owners = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => ownerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToListAsync(cancellationToken);
+
+        var pipelineByStage = openOpportunities
+            .GroupBy(o => o.Stage)
+            .Select(group => new PipelineStageDto(group.Key, group.Count(), group.Sum(o => o.Amount)))
+            .OrderBy(stage => stage.Stage)
+            .ToList();
+
+        var pipelineValueTotal = pipelineByStage.Sum(stage => stage.Value);
+
+        var reviewQueue = new List<ManagerReviewDealDto>();
+        var missingNextStepCount = 0;
+        var nextStepOverdueCount = 0;
+        var noRecentActivityCount = 0;
+        var closeDateOverdueCount = 0;
+        var stuckStageCount = 0;
+
+        foreach (var opportunity in openOpportunities)
+        {
+            activityLookup.TryGetValue(opportunity.Id, out var activityInfo);
+            var nextStepDueAtUtc = activityInfo.nextStepDueAtUtc;
+            var lastActivityAtUtc = activityInfo.lastActivityAtUtc;
+
+            var lastStageChange = stageHistoryLookup.TryGetValue(opportunity.Id, out var changedAt)
+                ? changedAt
+                : opportunity.CreatedAtUtc;
+
+            var stageAgeDays = (now - lastStageChange).TotalDays;
+
+            var reasons = new List<string>();
+
+            if (!nextStepDueAtUtc.HasValue)
+            {
+                missingNextStepCount++;
+                reasons.Add("Missing next step");
+            }
+            else if (nextStepDueAtUtc.Value < now)
+            {
+                nextStepOverdueCount++;
+                reasons.Add("Next step overdue");
+            }
+
+            if (lastActivityAtUtc.HasValue && (now - lastActivityAtUtc.Value).TotalDays > InactivityThresholdDays)
+            {
+                noRecentActivityCount++;
+                reasons.Add("No recent activity");
+            }
+
+            if (opportunity.ExpectedCloseDate.HasValue && opportunity.ExpectedCloseDate.Value.Date < now.Date)
+            {
+                closeDateOverdueCount++;
+                reasons.Add("Close date passed");
+            }
+
+            if (stageAgeDays > StuckStageThresholdDays)
+            {
+                stuckStageCount++;
+                reasons.Add("Stuck in stage");
+            }
+
+            if (reasons.Count == 0)
+            {
+                continue;
+            }
+
+            var ownerName = owners.FirstOrDefault(o => o.Id == opportunity.OwnerId)?.FullName ?? "Unassigned";
+            reviewQueue.Add(new ManagerReviewDealDto(
+                opportunity.Id,
+                opportunity.Name,
+                opportunity.AccountName,
+                opportunity.Stage,
+                opportunity.Amount,
+                ownerName,
+                string.Join(" • ", reasons),
+                nextStepDueAtUtc,
+                lastActivityAtUtc,
+                opportunity.ExpectedCloseDate));
+        }
+
+        var orderedReviewQueue = reviewQueue
+            .OrderByDescending(item => item.Reason.Contains("Missing next step"))
+            .ThenByDescending(item => item.Reason.Contains("Next step overdue"))
+            .ThenByDescending(item => item.Reason.Contains("Close date passed"))
+            .ThenByDescending(item => item.Reason.Contains("No recent activity"))
+            .ThenByDescending(item => item.Reason.Contains("Stuck in stage"))
+            .ThenBy(item => item.NextStepDueAtUtc ?? DateTime.MaxValue)
+            .Take(10)
+            .ToList();
+
+        return new ManagerPipelineHealthDto(
+            openOpportunities.Count,
+            pipelineValueTotal,
+            missingNextStepCount,
+            nextStepOverdueCount,
+            noRecentActivityCount,
+            closeDateOverdueCount,
+            stuckStageCount,
+            pipelineByStage,
+            orderedReviewQueue);
     }
 
     private async Task<DashboardOpportunityDto> BuildAtRiskDetailAsync(

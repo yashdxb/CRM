@@ -776,6 +776,10 @@ Legend:
 - Multi-tenancy + workspace settings
 - Lead lifecycle (CRUD + workflow + conversion + assignment rules)
 - Opportunity enhancements
+- Lead SLA timers + first-touch task enforcement
+- Mandatory next-step + due date enforcement on activities
+- Stage exit criteria gates + at-risk deal detection
+- Security/Legal checklist tracking per opportunity stage
 - Activity templates
 - Saved filters/views per user
 - Bulk actions + inline edit
@@ -783,40 +787,27 @@ Legend:
 - Ops hardening (background jobs, retries, health checks)
 
 **Missing vs full Sales Rep flow (must add):**
-1) [P2] Lead SLA timers + escalation rules for first-touch  
-   - Acceptance: SLA starts on lead assignment; overdue triggers alert + task.
-2) [P2] Mandatory next-step + due date enforcement on every activity  
-   - Acceptance: activity cannot save without outcome + next step.
-3) [P2] Stage exit criteria gates (Qualification → Discovery → …)  
-   - Acceptance: stage change blocked until required fields completed.
-4) [P2] At-risk deal detection (no activity in X days) surfaced in dashboard  
-   - Acceptance: deals with inactivity threshold flagged + filterable.
-5) [P3] Forecast category controls + commit discipline  
+1) [P3] Forecast category controls + commit discipline  
    - Acceptance: required forecast category before close; manager override logged.
-6) [P3] Security/Legal checklist tracking per opportunity stage  
-   - Acceptance: checklist required to move past Security/Legal stage.
-7) [P3] Renewal automation (90/60/30 day triggers)  
+2) [P3] Renewal automation (90/60/30 day triggers)  
    - Acceptance: renewal opportunity auto‑created with reminders.
-8) [P3] Expansion opportunity creation + signals  
+3) [P3] Expansion opportunity creation + signals  
    - Acceptance: expansion signal creates draft opportunity with account link.
 
 ## Phase 2 vs Full B2B Role Flows (Other Roles)
 
 **SDR / BDR gaps:**
-1) [P2] SLA timer + first-touch enforcement  
-   - Acceptance: SLA visible in lead list; overdue = alert + task.
-2) [P2] Multi-touch cadence tracking (call/email/LinkedIn sequences)  
+1) [P2] Multi-touch cadence tracking (call/email/LinkedIn sequences)  
    - Acceptance: cadence step logging + auto-next-step task.
-3) [P2] Handoff package standard (notes + meeting booked + outcome)  
+2) [P2] Handoff package standard (notes + meeting booked + outcome)  
    - Acceptance: handoff requires meeting + summary note.
 
 **Sales Manager gaps:**
 1) [P2] Deal review workflow (no next step, stuck stage, late-stage alerts)  
+   - Status: PARTIAL (pipeline health review queue implemented; coaching/comment tasks still missing).
    - Acceptance: review queue + comment task to rep.
 2) [P3] Forecast category governance + commit tracking  
    - Acceptance: commit changes require manager approval + audit.
-3) [P2] Approval workflow visibility with comments and audit trail  
-   - Acceptance: approval request includes status + comment log.
 
 **Sales Ops / CRM Admin gaps:**
 1) [P3] Stage exit criteria configuration UI  

@@ -10,7 +10,7 @@ import { DialogModule } from 'primeng/dialog';
 import { OrderListModule } from 'primeng/orderlist';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
-import { DashboardSummary } from '../models/dashboard.model';
+import { DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -83,8 +83,21 @@ export class DashboardPage implements OnInit {
     churnRate: 0
   };
   private readonly summarySignal = toSignal(this.dashboardData.getSummary(), { initialValue: this.emptySummary });
+  private readonly emptyManagerHealth: ManagerPipelineHealth = {
+    openOpportunities: 0,
+    pipelineValueTotal: 0,
+    missingNextStepCount: 0,
+    nextStepOverdueCount: 0,
+    noRecentActivityCount: 0,
+    closeDateOverdueCount: 0,
+    stuckStageCount: 0,
+    pipelineByStage: [],
+    reviewQueue: []
+  };
+  private readonly managerHealthSignal = toSignal(this.dashboardData.getManagerPipelineHealth(), { initialValue: this.emptyManagerHealth });
 
   protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
+  protected readonly managerHealth = computed(() => this.managerHealthSignal() ?? this.emptyManagerHealth);
 
   protected readonly greeting = this.getGreeting();
   
@@ -148,6 +161,18 @@ export class DashboardPage implements OnInit {
   protected readonly atRiskDeals = computed(() => this.summary()?.atRiskDeals?.slice(0, 6) ?? []);
   protected readonly activityBreakdown = computed(() => this.summary()?.activityBreakdown ?? []);
   protected readonly pipelineValue = computed(() => this.summary()?.pipelineValue ?? []);
+  protected readonly managerPipelineByStage = computed(() => this.managerHealth().pipelineByStage ?? []);
+  protected readonly managerReviewQueue = computed(() => this.managerHealth().reviewQueue ?? []);
+  protected readonly managerHealthStats = computed(() => {
+    const data = this.managerHealth();
+    return [
+      { label: 'Missing next step', value: data.missingNextStepCount, tone: 'danger' },
+      { label: 'Next step overdue', value: data.nextStepOverdueCount, tone: 'warn' },
+      { label: 'No recent activity', value: data.noRecentActivityCount, tone: 'warn' },
+      { label: 'Close date passed', value: data.closeDateOverdueCount, tone: 'danger' },
+      { label: 'Stuck in stage', value: data.stuckStageCount, tone: 'muted' }
+    ];
+  });
   
   protected readonly activityStats = computed(() => {
     const data = this.summary();
@@ -179,6 +204,7 @@ export class DashboardPage implements OnInit {
     accounts: 'md',
     'new-leads': 'md',
     'at-risk-deals': 'md',
+    'manager-health': 'md',
     'activity-mix': 'sm',
     conversion: 'sm',
     'top-performers': 'md',
@@ -223,6 +249,7 @@ export class DashboardPage implements OnInit {
     { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },
     { id: 'new-leads', label: 'Newly Assigned Leads', icon: 'pi pi-user-plus' },
     { id: 'at-risk-deals', label: 'At-Risk Deals', icon: 'pi pi-exclamation-triangle' },
+    { id: 'manager-health', label: 'Pipeline Health', icon: 'pi pi-shield' },
     { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
     { id: 'conversion', label: 'Conversion Trend', icon: 'pi pi-percentage' },
     { id: 'top-performers', label: 'Top Performers', icon: 'pi pi-trophy' },

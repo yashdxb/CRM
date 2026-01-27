@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { DashboardSummary } from '../models/dashboard.model';
+import { DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardDataService {
@@ -13,6 +13,7 @@ export class DashboardDataService {
     'accounts',
     'new-leads',
     'at-risk-deals',
+    'manager-health',
     'activity-mix',
     'conversion',
     'top-performers',
@@ -59,6 +60,22 @@ export class DashboardDataService {
     };
 
     return this.http.get<DashboardSummary>(url).pipe(catchError(() => of(empty)));
+  }
+
+  getManagerPipelineHealth() {
+    const url = `${environment.apiUrl}/api/dashboard/manager/pipeline-health`;
+    const empty: ManagerPipelineHealth = {
+      openOpportunities: 0,
+      pipelineValueTotal: 0,
+      missingNextStepCount: 0,
+      nextStepOverdueCount: 0,
+      noRecentActivityCount: 0,
+      closeDateOverdueCount: 0,
+      stuckStageCount: 0,
+      pipelineByStage: [],
+      reviewQueue: []
+    };
+    return this.http.get<ManagerPipelineHealth>(url).pipe(catchError(() => of(empty)));
   }
 
   getLayout() {

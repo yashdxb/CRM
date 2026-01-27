@@ -338,6 +338,55 @@
           </div>
         </ng-container>
 
+        <!-- Manager Pipeline Health -->
+        <ng-container *ngSwitchCase="'manager-health'">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-shield"></i>
+              Pipeline Health
+            </h3>
+            <div class="card-actions">
+              <span class="card-badge warn" *ngIf="managerReviewQueue().length">
+                {{ managerReviewQueue().length }} needs review
+              </span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body manager-health" *ngIf="managerReviewQueue().length; else emptyManagerHealth">
+            <div class="manager-health__stats">
+              <div class="health-pill" *ngFor="let stat of managerHealthStats()" [ngClass]="stat.tone">
+                <span class="health-pill__value">{{ stat.value }}</span>
+                <span class="health-pill__label">{{ stat.label }}</span>
+              </div>
+            </div>
+            <div class="manager-health__queue">
+              <div class="manager-deal" *ngFor="let deal of managerReviewQueue()">
+                <div class="manager-deal__info">
+                  <div class="manager-deal__name">{{ deal.name }}</div>
+                  <div class="manager-deal__meta">
+                    <span>{{ deal.accountName }}</span>
+                    <span class="separator">•</span>
+                    <span>{{ deal.stage }}</span>
+                    <span class="separator">•</span>
+                    <span>{{ deal.ownerName }}</span>
+                  </div>
+                  <div class="manager-deal__reason">
+                    <i class="pi pi-flag"></i>
+                    {{ deal.reason }}
+                  </div>
+                </div>
+                <div class="manager-deal__side">
+                  <div class="manager-deal__amount">{{ deal.amount | currency:'USD':'symbol':'1.0-0' }}</div>
+                  <div class="manager-deal__dates">
+                    <span *ngIf="deal.nextStepDueAtUtc">Next: {{ asLocalDate(deal.nextStepDueAtUtc) | date: 'MMM d' }}</span>
+                    <span *ngIf="deal.expectedCloseDate">Close: {{ asLocalDate(deal.expectedCloseDate) | date: 'MMM d' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
         <!-- Activity Breakdown Donut -->
         <ng-container *ngSwitchCase="'activity-mix'">
           <div class="card-header">
@@ -649,6 +698,16 @@
     </div>
     <h4>All deals on track</h4>
     <p>No at-risk opportunities right now</p>
+  </div>
+</ng-template>
+
+<ng-template #emptyManagerHealth>
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="pi pi-briefcase"></i>
+    </div>
+    <h4>Pipeline looks clean</h4>
+    <p>No deals require manager review right now</p>
   </div>
 </ng-template>
 
