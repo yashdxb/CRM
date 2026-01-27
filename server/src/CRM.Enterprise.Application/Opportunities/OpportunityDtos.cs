@@ -10,7 +10,12 @@ public sealed record OpportunityListItemDto(
     decimal Probability,
     string Currency,
     DateTime? ExpectedCloseDate,
+    DateTime? ContractStartDateUtc,
+    DateTime? ContractEndDateUtc,
     string? ForecastCategory,
+    string OpportunityType,
+    Guid? RenewalOfOpportunityId,
+    Guid? RenewalOpportunityId,
     decimal? DiscountPercent,
     decimal? DiscountAmount,
     string? PricingNotes,
@@ -29,6 +34,18 @@ public sealed record OpportunityListItemDto(
     bool IsAtRisk);
 
 public sealed record OpportunitySearchResultDto(IReadOnlyList<OpportunityListItemDto> Items, int Total);
+
+public sealed record RenewalAutomationResultDto(int RenewalsCreated, int ReminderTasksCreated);
+
+public sealed record ExpansionSignalDto(
+    Guid OpportunityId,
+    Guid AccountId,
+    string AccountName,
+    string OpportunityName,
+    DateTime? ContractEndDateUtc,
+    DateTime LastSignalAtUtc,
+    int SignalCount,
+    bool HasExpansionOpportunity);
 
 public sealed record OpportunityStageHistoryDto(
     Guid Id,

@@ -25,6 +25,12 @@ public sealed class OpportunityService : IOpportunityService
         "Closed",
         "Omitted"
     };
+    private static readonly HashSet<string> OpportunityTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "New",
+        "Renewal",
+        "Expansion"
+    };
     private static readonly HashSet<string> StagesRequiringAmount = new(StringComparer.OrdinalIgnoreCase)
     {
         "Qualification",
@@ -120,7 +126,12 @@ public sealed class OpportunityService : IOpportunityService
                 o.Probability,
                 o.Currency,
                 o.ExpectedCloseDate,
+                o.ContractStartDateUtc,
+                o.ContractEndDateUtc,
                 o.ForecastCategory,
+                o.OpportunityType,
+                o.RenewalOfOpportunityId,
+                o.RenewalOpportunityId,
                 o.DiscountPercent,
                 o.DiscountAmount,
                 o.PricingNotes,
@@ -193,7 +204,12 @@ public sealed class OpportunityService : IOpportunityService
                 o.Probability,
                 o.Currency,
                 o.ExpectedCloseDate,
+                o.ContractStartDateUtc,
+                o.ContractEndDateUtc,
                 o.ForecastCategory,
+                o.OpportunityType,
+                o.RenewalOfOpportunityId,
+                o.RenewalOpportunityId,
                 o.DiscountPercent,
                 o.DiscountAmount,
                 o.PricingNotes,
@@ -246,7 +262,12 @@ public sealed class OpportunityService : IOpportunityService
             opp.Probability,
             opp.Currency,
             opp.ExpectedCloseDate,
+            opp.ContractStartDateUtc,
+            opp.ContractEndDateUtc,
             opp.ForecastCategory,
+            opp.OpportunityType,
+            opp.RenewalOfOpportunityId,
+            opp.RenewalOpportunityId,
             opp.DiscountPercent,
             opp.DiscountAmount,
             opp.PricingNotes,
@@ -353,6 +374,17 @@ public sealed class OpportunityService : IOpportunityService
         {
             return OpportunityOperationResult<OpportunityListItemDto>.Fail(forecastError);
         }
+        var opportunityType = ResolveOpportunityType(request.OpportunityType);
+        if (opportunityType is null)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Opportunity type is invalid.");
+        }
+        if (request.ContractStartDateUtc.HasValue
+            && request.ContractEndDateUtc.HasValue
+            && request.ContractEndDateUtc < request.ContractStartDateUtc)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Contract end date must be after the contract start date.");
+        }
 
         var opp = new Opportunity
         {
@@ -365,7 +397,10 @@ public sealed class OpportunityService : IOpportunityService
             Currency = string.IsNullOrWhiteSpace(request.Currency) ? "USD" : request.Currency,
             Probability = request.Probability,
             ExpectedCloseDate = request.ExpectedCloseDate,
+            ContractStartDateUtc = request.ContractStartDateUtc,
+            ContractEndDateUtc = request.ContractEndDateUtc,
             ForecastCategory = resolvedForecastCategory,
+            OpportunityType = opportunityType,
             Summary = request.Summary,
             DiscountPercent = request.DiscountPercent,
             DiscountAmount = request.DiscountAmount,
@@ -397,7 +432,12 @@ public sealed class OpportunityService : IOpportunityService
             opp.Probability,
             opp.Currency,
             opp.ExpectedCloseDate,
+            opp.ContractStartDateUtc,
+            opp.ContractEndDateUtc,
             opp.ForecastCategory,
+            opp.OpportunityType,
+            opp.RenewalOfOpportunityId,
+            opp.RenewalOpportunityId,
             opp.DiscountPercent,
             opp.DiscountAmount,
             opp.PricingNotes,
@@ -454,6 +494,9 @@ public sealed class OpportunityService : IOpportunityService
         var previousAmount = opp.Amount;
         var previousExpectedClose = opp.ExpectedCloseDate;
         var previousForecastCategory = opp.ForecastCategory;
+        var previousContractStart = opp.ContractStartDateUtc;
+        var previousContractEnd = opp.ContractEndDateUtc;
+        var previousOpportunityType = opp.OpportunityType;
 
         var nextStageId = await ResolveStageIdAsync(request.StageId, request.StageName, cancellationToken);
         var nextStageName = await ResolveStageNameAsync(nextStageId, cancellationToken) ?? request.StageName ?? "Prospecting";
@@ -463,6 +506,17 @@ public sealed class OpportunityService : IOpportunityService
         if (forecastError is not null)
         {
             return OpportunityOperationResult<bool>.Fail(forecastError);
+        }
+        var opportunityType = ResolveOpportunityType(request.OpportunityType, opp.OpportunityType);
+        if (opportunityType is null)
+        {
+            return OpportunityOperationResult<bool>.Fail("Opportunity type is invalid.");
+        }
+        if (request.ContractStartDateUtc.HasValue
+            && request.ContractEndDateUtc.HasValue
+            && request.ContractEndDateUtc < request.ContractStartDateUtc)
+        {
+            return OpportunityOperationResult<bool>.Fail("Contract end date must be after the contract start date.");
         }
         if (previousStageId != nextStageId)
         {
@@ -482,7 +536,10 @@ public sealed class OpportunityService : IOpportunityService
         opp.Currency = string.IsNullOrWhiteSpace(request.Currency) ? "USD" : request.Currency;
         opp.Probability = request.Probability;
         opp.ExpectedCloseDate = request.ExpectedCloseDate;
+        opp.ContractStartDateUtc = request.ContractStartDateUtc;
+        opp.ContractEndDateUtc = request.ContractEndDateUtc;
         opp.ForecastCategory = resolvedForecastCategory;
+        opp.OpportunityType = opportunityType;
         opp.Summary = request.Summary;
         if (request.DiscountPercent.HasValue)
         {
@@ -558,6 +615,32 @@ public sealed class OpportunityService : IOpportunityService
                 cancellationToken);
         }
 
+        if (previousContractStart != opp.ContractStartDateUtc)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(
+                    opp.Id,
+                    "ContractStartChanged",
+                    "ContractStartDateUtc",
+                    previousContractStart?.ToString("u"),
+                    opp.ContractStartDateUtc?.ToString("u"),
+                    actor),
+                cancellationToken);
+        }
+
+        if (previousContractEnd != opp.ContractEndDateUtc)
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(
+                    opp.Id,
+                    "ContractEndChanged",
+                    "ContractEndDateUtc",
+                    previousContractEnd?.ToString("u"),
+                    opp.ContractEndDateUtc?.ToString("u"),
+                    actor),
+                cancellationToken);
+        }
+
         if (!string.Equals(previousForecastCategory, opp.ForecastCategory, StringComparison.OrdinalIgnoreCase))
         {
             await _auditEvents.TrackAsync(
@@ -567,6 +650,19 @@ public sealed class OpportunityService : IOpportunityService
                     "ForecastCategory",
                     previousForecastCategory,
                     opp.ForecastCategory,
+                    actor),
+                cancellationToken);
+        }
+
+        if (!string.Equals(previousOpportunityType, opp.OpportunityType, StringComparison.OrdinalIgnoreCase))
+        {
+            await _auditEvents.TrackAsync(
+                CreateAuditEntry(
+                    opp.Id,
+                    "OpportunityTypeChanged",
+                    "OpportunityType",
+                    previousOpportunityType,
+                    opp.OpportunityType,
                     actor),
                 cancellationToken);
         }
@@ -759,6 +855,232 @@ public sealed class OpportunityService : IOpportunityService
         return OpportunityOperationResult<Guid>.Ok(activityResult.Value.Id);
     }
 
+    public async Task<RenewalAutomationResultDto> RunRenewalAutomationAsync(ActorContext actor, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow.Date;
+        var renewalWindowEnd = now.AddDays(90);
+        var prospectingStageId = await ResolveStageIdAsync(null, "Prospecting", cancellationToken);
+        var prospectingForecastCategory = await ResolveStageForecastCategoryAsync(prospectingStageId, cancellationToken);
+        var defaultForecastCategory = ResolveForecastCategory("Pipeline", prospectingForecastCategory) ?? "Pipeline";
+
+        var baseOpportunities = await _dbContext.Opportunities
+            .Where(o => !o.IsDeleted
+                        && o.IsClosed
+                        && o.IsWon
+                        && o.ContractEndDateUtc.HasValue
+                        && o.ContractEndDateUtc.Value.Date >= now
+                        && o.ContractEndDateUtc.Value.Date <= renewalWindowEnd
+                        && !string.Equals(o.OpportunityType, "Renewal", StringComparison.OrdinalIgnoreCase))
+            .ToListAsync(cancellationToken);
+
+        var renewalsCreated = 0;
+        var reminderTasksCreated = 0;
+
+        foreach (var opportunity in baseOpportunities)
+        {
+            var daysToEnd = (opportunity.ContractEndDateUtc!.Value.Date - now).TotalDays;
+            if (daysToEnd < 0)
+            {
+                continue;
+            }
+
+            Opportunity? renewalOpportunity = null;
+            if (opportunity.RenewalOpportunityId.HasValue && opportunity.RenewalOpportunityId.Value != Guid.Empty)
+            {
+                renewalOpportunity = await _dbContext.Opportunities
+                    .FirstOrDefaultAsync(
+                        o => o.Id == opportunity.RenewalOpportunityId.Value && !o.IsDeleted,
+                        cancellationToken);
+            }
+
+            if (renewalOpportunity is null)
+            {
+                renewalOpportunity = await CreateRenewalOpportunityAsync(
+                    opportunity,
+                    prospectingStageId,
+                    defaultForecastCategory,
+                    actor,
+                    cancellationToken);
+                renewalsCreated++;
+            }
+
+            if (daysToEnd <= 90 && !opportunity.Renewal90TaskCreatedAtUtc.HasValue)
+            {
+                if (await CreateRenewalReminderTaskAsync(opportunity, renewalOpportunity.Id, 90, actor, cancellationToken))
+                {
+                    opportunity.Renewal90TaskCreatedAtUtc = DateTime.UtcNow;
+                    reminderTasksCreated++;
+                }
+            }
+
+            if (daysToEnd <= 60 && !opportunity.Renewal60TaskCreatedAtUtc.HasValue)
+            {
+                if (await CreateRenewalReminderTaskAsync(opportunity, renewalOpportunity.Id, 60, actor, cancellationToken))
+                {
+                    opportunity.Renewal60TaskCreatedAtUtc = DateTime.UtcNow;
+                    reminderTasksCreated++;
+                }
+            }
+
+            if (daysToEnd <= 30 && !opportunity.Renewal30TaskCreatedAtUtc.HasValue)
+            {
+                if (await CreateRenewalReminderTaskAsync(opportunity, renewalOpportunity.Id, 30, actor, cancellationToken))
+                {
+                    opportunity.Renewal30TaskCreatedAtUtc = DateTime.UtcNow;
+                    reminderTasksCreated++;
+                }
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return new RenewalAutomationResultDto(renewalsCreated, reminderTasksCreated);
+    }
+
+    public async Task<IReadOnlyList<ExpansionSignalDto>> GetExpansionSignalsAsync(CancellationToken cancellationToken = default)
+    {
+        const string expansionOutcome = "Expansion signal";
+        var cutoff = DateTime.UtcNow.AddDays(-180);
+
+        var signalActivities = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Opportunity
+                        && a.Outcome != null
+                        && a.Outcome == expansionOutcome
+                        && a.CreatedAtUtc >= cutoff)
+            .Select(a => new
+            {
+                a.RelatedEntityId,
+                a.CreatedAtUtc,
+                a.CompletedDateUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        if (signalActivities.Count == 0)
+        {
+            return Array.Empty<ExpansionSignalDto>();
+        }
+
+        var opportunityIds = signalActivities.Select(a => a.RelatedEntityId).Distinct().ToList();
+        var opportunities = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => opportunityIds.Contains(o.Id) && !o.IsDeleted && o.IsClosed && o.IsWon)
+            .Select(o => new
+            {
+                o.Id,
+                o.AccountId,
+                o.Name,
+                o.ContractEndDateUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        if (opportunities.Count == 0)
+        {
+            return Array.Empty<ExpansionSignalDto>();
+        }
+
+        var accountIds = opportunities.Select(o => o.AccountId).Distinct().ToList();
+        var accounts = await _dbContext.Accounts
+            .AsNoTracking()
+            .Where(a => accountIds.Contains(a.Id) && !a.IsDeleted)
+            .Select(a => new { a.Id, a.Name })
+            .ToListAsync(cancellationToken);
+        var accountNameById = accounts.ToDictionary(a => a.Id, a => a.Name);
+
+        var expansionAccounts = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted
+                        && !o.IsClosed
+                        && accountIds.Contains(o.AccountId)
+                        && string.Equals(o.OpportunityType, "Expansion", StringComparison.OrdinalIgnoreCase))
+            .Select(o => o.AccountId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        var expansionAccountSet = expansionAccounts.ToHashSet();
+
+        var signals = new List<ExpansionSignalDto>();
+        var signalLookup = signalActivities
+            .GroupBy(a => a.RelatedEntityId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        foreach (var opportunity in opportunities)
+        {
+            if (!signalLookup.TryGetValue(opportunity.Id, out var entries))
+            {
+                continue;
+            }
+
+            var lastSignalAtUtc = entries.Max(e => e.CompletedDateUtc ?? e.CreatedAtUtc);
+            var accountName = accountNameById.TryGetValue(opportunity.AccountId, out var name) ? name : "Account";
+            signals.Add(new ExpansionSignalDto(
+                opportunity.Id,
+                opportunity.AccountId,
+                accountName,
+                opportunity.Name,
+                opportunity.ContractEndDateUtc,
+                lastSignalAtUtc,
+                entries.Count,
+                expansionAccountSet.Contains(opportunity.AccountId)));
+        }
+
+        return signals
+            .OrderByDescending(s => s.LastSignalAtUtc)
+            .ToList();
+    }
+
+    public async Task<OpportunityOperationResult<OpportunityListItemDto>> CreateExpansionAsync(Guid sourceOpportunityId, ActorContext actor, CancellationToken cancellationToken = default)
+    {
+        var source = await _dbContext.Opportunities
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == sourceOpportunityId && !o.IsDeleted, cancellationToken);
+        if (source is null)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.NotFoundResult();
+        }
+
+        if (!source.IsClosed || !source.IsWon)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Expansion opportunities can only be created from closed won deals.");
+        }
+
+        var prospectingStageId = await ResolveStageIdAsync(null, "Prospecting", cancellationToken);
+        var prospectingStageName = await ResolveStageNameAsync(prospectingStageId, cancellationToken) ?? "Prospecting";
+        var prospectingForecastCategory = await ResolveStageForecastCategoryAsync(prospectingStageId, cancellationToken);
+        var forecastCategory = ResolveForecastCategory("Pipeline", prospectingForecastCategory) ?? "Pipeline";
+
+        var opportunity = new Opportunity
+        {
+            Name = $"{source.Name} Expansion",
+            AccountId = source.AccountId,
+            PrimaryContactId = source.PrimaryContactId,
+            StageId = prospectingStageId,
+            OwnerId = source.OwnerId,
+            Amount = source.Amount,
+            Currency = source.Currency,
+            Probability = source.Probability,
+            ExpectedCloseDate = DateTime.UtcNow.AddMonths(3),
+            ForecastCategory = forecastCategory,
+            OpportunityType = "Expansion",
+            Summary = $"Expansion created from {source.Name} on {DateTime.UtcNow:u}.",
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _dbContext.Opportunities.Add(opportunity);
+        AddStageHistory(opportunity, prospectingStageId, "Expansion created", actor);
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(opportunity.Id, "Created", null, null, null, actor),
+            cancellationToken);
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(source.Id, "ExpansionCreated", "ExpansionOpportunityId", null, opportunity.Id.ToString(), actor),
+            cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var dto = await GetAsync(opportunity.Id, cancellationToken);
+        return dto is null
+            ? OpportunityOperationResult<OpportunityListItemDto>.Fail("Expansion opportunity created but could not be loaded.")
+            : OpportunityOperationResult<OpportunityListItemDto>.Ok(dto);
+    }
+
     private static string ComputeStatus(bool isClosed, bool isWon)
     {
         if (isClosed) return isWon ? "Closed Won" : "Closed Lost";
@@ -810,6 +1132,111 @@ public sealed class OpportunityService : IOpportunityService
             .OrderBy(a => a.DueDateUtc)
             .Select(a => a.DueDateUtc)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<Opportunity> CreateRenewalOpportunityAsync(
+        Opportunity baseOpportunity,
+        Guid stageId,
+        string forecastCategory,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        var contractEnd = baseOpportunity.ContractEndDateUtc!.Value;
+        var durationDays = ResolveContractDurationDays(baseOpportunity);
+        var renewalContractStart = contractEnd;
+        var renewalContractEnd = renewalContractStart.AddDays(durationDays);
+        var renewalName = $"{baseOpportunity.Name} Renewal {renewalContractStart:yyyy}";
+        var renewalExpectedClose = renewalContractStart.AddDays(-30);
+
+        var renewal = new Opportunity
+        {
+            Name = renewalName,
+            AccountId = baseOpportunity.AccountId,
+            PrimaryContactId = baseOpportunity.PrimaryContactId,
+            StageId = stageId,
+            OwnerId = baseOpportunity.OwnerId,
+            Amount = baseOpportunity.Amount,
+            Currency = baseOpportunity.Currency,
+            Probability = baseOpportunity.Probability,
+            ExpectedCloseDate = renewalExpectedClose,
+            ContractStartDateUtc = renewalContractStart,
+            ContractEndDateUtc = renewalContractEnd,
+            ForecastCategory = forecastCategory,
+            OpportunityType = "Renewal",
+            RenewalOfOpportunityId = baseOpportunity.Id,
+            Summary = $"Auto-generated renewal for {baseOpportunity.Name} ending {contractEnd:u}.",
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _dbContext.Opportunities.Add(renewal);
+        AddStageHistory(renewal, stageId, "Renewal created", actor);
+        baseOpportunity.RenewalOpportunityId = renewal.Id;
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(renewal.Id, "Created", null, null, null, actor),
+            cancellationToken);
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(
+                baseOpportunity.Id,
+                "RenewalCreated",
+                "RenewalOpportunityId",
+                null,
+                renewal.Id.ToString(),
+                actor),
+            cancellationToken);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return renewal;
+    }
+
+    private async Task<bool> CreateRenewalReminderTaskAsync(
+        Opportunity baseOpportunity,
+        Guid renewalOpportunityId,
+        int daysBeforeEnd,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        var contractEnd = baseOpportunity.ContractEndDateUtc;
+        if (!contractEnd.HasValue)
+        {
+            return false;
+        }
+
+        var subject = $"Renewal {daysBeforeEnd}-day reminder: {baseOpportunity.Name}";
+        var description = $"Contract ends on {contractEnd.Value:u}. Review renewal opportunity and next steps.";
+        var dueDate = DateTime.UtcNow.AddDays(1);
+
+        var result = await _activityService.CreateAsync(
+            new ActivityUpsertRequest(
+                subject,
+                description,
+                null,
+                ActivityType.Task,
+                "High",
+                dueDate,
+                null,
+                null,
+                null,
+                ActivityRelationType.Opportunity,
+                renewalOpportunityId,
+                baseOpportunity.OwnerId),
+            actor,
+            cancellationToken);
+
+        return result.Success && result.Value is not null;
+    }
+
+    private static int ResolveContractDurationDays(Opportunity opportunity)
+    {
+        if (opportunity.ContractStartDateUtc.HasValue
+            && opportunity.ContractEndDateUtc.HasValue
+            && opportunity.ContractEndDateUtc.Value > opportunity.ContractStartDateUtc.Value)
+        {
+            var duration = (opportunity.ContractEndDateUtc.Value - opportunity.ContractStartDateUtc.Value).TotalDays;
+            return (int)Math.Clamp(Math.Round(duration), 30, 3650);
+        }
+
+        return 365;
     }
 
     private async Task<bool> HasBuyingRoleAsync(Opportunity opportunity, CancellationToken cancellationToken)
@@ -1039,6 +1466,18 @@ public sealed class OpportunityService : IOpportunityService
         }
 
         return null;
+    }
+
+    private static string? ResolveOpportunityType(string? requestedType, string? currentType = null)
+    {
+        var candidate = !string.IsNullOrWhiteSpace(requestedType) ? requestedType : currentType ?? "New";
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return "New";
+        }
+
+        var trimmed = candidate.Trim();
+        return OpportunityTypes.Contains(trimmed) ? trimmed : null;
     }
 
     private async Task<Guid> ResolveAccountIdAsync(Guid? requestedAccountId, CancellationToken cancellationToken)

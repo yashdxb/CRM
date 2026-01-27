@@ -13,7 +13,15 @@ public class Opportunity : AuditableEntity
     public string Currency { get; set; } = "USD";
     public decimal Probability { get; set; }
     public DateTime? ExpectedCloseDate { get; set; }
+    public DateTime? ContractStartDateUtc { get; set; }
+    public DateTime? ContractEndDateUtc { get; set; }
     public string? ForecastCategory { get; set; }
+    public string OpportunityType { get; set; } = "New";
+    public Guid? RenewalOfOpportunityId { get; set; }
+    public Guid? RenewalOpportunityId { get; set; }
+    public DateTime? Renewal90TaskCreatedAtUtc { get; set; }
+    public DateTime? Renewal60TaskCreatedAtUtc { get; set; }
+    public DateTime? Renewal30TaskCreatedAtUtc { get; set; }
     public string? Summary { get; set; }
     public string? WinLossReason { get; set; }
     public bool IsClosed { get; set; }

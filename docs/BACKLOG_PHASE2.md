@@ -146,6 +146,7 @@ Order: execute sequentially, build + verify after each task.
 - Manager coaching task API + dashboard coaching dialog + tests
 - Lead cadence + qualified handoff API tests
 - Forecast category controls + commit discipline (API + UI) + tests
+- Renewal automation (90/60/30) + expansion signals/creation (P3 follow-ons)
 
 ---
 

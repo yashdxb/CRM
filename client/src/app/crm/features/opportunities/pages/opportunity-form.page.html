@@ -172,6 +172,42 @@
                 ></p-select>
               </div>
               <div class="field">
+                <label for="oppType">Opportunity type</label>
+                <p-select
+                  inputId="oppType"
+                  appendTo="body"
+                  [options]="opportunityTypeOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="opportunityType"
+                  [(ngModel)]="form.opportunityType"
+                  placeholder="Type"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label for="oppContractStart">Contract start</label>
+                <p-datePicker
+                  inputId="oppContractStart"
+                  appendTo="body"
+                  name="contractStartDateUtc"
+                  [(ngModel)]="form.contractStartDateUtc"
+                  [showIcon]="true"
+                  styleClass="w-full"
+                ></p-datePicker>
+              </div>
+              <div class="field">
+                <label for="oppContractEnd">Contract end</label>
+                <p-datePicker
+                  inputId="oppContractEnd"
+                  appendTo="body"
+                  name="contractEndDateUtc"
+                  [(ngModel)]="form.contractEndDateUtc"
+                  [showIcon]="true"
+                  styleClass="w-full"
+                ></p-datePicker>
+              </div>
+              <div class="field">
                 <label for="oppReason">Win/Loss reason</label>
                 <input
                   pInputText

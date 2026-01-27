@@ -789,9 +789,9 @@ Legend:
 **Missing vs full Sales Rep flow (must add):**
 1) [P3] Forecast category controls + commit discipline — Implemented on January 27, 2026  
    - Acceptance: required forecast category before close; manager override logged.
-2) [P3] Renewal automation (90/60/30 day triggers)  
+2) [P3] Renewal automation (90/60/30 day triggers) — Implemented on January 27, 2026  
    - Acceptance: renewal opportunity auto‑created with reminders.
-3) [P3] Expansion opportunity creation + signals  
+3) [P3] Expansion opportunity creation + signals — Implemented on January 27, 2026  
    - Acceptance: expansion signal creates draft opportunity with account link.
 
 ## Phase 2 vs Full B2B Role Flows (Other Roles)

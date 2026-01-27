@@ -10,7 +10,12 @@ export interface Opportunity {
   probability: number;
   currency: string;
   closeDate?: string;
+  contractStartDateUtc?: string | null;
+  contractEndDateUtc?: string | null;
   forecastCategory?: string | null;
+  opportunityType?: string;
+  renewalOfOpportunityId?: string | null;
+  renewalOpportunityId?: string | null;
   discountPercent?: number | null;
   discountAmount?: number | null;
   pricingNotes?: string | null;

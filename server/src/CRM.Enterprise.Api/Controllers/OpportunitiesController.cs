@@ -167,6 +167,31 @@ public class OpportunitiesController : ControllerBase
         return Ok(new OpportunityCoachingResponse(result.Value!));
     }
 
+    [HttpPost("renewal-automation")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<RenewalAutomationResponse>> RunRenewalAutomation(CancellationToken cancellationToken)
+    {
+        var result = await _opportunityService.RunRenewalAutomationAsync(GetActor(), cancellationToken);
+        return Ok(new RenewalAutomationResponse(result.RenewalsCreated, result.ReminderTasksCreated));
+    }
+
+    [HttpGet("expansion-signals")]
+    public async Task<ActionResult<IReadOnlyList<ExpansionSignalItem>>> GetExpansionSignals(CancellationToken cancellationToken)
+    {
+        var signals = await _opportunityService.GetExpansionSignalsAsync(cancellationToken);
+        return Ok(signals.Select(ToExpansionSignalItem).ToList());
+    }
+
+    [HttpPost("{id:guid}/expansion")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityListItem>> CreateExpansion(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _opportunityService.CreateExpansionAsync(id, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success || result.Value is null) return BadRequest(result.Error);
+        return Ok(ToApiItem(result.Value));
+    }
+
     private static OpportunityListItem ToApiItem(OpportunityListItemDto dto)
     {
         return new OpportunityListItem(
@@ -179,7 +204,12 @@ public class OpportunitiesController : ControllerBase
             dto.Probability,
             dto.Currency,
             dto.ExpectedCloseDate,
+            dto.ContractStartDateUtc,
+            dto.ContractEndDateUtc,
             dto.ForecastCategory,
+            dto.OpportunityType,
+            dto.RenewalOfOpportunityId,
+            dto.RenewalOpportunityId,
             dto.DiscountPercent,
             dto.DiscountAmount,
             dto.PricingNotes,
@@ -198,6 +228,19 @@ public class OpportunitiesController : ControllerBase
             dto.IsAtRisk);
     }
 
+    private static ExpansionSignalItem ToExpansionSignalItem(ExpansionSignalDto dto)
+    {
+        return new ExpansionSignalItem(
+            dto.OpportunityId,
+            dto.AccountId,
+            dto.AccountName,
+            dto.OpportunityName,
+            dto.ContractEndDateUtc,
+            dto.LastSignalAtUtc,
+            dto.SignalCount,
+            dto.HasExpansionOpportunity);
+    }
+
     private static AppOpportunityUpsertRequest MapUpsertRequest(ApiOpportunityUpsertRequest request)
     {
         return new OpportunityUpsertRequest(
@@ -211,7 +254,10 @@ public class OpportunitiesController : ControllerBase
             request.Currency,
             request.Probability,
             request.ExpectedCloseDate,
+            request.ContractStartDateUtc,
+            request.ContractEndDateUtc,
             request.ForecastCategory,
+            request.OpportunityType,
             request.Summary,
             request.DiscountPercent,
             request.DiscountAmount,

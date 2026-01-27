@@ -79,6 +79,11 @@ export class OpportunityFormPage implements OnInit {
     { label: 'Closed', value: 'Closed' },
     { label: 'Omitted', value: 'Omitted' }
   ];
+  protected readonly opportunityTypeOptions: Option[] = [
+    { label: 'New', value: 'New' },
+    { label: 'Renewal', value: 'Renewal' },
+    { label: 'Expansion', value: 'Expansion' }
+  ];
 
   protected accountOptions: Option<string | undefined>[] = [];
   protected selectedStage = 'Prospecting';
@@ -170,9 +175,19 @@ export class OpportunityFormPage implements OnInit {
     const expectedCloseDate = rawCloseDate instanceof Date
       ? rawCloseDate.toISOString()
       : (typeof rawCloseDate === 'string' && rawCloseDate.trim() ? rawCloseDate : undefined);
+    const rawContractStart = this.form.contractStartDateUtc as unknown;
+    const contractStartDateUtc = rawContractStart instanceof Date
+      ? rawContractStart.toISOString()
+      : (typeof rawContractStart === 'string' && rawContractStart.trim() ? rawContractStart : undefined);
+    const rawContractEnd = this.form.contractEndDateUtc as unknown;
+    const contractEndDateUtc = rawContractEnd instanceof Date
+      ? rawContractEnd.toISOString()
+      : (typeof rawContractEnd === 'string' && rawContractEnd.trim() ? rawContractEnd : undefined);
     const payload: SaveOpportunityRequest = {
       ...this.form,
       expectedCloseDate,
+      contractStartDateUtc,
+      contractEndDateUtc,
       stageName: this.selectedStage,
       winLossReason: this.form.winLossReason || null
     };
@@ -440,7 +455,10 @@ export class OpportunityFormPage implements OnInit {
       currency: opp.currency ?? 'USD',
       probability: opp.probability ?? this.estimateProbability(stage),
       forecastCategory: opp.forecastCategory ?? this.estimateForecastCategory(stage),
+      opportunityType: opp.opportunityType ?? 'New',
       expectedCloseDate: opp.closeDate ? new Date(opp.closeDate) : undefined,
+      contractStartDateUtc: opp.contractStartDateUtc ? new Date(opp.contractStartDateUtc) : undefined,
+      contractEndDateUtc: opp.contractEndDateUtc ? new Date(opp.contractEndDateUtc) : undefined,
       summary: this.form.summary ?? '',
       discountPercent: opp.discountPercent ?? undefined,
       discountAmount: opp.discountAmount ?? undefined,
@@ -473,7 +491,10 @@ export class OpportunityFormPage implements OnInit {
       currency: 'USD',
       probability: this.estimateProbability('Prospecting'),
       forecastCategory: this.estimateForecastCategory('Prospecting'),
+      opportunityType: 'New',
       expectedCloseDate: undefined,
+      contractStartDateUtc: undefined,
+      contractEndDateUtc: undefined,
       summary: '',
       discountPercent: undefined,
       discountAmount: undefined,
@@ -532,6 +553,12 @@ export class OpportunityFormPage implements OnInit {
     const amountRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);
     const closeDateRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);
     const buyingRoleRequired = ['Proposal', 'Negotiation', 'Commit'].includes(stage);
+    const contractStart = this.form.contractStartDateUtc ? new Date(this.form.contractStartDateUtc) : null;
+    const contractEnd = this.form.contractEndDateUtc ? new Date(this.form.contractEndDateUtc) : null;
+
+    if (contractStart && contractEnd && contractEnd < contractStart) {
+      return 'Contract end date must be after the contract start date.';
+    }
 
     if (amountRequired && (!this.form.amount || this.form.amount <= 0)) {
       return `Amount is required before moving to ${stage}.`;

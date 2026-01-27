@@ -18,7 +18,10 @@ export interface SaveOpportunityRequest {
   currency?: string;
   probability?: number;
   expectedCloseDate?: string;
+  contractStartDateUtc?: string | null;
+  contractEndDateUtc?: string | null;
   forecastCategory?: string | null;
+  opportunityType?: string | null;
   summary?: string;
   discountPercent?: number | null;
   discountAmount?: number | null;
