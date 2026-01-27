@@ -78,6 +78,15 @@ export class DashboardDataService {
     return this.http.get<ManagerPipelineHealth>(url).pipe(catchError(() => of(empty)));
   }
 
+  coachOpportunity(opportunityId: string, payload: { comment: string; dueDateUtc?: string | null; priority?: string | null }) {
+    const url = `${environment.apiUrl}/api/opportunities/${opportunityId}/coach`;
+    return this.http.post<{ activityId: string }>(url, {
+      comment: payload.comment,
+      dueDateUtc: payload.dueDateUtc ?? null,
+      priority: payload.priority ?? null
+    });
+  }
+
   getLayout() {
     const url = `${environment.apiUrl}/api/dashboard/layout`;
     return this.http

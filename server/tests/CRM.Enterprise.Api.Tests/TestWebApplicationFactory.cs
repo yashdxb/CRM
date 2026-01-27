@@ -93,8 +93,12 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         {
             var userIdHeader = Context.Request.Headers["X-Test-UserId"].FirstOrDefault();
             var userNameHeader = Context.Request.Headers["X-Test-UserName"].FirstOrDefault();
+            var rolesHeader = Context.Request.Headers["X-Test-Roles"].FirstOrDefault();
             var userId = Guid.TryParse(userIdHeader, out var parsed) ? parsed : Guid.NewGuid();
             var userName = string.IsNullOrWhiteSpace(userNameHeader) ? "Test User" : userNameHeader;
+            var roles = string.IsNullOrWhiteSpace(rolesHeader)
+                ? Array.Empty<string>()
+                : rolesHeader.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
             var claims = new List<Claim>
             {
@@ -102,6 +106,7 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
                 new(ClaimTypes.Name, userName)
             };
             claims.AddRange(Permissions.AllKeys.Select(key => new Claim(Permissions.ClaimType, key)));
+            claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
             var identity = new ClaimsIdentity(claims, SchemeName);
             var principal = new ClaimsPrincipal(identity);

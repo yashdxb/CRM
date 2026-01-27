@@ -1,3 +1,4 @@
+using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Opportunities;
@@ -47,19 +48,22 @@ public sealed class OpportunityService : IOpportunityService
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
     private readonly IOpportunityApprovalService _approvalService;
+    private readonly IActivityService _activityService;
 
     public OpportunityService(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
         IAuditEventService auditEvents,
         IMediator mediator,
-        IOpportunityApprovalService approvalService)
+        IOpportunityApprovalService approvalService,
+        IActivityService activityService)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _auditEvents = auditEvents;
         _mediator = mediator;
         _approvalService = approvalService;
+        _activityService = activityService;
     }
 
     public async Task<OpportunitySearchResultDto> SearchAsync(OpportunitySearchRequest request, CancellationToken cancellationToken = default)
@@ -621,6 +625,66 @@ public sealed class OpportunityService : IOpportunityService
         }
 
         return OpportunityOperationResult<bool>.Ok(true);
+    }
+
+    public async Task<OpportunityOperationResult<Guid>> CoachAsync(Guid id, OpportunityCoachingRequest request, ActorContext actor, CancellationToken cancellationToken = default)
+    {
+        var comment = request.Comment?.Trim();
+        if (string.IsNullOrWhiteSpace(comment))
+        {
+            return OpportunityOperationResult<Guid>.Fail("Coaching comment is required.");
+        }
+
+        var opportunity = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Include(o => o.Account)
+            .Include(o => o.Stage)
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+
+        if (opportunity is null)
+        {
+            return OpportunityOperationResult<Guid>.NotFoundResult();
+        }
+
+        var dueDateUtc = request.DueDateUtc ?? DateTime.UtcNow.AddDays(2);
+        var priority = string.IsNullOrWhiteSpace(request.Priority) ? "High" : request.Priority;
+        var managerName = string.IsNullOrWhiteSpace(actor.UserName) ? "Manager" : actor.UserName;
+        var subject = $"Coaching: {opportunity.Name}";
+        var description = $"Manager coaching from {managerName}:{Environment.NewLine}{comment}";
+
+        var activityResult = await _activityService.CreateAsync(
+            new ActivityUpsertRequest(
+                subject,
+                description,
+                null,
+                ActivityType.Task,
+                priority,
+                dueDateUtc,
+                null,
+                null,
+                null,
+                ActivityRelationType.Opportunity,
+                opportunity.Id,
+                opportunity.OwnerId),
+            actor,
+            cancellationToken);
+
+        if (!activityResult.Success || activityResult.Value is null)
+        {
+            return OpportunityOperationResult<Guid>.Fail(activityResult.Error ?? "Unable to create coaching task.");
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(
+                opportunity.Id,
+                "CoachingTaskCreated",
+                "CoachingTask",
+                null,
+                activityResult.Value.Id.ToString(),
+                actor),
+            cancellationToken);
+
+        return OpportunityOperationResult<Guid>.Ok(activityResult.Value.Id);
     }
 
     private static string ComputeStatus(bool isClosed, bool isWon)

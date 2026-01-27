@@ -1,7 +1,9 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Opportunities;
+using ApiOpportunityCoachingRequest = CRM.Enterprise.Api.Contracts.Opportunities.OpportunityCoachingRequest;
 using ApiOpportunityUpsertRequest = CRM.Enterprise.Api.Contracts.Opportunities.UpsertOpportunityRequest;
 using AppOpportunityUpsertRequest = CRM.Enterprise.Application.Opportunities.OpportunityUpsertRequest;
+using AppOpportunityCoachingRequest = CRM.Enterprise.Application.Opportunities.OpportunityCoachingRequest;
 using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Application.Common;
@@ -139,6 +141,32 @@ public class OpportunitiesController : ControllerBase
         if (!result.Success) return BadRequest(result.Error);
         return NoContent();
     }
+
+    [HttpPost("{id:guid}/coach")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityCoachingResponse>> Coach(Guid id, [FromBody] ApiOpportunityCoachingRequest request, CancellationToken cancellationToken)
+    {
+        if (!IsManagerActor())
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Comment))
+        {
+            return BadRequest("Coaching comment is required.");
+        }
+
+        var result = await _opportunityService.CoachAsync(
+            id,
+            new AppOpportunityCoachingRequest(request.Comment, request.DueDateUtc, request.Priority),
+            GetActor(),
+            cancellationToken);
+
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        return Ok(new OpportunityCoachingResponse(result.Value!));
+    }
+
     private static OpportunityListItem ToApiItem(OpportunityListItemDto dto)
     {
         return new OpportunityListItem(
@@ -201,5 +229,15 @@ public class OpportunitiesController : ControllerBase
         var userId = Guid.TryParse(subject, out var parsed) ? parsed : (Guid?)null;
         var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
         return new ActorContext(userId, name);
+    }
+
+    private bool IsManagerActor()
+    {
+        var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value);
+        return roles.Any(role =>
+            role.Contains("manager", StringComparison.OrdinalIgnoreCase)
+            || role.Contains("admin", StringComparison.OrdinalIgnoreCase)
+            || role.Contains("supervisor", StringComparison.OrdinalIgnoreCase)
+            || role.Contains("lead", StringComparison.OrdinalIgnoreCase));
     }
 }

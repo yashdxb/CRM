@@ -381,6 +381,9 @@
                     <span *ngIf="deal.nextStepDueAtUtc">Next: {{ asLocalDate(deal.nextStepDueAtUtc) | date: 'MMM d' }}</span>
                     <span *ngIf="deal.expectedCloseDate">Close: {{ asLocalDate(deal.expectedCloseDate) | date: 'MMM d' }}</span>
                   </div>
+                  <button pButton type="button" class="btn-glass btn-sm coach-btn" (click)="openCoaching(deal)">
+                    Coach
+                  </button>
                 </div>
               </div>
             </div>
@@ -823,6 +826,52 @@
     <div class="layout-actions">
       <button pButton type="button" class="btn-glass" (click)="resetLayout()">Reset to default</button>
       <button pButton type="button" class="btn-gradient" (click)="saveLayout()">Save layout</button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<p-dialog
+  header="Coach Deal"
+  [(visible)]="coachingDialogOpen"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body"
+  [style]="{ width: 'min(560px, 92vw)' }"
+  [contentStyle]="{ overflow: 'visible' }"
+>
+  <div class="coaching-dialog">
+    <label class="coaching-label" for="coach-comment">Manager comment</label>
+    <textarea
+      id="coach-comment"
+      class="coaching-textarea"
+      [(ngModel)]="coachingComment"
+      rows="4"
+      placeholder="Give clear direction and the next action you expect."
+    ></textarea>
+
+    <div class="coaching-row">
+      <div class="coaching-field">
+        <label class="coaching-label" for="coach-due">Due date</label>
+        <input id="coach-due" type="datetime-local" class="coaching-input" [(ngModel)]="coachingDueLocal" />
+      </div>
+      <div class="coaching-field coaching-field--sm">
+        <label class="coaching-label" for="coach-priority">Priority</label>
+        <select id="coach-priority" class="coaching-input" [(ngModel)]="coachingPriority">
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="coaching-actions">
+      <button pButton type="button" class="btn-glass" (click)="closeCoaching()" [disabled]="coachingSubmitting">Cancel</button>
+      <button pButton type="button" class="btn-gradient" (click)="submitCoaching()" [disabled]="coachingSubmitting || !coachingComment.trim()">
+        {{ coachingSubmitting ? 'Sending...' : 'Create task' }}
+      </button>
     </div>
   </ng-template>
 </p-dialog>

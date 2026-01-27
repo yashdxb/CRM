@@ -98,7 +98,7 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: queue filters + drill-down view.
 - Comment + coaching tasks to reps  
   - Acceptance: manager comment generates rep task.
- - Status: Partial (pipeline health + review queue view implemented; coaching tasks pending).
+ - Status: Partial (pipeline health review queue + manager coaching task creation implemented; deeper coaching workflow pending).
 
 ## Pre-Sales
 - Opportunity team role tracking  
@@ -140,6 +140,7 @@ Order: execute sequentially, build + verify after each task.
 - Approval API/inbox integration tests + non-approver guards
 - Stage-change next-step requirement tests
 - Manager pipeline health API + dashboard review queue card
+- Manager coaching task API + dashboard coaching dialog + tests
 
 ---
 

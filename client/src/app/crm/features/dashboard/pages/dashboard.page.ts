@@ -8,9 +8,10 @@ import { ChartModule } from 'primeng/chart';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { OrderListModule } from 'primeng/orderlist';
+import { Subject, startWith, switchMap } from 'rxjs';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
-import { DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
+import { DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal } from '../models/dashboard.model';
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -94,10 +95,23 @@ export class DashboardPage implements OnInit {
     pipelineByStage: [],
     reviewQueue: []
   };
-  private readonly managerHealthSignal = toSignal(this.dashboardData.getManagerPipelineHealth(), { initialValue: this.emptyManagerHealth });
+  private readonly managerHealthRefresh$ = new Subject<void>();
+  private readonly managerHealthSignal = toSignal(
+    this.managerHealthRefresh$.pipe(
+      startWith(void 0),
+      switchMap(() => this.dashboardData.getManagerPipelineHealth())
+    ),
+    { initialValue: this.emptyManagerHealth }
+  );
 
   protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
   protected readonly managerHealth = computed(() => this.managerHealthSignal() ?? this.emptyManagerHealth);
+  protected coachingDialogOpen = false;
+  protected coachingComment = '';
+  protected coachingDueLocal = '';
+  protected coachingPriority = 'High';
+  protected coachingSubmitting = false;
+  private coachingDeal: ManagerReviewDeal | null = null;
 
   protected readonly greeting = this.getGreeting();
   
@@ -191,6 +205,64 @@ export class DashboardPage implements OnInit {
     }
     return pipeline.reduce((sum, stage) => sum + stage.value, 0);
   });
+
+  protected openCoaching(deal: ManagerReviewDeal) {
+    this.coachingDeal = deal;
+    this.coachingComment = '';
+    this.coachingPriority = 'High';
+    this.coachingDueLocal = this.defaultCoachingDueLocal();
+    this.coachingDialogOpen = true;
+  }
+
+  protected closeCoaching() {
+    if (this.coachingSubmitting) return;
+    this.coachingDialogOpen = false;
+    this.coachingDeal = null;
+  }
+
+  protected submitCoaching() {
+    const deal = this.coachingDeal;
+    const comment = this.coachingComment.trim();
+    if (!deal || !comment || this.coachingSubmitting) {
+      return;
+    }
+
+    this.coachingSubmitting = true;
+    const dueDateUtc = this.localToUtcIso(this.coachingDueLocal);
+    this.dashboardData
+      .coachOpportunity(deal.id, {
+        comment,
+        dueDateUtc,
+        priority: this.coachingPriority
+      })
+      .subscribe({
+        next: () => {
+          this.coachingSubmitting = false;
+          this.closeCoaching();
+          this.refreshManagerHealth();
+        },
+        error: () => {
+          this.coachingSubmitting = false;
+        }
+      });
+  }
+
+  private refreshManagerHealth() {
+    this.managerHealthRefresh$.next();
+  }
+
+  private defaultCoachingDueLocal() {
+    const due = new Date();
+    due.setDate(due.getDate() + 2);
+    due.setMinutes(due.getMinutes() - due.getTimezoneOffset());
+    return due.toISOString().slice(0, 16);
+  }
+
+  private localToUtcIso(localValue: string): string | null {
+    if (!localValue) return null;
+    const parsed = new Date(localValue);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
 
   protected layoutOrder: string[] = [];
   protected layoutDialogOpen = false;

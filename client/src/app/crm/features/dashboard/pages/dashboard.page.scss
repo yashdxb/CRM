@@ -1508,6 +1508,71 @@
   color: $text-muted;
 }
 
+.coach-btn {
+  margin-top: $space-2;
+  width: 100%;
+  justify-content: center;
+}
+
+.coaching-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.coaching-row {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: $space-3;
+}
+
+.coaching-field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.coaching-field--sm {
+  max-width: 160px;
+}
+
+.coaching-label {
+  font-size: $font-size-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $text-muted;
+  font-weight: 600;
+}
+
+.coaching-textarea,
+.coaching-input {
+  width: 100%;
+  border-radius: $radius-lg;
+  border: 1px solid rgba($primary, 0.16);
+  background: $glass-bg-subtle;
+  color: $text-primary;
+  padding: $space-2 $space-3;
+  font-size: $font-size-sm;
+  outline: none;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+
+  &:focus {
+    border-color: rgba($primary, 0.5);
+    box-shadow: 0 0 0 3px rgba($primary, 0.15);
+  }
+}
+
+.coaching-textarea {
+  resize: vertical;
+  min-height: 110px;
+}
+
+.coaching-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIMELINE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2468,6 +2533,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .coaching-row {
+    grid-template-columns: 1fr;
+  }
+
   .manager-deal {
     flex-direction: column;
     align-items: flex-start;
@@ -2522,5 +2591,9 @@
 
   .manager-health__stats {
     grid-template-columns: 1fr;
+  }
+
+  .coaching-field--sm {
+    max-width: none;
   }
 }
