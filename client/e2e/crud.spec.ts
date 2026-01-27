@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
-const ADMIN_PASSWORD = 'ChangeThisAdmin!1';
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
 
 async function login(page, request) {
   const response = await request.post(`${API_BASE_URL}/api/auth/login`, {

@@ -189,11 +189,14 @@ export class LeadFormPage implements OnInit {
     }
 
     const resolvedScore = this.form.autoScore ? this.computeAutoScore() : (this.form.score ?? 0);
+    const nurtureFollowUpAtUtc =
+      this.form.status === 'Nurture' && this.form.nurtureFollowUpAtUtc ? this.form.nurtureFollowUpAtUtc : undefined;
     const payload: SaveLeadRequest = {
       ...this.form,
       score: resolvedScore,
       ownerId: this.form.assignmentStrategy === 'Manual' ? this.form.ownerId : undefined,
-      territory: this.form.assignmentStrategy === 'Territory' ? this.form.territory : this.form.territory
+      territory: this.form.assignmentStrategy === 'Territory' ? this.form.territory : this.form.territory,
+      nurtureFollowUpAtUtc
     };
     if (this.form.autoScore) {
       this.form.score = resolvedScore;

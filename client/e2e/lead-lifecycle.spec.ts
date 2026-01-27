@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
-const ADMIN_PASSWORD = 'ChangeThisAdmin!1';
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
 
 async function login(page, request) {
   const response = await request.post(`${API_BASE_URL}/api/auth/login`, {
@@ -60,6 +60,44 @@ async function searchLeads(page, term) {
   await page.waitForTimeout(300);
 }
 
+async function getFirstUserName(request, token) {
+  const response = await request.get(`${API_BASE_URL}/api/users?page=1&pageSize=25`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  const payload = await response.json();
+  const items = Array.isArray(payload) ? payload : payload.items ?? payload.data ?? [];
+  const first = items.find((u) => u?.fullName);
+  return first?.fullName ?? null;
+}
+
+async function createDiscoveryMeeting(request, token, leadId) {
+  const dueDateUtc = new Date().toISOString();
+  await request.post(`${API_BASE_URL}/api/activities`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default',
+      'Content-Type': 'application/json'
+    },
+    data: {
+      subject: 'Discovery meeting',
+      description: 'E2E discovery meeting',
+      outcome: null,
+      type: 3,
+      priority: 'Medium',
+      dueDateUtc,
+      completedDateUtc: null,
+      nextStepSubject: null,
+      nextStepDueDateUtc: null,
+      relatedEntityType: 1,
+      relatedEntityId: leadId,
+      ownerId: null
+    }
+  });
+}
+
 function attachDiagnostics(page) {
   page.on('pageerror', (err) => console.log('pageerror:', err.message));
   page.on('console', (msg) => {
@@ -84,6 +122,7 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
   attachDiagnostics(page);
 
   const token = await login(page, request);
+  const firstUserName = await getFirstUserName(request, token);
 
   await page.goto('/app/settings/lead-assignment');
   await expect(page.getByRole('heading', { name: 'Assignment Rules', level: 1 })).toBeVisible();
@@ -94,13 +133,25 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
   await page.locator('input[name="lastName"]').fill(`UI ${suffix}`);
   await page.locator('input[name="companyName"]').fill(manualLead);
   await selectByLabel(page, 'p-select[name="assignmentStrategy"]', 'Manual');
-  await selectFirstOption(page, 'p-select[name="ownerId"]');
+  if (firstUserName) {
+    await selectByLabel(page, 'p-select[name="ownerId"]', firstUserName);
+  } else {
+    await selectFirstOption(page, 'p-select[name="ownerId"]');
+  }
   await expect(page.locator('button:has-text("Create lead")')).toBeEnabled();
   const [manualResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'POST'),
     page.locator('button:has-text("Create lead")').click()
   ]);
+  if (!manualResponse.ok()) {
+    console.log('manual lead create failed:', manualResponse.status(), await manualResponse.text());
+  }
   expect(manualResponse.ok()).toBeTruthy();
+  const manualLeadItem = await manualResponse.json();
+  const manualLeadId = manualLeadItem?.id;
+  if (manualLeadId) {
+    await createDiscoveryMeeting(request, token, manualLeadId);
+  }
   await page.goto('/app/leads');
   await expect(page.locator('.leads-table')).toContainText(manualLead);
 
@@ -144,10 +195,14 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
   await manualRow.locator('button[title="Edit"]').click();
   await page.waitForURL('**/app/leads/**');
   await selectByLabel(page, 'p-select[name="status"]', 'Qualified');
+  await page.locator('textarea[name="qualifiedNotes"]').fill('E2E qualification notes.');
   const [updateResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'PUT'),
     page.locator('button:has-text("Update lead")').click()
   ]);
+  if (!updateResponse.ok()) {
+    console.log('lead update failed:', updateResponse.status(), await updateResponse.text());
+  }
   expect(updateResponse.ok()).toBeTruthy();
   await page.locator('button:has-text("Convert lead")').first().click();
   await page.waitForURL('**/app/leads/**/convert');
@@ -172,6 +227,7 @@ test('lead auto score and conversion carries owner', async ({ page, request }) =
   attachDiagnostics(page);
 
   const token = await login(page, request);
+  const firstUserName = await getFirstUserName(request, token);
 
   await page.goto('/app/leads/new');
   await page.waitForURL('**/app/leads/new');
@@ -183,17 +239,25 @@ test('lead auto score and conversion carries owner', async ({ page, request }) =
   await page.locator('input[name="jobTitle"]').fill('Sales Lead');
   await page.locator('input[name="source"]').fill('Web');
   await selectByLabel(page, 'p-select[name="assignmentStrategy"]', 'Manual');
-  await selectFirstOption(page, 'p-select[name="ownerId"]');
+  if (firstUserName) {
+    await selectByLabel(page, 'p-select[name="ownerId"]', firstUserName);
+  } else {
+    await selectFirstOption(page, 'p-select[name="ownerId"]');
+  }
   await page.locator('input[name="autoScore"]').check();
 
   const [createResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'POST'),
     page.locator('button:has-text("Create lead")').click()
   ]);
+  if (!createResponse.ok()) {
+    console.log('auto lead create failed:', createResponse.status(), await createResponse.text());
+  }
   expect(createResponse.ok()).toBeTruthy();
   const createdLead = await createResponse.json();
   const leadId = createdLead?.id;
   expect(leadId).toBeTruthy();
+  await createDiscoveryMeeting(request, token, leadId);
 
   const leadResponse = await request.get(`${API_BASE_URL}/api/leads/${leadId}`, {
     headers: {
@@ -213,10 +277,14 @@ test('lead auto score and conversion carries owner', async ({ page, request }) =
   await row.locator('button[title="Edit"]').click();
   await page.waitForURL('**/app/leads/**');
   await selectByLabel(page, 'p-select[name="status"]', 'Qualified');
+  await page.locator('textarea[name="qualifiedNotes"]').fill('E2E qualification notes.');
   const [updateResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'PUT'),
     page.locator('button:has-text("Update lead")').click()
   ]);
+  if (!updateResponse.ok()) {
+    console.log('lead update failed:', updateResponse.status(), await updateResponse.text());
+  }
   expect(updateResponse.ok()).toBeTruthy();
   await page.locator('button:has-text("Convert lead")').first().click();
   await page.waitForURL('**/app/leads/**/convert');

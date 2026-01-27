@@ -754,7 +754,8 @@ public sealed class LeadService : ILeadService
             .Where(a => !a.IsDeleted
                         && a.RelatedEntityType == ActivityRelationType.Lead
                         && a.RelatedEntityId == id
-                        && a.Subject.StartsWith("Cadence ", StringComparison.OrdinalIgnoreCase)
+                        && a.Subject != null
+                        && EF.Functions.Like(a.Subject, "Cadence %")
                         && a.CompletedDateUtc.HasValue)
             .OrderByDescending(a => a.CompletedDateUtc)
             .Take(20)
@@ -1150,7 +1151,8 @@ public sealed class LeadService : ILeadService
                         && a.RelatedEntityType == ActivityRelationType.Lead
                         && a.RelatedEntityId == lead.Id
                         && !a.CompletedDateUtc.HasValue
-                        && a.Subject.StartsWith("First touch", StringComparison.OrdinalIgnoreCase))
+                        && a.Subject != null
+                        && EF.Functions.Like(a.Subject, "First touch%"))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingTask is not null)
@@ -1205,7 +1207,8 @@ public sealed class LeadService : ILeadService
                         && a.RelatedEntityType == ActivityRelationType.Lead
                         && a.RelatedEntityId == lead.Id
                         && !a.CompletedDateUtc.HasValue
-                        && a.Subject.StartsWith("Nurture follow-up", StringComparison.OrdinalIgnoreCase))
+                        && a.Subject != null
+                        && EF.Functions.Like(a.Subject, "Nurture follow-up%"))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existingTask is not null)
