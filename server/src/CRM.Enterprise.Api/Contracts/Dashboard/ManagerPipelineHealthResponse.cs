@@ -11,6 +11,15 @@ public record ManagerPipelineHealthResponse(
     int NoRecentActivityCount,
     int CloseDateOverdueCount,
     int StuckStageCount,
+    int CoachingOpenCount,
+    int CoachingOverdueCount,
+    int CoachingEscalationsLast7Days,
+    int ApprovalPendingCount,
+    decimal ApprovalCycleAvgHours,
+    int ReviewNeedsWorkCount,
+    int ReviewEscalatedCount,
+    int ReviewAckOverdueCount,
+    decimal ReviewAckAvgHours,
     IEnumerable<PipelineStageSummary> PipelineByStage,
     IEnumerable<ManagerReviewDealItem> ReviewQueue);
 

@@ -7,6 +7,7 @@ public record UpsertActivityRequest(
     string Subject,
     string? Description,
     string? Outcome,
+    string? TemplateKey,
     ActivityType Type,
     string? Priority,
     DateTime? DueDateUtc,

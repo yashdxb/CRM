@@ -830,6 +830,7 @@ public sealed class LeadService : ILeadService
                 subject,
                 description,
                 outcome,
+                null,
                 activityType,
                 "Medium",
                 request.NextStepDueAtUtc,

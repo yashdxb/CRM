@@ -4,6 +4,7 @@ using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CrmDbContext))]
-    partial class CrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260128030733_AddOpportunityTeamMembers")]
+    partial class AddOpportunityTeamMembers
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1537,24 +1540,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime?>("DeliveryCompletedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeliveryHandoffRisks")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DeliveryHandoffScope")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("DeliveryHandoffTimeline")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid?>("DeliveryOwnerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("DeliveryStatus")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<decimal?>("DiscountAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -1733,69 +1718,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("OpportunityApprovals", "crm");
-                });
-
-            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.OpportunityOnboardingItem", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("CompletedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DueDateUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("OpportunityId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("OpportunityId", "Type", "Title");
-
-                    b.ToTable("OpportunityOnboardingItems", "crm");
                 });
 
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.OpportunityReviewChecklistItem", b =>
@@ -4521,17 +4443,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Navigation("Opportunity");
                 });
 
-            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.OpportunityOnboardingItem", b =>
-                {
-                    b.HasOne("CRM.Enterprise.Domain.Entities.Opportunity", "Opportunity")
-                        .WithMany("OnboardingItems")
-                        .HasForeignKey("OpportunityId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Opportunity");
-                });
-
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.OpportunityReviewChecklistItem", b =>
                 {
                     b.HasOne("CRM.Enterprise.Domain.Entities.Opportunity", "Opportunity")
@@ -4968,8 +4879,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.Opportunity", b =>
                 {
                     b.Navigation("Activities");
-
-                    b.Navigation("OnboardingItems");
 
                     b.Navigation("StageHistory");
 

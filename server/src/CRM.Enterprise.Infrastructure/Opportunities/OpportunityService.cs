@@ -61,6 +61,16 @@ public sealed class OpportunityService : IOpportunityService
         "Negotiation",
         "Commit"
     };
+    private static readonly HashSet<string> StagesRequiringDemoOutcome = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Proposal",
+        "Negotiation",
+        "Commit"
+    };
+    private static readonly HashSet<string> DemoTemplateKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "demo-poc"
+    };
     private static readonly HashSet<string> BuyingRoles = new(StringComparer.OrdinalIgnoreCase)
     {
         "Decision Maker",
@@ -151,6 +161,12 @@ public sealed class OpportunityService : IOpportunityService
                 o.SecurityNotes,
                 o.LegalReviewStatus,
                 o.LegalNotes,
+                o.DeliveryOwnerId,
+                o.DeliveryHandoffScope,
+                o.DeliveryHandoffRisks,
+                o.DeliveryHandoffTimeline,
+                o.DeliveryStatus,
+                o.DeliveryCompletedAtUtc,
                 o.OwnerId,
                 o.IsClosed,
                 o.IsWon,
@@ -229,6 +245,12 @@ public sealed class OpportunityService : IOpportunityService
                 o.SecurityNotes,
                 o.LegalReviewStatus,
                 o.LegalNotes,
+                o.DeliveryOwnerId,
+                o.DeliveryHandoffScope,
+                o.DeliveryHandoffRisks,
+                o.DeliveryHandoffTimeline,
+                o.DeliveryStatus,
+                o.DeliveryCompletedAtUtc,
                 o.OwnerId,
                 owners.FirstOrDefault(own => own.Id == o.OwnerId)?.FullName ?? "Unassigned",
                 ComputeStatus(o.IsClosed, o.IsWon),
@@ -287,6 +309,12 @@ public sealed class OpportunityService : IOpportunityService
             opp.SecurityNotes,
             opp.LegalReviewStatus,
             opp.LegalNotes,
+            opp.DeliveryOwnerId,
+            opp.DeliveryHandoffScope,
+            opp.DeliveryHandoffRisks,
+            opp.DeliveryHandoffTimeline,
+            opp.DeliveryStatus,
+            opp.DeliveryCompletedAtUtc,
             opp.OwnerId,
             ownerName,
             ComputeStatus(opp.IsClosed, opp.IsWon),
@@ -421,6 +449,12 @@ public sealed class OpportunityService : IOpportunityService
             SecurityNotes = request.SecurityNotes,
             LegalReviewStatus = string.IsNullOrWhiteSpace(request.LegalReviewStatus) ? "Not Started" : request.LegalReviewStatus,
             LegalNotes = request.LegalNotes,
+            DeliveryOwnerId = request.DeliveryOwnerId,
+            DeliveryHandoffScope = request.DeliveryHandoffScope,
+            DeliveryHandoffRisks = request.DeliveryHandoffRisks,
+            DeliveryHandoffTimeline = request.DeliveryHandoffTimeline,
+            DeliveryStatus = request.DeliveryStatus,
+            DeliveryCompletedAtUtc = request.DeliveryCompletedAtUtc,
             WinLossReason = request.WinLossReason,
             IsClosed = request.IsClosed,
             IsWon = request.IsWon,
@@ -432,6 +466,12 @@ public sealed class OpportunityService : IOpportunityService
         await _auditEvents.TrackAsync(
             CreateAuditEntry(opp.Id, "Created", null, null, null, actor),
             cancellationToken);
+
+        if (opp.IsWon)
+        {
+            await EnsureOnboardingDefaultsAsync(opp, actor, cancellationToken);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var dto = new OpportunityListItemDto(
@@ -457,6 +497,12 @@ public sealed class OpportunityService : IOpportunityService
             opp.SecurityNotes,
             opp.LegalReviewStatus,
             opp.LegalNotes,
+            opp.DeliveryOwnerId,
+            opp.DeliveryHandoffScope,
+            opp.DeliveryHandoffRisks,
+            opp.DeliveryHandoffTimeline,
+            opp.DeliveryStatus,
+            opp.DeliveryCompletedAtUtc,
             ownerId,
             await _dbContext.Users.Where(u => u.Id == ownerId).Select(u => u.FullName).FirstOrDefaultAsync(cancellationToken) ?? "Unassigned",
             ComputeStatus(opp.IsClosed, opp.IsWon),
@@ -581,6 +627,30 @@ public sealed class OpportunityService : IOpportunityService
         {
             opp.LegalNotes = request.LegalNotes;
         }
+        if (request.DeliveryOwnerId.HasValue)
+        {
+            opp.DeliveryOwnerId = request.DeliveryOwnerId;
+        }
+        if (request.DeliveryHandoffScope is not null)
+        {
+            opp.DeliveryHandoffScope = request.DeliveryHandoffScope;
+        }
+        if (request.DeliveryHandoffRisks is not null)
+        {
+            opp.DeliveryHandoffRisks = request.DeliveryHandoffRisks;
+        }
+        if (request.DeliveryHandoffTimeline is not null)
+        {
+            opp.DeliveryHandoffTimeline = request.DeliveryHandoffTimeline;
+        }
+        if (request.DeliveryStatus is not null)
+        {
+            opp.DeliveryStatus = request.DeliveryStatus;
+        }
+        if (request.DeliveryCompletedAtUtc.HasValue)
+        {
+            opp.DeliveryCompletedAtUtc = request.DeliveryCompletedAtUtc;
+        }
         opp.WinLossReason = request.WinLossReason;
         opp.IsClosed = request.IsClosed;
         opp.IsWon = request.IsWon;
@@ -686,6 +756,11 @@ public sealed class OpportunityService : IOpportunityService
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(opp.Id, "StatusChanged", "Status", previousStatus, nextStatus, actor),
                 cancellationToken);
+        }
+
+        if (!wasWon && opp.IsWon)
+        {
+            await EnsureOnboardingDefaultsAsync(opp, actor, cancellationToken);
         }
 
         await _auditEvents.TrackAsync(
@@ -837,6 +912,7 @@ public sealed class OpportunityService : IOpportunityService
                 subject,
                 description,
                 null,
+                null,
                 ActivityType.Task,
                 priority,
                 dueDateUtc,
@@ -882,7 +958,7 @@ public sealed class OpportunityService : IOpportunityService
                         && o.ContractEndDateUtc.HasValue
                         && o.ContractEndDateUtc.Value.Date >= now
                         && o.ContractEndDateUtc.Value.Date <= renewalWindowEnd
-                        && !string.Equals(o.OpportunityType, "Renewal", StringComparison.OrdinalIgnoreCase))
+                        && o.OpportunityType != "Renewal")
             .ToListAsync(cancellationToken);
 
         var renewalsCreated = 0;
@@ -1178,6 +1254,7 @@ public sealed class OpportunityService : IOpportunityService
                 subject,
                 description,
                 outcome,
+                null,
                 ActivityType.Note,
                 "Normal",
                 DateTime.UtcNow,
@@ -1206,6 +1283,7 @@ public sealed class OpportunityService : IOpportunityService
                 new ActivityUpsertRequest(
                     ackSubject,
                     ackDescription,
+                    null,
                     null,
                     ActivityType.Task,
                     "High",
@@ -1289,6 +1367,7 @@ public sealed class OpportunityService : IOpportunityService
                 pendingAck.Subject,
                 pendingAck.Description,
                 ReviewOutcomeAcknowledged,
+                pendingAck.TemplateKey,
                 pendingAck.Type,
                 pendingAck.Priority,
                 pendingAck.DueDateUtc,
@@ -1336,6 +1415,209 @@ public sealed class OpportunityService : IOpportunityService
             false);
 
         return OpportunityOperationResult<OpportunityReviewThreadItemDto>.Ok(threadItem);
+    }
+
+    public async Task<IReadOnlyList<OpportunityTeamMemberDto>?> GetTeamAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var exists = await _dbContext.Opportunities
+            .AsNoTracking()
+            .AnyAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (!exists)
+        {
+            return null;
+        }
+
+        var team = await _dbContext.OpportunityTeamMembers
+            .AsNoTracking()
+            .Where(m => m.OpportunityId == id && !m.IsDeleted)
+            .Join(_dbContext.Users,
+                member => member.UserId,
+                user => user.Id,
+                (member, user) => new OpportunityTeamMemberDto(
+                    member.UserId,
+                    user.FullName,
+                    member.Role,
+                    member.CreatedAtUtc,
+                    member.UpdatedAtUtc))
+            .OrderBy(m => m.UserName)
+            .ToListAsync(cancellationToken);
+
+        return team;
+    }
+
+    public async Task<OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>> UpdateTeamAsync(
+        Guid id,
+        IReadOnlyList<OpportunityTeamMemberRequest> members,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var opportunity = await _dbContext.Opportunities
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (opportunity is null)
+        {
+            return OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>.NotFoundResult();
+        }
+
+        var normalized = members
+            .Where(m => m.UserId != Guid.Empty)
+            .Select(m => new
+            {
+                m.UserId,
+                Role = string.IsNullOrWhiteSpace(m.Role) ? string.Empty : m.Role.Trim()
+            })
+            .ToList();
+
+        if (normalized.Any(m => string.IsNullOrWhiteSpace(m.Role)))
+        {
+            return OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>.Fail("Team member role is required.");
+        }
+
+        var distinctUserIds = normalized.Select(m => m.UserId).Distinct().ToList();
+        if (distinctUserIds.Count != normalized.Count)
+        {
+            return OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>.Fail("Duplicate team members are not allowed.");
+        }
+
+        var tenantId = _tenantProvider.TenantId;
+        var validUsers = await _dbContext.Users
+            .Where(u => distinctUserIds.Contains(u.Id) && u.IsActive && !u.IsDeleted && (tenantId == Guid.Empty || u.TenantId == tenantId))
+            .Select(u => u.Id)
+            .ToListAsync(cancellationToken);
+        if (validUsers.Count != distinctUserIds.Count)
+        {
+            return OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>.Fail("One or more team members are invalid or inactive.");
+        }
+
+        var existing = await _dbContext.OpportunityTeamMembers
+            .Where(m => m.OpportunityId == id)
+            .ToListAsync(cancellationToken);
+
+        var existingByUser = existing.ToDictionary(m => m.UserId, m => m);
+        var now = DateTime.UtcNow;
+
+        foreach (var member in existing)
+        {
+            if (distinctUserIds.Contains(member.UserId))
+            {
+                continue;
+            }
+
+            if (!member.IsDeleted)
+            {
+                member.IsDeleted = true;
+                member.DeletedAtUtc = now;
+                member.DeletedBy = actor.UserName;
+                member.UpdatedAtUtc = now;
+                member.UpdatedBy = actor.UserName;
+            }
+        }
+
+        foreach (var member in normalized)
+        {
+            if (existingByUser.TryGetValue(member.UserId, out var existingMember))
+            {
+                if (existingMember.IsDeleted)
+                {
+                    existingMember.IsDeleted = false;
+                    existingMember.DeletedAtUtc = null;
+                    existingMember.DeletedBy = null;
+                }
+
+                if (!string.Equals(existingMember.Role, member.Role, StringComparison.OrdinalIgnoreCase))
+                {
+                    existingMember.Role = member.Role;
+                }
+
+                existingMember.UpdatedAtUtc = now;
+                existingMember.UpdatedBy = actor.UserName;
+                continue;
+            }
+
+            _dbContext.OpportunityTeamMembers.Add(new OpportunityTeamMember
+            {
+                OpportunityId = id,
+                UserId = member.UserId,
+                Role = member.Role,
+                TenantId = opportunity.TenantId,
+                CreatedAtUtc = now,
+                CreatedBy = actor.UserName
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var team = await GetTeamAsync(id, cancellationToken) ?? Array.Empty<OpportunityTeamMemberDto>();
+        return OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>.Ok(team);
+    }
+
+    private async Task EnsureOnboardingDefaultsAsync(Opportunity opportunity, ActorContext actor, CancellationToken cancellationToken)
+    {
+        var hasItems = await _dbContext.OpportunityOnboardingItems
+            .AnyAsync(i => i.OpportunityId == opportunity.Id && !i.IsDeleted, cancellationToken);
+        if (hasItems)
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var items = new List<OpportunityOnboardingItem>
+        {
+            new()
+            {
+                OpportunityId = opportunity.Id,
+                Type = "Checklist",
+                Title = "Define success criteria",
+                Status = "Pending",
+                DueDateUtc = now.AddDays(3),
+                TenantId = opportunity.TenantId,
+                CreatedAtUtc = now,
+                CreatedBy = actor.UserName
+            },
+            new()
+            {
+                OpportunityId = opportunity.Id,
+                Type = "Checklist",
+                Title = "Confirm stakeholders & kickoff attendees",
+                Status = "Pending",
+                DueDateUtc = now.AddDays(5),
+                TenantId = opportunity.TenantId,
+                CreatedAtUtc = now,
+                CreatedBy = actor.UserName
+            },
+            new()
+            {
+                OpportunityId = opportunity.Id,
+                Type = "Milestone",
+                Title = "Kickoff meeting scheduled",
+                Status = "Pending",
+                DueDateUtc = now.AddDays(7),
+                TenantId = opportunity.TenantId,
+                CreatedAtUtc = now,
+                CreatedBy = actor.UserName
+            },
+            new()
+            {
+                OpportunityId = opportunity.Id,
+                Type = "Milestone",
+                Title = "Implementation plan approved",
+                Status = "Pending",
+                DueDateUtc = now.AddDays(14),
+                TenantId = opportunity.TenantId,
+                CreatedAtUtc = now,
+                CreatedBy = actor.UserName
+            }
+        };
+
+        _dbContext.OpportunityOnboardingItems.AddRange(items);
+        if (string.IsNullOrWhiteSpace(opportunity.DeliveryStatus))
+        {
+            opportunity.DeliveryStatus = "Not Started";
+        }
+        opportunity.UpdatedAtUtc = now;
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(opportunity.Id, "OnboardingSeeded", "Onboarding", null, $"{items.Count} items", actor),
+            cancellationToken);
     }
 
     private static string ComputeStatus(bool isClosed, bool isWon)
@@ -1468,6 +1750,7 @@ public sealed class OpportunityService : IOpportunityService
                 subject,
                 description,
                 null,
+                null,
                 ActivityType.Task,
                 "High",
                 dueDate,
@@ -1529,6 +1812,21 @@ public sealed class OpportunityService : IOpportunityService
                 cancellationToken);
     }
 
+    private async Task<bool> HasCompletedDemoAsync(Opportunity opportunity, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Activities
+            .AsNoTracking()
+            .AnyAsync(
+                a => !a.IsDeleted
+                     && a.RelatedEntityType == ActivityRelationType.Opportunity
+                     && a.RelatedEntityId == opportunity.Id
+                     && a.CompletedDateUtc.HasValue
+                     && !string.IsNullOrWhiteSpace(a.Outcome)
+                     && a.TemplateKey != null
+                     && DemoTemplateKeys.Contains(a.TemplateKey),
+                cancellationToken);
+    }
+
     private async Task<string?> ValidateStageChangeAsync(
         Opportunity opportunity,
         string nextStageName,
@@ -1573,6 +1871,15 @@ public sealed class OpportunityService : IOpportunityService
             if (!hasBuyingRole)
             {
                 return "Buying group role is required before moving to late-stage opportunities.";
+            }
+        }
+
+        if (StagesRequiringDemoOutcome.Contains(nextStageName))
+        {
+            var hasDemo = await HasCompletedDemoAsync(opportunity, cancellationToken);
+            if (!hasDemo)
+            {
+                return "Demo/POC outcome is required before moving to late-stage opportunities.";
             }
         }
 

@@ -8,22 +8,27 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
-import { map } from 'rxjs';
+import { map, of, switchMap } from 'rxjs';
 
 import { OpportunityDataService, OpportunityReviewOutcomeRequest, SaveOpportunityRequest } from '../services/opportunity-data.service';
 import { OpportunityApprovalService } from '../services/opportunity-approval.service';
 import { OpportunityReviewChecklistService } from '../services/opportunity-review-checklist.service';
+import { OpportunityOnboardingService } from '../services/opportunity-onboarding.service';
 import { CustomerDataService } from '../../customers/services/customer-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import {
   Opportunity,
   OpportunityApprovalItem,
   OpportunityReviewChecklistItem,
-  OpportunityReviewThreadItem
+  OpportunityReviewThreadItem,
+  OpportunityOnboardingItem,
+  OpportunityTeamMember
 } from '../models/opportunity.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
+import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
+import { UserListItem } from '../../settings/models/user-admin.model';
 
 interface Option<T = string> {
   label: string;
@@ -71,6 +76,12 @@ export class OpportunityFormPage implements OnInit {
     { label: 'Not Started', value: 'Not Started' },
     { label: 'In Progress', value: 'In Progress' },
     { label: 'Approved', value: 'Approved' },
+    { label: 'Blocked', value: 'Blocked' }
+  ];
+  protected readonly onboardingStatusOptions: Option[] = [
+    { label: 'Pending', value: 'Pending' },
+    { label: 'In Progress', value: 'In Progress' },
+    { label: 'Completed', value: 'Completed' },
     { label: 'Blocked', value: 'Blocked' }
   ];
   protected readonly forecastCategoryOptions: Option[] = [
@@ -129,6 +140,26 @@ export class OpportunityFormPage implements OnInit {
     { label: 'Escalated', value: 'Escalated' }
   ];
   protected reviewThread = signal<OpportunityReviewThreadItem[]>([]);
+  protected readonly teamRoleOptions: Option[] = [
+    { label: 'Solution Consultant', value: 'Solution Consultant' },
+    { label: 'Sales Engineer', value: 'Sales Engineer' },
+    { label: 'Product Specialist', value: 'Product Specialist' },
+    { label: 'Executive Sponsor', value: 'Executive Sponsor' }
+  ];
+  protected readonly deliveryStatusOptions: Option[] = [
+    { label: 'Not Started', value: 'Not Started' },
+    { label: 'In Progress', value: 'In Progress' },
+    { label: 'Completed', value: 'Completed' }
+  ];
+  protected teamMemberOptions: Option[] = [];
+  protected teamMembers: OpportunityTeamMember[] = [];
+  private teamDirty = false;
+  protected onboardingChecklist: OpportunityOnboardingItem[] = [];
+  protected onboardingMilestones: OpportunityOnboardingItem[] = [];
+  protected onboardingSavingIds = new Set<string>();
+  protected onboardingSavedIds = new Set<string>();
+  protected newOnboardingChecklistItem = '';
+  protected newOnboardingMilestoneItem = '';
   protected reviewOutcome: OpportunityReviewOutcomeRequest['outcome'] = 'Needs Work';
   protected reviewComment = '';
   protected reviewAckDueLocal = '';
@@ -143,6 +174,8 @@ export class OpportunityFormPage implements OnInit {
   private readonly opportunityData = inject(OpportunityDataService);
   private readonly approvalService = inject(OpportunityApprovalService);
   private readonly checklistService = inject(OpportunityReviewChecklistService);
+  private readonly onboardingService = inject(OpportunityOnboardingService);
+  private readonly userAdminData = inject(UserAdminDataService);
   protected readonly router = inject(Router);
   protected readonly customerData = inject(CustomerDataService);
   private readonly toastService = inject(AppToastService);
@@ -161,15 +194,20 @@ export class OpportunityFormPage implements OnInit {
         this.loadChecklists(id);
         this.loadApprovals(id);
         this.loadReviewThread(id);
+        this.loadOnboarding(id);
+        this.loadTeamMembers(id);
       } else {
         this.form = this.createEmptyForm();
         this.selectedStage = this.form.stageName ?? 'Prospecting';
         this.securityChecklist = [];
         this.legalChecklist = [];
+        this.onboardingChecklist = [];
+        this.onboardingMilestones = [];
         this.approvals = [];
         this.reviewThread.set([]);
       }
     });
+    this.loadTeamMemberOptions();
   }
 
   protected onStageChange(stage: string) {
@@ -186,6 +224,11 @@ export class OpportunityFormPage implements OnInit {
 
   protected onSave() {
     if (!this.form.name) return;
+    const teamError = this.validateTeamMembers();
+    if (teamError) {
+      this.toastService.show('error', teamError, 4000);
+      return;
+    }
     const validationError = this.validateStageRequirements();
     if (validationError) {
       this.toastService.show('error', validationError, 4000);
@@ -205,30 +248,59 @@ export class OpportunityFormPage implements OnInit {
     const contractEndDateUtc = rawContractEnd instanceof Date
       ? rawContractEnd.toISOString()
       : (typeof rawContractEnd === 'string' && rawContractEnd.trim() ? rawContractEnd : undefined);
+    const rawDeliveryCompleted = this.form.deliveryCompletedAtUtc as unknown;
+    const deliveryCompletedAtUtc = rawDeliveryCompleted instanceof Date
+      ? rawDeliveryCompleted.toISOString()
+      : (typeof rawDeliveryCompleted === 'string' && rawDeliveryCompleted.trim() ? rawDeliveryCompleted : undefined);
     const payload: SaveOpportunityRequest = {
       ...this.form,
       expectedCloseDate,
       contractStartDateUtc,
       contractEndDateUtc,
+      deliveryCompletedAtUtc,
       stageName: this.selectedStage,
       winLossReason: this.form.winLossReason || null
     };
 
     const request$ = this.editingId
-      ? this.opportunityData.update(this.editingId, payload).pipe(map(() => null))
-      : this.opportunityData.create(payload).pipe(map(() => null));
+      ? this.opportunityData.update(this.editingId, payload).pipe(map(() => this.editingId!))
+      : this.opportunityData.create(payload).pipe(map((opp) => opp.id));
 
-    request$.subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.originalStage = this.selectedStage;
-      },
-      error: (err) => {
-        this.saving.set(false);
-        const message = typeof err?.error === 'string' ? err.error : 'Unable to save opportunity.';
-        this.toastService.show('error', message, 4000);
+    request$
+      .pipe(switchMap((id) => this.saveTeamMembers(id)))
+      .subscribe({
+        next: () => {
+          this.saving.set(false);
+          this.originalStage = this.selectedStage;
+        },
+        error: (err) => {
+          this.saving.set(false);
+          const message = typeof err?.error === 'string' ? err.error : 'Unable to save opportunity.';
+          this.toastService.show('error', message, 4000);
+        }
+      });
+  }
+
+  protected addTeamMember() {
+    this.teamMembers = [
+      ...this.teamMembers,
+      {
+        userId: '',
+        userName: '',
+        role: this.teamRoleOptions[0]?.value ?? '',
+        createdAtUtc: new Date().toISOString()
       }
-    });
+    ];
+    this.teamDirty = true;
+  }
+
+  protected removeTeamMember(index: number) {
+    this.teamMembers = this.teamMembers.filter((_, i) => i !== index);
+    this.teamDirty = true;
+  }
+
+  protected markTeamDirty() {
+    this.teamDirty = true;
   }
 
   protected accountLink(): string | null {
@@ -293,6 +365,33 @@ export class OpportunityFormPage implements OnInit {
     });
   }
 
+  private loadOnboarding(opportunityId: string) {
+    this.onboardingService.get(opportunityId, 'Checklist').subscribe({
+      next: (items) => {
+        this.onboardingChecklist = (items ?? []).map((item) => ({
+          ...item,
+          dueDateUtc: item.dueDateUtc ? new Date(item.dueDateUtc) : undefined
+        }));
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.onboardingChecklist = [];
+      }
+    });
+    this.onboardingService.get(opportunityId, 'Milestone').subscribe({
+      next: (items) => {
+        this.onboardingMilestones = (items ?? []).map((item) => ({
+          ...item,
+          dueDateUtc: item.dueDateUtc ? new Date(item.dueDateUtc) : undefined
+        }));
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.onboardingMilestones = [];
+      }
+    });
+  }
+
   private loadApprovals(opportunityId: string) {
     this.approvalService.getForOpportunity(opportunityId).subscribe({
       next: (items) => {
@@ -315,6 +414,71 @@ export class OpportunityFormPage implements OnInit {
         this.reviewThread.set([]);
       }
     });
+  }
+
+  private loadTeamMemberOptions() {
+    this.userAdminData.search({ page: 1, pageSize: 100, includeInactive: false }).subscribe({
+      next: (res) => {
+        this.teamMemberOptions = res.items.map((user: UserListItem) => ({
+          label: user.fullName,
+          value: user.id
+        }));
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.teamMemberOptions = [];
+      }
+    });
+  }
+
+  private loadTeamMembers(opportunityId: string) {
+    this.opportunityData.getTeam(opportunityId).subscribe({
+      next: (items) => {
+        this.teamMembers = items ?? [];
+        this.teamDirty = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.teamMembers = [];
+        this.teamDirty = false;
+      }
+    });
+  }
+
+  private saveTeamMembers(opportunityId: string) {
+    if (!this.teamDirty) {
+      return of(null);
+    }
+
+    const members = this.teamMembers
+      .filter((member) => member.userId && member.role)
+      .map((member) => ({
+        userId: member.userId,
+        role: member.role
+      }));
+
+    return this.opportunityData.updateTeam(opportunityId, { members }).pipe(
+      map((items) => {
+        this.teamMembers = items ?? [];
+        this.teamDirty = false;
+        return null;
+      })
+    );
+  }
+
+  private validateTeamMembers(): string | null {
+    if (!this.teamMembers.length) {
+      return null;
+    }
+    const missing = this.teamMembers.some((member) => !member.userId || !member.role);
+    if (missing) {
+      return 'Each team member needs a user and role.';
+    }
+    const unique = new Set(this.teamMembers.map((member) => member.userId));
+    if (unique.size !== this.teamMembers.length) {
+      return 'Duplicate team members are not allowed.';
+    }
+    return null;
   }
 
   protected submitReviewOutcome() {
@@ -520,6 +684,68 @@ export class OpportunityFormPage implements OnInit {
     });
   }
 
+  protected addOnboardingItem(type: 'Checklist' | 'Milestone') {
+    const title = (type === 'Checklist' ? this.newOnboardingChecklistItem : this.newOnboardingMilestoneItem).trim();
+    if (!title || !this.editingId) {
+      return;
+    }
+
+    this.onboardingService
+      .create(this.editingId, { title, type, status: 'Pending' })
+      .subscribe((item) => {
+        if (type === 'Checklist') {
+          this.onboardingChecklist = [...this.onboardingChecklist, item];
+          this.newOnboardingChecklistItem = '';
+        } else {
+          this.onboardingMilestones = [...this.onboardingMilestones, item];
+          this.newOnboardingMilestoneItem = '';
+        }
+      });
+  }
+
+  protected saveOnboardingItem(item: OpportunityOnboardingItem) {
+    if (this.onboardingSavingIds.has(item.id)) {
+      return;
+    }
+    this.onboardingSavingIds.add(item.id);
+    this.onboardingService
+      .update(item.id, {
+        title: item.title,
+        status: item.status,
+        type: item.type,
+        dueDateUtc: item.dueDateUtc,
+        notes: item.notes ?? null
+      })
+      .subscribe({
+        next: () => {
+          this.onboardingSavingIds.delete(item.id);
+          this.onboardingSavedIds.add(item.id);
+          window.setTimeout(() => this.onboardingSavedIds.delete(item.id), 1200);
+        },
+        error: () => {
+          this.onboardingSavingIds.delete(item.id);
+        }
+      });
+  }
+
+  protected deleteOnboardingItem(item: OpportunityOnboardingItem) {
+    this.onboardingService.delete(item.id).subscribe(() => {
+      if (item.type === 'Checklist') {
+        this.onboardingChecklist = this.onboardingChecklist.filter((i) => i.id !== item.id);
+      } else {
+        this.onboardingMilestones = this.onboardingMilestones.filter((i) => i.id !== item.id);
+      }
+    });
+  }
+
+  protected isOnboardingSaving(item: OpportunityOnboardingItem): boolean {
+    return this.onboardingSavingIds.has(item.id);
+  }
+
+  protected isOnboardingSaved(item: OpportunityOnboardingItem): boolean {
+    return this.onboardingSavedIds.has(item.id);
+  }
+
   protected isChecklistSaving(item: OpportunityReviewChecklistItem): boolean {
     return this.checklistSavingIds.has(item.id);
   }
@@ -557,6 +783,12 @@ export class OpportunityFormPage implements OnInit {
       securityNotes: opp.securityNotes ?? '',
       legalReviewStatus: opp.legalReviewStatus ?? 'Not Started',
       legalNotes: opp.legalNotes ?? '',
+      deliveryOwnerId: opp.deliveryOwnerId ?? undefined,
+      deliveryHandoffScope: opp.deliveryHandoffScope ?? '',
+      deliveryHandoffRisks: opp.deliveryHandoffRisks ?? '',
+      deliveryHandoffTimeline: opp.deliveryHandoffTimeline ?? '',
+      deliveryStatus: opp.deliveryStatus ?? undefined,
+      deliveryCompletedAtUtc: opp.deliveryCompletedAtUtc ? new Date(opp.deliveryCompletedAtUtc) : undefined,
       isClosed: opp.status !== 'Open',
       isWon: opp.status === 'Closed Won',
       winLossReason: opp.winLossReason ?? ''
@@ -593,6 +825,12 @@ export class OpportunityFormPage implements OnInit {
       securityNotes: '',
       legalReviewStatus: 'Not Started',
       legalNotes: '',
+      deliveryOwnerId: undefined,
+      deliveryHandoffScope: '',
+      deliveryHandoffRisks: '',
+      deliveryHandoffTimeline: '',
+      deliveryStatus: undefined,
+      deliveryCompletedAtUtc: undefined,
       isClosed: false,
       isWon: false,
       winLossReason: ''

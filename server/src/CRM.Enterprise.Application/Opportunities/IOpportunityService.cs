@@ -20,4 +20,6 @@ public interface IOpportunityService
     Task<IReadOnlyList<OpportunityReviewThreadItemDto>?> GetReviewThreadAsync(Guid id, CancellationToken cancellationToken = default);
     Task<OpportunityOperationResult<OpportunityReviewThreadItemDto>> AddReviewOutcomeAsync(Guid id, OpportunityReviewOutcomeRequest request, ActorContext actor, CancellationToken cancellationToken = default);
     Task<OpportunityOperationResult<OpportunityReviewThreadItemDto>> AcknowledgeReviewAsync(Guid id, ActorContext actor, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<OpportunityTeamMemberDto>?> GetTeamAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>> UpdateTeamAsync(Guid id, IReadOnlyList<OpportunityTeamMemberRequest> members, ActorContext actor, CancellationToken cancellationToken = default);
 }

@@ -86,6 +86,7 @@ public sealed class ActivityService : IActivityService
                 a.CompletedDateUtc,
                 a.Description,
                 a.Outcome,
+                a.TemplateKey,
                 a.Priority,
                 a.OwnerId,
                 a.CreatedAtUtc
@@ -186,6 +187,7 @@ public sealed class ActivityService : IActivityService
                     a.Type.ToString(),
                     a.Description,
                     a.Outcome,
+                    a.TemplateKey,
                     a.Priority,
                     relatedId,
                     ResolveCustomerName(a.RelatedEntityType, relatedId, accountLookup, contactLookup, opportunityLookup, leadLookup),
@@ -260,6 +262,7 @@ public sealed class ActivityService : IActivityService
             Subject = request.Subject,
             Description = request.Description,
             Outcome = request.Outcome,
+            TemplateKey = request.TemplateKey,
             Type = request.Type,
             Priority = request.Priority,
             DueDateUtc = request.DueDateUtc,
@@ -308,6 +311,7 @@ public sealed class ActivityService : IActivityService
         activity.Subject = request.Subject;
         activity.Description = request.Description;
         activity.Outcome = request.Outcome;
+        activity.TemplateKey = request.TemplateKey;
         activity.Type = request.Type;
         activity.Priority = request.Priority;
         activity.DueDateUtc = request.DueDateUtc;
@@ -540,6 +544,7 @@ public sealed class ActivityService : IActivityService
             activity.Type.ToString(),
             activity.Description,
             activity.Outcome,
+            activity.TemplateKey,
             activity.Priority,
             activity.RelatedEntityId == Guid.Empty ? null : activity.RelatedEntityId,
             relatedName,

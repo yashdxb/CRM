@@ -88,6 +88,15 @@ export interface ManagerPipelineHealth {
   noRecentActivityCount: number;
   closeDateOverdueCount: number;
   stuckStageCount: number;
+  coachingOpenCount: number;
+  coachingOverdueCount: number;
+  coachingEscalationsLast7Days: number;
+  approvalPendingCount: number;
+  approvalCycleAvgHours: number;
+  reviewNeedsWorkCount: number;
+  reviewEscalatedCount: number;
+  reviewAckOverdueCount: number;
+  reviewAckAvgHours: number;
   pipelineByStage: PipelineStage[];
   reviewQueue: ManagerReviewDeal[];
 }

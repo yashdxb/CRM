@@ -28,6 +28,8 @@ public class CrmDbContext : DbContext
     public DbSet<OpportunityStageHistory> OpportunityStageHistories => Set<OpportunityStageHistory>();
     public DbSet<OpportunityReviewChecklistItem> OpportunityReviewChecklistItems => Set<OpportunityReviewChecklistItem>();
     public DbSet<OpportunityApproval> OpportunityApprovals => Set<OpportunityApproval>();
+    public DbSet<OpportunityTeamMember> OpportunityTeamMembers => Set<OpportunityTeamMember>();
+    public DbSet<OpportunityOnboardingItem> OpportunityOnboardingItems => Set<OpportunityOnboardingItem>();
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
@@ -110,6 +112,13 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<OpportunityStageHistory>().ToTable("OpportunityStageHistories", CrmSchema);
         modelBuilder.Entity<OpportunityApproval>().ToTable("OpportunityApprovals", CrmSchema);
         modelBuilder.Entity<OpportunityReviewChecklistItem>().ToTable("OpportunityReviewChecklistItems", CrmSchema);
+        modelBuilder.Entity<OpportunityTeamMember>().ToTable("OpportunityTeamMembers", CrmSchema);
+        modelBuilder.Entity<OpportunityOnboardingItem>().ToTable("OpportunityOnboardingItems", CrmSchema);
+        modelBuilder.Entity<OpportunityTeamMember>()
+            .HasIndex(member => new { member.OpportunityId, member.UserId })
+            .IsUnique();
+        modelBuilder.Entity<OpportunityOnboardingItem>()
+            .HasIndex(item => new { item.OpportunityId, item.Type, item.Title });
         modelBuilder.Entity<Activity>().ToTable("Activities", CrmSchema);
         modelBuilder.Entity<Attachment>().ToTable("Attachments", CrmSchema);
         modelBuilder.Entity<ImportJob>().ToTable("ImportJobs", CrmSchema);

@@ -6,7 +6,9 @@ import {
   OpportunityReviewThreadItem,
   OpportunityStageHistoryItem,
   OpportunitySearchRequest,
-  OpportunitySearchResponse
+  OpportunitySearchResponse,
+  OpportunityTeamMember,
+  UpdateOpportunityTeamRequest
 } from '../models/opportunity.model';
 
 export interface SaveOpportunityRequest {
@@ -31,6 +33,12 @@ export interface SaveOpportunityRequest {
   securityNotes?: string | null;
   legalReviewStatus?: string | null;
   legalNotes?: string | null;
+  deliveryOwnerId?: string | null;
+  deliveryHandoffScope?: string | null;
+  deliveryHandoffRisks?: string | null;
+  deliveryHandoffTimeline?: string | null;
+  deliveryStatus?: string | null;
+  deliveryCompletedAtUtc?: string | null;
   isClosed?: boolean;
   isWon?: boolean;
   winLossReason?: string | null;
@@ -100,5 +108,13 @@ export class OpportunityDataService {
 
   acknowledgeReview(id: string) {
     return this.http.post<OpportunityReviewThreadItem>(`${this.baseUrl}/api/opportunities/${id}/review-ack`, {});
+  }
+
+  getTeam(id: string) {
+    return this.http.get<OpportunityTeamMember[]>(`${this.baseUrl}/api/opportunities/${id}/team`);
+  }
+
+  updateTeam(id: string, payload: UpdateOpportunityTeamRequest) {
+    return this.http.put<OpportunityTeamMember[]>(`${this.baseUrl}/api/opportunities/${id}/team`, payload);
   }
 }

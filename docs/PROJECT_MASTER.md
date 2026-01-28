@@ -200,6 +200,11 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 
 ---
 
+## 14) User Stories (Role-Based)
+- Canonical user stories live in `docs/USER_STORIES.md` (all roles, execution-ready).
+
+---
+
 ## 13.1) Sales Rep Full B2B Flow (Future-Ready)
 
 **Principle:** The CRM is an execution system, not a database. It enforces next steps, protects forecast accuracy, and drives continuous momentum.

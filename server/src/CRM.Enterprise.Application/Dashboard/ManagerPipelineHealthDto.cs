@@ -11,6 +11,15 @@ public record ManagerPipelineHealthDto(
     int NoRecentActivityCount,
     int CloseDateOverdueCount,
     int StuckStageCount,
+    int CoachingOpenCount,
+    int CoachingOverdueCount,
+    int CoachingEscalationsLast7Days,
+    int ApprovalPendingCount,
+    decimal ApprovalCycleAvgHours,
+    int ReviewNeedsWorkCount,
+    int ReviewEscalatedCount,
+    int ReviewAckOverdueCount,
+    decimal ReviewAckAvgHours,
     IReadOnlyList<PipelineStageDto> PipelineByStage,
     IReadOnlyList<ManagerReviewDealDto> ReviewQueue);
 

@@ -23,6 +23,12 @@ public sealed record OpportunityListItemDto(
     string? SecurityNotes,
     string? LegalReviewStatus,
     string? LegalNotes,
+    Guid? DeliveryOwnerId,
+    string? DeliveryHandoffScope,
+    string? DeliveryHandoffRisks,
+    string? DeliveryHandoffTimeline,
+    string? DeliveryStatus,
+    DateTime? DeliveryCompletedAtUtc,
     Guid OwnerId,
     string OwnerName,
     string Status,
@@ -59,6 +65,23 @@ public sealed record OpportunityReviewThreadItemDto(
     DateTime? DueDateUtc,
     DateTime? CompletedDateUtc,
     bool RequiresAcknowledgment);
+
+public sealed record OpportunityTeamMemberDto(
+    Guid UserId,
+    string UserName,
+    string Role,
+    DateTime CreatedAtUtc,
+    DateTime? UpdatedAtUtc);
+
+public sealed record OpportunityOnboardingItemDto(
+    Guid Id,
+    Guid OpportunityId,
+    string Type,
+    string Title,
+    string Status,
+    DateTime? DueDateUtc,
+    DateTime? CompletedAtUtc,
+    string? Notes);
 
 public sealed record OpportunityStageHistoryDto(
     Guid Id,

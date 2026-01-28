@@ -82,6 +82,7 @@ public static class DependencyInjection
         services.AddSingleton<ServiceBusEmailQueue>();
         services.AddSingleton<ServiceBusApprovalQueue>();
         services.AddHostedService<EmailQueueWorker>();
+        services.AddHostedService<NotificationAlertWorker>();
         services.AddHostedService<RenewalAutomationWorker>();
         services.AddSingleton<IEmailSender>(sp =>
         {
@@ -109,6 +110,7 @@ public static class DependencyInjection
         services.AddScoped<IOpportunityService, OpportunityService>();
         services.AddScoped<IOpportunityApprovalService, OpportunityApprovalService>();
         services.AddScoped<IOpportunityReviewChecklistService, OpportunityReviewChecklistService>();
+        services.AddScoped<IOpportunityOnboardingService, OpportunityOnboardingService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ICustomerImportService, CustomerImportService>();
         services.AddScoped<IContactService, ContactService>();

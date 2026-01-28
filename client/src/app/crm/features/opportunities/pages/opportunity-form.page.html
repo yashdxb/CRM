@@ -279,6 +279,52 @@
             </div>
           </section>
 
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-users"></i>
+              Pre-Sales Team
+            </h3>
+            <p class="section-subtitle">Track solution partners and demo owners supporting this deal.</p>
+            <div class="team-grid" *ngIf="teamMembers.length; else emptyTeam">
+              <div class="team-row" *ngFor="let member of teamMembers; let i = index">
+                <p-select
+                  appendTo="body"
+                  [options]="teamMemberOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="teamUser{{ i }}"
+                  [(ngModel)]="teamMembers[i].userId"
+                  (ngModelChange)="markTeamDirty()"
+                  placeholder="Select teammate"
+                  styleClass="w-full"
+                ></p-select>
+                <p-select
+                  appendTo="body"
+                  [options]="teamRoleOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="teamRole{{ i }}"
+                  [(ngModel)]="teamMembers[i].role"
+                  (ngModelChange)="markTeamDirty()"
+                  placeholder="Role"
+                  styleClass="w-full"
+                ></p-select>
+                <button type="button" class="btn-glass btn-icon" (click)="removeTeamMember(i)">
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+            </div>
+            <ng-template #emptyTeam>
+              <p class="empty-state">No pre-sales teammates yet.</p>
+            </ng-template>
+            <div class="team-actions">
+              <button type="button" class="btn-glass" (click)="addTeamMember()">
+                <i class="pi pi-plus"></i>
+                Add teammate
+              </button>
+            </div>
+          </section>
+
           <section class="form-card" *ngIf="isEditMode()">
             <h3 class="section-title">
               <i class="pi pi-check-circle"></i>
@@ -548,6 +594,200 @@
                 </ng-template>
               </div>
             </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-briefcase"></i>
+              Delivery Handoff
+            </h3>
+            <p class="section-subtitle">Capture scope, risks, and delivery ownership before kickoff.</p>
+            <div class="form-grid">
+              <div class="field">
+                <label for="oppDeliveryOwner">Delivery owner</label>
+                <p-select
+                  inputId="oppDeliveryOwner"
+                  appendTo="body"
+                  [options]="teamMemberOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="deliveryOwnerId"
+                  [(ngModel)]="form.deliveryOwnerId"
+                  placeholder="Select owner"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label for="oppDeliveryStatus">Delivery status</label>
+                <p-select
+                  inputId="oppDeliveryStatus"
+                  appendTo="body"
+                  [options]="deliveryStatusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="deliveryStatus"
+                  [(ngModel)]="form.deliveryStatus"
+                  placeholder="Status"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field full">
+                <label for="oppDeliveryScope">Scope</label>
+                <textarea
+                  pTextarea
+                  id="oppDeliveryScope"
+                  rows="3"
+                  name="deliveryHandoffScope"
+                  [(ngModel)]="form.deliveryHandoffScope"
+                  placeholder="Implementation scope and key deliverables"
+                  class="w-full"
+                ></textarea>
+              </div>
+              <div class="field full">
+                <label for="oppDeliveryRisks">Risks</label>
+                <textarea
+                  pTextarea
+                  id="oppDeliveryRisks"
+                  rows="3"
+                  name="deliveryHandoffRisks"
+                  [(ngModel)]="form.deliveryHandoffRisks"
+                  placeholder="Dependencies, blockers, or risks"
+                  class="w-full"
+                ></textarea>
+              </div>
+              <div class="field full">
+                <label for="oppDeliveryTimeline">Timeline</label>
+                <textarea
+                  pTextarea
+                  id="oppDeliveryTimeline"
+                  rows="2"
+                  name="deliveryHandoffTimeline"
+                  [(ngModel)]="form.deliveryHandoffTimeline"
+                  placeholder="Target milestones and timing"
+                  class="w-full"
+                ></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-list-check"></i>
+              Onboarding Checklist & Milestones
+            </h3>
+            <div class="checklist-form">
+              <input
+                pInputText
+                type="text"
+                name="newOnboardingChecklistItem"
+                [(ngModel)]="newOnboardingChecklistItem"
+                placeholder="Add onboarding checklist item"
+                class="w-full"
+              />
+              <button pButton type="button" class="btn-glass btn-sm" (click)="addOnboardingItem('Checklist')">
+                Add checklist
+              </button>
+            </div>
+            <div class="checklist-list" *ngIf="onboardingChecklist.length; else emptyOnboardingChecklist">
+              <div class="checklist-item" *ngFor="let item of onboardingChecklist">
+                <input
+                  pInputText
+                  type="text"
+                  [(ngModel)]="item.title"
+                  (blur)="saveOnboardingItem(item)"
+                  class="w-full"
+                />
+                <p-select
+                  appendTo="body"
+                  [options]="onboardingStatusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="item.status"
+                  (onChange)="saveOnboardingItem(item)"
+                  styleClass="w-full"
+                ></p-select>
+                <p-datePicker
+                  appendTo="body"
+                  [(ngModel)]="item.dueDateUtc"
+                  (onSelect)="saveOnboardingItem(item)"
+                  [showIcon]="true"
+                  styleClass="w-full"
+                ></p-datePicker>
+                <textarea
+                  pTextarea
+                  rows="2"
+                  [(ngModel)]="item.notes"
+                  (blur)="saveOnboardingItem(item)"
+                  placeholder="Notes"
+                  class="w-full"
+                ></textarea>
+                <span class="checklist-status" *ngIf="isOnboardingSaving(item)">Saving...</span>
+                <span class="checklist-status saved" *ngIf="isOnboardingSaved(item)">Saved</span>
+                <button pButton type="button" class="btn-glass btn-sm" (click)="deleteOnboardingItem(item)">
+                  Remove
+                </button>
+              </div>
+            </div>
+            <ng-template #emptyOnboardingChecklist>
+              <p class="empty-state">No onboarding checklist items yet.</p>
+            </ng-template>
+
+            <div class="checklist-form">
+              <input
+                pInputText
+                type="text"
+                name="newOnboardingMilestoneItem"
+                [(ngModel)]="newOnboardingMilestoneItem"
+                placeholder="Add onboarding milestone"
+                class="w-full"
+              />
+              <button pButton type="button" class="btn-glass btn-sm" (click)="addOnboardingItem('Milestone')">
+                Add milestone
+              </button>
+            </div>
+            <div class="checklist-list" *ngIf="onboardingMilestones.length; else emptyOnboardingMilestones">
+              <div class="checklist-item" *ngFor="let item of onboardingMilestones">
+                <input
+                  pInputText
+                  type="text"
+                  [(ngModel)]="item.title"
+                  (blur)="saveOnboardingItem(item)"
+                  class="w-full"
+                />
+                <p-select
+                  appendTo="body"
+                  [options]="onboardingStatusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="item.status"
+                  (onChange)="saveOnboardingItem(item)"
+                  styleClass="w-full"
+                ></p-select>
+                <p-datePicker
+                  appendTo="body"
+                  [(ngModel)]="item.dueDateUtc"
+                  (onSelect)="saveOnboardingItem(item)"
+                  [showIcon]="true"
+                  styleClass="w-full"
+                ></p-datePicker>
+                <textarea
+                  pTextarea
+                  rows="2"
+                  [(ngModel)]="item.notes"
+                  (blur)="saveOnboardingItem(item)"
+                  placeholder="Notes"
+                  class="w-full"
+                ></textarea>
+                <span class="checklist-status" *ngIf="isOnboardingSaving(item)">Saving...</span>
+                <span class="checklist-status saved" *ngIf="isOnboardingSaved(item)">Saved</span>
+                <button pButton type="button" class="btn-glass btn-sm" (click)="deleteOnboardingItem(item)">
+                  Remove
+                </button>
+              </div>
+            </div>
+            <ng-template #emptyOnboardingMilestones>
+              <p class="empty-state">No onboarding milestones yet.</p>
+            </ng-template>
           </section>
 
           <section class="form-card review-thread-card" *ngIf="isEditMode()">

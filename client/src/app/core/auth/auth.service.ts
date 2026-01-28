@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { clearToken, saveToken } from './token.utils';
-import { setTenantKey } from '../tenant/tenant.utils';
+import { getTenantKey, setTenantKey } from '../tenant/tenant.utils';
 import { PresenceService } from '../realtime/presence.service';
 
 interface LoginRequest {
@@ -41,7 +41,12 @@ export class AuthService {
 
   login(payload: LoginRequest) {
     const url = `${environment.apiUrl}/api/auth/login`;
-    return this.http.post<LoginResponse>(url, payload).pipe(
+    const tenantKey = getTenantKey();
+    return this.http
+      .post<LoginResponse>(url, payload, {
+        headers: tenantKey ? { 'X-Tenant-Key': tenantKey } : undefined
+      })
+      .pipe(
       tap((res) => {
         if (!res?.accessToken) {
           throw new Error('Missing access token.');

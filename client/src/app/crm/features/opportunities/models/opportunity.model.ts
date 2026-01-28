@@ -23,6 +23,12 @@ export interface Opportunity {
   securityNotes?: string | null;
   legalReviewStatus?: string | null;
   legalNotes?: string | null;
+  deliveryOwnerId?: string | null;
+  deliveryHandoffScope?: string | null;
+  deliveryHandoffRisks?: string | null;
+  deliveryHandoffTimeline?: string | null;
+  deliveryStatus?: string | null;
+  deliveryCompletedAtUtc?: string | null;
   ownerId?: string;
   owner: string;
   status: OpportunityStatus;
@@ -63,6 +69,17 @@ export interface OpportunityReviewChecklistItem {
   status: string;
   notes?: string | null;
   completedAtUtc?: string | null;
+}
+
+export interface OpportunityOnboardingItem {
+  id: string;
+  opportunityId: string;
+  type: 'Checklist' | 'Milestone';
+  title: string;
+  status: string;
+  dueDateUtc?: string | Date | null;
+  completedAtUtc?: string | null;
+  notes?: string | null;
 }
 
 export type OpportunityApprovalStatus = 'Pending' | 'Approved' | 'Rejected';
@@ -128,4 +145,19 @@ export interface OpportunityReviewThreadItem {
   dueDateUtc?: string | null;
   completedDateUtc?: string | null;
   requiresAcknowledgment: boolean;
+}
+
+export interface OpportunityTeamMember {
+  userId: string;
+  userName: string;
+  role: string;
+  createdAtUtc: string;
+  updatedAtUtc?: string | null;
+}
+
+export interface UpdateOpportunityTeamRequest {
+  members: Array<{
+    userId: string;
+    role: string;
+  }>;
 }

@@ -59,7 +59,7 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: templates selectable per stage with prefilled defaults.
 - Inactivity detection hook (no activity in X days)  
   - Acceptance: idle opportunities flagged at X days.
- - Status: Discipline enforced + inactivity hook implemented; templates pending.
+ - Status: Completed (discipline + inactivity hook + stage-aligned templates).
 
 ## Opportunities
 - Stage exit criteria gates  
@@ -102,14 +102,14 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: manager comment generates rep task.
 - Deal review workflow depth (review thread + outcomes + rep acknowledgment)  
   - Acceptance: manager can post review outcomes (Approve / Needs Work / Escalate), reps must acknowledge with due date tracking.
- - Status: Partial (pipeline health review queue + manager coaching task creation + review thread/outcomes/acknowledgment implemented; deeper coaching automation/reporting still pending).
+ - Status: Completed (coaching SLA + escalation rollups, review effectiveness metrics, approval cycle time metrics).
 
 ## Pre-Sales
 - Opportunity team role tracking  
   - Acceptance: team members have role tags.
 - Demo/POC activity with required outcomes  
   - Acceptance: demo outcome required before stage advance.
- - Status: Pending.
+ - Status: Completed (team roles + demo/POC template + stage gate).
 
 ## Delivery / Implementation
 - Handoff package template (scope/risks/timeline)  
@@ -118,14 +118,14 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: tasks auto-created on Closed Won.
 - Implementation completion status  
   - Acceptance: completion updates account state.
- - Status: Pending.
+ - Status: Completed (delivery handoff fields + onboarding checklist/milestones + completion tracking).
 
 ## Notifications
 - Escalation alerts for SLA breaches  
   - Acceptance: alerts delivered + logged.
 - Idle deal alert notifications  
   - Acceptance: triggered after inactivity threshold.
- - Status: Pending.
+ - Status: Completed (alert worker sends SLA breach + idle deal alerts and logs audit events).
 
 ---
 
@@ -150,6 +150,10 @@ Order: execute sequentially, build + verify after each task.
 - Lead cadence + qualified handoff API tests
 - Forecast category controls + commit discipline (API + UI) + tests
 - Renewal automation (90/60/30) + expansion signals/creation (P3 follow-ons)
+- Activity template metadata + demo/POC template with stage gating
+- Expanded activity templates aligned to all opportunity stages
+- Opportunity team role tracking (API + UI)
+- Delivery handoff fields + onboarding checklist/milestones + completion tracking (API + UI)
 
 ---
 

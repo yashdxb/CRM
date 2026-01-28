@@ -26,6 +26,12 @@ public class UpsertOpportunityRequest
     public string? SecurityNotes { get; set; }
     public string? LegalReviewStatus { get; set; }
     public string? LegalNotes { get; set; }
+    public Guid? DeliveryOwnerId { get; set; }
+    public string? DeliveryHandoffScope { get; set; }
+    public string? DeliveryHandoffRisks { get; set; }
+    public string? DeliveryHandoffTimeline { get; set; }
+    public string? DeliveryStatus { get; set; }
+    public DateTime? DeliveryCompletedAtUtc { get; set; }
     public bool IsClosed { get; set; }
     public bool IsWon { get; set; }
     public string? WinLossReason { get; set; }

@@ -27,6 +27,7 @@ public class OpportunityForecastCategoryTests
         var opportunity = SeedOpportunity(context, tenant.Id, account.Id, negotiationStage.Id, owner.Id);
         opportunity.SecurityReviewStatus = "Approved";
         opportunity.LegalReviewStatus = "Approved";
+        SeedDemoActivity(context, tenant.Id, opportunity.Id, owner.Id);
         SeedNextStep(context, tenant.Id, opportunity.Id, owner.Id);
         await context.SaveChangesAsync();
 
@@ -201,6 +202,23 @@ public class OpportunityForecastCategoryTests
             RelatedEntityId = opportunityId,
             OwnerId = ownerId,
             DueDateUtc = DateTime.UtcNow.AddDays(2),
+            CreatedAtUtc = DateTime.UtcNow
+        });
+    }
+
+    private static void SeedDemoActivity(CrmDbContext context, Guid tenantId, Guid opportunityId, Guid ownerId)
+    {
+        context.Activities.Add(new Activity
+        {
+            TenantId = tenantId,
+            Subject = "Demo / POC",
+            Outcome = "Completed",
+            TemplateKey = "demo-poc",
+            Type = ActivityType.Meeting,
+            RelatedEntityType = ActivityRelationType.Opportunity,
+            RelatedEntityId = opportunityId,
+            OwnerId = ownerId,
+            CompletedDateUtc = DateTime.UtcNow,
             CreatedAtUtc = DateTime.UtcNow
         });
     }

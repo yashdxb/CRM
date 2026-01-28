@@ -624,6 +624,15 @@ public class DashboardReadService : IDashboardReadService
                 0,
                 0,
                 0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
                 new List<PipelineStageDto>(),
                 new List<ManagerReviewDealDto>());
         }
@@ -684,6 +693,15 @@ public class DashboardReadService : IDashboardReadService
         var pipelineValueTotal = pipelineByStage.Sum(stage => stage.Value);
 
         var reviewQueue = new List<ManagerReviewDealDto>();
+        var coachingOpenCount = 0;
+        var coachingOverdueCount = 0;
+        var coachingEscalationsLast7Days = 0;
+        var approvalPendingCount = 0;
+        var approvalCycleAvgHours = 0m;
+        var reviewNeedsWorkCount = 0;
+        var reviewEscalatedCount = 0;
+        var reviewAckOverdueCount = 0;
+        var reviewAckAvgHours = 0m;
         var missingNextStepCount = 0;
         var nextStepOverdueCount = 0;
         var noRecentActivityCount = 0;
@@ -762,6 +780,72 @@ public class DashboardReadService : IDashboardReadService
             .Take(10)
             .ToList();
 
+        var coachingTasks = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.Type == ActivityType.Task
+                        && a.Subject.StartsWith("Coaching:"))
+            .Select(a => new { a.CompletedDateUtc, a.DueDateUtc })
+            .ToListAsync(cancellationToken);
+
+        coachingOpenCount = coachingTasks.Count(a => !a.CompletedDateUtc.HasValue);
+        coachingOverdueCount = coachingTasks.Count(a => !a.CompletedDateUtc.HasValue
+                                                       && a.DueDateUtc.HasValue
+                                                       && a.DueDateUtc.Value < now);
+
+        coachingEscalationsLast7Days = await _dbContext.AuditEvents
+            .AsNoTracking()
+            .CountAsync(a => a.EntityType == "Activity"
+                             && a.Action == "CoachingEscalation"
+                             && a.CreatedAtUtc >= now.AddDays(-7), cancellationToken);
+
+        approvalPendingCount = await _dbContext.OpportunityApprovals
+            .AsNoTracking()
+            .CountAsync(a => !a.IsDeleted && a.Status == "Pending", cancellationToken);
+
+        var approvalCycles = await _dbContext.OpportunityApprovals
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.DecisionOn.HasValue
+                        && a.DecisionOn.Value >= now.AddDays(-30))
+            .Select(a => new { a.RequestedOn, a.DecisionOn })
+            .ToListAsync(cancellationToken);
+
+        if (approvalCycles.Count > 0)
+        {
+            approvalCycleAvgHours = (decimal)approvalCycles
+                .Average(a => (a.DecisionOn!.Value - a.RequestedOn).TotalHours);
+        }
+
+        var reviewOutcomes = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.Subject.StartsWith("Review:")
+                        && a.CreatedAtUtc >= now.AddDays(-30))
+            .Select(a => a.Outcome)
+            .ToListAsync(cancellationToken);
+
+        reviewNeedsWorkCount = reviewOutcomes.Count(o => o == "Needs Work");
+        reviewEscalatedCount = reviewOutcomes.Count(o => o == "Escalated");
+
+        var reviewAckTasks = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.Subject.StartsWith("Review acknowledgment:"))
+            .Select(a => new { a.CreatedAtUtc, a.CompletedDateUtc, a.DueDateUtc })
+            .ToListAsync(cancellationToken);
+
+        reviewAckOverdueCount = reviewAckTasks.Count(a => !a.CompletedDateUtc.HasValue
+                                                          && a.DueDateUtc.HasValue
+                                                          && a.DueDateUtc.Value < now);
+
+        var completedAckTasks = reviewAckTasks.Where(a => a.CompletedDateUtc.HasValue).ToList();
+        if (completedAckTasks.Count > 0)
+        {
+            reviewAckAvgHours = (decimal)completedAckTasks
+                .Average(a => (a.CompletedDateUtc!.Value - a.CreatedAtUtc).TotalHours);
+        }
+
         return new ManagerPipelineHealthDto(
             openOpportunities.Count,
             pipelineValueTotal,
@@ -770,6 +854,15 @@ public class DashboardReadService : IDashboardReadService
             noRecentActivityCount,
             closeDateOverdueCount,
             stuckStageCount,
+            coachingOpenCount,
+            coachingOverdueCount,
+            coachingEscalationsLast7Days,
+            approvalPendingCount,
+            Math.Round(approvalCycleAvgHours, 1),
+            reviewNeedsWorkCount,
+            reviewEscalatedCount,
+            reviewAckOverdueCount,
+            Math.Round(reviewAckAvgHours, 1),
             pipelineByStage,
             orderedReviewQueue);
     }

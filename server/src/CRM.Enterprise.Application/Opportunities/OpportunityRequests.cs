@@ -30,6 +30,12 @@ public sealed record OpportunityUpsertRequest(
     string? SecurityNotes,
     string? LegalReviewStatus,
     string? LegalNotes,
+    Guid? DeliveryOwnerId,
+    string? DeliveryHandoffScope,
+    string? DeliveryHandoffRisks,
+    string? DeliveryHandoffTimeline,
+    string? DeliveryStatus,
+    DateTime? DeliveryCompletedAtUtc,
     bool IsClosed,
     bool IsWon,
     string? WinLossReason);
@@ -38,3 +44,18 @@ public sealed record OpportunityReviewOutcomeRequest(
     string Outcome,
     string? Comment,
     DateTime? AcknowledgmentDueAtUtc);
+
+public sealed record OpportunityTeamMemberRequest(Guid UserId, string Role);
+
+public sealed record OpportunityOnboardingCreateRequest(
+    string Type,
+    string Title,
+    string? Status,
+    DateTime? DueDateUtc,
+    string? Notes);
+
+public sealed record OpportunityOnboardingUpdateRequest(
+    string? Title,
+    string? Status,
+    DateTime? DueDateUtc,
+    string? Notes);

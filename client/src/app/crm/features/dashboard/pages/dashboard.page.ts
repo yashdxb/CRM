@@ -92,6 +92,15 @@ export class DashboardPage implements OnInit {
     noRecentActivityCount: 0,
     closeDateOverdueCount: 0,
     stuckStageCount: 0,
+    coachingOpenCount: 0,
+    coachingOverdueCount: 0,
+    coachingEscalationsLast7Days: 0,
+    approvalPendingCount: 0,
+    approvalCycleAvgHours: 0,
+    reviewNeedsWorkCount: 0,
+    reviewEscalatedCount: 0,
+    reviewAckOverdueCount: 0,
+    reviewAckAvgHours: 0,
     pipelineByStage: [],
     reviewQueue: []
   };
@@ -184,7 +193,16 @@ export class DashboardPage implements OnInit {
       { label: 'Next step overdue', value: data.nextStepOverdueCount, tone: 'warn' },
       { label: 'No recent activity', value: data.noRecentActivityCount, tone: 'warn' },
       { label: 'Close date passed', value: data.closeDateOverdueCount, tone: 'danger' },
-      { label: 'Stuck in stage', value: data.stuckStageCount, tone: 'muted' }
+      { label: 'Stuck in stage', value: data.stuckStageCount, tone: 'muted' },
+      { label: 'Coaching open', value: data.coachingOpenCount, tone: 'warn' },
+      { label: 'Coaching overdue', value: data.coachingOverdueCount, tone: 'danger' },
+      { label: 'Coaching escalations (7d)', value: data.coachingEscalationsLast7Days, tone: 'muted' },
+      { label: 'Approvals pending', value: data.approvalPendingCount, tone: 'warn' },
+      { label: 'Approval cycle (hrs)', value: data.approvalCycleAvgHours, tone: 'muted' },
+      { label: 'Review needs work', value: data.reviewNeedsWorkCount, tone: 'warn' },
+      { label: 'Review escalated', value: data.reviewEscalatedCount, tone: 'danger' },
+      { label: 'Review ack overdue', value: data.reviewAckOverdueCount, tone: 'danger' },
+      { label: 'Review ack avg (hrs)', value: data.reviewAckAvgHours, tone: 'muted' }
     ];
   });
   

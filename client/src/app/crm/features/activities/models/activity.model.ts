@@ -5,6 +5,7 @@ export interface Activity {
   subject: string;
   description?: string;
   outcome?: string;
+  templateKey?: string;
   type: ActivityType;
   priority?: 'High' | 'Normal' | 'Low';
   dueDateUtc?: string;
@@ -22,6 +23,7 @@ export interface UpsertActivityRequest {
   subject: string;
   description?: string;
   outcome?: string;
+  templateKey?: string;
   type: ActivityType;
   priority?: 'High' | 'Normal' | 'Low';
   dueDateUtc?: string | Date;

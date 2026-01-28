@@ -72,6 +72,15 @@ export class DashboardDataService {
       noRecentActivityCount: 0,
       closeDateOverdueCount: 0,
       stuckStageCount: 0,
+      coachingOpenCount: 0,
+      coachingOverdueCount: 0,
+      coachingEscalationsLast7Days: 0,
+      approvalPendingCount: 0,
+      approvalCycleAvgHours: 0,
+      reviewNeedsWorkCount: 0,
+      reviewEscalatedCount: 0,
+      reviewAckOverdueCount: 0,
+      reviewAckAvgHours: 0,
       pipelineByStage: [],
       reviewQueue: []
     };

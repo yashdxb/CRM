@@ -3,9 +3,11 @@ using CRM.Enterprise.Api.Contracts.Opportunities;
 using ApiOpportunityCoachingRequest = CRM.Enterprise.Api.Contracts.Opportunities.OpportunityCoachingRequest;
 using ApiOpportunityReviewOutcomeRequest = CRM.Enterprise.Api.Contracts.Opportunities.OpportunityReviewOutcomeRequest;
 using ApiOpportunityUpsertRequest = CRM.Enterprise.Api.Contracts.Opportunities.UpsertOpportunityRequest;
+using ApiOpportunityTeamRequest = CRM.Enterprise.Api.Contracts.Opportunities.UpdateOpportunityTeamRequest;
 using AppOpportunityUpsertRequest = CRM.Enterprise.Application.Opportunities.OpportunityUpsertRequest;
 using AppOpportunityCoachingRequest = CRM.Enterprise.Application.Opportunities.OpportunityCoachingRequest;
 using AppOpportunityReviewOutcomeRequest = CRM.Enterprise.Application.Opportunities.OpportunityReviewOutcomeRequest;
+using AppOpportunityTeamMemberRequest = CRM.Enterprise.Application.Opportunities.OpportunityTeamMemberRequest;
 using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Application.Common;
@@ -237,6 +239,29 @@ public class OpportunitiesController : ControllerBase
         return Ok(ToApiItem(result.Value));
     }
 
+    [HttpGet("{id:guid}/team")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesView)]
+    public async Task<ActionResult<IEnumerable<OpportunityTeamMemberItem>>> GetTeam(Guid id, CancellationToken cancellationToken)
+    {
+        var team = await _opportunityService.GetTeamAsync(id, cancellationToken);
+        if (team is null) return NotFound();
+        return Ok(team.Select(ToTeamItem));
+    }
+
+    [HttpPut("{id:guid}/team")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<IEnumerable<OpportunityTeamMemberItem>>> UpdateTeam(
+        Guid id,
+        [FromBody] ApiOpportunityTeamRequest request,
+        CancellationToken cancellationToken)
+    {
+        var members = request.Members.Select(member => new AppOpportunityTeamMemberRequest(member.UserId, member.Role)).ToList();
+        var result = await _opportunityService.UpdateTeamAsync(id, members, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success || result.Value is null) return BadRequest(result.Error);
+        return Ok(result.Value.Select(ToTeamItem));
+    }
+
     private static OpportunityListItem ToApiItem(OpportunityListItemDto dto)
     {
         return new OpportunityListItem(
@@ -262,6 +287,12 @@ public class OpportunitiesController : ControllerBase
             dto.SecurityNotes,
             dto.LegalReviewStatus,
             dto.LegalNotes,
+            dto.DeliveryOwnerId,
+            dto.DeliveryHandoffScope,
+            dto.DeliveryHandoffRisks,
+            dto.DeliveryHandoffTimeline,
+            dto.DeliveryStatus,
+            dto.DeliveryCompletedAtUtc,
             dto.OwnerId,
             dto.OwnerName,
             dto.Status,
@@ -302,6 +333,16 @@ public class OpportunitiesController : ControllerBase
             dto.RequiresAcknowledgment);
     }
 
+    private static OpportunityTeamMemberItem ToTeamItem(OpportunityTeamMemberDto dto)
+    {
+        return new OpportunityTeamMemberItem(
+            dto.UserId,
+            dto.UserName,
+            dto.Role,
+            dto.CreatedAtUtc,
+            dto.UpdatedAtUtc);
+    }
+
     private static AppOpportunityUpsertRequest MapUpsertRequest(ApiOpportunityUpsertRequest request)
     {
         return new OpportunityUpsertRequest(
@@ -327,6 +368,12 @@ public class OpportunitiesController : ControllerBase
             request.SecurityNotes,
             request.LegalReviewStatus,
             request.LegalNotes,
+            request.DeliveryOwnerId,
+            request.DeliveryHandoffScope,
+            request.DeliveryHandoffRisks,
+            request.DeliveryHandoffTimeline,
+            request.DeliveryStatus,
+            request.DeliveryCompletedAtUtc,
             request.IsClosed,
             request.IsWon,
             request.WinLossReason);

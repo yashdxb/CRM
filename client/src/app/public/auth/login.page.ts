@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, NgZone } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -41,7 +41,8 @@ export class LoginPage {
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private zone: NgZone
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -67,10 +68,12 @@ export class LoginPage {
       if (!this.loading) {
         return;
       }
-      timedOut = true;
-      this.loading = false;
-      this.showErrors = true;
-      this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
+      this.zone.run(() => {
+        timedOut = true;
+        this.loading = false;
+        this.showErrors = true;
+        this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
+      });
     }, 15000);
 
     this.auth

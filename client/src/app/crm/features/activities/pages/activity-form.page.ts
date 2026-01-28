@@ -96,6 +96,30 @@ export class ActivityFormPage implements OnInit {
       }
     },
     {
+      id: 'intro-email',
+      label: 'Intro email',
+      icon: 'pi-send',
+      stages: ['Prospecting'],
+      defaults: {
+        subject: 'Intro outreach',
+        type: 'Email',
+        priority: 'Normal',
+        description: 'Introduce value proposition and request a quick discovery call.'
+      }
+    },
+    {
+      id: 'intro-call',
+      label: 'Intro call',
+      icon: 'pi-phone',
+      stages: ['Prospecting'],
+      defaults: {
+        subject: 'Intro call',
+        type: 'Call',
+        priority: 'Normal',
+        description: 'Validate interest and confirm discovery meeting.'
+      }
+    },
+    {
       id: 'qualification-email',
       label: 'Qualification email',
       icon: 'pi-envelope',
@@ -105,6 +129,18 @@ export class ActivityFormPage implements OnInit {
         type: 'Email',
         priority: 'Normal',
         description: 'Summarize needs, confirm stakeholders, and propose next step.'
+      }
+    },
+    {
+      id: 'discovery-survey',
+      label: 'Discovery questionnaire',
+      icon: 'pi-list',
+      stages: ['Qualification'],
+      defaults: {
+        subject: 'Discovery questionnaire',
+        type: 'Task',
+        priority: 'Normal',
+        description: 'Capture requirements, success criteria, and timeline.'
       }
     },
     {
@@ -120,6 +156,18 @@ export class ActivityFormPage implements OnInit {
       }
     },
     {
+      id: 'demo-poc',
+      label: 'Demo / POC',
+      icon: 'pi-desktop',
+      stages: ['Qualification', 'Proposal'],
+      defaults: {
+        subject: 'Product demo / POC',
+        type: 'Meeting',
+        priority: 'High',
+        description: 'Run demo or proof of concept, capture decision criteria and feedback.'
+      }
+    },
+    {
       id: 'proposal-review',
       label: 'Proposal review',
       icon: 'pi-file',
@@ -132,6 +180,30 @@ export class ActivityFormPage implements OnInit {
       }
     },
     {
+      id: 'security-questionnaire',
+      label: 'Security questionnaire',
+      icon: 'pi-shield',
+      stages: ['Proposal', 'Negotiation'],
+      defaults: {
+        subject: 'Security review',
+        type: 'Task',
+        priority: 'High',
+        description: 'Complete security questionnaire and address compliance concerns.'
+      }
+    },
+    {
+      id: 'legal-redlines',
+      label: 'Legal redlines',
+      icon: 'pi-briefcase',
+      stages: ['Proposal', 'Negotiation'],
+      defaults: {
+        subject: 'Legal redlines',
+        type: 'Task',
+        priority: 'High',
+        description: 'Review contract redlines and coordinate approvals.'
+      }
+    },
+    {
       id: 'negotiation-call',
       label: 'Negotiation call',
       icon: 'pi-phone',
@@ -141,6 +213,42 @@ export class ActivityFormPage implements OnInit {
         type: 'Call',
         priority: 'High',
         description: 'Review terms, pricing, and confirm path to signature.'
+      }
+    },
+    {
+      id: 'final-approval',
+      label: 'Final approval',
+      icon: 'pi-check-circle',
+      stages: ['Negotiation'],
+      defaults: {
+        subject: 'Final approval request',
+        type: 'Task',
+        priority: 'High',
+        description: 'Secure final approvals and confirm signature date.'
+      }
+    },
+    {
+      id: 'handoff-kickoff',
+      label: 'Handoff kickoff',
+      icon: 'pi-flag',
+      stages: ['Closed Won'],
+      defaults: {
+        subject: 'Implementation kickoff',
+        type: 'Meeting',
+        priority: 'High',
+        description: 'Introduce delivery team, confirm scope, and schedule kickoff.'
+      }
+    },
+    {
+      id: 'loss-review',
+      label: 'Loss review',
+      icon: 'pi-chart-line',
+      stages: ['Closed Lost'],
+      defaults: {
+        subject: 'Loss review',
+        type: 'Task',
+        priority: 'Normal',
+        description: 'Capture loss reason and competitive insights.'
       }
     },
     {
@@ -279,6 +387,7 @@ export class ActivityFormPage implements OnInit {
   protected onTemplateChange(value?: string | null) {
     const selected = value ?? 'none';
     this.selectedTemplate = selected;
+    this.form.templateKey = selected === 'none' ? undefined : selected;
     if (selected === 'none') {
       return;
     }
@@ -293,7 +402,8 @@ export class ActivityFormPage implements OnInit {
       subject: template.defaults.subject ?? this.form.subject,
       type: template.defaults.type ?? this.form.type,
       priority: template.defaults.priority ?? this.form.priority,
-      description: template.defaults.description ?? this.form.description
+      description: template.defaults.description ?? this.form.description,
+      templateKey: selected
     };
   }
 
@@ -450,6 +560,7 @@ export class ActivityFormPage implements OnInit {
       subject: activity.subject,
       description: activity.description,
       outcome: activity.outcome,
+      templateKey: activity.templateKey,
       type: activity.type,
       priority: activity.priority ?? 'Normal',
       dueDateUtc: dueDate,
@@ -460,6 +571,9 @@ export class ActivityFormPage implements OnInit {
       relatedEntityId: activity.relatedEntityId,
       ownerId: activity.ownerId
     };
+    if (activity.templateKey) {
+      this.selectedTemplate = activity.templateKey;
+    }
     this.activityStatus = completedDate ? 'Completed' : 'Open';
     if (activity.ownerId) {
       const label = activity.ownerName?.trim() || 'Owner';
@@ -521,6 +635,7 @@ export class ActivityFormPage implements OnInit {
       subject: '',
       description: '',
       outcome: '',
+      templateKey: undefined,
       type: 'Task',
       priority: 'Normal',
       dueDateUtc: undefined,

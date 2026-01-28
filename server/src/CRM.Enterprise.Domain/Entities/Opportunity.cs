@@ -33,10 +33,18 @@ public class Opportunity : AuditableEntity
     public string? SecurityNotes { get; set; }
     public string? LegalReviewStatus { get; set; }
     public string? LegalNotes { get; set; }
+    public Guid? DeliveryOwnerId { get; set; }
+    public string? DeliveryHandoffScope { get; set; }
+    public string? DeliveryHandoffRisks { get; set; }
+    public string? DeliveryHandoffTimeline { get; set; }
+    public string? DeliveryStatus { get; set; }
+    public DateTime? DeliveryCompletedAtUtc { get; set; }
 
     public Account? Account { get; set; }
     public Contact? PrimaryContact { get; set; }
     public OpportunityStage? Stage { get; set; }
     public ICollection<Activity> Activities { get; set; } = new List<Activity>();
     public ICollection<OpportunityStageHistory> StageHistory { get; set; } = new List<OpportunityStageHistory>();
+    public ICollection<OpportunityTeamMember> TeamMembers { get; set; } = new List<OpportunityTeamMember>();
+    public ICollection<OpportunityOnboardingItem> OnboardingItems { get; set; } = new List<OpportunityOnboardingItem>();
 }
