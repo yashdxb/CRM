@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class AssistantService {
-  private readonly visible = signal<boolean>(this.readBoolean('crm_assistant_visible', true));
+  private readonly visible = signal<boolean>(this.readBoolean('crm_assistant_visible', false));
   private readonly collapsed = signal<boolean>(this.readBoolean('crm_assistant_collapsed', false));
 
   readonly isVisible = this.visible.asReadonly();

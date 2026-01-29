@@ -425,6 +425,8 @@
     width: min(86vw, 320px);
     max-width: 100%;
     transform: translateX(0);
+    margin-left: 0;
+    right: auto;
     transition: transform 0.25s ease;
     overflow-y: auto;
     flex-direction: column;
@@ -454,6 +456,7 @@
   :host-context(.shell--collapsed) {
     .sidebar {
       transform: translateX(-110%);
+      pointer-events: none;
     }
   }
 }

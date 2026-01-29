@@ -5,6 +5,7 @@ import { NotificationContainerComponent } from '../core/notifications';
 import { CommandPaletteComponent, CommandPaletteService, QuickAddType } from '../core/command-palette';
 import { KeyboardShortcutsModalComponent } from '../core/keyboard-shortcuts';
 import { AppToastComponent } from '../shared/app-toast.component';
+import { AssistantPanelComponent } from '../core/assistant/assistant-panel.component';
 import { NavigationService } from './navigation';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { TopbarComponent } from './topbar/topbar.component';
@@ -20,6 +21,7 @@ import { QuickAddModalComponent } from './quick-add/quick-add-modal.component';
     CommandPaletteComponent,
     KeyboardShortcutsModalComponent,
     AppToastComponent,
+    AssistantPanelComponent,
     SidebarComponent,
     TopbarComponent,
     QuickAddModalComponent

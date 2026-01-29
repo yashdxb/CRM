@@ -1,4 +1,4 @@
-import { Component, NgZone } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -11,7 +11,7 @@ import { BreadcrumbsComponent } from '../../core/breadcrumbs';
 import { AuthShellComponent } from './auth-shell.component';
 import { readTokenContext } from '../../core/auth/token.utils';
 import { HttpErrorResponse } from '@angular/common/http';
-import { EMPTY, catchError, finalize, timeout } from 'rxjs';
+import { finalize, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-login-page',
@@ -42,7 +42,8 @@ export class LoginPage {
     private auth: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private zone: NgZone
+    private zone: NgZone,
+    private cdr: ChangeDetectorRef
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -73,6 +74,7 @@ export class LoginPage {
         this.loading = false;
         this.showErrors = true;
         this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
+        this.cdr.detectChanges();
       });
     }, 15000);
 
@@ -80,26 +82,14 @@ export class LoginPage {
       .login({ email: normalizedEmail, password: normalizedPassword })
       .pipe(
         timeout(15000),
-        catchError((err: unknown) => {
-          if (timedOut) {
-            return EMPTY;
-          }
-          this.zone.run(() => {
-            if ((err as { name?: string })?.name === 'TimeoutError') {
-              this.showErrors = true;
-              this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
-              return;
-            }
-            const httpError = err as HttpErrorResponse | null;
-            const messageBody = httpError?.error?.message || httpError?.error?.error || null;
-            this.showErrors = true;
-            this.error = this.buildErrorText(normalizedEmail, messageBody, httpError?.status);
-          });
-          return EMPTY;
-        }),
         finalize(() => {
           window.clearTimeout(timeoutId);
           this.loading = false;
+          if (!timedOut && !this.error && !readTokenContext()) {
+            this.showErrors = true;
+            this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Please check your credentials and try again.`;
+            this.cdr.detectChanges();
+          }
         })
       )
       .subscribe({
@@ -120,6 +110,24 @@ export class LoginPage {
         const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo');
         const target = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/app/dashboard';
         this.router.navigateByUrl(target);
+        },
+        error: (err: unknown) => {
+          if (timedOut) {
+            return;
+          }
+          this.zone.run(() => {
+            if ((err as { name?: string })?.name === 'TimeoutError') {
+              this.showErrors = true;
+              this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
+              this.cdr.detectChanges();
+              return;
+            }
+            const httpError = err as HttpErrorResponse | null;
+            const messageBody = httpError?.error?.message || httpError?.error?.error || null;
+            this.showErrors = true;
+            this.error = this.buildErrorText(normalizedEmail, messageBody, httpError?.status);
+            this.cdr.detectChanges();
+          });
         }
       });
   }

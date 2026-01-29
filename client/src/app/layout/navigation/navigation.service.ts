@@ -97,6 +97,9 @@ export class NavigationService {
 
   private loadCollapsedState(): boolean {
     try {
+      if (typeof window !== 'undefined' && window.innerWidth <= 840) {
+        return true;
+      }
       return localStorage.getItem(this.COLLAPSED_KEY) === 'true';
     } catch {
       return false;

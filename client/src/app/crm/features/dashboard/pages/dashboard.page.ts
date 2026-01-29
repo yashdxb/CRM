@@ -17,9 +17,6 @@ import { Activity } from '../../activities/models/activity.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CommandPaletteService } from '../../../../core/command-palette/command-palette.service';
 import { AppToastService } from '../../../../core/app-toast.service';
-import { AssistantService } from '../../../../core/assistant/assistant.service';
-import { AssistantChatMessage, AssistantChatService } from '../../../../core/assistant/assistant-chat.service';
-import { AuthService } from '../../../../core/auth/auth.service';
 
 type ChartId = 'revenue' | 'growth';
 
@@ -58,17 +55,6 @@ export class DashboardPage implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly commandPaletteService = inject(CommandPaletteService);
   private readonly toastService = inject(AppToastService);
-  private readonly assistantService = inject(AssistantService);
-  private readonly assistantChatService = inject(AssistantChatService);
-  private readonly authService = inject(AuthService);
-  protected readonly assistantVisible = this.assistantService.isVisible;
-  protected readonly assistantCollapsed = this.assistantService.isCollapsed;
-  protected readonly assistantMessages = signal<AssistantChatMessage[]>([]);
-  protected readonly assistantInput = signal('');
-  protected readonly assistantSending = signal(false);
-  protected readonly assistantError = signal<string | null>(null);
-  protected readonly assistantLoaded = signal(false);
-  protected readonly assistantGreeting = computed(() => this.buildAssistantGreeting());
   private readonly emptySummary: DashboardSummary = {
     totalCustomers: 0,
     leads: 0,
@@ -403,7 +389,6 @@ export class DashboardPage implements OnInit {
       this.persistLayoutPreferences();
     });
 
-    this.setupAssistantHistory();
   }
 
   protected onQuickAdd(): void {
@@ -413,55 +398,6 @@ export class DashboardPage implements OnInit {
   protected openLayoutDialog(): void {
     this.layoutDraft = this.getOrderedCards(this.layoutOrder);
     this.layoutDialogOpen = true;
-  }
-
-  protected toggleAssistantVisibility(visible: boolean): void {
-    this.assistantService.setVisible(visible);
-  }
-
-  protected toggleAssistantCollapsed(): void {
-    this.assistantService.toggleCollapsed();
-  }
-
-  protected restoreAssistantFromTopbar(): void {
-    this.assistantService.restoreFromTopbar();
-  }
-
-  protected hideAssistant(): void {
-    this.assistantService.setVisible(false);
-  }
-
-  protected sendAssistantMessage(): void {
-    const message = this.assistantInput().trim();
-    if (!message || this.assistantSending()) {
-      return;
-    }
-
-    this.assistantSending.set(true);
-    this.assistantError.set(null);
-    this.assistantInput.set('');
-
-    this.assistantChatService.sendMessage(message).subscribe({
-      next: response => {
-        this.assistantMessages.set(response.messages ?? []);
-        this.assistantSending.set(false);
-        this.assistantLoaded.set(true);
-      },
-      error: err => {
-        const fallback = typeof err?.error?.error === 'string'
-          ? err.error.error
-          : 'Assistant is unavailable right now. Please try again.';
-        this.assistantError.set(fallback);
-        this.assistantSending.set(false);
-      }
-    });
-  }
-
-  protected onAssistantInputKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      this.sendAssistantMessage();
-    }
   }
 
   protected isCardVisible(cardId: string): boolean {
@@ -1368,33 +1304,6 @@ export class DashboardPage implements OnInit {
     };
   }
 
-  private setupAssistantHistory(): void {
-    if (!isPlatformBrowser(this.platformId)) {
-      return;
-    }
-
-    effect(() => {
-      if (!this.assistantVisible()) {
-        return;
-      }
-
-      if (this.assistantLoaded()) {
-        return;
-      }
-
-      this.assistantChatService.getHistory().subscribe({
-        next: messages => {
-          this.assistantMessages.set(messages ?? []);
-          this.assistantLoaded.set(true);
-        },
-        error: () => {
-          this.assistantError.set('Unable to load assistant history.');
-          this.assistantLoaded.set(true);
-        }
-      });
-    });
-  }
-
   private buildDefaultSizeMap() {
     return {
       ...this.defaultCardSizes,
@@ -1402,11 +1311,4 @@ export class DashboardPage implements OnInit {
     };
   }
 
-  private buildAssistantGreeting(): string {
-    const hours = new Date().getHours();
-    const timeGreeting = hours < 12 ? 'Good morning' : hours < 18 ? 'Good afternoon' : 'Good evening';
-    const fullName = this.authService.currentUser()?.fullName ?? '';
-    const firstName = fullName.trim().split(' ')[0] || 'there';
-    return `Hi ${firstName}, ${timeGreeting}. How can I help you today? I can help with leads, accounts, opportunities, or activities. I’ll summarize and suggest next steps.`;
-  }
 }
