@@ -111,6 +111,8 @@ public static class DependencyInjection
         });
         services.AddScoped<ILeadScoringService>(sp => sp.GetRequiredService<OpenAiLeadScoringService>());
         services.Configure<FoundryAgentOptions>(configuration.GetSection(FoundryAgentOptions.SectionName));
+        services.AddSingleton(sp =>
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FoundryAgentOptions>>().Value);
         services.AddHttpClient<FoundryAgentClient>((sp, client) =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FoundryAgentOptions>>().Value;
