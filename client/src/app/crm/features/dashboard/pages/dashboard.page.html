@@ -705,6 +705,15 @@
             <span class="assistant-role">{{ message.role === 'user' ? 'You' : 'Assistant' }}</span>
             <p>{{ message.content }}</p>
           </div>
+          <div class="assistant-message thinking" *ngIf="assistantSending()">
+            <span class="assistant-role">Assistant</span>
+            <p>
+              Thinking
+              <span class="thinking-dots">
+                <span></span><span></span><span></span>
+              </span>
+            </p>
+          </div>
           <div class="assistant-message" *ngIf="assistantError()">
             <span class="assistant-role">Assistant</span>
             <p>{{ assistantError() }}</p>
