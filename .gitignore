@@ -41,6 +41,9 @@ yarn-error.log
 testem.log
 /typings
 __screenshots__/
+/client/test-results/
+/test-results/
+/scratch/
 
 # .NET build output
 /server/**/bin
