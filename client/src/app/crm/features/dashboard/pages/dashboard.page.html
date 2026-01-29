@@ -6,7 +6,7 @@
   <div class="grid-pattern"></div>
 </div>
 
-<div class="page-container dashboard" *ngIf="summary(); else loading">
+<div class="page-container dashboard">
   <div class="page-content">
     <!-- PrimeNG Breadcrumb -->
     <app-breadcrumbs></app-breadcrumbs>
@@ -960,20 +960,3 @@
     </div>
   </ng-template>
 </p-dialog>
-
-<ng-template #loading>
-  <div class="page-background">
-    <div class="animated-orb orb-1"></div>
-    <div class="animated-orb orb-2"></div>
-  </div>
-  <div class="page-container">
-    <div class="loading-state">
-      <div class="loading-spinner">
-        <div class="spinner-ring"></div>
-        <div class="spinner-ring"></div>
-        <div class="spinner-ring"></div>
-      </div>
-      <p>Loading your dashboard...</p>
-    </div>
-  </div>
-</ng-template>
