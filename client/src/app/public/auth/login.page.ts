@@ -11,7 +11,7 @@ import { BreadcrumbsComponent } from '../../core/breadcrumbs';
 import { AuthShellComponent } from './auth-shell.component';
 import { readTokenContext } from '../../core/auth/token.utils';
 import { HttpErrorResponse } from '@angular/common/http';
-import { finalize, timeout } from 'rxjs';
+import { EMPTY, catchError, finalize, timeout } from 'rxjs';
 
 @Component({
   selector: 'app-login-page',
@@ -80,6 +80,23 @@ export class LoginPage {
       .login({ email: normalizedEmail, password: normalizedPassword })
       .pipe(
         timeout(15000),
+        catchError((err: unknown) => {
+          if (timedOut) {
+            return EMPTY;
+          }
+          this.zone.run(() => {
+            if ((err as { name?: string })?.name === 'TimeoutError') {
+              this.showErrors = true;
+              this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
+              return;
+            }
+            const httpError = err as HttpErrorResponse | null;
+            const messageBody = httpError?.error?.message || httpError?.error?.error || null;
+            this.showErrors = true;
+            this.error = this.buildErrorText(normalizedEmail, messageBody, httpError?.status);
+          });
+          return EMPTY;
+        }),
         finalize(() => {
           window.clearTimeout(timeoutId);
           this.loading = false;
@@ -103,20 +120,6 @@ export class LoginPage {
         const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo');
         const target = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/app/dashboard';
         this.router.navigateByUrl(target);
-        },
-        error: (err: unknown) => {
-          if (timedOut) {
-            return;
-          }
-          if ((err as { name?: string })?.name === 'TimeoutError') {
-            this.showErrors = true;
-            this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
-            return;
-          }
-          const httpError = err as HttpErrorResponse | null;
-          const messageBody = httpError?.error?.message || httpError?.error?.error || null;
-          this.showErrors = true;
-          this.error = this.buildErrorText(normalizedEmail, messageBody, httpError?.status);
         }
       });
   }

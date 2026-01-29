@@ -169,10 +169,22 @@
   border-radius: $radius-lg;
   background: rgba(white, 0.4);
   border: 1px solid rgba($glass-border, 0.6);
+  position: relative;
+  z-index: 1;
 }
 
 .preference-row--compact {
   padding: $space-2 $space-3;
+}
+
+:host ::ng-deep .preference-row .p-toggleswitch {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+:host ::ng-deep .preference-row .p-toggleswitch * {
+  pointer-events: auto;
 }
 
 .preference-divider {

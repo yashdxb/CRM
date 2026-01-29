@@ -64,7 +64,7 @@ public sealed class AssistantChatService : IAssistantChatService
                 "Dev mode: the Foundry agent is not configured, so this is a local response. " +
                 "Set FoundryAgent settings to enable real replies.";
 
-            var userMessage = new AssistantMessage
+            var devUserMessage = new AssistantMessage
             {
                 TenantId = tenantId,
                 UserId = userId,
@@ -74,7 +74,7 @@ public sealed class AssistantChatService : IAssistantChatService
                 CreatedBy = "system"
             };
 
-            var assistantMessage = new AssistantMessage
+            var devAssistantMessage = new AssistantMessage
             {
                 TenantId = tenantId,
                 UserId = userId,
@@ -84,11 +84,11 @@ public sealed class AssistantChatService : IAssistantChatService
                 CreatedBy = "system"
             };
 
-            _dbContext.AssistantMessages.AddRange(userMessage, assistantMessage);
+            _dbContext.AssistantMessages.AddRange(devUserMessage, devAssistantMessage);
             await _dbContext.SaveChangesAsync(cancellationToken);
 
-            var history = await GetHistoryAsync(userId, cancellationToken, 50);
-            return new AssistantChatResult(devReply, history);
+            var devHistory = await GetHistoryAsync(userId, cancellationToken, 50);
+            return new AssistantChatResult(devReply, devHistory);
         }
 
         var thread = await _dbContext.AssistantThreads

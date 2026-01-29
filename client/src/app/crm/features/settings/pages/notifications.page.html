@@ -44,8 +44,9 @@
             </div>
           </div>
           <p-toggleSwitch
-            [ngModel]="preferences().inApp[option.key]"
-            (ngModelChange)="toggle('inApp', option.key, $event)"
+            [ngModel]="getPreference('inApp', option.key)"
+            (ngModelChange)="setPreference('inApp', option.key, $event)"
+            [ngModelOptions]="{ standalone: true }"
           ></p-toggleSwitch>
         </div>
       </div>
@@ -71,8 +72,8 @@
             </div>
           </div>
           <p-toggleSwitch
-            [ngModel]="preferences().alertsEnabled"
-            (ngModelChange)="toggleAlertsEnabled($event)"
+            [(ngModel)]="alertsEnabled"
+            [ngModelOptions]="{ standalone: true }"
           ></p-toggleSwitch>
         </div>
         <div class="preference-divider"></div>
@@ -87,8 +88,9 @@
             </div>
           </div>
           <p-toggleSwitch
-            [ngModel]="preferences().email[option.key]"
-            (ngModelChange)="toggle('email', option.key, $event)"
+            [ngModel]="getPreference('email', option.key)"
+            (ngModelChange)="setPreference('email', option.key, $event)"
+            [ngModelOptions]="{ standalone: true }"
           ></p-toggleSwitch>
         </div>
         <p class="panel-note" *ngIf="emailDisabled()">

@@ -50,17 +50,33 @@ export class NotificationsPage implements OnInit {
     });
   }
 
-  protected toggle(channel: NotificationChannel, type: NotificationType, enabled: boolean) {
+  protected toggle(channel: NotificationChannel, type: NotificationType, enabled: boolean | { checked?: boolean }) {
     const resolved = this.resolveToggleValue(enabled);
     this.notificationService.updatePreference(channel, type, resolved);
     this.syncPreferences();
   }
 
-  protected toggleAlertsEnabled(enabled: boolean) {
+  protected toggleAlertsEnabled(enabled: boolean | { checked?: boolean }) {
     const current = this.preferences();
     const resolved = this.resolveToggleValue(enabled);
     this.notificationService.setPreferences({ ...current, alertsEnabled: resolved });
     this.syncPreferences();
+  }
+
+  protected getPreference(channel: NotificationChannel, type: NotificationType): boolean {
+    return this.preferences()[channel][type];
+  }
+
+  protected setPreference(channel: NotificationChannel, type: NotificationType, enabled: boolean): void {
+    this.toggle(channel, type, enabled);
+  }
+
+  protected get alertsEnabled(): boolean {
+    return this.preferences().alertsEnabled;
+  }
+
+  protected set alertsEnabled(value: boolean) {
+    this.toggleAlertsEnabled(value);
   }
 
   protected resetPreferences() {

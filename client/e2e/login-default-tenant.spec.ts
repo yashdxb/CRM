@@ -60,3 +60,21 @@ test('login without tenant header still resolves default tenant', async ({ page,
   expect(tenantContext?.key).toBe('default');
   expect(tenantContext?.id).toBeTruthy();
 });
+
+test('invalid credentials show an error message', async ({ page }) => {
+  await page.goto('/login');
+
+  await page.locator('input[formcontrolname="email"]').fill('invalid.user@example.com');
+  await page.locator('input[formcontrolname="password"]').fill('InvalidPass123!');
+  const loginResponsePromise = page.waitForResponse((response) =>
+    response.url().includes('/api/auth/login')
+  );
+  await page.getByRole('button', { name: /sign in/i }).click();
+  const loginResponse = await loginResponsePromise;
+  expect(loginResponse.status()).toBe(401);
+  await expect(page).toHaveURL(/\/login/);
+
+  const error = page.locator('.error-message');
+  await expect(error).toBeVisible({ timeout: 20000 });
+  await expect(error).toContainText(/Unable to sign in/i);
+});
