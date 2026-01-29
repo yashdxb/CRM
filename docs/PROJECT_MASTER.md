@@ -773,6 +773,14 @@ Legend:
 16) Recently viewed lists in each module
 - Status: DONE
 
+17) AI Assistant (Foundry-backed internal chat)
+- Status: DONE
+- Evidence:
+  - API: `server/src/CRM.Enterprise.Api/Controllers/AssistantController.cs`
+  - Foundry client: `server/src/CRM.Enterprise.Infrastructure/AI/FoundryAgentClient.cs`
+  - Chat storage: `server/src/CRM.Enterprise.Domain/Entities/AssistantThread.cs`
+  - UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+
 ---
 
 ## Phase 2 vs Full B2B Sales Rep Flow (Gap Check)
@@ -888,6 +896,7 @@ Legend:
 ## 19) Resolved Conflicts (Applied)
 - Competitive gap vs current reality: email integration is **transactional only** today; full email sync/templates remain a gap.
 - Phase evidence paths updated to `client/src/app/crm/features/...` to match current structure.
+- Foundry agent 500s in Azure dev fixed by wiring `FoundryAgentOptions` into DI and setting App Service config (`FoundryAgent__*`).
 
 ## 20) Conflicts to Validate
 - Phase 2 says notification center is done, competitive gap previously marked it as missing. Current status is in-app toasts + preferences; confirm if the full notification center UI is complete.
