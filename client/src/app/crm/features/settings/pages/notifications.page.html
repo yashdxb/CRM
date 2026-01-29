@@ -60,6 +60,22 @@
         <span class="panel-pill">Live</span>
       </div>
       <div class="panel-body">
+        <div class="preference-row preference-row--compact">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-bell"></i>
+            </div>
+            <div>
+              <div class="preference-title">SLA + idle deal alerts</div>
+              <div class="preference-subtitle">Enable escalation emails for SLA breaches, idle deals, and coaching overdue tasks.</div>
+            </div>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="preferences().alertsEnabled"
+            (ngModelChange)="toggleAlertsEnabled($event)"
+          ></p-toggleSwitch>
+        </div>
+        <div class="preference-divider"></div>
         <div class="preference-row" *ngFor="let option of options">
           <div class="preference-info">
             <div class="preference-icon">

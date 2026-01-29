@@ -171,6 +171,16 @@
   border: 1px solid rgba($glass-border, 0.6);
 }
 
+.preference-row--compact {
+  padding: $space-2 $space-3;
+}
+
+.preference-divider {
+  height: 1px;
+  width: 100%;
+  background: rgba($glass-border, 0.6);
+}
+
 .preference-info {
   display: flex;
   align-items: center;

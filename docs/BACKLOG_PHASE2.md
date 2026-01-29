@@ -127,6 +127,15 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: triggered after inactivity threshold.
  - Status: Completed (alert worker sends SLA breach + idle deal alerts and logs audit events).
 
+## AI Assistant (Microsoft Foundry)
+- Internal CRM chat agent (read‑only MVP)  
+  - Scope: contextual Q&A on Leads/Accounts/Opportunities/Activities; answer + evidence + suggested next step; no write actions.  
+  - Acceptance: side panel in Command Center + record pages; tools scoped to current user/tenant; audit log of tool calls; PII safe responses.  
+- Action proposals (confirm‑to‑execute)  
+  - Scope: draft follow‑up email, create activity, update stage (requires explicit user confirmation).  
+  - Acceptance: action cards with confirm/cancel; RBAC‑gated tools; all executions audited.  
+ - Status: Planned (Phase 2 addition).
+
 ---
 
 # Completed Work (to date)

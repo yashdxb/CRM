@@ -45,7 +45,7 @@ public class NotificationPreferencesController : ControllerBase
             return Unauthorized();
         }
 
-        var payload = new NotificationPreferencesResponse(request.InApp, request.Email);
+        var payload = new NotificationPreferencesResponse(request.InApp, request.Email, request.AlertsEnabled);
         user.NotificationPreferencesJson = JsonSerializer.Serialize(payload, JsonOptions);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Ok(payload);
@@ -71,10 +71,21 @@ public class NotificationPreferencesController : ControllerBase
 
         try
         {
-            var prefs = JsonSerializer.Deserialize<NotificationPreferencesResponse>(
+            using var document = JsonDocument.Parse(user.NotificationPreferencesJson);
+            if (document.RootElement.TryGetProperty("alertsEnabled", out _))
+            {
+                var prefs = JsonSerializer.Deserialize<NotificationPreferencesResponse>(
+                    user.NotificationPreferencesJson,
+                    JsonOptions);
+                return prefs ?? DefaultPreferences();
+            }
+
+            var legacy = JsonSerializer.Deserialize<LegacyNotificationPreferencesResponse>(
                 user.NotificationPreferencesJson,
                 JsonOptions);
-            return prefs ?? DefaultPreferences();
+            return legacy is null
+                ? DefaultPreferences()
+                : new NotificationPreferencesResponse(legacy.InApp, legacy.Email, true);
         }
         catch
         {
@@ -86,6 +97,10 @@ public class NotificationPreferencesController : ControllerBase
     {
         var defaults = new NotificationChannelPreferences(true, true, true, true);
         var email = new NotificationChannelPreferences(false, false, false, false);
-        return new NotificationPreferencesResponse(defaults, email);
+        return new NotificationPreferencesResponse(defaults, email, true);
     }
+
+    private record LegacyNotificationPreferencesResponse(
+        NotificationChannelPreferences InApp,
+        NotificationChannelPreferences Email);
 }

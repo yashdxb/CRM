@@ -11,6 +11,9 @@ public class DashboardLayoutService : IDashboardLayoutService
     [
         "pipeline",
         "accounts",
+        "new-leads",
+        "at-risk-deals",
+        "manager-health",
         "activity-mix",
         "conversion",
         "top-performers",

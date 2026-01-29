@@ -51,7 +51,15 @@ export class NotificationsPage implements OnInit {
   }
 
   protected toggle(channel: NotificationChannel, type: NotificationType, enabled: boolean) {
-    this.notificationService.updatePreference(channel, type, enabled);
+    const resolved = this.resolveToggleValue(enabled);
+    this.notificationService.updatePreference(channel, type, resolved);
+    this.syncPreferences();
+  }
+
+  protected toggleAlertsEnabled(enabled: boolean) {
+    const current = this.preferences();
+    const resolved = this.resolveToggleValue(enabled);
+    this.notificationService.setPreferences({ ...current, alertsEnabled: resolved });
     this.syncPreferences();
   }
 
@@ -68,5 +76,15 @@ export class NotificationsPage implements OnInit {
         this.toastService.show('error', 'Unable to save notification preferences.', 3000);
       }
     });
+  }
+
+  private resolveToggleValue(event: boolean | { checked?: boolean } | null | undefined): boolean {
+    if (typeof event === 'boolean') {
+      return event;
+    }
+    if (event && typeof event === 'object' && typeof event.checked === 'boolean') {
+      return event.checked;
+    }
+    return false;
   }
 }

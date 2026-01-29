@@ -77,6 +77,8 @@ public class CrmDbContext : DbContext
     public DbSet<PriceList> PriceLists => Set<PriceList>();
     public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+    public DbSet<AssistantMessage> AssistantMessages => Set<AssistantMessage>();
+    public DbSet<AssistantThread> AssistantThreads => Set<AssistantThread>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -176,6 +178,13 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<PriceList>().ToTable("PriceLists", SupplyChainSchema);
         modelBuilder.Entity<PriceListItem>().ToTable("PriceListItems", SupplyChainSchema);
         modelBuilder.Entity<AuditEvent>().ToTable("AuditEvents", CrmSchema);
+        modelBuilder.Entity<AssistantMessage>().ToTable("AssistantMessages", CrmSchema);
+        modelBuilder.Entity<AssistantThread>().ToTable("AssistantThreads", CrmSchema);
+        modelBuilder.Entity<AssistantMessage>()
+            .HasIndex(message => new { message.TenantId, message.UserId, message.CreatedAtUtc });
+        modelBuilder.Entity<AssistantThread>()
+            .HasIndex(thread => new { thread.TenantId, thread.UserId })
+            .IsUnique();
         modelBuilder.Entity<AuditEvent>()
             .HasIndex(e => new { e.TenantId, e.EntityType, e.EntityId, e.CreatedAtUtc });
         modelBuilder.Entity<AuditEvent>()

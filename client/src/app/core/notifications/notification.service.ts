@@ -14,6 +14,7 @@ export interface NotificationChannelPreferences {
 export interface NotificationPreferences {
   inApp: NotificationChannelPreferences;
   email: NotificationChannelPreferences;
+  alertsEnabled: boolean;
 }
 
 export interface Notification {
@@ -239,7 +240,14 @@ export class NotificationService {
         return this.defaultPreferences();
       }
       const parsed = JSON.parse(stored) as NotificationPreferences;
-      return parsed?.inApp && parsed?.email ? parsed : this.defaultPreferences();
+      if (!parsed?.inApp || !parsed?.email) {
+        return this.defaultPreferences();
+      }
+      return {
+        inApp: parsed.inApp,
+        email: parsed.email,
+        alertsEnabled: typeof parsed.alertsEnabled === 'boolean' ? parsed.alertsEnabled : true
+      };
     } catch {
       return this.defaultPreferences();
     }
@@ -267,7 +275,8 @@ export class NotificationService {
         error: false,
         warning: false,
         info: false
-      }
+      },
+      alertsEnabled: true
     };
   }
 

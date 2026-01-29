@@ -26,6 +26,61 @@
   backdrop-filter: blur(4px);
 }
 
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px var(--md-space-7) 20px;
+  border-top: 1px solid rgba(99, 102, 241, 0.08);
+  color: #64748b;
+  font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+}
+
+.footer-left,
+.footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-brand {
+  font-weight: 700;
+  color: #334155;
+}
+
+.footer-divider {
+  opacity: 0.4;
+}
+
+.footer-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  color: #4f46e5;
+  background: rgba(99, 102, 241, 0.08);
+  font-weight: 600;
+}
+
+.footer-link {
+  color: #4f46e5;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .app-footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
 @media (max-width: 1024px) {
   .shell {
     grid-template-columns: 220px 1fr;

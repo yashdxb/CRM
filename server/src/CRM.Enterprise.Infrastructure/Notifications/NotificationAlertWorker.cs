@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Infrastructure.Notifications;
 
@@ -21,6 +22,7 @@ public sealed class NotificationAlertWorker : BackgroundService
     private static readonly TimeSpan IdleDealThreshold = TimeSpan.FromDays(30);
     private static readonly TimeSpan IdleAlertCooldown = TimeSpan.FromDays(7);
     private static readonly TimeSpan CoachingEscalationCooldown = TimeSpan.FromDays(7);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<NotificationAlertWorker> _logger;
@@ -103,12 +105,15 @@ public sealed class NotificationAlertWorker : BackgroundService
         {
             if (owners.TryGetValue(lead.OwnerId, out var owner))
             {
-                var subject = $"Lead SLA breach: {lead.FirstName} {lead.LastName}";
-                var body = BuildLeadSlaBody(lead, owner.FullName);
-                await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                if (IsAlertsEnabled(owner))
+                {
+                    var subject = $"Lead SLA breach: {lead.FirstName} {lead.LastName}";
+                    var body = BuildLeadSlaBody(lead, owner.FullName);
+                    await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                }
             }
 
-            foreach (var manager in managerUsers)
+            foreach (var manager in managerUsers.Where(IsAlertsEnabled))
             {
                 var subject = $"SLA breach (Lead): {lead.FirstName} {lead.LastName}";
                 var body = BuildLeadManagerBody(lead, manager.FullName);
@@ -176,12 +181,15 @@ public sealed class NotificationAlertWorker : BackgroundService
             var lastActivityAtUtc = lastActivities.GetValueOrDefault(opportunity.Id);
             if (owners.TryGetValue(opportunity.OwnerId, out var owner))
             {
-                var subject = $"Idle deal alert: {opportunity.Name}";
-                var body = BuildIdleDealBody(opportunity, lastActivityAtUtc, owner.FullName);
-                await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                if (IsAlertsEnabled(owner))
+                {
+                    var subject = $"Idle deal alert: {opportunity.Name}";
+                    var body = BuildIdleDealBody(opportunity, lastActivityAtUtc, owner.FullName);
+                    await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                }
             }
 
-            foreach (var manager in managerUsers)
+            foreach (var manager in managerUsers.Where(IsAlertsEnabled))
             {
                 var subject = $"Idle deal alert: {opportunity.Name}";
                 var body = BuildIdleDealManagerBody(opportunity, lastActivityAtUtc, manager.FullName);
@@ -250,7 +258,7 @@ public sealed class NotificationAlertWorker : BackgroundService
             var subject = $"Coaching SLA overdue: {opportunityName}";
             var body = $"<p>Coaching task for <strong>{opportunityName}</strong> assigned to {ownerName} is overdue. Due: {dueAt}.</p>";
 
-            foreach (var manager in managers)
+            foreach (var manager in managers.Where(IsAlertsEnabled))
             {
                 await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
             }
@@ -319,6 +327,34 @@ public sealed class NotificationAlertWorker : BackgroundService
         }
 
         await emailSender.SendAsync(toEmail, subject, htmlBody, htmlBody, cancellationToken);
+    }
+
+    private static bool IsAlertsEnabled(User user)
+    {
+        if (string.IsNullOrWhiteSpace(user.NotificationPreferencesJson))
+        {
+            return true;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(user.NotificationPreferencesJson);
+            if (document.RootElement.TryGetProperty("alertsEnabled", out var enabled))
+            {
+                return enabled.ValueKind switch
+                {
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    _ => true
+                };
+            }
+        }
+        catch
+        {
+            return true;
+        }
+
+        return true;
     }
 
     private static string BuildLeadSlaBody(Lead lead, string recipientName)

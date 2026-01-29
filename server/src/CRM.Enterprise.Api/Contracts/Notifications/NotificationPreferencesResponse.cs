@@ -10,8 +10,10 @@ public record NotificationChannelPreferences(
 
 public record NotificationPreferencesResponse(
     [property: JsonPropertyName("inApp")] NotificationChannelPreferences InApp,
-    [property: JsonPropertyName("email")] NotificationChannelPreferences Email);
+    [property: JsonPropertyName("email")] NotificationChannelPreferences Email,
+    [property: JsonPropertyName("alertsEnabled")] bool AlertsEnabled);
 
 public record UpdateNotificationPreferencesRequest(
     [property: JsonPropertyName("inApp")] NotificationChannelPreferences InApp,
-    [property: JsonPropertyName("email")] NotificationChannelPreferences Email);
+    [property: JsonPropertyName("email")] NotificationChannelPreferences Email,
+    [property: JsonPropertyName("alertsEnabled")] bool AlertsEnabled);

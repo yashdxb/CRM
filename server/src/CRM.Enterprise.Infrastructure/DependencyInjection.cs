@@ -26,6 +26,8 @@ using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Notifications;
 using CRM.Enterprise.Infrastructure.Leads;
+using CRM.Enterprise.Infrastructure.AI;
+using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Infrastructure.Activities;
 using CRM.Enterprise.Infrastructure.Opportunities;
 using CRM.Enterprise.Infrastructure.Customers;
@@ -82,7 +84,11 @@ public static class DependencyInjection
         services.AddSingleton<ServiceBusEmailQueue>();
         services.AddSingleton<ServiceBusApprovalQueue>();
         services.AddHostedService<EmailQueueWorker>();
-        services.AddHostedService<NotificationAlertWorker>();
+        var alertsEnabled = configuration.GetValue("Notifications:AlertsEnabled", true);
+        if (alertsEnabled)
+        {
+            services.AddHostedService<NotificationAlertWorker>();
+        }
         services.AddHostedService<RenewalAutomationWorker>();
         services.AddSingleton<IEmailSender>(sp =>
         {
@@ -104,6 +110,16 @@ public static class DependencyInjection
             }
         });
         services.AddScoped<ILeadScoringService>(sp => sp.GetRequiredService<OpenAiLeadScoringService>());
+        services.Configure<FoundryAgentOptions>(configuration.GetSection(FoundryAgentOptions.SectionName));
+        services.AddHttpClient<FoundryAgentClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FoundryAgentOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(options.Endpoint))
+            {
+                client.BaseAddress = new Uri(options.Endpoint.TrimEnd('/') + "/");
+            }
+        });
+        services.AddScoped<IAssistantChatService, AssistantChatService>();
         services.AddScoped<ILeadService, LeadService>();
         services.AddScoped<ILeadImportService, LeadImportService>();
         services.AddScoped<IActivityService, ActivityService>();

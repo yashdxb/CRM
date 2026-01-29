@@ -1,0 +1,175 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CRM Agent Tools",
+    "version": "1.0.0",
+    "description": "Read-only CRM tools for the internal AI agent."
+  },
+  "servers": [
+    {
+      "url": "https://crm-enterprise-api-dev-01122345.azurewebsites.net"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "AgentKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Agent-Key"
+      }
+    },
+    "schemas": {
+      "AgentLeadItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "nullable": true },
+          "company": { "type": "string", "nullable": true },
+          "status": { "type": "string", "nullable": true },
+          "ownerName": { "type": "string", "nullable": true },
+          "firstTouchDueAtUtc": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "AgentAccountItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "industry": { "type": "string", "nullable": true },
+          "lifecycleStage": { "type": "string", "nullable": true },
+          "ownerName": { "type": "string", "nullable": true },
+          "website": { "type": "string", "nullable": true }
+        }
+      },
+      "AgentOpportunityItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "accountName": { "type": "string", "nullable": true },
+          "stage": { "type": "string", "nullable": true },
+          "amount": { "type": "number", "format": "decimal" },
+          "currency": { "type": "string" },
+          "expectedCloseDate": { "type": "string", "format": "date-time", "nullable": true },
+          "forecastCategory": { "type": "string", "nullable": true },
+          "ownerName": { "type": "string", "nullable": true },
+          "isClosed": { "type": "boolean" },
+          "isWon": { "type": "boolean" }
+        }
+      },
+      "AgentActivityItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "subject": { "type": "string" },
+          "type": { "type": "string" },
+          "dueDateUtc": { "type": "string", "format": "date-time", "nullable": true },
+          "completedDateUtc": { "type": "string", "format": "date-time", "nullable": true },
+          "relatedEntityType": { "type": "string" },
+          "relatedEntityId": { "type": "string", "format": "uuid" },
+          "ownerName": { "type": "string", "nullable": true },
+          "outcome": { "type": "string", "nullable": true }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/agent/leads": {
+      "get": {
+        "summary": "Search leads",
+        "security": [{ "AgentKey": [] }],
+        "parameters": [
+          { "name": "X-Tenant-Key", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "query", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lead results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AgentLeadItem" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/accounts": {
+      "get": {
+        "summary": "Search accounts",
+        "security": [{ "AgentKey": [] }],
+        "parameters": [
+          { "name": "X-Tenant-Key", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "query", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AgentAccountItem" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/opportunities": {
+      "get": {
+        "summary": "Search opportunities",
+        "security": [{ "AgentKey": [] }],
+        "parameters": [
+          { "name": "X-Tenant-Key", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "query", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Opportunity results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AgentOpportunityItem" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/agent/activities": {
+      "get": {
+        "summary": "Search activities",
+        "security": [{ "AgentKey": [] }],
+        "parameters": [
+          { "name": "X-Tenant-Key", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "query", "in": "query", "required": false, "schema": { "type": "string" } },
+          { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Activity results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/AgentActivityItem" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
