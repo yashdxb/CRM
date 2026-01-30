@@ -68,6 +68,28 @@
   gap: $space-2;
 }
 
+.assistant-history {
+  border: 1px solid rgba(130, 170, 255, 0.25);
+  background: rgba(20, 28, 54, 0.6);
+  color: rgba(226, 236, 255, 0.9);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all $transition-fast;
+
+  &:hover {
+    border-color: rgba(130, 170, 255, 0.45);
+    color: #f8fbff;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+}
+
 .assistant-control {
   width: 28px;
   height: 28px;

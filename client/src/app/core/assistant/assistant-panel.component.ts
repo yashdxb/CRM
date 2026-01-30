@@ -1,6 +1,6 @@
 import { NgFor, NgIf } from '@angular/common';
 import { isPlatformBrowser } from '@angular/common';
-import { Component, computed, effect, inject, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 
@@ -27,7 +27,8 @@ export class AssistantPanelComponent {
   protected readonly assistantInput = signal('');
   protected readonly assistantSending = signal(false);
   protected readonly assistantError = signal<string | null>(null);
-  protected readonly assistantLoaded = signal(false);
+  protected readonly historyLoaded = signal(false);
+  protected readonly historyLoading = signal(false);
   protected readonly assistantGreeting = computed(() => this.buildAssistantGreeting());
 
   protected toggleAssistantCollapsed(): void {
@@ -52,7 +53,6 @@ export class AssistantPanelComponent {
       next: response => {
         this.assistantMessages.set(response.messages ?? []);
         this.assistantSending.set(false);
-        this.assistantLoaded.set(true);
       },
       error: err => {
         const fallback = typeof err?.error?.error === 'string'
@@ -64,6 +64,28 @@ export class AssistantPanelComponent {
     });
   }
 
+  protected loadHistory(): void {
+    if (this.historyLoaded() || this.historyLoading()) {
+      return;
+    }
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.historyLoading.set(true);
+    this.assistantChatService.getHistory().subscribe({
+      next: messages => {
+        this.assistantMessages.set(messages ?? []);
+        this.historyLoaded.set(true);
+        this.historyLoading.set(false);
+      },
+      error: () => {
+        this.assistantError.set('Unable to load assistant history.');
+        this.historyLoading.set(false);
+      }
+    });
+  }
+
   protected onAssistantInputKeydown(event: KeyboardEvent): void {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
@@ -71,32 +93,7 @@ export class AssistantPanelComponent {
     }
   }
 
-  constructor() {
-    effect(() => {
-      if (!isPlatformBrowser(this.platformId)) {
-        return;
-      }
-
-      if (!this.assistantVisible()) {
-        return;
-      }
-
-      if (this.assistantLoaded()) {
-        return;
-      }
-
-      this.assistantChatService.getHistory().subscribe({
-        next: messages => {
-          this.assistantMessages.set(messages ?? []);
-          this.assistantLoaded.set(true);
-        },
-        error: () => {
-          this.assistantError.set('Unable to load assistant history.');
-          this.assistantLoaded.set(true);
-        }
-      });
-    });
-  }
+  constructor() {}
 
   private buildAssistantGreeting(): string {
     const hours = new Date().getHours();
