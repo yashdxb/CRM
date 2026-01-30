@@ -95,6 +95,57 @@ export class AssistantPanelComponent {
 
   constructor() {}
 
+  protected formatAssistantMessage(content: string): string {
+    if (!content) {
+      return '';
+    }
+
+    let normalized = content.replace(/\r\n/g, '\n');
+    normalized = normalized.replace(/(\s|^)(\d+)\.\s+/g, '\n$2. ');
+    normalized = normalized.trim();
+
+    const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
+    type Block = { type: 'p'; text: string } | { type: 'list'; items: string[] };
+    const blocks: Block[] = [];
+
+    for (const line of lines) {
+      const listMatch = line.match(/^\d+\.\s+(.*)$/);
+      if (listMatch) {
+        const item = listMatch[1];
+        const last = blocks[blocks.length - 1];
+        if (last && last.type === 'list') {
+          last.items.push(item);
+        } else {
+          blocks.push({ type: 'list', items: [item] });
+        }
+      } else {
+        blocks.push({ type: 'p', text: line });
+      }
+    }
+
+    return blocks
+      .map((block) => {
+        if (block.type === 'list') {
+          const items = block.items.map((item) => `<li>${this.formatInline(item)}</li>`).join('');
+          return `<ol class=\"assistant-list\">${items}</ol>`;
+        }
+        return `<p>${this.formatInline(block.text)}</p>`;
+      })
+      .join('');
+  }
+
+  private formatInline(text: string): string {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    return escaped
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+
   private buildAssistantGreeting(): string {
     const hours = new Date().getHours();
     const timeGreeting = hours < 12 ? 'Good morning' : hours < 18 ? 'Good afternoon' : 'Good evening';
