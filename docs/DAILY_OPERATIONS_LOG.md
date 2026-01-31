@@ -57,6 +57,36 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ## Log
 
+**Date:** 2026-01-30  
+**Environment:** Dev (Azure AI Foundry / OpenAI)  
+**Owner:** Yasser / Eng
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 20:16 | Foundry / Fine-tune | Needed agent IDs and fine-tune guidance for CRM assistant | Medium | Product |
+| 20:17 | Foundry / Fine-tune | o4-mini fine-tune rejected (requires reinforcement) | Medium | Eng |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Agent IDs needed | No documented agent list | Retrieved agent list via Azure OpenAI endpoint | Azure OpenAI | Eng | Agent ID `asst_LQWvrfLaeN3KL8nzNyA6JwZH` |
+| o4-mini fine-tune failed | Model requires reinforcement fine-tuning, not supervised JSONL | Switched to supervised fine-tune on gpt-4o | Azure OpenAI | Eng | Job started successfully |
+| Training dataset creation | No dataset existed | Built JSONL dataset and expanded to 110 examples | `docs/ai/training/north-edge-crm-o4-mini-train.jsonl` | Eng | Uploaded to Azure OpenAI files |
+| Fine-tune kickoff | Needed supervised FT job | Started fine-tune with gpt-4o | Azure OpenAI | Eng | Job ID `ftjob-c24a70b97e6e4a4bbcf8c64ba8a14ebd` |
+| Deployment | Fine-tune completed | Deployed fine-tuned model as `crm-assistant-ft` and updated assistant model | Azure OpenAI | Eng | Assistant now uses fine-tuned deployment |
+| App config | Agent wiring required in API | Set FoundryAgent Endpoint + AgentId in dev config (API key remains env/secret) | `server/src/CRM.Enterprise.Api/appsettings.Development.json` | Eng | Endpoint + AgentId populated |
+| App Service config | Azure app settings needed for prod/dev API | Set FoundryAgent__Endpoint, FoundryAgent__AgentId, FoundryAgent__ApiVersion, FoundryAgent__ApiKey | Azure App Service `crm-enterprise-api-dev-01122345` | Eng | Values applied (masked in CLI output) |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Verify assistant responses in CRM UI | Eng | 2026-01-31 | Validate output quality vs baseline |
+
+### Summary for Project Master (If Verified)
+- Foundry fine-tune pipeline documented; supervised fine-tune started on gpt-4o due to o4-mini reinforcement requirement.
+ - Fine-tuned model deployed and assistant updated to use the new deployment.
+
 **Date:** 2026-01-24  
 **Environment:**  
 **Owner:**  

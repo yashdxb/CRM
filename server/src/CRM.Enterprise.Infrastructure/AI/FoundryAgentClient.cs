@@ -59,6 +59,73 @@ public sealed class FoundryAgentClient
 
     public async Task<string> RunAndGetReplyAsync(string threadId, CancellationToken cancellationToken)
     {
+        var runId = await CreateRunAsync(threadId, cancellationToken);
+        var runAttempts = 0;
+        var startedAt = DateTime.UtcNow;
+        var maxDuration = TimeSpan.FromSeconds(20);
+
+        while (runAttempts < 3)
+        {
+            runAttempts++;
+            var status = string.Empty;
+            for (var attempt = 0; attempt < _options.PollAttempts; attempt++)
+            {
+                using var statusRequest = new HttpRequestMessage(HttpMethod.Get, $"openai/threads/{threadId}/runs/{runId}?api-version={_options.ApiVersion}");
+                statusRequest.Headers.Add("api-key", _options.ApiKey);
+
+                using var statusResponse = await _httpClient.SendAsync(statusRequest, cancellationToken);
+                var statusPayload = await statusResponse.Content.ReadAsStringAsync(cancellationToken);
+                if (!statusResponse.IsSuccessStatusCode)
+                {
+                    throw new InvalidOperationException($"Foundry run status failed: {statusResponse.StatusCode} {statusPayload}");
+                }
+
+                using var statusDoc = JsonDocument.Parse(statusPayload);
+                status = statusDoc.RootElement.GetProperty("status").GetString() ?? string.Empty;
+                var (errorCode, errorMessage, retryAfterSeconds) = ExtractLastError(statusDoc.RootElement);
+
+                if (string.Equals(status, "completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    return await FetchLatestAssistantReplyAsync(threadId, cancellationToken);
+                }
+
+                if (string.Equals(status, "failed", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(status, "cancelled", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (string.Equals(errorCode, "rate_limit_exceeded", StringComparison.OrdinalIgnoreCase) && runAttempts < 3)
+                    {
+                        var delayMs = Math.Max(retryAfterSeconds * 1000, _options.PollDelayMs);
+                        if (DateTime.UtcNow - startedAt > maxDuration)
+                        {
+                            throw new InvalidOperationException("Foundry run timed out after rate limit; retry the request.");
+                        }
+                        await Task.Delay(delayMs, cancellationToken);
+                        runId = await CreateRunAsync(threadId, cancellationToken);
+                        break;
+                    }
+
+                    var detail = string.IsNullOrWhiteSpace(errorMessage) ? "Foundry run failed." : errorMessage;
+                    throw new InvalidOperationException($"Foundry run failed with status '{status}': {detail}");
+                }
+
+                await Task.Delay(_options.PollDelayMs, cancellationToken);
+                if (DateTime.UtcNow - startedAt > maxDuration)
+                {
+                    throw new InvalidOperationException("Foundry run timed out; retry the request.");
+                }
+            }
+
+            if (string.Equals(status, "completed", StringComparison.OrdinalIgnoreCase))
+            {
+                return await FetchLatestAssistantReplyAsync(threadId, cancellationToken);
+            }
+        }
+
+        throw new InvalidOperationException("Foundry run failed after retry attempts.");
+    }
+
+    private async Task<string> CreateRunAsync(string threadId, CancellationToken cancellationToken)
+    {
         var runBody = new { assistant_id = _options.AgentId };
         using var runRequest = new HttpRequestMessage(HttpMethod.Post, $"openai/threads/{threadId}/runs?api-version={_options.ApiVersion}");
         runRequest.Headers.Add("api-key", _options.ApiKey);
@@ -78,36 +145,30 @@ public sealed class FoundryAgentClient
             throw new InvalidOperationException("Foundry run id missing.");
         }
 
-        var status = string.Empty;
-        for (var attempt = 0; attempt < _options.PollAttempts; attempt++)
+        return runId;
+    }
+
+    private static (string? errorCode, string? errorMessage, int retryAfterSeconds) ExtractLastError(JsonElement root)
+    {
+        if (!root.TryGetProperty("last_error", out var lastError) || lastError.ValueKind == JsonValueKind.Null)
         {
-            using var statusRequest = new HttpRequestMessage(HttpMethod.Get, $"openai/threads/{threadId}/runs/{runId}?api-version={_options.ApiVersion}");
-            statusRequest.Headers.Add("api-key", _options.ApiKey);
-
-            using var statusResponse = await _httpClient.SendAsync(statusRequest, cancellationToken);
-            var statusPayload = await statusResponse.Content.ReadAsStringAsync(cancellationToken);
-            if (!statusResponse.IsSuccessStatusCode)
-            {
-                throw new InvalidOperationException($"Foundry run status failed: {statusResponse.StatusCode} {statusPayload}");
-            }
-
-            using var statusDoc = JsonDocument.Parse(statusPayload);
-            status = statusDoc.RootElement.GetProperty("status").GetString() ?? string.Empty;
-            if (string.Equals(status, "completed", StringComparison.OrdinalIgnoreCase))
-            {
-                return await FetchLatestAssistantReplyAsync(threadId, cancellationToken);
-            }
-
-            if (string.Equals(status, "failed", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(status, "cancelled", StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidOperationException($"Foundry run failed with status '{status}'.");
-            }
-
-            await Task.Delay(_options.PollDelayMs, cancellationToken);
+            return (null, null, 0);
         }
 
-        throw new InvalidOperationException($"Foundry run did not complete after {_options.PollAttempts} attempts (last status: '{status}').");
+        var code = lastError.TryGetProperty("code", out var codeProp) ? codeProp.GetString() : null;
+        var message = lastError.TryGetProperty("message", out var messageProp) ? messageProp.GetString() : null;
+        var retryAfterSeconds = 0;
+
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(message, @"retry after\\s+(\\d+)\\s+seconds", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out var parsed))
+            {
+                retryAfterSeconds = parsed;
+            }
+        }
+
+        return (code, message, retryAfterSeconds);
     }
 
     private async Task<string> FetchLatestAssistantReplyAsync(string threadId, CancellationToken cancellationToken)

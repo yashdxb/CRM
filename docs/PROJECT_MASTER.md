@@ -779,7 +779,8 @@ Legend:
   - API: `server/src/CRM.Enterprise.Api/Controllers/AssistantController.cs`
   - Foundry client: `server/src/CRM.Enterprise.Infrastructure/AI/FoundryAgentClient.cs`
   - Chat storage: `server/src/CRM.Enterprise.Domain/Entities/AssistantThread.cs`
-  - UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+  - UI: `client/src/app/core/assistant/assistant-panel.component.ts`
+  - Guide: `docs/ai/FOUNDARY_FINE_TUNING_GUIDE.md`
 
 ---
 
@@ -917,3 +918,11 @@ The following documents are superseded by this master file and should only be us
 - `docs/TEST_PLAN.md`
 - `docs/COMPETITIVE_GAP.md`
 - `docs/login-cors-fix.md`
+
+---
+
+## Documentation Discipline (Required)
+To keep the project auditable and clean:
+- **Daily operations must be logged** in `docs/DAILY_OPERATIONS_LOG.md` (errors, fixes, successes, follow‑ups).
+- **Project‑level decisions and verified outcomes** must be reflected in `docs/PROJECT_MASTER.md`.
+- **Supporting procedures/guides** should live in focused docs (e.g., `docs/ai/FOUNDARY_FINE_TUNING_GUIDE.md`) and be referenced here.

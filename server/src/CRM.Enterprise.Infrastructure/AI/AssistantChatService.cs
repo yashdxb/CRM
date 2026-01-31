@@ -9,6 +9,7 @@ namespace CRM.Enterprise.Infrastructure.AI;
 
 public sealed class AssistantChatService : IAssistantChatService
 {
+    private static readonly TimeSpan MinRequestInterval = TimeSpan.FromSeconds(10);
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly FoundryAgentClient _client;
@@ -51,6 +52,23 @@ public sealed class AssistantChatService : IAssistantChatService
         if (string.IsNullOrWhiteSpace(normalized))
         {
             throw new InvalidOperationException("Message cannot be empty.");
+        }
+
+        var lastMessageAt = await _dbContext.AssistantMessages
+            .AsNoTracking()
+            .Where(m => m.TenantId == tenantId && m.UserId == userId && !m.IsDeleted)
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .Select(m => (DateTime?)m.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (lastMessageAt.HasValue)
+        {
+            var elapsed = DateTime.UtcNow - lastMessageAt.Value;
+            if (elapsed < MinRequestInterval)
+            {
+                var waitSeconds = (int)Math.Ceiling((MinRequestInterval - elapsed).TotalSeconds);
+                throw new AssistantRateLimitException(Math.Max(waitSeconds, 1));
+            }
         }
 
         if (!_client.IsConfigured)
@@ -110,7 +128,15 @@ public sealed class AssistantChatService : IAssistantChatService
         }
 
         await _client.AddMessageAsync(thread.ThreadId, "user", normalized, cancellationToken);
-        var reply = await _client.RunAndGetReplyAsync(thread.ThreadId, cancellationToken);
+        string reply;
+        try
+        {
+            reply = await _client.RunAndGetReplyAsync(thread.ThreadId, cancellationToken);
+        }
+        catch (InvalidOperationException ex) when (TryParseRetryAfter(ex.Message, out var retryAfterSeconds))
+        {
+            throw new AssistantRateLimitException(retryAfterSeconds);
+        }
 
         var userMessage = new AssistantMessage
         {
@@ -139,5 +165,34 @@ public sealed class AssistantChatService : IAssistantChatService
 
         var history = await GetHistoryAsync(userId, cancellationToken, 50);
         return new AssistantChatResult(reply, history);
+    }
+
+    private static bool TryParseRetryAfter(string? message, out int retryAfterSeconds)
+    {
+        retryAfterSeconds = 0;
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        if (!message.Contains("rate_limit", StringComparison.OrdinalIgnoreCase)
+            && !message.Contains("rate limit", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(
+            message,
+            @"retry after\s+(\d+)\s+seconds",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (match.Success && int.TryParse(match.Groups[1].Value, out var parsed))
+        {
+            retryAfterSeconds = Math.Max(parsed, 1);
+            return true;
+        }
+
+        retryAfterSeconds = 10;
+        return true;
     }
 }

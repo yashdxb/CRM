@@ -52,9 +52,14 @@ public class AssistantController : ControllerBase
                 result.Reply,
                 result.Messages.Select(MapMessage).ToList()));
         }
+        catch (AssistantRateLimitException ex)
+        {
+            Response.Headers["Retry-After"] = ex.RetryAfterSeconds.ToString();
+            return StatusCode(429, new { error = ex.Message, retryAfterSeconds = ex.RetryAfterSeconds });
+        }
         catch (InvalidOperationException ex)
         {
-            return StatusCode(503, new { error = ex.Message });
+            return StatusCode(503, new { error = "Assistant is unavailable right now. Please try again shortly." });
         }
     }
 
