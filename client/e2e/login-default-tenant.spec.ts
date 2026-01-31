@@ -4,32 +4,53 @@ const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'htt
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
 
-async function loginWithoutTenantHeader(page, request) {
-  let response = await request.post(`${API_BASE_URL}/api/auth/login`, {
+async function parseJsonSafely(response) {
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+async function postLogin(request, headers) {
+  const response = await request.post(`${API_BASE_URL}/api/auth/login`, {
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      ...(headers ?? {})
     },
     data: {
       email: ADMIN_EMAIL,
       password: ADMIN_PASSWORD
-    }
+    },
+    timeout: 15000
   });
 
-  let payload = await response.json();
-  // Some local environments still require an explicit tenant header.
-  if (!payload?.accessToken) {
-    response = await request.post(`${API_BASE_URL}/api/auth/login`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Tenant-Key': 'default'
-      },
-      data: {
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD
-      }
-    });
-    payload = await response.json();
+  const payload = await parseJsonSafely(response);
+  return { response, payload };
+}
+
+async function loginWithoutTenantHeader(page, request) {
+  let payload = null;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const result = await postLogin(request);
+    payload = result.payload;
+    if (payload?.accessToken) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 750));
   }
+
+  // Some environments still require an explicit tenant header.
+  if (!payload?.accessToken) {
+    const result = await postLogin(request, { 'X-Tenant-Key': 'default' });
+    payload = result.payload;
+  }
+
   if (!payload?.accessToken) {
     throw new Error('Unable to authenticate against the API during the Playwright test.');
   }
