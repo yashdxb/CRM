@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { tap } from 'rxjs';
+import { mergeMap, retryWhen, tap, throwError, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { clearToken, saveToken } from './token.utils';
 import { getTenantKey, setTenantKey } from '../tenant/tenant.utils';
@@ -47,6 +47,17 @@ export class AuthService {
         headers: tenantKey ? { 'X-Tenant-Key': tenantKey } : undefined
       })
       .pipe(
+      retryWhen((errors) =>
+        errors.pipe(
+          mergeMap((err, retryIndex) => {
+            if (retryIndex >= 2 || !this.isTransientAuthFailure(err)) {
+              return throwError(() => err);
+            }
+            const delayMs = 800 * (retryIndex + 1);
+            return timer(delayMs);
+          })
+        )
+      ),
       tap((res) => {
         if (!res?.accessToken) {
           throw new Error('Missing access token.');
@@ -59,6 +70,11 @@ export class AuthService {
         this.presenceService.connect();
       })
     );
+  }
+
+  private isTransientAuthFailure(error: unknown): boolean {
+    const status = (error as { status?: number })?.status ?? 0;
+    return status === 0 || status === 502 || status === 503 || status === 504;
   }
 
   changePassword(currentPassword: string, newPassword: string) {
