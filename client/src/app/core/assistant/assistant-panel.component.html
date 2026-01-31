@@ -41,7 +41,7 @@
           [class.user]="message.role === 'user'"
         >
           <span class="assistant-role">{{ message.role === 'user' ? 'You' : 'Assistant' }}</span>
-          <div class="assistant-content" [innerHTML]="formatAssistantMessage(message.content)"></div>
+          <div class="assistant-content" [innerHTML]="formatAssistantMessage(message.displayContent ?? message.content)"></div>
         </div>
         <div class="assistant-message thinking" *ngIf="assistantSending()">
           <span class="assistant-role">Assistant</span>

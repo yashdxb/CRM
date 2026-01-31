@@ -30,6 +30,33 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ---
 
+**Date:** 2026-01-31  
+**Environment:** Prod (Azure App Service + Foundry)  
+**Owner:** Yasser / Eng
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 09:45 | Auth / Login | Prod login needed multiple clicks to succeed | High | Product |
+| 10:15 | Foundry | Clean up unused model deployments | Low | Eng |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Login takes multiple clicks | App Service Free tier cold starts (Always On unavailable) | Upgraded plan to B1 and enabled Always On | Azure App Service `crm-enterprise-api-dev-01122345` | Eng | Reduced cold starts for first-login |
+| Unused deployments | Legacy deployments left from fine-tune iteration | Deleted `crm-assistant-ft` + `text-embedding-3-small` deployments | Azure OpenAI `crm-ai-project-resource` | Eng | Only `gpt-4.1-mini` remains |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Monitor prod login click-through | Eng | 2026-02-01 | Confirm one-click login stability |
+
+### Summary for Project Master (If Verified)
+- App Service plan upgraded to B1 and Always On enabled to address login cold start.
+- Foundry deployments cleaned; only gpt-4.1-mini retained.
+
+---
+
 **Date:** 2026-01-24  
 **Environment:**  
 **Owner:**  

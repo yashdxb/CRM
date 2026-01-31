@@ -23,7 +23,7 @@ export class AssistantPanelComponent {
 
   protected readonly assistantVisible = this.assistantService.isVisible;
   protected readonly assistantCollapsed = this.assistantService.isCollapsed;
-  protected readonly assistantMessages = signal<AssistantChatMessage[]>([]);
+  protected readonly assistantMessages = signal<AssistantUiMessage[]>([]);
   protected readonly assistantInput = signal('');
   protected readonly assistantSending = signal(false);
   protected readonly assistantError = signal<string | null>(null);
@@ -45,14 +45,31 @@ export class AssistantPanelComponent {
       return;
     }
 
+    const userMessage: AssistantUiMessage = {
+      id: this.buildLocalId('user'),
+      role: 'user',
+      content: message,
+      createdAtUtc: new Date().toISOString()
+    };
+    this.assistantMessages.update(messages => [...messages, userMessage]);
     this.assistantSending.set(true);
     this.assistantError.set(null);
     this.assistantInput.set('');
 
     this.assistantChatService.sendMessage(message).subscribe({
       next: response => {
-        this.assistantMessages.set(response.messages ?? []);
+        const reply = response.reply ?? '';
+        const assistantMessage: AssistantUiMessage = {
+          id: this.buildLocalId('assistant'),
+          role: 'assistant',
+          content: reply,
+          displayContent: '',
+          isTyping: true,
+          createdAtUtc: new Date().toISOString()
+        };
+        this.assistantMessages.update(messages => [...messages, assistantMessage]);
         this.assistantSending.set(false);
+        this.runTypewriter(assistantMessage.id, reply);
       },
       error: err => {
         const fallback = typeof err?.error?.error === 'string'
@@ -75,7 +92,9 @@ export class AssistantPanelComponent {
     this.historyLoading.set(true);
     this.assistantChatService.getHistory().subscribe({
       next: messages => {
-        this.assistantMessages.set(messages ?? []);
+        this.assistantMessages.set((messages ?? []).map((message) => ({
+          ...message
+        })));
         this.historyLoaded.set(true);
         this.historyLoading.set(false);
       },
@@ -153,4 +172,46 @@ export class AssistantPanelComponent {
     const firstName = fullName.trim().split(' ')[0] || 'there';
     return `Hi ${firstName}, ${timeGreeting}. How can I help you today? I can help with leads, accounts, opportunities, or activities. I’ll summarize and suggest next steps.`;
   }
+
+  private runTypewriter(messageId: string, fullText: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.updateMessage(messageId, { displayContent: fullText, isTyping: false });
+      return;
+    }
+
+    const text = fullText ?? '';
+    if (!text) {
+      this.updateMessage(messageId, { displayContent: '', isTyping: false });
+      return;
+    }
+
+    let index = 0;
+    const step = () => {
+      index = Math.min(index + 2, text.length);
+      const snippet = text.slice(0, index);
+      this.updateMessage(messageId, { displayContent: snippet });
+      if (index >= text.length) {
+        clearInterval(timerId);
+        this.updateMessage(messageId, { isTyping: false });
+      }
+    };
+
+    const timerId = window.setInterval(step, 24);
+    step();
+  }
+
+  private updateMessage(id: string, patch: Partial<AssistantUiMessage>): void {
+    this.assistantMessages.update(messages =>
+      messages.map(message => (message.id === id ? { ...message, ...patch } : message))
+    );
+  }
+
+  private buildLocalId(prefix: string): string {
+    return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+}
+
+interface AssistantUiMessage extends AssistantChatMessage {
+  displayContent?: string;
+  isTyping?: boolean;
 }
