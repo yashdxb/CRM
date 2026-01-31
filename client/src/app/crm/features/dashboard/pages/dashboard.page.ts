@@ -19,6 +19,21 @@ import { CommandPaletteService } from '../../../../core/command-palette/command-
 import { AppToastService } from '../../../../core/app-toast.service';
 
 type ChartId = 'revenue' | 'growth';
+type PriorityStreamType = 'task' | 'lead' | 'deal';
+
+interface PriorityStreamItem {
+  id: string;
+  type: PriorityStreamType;
+  title: string;
+  subtitle: string;
+  status: string;
+  dueLabel: string;
+  dueClass: string;
+  dueColumn: string;
+  action: string;
+  meta: string[];
+  priorityScore: number;
+}
 
 @Component({
   selector: 'app-dashboard-page',
@@ -184,6 +199,103 @@ export class DashboardPage implements OnInit {
   protected readonly topPerformers = computed(() => this.summary()?.topPerformers ?? []);
   protected readonly newlyAssignedLeads = computed(() => this.summary()?.newlyAssignedLeads?.slice(0, 6) ?? []);
   protected readonly atRiskDeals = computed(() => this.summary()?.atRiskDeals?.slice(0, 6) ?? []);
+  protected readonly priorityStreamItems = computed(() => {
+    const items: PriorityStreamItem[] = [];
+    const tasks = this.myTasks();
+    const leads = this.newlyAssignedLeads();
+    const deals = this.atRiskDeals();
+
+    for (const task of tasks) {
+      const dueLabel = this.getTaskDueLabel(task);
+      const dueClass = this.getTaskDueClass(task);
+      items.push({
+        id: task.id,
+        type: 'task',
+        title: task.subject,
+        subtitle: task.relatedEntityName || `${task.type} task`,
+        status: task.status,
+        dueLabel,
+        dueClass,
+        dueColumn: dueClass === 'due-today' ? 'Due today' : dueLabel,
+        action: task.type === 'Call' ? 'Call now' : task.type === 'Email' ? 'Send email' : 'Complete task',
+        meta: [
+          task.dueDateUtc ? `Due ${this.formatShortDate(task.dueDateUtc)}` : 'No due date',
+          `Priority: ${this.getTaskPriorityLabel(task)}`
+        ],
+        priorityScore: this.getTaskPriorityScore(task)
+      });
+    }
+
+    for (const lead of leads) {
+      items.push({
+        id: lead.id,
+        type: 'lead',
+        title: lead.name,
+        subtitle: lead.company,
+        status: 'New lead',
+        dueLabel: 'New',
+        dueClass: 'due-today',
+        dueColumn: 'Due today',
+        action: 'Review & contact',
+        meta: [
+          lead.email ? lead.email : 'No email',
+          `Assigned ${this.formatShortDate(lead.createdAtUtc)}`
+        ],
+        priorityScore: 70
+      });
+    }
+
+    for (const deal of deals) {
+      items.push({
+        id: deal.id,
+        type: 'deal',
+        title: deal.name,
+        subtitle: deal.accountName,
+        status: deal.reason || 'At risk',
+        dueLabel: 'At risk',
+        dueClass: 'due-overdue',
+        dueColumn: deal.nextStepDueAtUtc ? `Due ${this.formatShortDate(deal.nextStepDueAtUtc)}` : 'No next step',
+        action: deal.reason?.toLowerCase().includes('missing next step')
+          ? 'Set next step'
+          : deal.reason?.toLowerCase().includes('next step overdue')
+            ? 'Update next step'
+            : 'Log activity',
+        meta: [
+          `Stage: ${deal.stage}`,
+          `Amount: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(deal.amount ?? 0)}`
+        ],
+        priorityScore: 65
+      });
+    }
+
+    return items.sort((a, b) => b.priorityScore - a.priorityScore);
+  });
+  protected readonly prioritySummary = computed(() => ({
+    overdue: this.getTaskSummaryCounts().overdue,
+    today: this.getTaskSummaryCounts().today,
+    newLeads: this.newlyAssignedLeads().length,
+    atRisk: this.atRiskDeals().length,
+    noNextStep: this.summary()?.opportunitiesWithoutNextStep ?? 0
+  }));
+  protected priorityFilter = signal<'all' | 'overdue' | 'today' | 'new-leads' | 'at-risk' | 'no-next-step'>('all');
+  protected readonly filteredPriorityStreamItems = computed(() => {
+    const items = this.priorityStreamItems();
+    const filter = this.priorityFilter();
+    if (filter === 'all') return items;
+    if (filter === 'overdue') {
+      return items.filter(item => item.type === 'task' && item.dueClass === 'due-overdue');
+    }
+    if (filter === 'today') {
+      return items.filter(item => item.type === 'task' && item.dueClass === 'due-today');
+    }
+    if (filter === 'new-leads') {
+      return items.filter(item => item.type === 'lead');
+    }
+    if (filter === 'no-next-step') {
+      return items.filter(item => item.type === 'deal' && item.status?.toLowerCase().includes('missing next step'));
+    }
+    return items.filter(item => item.type === 'deal');
+  });
   protected readonly activityBreakdown = computed(() => this.summary()?.activityBreakdown ?? []);
   protected readonly pipelineValue = computed(() => this.summary()?.pipelineValue ?? []);
   protected readonly managerPipelineByStage = computed(() => this.managerHealth().pipelineByStage ?? []);
@@ -294,8 +406,6 @@ export class DashboardPage implements OnInit {
   private readonly defaultCardSizes: Record<string, 'sm' | 'md' | 'lg'> = {
     pipeline: 'lg',
     accounts: 'md',
-    'new-leads': 'md',
-    'at-risk-deals': 'md',
     'manager-health': 'md',
     'activity-mix': 'sm',
     conversion: 'sm',
@@ -339,13 +449,11 @@ export class DashboardPage implements OnInit {
   protected readonly cardCatalog = [
     { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
     { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },
-    { id: 'new-leads', label: 'Newly Assigned Leads', icon: 'pi pi-user-plus' },
-    { id: 'at-risk-deals', label: 'At-Risk Deals', icon: 'pi pi-exclamation-triangle' },
     { id: 'manager-health', label: 'Pipeline Health', icon: 'pi pi-shield' },
     { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
     { id: 'conversion', label: 'Conversion Trend', icon: 'pi pi-percentage' },
     { id: 'top-performers', label: 'Top Performers', icon: 'pi pi-trophy' },
-    { id: 'my-tasks', label: 'My Tasks', icon: 'pi pi-check-square' },
+    { id: 'my-tasks', label: 'My Task', icon: 'pi pi-check-square' },
     { id: 'timeline', label: 'Activity Timeline', icon: 'pi pi-clock' },
     { id: 'health', label: 'Business Health', icon: 'pi pi-heart' }
   ];
@@ -385,7 +493,7 @@ export class DashboardPage implements OnInit {
       }
       this.layoutOrder = normalized;
       this.layoutSizes = this.buildDefaultSizeMap();
-      this.layoutDimensions = {};
+      this.layoutDimensions = dimensions ?? {};
       this.persistLayoutPreferences();
     });
 
@@ -456,7 +564,7 @@ export class DashboardPage implements OnInit {
           ? normalized
           : requested;
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = {};
+        this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
         this.toastService.show('success', 'Layout saved.', 2500);
       },
@@ -476,7 +584,7 @@ export class DashboardPage implements OnInit {
         const defaultOrder = this.dashboardData.getDefaultLayout();
         this.layoutOrder = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
-        this.layoutDimensions = {};
+        this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
       },
@@ -586,8 +694,10 @@ export class DashboardPage implements OnInit {
     element: HTMLElement,
     handle: 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw'
   ): void {
-    // Resizing disabled: keep cards at fixed dimensions.
-    return;
+    const cardId = element.dataset['cardId'] ?? null;
+    if (cardId !== 'my-tasks') {
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     const rect = element.getBoundingClientRect();
@@ -601,8 +711,7 @@ export class DashboardPage implements OnInit {
     const grid = element.closest('.dashboard-card-grid') as HTMLElement | null;
     const gridRect = grid?.getBoundingClientRect();
     const maxWidth = Math.max(minWidth, Math.floor(gridRect?.width ?? window.innerWidth));
-    const maxHeight = Math.max(minHeight, Math.floor(minHeight * 1.5));
-    const cardId = element.dataset['cardId'] ?? null;
+    const maxHeight = Math.max(minHeight, Math.floor(gridRect?.height ?? window.innerHeight));
     this.resizeState = {
       element,
       cardId,
@@ -662,14 +771,14 @@ export class DashboardPage implements OnInit {
       this.persistLayoutPreferences();
       this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe({
         next: response => {
-          this.layoutOrder = this.normalizeLayoutWithHidden(
-            response.cardOrder,
-            response.hiddenCards,
-            this.layoutOrder
-          );
-          this.layoutSizes = this.buildDefaultSizeMap();
-          this.layoutDimensions = {};
-          this.persistLayoutPreferences();
+        this.layoutOrder = this.normalizeLayoutWithHidden(
+          response.cardOrder,
+          response.hiddenCards,
+          this.layoutOrder
+        );
+        this.layoutSizes = this.buildDefaultSizeMap();
+        this.layoutDimensions = response.dimensions ?? {};
+        this.persistLayoutPreferences();
         },
         error: () => {
           // Keep local changes if server update fails.
@@ -752,6 +861,11 @@ export class DashboardPage implements OnInit {
   }
 
   protected getCardDimensions(cardId: string): { width?: string; height?: string } | null {
+    const dimensions = this.layoutDimensions[cardId];
+    if (!dimensions) return null;
+    if (cardId === 'my-tasks') {
+      return { height: `${dimensions.height}px` };
+    }
     return null;
   }
 
@@ -770,6 +884,12 @@ export class DashboardPage implements OnInit {
       this.showCustomerGrowthChart = visible;
     }
     this.persistChartVisibility();
+  }
+
+  protected setPriorityFilter(
+    filter: 'all' | 'overdue' | 'today' | 'new-leads' | 'at-risk' | 'no-next-step'
+  ): void {
+    this.priorityFilter.set(this.priorityFilter() === filter ? 'all' : filter);
   }
 
   private initCharts(summary: DashboardSummary): void {
@@ -1253,6 +1373,27 @@ export class DashboardPage implements OnInit {
       { overdue: 0, today: 0, week: 0 }
     );
   }
+
+  private getTaskPriorityScore(task: Activity): number {
+    if (!task.dueDateUtc) {
+      return task.status === 'Overdue' ? 95 : 60;
+    }
+    const due = this.parseUtcDate(task.dueDateUtc);
+    const today = new Date();
+    const dueDate = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const diffDays = Math.round((dueDate.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) return 100;
+    if (diffDays === 0) return 90;
+    if (diffDays <= 2) return 80;
+    if (diffDays <= 7) return 70;
+    return 60;
+  }
+
+  private formatShortDate(value: string): string {
+    const date = this.parseUtcDate(value);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
   
   private getGreeting(): string {
     const hour = new Date().getHours();
@@ -1299,7 +1440,7 @@ export class DashboardPage implements OnInit {
     return {
       cardOrder,
       sizes: this.buildDefaultSizeMap(),
-      dimensions: {},
+      dimensions: this.buildLayoutDimensionsPayload(),
       hiddenCards
     };
   }
@@ -1309,6 +1450,12 @@ export class DashboardPage implements OnInit {
       ...this.defaultCardSizes,
       ...this.defaultChartSizes
     };
+  }
+
+  private buildLayoutDimensionsPayload(): Record<string, { width: number; height: number }> {
+    const dimensions = this.layoutDimensions ?? {};
+    if (!dimensions['my-tasks']) return {};
+    return { 'my-tasks': dimensions['my-tasks'] };
   }
 
 }

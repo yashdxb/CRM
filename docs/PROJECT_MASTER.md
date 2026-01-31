@@ -185,7 +185,34 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 
 ---
 
-## 13) User Guide (Condensed)
+## 13) Roadmap & Benchmark (Current)
+Reference: `docs/USER_STORIES.md` → “Strategic Benchmark & Differentiation (Current Plan)”.
+
+### Positioning Goal
+Win on **execution discipline**, **speed to value**, and **AI‑guided next steps** rather than feature parity with enterprise CRMs.
+
+### Phase 1.5 (next 30–45 days)
+- Priority Stream finalization (filters, quick actions, next‑step enforcement)
+- Approval routing logic (role + amount + discount)
+- Rep activity metrics (calls/emails per rep, response time)
+
+### Phase 2 (next 60–90 days)
+- Lead scoring (rules‑based)
+- Workflow automation (stage triggers + task creation)
+- Forecast rollups (rep → manager)
+- Account hierarchy view
+- Email + calendar auto‑logging
+
+### Phase 3 (next 120–180 days)
+- Custom report builder
+- Win/loss analysis + competitor tracking
+- Next‑best‑action AI
+- Document management + e‑signature hooks
+- Mobile offline mode
+
+---
+
+## 14) User Guide (Condensed)
 
 ### Core Flow
 - Lead -> qualify -> activity -> convert -> opportunity -> stage updates -> win/loss.

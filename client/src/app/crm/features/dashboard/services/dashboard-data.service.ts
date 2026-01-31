@@ -9,15 +9,13 @@ export class DashboardDataService {
   private readonly http = inject(HttpClient);
 
   private readonly defaultLayout = [
+    'my-tasks',
     'pipeline',
     'accounts',
-    'new-leads',
-    'at-risk-deals',
     'manager-health',
     'activity-mix',
     'conversion',
     'top-performers',
-    'my-tasks',
     'timeline',
     'health'
   ];

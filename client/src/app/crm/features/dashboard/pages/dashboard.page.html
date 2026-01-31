@@ -119,70 +119,6 @@
       </div>
     </section>
 
-    <!-- Charts Row -->
-    <section
-      class="charts-row"
-      cdkDropList
-      [cdkDropListData]="chartOrder"
-      (cdkDropListDropped)="onChartDrop($event)"
-      cdkDropListOrientation="horizontal"
-    >
-      <ng-container *ngFor="let chartId of chartOrder">
-        <article
-          *ngIf="isChartVisible(chartId)"
-          class="glass-card chart-card chart-card--resizable card-resizable"
-          cdkDrag
-          #chartCard
-          [attr.data-card-id]="chartId"
-          [ngClass]="[getChartSizeClass(chartId), chartId === 'revenue' ? 'large' : '']"
-          [ngStyle]="getCardDimensions(chartId)"
-          [attr.data-min-width]="chartId === 'revenue' ? 320 : 280"
-          [attr.data-min-height]="chartId === 'revenue' ? 320 : 280"
-        >
-          <ng-container [ngSwitch]="chartId">
-            <ng-container *ngSwitchCase="'revenue'">
-              <div class="card-header">
-                <h3 class="card-title">
-                  <i class="pi pi-chart-line"></i>
-                  Revenue Trend
-                </h3>
-                <div class="card-actions">
-                  <div class="chart-legend">
-                    <span class="legend-item primary">
-                      <span class="legend-dot"></span>
-                      Revenue
-                    </span>
-                  </div>
-                  <ng-container *ngTemplateOutlet="chartControls; context: { $implicit: chartId }"></ng-container>
-                </div>
-              </div>
-              <div class="card-body">
-                <div class="chart-container">
-                  <p-chart type="line" [data]="revenueChartData" [options]="revenueChartOptions" height="100%"></p-chart>
-                </div>
-              </div>
-            </ng-container>
-            <ng-container *ngSwitchCase="'growth'">
-              <div class="card-header">
-                <h3 class="card-title">
-                  <i class="pi pi-users"></i>
-                  Customer Growth
-                </h3>
-                <div class="card-actions">
-                  <ng-container *ngTemplateOutlet="chartControls; context: { $implicit: chartId }"></ng-container>
-                </div>
-              </div>
-              <div class="card-body">
-                <div class="chart-container">
-                  <p-chart type="bar" [data]="customerGrowthData" [options]="customerGrowthOptions" height="100%"></p-chart>
-                </div>
-              </div>
-            </ng-container>
-          </ng-container>
-        </article>
-      </ng-container>
-    </section>
-
     <!-- Main Grid: Command Center Cards -->
     <section
       class="dashboard-card-grid"
@@ -191,20 +127,21 @@
       (cdkDropListDropped)="onCardDrop($event)"
       cdkDropListOrientation="mixed"
     >
-      <article
-        class="glass-card dashboard-card card-resizable"
-        *ngFor="let cardId of layoutOrder"
-        [ngSwitch]="cardId"
-        [ngClass]="getCardSizeClass(cardId)"
-        cdkDrag
-        (cdkDragStarted)="onCardDragStart($event)"
-        (cdkDragEnded)="onCardDragEnd($event)"
-        #dashboardCard
-        [attr.data-card-id]="cardId"
-        [ngStyle]="getCardDimensions(cardId)"
-        data-min-width="280"
-        data-min-height="220"
-      >
+        <article
+          class="glass-card dashboard-card card-resizable"
+          *ngFor="let cardId of layoutOrder"
+          [ngSwitch]="cardId"
+          [ngClass]="getCardSizeClass(cardId)"
+          [class.my-tasks-card]="cardId === 'my-tasks'"
+          cdkDrag
+          (cdkDragStarted)="onCardDragStart($event)"
+          (cdkDragEnded)="onCardDragEnd($event)"
+          #dashboardCard
+          [attr.data-card-id]="cardId"
+          [ngStyle]="getCardDimensions(cardId)"
+          data-min-width="280"
+          [attr.data-min-height]="cardId === 'my-tasks' ? 360 : 220"
+        >
         <!-- Pipeline Value Chart -->
         <ng-container *ngSwitchCase="'pipeline'">
           <div class="card-header">
@@ -275,70 +212,7 @@
           </div>
         </ng-container>
 
-        <!-- Newly Assigned Leads -->
-        <ng-container *ngSwitchCase="'new-leads'">
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="pi pi-user-plus"></i>
-              Newly Assigned Leads
-            </h3>
-            <div class="card-actions">
-              <span class="card-badge" *ngIf="newlyAssignedLeads().length">{{ newlyAssignedLeads().length }} new</span>
-              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
-            </div>
-          </div>
-          <div class="card-body" *ngIf="newlyAssignedLeads().length; else emptyNewLeads">
-            <div class="lead-list">
-              <div class="lead-row" *ngFor="let lead of newlyAssignedLeads()">
-                <div class="lead-avatar">{{ lead.name.charAt(0) }}</div>
-                <div class="lead-info">
-                  <div class="lead-name">{{ lead.name }}</div>
-                  <div class="lead-meta">
-                    <span>{{ lead.company || 'No company' }}</span>
-                    <span class="separator">•</span>
-                    <span>{{ lead.status }}</span>
-                  </div>
-                </div>
-                <div class="lead-time">
-                  {{ asLocalDate(lead.createdAtUtc) | date: 'MMM d' }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </ng-container>
-
-        <!-- At-Risk Deals -->
-        <ng-container *ngSwitchCase="'at-risk-deals'">
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="pi pi-exclamation-triangle"></i>
-              At-Risk Deals
-            </h3>
-            <div class="card-actions">
-              <span class="card-badge danger" *ngIf="atRiskDeals().length">{{ atRiskDeals().length }} flagged</span>
-              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
-            </div>
-          </div>
-          <div class="card-body" *ngIf="atRiskDeals().length; else emptyAtRiskDeals">
-            <div class="risk-list">
-              <div class="risk-row" *ngFor="let deal of atRiskDeals()">
-                <div class="risk-info">
-                  <div class="risk-name">{{ deal.name }}</div>
-                  <div class="risk-meta">
-                    <span>{{ deal.accountName }}</span>
-                    <span class="separator">•</span>
-                    <span>{{ deal.stage }}</span>
-                  </div>
-                  <div class="risk-reason">
-                    <i class="pi pi-flag"></i>
-                    {{ deal.reason }}
-                  </div>
-                </div>
-                <div class="risk-amount">{{ deal.amount | currency:'USD':'symbol':'1.0-0' }}</div>
-              </div>
-            </div>
-          </div>
-        </ng-container>
+        <!-- Cards merged into Priority Stream -->
 
         <!-- Manager Pipeline Health -->
         <ng-container *ngSwitchCase="'manager-health'">
@@ -489,71 +363,110 @@
 
         <!-- My Tasks -->
         <ng-container *ngSwitchCase="'my-tasks'">
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="pi pi-check-square"></i>
-              My Tasks
-            </h3>
+          <div class="card-header priority-header">
+            <div class="priority-header-left">
+              <button class="priority-filter">
+                <span class="priority-filter-label">Tasks:</span>
+                <span class="priority-filter-value">Assigned to Me</span>
+                <i class="pi pi-chevron-down"></i>
+              </button>
+            </div>
+            <div class="priority-header-center">
+              <h3 class="priority-header-title">My Tasks</h3>
+              <span class="priority-header-subtitle">Priority Stream</span>
+            </div>
             <div class="card-actions">
-              <span class="card-badge" *ngIf="myTasks().length">{{ myTasks().length }} open</span>
+              <span class="card-badge" *ngIf="priorityStreamItems().length">{{ priorityStreamItems().length }} items</span>
               <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
             </div>
           </div>
-          <div class="card-body" *ngIf="myTasks().length; else emptyMyTasks">
-            <div class="task-summary">
-              <span class="summary-pill overdue" *ngIf="getTaskSummaryCounts().overdue">
+          <div class="card-body" *ngIf="filteredPriorityStreamItems().length; else emptyMyTasks">
+            <div class="priority-summary">
+              <button
+                type="button"
+                class="priority-summary-card overdue"
+                [class.active]="priorityFilter() === 'overdue'"
+                *ngIf="prioritySummary().overdue"
+                (click)="setPriorityFilter('overdue')"
+              >
                 <i class="pi pi-exclamation-circle"></i>
-                {{ getTaskSummaryCounts().overdue }} overdue
-              </span>
-              <span class="summary-pill today" *ngIf="getTaskSummaryCounts().today">
+                <span>Overdue</span>
+                <strong>{{ prioritySummary().overdue }}</strong>
+              </button>
+              <button
+                type="button"
+                class="priority-summary-card today"
+                [class.active]="priorityFilter() === 'today'"
+                *ngIf="prioritySummary().today"
+                (click)="setPriorityFilter('today')"
+              >
                 <i class="pi pi-calendar"></i>
-                {{ getTaskSummaryCounts().today }} due today
-              </span>
-              <span class="summary-pill week" *ngIf="getTaskSummaryCounts().week">
-                <i class="pi pi-clock"></i>
-                {{ getTaskSummaryCounts().week }} this week
-              </span>
+                <span>Due Today</span>
+                <strong>{{ prioritySummary().today }}</strong>
+              </button>
+              <button
+                type="button"
+                class="priority-summary-card warn"
+                [class.active]="priorityFilter() === 'at-risk'"
+                *ngIf="prioritySummary().atRisk"
+                (click)="setPriorityFilter('at-risk')"
+              >
+                <i class="pi pi-flag"></i>
+                <span>At-Risk Deals</span>
+                <strong>{{ prioritySummary().atRisk }}</strong>
+              </button>
+              <button
+                type="button"
+                class="priority-summary-card info"
+                [class.active]="priorityFilter() === 'no-next-step'"
+                *ngIf="prioritySummary().noNextStep"
+                (click)="setPriorityFilter('no-next-step')"
+              >
+                <i class="pi pi-flag-fill"></i>
+                <span>No Next Step</span>
+                <strong>{{ prioritySummary().noNextStep }}</strong>
+              </button>
             </div>
-            <div class="task-list">
-              <div class="task-item" *ngFor="let task of myTasks()">
-                <div class="task-marker" [class.overdue]="task.status === 'Overdue'">
-                  <i class="pi pi-check-square"></i>
-                </div>
-                <div class="task-details">
-                  <div class="task-title">{{ task.subject }}</div>
-                  <div class="task-meta">
-                    <span *ngIf="task.relatedEntityName">
-                      <i class="pi pi-link"></i>
-                      {{ task.relatedEntityName }}
-                    </span>
-                    <span *ngIf="task.dueDateUtc">
-                      <i class="pi pi-calendar"></i>
-                      {{ asLocalDate(task.dueDateUtc) | date: 'MMM d, h:mm a' }}
-                    </span>
-                    <span>
-                      <i class="pi pi-flag"></i>
-                      {{ getTaskPriorityLabel(task) }}
-                    </span>
-                    <span *ngIf="task.ownerName">
-                      <i class="pi pi-user"></i>
-                      {{ task.ownerName }}
-                    </span>
+            <div class="priority-list">
+              <div class="priority-row-head">
+                <span>Task</span>
+                <span>Due Today</span>
+                <span>Recommended action</span>
+                <span>Status</span>
+              </div>
+              <div class="priority-item" *ngFor="let item of filteredPriorityStreamItems()">
+                <div class="priority-main">
+                  <div class="priority-marker" [class.overdue]="item.type === 'deal' || item.dueClass === 'due-overdue'">
+                    <i class="pi" [ngClass]="{
+                      'pi-check-square': item.type === 'task',
+                      'pi-user-plus': item.type === 'lead',
+                      'pi-flag': item.type === 'deal'
+                    }"></i>
                   </div>
-                  <div class="task-badges">
-                    <span class="task-pill" [ngClass]="getTaskDueClass(task)">
-                      {{ getTaskDueLabel(task) }}
-                    </span>
-                    <span class="task-pill status-pill" [class.overdue]="task.status === 'Overdue'">
-                      {{ task.status }}
-                    </span>
+                  <div class="priority-details">
+                    <div class="priority-title">{{ item.title }}</div>
+                    <div class="priority-subtitle">{{ item.subtitle }}</div>
+                    <div class="priority-meta">
+                      <span *ngFor="let meta of item.meta">{{ meta }}</span>
+                    </div>
                   </div>
                 </div>
-                <span class="task-status" [class.overdue]="task.status === 'Overdue'">
-                  {{ task.status }}
-                </span>
+                <div class="priority-due">
+                  <span class="task-pill" [ngClass]="item.dueClass">{{ item.dueColumn }}</span>
+                </div>
+                <div class="priority-action">
+                  <button type="button" class="btn-glass btn-sm">{{ item.action }}</button>
+                </div>
+                <div class="priority-status-col">
+                  <span class="task-pill status-pill" [class.overdue]="item.type === 'deal'">{{ item.status }}</span>
+                </div>
               </div>
             </div>
           </div>
+          <div
+            class="resize-handle handle-s"
+            (mousedown)="startResize($event, dashboardCard, 's')"
+          ></div>
         </ng-container>
 
         <!-- Activity Timeline -->
@@ -663,6 +576,70 @@
         <!-- Resizing disabled: keep cards at consistent sizes, allow only drag ordering. -->
       </article>
     </section>
+
+    <!-- Charts Row -->
+    <section
+      class="charts-row"
+      cdkDropList
+      [cdkDropListData]="chartOrder"
+      (cdkDropListDropped)="onChartDrop($event)"
+      cdkDropListOrientation="horizontal"
+    >
+      <ng-container *ngFor="let chartId of chartOrder">
+        <article
+          *ngIf="isChartVisible(chartId)"
+          class="glass-card chart-card chart-card--resizable card-resizable"
+          cdkDrag
+          #chartCard
+          [attr.data-card-id]="chartId"
+          [ngClass]="[getChartSizeClass(chartId), chartId === 'revenue' ? 'large' : '']"
+          [ngStyle]="getCardDimensions(chartId)"
+          [attr.data-min-width]="chartId === 'revenue' ? 320 : 280"
+          [attr.data-min-height]="chartId === 'revenue' ? 320 : 280"
+        >
+          <ng-container [ngSwitch]="chartId">
+            <ng-container *ngSwitchCase="'revenue'">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="pi pi-chart-line"></i>
+                  Revenue Trend
+                </h3>
+                <div class="card-actions">
+                  <div class="chart-legend">
+                    <span class="legend-item primary">
+                      <span class="legend-dot"></span>
+                      Revenue
+                    </span>
+                  </div>
+                  <ng-container *ngTemplateOutlet="chartControls; context: { $implicit: chartId }"></ng-container>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <p-chart type="line" [data]="revenueChartData" [options]="revenueChartOptions" height="100%"></p-chart>
+                </div>
+              </div>
+            </ng-container>
+            <ng-container *ngSwitchCase="'growth'">
+              <div class="card-header">
+                <h3 class="card-title">
+                  <i class="pi pi-users"></i>
+                  Customer Growth
+                </h3>
+                <div class="card-actions">
+                  <ng-container *ngTemplateOutlet="chartControls; context: { $implicit: chartId }"></ng-container>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="chart-container">
+                  <p-chart type="bar" [data]="customerGrowthData" [options]="customerGrowthOptions" height="100%"></p-chart>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+        </article>
+      </ng-container>
+    </section>
   </div>
 </div>
 
@@ -674,8 +651,8 @@
     <div class="empty-icon">
       <i class="pi pi-check-square"></i>
     </div>
-    <h4>No tasks assigned</h4>
-    <p>New tasks will show up here</p>
+    <h4>No priority items</h4>
+    <p>Tasks, new leads, and at‑risk deals will appear here</p>
   </div>
 </ng-template>
 
@@ -689,25 +666,6 @@
   </div>
 </ng-template>
 
-<ng-template #emptyNewLeads>
-  <div class="empty-state">
-    <div class="empty-icon">
-      <i class="pi pi-user-plus"></i>
-    </div>
-    <h4>No new lead assignments</h4>
-    <p>Newly assigned leads will appear here</p>
-  </div>
-</ng-template>
-
-<ng-template #emptyAtRiskDeals>
-  <div class="empty-state">
-    <div class="empty-icon">
-      <i class="pi pi-shield"></i>
-    </div>
-    <h4>All deals on track</h4>
-    <p>No at-risk opportunities right now</p>
-  </div>
-</ng-template>
 
 <ng-template #emptyManagerHealth>
   <div class="empty-state">

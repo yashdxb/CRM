@@ -907,6 +907,9 @@
 // Resize handles for command center card sizing.
 .resize-handle {
   display: none;
+  position: absolute;
+  z-index: 4;
+  background: transparent;
 }
 
 .resize-handle.handle-n,
@@ -1590,8 +1593,136 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 .my-tasks-card {
+  grid-column: 1 / -1;
+  min-height: 420px;
+
   .card-body {
     padding: $space-4 $space-5;
+    display: flex;
+    flex-direction: column;
+    gap: $space-3;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .task-list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding-right: $space-2;
+  }
+
+  .resize-handle {
+    display: block;
+  }
+}
+
+.priority-header {
+  align-items: center;
+  padding-right: calc(#{$space-5} + 120px);
+  gap: $space-4;
+}
+
+.priority-header-left {
+  flex: 0 0 auto;
+}
+
+.priority-header-center {
+  flex: 1;
+  text-align: center;
+}
+
+.priority-header-title {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $text-primary;
+  margin: 0;
+}
+
+.priority-header-subtitle {
+  display: block;
+  margin-top: 2px;
+  font-size: $font-size-xs;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $text-muted;
+}
+
+.priority-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  border-radius: $radius-lg;
+  border: 1px solid rgba($glass-border, 0.7);
+  background: rgba(255, 255, 255, 0.85);
+  padding: $space-2 $space-3;
+  font-size: $font-size-sm;
+  color: $text-primary;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+
+  .priority-filter-label {
+    font-weight: 600;
+  }
+
+  .priority-filter-value {
+    color: $text-secondary;
+  }
+}
+
+.priority-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: $space-3;
+}
+
+.priority-summary-card {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-3 $space-4;
+  border-radius: $radius-lg;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba($glass-border, 0.4);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.1);
+  cursor: pointer;
+  transition: transform $transition-fast, box-shadow $transition-fast, border-color $transition-fast;
+
+  strong {
+    margin-left: auto;
+    font-size: $font-size-lg;
+  }
+
+  &.overdue {
+    background: #e64b3c;
+    border-color: #d44235;
+  }
+
+  &.today {
+    background: #f2994a;
+    border-color: #e58a39;
+  }
+
+  &.warn {
+    background: #f2c94c;
+    border-color: #e0b841;
+    color: #1f2937;
+  }
+
+  &.info {
+    background: #2f80ed;
+    border-color: #2a73d6;
+  }
+
+  &.active {
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+    transform: translateY(-1px);
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
   }
 }
 
@@ -1754,6 +1885,101 @@
     background: rgba($danger, 0.12);
     color: $danger;
   }
+}
+
+.priority-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: $space-2;
+}
+
+.priority-row-head {
+  display: grid;
+  grid-template-columns: 2.4fr 0.9fr 1.2fr 0.9fr;
+  gap: $space-3;
+  padding: $space-2 $space-2;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: $text-muted;
+  border-bottom: 1px dotted rgba($glass-border, 0.9);
+}
+
+.priority-item {
+  display: grid;
+  grid-template-columns: 2.4fr 0.9fr 1.2fr 0.9fr;
+  gap: $space-2;
+  align-items: center;
+  padding: $space-2 $space-2;
+  border-bottom: 1px dotted rgba($glass-border, 0.9);
+}
+
+.priority-main {
+  display: flex;
+  gap: $space-3;
+  align-items: flex-start;
+}
+
+.priority-marker {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba($primary, 0.12);
+  color: $primary;
+
+  &.overdue {
+    background: rgba($danger, 0.12);
+    color: $danger;
+  }
+}
+
+.priority-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.priority-title {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $text-primary;
+  margin-bottom: 2px;
+}
+
+.priority-subtitle {
+  font-size: $font-size-sm;
+  color: $text-muted;
+  margin-bottom: $space-1;
+}
+
+.priority-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  font-size: $font-size-xs;
+  color: $text-muted;
+  margin-bottom: $space-1;
+}
+
+.priority-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.priority-due,
+.priority-action,
+.priority-status-col {
+  display: flex;
+  align-items: center;
 }
 
 .timeline-filter {
