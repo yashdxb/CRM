@@ -23,6 +23,7 @@ public class CrmDbContext : DbContext
     public DbSet<LeadAssignmentRule> LeadAssignmentRules => Set<LeadAssignmentRule>();
     public DbSet<LeadStatus> LeadStatuses => Set<LeadStatus>();
     public DbSet<LeadStatusHistory> LeadStatusHistories => Set<LeadStatusHistory>();
+    public DbSet<LeadCadenceChannel> LeadCadenceChannels => Set<LeadCadenceChannel>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityStage> OpportunityStages => Set<OpportunityStage>();
     public DbSet<OpportunityStageHistory> OpportunityStageHistories => Set<OpportunityStageHistory>();
@@ -106,6 +107,7 @@ public class CrmDbContext : DbContext
             .HasIndex(ls => new { ls.TenantId, ls.Name })
             .IsUnique();
         modelBuilder.Entity<LeadStatusHistory>().ToTable("LeadStatusHistories", CrmSchema);
+        modelBuilder.Entity<LeadCadenceChannel>().ToTable("LeadCadenceChannels", CrmSchema);
         modelBuilder.Entity<Lead>()
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);

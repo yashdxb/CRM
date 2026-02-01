@@ -35,6 +35,18 @@
             </h1>
             <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
           </div>
+          <div class="sla-strip" *ngIf="isEditMode()">
+            <div class="sla-pill" [ngClass]="getSlaTone()">
+              <i class="pi pi-stopwatch"></i>
+              <span class="sla-label">{{ getSlaStatusLabel() }}</span>
+              <span class="sla-time">
+                {{ firstTouchDueAtUtc() ? (firstTouchDueAtUtc() | date:'medium') : '—' }}
+              </span>
+            </div>
+            <div class="sla-meta" *ngIf="firstTouchedAtUtc()">
+              First touched {{ firstTouchedAtUtc() | date:'medium' }}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -251,13 +263,12 @@
               </div>
               <div class="field" *ngIf="form.status === 'Nurture'">
                 <label>Nurture follow-up date <span class="required">*</span></label>
-                <input
-                  pInputText
-                  type="date"
+                <p-datepicker
                   name="nurtureFollowUpAtUtc"
                   [(ngModel)]="form.nurtureFollowUpAtUtc"
-                  class="w-full"
-                />
+                  appendTo="body"
+                  styleClass="w-full"
+                ></p-datepicker>
               </div>
               <div class="field full-row" *ngIf="form.status === 'Lost' || form.status === 'Disqualified'">
                 <label>Disqualified reason <span class="required">*</span></label>
@@ -276,25 +287,32 @@
           <section class="form-section cadence-section" *ngIf="isEditMode()">
             <h2 class="section-title">
               <i class="pi pi-bullseye"></i>
-              SDR Cadence
+              Follow-Up Plan
             </h2>
             <div class="cadence-grid">
               <div class="field">
                 <label>Channel</label>
-                <select class="cadence-input" [(ngModel)]="cadenceChannel" name="cadenceChannel">
-                  <option value="Call">Call</option>
-                  <option value="Email">Email</option>
-                  <option value="LinkedIn">LinkedIn</option>
-                </select>
+                <p-select
+                  [options]="cadenceChannelOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="cadenceChannel"
+                  [(ngModel)]="cadenceChannel"
+                  placeholder="Select channel"
+                  appendTo="body"
+                  styleClass="w-full cadence-input"
+                ></p-select>
               </div>
               <div class="field">
                 <label>Next step due date</label>
-                <input
-                  class="cadence-input"
-                  type="datetime-local"
+                <p-datepicker
                   name="cadenceNextStepLocal"
                   [(ngModel)]="cadenceNextStepLocal"
-                />
+                  [showTime]="true"
+                  hourFormat="12"
+                  appendTo="body"
+                  styleClass="w-full cadence-input"
+                ></p-datepicker>
               </div>
               <div class="field full-row">
                 <label>Outcome</label>

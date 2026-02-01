@@ -1,6 +1,14 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Nurture' | 'Qualified' | 'Converted' | 'Lost' | 'Disqualified';
 export type LeadAssignmentStrategy = 'Manual' | 'RoundRobin' | 'Territory';
-export type LeadCadenceChannel = 'Call' | 'Email' | 'LinkedIn';
+export type LeadCadenceChannel = string;
+
+export interface LeadCadenceChannelOption {
+  id: string;
+  name: string;
+  order: number;
+  isDefault: boolean;
+  isActive: boolean;
+}
 
 export interface Lead {
   id: string;

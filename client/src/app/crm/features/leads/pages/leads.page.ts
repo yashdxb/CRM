@@ -566,6 +566,22 @@ export class LeadsPage {
     }
   }
 
+  protected getSlaStatusLabel(lead: Lead): string {
+    if (lead.firstTouchedAtUtc) return 'First touch completed';
+    if (!lead.firstTouchDueAtUtc) return 'SLA not started';
+    const due = new Date(lead.firstTouchDueAtUtc);
+    if (Number.isNaN(due.getTime())) return 'SLA pending';
+    return due.getTime() < Date.now() ? 'SLA overdue' : 'SLA due';
+  }
+
+  protected getSlaTone(lead: Lead): string {
+    if (lead.firstTouchedAtUtc) return 'done';
+    if (!lead.firstTouchDueAtUtc) return 'pending';
+    const due = new Date(lead.firstTouchDueAtUtc);
+    if (Number.isNaN(due.getTime())) return 'pending';
+    return due.getTime() < Date.now() ? 'overdue' : 'due';
+  }
+
   // Lead create/edit handled by separate page.
 
   protected clearToast() {
@@ -577,8 +593,8 @@ export class LeadsPage {
   }
 
   private loadOwners() {
-    this.userAdminData.search({ includeInactive: false, page: 1, pageSize: 200 }).subscribe((res) => {
-      const options = res.items.map((user) => ({ label: user.fullName, value: user.id }));
+    this.userAdminData.lookupActive(undefined, 300).subscribe((items) => {
+      const options = items.map((user) => ({ label: user.fullName, value: user.id }));
       this.ownerOptionsForAssign.set(options);
     });
   }

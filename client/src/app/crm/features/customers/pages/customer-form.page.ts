@@ -109,9 +109,9 @@ export class CustomerFormPage implements OnInit {
       const items = res.items
         .filter((item) => item.id !== this.customerId)
         .map((item) => ({ label: item.name, value: item.id }));
-      queueMicrotask(() => {
+      setTimeout(() => {
         this.parentAccountOptions = items;
-      });
+      }, 0);
     });
   }
 

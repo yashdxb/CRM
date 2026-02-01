@@ -1869,6 +1869,29 @@ public class DatabaseInitializer : IDatabaseInitializer
         });
     }
 
+    private async Task SeedLeadCadenceChannelsAsync(CancellationToken cancellationToken)
+    {
+        var existingNames = await _dbContext.LeadCadenceChannels
+            .Select(c => c.Name)
+            .ToListAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var channels = new[]
+        {
+            new LeadCadenceChannel { Name = "Call", Order = 1, IsActive = true, IsDefault = true, CreatedAtUtc = now },
+            new LeadCadenceChannel { Name = "Email", Order = 2, IsActive = true, CreatedAtUtc = now },
+            new LeadCadenceChannel { Name = "LinkedIn", Order = 3, IsActive = true, CreatedAtUtc = now }
+        };
+
+        foreach (var channel in channels)
+        {
+            if (!existingNames.Contains(channel.Name))
+            {
+                _dbContext.LeadCadenceChannels.Add(channel);
+            }
+        }
+    }
+
     private async Task SeedOpportunityStagesAsync(CancellationToken cancellationToken)
     {
         if (await _dbContext.OpportunityStages.AnyAsync(cancellationToken))
@@ -2102,6 +2125,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             await SeedRolesAsync(cancellationToken);
             await SeedUsersAsync(cancellationToken);
             await SeedLeadAssignmentRulesAsync(cancellationToken);
+            await SeedLeadCadenceChannelsAsync(cancellationToken);
             await SeedOpportunityStagesAsync(cancellationToken);
             // CRM sample data seeding disabled
             // await SeedSampleDataAsync(cancellationToken);

@@ -15,6 +15,7 @@ BEGIN TRY
     DELETE FROM [crm].[LeadStatusHistories];
     DELETE FROM [crm].[OpportunityStageHistories];
     DELETE FROM [crm].[Activities];
+    DELETE FROM [crm].[AuditEvents];
     DELETE FROM [crm].[Attachments];
     DELETE FROM [crm].[CustomFieldValues];
     DELETE FROM [crm].[Leads];

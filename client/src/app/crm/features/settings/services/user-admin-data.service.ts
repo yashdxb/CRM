@@ -10,6 +10,7 @@ import {
   UpsertUserRequest,
   UserDetailResponse,
   UserListItem,
+  UserLookupItem,
   UserSearchRequest,
   UserSearchResponse
 } from '../models/user-admin.model';
@@ -35,6 +36,18 @@ export class UserAdminDataService {
     }
 
     return this.http.get<UserSearchResponse>(`${this.baseUrl}/api/users`, { params });
+  }
+
+  lookupActive(search?: string, max = 200) {
+    let params = new HttpParams();
+    if (search) {
+      params = params.set('search', search);
+    }
+    if (max) {
+      params = params.set('max', String(max));
+    }
+
+    return this.http.get<UserLookupItem[]>(`${this.baseUrl}/api/users/lookup`, { params });
   }
 
   getUser(id: string) {

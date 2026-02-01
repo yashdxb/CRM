@@ -212,7 +212,7 @@ export class DashboardPage implements OnInit {
         id: task.id,
         type: 'task',
         title: task.subject,
-        subtitle: task.relatedEntityName || `${task.type} task`,
+        subtitle: task.relatedEntityName || task.type || 'Task',
         status: task.status,
         dueLabel,
         dueClass,
@@ -491,10 +491,15 @@ export class DashboardPage implements OnInit {
         this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe();
         return;
       }
-      this.layoutOrder = normalized;
-      this.layoutSizes = this.buildDefaultSizeMap();
-      this.layoutDimensions = dimensions ?? {};
-      this.persistLayoutPreferences();
+      setTimeout(() => {
+        this.layoutOrder = normalized;
+        this.layoutSizes = this.buildDefaultSizeMap();
+        const serverDimensions = dimensions ?? {};
+        this.layoutDimensions = Object.keys(serverDimensions).length > 0
+          ? serverDimensions
+          : (this.layoutDimensions ?? {});
+        this.persistLayoutPreferences();
+      }, 0);
     });
 
   }
@@ -1208,13 +1213,26 @@ export class DashboardPage implements OnInit {
     if (!isPlatformBrowser(this.platformId)) {
       return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
     }
-    // Keep layout state server-driven so it follows the user across devices.
-    return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
+    try {
+      const stored = window.localStorage.getItem(this.layoutStorageKey);
+      if (!stored) {
+        return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
+      }
+      const parsed = JSON.parse(stored) as { dimensions?: Record<string, { width: number; height: number }> };
+      const dimensions = parsed?.dimensions ?? {};
+      const hasLocalPreference = Object.keys(dimensions).length > 0;
+      return { order: defaultOrder, sizes: {}, dimensions, hasLocalPreference };
+    } catch {
+      return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
+    }
   }
 
   private persistLayoutPreferences(): void {
-    // No-op: layout persistence is handled by the API for cross-device consistency.
-    this.hasLocalLayoutPreference = false;
+    if (!isPlatformBrowser(this.platformId)) return;
+    window.localStorage.setItem(this.layoutStorageKey, JSON.stringify({
+      dimensions: this.layoutDimensions ?? {}
+    }));
+    this.hasLocalLayoutPreference = Object.keys(this.layoutDimensions ?? {}).length > 0;
   }
 
   private shouldHonorServerLayout(

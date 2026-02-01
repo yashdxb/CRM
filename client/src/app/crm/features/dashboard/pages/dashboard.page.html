@@ -380,13 +380,12 @@
               <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
             </div>
           </div>
-          <div class="card-body" *ngIf="filteredPriorityStreamItems().length; else emptyMyTasks">
+          <div class="card-body">
             <div class="priority-summary">
               <button
                 type="button"
                 class="priority-summary-card overdue"
                 [class.active]="priorityFilter() === 'overdue'"
-                *ngIf="prioritySummary().overdue"
                 (click)="setPriorityFilter('overdue')"
               >
                 <i class="pi pi-exclamation-circle"></i>
@@ -397,7 +396,6 @@
                 type="button"
                 class="priority-summary-card today"
                 [class.active]="priorityFilter() === 'today'"
-                *ngIf="prioritySummary().today"
                 (click)="setPriorityFilter('today')"
               >
                 <i class="pi pi-calendar"></i>
@@ -408,7 +406,6 @@
                 type="button"
                 class="priority-summary-card warn"
                 [class.active]="priorityFilter() === 'at-risk'"
-                *ngIf="prioritySummary().atRisk"
                 (click)="setPriorityFilter('at-risk')"
               >
                 <i class="pi pi-flag"></i>
@@ -419,7 +416,6 @@
                 type="button"
                 class="priority-summary-card info"
                 [class.active]="priorityFilter() === 'no-next-step'"
-                *ngIf="prioritySummary().noNextStep"
                 (click)="setPriorityFilter('no-next-step')"
               >
                 <i class="pi pi-flag-fill"></i>
@@ -427,20 +423,64 @@
                 <strong>{{ prioritySummary().noNextStep }}</strong>
               </button>
             </div>
-            <div class="priority-list">
-              <div class="priority-row-head">
-                <span>Task</span>
-                <span>Due Today</span>
-                <span>Recommended action</span>
-                <span>Status</span>
-              </div>
+            <div class="priority-tabs">
+              <button
+                type="button"
+                class="priority-tab"
+                [class.active]="priorityFilter() === 'overdue'"
+                (click)="setPriorityFilter('overdue')"
+              >
+                Overdue ({{ prioritySummary().overdue }})
+              </button>
+              <button
+                type="button"
+                class="priority-tab"
+                [class.active]="priorityFilter() === 'today'"
+                (click)="setPriorityFilter('today')"
+              >
+                Due Today ({{ prioritySummary().today }})
+              </button>
+              <button
+                type="button"
+                class="priority-tab"
+                [class.active]="priorityFilter() === 'new-leads'"
+                (click)="setPriorityFilter('new-leads')"
+              >
+                New Leads ({{ prioritySummary().newLeads }})
+              </button>
+              <button
+                type="button"
+                class="priority-tab"
+                [class.active]="priorityFilter() === 'at-risk'"
+                (click)="setPriorityFilter('at-risk')"
+              >
+                At-Risk Deals ({{ prioritySummary().atRisk }})
+              </button>
+              <button
+                type="button"
+                class="priority-tab"
+                [class.active]="priorityFilter() === 'no-next-step'"
+                (click)="setPriorityFilter('no-next-step')"
+              >
+                No Next Step ({{ prioritySummary().noNextStep }})
+              </button>
+              <button
+                type="button"
+                class="priority-tab"
+                [class.active]="priorityFilter() === 'all'"
+                (click)="setPriorityFilter('all')"
+              >
+                All ({{ priorityStreamItems().length }})
+              </button>
+            </div>
+            <div class="priority-list" *ngIf="filteredPriorityStreamItems().length; else emptyMyTasks">
               <div class="priority-item" *ngFor="let item of filteredPriorityStreamItems()">
                 <div class="priority-main">
                   <div class="priority-marker" [class.overdue]="item.type === 'deal' || item.dueClass === 'due-overdue'">
                     <i class="pi" [ngClass]="{
-                      'pi-check-square': item.type === 'task',
-                      'pi-user-plus': item.type === 'lead',
-                      'pi-flag': item.type === 'deal'
+                      'pi-exclamation-circle': item.type === 'deal' || item.dueClass === 'due-overdue',
+                      'pi-check-square': item.type === 'task' && item.dueClass !== 'due-overdue',
+                      'pi-user-plus': item.type === 'lead'
                     }"></i>
                   </div>
                   <div class="priority-details">
@@ -449,16 +489,20 @@
                     <div class="priority-meta">
                       <span *ngFor="let meta of item.meta">{{ meta }}</span>
                     </div>
+                    <div class="priority-meta">
+                      <span class="task-pill" [ngClass]="item.dueClass">{{ item.dueColumn }}</span>
+                      <span class="task-pill status-pill" [class.overdue]="item.type === 'deal'">{{ item.status }}</span>
+                    </div>
                   </div>
                 </div>
-                <div class="priority-due">
-                  <span class="task-pill" [ngClass]="item.dueClass">{{ item.dueColumn }}</span>
-                </div>
-                <div class="priority-action">
-                  <button type="button" class="btn-glass btn-sm">{{ item.action }}</button>
-                </div>
-                <div class="priority-status-col">
-                  <span class="task-pill status-pill" [class.overdue]="item.type === 'deal'">{{ item.status }}</span>
+                <div class="priority-actions">
+                  <button type="button" class="priority-icon-btn" aria-label="Call">
+                    <i class="pi pi-phone"></i>
+                  </button>
+                  <button type="button" class="priority-icon-btn" aria-label="Email">
+                    <i class="pi pi-envelope"></i>
+                  </button>
+                  <button type="button" class="priority-complete-btn">Complete</button>
                 </div>
               </div>
             </div>

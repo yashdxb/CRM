@@ -8,6 +8,7 @@ import {
   LeadConversionRequest,
   LeadConversionResponse,
   LeadCadenceChannel,
+  LeadCadenceChannelOption,
   LeadCadenceTouch,
   LeadSearchRequest,
   LeadSearchResponse,
@@ -30,7 +31,7 @@ export interface SaveLeadRequest {
   autoScore?: boolean;
   score?: number;
   disqualifiedReason?: string;
-  nurtureFollowUpAtUtc?: string | Date;
+  nurtureFollowUpAtUtc?: string | Date | null;
   qualifiedNotes?: string;
 }
 
@@ -66,6 +67,10 @@ export class LeadDataService {
 
   getCadenceTouches(id: string) {
     return this.http.get<LeadCadenceTouch[]>(`${this.baseUrl}/api/leads/${id}/cadence-touches`);
+  }
+
+  getCadenceChannels() {
+    return this.http.get<LeadCadenceChannelOption[]>(`${this.baseUrl}/api/leads/cadence-channels`);
   }
 
   create(payload: SaveLeadRequest) {

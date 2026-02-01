@@ -31,6 +31,12 @@ export interface UserSearchResponse {
   total: number;
 }
 
+export interface UserLookupItem {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
 export interface UserDetailResponse {
   id: string;
   fullName: string;

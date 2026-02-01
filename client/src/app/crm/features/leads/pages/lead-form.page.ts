@@ -10,13 +10,13 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TagModule } from 'primeng/tag';
+import { DatePickerModule } from 'primeng/datepicker';
 
 import { map } from 'rxjs';
 
 import { Lead, LeadAssignmentStrategy, LeadCadenceChannel, LeadCadenceTouch, LeadStatus, LeadStatusHistoryItem } from '../models/lead.model';
 import { LeadDataService, SaveLeadRequest } from '../services/lead-data.service';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
-import { UserListItem } from '../../settings/models/user-admin.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 
@@ -36,6 +36,10 @@ interface OwnerOption {
   label: string;
   value: string;
 }
+interface CadenceChannelOption {
+  label: string;
+  value: LeadCadenceChannel;
+}
 
 @Component({
   selector: 'app-lead-form-page',
@@ -52,6 +56,7 @@ interface OwnerOption {
     TextareaModule,
     ProgressBarModule,
     TagModule,
+    DatePickerModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./lead-form.page.html",
@@ -82,8 +87,9 @@ export class LeadFormPage implements OnInit {
   protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
   protected cadenceTouches = signal<LeadCadenceTouch[]>([]);
   protected cadenceChannel: LeadCadenceChannel = 'Call';
+  protected cadenceChannelOptions: CadenceChannelOption[] = [];
   protected cadenceOutcome = '';
-  protected cadenceNextStepLocal = '';
+  protected cadenceNextStepLocal: Date | null = null;
   protected cadenceSubmitting = signal(false);
   protected linkedAccountId = signal<string | null>(null);
   protected linkedContactId = signal<string | null>(null);
@@ -104,6 +110,7 @@ export class LeadFormPage implements OnInit {
     this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
+    this.loadCadenceChannels();
     if (this.editingId && lead) {
       this.prefillFromLead(lead);
       this.loadStatusHistory(this.editingId);
@@ -190,7 +197,7 @@ export class LeadFormPage implements OnInit {
 
     const resolvedScore = this.form.autoScore ? this.computeAutoScore() : (this.form.score ?? 0);
     const nurtureFollowUpAtUtc =
-      this.form.status === 'Nurture' && this.form.nurtureFollowUpAtUtc ? this.form.nurtureFollowUpAtUtc : undefined;
+      this.form.status === 'Nurture' ? this.localToUtcIso(this.form.nurtureFollowUpAtUtc) : undefined;
     const payload: SaveLeadRequest = {
       ...this.form,
       score: resolvedScore,
@@ -241,7 +248,7 @@ export class LeadFormPage implements OnInit {
       assignmentStrategy: 'Manual',
       territory: lead.territory ?? '',
       disqualifiedReason: lead.disqualifiedReason ?? '',
-      nurtureFollowUpAtUtc: this.toDateInputValue(lead.nurtureFollowUpAtUtc),
+      nurtureFollowUpAtUtc: this.toDateValue(lead.nurtureFollowUpAtUtc),
       qualifiedNotes: lead.qualifiedNotes ?? ''
     };
     this.linkedAccountId.set(lead.accountId ?? null);
@@ -304,16 +311,16 @@ export class LeadFormPage implements OnInit {
       });
   }
 
-  private defaultCadenceDueLocal() {
+  private defaultCadenceDueLocal(): Date {
     const due = new Date();
     due.setDate(due.getDate() + 2);
     due.setMinutes(due.getMinutes() - due.getTimezoneOffset());
-    return due.toISOString().slice(0, 16);
+    return due;
   }
 
-  private localToUtcIso(localValue: string): string | null {
+  private localToUtcIso(localValue: string | Date | null | undefined): string | null {
     if (!localValue) return null;
-    const parsed = new Date(localValue);
+    const parsed = localValue instanceof Date ? localValue : new Date(localValue);
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
@@ -332,23 +339,64 @@ export class LeadFormPage implements OnInit {
       autoScore: true,
       assignmentStrategy: 'RoundRobin',
       disqualifiedReason: '',
-      nurtureFollowUpAtUtc: '',
+      nurtureFollowUpAtUtc: null,
       qualifiedNotes: ''
     };
   }
 
   private loadOwners() {
-    this.userAdminData.search({ page: 1, pageSize: 100, includeInactive: false }).subscribe({
-      next: (res) => this.ownerOptions.set(this.mapOwnerOptions(res.items)),
+    this.userAdminData.lookupActive(undefined, 200).subscribe({
+      next: (items) => this.ownerOptions.set(this.mapOwnerOptions(items)),
       error: () => this.ownerOptions.set([])
     });
   }
 
-  private mapOwnerOptions(users: UserListItem[]): OwnerOption[] {
+  private mapOwnerOptions(users: Array<{ id: string; fullName: string }>): OwnerOption[] {
     return users.map((user) => ({
       label: user.fullName,
       value: user.id
     }));
+  }
+
+  private loadCadenceChannels() {
+    this.leadData.getCadenceChannels().subscribe({
+      next: (items) => {
+        const options = items
+          .filter((item) => item.isActive)
+          .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+          .map((item) => ({ label: item.name, value: item.name }));
+        this.cadenceChannelOptions = options;
+        if (!options.some((opt) => opt.value === this.cadenceChannel)) {
+          const fallback = items.find((item) => item.isDefault)?.name ?? options[0]?.value;
+          if (fallback) {
+            this.cadenceChannel = fallback;
+          }
+        }
+      },
+      error: () => {
+        this.cadenceChannelOptions = [];
+      }
+    });
+  }
+
+  protected getSlaStatusLabel(): string {
+    const due = this.firstTouchDueAtUtc();
+    const touched = this.firstTouchedAtUtc();
+    if (touched) return 'First touch completed';
+    if (!due) return 'SLA not started';
+    const dueDate = new Date(due);
+    if (Number.isNaN(dueDate.getTime())) return 'SLA pending';
+    return dueDate.getTime() < Date.now() ? 'SLA overdue' : 'SLA due';
+  }
+
+  protected getSlaTone(): 'overdue' | 'due' | 'done' | 'pending' {
+    const due = this.firstTouchDueAtUtc();
+    const touched = this.firstTouchedAtUtc();
+    if (touched) return 'done';
+    if (!due) return 'pending';
+    const dueDate = new Date(due);
+    if (Number.isNaN(dueDate.getTime())) return 'pending';
+    return dueDate.getTime() < Date.now() ? 'overdue' : 'due';
   }
 
   protected computeAutoScore(): number {
@@ -457,10 +505,10 @@ export class LeadFormPage implements OnInit {
     return null;
   }
 
-  private toDateInputValue(value?: string): string | undefined {
-    if (!value) return undefined;
+  private toDateValue(value?: string): Date | null {
+    if (!value) return null;
     const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return undefined;
-    return date.toISOString().slice(0, 10);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
   }
 }

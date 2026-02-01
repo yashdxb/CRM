@@ -914,6 +914,7 @@ Legend:
 4) Email draft suggestions (MED)
 5) KPI explanations (MED)
 6) Dedicated award screen (SCM) (MED)
+7) Lead cadence channel management UI (admin manage add/edit/disable)
 
 # Phase 3 Options (Draft)
 

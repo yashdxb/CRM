@@ -262,6 +262,12 @@
                       <div class="lead-info">
                         <span class="name">{{ lead.name }}</span>
                         <span class="company">{{ lead.company }}</span>
+                        <div class="lead-sla" *ngIf="lead.firstTouchDueAtUtc || lead.firstTouchedAtUtc">
+                          <span class="sla-chip" [ngClass]="getSlaTone(lead)">
+                            <i class="pi pi-stopwatch"></i>
+                            {{ getSlaStatusLabel(lead) }}
+                          </span>
+                        </div>
                         <div class="lead-related" *ngIf="hasConvertedLinks(lead)">
                           <span class="lead-related-label">Converted to</span>
                           <div class="lead-related-links">

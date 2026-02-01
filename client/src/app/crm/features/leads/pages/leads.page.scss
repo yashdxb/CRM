@@ -979,6 +979,51 @@ $status-lost: #ef4444;
       color: $gray-500;
     }
   }
+
+  .lead-sla {
+    margin-top: 4px;
+  }
+
+  .sla-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(248, 250, 252, 0.9);
+    color: #475569;
+
+    i {
+      font-size: 11px;
+    }
+  }
+
+  .sla-chip.overdue {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .sla-chip.due {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .sla-chip.done {
+    background: rgba(34, 197, 94, 0.12);
+    color: #15803d;
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+
+  .sla-chip.pending {
+    background: rgba(148, 163, 184, 0.12);
+    color: #475569;
+    border-color: rgba(148, 163, 184, 0.3);
+  }
 }
 
 .status-pill {

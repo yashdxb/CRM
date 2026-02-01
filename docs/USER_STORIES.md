@@ -67,14 +67,14 @@ We will not try to out‑Salesforce Salesforce. We win on **speed to value**, **
 - As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.
 - As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach.
   - Use case: View “Newly assigned leads” list → see SLA due time → click lead.
-  - Data to enter: lead source (web/email/event), score, routing reason, SLA due date, assigned owner.
+  - Data to enter (matches lead form fields): first/last name, company, email, phone, job title, source, status, assignment strategy (Auto/Territory/Manual), owner (if Manual), lead score or auto score, territory (if Territory), qualification notes (if Qualified).
 
 ### Leads — Qualification Loop
 - As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
 - As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
 - As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
   - Use case: Log outreach → set outcome → add next step date → update lead status.
-  - Data to enter: qualification fields (fit/role/timing), disqualify reason, nurture follow‑up date, qualified notes.
+  - Data to enter (matches lead form fields): status = Qualified/Nurture/Lost/Disqualified, qualified notes, nurture follow‑up date (if Nurture), disqualified reason (if Lost/Disqualified), score/auto score toggle, territory (if assignment is Territory).
 
 ### Lead Conversion
 - As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.

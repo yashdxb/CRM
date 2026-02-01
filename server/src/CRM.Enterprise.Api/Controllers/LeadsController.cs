@@ -8,10 +8,13 @@ using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Api.Contracts.Imports;
+using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Infrastructure.Persistence;
 // using CRM.Enterprise.Api.Jobs; // Removed Hangfire
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -22,13 +25,16 @@ public class LeadsController : ControllerBase
 {
     private readonly ILeadService _leadService;
     private readonly ILeadImportService _leadImportService;
+    private readonly CrmDbContext _dbContext;
 
     public LeadsController(
         ILeadService leadService,
-        ILeadImportService leadImportService)
+        ILeadImportService leadImportService,
+        CrmDbContext dbContext)
     {
         _leadService = leadService;
         _leadImportService = leadImportService;
+        _dbContext = dbContext;
     }
 
     [HttpGet]
@@ -73,6 +79,43 @@ public class LeadsController : ControllerBase
             t.CompletedAtUtc,
             t.NextStepDueAtUtc,
             t.OwnerName));
+        return Ok(items);
+    }
+
+    [HttpGet("cadence-channels")]
+    public async Task<ActionResult<IEnumerable<LeadCadenceChannelItem>>> GetCadenceChannels(CancellationToken cancellationToken)
+    {
+        async Task<List<LeadCadenceChannelItem>> LoadAsync()
+        {
+            return await _dbContext.LeadCadenceChannels
+                .AsNoTracking()
+                .Where(c => c.IsActive && !c.IsDeleted)
+                .OrderBy(c => c.Order)
+                .ThenBy(c => c.Name)
+                .Select(c => new LeadCadenceChannelItem(
+                    c.Id,
+                    c.Name,
+                    c.Order,
+                    c.IsDefault,
+                    c.IsActive))
+                .ToListAsync(cancellationToken);
+        }
+
+        var items = await LoadAsync();
+        if (items.Count == 0)
+        {
+            var now = DateTime.UtcNow;
+            _dbContext.LeadCadenceChannels.AddRange(new[]
+            {
+                new LeadCadenceChannel { Name = "Call", Order = 1, IsActive = true, IsDefault = true, CreatedAtUtc = now },
+                new LeadCadenceChannel { Name = "Email", Order = 2, IsActive = true, CreatedAtUtc = now },
+                new LeadCadenceChannel { Name = "LinkedIn", Order = 3, IsActive = true, CreatedAtUtc = now }
+            });
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            items = await LoadAsync();
+        }
+
         return Ok(items);
     }
 
