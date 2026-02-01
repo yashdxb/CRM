@@ -915,6 +915,7 @@ Legend:
 5) KPI explanations (MED)
 6) Dedicated award screen (SCM) (MED)
 7) Lead cadence channel management UI (admin manage add/edit/disable)
+8) Configurable Lead SLA rules in Settings (tenant defaults + source overrides)
 
 # Phase 3 Options (Draft)
 
