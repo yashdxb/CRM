@@ -100,7 +100,16 @@ public static class DependencyInjection
 
             return sp.GetRequiredService<AcsEmailSender>();
         });
+        services.Configure<AzureOpenAiOptions>(configuration.GetSection(AzureOpenAiOptions.SectionName));
         services.Configure<OpenAiOptions>(configuration.GetSection(OpenAiOptions.SectionName));
+        services.AddHttpClient<AzureOpenAiLeadScoringService>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AzureOpenAiOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(options.Endpoint))
+            {
+                client.BaseAddress = new Uri(options.Endpoint.TrimEnd('/') + "/");
+            }
+        });
         services.AddHttpClient<OpenAiLeadScoringService>((sp, client) =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpenAiOptions>>().Value;
@@ -109,7 +118,22 @@ public static class DependencyInjection
                 client.BaseAddress = new Uri(options.BaseUrl);
             }
         });
-        services.AddScoped<ILeadScoringService>(sp => sp.GetRequiredService<OpenAiLeadScoringService>());
+        services.AddScoped<ILeadScoringService>(sp =>
+        {
+            var azureOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AzureOpenAiOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(azureOptions.ApiKey) && !string.IsNullOrWhiteSpace(azureOptions.Deployment))
+            {
+                return sp.GetRequiredService<AzureOpenAiLeadScoringService>();
+            }
+
+            var openAiOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<OpenAiOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(openAiOptions.ApiKey))
+            {
+                return sp.GetRequiredService<OpenAiLeadScoringService>();
+            }
+
+            return new RuleBasedLeadScoringService();
+        });
         services.Configure<FoundryAgentOptions>(configuration.GetSection(FoundryAgentOptions.SectionName));
         services.AddSingleton(sp =>
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FoundryAgentOptions>>().Value);

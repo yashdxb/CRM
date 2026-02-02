@@ -32,6 +32,22 @@ export interface Lead {
   qualifiedNotes?: string;
   firstTouchDueAtUtc?: string;
   firstTouchedAtUtc?: string;
+  budgetAvailability?: string;
+  budgetEvidence?: string;
+  readinessToSpend?: string;
+  readinessEvidence?: string;
+  buyingTimeline?: string;
+  timelineEvidence?: string;
+  problemSeverity?: string;
+  problemEvidence?: string;
+  economicBuyer?: string;
+  economicBuyerEvidence?: string;
+  icpFit?: string;
+  icpFitEvidence?: string;
+  qualificationConfidence?: number;
+  qualificationConfidenceLabel?: string;
+  scoreBreakdown?: LeadScoreBreakdownItem[];
+  riskFlags?: string[];
 }
 
 export interface LeadSearchRequest {
@@ -78,4 +94,10 @@ export interface LeadCadenceTouch {
   completedAtUtc: string;
   nextStepDueAtUtc?: string;
   ownerName: string;
+}
+
+export interface LeadScoreBreakdownItem {
+  factor: string;
+  score: number;
+  maxScore: number;
 }

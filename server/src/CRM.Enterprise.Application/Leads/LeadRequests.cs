@@ -20,7 +20,19 @@ public sealed record LeadUpsertRequest(
     Guid? ContactId,
     string? DisqualifiedReason,
     DateTime? NurtureFollowUpAtUtc,
-    string? QualifiedNotes);
+    string? QualifiedNotes,
+    string? BudgetAvailability,
+    string? BudgetEvidence,
+    string? ReadinessToSpend,
+    string? ReadinessEvidence,
+    string? BuyingTimeline,
+    string? TimelineEvidence,
+    string? ProblemSeverity,
+    string? ProblemEvidence,
+    string? EconomicBuyer,
+    string? EconomicBuyerEvidence,
+    string? IcpFit,
+    string? IcpFitEvidence);
 
 public sealed record LeadConversionRequest(
     bool CreateAccount,

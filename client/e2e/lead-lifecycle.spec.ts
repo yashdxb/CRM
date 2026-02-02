@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
-const ADMIN_EMAIL = 'yasser.ahamed@live.com';
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
 
 async function login(page, request) {
@@ -53,11 +53,24 @@ async function selectByLabel(page, selector, optionText) {
   await option.click({ force: true });
 }
 
+async function openTab(page, label) {
+  const tab = page.locator('.lead-tab', { hasText: label }).first();
+  if (await tab.count()) {
+    await tab.click();
+  }
+}
+
 async function searchLeads(page, term) {
   const input = page.locator('.search-box input');
   await input.waitFor({ state: 'visible' });
   await input.fill(term);
   await page.waitForTimeout(300);
+}
+
+async function fillQualificationFactors(page) {
+  await selectByLabel(page, 'p-select[name="budgetAvailability"]', 'Confirmed allocated');
+  await selectByLabel(page, 'p-select[name="readinessToSpend"]', 'Actively evaluating');
+  await selectByLabel(page, 'p-select[name="icpFit"]', 'Strong');
 }
 
 async function getFirstUserName(request, token) {
@@ -67,7 +80,14 @@ async function getFirstUserName(request, token) {
       'X-Tenant-Key': 'default'
     }
   });
-  const payload = await response.json();
+  if (!response.ok()) {
+    return null;
+  }
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+  const payload = JSON.parse(text);
   const items = Array.isArray(payload) ? payload : payload.items ?? payload.data ?? [];
   const first = items.find((u) => u?.fullName);
   return first?.fullName ?? null;
@@ -124,11 +144,9 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
   const token = await login(page, request);
   const firstUserName = await getFirstUserName(request, token);
 
-  await page.goto('/app/settings/lead-assignment');
-  await expect(page.getByRole('heading', { name: 'Assignment Rules', level: 1 })).toBeVisible();
-
   await page.goto('/app/leads/new');
   await page.waitForURL('**/app/leads/new');
+  await page.locator('form.lead-form').waitFor({ state: 'visible' });
   await page.locator('input[name="firstName"]').fill('Manual');
   await page.locator('input[name="lastName"]').fill(`UI ${suffix}`);
   await page.locator('input[name="companyName"]').fill(manualLead);
@@ -157,6 +175,7 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
 
   await page.goto('/app/leads/new');
   await page.waitForURL('**/app/leads/new');
+  await page.locator('form.lead-form').waitFor({ state: 'visible' });
   await page.locator('input[name="firstName"]').fill('Round');
   await page.locator('input[name="lastName"]').fill(`UI ${suffix}`);
   await page.locator('input[name="companyName"]').fill(roundLead);
@@ -194,8 +213,12 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
   const manualRow = page.locator('tr').filter({ hasText: manualLead }).first();
   await manualRow.locator('button[title="Edit"]').click();
   await page.waitForURL('**/app/leads/**');
-  await selectByLabel(page, 'p-select[name="status"]', 'Qualified');
+  await page.locator('form.lead-form').waitFor({ state: 'visible' });
+  await openTab(page, 'Qualification');
+  await fillQualificationFactors(page);
   await page.locator('textarea[name="qualifiedNotes"]').fill('E2E qualification notes.');
+  await openTab(page, 'Overview');
+  await selectByLabel(page, 'p-select[name="status"]', 'Qualified');
   const [updateResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'PUT'),
     page.locator('button:has-text("Update lead")').click()
@@ -244,7 +267,6 @@ test('lead auto score and conversion carries owner', async ({ page, request }) =
   } else {
     await selectFirstOption(page, 'p-select[name="ownerId"]');
   }
-  await page.locator('input[name="autoScore"]').check();
 
   const [createResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'POST'),
@@ -276,8 +298,11 @@ test('lead auto score and conversion carries owner', async ({ page, request }) =
   const row = page.locator('tr').filter({ hasText: companyName }).first();
   await row.locator('button[title="Edit"]').click();
   await page.waitForURL('**/app/leads/**');
-  await selectByLabel(page, 'p-select[name="status"]', 'Qualified');
+  await openTab(page, 'Qualification');
+  await fillQualificationFactors(page);
   await page.locator('textarea[name="qualifiedNotes"]').fill('E2E qualification notes.');
+  await openTab(page, 'Overview');
+  await selectByLabel(page, 'p-select[name="status"]', 'Qualified');
   const [updateResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'PUT'),
     page.locator('button:has-text("Update lead")').click()

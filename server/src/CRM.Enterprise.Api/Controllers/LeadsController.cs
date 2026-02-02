@@ -337,7 +337,23 @@ public class LeadsController : ControllerBase
             dto.NurtureFollowUpAtUtc,
             dto.QualifiedNotes,
             dto.FirstTouchDueAtUtc,
-            dto.FirstTouchedAtUtc);
+            dto.FirstTouchedAtUtc,
+            dto.BudgetAvailability,
+            dto.BudgetEvidence,
+            dto.ReadinessToSpend,
+            dto.ReadinessEvidence,
+            dto.BuyingTimeline,
+            dto.TimelineEvidence,
+            dto.ProblemSeverity,
+            dto.ProblemEvidence,
+            dto.EconomicBuyer,
+            dto.EconomicBuyerEvidence,
+            dto.IcpFit,
+            dto.IcpFitEvidence,
+            dto.QualificationConfidence,
+            dto.QualificationConfidenceLabel,
+            dto.ScoreBreakdown.Select(item => new CRM.Enterprise.Api.Contracts.Leads.LeadScoreBreakdownItem(item.Factor, item.Score, item.MaxScore)),
+            dto.RiskFlags);
     }
 
     private static LeadUpsertRequest MapUpsertRequest(UpsertLeadRequest request)
@@ -360,7 +376,19 @@ public class LeadsController : ControllerBase
             request.ContactId,
             request.DisqualifiedReason,
             request.NurtureFollowUpAtUtc,
-            request.QualifiedNotes);
+            request.QualifiedNotes,
+            request.BudgetAvailability,
+            request.BudgetEvidence,
+            request.ReadinessToSpend,
+            request.ReadinessEvidence,
+            request.BuyingTimeline,
+            request.TimelineEvidence,
+            request.ProblemSeverity,
+            request.ProblemEvidence,
+            request.EconomicBuyer,
+            request.EconomicBuyerEvidence,
+            request.IcpFit,
+            request.IcpFitEvidence);
     }
 
     private static AppLeadConversionRequest MapConversionRequest(ApiLeadConversionRequest request)

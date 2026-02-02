@@ -12,13 +12,23 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
 
-import { map } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
-import { Lead, LeadAssignmentStrategy, LeadCadenceChannel, LeadCadenceTouch, LeadStatus, LeadStatusHistoryItem } from '../models/lead.model';
+import {
+  Lead,
+  LeadAssignmentStrategy,
+  LeadCadenceChannel,
+  LeadCadenceTouch,
+  LeadScoreBreakdownItem,
+  LeadStatus,
+  LeadStatusHistoryItem
+} from '../models/lead.model';
 import { LeadDataService, SaveLeadRequest } from '../services/lead-data.service';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { TooltipModule } from 'primeng/tooltip';
 
 interface StatusOption {
   label: string;
@@ -33,6 +43,11 @@ interface AssignmentOption {
 }
 
 interface OwnerOption {
+  label: string;
+  value: string;
+}
+
+interface OptionItem {
   label: string;
   value: string;
 }
@@ -57,12 +72,14 @@ interface CadenceChannelOption {
     ProgressBarModule,
     TagModule,
     DatePickerModule,
+    TooltipModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./lead-form.page.html",
   styleUrls: ["./lead-form.page.scss"]
 })
 export class LeadFormPage implements OnInit {
+  protected activeTab = signal<'overview' | 'qualification' | 'activity' | 'history'>('overview');
   protected readonly statusOptions: StatusOption[] = [
     { label: 'New', value: 'New', icon: 'pi-star' },
     { label: 'Contacted', value: 'Contacted', icon: 'pi-comments' },
@@ -77,6 +94,44 @@ export class LeadFormPage implements OnInit {
     { label: 'Round robin', value: 'RoundRobin' },
     { label: 'Territory', value: 'Territory' }
   ];
+  protected readonly budgetOptions: OptionItem[] = [
+    { label: 'Confirmed allocated', value: 'Confirmed allocated' },
+    { label: 'Indicative / estimated', value: 'Indicative / estimated' },
+    { label: 'No defined budget', value: 'No defined budget' },
+    { label: 'Insufficient', value: 'Insufficient' },
+    { label: 'Unknown', value: 'Unknown' }
+  ];
+  protected readonly readinessOptions: OptionItem[] = [
+    { label: 'Actively evaluating', value: 'Actively evaluating' },
+    { label: 'Approved, timing TBD', value: 'Approved, timing TBD' },
+    { label: 'Early research', value: 'Early research' },
+    { label: 'No initiative', value: 'No initiative' },
+    { label: 'Unknown', value: 'Unknown' }
+  ];
+  protected readonly timelineOptions: OptionItem[] = [
+    { label: '< 30 days', value: '< 30 days' },
+    { label: '1–3 months', value: '1–3 months' },
+    { label: '3–6 months', value: '3–6 months' },
+    { label: 'Unknown', value: 'Unknown' }
+  ];
+  protected readonly problemOptions: OptionItem[] = [
+    { label: 'Critical', value: 'Critical' },
+    { label: 'High', value: 'High' },
+    { label: 'Moderate', value: 'Moderate' },
+    { label: 'Nice-to-have', value: 'Nice-to-have' },
+    { label: 'Unknown', value: 'Unknown' }
+  ];
+  protected readonly economicBuyerOptions: OptionItem[] = [
+    { label: 'Engaged', value: 'Engaged' },
+    { label: 'Identified only', value: 'Identified only' },
+    { label: 'Unknown', value: 'Unknown' }
+  ];
+  protected readonly icpFitOptions: OptionItem[] = [
+    { label: 'Strong', value: 'Strong' },
+    { label: 'Partial', value: 'Partial' },
+    { label: 'Weak', value: 'Weak' },
+    { label: 'Unknown', value: 'Unknown' }
+  ];
   protected readonly ownerOptions = signal<OwnerOption[]>([]);
 
   protected form: SaveLeadRequest & { autoScore: boolean } = this.createEmptyForm();
@@ -84,6 +139,11 @@ export class LeadFormPage implements OnInit {
   protected aiScoring = signal(false);
   protected aiScoreNote = signal<string | null>(null);
   protected aiScoreSeverity = signal<'success' | 'info' | 'warn' | 'error'>('info');
+  protected aiScoreConfidence = signal<number | null>(null);
+  protected qualificationConfidenceLabel = signal<string | null>(null);
+  protected qualificationConfidence = signal<number | null>(null);
+  protected scoreBreakdown = signal<LeadScoreBreakdownItem[]>([]);
+  protected riskFlags = signal<string[]>([]);
   protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
   protected cadenceTouches = signal<LeadCadenceTouch[]>([]);
   protected cadenceChannel: LeadCadenceChannel = 'Call';
@@ -96,10 +156,12 @@ export class LeadFormPage implements OnInit {
   protected linkedOpportunityId = signal<string | null>(null);
   protected firstTouchDueAtUtc = signal<string | null>(null);
   protected firstTouchedAtUtc = signal<string | null>(null);
+  protected followUpHint = signal<string | null>(null);
   private readonly toastService = inject(AppToastService);
 
   private readonly leadData = inject(LeadDataService);
   private readonly userAdminData = inject(UserAdminDataService);
+  private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
 
@@ -108,6 +170,7 @@ export class LeadFormPage implements OnInit {
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
     this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
+    this.activeTab.set(this.getDefaultTab());
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
     this.loadCadenceChannels();
@@ -129,6 +192,40 @@ export class LeadFormPage implements OnInit {
 
   protected isEditMode() {
     return !!this.editingId;
+  }
+
+  protected setActiveTab(tab: 'overview' | 'qualification' | 'activity' | 'history') {
+    this.activeTab.set(tab);
+  }
+
+  protected leadDisplayName(): string {
+    const first = this.form.firstName?.trim() ?? '';
+    const last = this.form.lastName?.trim() ?? '';
+    return `${first} ${last}`.trim() || 'Lead';
+  }
+
+  protected qualificationRuleMessage(): string {
+    return 'Unknown is neutral. Select at least 3 factors before setting to Qualified.';
+  }
+
+  protected qualificationInlineError(): string | null {
+    if (this.form.status !== 'Qualified') return null;
+    return this.countQualificationFactors() < 3 ? '3 qualification factors required to qualify.' : null;
+  }
+
+  protected qualificationTabBadge(): string | null {
+    const count = this.riskFlags().length;
+    return count ? `${count} risk` : null;
+  }
+
+  protected activityTabBadge(): string | null {
+    const due = this.cadenceNextStepLocal;
+    if (!due) return null;
+    const now = new Date();
+    if (due.getTime() < now.getTime()) {
+      return 'Overdue';
+    }
+    return null;
   }
 
   protected logActivity(): void {
@@ -210,14 +307,19 @@ export class LeadFormPage implements OnInit {
     }
 
     this.saving.set(true);
-    const request$ = this.editingId
-      ? this.leadData.update(this.editingId, payload).pipe(map(() => null))
-      : this.leadData.create(payload).pipe(map(() => null));
+    const isEdit = !!this.editingId;
+    const request$: Observable<Lead | null> = isEdit
+      ? this.leadData.update(this.editingId!, payload).pipe(map(() => null))
+      : this.leadData.create(payload);
 
     request$.subscribe({
-      next: () => {
+      next: (created) => {
         this.saving.set(false);
-        const message = this.editingId ? 'Lead updated.' : 'Lead created.';
+        if (!isEdit && created) {
+          this.editingId = created.id;
+          this.router.navigate(['/app/leads', created.id, 'edit'], { state: { lead: created } });
+        }
+        const message = isEdit ? 'Lead updated.' : 'Lead created.';
         this.raiseToast('success', message);
       },
       error: () => {
@@ -241,7 +343,7 @@ export class LeadFormPage implements OnInit {
       phone: lead.phone,
       status: lead.status,
       score: lead.score ?? 0,
-      autoScore: false,
+      autoScore: true,
       source: lead.source ?? '',
       jobTitle: lead.jobTitle ?? '',
       ownerId: lead.ownerId,
@@ -249,13 +351,29 @@ export class LeadFormPage implements OnInit {
       territory: lead.territory ?? '',
       disqualifiedReason: lead.disqualifiedReason ?? '',
       nurtureFollowUpAtUtc: this.toDateValue(lead.nurtureFollowUpAtUtc),
-      qualifiedNotes: lead.qualifiedNotes ?? ''
+      qualifiedNotes: lead.qualifiedNotes ?? '',
+      budgetAvailability: lead.budgetAvailability ?? '',
+      budgetEvidence: lead.budgetEvidence ?? '',
+      readinessToSpend: lead.readinessToSpend ?? '',
+      readinessEvidence: lead.readinessEvidence ?? '',
+      buyingTimeline: lead.buyingTimeline ?? '',
+      timelineEvidence: lead.timelineEvidence ?? '',
+      problemSeverity: lead.problemSeverity ?? '',
+      problemEvidence: lead.problemEvidence ?? '',
+      economicBuyer: lead.economicBuyer ?? '',
+      economicBuyerEvidence: lead.economicBuyerEvidence ?? '',
+      icpFit: lead.icpFit ?? '',
+      icpFitEvidence: lead.icpFitEvidence ?? ''
     };
     this.linkedAccountId.set(lead.accountId ?? null);
     this.linkedContactId.set(lead.contactId ?? null);
     this.linkedOpportunityId.set(lead.convertedOpportunityId ?? null);
     this.firstTouchDueAtUtc.set(lead.firstTouchDueAtUtc ?? null);
     this.firstTouchedAtUtc.set(lead.firstTouchedAtUtc ?? null);
+    this.qualificationConfidenceLabel.set(lead.qualificationConfidenceLabel ?? null);
+    this.qualificationConfidence.set(lead.qualificationConfidence ?? null);
+    this.scoreBreakdown.set(lead.scoreBreakdown ?? []);
+    this.riskFlags.set(lead.riskFlags ?? []);
   }
 
   private loadStatusHistory(leadId: string) {
@@ -340,7 +458,19 @@ export class LeadFormPage implements OnInit {
       assignmentStrategy: 'RoundRobin',
       disqualifiedReason: '',
       nurtureFollowUpAtUtc: null,
-      qualifiedNotes: ''
+      qualifiedNotes: '',
+      budgetAvailability: '',
+      budgetEvidence: '',
+      readinessToSpend: '',
+      readinessEvidence: '',
+      buyingTimeline: '',
+      timelineEvidence: '',
+      problemSeverity: '',
+      problemEvidence: '',
+      economicBuyer: '',
+      economicBuyerEvidence: '',
+      icpFit: '',
+      icpFitEvidence: ''
     };
   }
 
@@ -400,6 +530,11 @@ export class LeadFormPage implements OnInit {
   }
 
   protected computeAutoScore(): number {
+    const qualificationScore = this.computeQualificationScore();
+    if (qualificationScore !== null) {
+      return qualificationScore;
+    }
+
     const email = this.form.email?.trim();
     const phone = this.form.phone?.trim();
     const company = this.form.companyName?.trim();
@@ -423,8 +558,110 @@ export class LeadFormPage implements OnInit {
     return Math.min(100, Math.max(0, score));
   }
 
+  private computeQualificationScore(): number | null {
+    const factors = [
+      this.form.budgetAvailability,
+      this.form.readinessToSpend,
+      this.form.buyingTimeline,
+      this.form.problemSeverity,
+      this.form.economicBuyer,
+      this.form.icpFit
+    ];
+    const filled = factors.filter((value) => this.isMeaningfulFactor(value)).length;
+    if (filled === 0) return null;
+
+    return (
+      this.getBudgetScore(this.form.budgetAvailability)
+      + this.getReadinessScore(this.form.readinessToSpend)
+      + this.getTimelineScore(this.form.buyingTimeline)
+      + this.getProblemScore(this.form.problemSeverity)
+      + this.getEconomicBuyerScore(this.form.economicBuyer)
+      + this.getIcpFitScore(this.form.icpFit)
+    );
+  }
+
+  private getBudgetScore(value?: string | null): number {
+    switch (value?.toLowerCase()) {
+      case 'confirmed allocated':
+        return 25;
+      case 'indicative / estimated':
+      case 'indicative/estimated':
+        return 15;
+      case 'no defined budget':
+        return 5;
+      default:
+        return 0;
+    }
+  }
+
+  private getReadinessScore(value?: string | null): number {
+    switch (value?.toLowerCase()) {
+      case 'actively evaluating':
+        return 20;
+      case 'approved, timing tbd':
+      case 'approved timing tbd':
+        return 15;
+      case 'early research':
+        return 8;
+      default:
+        return 0;
+    }
+  }
+
+  private getTimelineScore(value?: string | null): number {
+    switch (value?.toLowerCase()) {
+      case '< 30 days':
+        return 15;
+      case '1–3 months':
+      case '1-3 months':
+        return 12;
+      case '3–6 months':
+      case '3-6 months':
+        return 6;
+      default:
+        return 0;
+    }
+  }
+
+  private getProblemScore(value?: string | null): number {
+    switch (value?.toLowerCase()) {
+      case 'critical':
+        return 20;
+      case 'high':
+        return 15;
+      case 'moderate':
+        return 8;
+      case 'nice-to-have':
+      case 'nice to have':
+        return 2;
+      default:
+        return 0;
+    }
+  }
+
+  private getEconomicBuyerScore(value?: string | null): number {
+    switch (value?.toLowerCase()) {
+      case 'engaged':
+        return 10;
+      case 'identified only':
+        return 5;
+      default:
+        return 0;
+    }
+  }
+
+  private getIcpFitScore(value?: string | null): number {
+    switch (value?.toLowerCase()) {
+      case 'strong':
+        return 10;
+      case 'partial':
+        return 5;
+      default:
+        return 0;
+    }
+  }
+
   protected onAiScore() {
-    debugger;
     if (!this.editingId || this.aiScoring()) {
       return;
     }
@@ -435,16 +672,17 @@ export class LeadFormPage implements OnInit {
         this.aiScoring.set(false);
         this.form.score = result.score;
         this.form.autoScore = false;
-        const confidencePct = Math.round(result.confidence * 100);
-        this.aiScoreNote.set(`AI score ${result.score} - ${confidencePct}% confidence. ${result.rationale || ''}`.trim());
+        const confidencePct = Math.round((result.confidence ?? 0) * 100);
+        this.aiScoreConfidence.set(confidencePct);
+        this.aiScoreNote.set(`Score refreshed to ${result.score}${result.rationale ? ` - ${result.rationale}` : ''}`.trim());
         this.aiScoreSeverity.set(this.resolveAiSeverity(result.score));
-        this.raiseToast('success', `AI score updated to ${result.score}.`);
+        this.raiseToast('success', `Score refreshed to ${result.score}.`);
       },
       error: () => {
         
         
         this.aiScoring.set(false);
-        this.raiseToast('error', 'Unable to run AI scoring.');
+        this.raiseToast('error', 'Unable to refresh score.');
       }
     });
   }
@@ -473,6 +711,35 @@ export class LeadFormPage implements OnInit {
     }
   }
 
+  protected aiScoreConfidenceLabel() {
+    const confidence = this.aiScoreConfidence();
+    if (confidence === null) return null;
+    if (confidence >= 75) return 'High confidence';
+    if (confidence >= 45) return 'Medium confidence';
+    return 'Low confidence';
+  }
+
+  protected qualificationConfidencePercent(): number {
+    const serverConfidence = this.qualificationConfidence();
+    if (serverConfidence !== null) {
+      return Math.round(serverConfidence * 100);
+    }
+    const count = this.countQualificationFactors();
+    return Math.round((count / 6) * 100);
+  }
+
+  protected qualificationConfidenceHint(): string | null {
+    const percent = this.qualificationConfidencePercent();
+    if (percent >= 80) return null;
+    return 'Improve confidence by completing more qualification factors.';
+  }
+
+  protected scoreItemClass(item: LeadScoreBreakdownItem): string {
+    if (item.score === 0) return 'is-zero';
+    if (item.score >= item.maxScore) return 'is-full';
+    return '';
+  }
+
   protected statusSeverity(status: LeadStatus | string) {
     switch (status) {
       case 'Qualified':
@@ -494,6 +761,10 @@ export class LeadFormPage implements OnInit {
       return 'Qualification notes are required when qualifying a lead.';
     }
 
+    if (this.form.status === 'Qualified' && this.countQualificationFactors() < 3) {
+      return 'At least 3 qualification factors are required before marking a lead as Qualified.';
+    }
+
     if (this.form.status === 'Nurture' && !this.form.nurtureFollowUpAtUtc) {
       return 'Nurture follow-up date is required when setting a lead to Nurture.';
     }
@@ -503,6 +774,72 @@ export class LeadFormPage implements OnInit {
     }
 
     return null;
+  }
+
+  private countQualificationFactors(): number {
+    const factors = [
+      this.form.budgetAvailability,
+      this.form.readinessToSpend,
+      this.form.buyingTimeline,
+      this.form.problemSeverity,
+      this.form.economicBuyer,
+      this.form.icpFit
+    ];
+    return factors.filter((value) => this.isMeaningfulFactor(value)).length;
+  }
+
+  private isMeaningfulFactor(value?: string | null): boolean {
+    if (!value) return false;
+    return value.trim().length > 0 && value.trim().toLowerCase() !== 'unknown';
+  }
+
+  protected onQualificationFactorChange(): void {
+    if (!this.isEditMode()) {
+      return;
+    }
+    this.applyFollowUpDefaults();
+  }
+
+  private applyFollowUpDefaults(): void {
+    const readiness = this.form.readinessToSpend?.toLowerCase() ?? '';
+    const timeline = this.form.buyingTimeline?.toLowerCase() ?? '';
+    let hint: string | null = null;
+
+    if (readiness === 'no initiative') {
+      if (!this.cadenceOutcome.trim()) {
+        this.cadenceOutcome = 'Nurture reminder';
+      }
+      const due = new Date();
+      due.setDate(due.getDate() + 14);
+      if (!this.cadenceNextStepLocal || this.cadenceNextStepLocal.getTime() > due.getTime()) {
+        this.cadenceNextStepLocal = due;
+      }
+      hint = 'Readiness is “No initiative.” Defaulting follow-up to nurture reminder.';
+    }
+
+    if (timeline === '< 30 days') {
+      const due = new Date();
+      due.setDate(due.getDate() + 1);
+      if (!this.cadenceNextStepLocal || this.cadenceNextStepLocal.getTime() > due.getTime()) {
+        this.cadenceNextStepLocal = due;
+      }
+      hint = 'Timeline is < 30 days. Schedule the next step within SLA.';
+    }
+
+    this.followUpHint.set(hint);
+  }
+
+  private getDefaultTab(): 'overview' | 'qualification' | 'activity' | 'history' {
+    if (!this.isEditMode()) {
+      return 'overview';
+    }
+    const roles = this.authService.currentUser()?.roles ?? [];
+    const normalized = roles.map((role) => role.toLowerCase());
+    const isManager = normalized.some((role) => role.includes('manager') || role.includes('director') || role.includes('vp') || role.includes('admin'));
+    if (normalized.length === 0) {
+      return 'overview';
+    }
+    return isManager ? 'overview' : 'qualification';
   }
 
   private toDateValue(value?: string): Date | null {

@@ -48,6 +48,8 @@ Order: execute sequentially, build + verify after each task.
   - Acceptance: cadence steps logged + auto next-step task created.
 - Lead outcome enforcement (Disqualified reason, Nurture follow-up date, Qualified handoff)  
   - Acceptance: lead cannot close without required outcome fields.
+- Structured qualification factors + evidence + score breakdown + risk flags  
+  - Acceptance: system-calculated score only; at least 3 factors required to qualify; confidence derived from completeness.
 - Handoff package validator (notes + booked meeting + outcome)  
   - Acceptance: handoff blocked unless meeting + notes exist.
  - Status: Lead outcomes + SLA + nurture follow-up task completed; cadence tracking + handoff validator now implemented.
@@ -143,6 +145,8 @@ Order: execute sequentially, build + verify after each task.
 - Lead import service seam
 - Lead outcomes + first-touch SLA + nurture follow-up task
 - Lead cadence touch logging + auto next-step task + qualified handoff validator (meeting + notes)
+- Lead qualification factors + evidence + confidence scoring + risk flags (system score only)
+- Lead score refresh via Azure OpenAI (fallback to OpenAI, then rules-based)
 - Activity and opportunity service seams + domain events
 - Opportunity stage enforcement + at-risk + no-next-step flags
 - Activity discipline enforcement (outcome + next step)

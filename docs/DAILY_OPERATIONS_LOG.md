@@ -84,6 +84,28 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ## Log
 
+**Date:** 2026-02-02  
+**Environment:** Dev  
+**Owner:** Yasser / Eng
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 14:10 | Leads / AI Scoring | Refresh score button failing because OpenAI key not configured | Medium | Product |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Lead refresh score | OpenAI scoring client required API key; no Azure OpenAI fallback | Added Azure OpenAI scoring service + DI selection with OpenAI fallback + rule-based fallback | `server/src/CRM.Enterprise.Infrastructure/Leads/*LeadScoring*`, `server/src/CRM.Enterprise.Infrastructure/DependencyInjection.cs`, `server/src/CRM.Enterprise.Api/appsettings.Development.json` | Eng | Refresh score now works with Azure OpenAI when configured; falls back to rules-based if not configured |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Populate Azure OpenAI deployment settings in non-dev environments | Eng | 2026-02-03 | Add endpoint + deployment + api key in secure config |
+
+### Summary for Project Master (If Verified)
+- Lead score refresh now supports Azure OpenAI with OpenAI fallback and rules-based fallback for reliability.
+
 **Date:** 2026-01-30  
 **Environment:** Dev (Azure AI Foundry / OpenAI)  
 **Owner:** Yasser / Eng

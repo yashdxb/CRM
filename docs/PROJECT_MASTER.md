@@ -152,6 +152,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - SignalR hub is mapped to `/api/hubs/presence` and uses the same CORS policy.
 - **Deployment gate:** before any deploy, verify both client and API builds succeed.
 - **Daily ops log:** record daily issues and fixes in `docs/DAILY_OPERATIONS_LOG.md`, and only merge verified outcomes into this master file.
+- **Lead AI scoring:** Lead score refresh uses Azure OpenAI when configured, falls back to OpenAI, then rules-based scoring to keep the UI functional.
 
 ---
 

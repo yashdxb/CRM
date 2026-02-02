@@ -17,16 +17,6 @@
               *ngIf="isEditMode()"
               (click)="logActivity()"
             ></button>
-            <button
-              pButton
-              type="button"
-              class="crm-button crm-button--primary"
-              icon="pi pi-bolt"
-              label="Convert lead"
-              *ngIf="isEditMode()"
-              [disabled]="!canConvertLead()"
-              (click)="onConvertLead()"
-            ></button>
           </div>
           <div class="header-title">
             <h1>
@@ -72,8 +62,67 @@
       </section>
 
       <main class="form-container">
+        <div class="lead-sticky-bar" *ngIf="isEditMode()">
+          <div class="lead-sticky-left">
+            <h3>{{ leadDisplayName() }}</h3>
+            <div class="lead-sticky-meta">
+              <span class="status-chip" [attr.data-status]="form.status">{{ form.status }}</span>
+              <span class="score-chip">Score {{ form.score ?? 0 }} / 100</span>
+              <span class="confidence-chip" *ngIf="qualificationConfidenceLabel()">{{ qualificationConfidenceLabel() }}</span>
+            </div>
+          </div>
+          <div class="lead-sticky-right">
+            <button
+              pButton
+              type="button"
+              class="crm-button crm-button--primary"
+              icon="pi pi-bolt"
+              label="Convert lead"
+              [disabled]="!canConvertLead()"
+              (click)="onConvertLead()"
+            ></button>
+          </div>
+        </div>
+
+        <div class="lead-tabs">
+          <button
+            type="button"
+            class="lead-tab"
+            [class.is-active]="activeTab() === 'overview'"
+            (click)="setActiveTab('overview')"
+          >
+            Overview
+          </button>
+          <button
+            type="button"
+            class="lead-tab"
+            [class.is-active]="activeTab() === 'qualification'"
+            (click)="setActiveTab('qualification')"
+          >
+            Qualification
+            <span class="tab-badge" *ngIf="qualificationTabBadge()">{{ qualificationTabBadge() }}</span>
+          </button>
+          <button
+            type="button"
+            class="lead-tab"
+            [class.is-active]="activeTab() === 'activity'"
+            (click)="setActiveTab('activity')"
+          >
+            Activity &amp; Follow-Up
+            <span class="tab-badge warn" *ngIf="activityTabBadge()">{{ activityTabBadge() }}</span>
+          </button>
+          <button
+            type="button"
+            class="lead-tab"
+            [class.is-active]="activeTab() === 'history'"
+            (click)="setActiveTab('history')"
+          >
+            History
+          </button>
+        </div>
+
         <form class="lead-form" (ngSubmit)="onSave()">
-          <section class="form-section">
+          <section class="form-section" *ngIf="activeTab() === 'overview'">
             <h2 class="section-title">
               <i class="pi pi-user"></i>
               Lead basics
@@ -121,6 +170,8 @@
                 <p class="status-note" *ngIf="isEditMode() && form.status === 'Converted'">
                   This lead is already converted. Update the opportunity instead.
                 </p>
+                <p class="status-rule">{{ qualificationRuleMessage() }}</p>
+                <p class="status-error" *ngIf="qualificationInlineError()">{{ qualificationInlineError() }}</p>
                 <p class="status-note" *ngIf="isEditMode() && form.status !== 'Converted'">
                   Convert via the "Convert lead" button after qualification.
                 </p>
@@ -166,7 +217,7 @@
             </div>
           </section>
 
-          <section class="form-section">
+          <section class="form-section" *ngIf="activeTab() === 'overview'">
             <h2 class="section-title">
               <i class="pi pi-phone"></i>
               Contact details
@@ -191,10 +242,10 @@
             </div>
           </section>
 
-          <section class="form-section form-section--qualification">
+          <section class="form-section" *ngIf="activeTab() === 'overview'">
             <h2 class="section-title">
               <i class="pi pi-chart-line"></i>
-              Qualification
+              System score
             </h2>
             <p-progressBar
               *ngIf="aiScoring()"
@@ -202,16 +253,8 @@
               mode="indeterminate"
             ></p-progressBar>
             <div class="form-grid">
-              <div class="field full-row" *ngIf="isEditMode()">
-                <p class="status-note" *ngIf="firstTouchDueAtUtc()">
-                  First touch due: {{ firstTouchDueAtUtc() | date:'medium' }}
-                </p>
-                <p class="status-note" *ngIf="firstTouchedAtUtc()">
-                  First touched: {{ firstTouchedAtUtc() | date:'medium' }}
-                </p>
-              </div>
               <div class="field score-field">
-                <label>Lead score</label>
+                <label>Lead score (System)</label>
                 <p-inputNumber
                   name="score"
                   [(ngModel)]="form.score"
@@ -219,23 +262,21 @@
                   [max]="100"
                   placeholder="0-100"
                   class="w-full"
-                  [disabled]="form.autoScore"
+                  [disabled]="true"
                 ></p-inputNumber>
-                <label class="checkbox-row">
-                  <p-checkbox name="autoScore" [(ngModel)]="form.autoScore" binary="true"></p-checkbox>
-                  <span>Auto score</span>
-                </label>
-                <p class="hint-text" *ngIf="form.autoScore">
-                  Auto score uses email, phone, company, job title, source, territory, and linked account/contact.
-                  Preview: {{ computeAutoScore() }}.
-                  <span *ngIf="isEditMode()">Last saved: {{ form.score ?? 0 }}.</span>
-                </p>
+                <div class="score-meta">
+                  <p class="hint-text">
+                    Calculated from lead signals and qualification factors. Manual entry is disabled.
+                    <span *ngIf="form.autoScore"> Preview: {{ computeAutoScore() }}.</span>
+                  </p>
+                  <p-tag *ngIf="aiScoreConfidenceLabel()" [value]="aiScoreConfidenceLabel()!" severity="info"></p-tag>
+                </div>
                 <div class="ai-score-row" *ngIf="isEditMode()">
                   <button
                     pButton
                     type="button"
-                    label="AI score"
-                    icon="pi pi-bolt"
+                    label="Refresh score"
+                    icon="pi pi-sync"
                     class="crm-button crm-button--primary ai-score-button"
                     (click)="onAiScore()"
                     [disabled]="aiScoring()"
@@ -250,13 +291,208 @@
                 <label>Territory</label>
                 <input pInputText name="territory" [(ngModel)]="form.territory" placeholder="West, EMEA, APAC" class="w-full" />
               </div>
+            </div>
+          </section>
+
+          <section class="form-section form-section--qualification" *ngIf="activeTab() === 'qualification'">
+            <h2 class="section-title">
+              <i class="pi pi-chart-line"></i>
+              Qualification
+            </h2>
+            <div class="form-grid">
+              <div class="field full-row" *ngIf="isEditMode()">
+                <p class="status-note" *ngIf="firstTouchDueAtUtc()">
+                  First touch due: {{ firstTouchDueAtUtc() | date:'medium' }}
+                </p>
+                <p class="status-note" *ngIf="firstTouchedAtUtc()">
+                  First touched: {{ firstTouchedAtUtc() | date:'medium' }}
+                </p>
+              </div>
               <div class="field full-row">
-                <label>Qualification notes <span class="required" *ngIf="form.status === 'Qualified'">*</span></label>
+                <div class="qualification-header">
+                  <div>
+                    <h3>Qualification factors</h3>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Budget availability</label>
+                <p-select
+                  name="budgetAvailability"
+                  [options]="budgetOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="form.budgetAvailability"
+                  placeholder="Select"
+                  class="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label>Evidence (optional)</label>
+                <textarea
+                  pTextarea
+                  name="budgetEvidence"
+                  rows="2"
+                  class="w-full"
+                  placeholder="What did you observe or hear?"
+                  [(ngModel)]="form.budgetEvidence"
+                ></textarea>
+              </div>
+              <div class="field">
+                <label>Readiness to spend</label>
+                <p-select
+                  name="readinessToSpend"
+                  [options]="readinessOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="form.readinessToSpend"
+                  (ngModelChange)="onQualificationFactorChange()"
+                  placeholder="Select"
+                  class="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label>Evidence (optional)</label>
+                <textarea
+                  pTextarea
+                  name="readinessEvidence"
+                  rows="2"
+                  class="w-full"
+                  placeholder="What did you observe or hear?"
+                  [(ngModel)]="form.readinessEvidence"
+                ></textarea>
+              </div>
+              <div class="field">
+                <label>Buying timeline</label>
+                <p-select
+                  name="buyingTimeline"
+                  [options]="timelineOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="form.buyingTimeline"
+                  (ngModelChange)="onQualificationFactorChange()"
+                  placeholder="Select"
+                  class="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label>Evidence (optional)</label>
+                <textarea
+                  pTextarea
+                  name="timelineEvidence"
+                  rows="2"
+                  class="w-full"
+                  placeholder="What did you observe or hear?"
+                  [(ngModel)]="form.timelineEvidence"
+                ></textarea>
+              </div>
+              <div class="field">
+                <label>Problem severity</label>
+                <p-select
+                  name="problemSeverity"
+                  [options]="problemOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="form.problemSeverity"
+                  placeholder="Select"
+                  class="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label>Evidence (optional)</label>
+                <textarea
+                  pTextarea
+                  name="problemEvidence"
+                  rows="2"
+                  class="w-full"
+                  placeholder="What did you observe or hear?"
+                  [(ngModel)]="form.problemEvidence"
+                ></textarea>
+              </div>
+              <div class="field">
+                <label>Economic buyer</label>
+                <p-select
+                  name="economicBuyer"
+                  [options]="economicBuyerOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="form.economicBuyer"
+                  placeholder="Select"
+                  class="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label>Evidence (optional)</label>
+                <textarea
+                  pTextarea
+                  name="economicBuyerEvidence"
+                  rows="2"
+                  class="w-full"
+                  placeholder="What did you observe or hear?"
+                  [(ngModel)]="form.economicBuyerEvidence"
+                ></textarea>
+              </div>
+              <div class="field">
+                <label>
+                  ICP fit
+                  <i
+                    class="pi pi-info-circle info-icon"
+                    pTooltip="How closely this lead matches our ideal customer profile (industry, size, use case, delivery fit)."
+                    tooltipPosition="top"
+                  ></i>
+                </label>
+                <p-select
+                  name="icpFit"
+                  [options]="icpFitOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [(ngModel)]="form.icpFit"
+                  placeholder="Select"
+                  class="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label>Evidence (optional)</label>
+                <textarea
+                  pTextarea
+                  name="icpFitEvidence"
+                  rows="2"
+                  class="w-full"
+                  placeholder="What did you observe or hear?"
+                  [(ngModel)]="form.icpFitEvidence"
+                ></textarea>
+              </div>
+              <div class="field full-row" *ngIf="scoreBreakdown().length">
+                <div class="score-breakdown">
+                  <div class="score-breakdown__header">
+                    <span>Score breakdown</span>
+                    <span class="confidence-pill" *ngIf="qualificationConfidenceLabel()">{{ qualificationConfidenceLabel() }}</span>
+                  </div>
+                  <div class="confidence-meter">
+                    <span>Confidence</span>
+                    <p-progressBar [value]="qualificationConfidencePercent()" styleClass="confidence-bar"></p-progressBar>
+                    <span class="confidence-value">{{ qualificationConfidencePercent() }}%</span>
+                  </div>
+                  <p class="hint-text compact" *ngIf="qualificationConfidenceHint()">{{ qualificationConfidenceHint() }}</p>
+                  <div class="score-breakdown__grid">
+                    <div class="score-breakdown__item" [ngClass]="scoreItemClass(item)" *ngFor="let item of scoreBreakdown()">
+                      <span>{{ item.factor }}</span>
+                      <strong>{{ item.score }} / {{ item.maxScore }}</strong>
+                    </div>
+                  </div>
+                  <div class="risk-flags" *ngIf="riskFlags().length">
+                    <span class="risk-flag" *ngFor="let flag of riskFlags()">⚠️ {{ flag }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="field full-row">
+                <label>Context &amp; supporting notes <span class="required" *ngIf="form.status === 'Qualified'">*</span></label>
+                <p class="hint-text compact">Context only. Does not affect score.</p>
                 <textarea
                   pTextarea
                   name="qualifiedNotes"
                   rows="5"
-                  placeholder="Key context, objections, next steps"
+                  placeholder="Key context, objections, and next steps (non-scoring)"
                   class="w-full"
                   [(ngModel)]="form.qualifiedNotes"
                 ></textarea>
@@ -284,11 +520,12 @@
             </div>
           </section>
 
-          <section class="form-section cadence-section" *ngIf="isEditMode()">
+          <section class="form-section cadence-section" *ngIf="isEditMode() && activeTab() === 'activity'">
             <h2 class="section-title">
               <i class="pi pi-bullseye"></i>
               Follow-Up Plan
             </h2>
+            <p class="hint-text compact" *ngIf="followUpHint()">{{ followUpHint() }}</p>
             <div class="cadence-grid">
               <div class="field">
                 <label>Channel</label>
@@ -353,7 +590,7 @@
             </ng-template>
           </section>
 
-          <section class="form-section" *ngIf="isEditMode()">
+          <section class="form-section" *ngIf="isEditMode() && activeTab() === 'history'">
             <h2 class="section-title">
               <i class="pi pi-history"></i>
               Status history

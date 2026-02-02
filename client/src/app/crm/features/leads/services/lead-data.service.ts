@@ -33,6 +33,18 @@ export interface SaveLeadRequest {
   disqualifiedReason?: string;
   nurtureFollowUpAtUtc?: string | Date | null;
   qualifiedNotes?: string;
+  budgetAvailability?: string;
+  budgetEvidence?: string;
+  readinessToSpend?: string;
+  readinessEvidence?: string;
+  buyingTimeline?: string;
+  timelineEvidence?: string;
+  problemSeverity?: string;
+  problemEvidence?: string;
+  economicBuyer?: string;
+  economicBuyerEvidence?: string;
+  icpFit?: string;
+  icpFitEvidence?: string;
 }
 
 export interface LeadAiScoreResponse {

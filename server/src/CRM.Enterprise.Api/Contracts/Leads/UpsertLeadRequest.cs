@@ -22,4 +22,16 @@ public class UpsertLeadRequest
     public string? DisqualifiedReason { get; set; }
     public DateTime? NurtureFollowUpAtUtc { get; set; }
     public string? QualifiedNotes { get; set; }
+    public string? BudgetAvailability { get; set; }
+    public string? BudgetEvidence { get; set; }
+    public string? ReadinessToSpend { get; set; }
+    public string? ReadinessEvidence { get; set; }
+    public string? BuyingTimeline { get; set; }
+    public string? TimelineEvidence { get; set; }
+    public string? ProblemSeverity { get; set; }
+    public string? ProblemEvidence { get; set; }
+    public string? EconomicBuyer { get; set; }
+    public string? EconomicBuyerEvidence { get; set; }
+    public string? IcpFit { get; set; }
+    public string? IcpFitEvidence { get; set; }
 }

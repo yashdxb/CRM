@@ -21,7 +21,23 @@ public sealed record LeadListItemDto(
     DateTime? NurtureFollowUpAtUtc,
     string? QualifiedNotes,
     DateTime? FirstTouchDueAtUtc,
-    DateTime? FirstTouchedAtUtc);
+    DateTime? FirstTouchedAtUtc,
+    string? BudgetAvailability,
+    string? BudgetEvidence,
+    string? ReadinessToSpend,
+    string? ReadinessEvidence,
+    string? BuyingTimeline,
+    string? TimelineEvidence,
+    string? ProblemSeverity,
+    string? ProblemEvidence,
+    string? EconomicBuyer,
+    string? EconomicBuyerEvidence,
+    string? IcpFit,
+    string? IcpFitEvidence,
+    decimal QualificationConfidence,
+    string QualificationConfidenceLabel,
+    IReadOnlyList<LeadScoreBreakdownItem> ScoreBreakdown,
+    IReadOnlyList<string> RiskFlags);
 
 public sealed record LeadSearchResultDto(IReadOnlyList<LeadListItemDto> Items, int Total);
 
@@ -63,6 +79,11 @@ public sealed record LeadCadenceTouchDto(
     DateTime CompletedAtUtc,
     DateTime? NextStepDueAtUtc,
     string OwnerName);
+
+public sealed record LeadScoreBreakdownItem(
+    string Factor,
+    int Score,
+    int MaxScore);
 
 public sealed record LeadOperationResult<T>(bool Success, T? Value, string? Error, bool NotFound = false)
 {

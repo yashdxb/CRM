@@ -86,7 +86,19 @@ public sealed class LeadService : ILeadService
                 l.NurtureFollowUpAtUtc,
                 l.QualifiedNotes,
                 l.FirstTouchDueAtUtc,
-                l.FirstTouchedAtUtc
+                l.FirstTouchedAtUtc,
+                l.BudgetAvailability,
+                l.BudgetEvidence,
+                l.ReadinessToSpend,
+                l.ReadinessEvidence,
+                l.BuyingTimeline,
+                l.TimelineEvidence,
+                l.ProblemSeverity,
+                l.ProblemEvidence,
+                l.EconomicBuyer,
+                l.EconomicBuyerEvidence,
+                l.IcpFit,
+                l.IcpFitEvidence
             })
             .ToListAsync(cancellationToken);
 
@@ -96,28 +108,61 @@ public sealed class LeadService : ILeadService
             .Select(u => new { u.Id, u.FullName })
             .ToListAsync(cancellationToken);
 
-        var items = leads.Select(l => new LeadListItemDto(
-            l.Id,
-            $"{l.FirstName} {l.LastName}".Trim(),
-            l.CompanyName ?? string.Empty,
-            l.Status,
-            l.Email,
-            l.Phone,
-            l.OwnerId,
-            owners.FirstOrDefault(o => o.Id == l.OwnerId)?.FullName ?? "Unassigned",
-            l.Score,
-            l.CreatedAtUtc,
-            l.Source,
-            l.Territory,
-            l.JobTitle,
-            l.AccountId,
-            l.ContactId,
-            l.ConvertedOpportunityId,
-            l.DisqualifiedReason,
-            l.NurtureFollowUpAtUtc,
-            l.QualifiedNotes,
-            l.FirstTouchDueAtUtc,
-            l.FirstTouchedAtUtc));
+        var items = leads.Select(l =>
+        {
+            var insights = BuildQualificationInsights(
+                l.BudgetAvailability,
+                l.BudgetEvidence,
+                l.ReadinessToSpend,
+                l.ReadinessEvidence,
+                l.BuyingTimeline,
+                l.TimelineEvidence,
+                l.ProblemSeverity,
+                l.ProblemEvidence,
+                l.EconomicBuyer,
+                l.EconomicBuyerEvidence,
+                l.IcpFit,
+                l.IcpFitEvidence);
+
+            return new LeadListItemDto(
+                l.Id,
+                $"{l.FirstName} {l.LastName}".Trim(),
+                l.CompanyName ?? string.Empty,
+                l.Status,
+                l.Email,
+                l.Phone,
+                l.OwnerId,
+                owners.FirstOrDefault(o => o.Id == l.OwnerId)?.FullName ?? "Unassigned",
+                l.Score,
+                l.CreatedAtUtc,
+                l.Source,
+                l.Territory,
+                l.JobTitle,
+                l.AccountId,
+                l.ContactId,
+                l.ConvertedOpportunityId,
+                l.DisqualifiedReason,
+                l.NurtureFollowUpAtUtc,
+                l.QualifiedNotes,
+                l.FirstTouchDueAtUtc,
+                l.FirstTouchedAtUtc,
+                l.BudgetAvailability,
+                l.BudgetEvidence,
+                l.ReadinessToSpend,
+                l.ReadinessEvidence,
+                l.BuyingTimeline,
+                l.TimelineEvidence,
+                l.ProblemSeverity,
+                l.ProblemEvidence,
+                l.EconomicBuyer,
+                l.EconomicBuyerEvidence,
+                l.IcpFit,
+                l.IcpFitEvidence,
+                insights.Confidence,
+                insights.ConfidenceLabel,
+                insights.Breakdown,
+                insights.RiskFlags);
+        });
 
         return new LeadSearchResultDto(items.ToList(), total);
     }
@@ -138,6 +183,20 @@ public sealed class LeadService : ILeadService
             .Where(u => u.Id == lead.OwnerId)
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
+
+        var detailInsights = BuildQualificationInsights(
+            lead.BudgetAvailability,
+            lead.BudgetEvidence,
+            lead.ReadinessToSpend,
+            lead.ReadinessEvidence,
+            lead.BuyingTimeline,
+            lead.TimelineEvidence,
+            lead.ProblemSeverity,
+            lead.ProblemEvidence,
+            lead.EconomicBuyer,
+            lead.EconomicBuyerEvidence,
+            lead.IcpFit,
+            lead.IcpFitEvidence);
 
         return new LeadListItemDto(
             lead.Id,
@@ -160,7 +219,23 @@ public sealed class LeadService : ILeadService
             lead.NurtureFollowUpAtUtc,
             lead.QualifiedNotes,
             lead.FirstTouchDueAtUtc,
-            lead.FirstTouchedAtUtc);
+            lead.FirstTouchedAtUtc,
+            lead.BudgetAvailability,
+            lead.BudgetEvidence,
+            lead.ReadinessToSpend,
+            lead.ReadinessEvidence,
+            lead.BuyingTimeline,
+            lead.TimelineEvidence,
+            lead.ProblemSeverity,
+            lead.ProblemEvidence,
+            lead.EconomicBuyer,
+            lead.EconomicBuyerEvidence,
+            lead.IcpFit,
+            lead.IcpFitEvidence,
+            detailInsights.Confidence,
+            detailInsights.ConfidenceLabel,
+            detailInsights.Breakdown,
+            detailInsights.RiskFlags);
     }
 
     public async Task<IReadOnlyList<LeadStatusHistoryDto>?> GetStatusHistoryAsync(Guid id, CancellationToken cancellationToken = default)
@@ -280,6 +355,18 @@ public sealed class LeadService : ILeadService
             DisqualifiedReason = request.DisqualifiedReason,
             NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc,
             QualifiedNotes = request.QualifiedNotes,
+            BudgetAvailability = request.BudgetAvailability,
+            BudgetEvidence = request.BudgetEvidence,
+            ReadinessToSpend = request.ReadinessToSpend,
+            ReadinessEvidence = request.ReadinessEvidence,
+            BuyingTimeline = request.BuyingTimeline,
+            TimelineEvidence = request.TimelineEvidence,
+            ProblemSeverity = request.ProblemSeverity,
+            ProblemEvidence = request.ProblemEvidence,
+            EconomicBuyer = request.EconomicBuyer,
+            EconomicBuyerEvidence = request.EconomicBuyerEvidence,
+            IcpFit = request.IcpFit,
+            IcpFitEvidence = request.IcpFitEvidence,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -307,6 +394,20 @@ public sealed class LeadService : ILeadService
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
 
+        var createInsights = BuildQualificationInsights(
+            lead.BudgetAvailability,
+            lead.BudgetEvidence,
+            lead.ReadinessToSpend,
+            lead.ReadinessEvidence,
+            lead.BuyingTimeline,
+            lead.TimelineEvidence,
+            lead.ProblemSeverity,
+            lead.ProblemEvidence,
+            lead.EconomicBuyer,
+            lead.EconomicBuyerEvidence,
+            lead.IcpFit,
+            lead.IcpFitEvidence);
+
         var dto = new LeadListItemDto(
             lead.Id,
             $"{lead.FirstName} {lead.LastName}".Trim(),
@@ -328,7 +429,23 @@ public sealed class LeadService : ILeadService
             lead.NurtureFollowUpAtUtc,
             lead.QualifiedNotes,
             lead.FirstTouchDueAtUtc,
-            lead.FirstTouchedAtUtc);
+            lead.FirstTouchedAtUtc,
+            lead.BudgetAvailability,
+            lead.BudgetEvidence,
+            lead.ReadinessToSpend,
+            lead.ReadinessEvidence,
+            lead.BuyingTimeline,
+            lead.TimelineEvidence,
+            lead.ProblemSeverity,
+            lead.ProblemEvidence,
+            lead.EconomicBuyer,
+            lead.EconomicBuyerEvidence,
+            lead.IcpFit,
+            lead.IcpFitEvidence,
+            createInsights.Confidence,
+            createInsights.ConfidenceLabel,
+            createInsights.Breakdown,
+            createInsights.RiskFlags);
 
         return LeadOperationResult<LeadListItemDto>.Ok(dto);
     }
@@ -366,6 +483,18 @@ public sealed class LeadService : ILeadService
         lead.DisqualifiedReason = request.DisqualifiedReason;
         lead.NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc;
         lead.QualifiedNotes = request.QualifiedNotes;
+        lead.BudgetAvailability = request.BudgetAvailability;
+        lead.BudgetEvidence = request.BudgetEvidence;
+        lead.ReadinessToSpend = request.ReadinessToSpend;
+        lead.ReadinessEvidence = request.ReadinessEvidence;
+        lead.BuyingTimeline = request.BuyingTimeline;
+        lead.TimelineEvidence = request.TimelineEvidence;
+        lead.ProblemSeverity = request.ProblemSeverity;
+        lead.ProblemEvidence = request.ProblemEvidence;
+        lead.EconomicBuyer = request.EconomicBuyer;
+        lead.EconomicBuyerEvidence = request.EconomicBuyerEvidence;
+        lead.IcpFit = request.IcpFit;
+        lead.IcpFitEvidence = request.IcpFitEvidence;
         lead.UpdatedAtUtc = DateTime.UtcNow;
 
         var validationError = ValidateOutcome(resolvedStatusName, request);
@@ -1127,6 +1256,11 @@ public sealed class LeadService : ILeadService
 
         if (string.Equals(statusName, "Qualified", StringComparison.OrdinalIgnoreCase))
         {
+            if (CountQualificationFactors(request) < 3)
+            {
+                return "At least 3 qualification factors are required to set a lead to Qualified.";
+            }
+
             return string.IsNullOrWhiteSpace(request.QualifiedNotes)
                 ? "Qualification notes are required when qualifying a lead."
                 : null;
@@ -1262,6 +1396,11 @@ public sealed class LeadService : ILeadService
 
     private static int ResolveLeadScore(LeadUpsertRequest request, int? currentScore = null)
     {
+        if (TryComputeQualificationScore(request, out var qualificationScore))
+        {
+            return qualificationScore;
+        }
+
         var autoScore = request.AutoScore ?? true;
         if (!autoScore)
         {
@@ -1285,6 +1424,206 @@ public sealed class LeadService : ILeadService
 
         return Math.Clamp(score, 0, 100);
     }
+
+    private static bool TryComputeQualificationScore(LeadUpsertRequest request, out int score)
+    {
+        if (CountQualificationFactors(request) == 0)
+        {
+            score = 0;
+            return false;
+        }
+
+        score = GetBudgetScore(request.BudgetAvailability)
+                + GetReadinessScore(request.ReadinessToSpend)
+                + GetTimelineScore(request.BuyingTimeline)
+                + GetProblemScore(request.ProblemSeverity)
+                + GetEconomicBuyerScore(request.EconomicBuyer)
+                + GetIcpFitScore(request.IcpFit);
+        return true;
+    }
+
+    private static int CountQualificationFactors(LeadUpsertRequest request)
+    {
+        var count = 0;
+        if (IsMeaningfulFactor(request.BudgetAvailability)) count++;
+        if (IsMeaningfulFactor(request.ReadinessToSpend)) count++;
+        if (IsMeaningfulFactor(request.BuyingTimeline)) count++;
+        if (IsMeaningfulFactor(request.ProblemSeverity)) count++;
+        if (IsMeaningfulFactor(request.EconomicBuyer)) count++;
+        if (IsMeaningfulFactor(request.IcpFit)) count++;
+        return count;
+    }
+
+    private static bool IsMeaningfulFactor(string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value) && !IsUnknown(value);
+    }
+
+    private static bool IsUnknown(string? value)
+    {
+        return string.Equals(value, "Unknown", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int GetBudgetScore(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0;
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "confirmed allocated" => 25,
+            "indicative / estimated" => 15,
+            "indicative/estimated" => 15,
+            "no defined budget" => 5,
+            "insufficient" => 0,
+            "unknown" => 0,
+            _ => 0
+        };
+    }
+
+    private static int GetReadinessScore(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0;
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "actively evaluating" => 20,
+            "approved, timing tbd" => 15,
+            "approved timing tbd" => 15,
+            "early research" => 8,
+            "no initiative" => 0,
+            "unknown" => 0,
+            _ => 0
+        };
+    }
+
+    private static int GetTimelineScore(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0;
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "< 30 days" => 15,
+            "1–3 months" => 12,
+            "1-3 months" => 12,
+            "3–6 months" => 6,
+            "3-6 months" => 6,
+            "unknown" => 0,
+            _ => 0
+        };
+    }
+
+    private static int GetProblemScore(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0;
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "critical" => 20,
+            "high" => 15,
+            "moderate" => 8,
+            "nice-to-have" => 2,
+            "nice to have" => 2,
+            "unknown" => 0,
+            _ => 0
+        };
+    }
+
+    private static int GetEconomicBuyerScore(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0;
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "engaged" => 10,
+            "identified only" => 5,
+            "unknown" => 0,
+            _ => 0
+        };
+    }
+
+    private static int GetIcpFitScore(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return 0;
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "strong" => 10,
+            "partial" => 5,
+            "weak" => 0,
+            "unknown" => 0,
+            _ => 0
+        };
+    }
+
+    private static QualificationInsights BuildQualificationInsights(
+        string? budgetAvailability,
+        string? budgetEvidence,
+        string? readinessToSpend,
+        string? readinessEvidence,
+        string? buyingTimeline,
+        string? timelineEvidence,
+        string? problemSeverity,
+        string? problemEvidence,
+        string? economicBuyer,
+        string? economicBuyerEvidence,
+        string? icpFit,
+        string? icpFitEvidence)
+    {
+        var breakdown = new List<LeadScoreBreakdownItem>
+        {
+            new("Budget", GetBudgetScore(budgetAvailability), 25),
+            new("Readiness", GetReadinessScore(readinessToSpend), 20),
+            new("Timeline", GetTimelineScore(buyingTimeline), 15),
+            new("Problem", GetProblemScore(problemSeverity), 20),
+            new("Economic Buyer", GetEconomicBuyerScore(economicBuyer), 10),
+            new("ICP Fit", GetIcpFitScore(icpFit), 10)
+        };
+
+        var totalFactors = 6m;
+        var completedFactors = new[]
+        {
+            budgetAvailability,
+            readinessToSpend,
+            buyingTimeline,
+            problemSeverity,
+            economicBuyer,
+            icpFit
+        }.Count(IsMeaningfulFactor);
+
+        var confidence = totalFactors == 0 ? 0 : completedFactors / totalFactors;
+        var confidenceLabel = confidence >= 0.8m ? "High confidence"
+            : confidence >= 0.5m ? "Medium confidence"
+            : "Low confidence";
+
+        var riskFlags = new List<string>();
+        if (!IsMeaningfulFactor(buyingTimeline))
+        {
+            riskFlags.Add("No buying timeline");
+        }
+        if (!IsMeaningfulFactor(economicBuyer) || string.Equals(economicBuyer, "Identified only", StringComparison.OrdinalIgnoreCase))
+        {
+            riskFlags.Add("Economic buyer not engaged");
+        }
+        if (string.Equals(budgetAvailability, "Confirmed allocated", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(readinessToSpend, "No initiative", StringComparison.OrdinalIgnoreCase))
+        {
+            riskFlags.Add("Budget confirmed but no initiative");
+        }
+        if (string.Equals(icpFit, "Weak", StringComparison.OrdinalIgnoreCase))
+        {
+            riskFlags.Add("Weak ICP fit");
+        }
+        if (!IsMeaningfulFactor(problemSeverity))
+        {
+            riskFlags.Add("Problem severity unclear");
+        }
+
+        return new QualificationInsights(
+            confidence,
+            confidenceLabel,
+            breakdown,
+            riskFlags.Take(3).ToList());
+    }
+
+    private sealed record QualificationInsights(
+        decimal Confidence,
+        string ConfidenceLabel,
+        IReadOnlyList<LeadScoreBreakdownItem> Breakdown,
+        IReadOnlyList<string> RiskFlags);
 
     private static bool HasAiSignals(LeadUpsertRequest request)
     {

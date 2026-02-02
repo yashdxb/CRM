@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace CRM.Enterprise.Api.Contracts.Leads;
 
@@ -23,4 +24,20 @@ public record LeadListItem(
     DateTime? NurtureFollowUpAtUtc,
     string? QualifiedNotes,
     DateTime? FirstTouchDueAtUtc,
-    DateTime? FirstTouchedAtUtc);
+    DateTime? FirstTouchedAtUtc,
+    string? BudgetAvailability,
+    string? BudgetEvidence,
+    string? ReadinessToSpend,
+    string? ReadinessEvidence,
+    string? BuyingTimeline,
+    string? TimelineEvidence,
+    string? ProblemSeverity,
+    string? ProblemEvidence,
+    string? EconomicBuyer,
+    string? EconomicBuyerEvidence,
+    string? IcpFit,
+    string? IcpFitEvidence,
+    decimal QualificationConfidence,
+    string QualificationConfidenceLabel,
+    IEnumerable<LeadScoreBreakdownItem> ScoreBreakdown,
+    IEnumerable<string> RiskFlags);
