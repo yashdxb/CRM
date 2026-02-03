@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, NgZone, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -36,6 +36,8 @@ export class AcceptInvitePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   form = this.fb.group(
     {
@@ -94,16 +96,25 @@ export class AcceptInvitePage implements OnInit {
       .pipe(
         timeout(15000),
         finalize(() => {
-          this.loading = false;
+          this.zone.run(() => {
+            this.loading = false;
+            this.cdr.detectChanges();
+          });
         })
       )
       .subscribe({
         next: () => {
-          this.status = null;
-          this.showSuccessDialog = true;
+          this.zone.run(() => {
+            this.status = null;
+            this.showSuccessDialog = true;
+            this.cdr.detectChanges();
+          });
         },
         error: () => {
-          this.status = { tone: 'error', message: 'Invite link is invalid or expired.' };
+          this.zone.run(() => {
+            this.status = { tone: 'error', message: 'Invite link is invalid or expired.' };
+            this.cdr.detectChanges();
+          });
         }
       });
   }

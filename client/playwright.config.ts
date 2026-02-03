@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-const baseURL = process.env.E2E_BASE_URL || 'http://localhost:4201';
+const baseURL = process.env.E2E_BASE_URL || 'https://www.northedgesystem.com';
 const shouldStartServer =
   !process.env.E2E_SKIP_SERVER && (baseURL.startsWith('http://localhost') || baseURL.startsWith('http://127.0.0.1'));
 

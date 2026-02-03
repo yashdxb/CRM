@@ -917,6 +917,7 @@ Legend:
 6) Dedicated award screen (SCM) (MED)
 7) Lead cadence channel management UI (admin manage add/edit/disable)
 8) Configurable Lead SLA rules in Settings (tenant defaults + source overrides)
+9) Qualification option lookups in API/DB (replace hard-coded UI options)
 
 # Phase 3 Options (Draft)
 

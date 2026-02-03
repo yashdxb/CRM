@@ -88,6 +88,7 @@
           <button
             type="button"
             class="lead-tab"
+            data-tab="overview"
             [class.is-active]="activeTab() === 'overview'"
             (click)="setActiveTab('overview')"
           >
@@ -96,6 +97,7 @@
           <button
             type="button"
             class="lead-tab"
+            data-tab="qualification"
             [class.is-active]="activeTab() === 'qualification'"
             (click)="setActiveTab('qualification')"
           >
@@ -105,6 +107,7 @@
           <button
             type="button"
             class="lead-tab"
+            data-tab="activity"
             [class.is-active]="activeTab() === 'activity'"
             (click)="setActiveTab('activity')"
           >
@@ -114,6 +117,7 @@
           <button
             type="button"
             class="lead-tab"
+            data-tab="history"
             [class.is-active]="activeTab() === 'history'"
             (click)="setActiveTab('history')"
           >
@@ -313,6 +317,15 @@
                   <div>
                     <h3>Qualification factors</h3>
                   </div>
+                  <div class="qualification-legend">
+                    <span class="legend-title">Confidence legend</span>
+                    <div class="legend-chips">
+                      <p-tag value="Unknown" severity="info"></p-tag>
+                      <p-tag value="Assumed" severity="warning"></p-tag>
+                      <p-tag value="Verified" severity="success"></p-tag>
+                      <p-tag value="Invalid" severity="danger"></p-tag>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="field">
@@ -323,20 +336,23 @@
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.budgetAvailability"
+                  (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
                 ></p-select>
               </div>
               <div class="field">
-                <label>Evidence (optional)</label>
-                <textarea
-                  pTextarea
+                <label>Evidence source</label>
+                <p-select
                   name="budgetEvidence"
-                  rows="2"
-                  class="w-full"
-                  placeholder="What did you observe or hear?"
+                  [options]="evidenceOptions"
+                  optionLabel="label"
+                  optionValue="value"
                   [(ngModel)]="form.budgetEvidence"
-                ></textarea>
+                  [disabled]="isEvidenceDisabled(form.budgetAvailability)"
+                  placeholder="Select evidence"
+                  class="w-full"
+                ></p-select>
               </div>
               <div class="field">
                 <label>Readiness to spend</label>
@@ -352,15 +368,17 @@
                 ></p-select>
               </div>
               <div class="field">
-                <label>Evidence (optional)</label>
-                <textarea
-                  pTextarea
+                <label>Evidence source</label>
+                <p-select
                   name="readinessEvidence"
-                  rows="2"
-                  class="w-full"
-                  placeholder="What did you observe or hear?"
+                  [options]="evidenceOptions"
+                  optionLabel="label"
+                  optionValue="value"
                   [(ngModel)]="form.readinessEvidence"
-                ></textarea>
+                  [disabled]="isEvidenceDisabled(form.readinessToSpend)"
+                  placeholder="Select evidence"
+                  class="w-full"
+                ></p-select>
               </div>
               <div class="field">
                 <label>Buying timeline</label>
@@ -376,15 +394,17 @@
                 ></p-select>
               </div>
               <div class="field">
-                <label>Evidence (optional)</label>
-                <textarea
-                  pTextarea
+                <label>Evidence source</label>
+                <p-select
                   name="timelineEvidence"
-                  rows="2"
-                  class="w-full"
-                  placeholder="What did you observe or hear?"
+                  [options]="evidenceOptions"
+                  optionLabel="label"
+                  optionValue="value"
                   [(ngModel)]="form.timelineEvidence"
-                ></textarea>
+                  [disabled]="isEvidenceDisabled(form.buyingTimeline)"
+                  placeholder="Select evidence"
+                  class="w-full"
+                ></p-select>
               </div>
               <div class="field">
                 <label>Problem severity</label>
@@ -394,20 +414,23 @@
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.problemSeverity"
+                  (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
                 ></p-select>
               </div>
               <div class="field">
-                <label>Evidence (optional)</label>
-                <textarea
-                  pTextarea
+                <label>Evidence source</label>
+                <p-select
                   name="problemEvidence"
-                  rows="2"
-                  class="w-full"
-                  placeholder="What did you observe or hear?"
+                  [options]="evidenceOptions"
+                  optionLabel="label"
+                  optionValue="value"
                   [(ngModel)]="form.problemEvidence"
-                ></textarea>
+                  [disabled]="isEvidenceDisabled(form.problemSeverity)"
+                  placeholder="Select evidence"
+                  class="w-full"
+                ></p-select>
               </div>
               <div class="field">
                 <label>Economic buyer</label>
@@ -417,20 +440,23 @@
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.economicBuyer"
+                  (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
                 ></p-select>
               </div>
               <div class="field">
-                <label>Evidence (optional)</label>
-                <textarea
-                  pTextarea
+                <label>Evidence source</label>
+                <p-select
                   name="economicBuyerEvidence"
-                  rows="2"
-                  class="w-full"
-                  placeholder="What did you observe or hear?"
+                  [options]="evidenceOptions"
+                  optionLabel="label"
+                  optionValue="value"
                   [(ngModel)]="form.economicBuyerEvidence"
-                ></textarea>
+                  [disabled]="isEvidenceDisabled(form.economicBuyer)"
+                  placeholder="Select evidence"
+                  class="w-full"
+                ></p-select>
               </div>
               <div class="field">
                 <label>
@@ -447,20 +473,23 @@
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.icpFit"
+                  (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
                 ></p-select>
               </div>
               <div class="field">
-                <label>Evidence (optional)</label>
-                <textarea
-                  pTextarea
+                <label>Evidence source</label>
+                <p-select
                   name="icpFitEvidence"
-                  rows="2"
-                  class="w-full"
-                  placeholder="What did you observe or hear?"
+                  [options]="evidenceOptions"
+                  optionLabel="label"
+                  optionValue="value"
                   [(ngModel)]="form.icpFitEvidence"
-                ></textarea>
+                  [disabled]="isEvidenceDisabled(form.icpFit)"
+                  placeholder="Select evidence"
+                  class="w-full"
+                ></p-select>
               </div>
               <div class="field full-row" *ngIf="scoreBreakdown().length">
                 <div class="score-breakdown">

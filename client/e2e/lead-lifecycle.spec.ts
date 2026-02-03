@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'yasser.ahamed@live.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
+const API_BASE_URL =
+  process.env.API_BASE_URL ??
+  process.env.E2E_API_URL ??
+  'https://crm-enterprise-api-dev-01122345.azurewebsites.net';
+const SALES_REP_EMAIL = process.env.E2E_SALES_REP_EMAIL ?? process.env.E2E_ADMIN_EMAIL ?? 'yasser0503@outlook.com';
+const SALES_REP_PASSWORD = process.env.E2E_SALES_REP_PASSWORD ?? process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
 
 async function login(page, request) {
   const response = await request.post(`${API_BASE_URL}/api/auth/login`, {
@@ -10,7 +13,7 @@ async function login(page, request) {
       'Content-Type': 'application/json',
       'X-Tenant-Key': 'default'
     },
-    data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
+    data: { email: SALES_REP_EMAIL, password: SALES_REP_PASSWORD }
   });
   const payload = await response.json();
   if (!payload?.accessToken) {
@@ -71,6 +74,97 @@ async function fillQualificationFactors(page) {
   await selectByLabel(page, 'p-select[name="budgetAvailability"]', 'Confirmed allocated');
   await selectByLabel(page, 'p-select[name="readinessToSpend"]', 'Actively evaluating');
   await selectByLabel(page, 'p-select[name="icpFit"]', 'Strong');
+}
+
+async function setDateInputByOffset(page, selector, offsetDays) {
+  const input = page.locator(`${selector} input`);
+  await input.waitFor({ state: 'visible' });
+  await input.click();
+
+  const target = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const targetDay = target.getDate();
+  const targetMonth = target.getMonth();
+  const targetYear = target.getFullYear();
+
+  const calendarDialog = page.getByRole('dialog', { name: 'Choose Date' });
+  await calendarDialog.waitFor({ state: 'visible' });
+
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
+  ];
+
+  for (let i = 0; i < 12; i += 1) {
+    const monthButton = calendarDialog.locator('button[aria-label="Choose Month"]');
+    const yearButton = calendarDialog.locator('button[aria-label="Choose Year"]');
+    const monthText = (await monthButton.innerText()).trim();
+    const yearText = (await yearButton.innerText()).trim();
+    const monthIndex = monthNames.indexOf(monthText);
+    const year = Number(yearText);
+    if (monthIndex === targetMonth && year === targetYear) {
+      break;
+    }
+    const next = calendarDialog.getByRole('button', { name: 'Next Month' });
+    await next.click();
+    await page.waitForTimeout(150);
+  }
+
+  await calendarDialog.getByRole('gridcell', { name: String(targetDay) }).first().click();
+
+  await input.press('Tab');
+  await expect(input).not.toHaveValue('');
+}
+
+async function updateLeadStatus(page, name, status) {
+  await page.goto('/app/leads');
+  await searchLeads(page, name);
+  const row = page.locator('tr').filter({ hasText: name }).first();
+  await row.locator('button[title="Edit"]').click();
+  await page.waitForURL('**/app/leads/**');
+  await page.locator('form.lead-form').waitFor({ state: 'visible' });
+  await openTab(page, 'Overview');
+  await selectByLabel(page, 'p-select[name="status"]', status);
+}
+
+async function saveLeadUpdate(page) {
+  const updateButton = page.locator('button:has-text("Update lead")');
+  await expect(updateButton).toBeEnabled();
+
+  const responsePromise = page
+    .waitForResponse(
+      (response) => response.url().includes('/api/leads') && response.request().method() === 'PUT',
+      { timeout: 30_000 }
+    )
+    .catch(() => null);
+  const toastPromise = page
+    .getByText('Lead updated.')
+    .waitFor({ state: 'visible', timeout: 30_000 })
+    .then(() => 'toast')
+    .catch(() => null);
+
+  await updateButton.click();
+
+  const result = await Promise.race([
+    responsePromise.then((response) => ({ type: 'response', response })),
+    toastPromise.then((toast) => ({ type: 'toast', toast }))
+  ]);
+
+  if (!result || (result.type === 'response' && !result.response)) {
+    throw new Error('Lead update did not complete within timeout.');
+  }
+  if (result.type === 'response' && !result.response.ok()) {
+    console.log('lead update failed:', result.response.status(), await result.response.text());
+  }
 }
 
 async function getFirstUserName(request, token) {
@@ -351,4 +445,75 @@ test('lead auto score and conversion carries owner', async ({ page, request }) =
   expect(opportunityResponse.ok()).toBeTruthy();
   const opportunity = await opportunityResponse.json();
   expect(opportunity.owner).toBe(lead.owner);
+});
+
+test('seed azure lead scenarios (sales rep)', async ({ page, request }) => {
+  const suffix = Date.now();
+  attachDiagnostics(page);
+
+  await login(page, request);
+
+  const scenarios = [
+    { key: 'New', first: 'Azure', last: `New ${suffix}`, company: `Azure New ${suffix}` },
+    { key: 'Nurture', first: 'Azure', last: `Nurture ${suffix}`, company: `Azure Nurture ${suffix}` },
+    { key: 'Qualified', first: 'Azure', last: `Qualified ${suffix}`, company: `Azure Qualified ${suffix}` },
+    { key: 'Disqualified', first: 'Azure', last: `Disqualified ${suffix}`, company: `Azure Disqualified ${suffix}` },
+    { key: 'Converted', first: 'Azure', last: `Converted ${suffix}`, company: `Azure Converted ${suffix}` }
+  ];
+
+  for (const lead of scenarios) {
+    await page.goto('/app/leads/new');
+    await page.waitForURL('**/app/leads/new');
+    await page.locator('form.lead-form').waitFor({ state: 'visible' });
+    await page.locator('input[name="firstName"]').fill(lead.first);
+    await page.locator('input[name="lastName"]').fill(lead.last);
+    await page.locator('input[name="companyName"]').fill(lead.company);
+    await selectByLabel(page, 'p-select[name="assignmentStrategy"]', 'Manual');
+    await selectFirstOption(page, 'p-select[name="ownerId"]');
+    await expect(page.locator('button:has-text("Create lead")')).toBeEnabled();
+    const [createResponse] = await Promise.all([
+      page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'POST'),
+      page.locator('button:has-text("Create lead")').click()
+    ]);
+    if (!createResponse.ok()) {
+      console.log(`lead create failed (${lead.key}):`, createResponse.status(), await createResponse.text());
+    }
+    expect(createResponse.ok()).toBeTruthy();
+  }
+
+  await updateLeadStatus(page, scenarios[1].company, 'Nurture');
+  await openTab(page, 'Qualification');
+  await setDateInputByOffset(page, 'p-datepicker[name="nurtureFollowUpAtUtc"]', 7);
+  await openTab(page, 'Overview');
+  await saveLeadUpdate(page);
+
+  await updateLeadStatus(page, scenarios[2].company, 'Qualified');
+  await openTab(page, 'Qualification');
+  await fillQualificationFactors(page);
+  await page.locator('textarea[name="qualifiedNotes"]').fill('Qualified via Azure E2E seed.');
+  await openTab(page, 'Overview');
+  await saveLeadUpdate(page);
+
+  await updateLeadStatus(page, scenarios[3].company, 'Disqualified');
+  await openTab(page, 'Qualification');
+  await page.locator('textarea[name="disqualifiedReason"]').fill('No fit / budget.');
+  await openTab(page, 'Overview');
+  await saveLeadUpdate(page);
+
+  await updateLeadStatus(page, scenarios[4].company, 'Qualified');
+  await openTab(page, 'Qualification');
+  await fillQualificationFactors(page);
+  await page.locator('textarea[name="qualifiedNotes"]').fill('Ready to convert (Azure seed).');
+  await openTab(page, 'Overview');
+  await saveLeadUpdate(page);
+  await page.locator('button:has-text("Convert lead")').first().click();
+  await page.waitForURL('**/app/leads/**/convert');
+  const [convertResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) => response.url().includes('/convert') && response.request().method() === 'POST'
+    ),
+    page.locator('form.convert-form button:has-text("Convert lead")').click()
+  ]);
+  expect(convertResponse.ok()).toBeTruthy();
+  await page.waitForURL('**/app/leads');
 });

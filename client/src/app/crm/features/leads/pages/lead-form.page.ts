@@ -95,42 +95,60 @@ export class LeadFormPage implements OnInit {
     { label: 'Territory', value: 'Territory' }
   ];
   protected readonly budgetOptions: OptionItem[] = [
-    { label: 'Confirmed allocated', value: 'Confirmed allocated' },
-    { label: 'Indicative / estimated', value: 'Indicative / estimated' },
+    { label: 'Unknown / not yet discussed', value: 'Unknown / not yet discussed' },
+    { label: 'Indicative range mentioned', value: 'Indicative range mentioned' },
+    { label: 'Budget allocated and approved', value: 'Budget allocated and approved' },
+    { label: 'Budget identified but unapproved', value: 'Budget identified but unapproved' },
     { label: 'No defined budget', value: 'No defined budget' },
-    { label: 'Insufficient', value: 'Insufficient' },
-    { label: 'Unknown', value: 'Unknown' }
+    { label: 'Budget explicitly unavailable', value: 'Budget explicitly unavailable' }
   ];
   protected readonly readinessOptions: OptionItem[] = [
-    { label: 'Actively evaluating', value: 'Actively evaluating' },
-    { label: 'Approved, timing TBD', value: 'Approved, timing TBD' },
-    { label: 'Early research', value: 'Early research' },
-    { label: 'No initiative', value: 'No initiative' },
-    { label: 'Unknown', value: 'Unknown' }
+    { label: 'Unknown / unclear', value: 'Unknown / unclear' },
+    { label: 'Interest expressed, no urgency', value: 'Interest expressed, no urgency' },
+    { label: 'Actively evaluating solutions', value: 'Actively evaluating solutions' },
+    { label: 'Internal decision in progress', value: 'Internal decision in progress' },
+    { label: 'Ready to proceed pending final step', value: 'Ready to proceed pending final step' },
+    { label: 'Not planning to spend', value: 'Not planning to spend' }
   ];
   protected readonly timelineOptions: OptionItem[] = [
-    { label: '< 30 days', value: '< 30 days' },
-    { label: '1–3 months', value: '1–3 months' },
-    { label: '3–6 months', value: '3–6 months' },
-    { label: 'Unknown', value: 'Unknown' }
+    { label: 'Unknown / not discussed', value: 'Unknown / not discussed' },
+    { label: 'Rough timeline mentioned', value: 'Rough timeline mentioned' },
+    { label: 'Target date verbally confirmed', value: 'Target date verbally confirmed' },
+    { label: 'Decision date confirmed internally', value: 'Decision date confirmed internally' },
+    { label: 'Date missed / repeatedly pushed', value: 'Date missed / repeatedly pushed' },
+    { label: 'No defined timeline', value: 'No defined timeline' }
   ];
   protected readonly problemOptions: OptionItem[] = [
-    { label: 'Critical', value: 'Critical' },
-    { label: 'High', value: 'High' },
-    { label: 'Moderate', value: 'Moderate' },
-    { label: 'Nice-to-have', value: 'Nice-to-have' },
-    { label: 'Unknown', value: 'Unknown' }
+    { label: 'Unknown / not validated', value: 'Unknown / not validated' },
+    { label: 'Mild inconvenience', value: 'Mild inconvenience' },
+    { label: 'Recognized operational problem', value: 'Recognized operational problem' },
+    { label: 'Critical business impact', value: 'Critical business impact' },
+    { label: 'Executive-level priority', value: 'Executive-level priority' },
+    { label: 'Problem acknowledged but deprioritized', value: 'Problem acknowledged but deprioritized' }
   ];
   protected readonly economicBuyerOptions: OptionItem[] = [
-    { label: 'Engaged', value: 'Engaged' },
-    { label: 'Identified only', value: 'Identified only' },
-    { label: 'Unknown', value: 'Unknown' }
+    { label: 'Unknown / not identified', value: 'Unknown / not identified' },
+    { label: 'Influencer identified', value: 'Influencer identified' },
+    { label: 'Buyer identified, not engaged', value: 'Buyer identified, not engaged' },
+    { label: 'Buyer engaged in discussion', value: 'Buyer engaged in discussion' },
+    { label: 'Buyer verbally supportive', value: 'Buyer verbally supportive' },
+    { label: 'Buyer explicitly not involved', value: 'Buyer explicitly not involved' }
   ];
   protected readonly icpFitOptions: OptionItem[] = [
-    { label: 'Strong', value: 'Strong' },
-    { label: 'Partial', value: 'Partial' },
-    { label: 'Weak', value: 'Weak' },
-    { label: 'Unknown', value: 'Unknown' }
+    { label: 'Unknown / not assessed', value: 'Unknown / not assessed' },
+    { label: 'Partial ICP fit', value: 'Partial ICP fit' },
+    { label: 'Strong ICP fit', value: 'Strong ICP fit' },
+    { label: 'Out-of-profile but exploratory', value: 'Out-of-profile but exploratory' },
+    { label: 'Clearly out of ICP', value: 'Clearly out of ICP' }
+  ];
+  protected readonly evidenceOptions: OptionItem[] = [
+    { label: 'No evidence yet', value: 'No evidence yet' },
+    { label: 'Direct buyer statement', value: 'Direct buyer statement' },
+    { label: 'Written confirmation', value: 'Written confirmation' },
+    { label: 'Observed behaviour', value: 'Observed behaviour' },
+    { label: 'Third-party confirmation', value: 'Third-party confirmation' },
+    { label: 'Inferred from context', value: 'Inferred from context' },
+    { label: 'Historical / prior deal', value: 'Historical / prior deal' }
   ];
   protected readonly ownerOptions = signal<OwnerOption[]>([]);
 
@@ -460,17 +478,17 @@ export class LeadFormPage implements OnInit {
       nurtureFollowUpAtUtc: null,
       qualifiedNotes: '',
       budgetAvailability: '',
-      budgetEvidence: '',
+      budgetEvidence: 'No evidence yet',
       readinessToSpend: '',
-      readinessEvidence: '',
+      readinessEvidence: 'No evidence yet',
       buyingTimeline: '',
-      timelineEvidence: '',
+      timelineEvidence: 'No evidence yet',
       problemSeverity: '',
-      problemEvidence: '',
+      problemEvidence: 'No evidence yet',
       economicBuyer: '',
-      economicBuyerEvidence: '',
+      economicBuyerEvidence: 'No evidence yet',
       icpFit: '',
-      icpFitEvidence: ''
+      icpFitEvidence: 'No evidence yet'
     };
   }
 
@@ -790,14 +808,46 @@ export class LeadFormPage implements OnInit {
 
   private isMeaningfulFactor(value?: string | null): boolean {
     if (!value) return false;
-    return value.trim().length > 0 && value.trim().toLowerCase() !== 'unknown';
+    return value.trim().length > 0 && !this.isUnknownValue(value);
   }
 
   protected onQualificationFactorChange(): void {
     if (!this.isEditMode()) {
       return;
     }
+    this.normalizeEvidence();
     this.applyFollowUpDefaults();
+  }
+
+  protected isEvidenceDisabled(value?: string | null): boolean {
+    if (!value) return true;
+    return this.isUnknownValue(value);
+  }
+
+  private isUnknownValue(value?: string | null): boolean {
+    if (!value) return true;
+    return value.trim().toLowerCase().includes('unknown');
+  }
+
+  private normalizeEvidence(): void {
+    if (this.isEvidenceDisabled(this.form.budgetAvailability)) {
+      this.form.budgetEvidence = 'No evidence yet';
+    }
+    if (this.isEvidenceDisabled(this.form.readinessToSpend)) {
+      this.form.readinessEvidence = 'No evidence yet';
+    }
+    if (this.isEvidenceDisabled(this.form.buyingTimeline)) {
+      this.form.timelineEvidence = 'No evidence yet';
+    }
+    if (this.isEvidenceDisabled(this.form.problemSeverity)) {
+      this.form.problemEvidence = 'No evidence yet';
+    }
+    if (this.isEvidenceDisabled(this.form.economicBuyer)) {
+      this.form.economicBuyerEvidence = 'No evidence yet';
+    }
+    if (this.isEvidenceDisabled(this.form.icpFit)) {
+      this.form.icpFitEvidence = 'No evidence yet';
+    }
   }
 
   private applyFollowUpDefaults(): void {
@@ -805,7 +855,7 @@ export class LeadFormPage implements OnInit {
     const timeline = this.form.buyingTimeline?.toLowerCase() ?? '';
     let hint: string | null = null;
 
-    if (readiness === 'no initiative') {
+    if (readiness === 'not planning to spend') {
       if (!this.cadenceOutcome.trim()) {
         this.cadenceOutcome = 'Nurture reminder';
       }
@@ -814,16 +864,16 @@ export class LeadFormPage implements OnInit {
       if (!this.cadenceNextStepLocal || this.cadenceNextStepLocal.getTime() > due.getTime()) {
         this.cadenceNextStepLocal = due;
       }
-      hint = 'Readiness is “No initiative.” Defaulting follow-up to nurture reminder.';
+      hint = 'Readiness is “Not planning to spend.” Defaulting follow-up to nurture reminder.';
     }
 
-    if (timeline === '< 30 days') {
+    if (timeline.includes('target date verbally confirmed')) {
       const due = new Date();
       due.setDate(due.getDate() + 1);
       if (!this.cadenceNextStepLocal || this.cadenceNextStepLocal.getTime() > due.getTime()) {
         this.cadenceNextStepLocal = due;
       }
-      hint = 'Timeline is < 30 days. Schedule the next step within SLA.';
+      hint = 'Timeline has a confirmed target date. Schedule the next step within SLA.';
     }
 
     this.followUpHint.set(hint);

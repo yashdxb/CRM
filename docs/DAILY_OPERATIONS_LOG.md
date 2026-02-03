@@ -84,6 +84,33 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ## Log
 
+**Date:** 2026-02-03  
+**Environment:** Dev (Azure App Service + Azure SQL)  
+**Owner:** Yasser / Eng
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 09:30 | Notifications | SLA + idle alerts toggle not saving; email flood | High | Product |
+| 10:40 | Auth / Invite | Accept invite password change appears stuck until focusing inputs | Medium | Product |
+| 11:20 | Data hygiene | Playwright-created records showing in Leads/Tasks/KPIs/audit log | Medium | Product |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| SLA + idle toggle not saving | Toggle bound via getter/setter; update API not reliably invoked | Switched to explicit `(ngModelChange)` handler for alerts toggle | `client/src/app/crm/features/settings/pages/notifications.page.html` | Eng | Toggle now saves and persists |
+| Invite activation loading stuck | UI state updates outside Angular zone on accept-invite flow | Wrapped updates in `NgZone` + forced change detection | `client/src/app/public/auth/accept-invite.page.ts` | Eng | Success dialog renders without extra click |
+| Playwright data in dev | E2E created real records in Azure dev | Added seed test; cleaned data directly in Azure SQL | `client/e2e/lead-lifecycle.spec.ts`, Azure SQL (`crm.*`) | Eng | Leads/activities/opps/accounts/contacts/audit events removed |
+| KPI cards showing tasks | Tasks KPI uses `crm.Activities` | Cleared `crm.Activities` for default tenant | Azure SQL (`crm.Activities`, `identity.Tenants`) | Eng | Tasks KPI drops after refresh |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Consider tagging E2E data for easier cleanup | Eng | 2026-02-04 | Add marker field or consistent prefix |
+
+### Summary for Project Master (If Verified)
+- Notifications alert toggle now persists; invite activation UI fixed; Azure dev data cleaned after Playwright seeding.
+
 **Date:** 2026-02-02  
 **Environment:** Dev  
 **Owner:** Yasser / Eng
