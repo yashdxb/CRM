@@ -497,6 +497,36 @@
       flex-wrap: wrap;
     }
 
+    .select-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+    }
+
+    .option-icon {
+      font-size: 0.95rem;
+    }
+
+    .tone-unknown {
+      color: #64748b;
+    }
+
+    .tone-assumed {
+      color: #0ea5e9;
+    }
+
+    .tone-verified {
+      color: #16a34a;
+    }
+
+    .tone-invalid {
+      color: #ef4444;
+    }
+
+    .tone-neutral {
+      color: #a855f7;
+    }
+
     .history-list {
       display: grid;
       gap: 0.85rem;

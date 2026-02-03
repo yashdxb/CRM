@@ -321,7 +321,7 @@
                     <span class="legend-title">Confidence legend</span>
                     <div class="legend-chips">
                       <p-tag value="Unknown" severity="info"></p-tag>
-                      <p-tag value="Assumed" severity="warning"></p-tag>
+                      <p-tag value="Assumed" severity="warn"></p-tag>
                       <p-tag value="Verified" severity="success"></p-tag>
                       <p-tag value="Invalid" severity="danger"></p-tag>
                     </div>
@@ -339,7 +339,20 @@
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Evidence source</label>
@@ -352,7 +365,20 @@
                   [disabled]="isEvidenceDisabled(form.budgetAvailability)"
                   placeholder="Select evidence"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Readiness to spend</label>
@@ -365,7 +391,20 @@
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Evidence source</label>
@@ -378,7 +417,20 @@
                   [disabled]="isEvidenceDisabled(form.readinessToSpend)"
                   placeholder="Select evidence"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Buying timeline</label>
@@ -391,7 +443,20 @@
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Evidence source</label>
@@ -404,7 +469,20 @@
                   [disabled]="isEvidenceDisabled(form.buyingTimeline)"
                   placeholder="Select evidence"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Problem severity</label>
@@ -417,7 +495,20 @@
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Evidence source</label>
@@ -430,7 +521,20 @@
                   [disabled]="isEvidenceDisabled(form.problemSeverity)"
                   placeholder="Select evidence"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Economic buyer</label>
@@ -443,7 +547,20 @@
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Evidence source</label>
@@ -456,7 +573,20 @@
                   [disabled]="isEvidenceDisabled(form.economicBuyer)"
                   placeholder="Select evidence"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>
@@ -476,7 +606,20 @@
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Select"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field">
                 <label>Evidence source</label>
@@ -489,7 +632,20 @@
                   [disabled]="isEvidenceDisabled(form.icpFit)"
                   placeholder="Select evidence"
                   class="w-full"
-                ></p-select>
+                >
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i [ngClass]="['option-icon', 'tone-' + option.tone, option.icon]"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                  </ng-template>
+                </p-select>
               </div>
               <div class="field full-row" *ngIf="scoreBreakdown().length">
                 <div class="score-breakdown">

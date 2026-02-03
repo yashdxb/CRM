@@ -8,7 +8,7 @@ const API_BASE_URL =
 const TENANT_KEY = 'default';
 
 const USERS = [
-  { email: 'yasser05003@outlook.com', password: 'yAsh@123' },
+  { email: 'yasser0503@outlook.com', password: 'yAsh@123' },
   { email: 'udemy786@outlook.com', password: 'yAsh@123' }
 ];
 
@@ -23,6 +23,32 @@ const INDUSTRIES = [
   'SaaS',
   'Hospitality',
   'Public Sector'
+];
+
+const FIRST_NAMES = [
+  'Ava',
+  'Noah',
+  'Mia',
+  'Ethan',
+  'Liam',
+  'Olivia',
+  'Mason',
+  'Sophia',
+  'Lucas',
+  'Isabella'
+];
+
+const LAST_NAMES = [
+  'Reed',
+  'Carter',
+  'Patel',
+  'Nguyen',
+  'Brooks',
+  'Santos',
+  'Kim',
+  'Morgan',
+  'Ali',
+  'Turner'
 ];
 
 async function login(page, request, email: string, password: string) {
@@ -46,13 +72,14 @@ async function login(page, request, email: string, password: string) {
 }
 
 async function openSelect(page, selector) {
-  const selectHost = page.locator(selector);
-  const trigger = selectHost.locator('.p-select');
-  if (await trigger.count()) {
-    await trigger.click();
-  } else {
-    await selectHost.click();
-  }
+  const selectHost = page.locator(selector).first();
+  await selectHost.waitFor({ state: 'visible' });
+  await selectHost.scrollIntoViewIfNeeded();
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(50);
+  const trigger = selectHost.locator('.p-select').first();
+  const target = (await trigger.count()) ? trigger : selectHost;
+  await target.click({ force: true });
 }
 
 async function selectByLabel(page, selector, optionText) {
@@ -61,8 +88,35 @@ async function selectByLabel(page, selector, optionText) {
     '.p-select-panel .p-select-item, .p-select-overlay .p-select-item, .p-overlay .p-select-item, [role="option"]'
   );
   const option = options.filter({ hasText: optionText }).first();
-  await option.waitFor({ state: 'visible' });
-  await option.click({ force: true });
+  try {
+    await option.waitFor({ state: 'visible', timeout: 5000 });
+    await option.click({ force: true });
+  } catch {
+    await openSelect(page, selector);
+    const count = await options.count();
+    for (let i = 0; i < count; i += 1) {
+      const candidate = options.nth(i);
+      const text = (await candidate.innerText()).toLowerCase();
+      if (!text.includes('unknown')) {
+        await candidate.click({ force: true });
+        return;
+      }
+    }
+    await options.first().waitFor({ state: 'visible', timeout: 5000 });
+    await options.first().click({ force: true });
+  }
+}
+
+async function setEvidence(page, fieldName: string, value: string) {
+  const select = page.locator(`p-select[name="${fieldName}"]`);
+  if (await select.count()) {
+    await selectByLabel(page, `p-select[name="${fieldName}"]`, value);
+    return;
+  }
+  const textarea = page.locator(`textarea[name="${fieldName}"]`);
+  if (await textarea.count()) {
+    await textarea.fill(value);
+  }
 }
 
 async function searchLeads(page, term) {
@@ -126,20 +180,25 @@ async function setDateInputByOffset(page, selector, offsetDays) {
   await input.press('Tab');
 }
 
-async function getUserNameByEmail(request, token: string, email: string) {
-  const response = await request.get(`${API_BASE_URL}/api/users?page=1&pageSize=200`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'X-Tenant-Key': TENANT_KEY
-    }
-  });
-  if (!response.ok()) {
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const [, payload] = token.split('.');
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = Buffer.from(normalized, 'base64').toString('utf8');
+    return JSON.parse(json);
+  } catch {
     return null;
   }
-  const payload = await response.json();
-  const items = Array.isArray(payload) ? payload : payload.items ?? payload.data ?? [];
-  const match = items.find((u) => String(u?.email ?? '').toLowerCase() === email.toLowerCase());
-  return match?.fullName ?? null;
+}
+
+function getUserIdFromPayload(payload: Record<string, unknown>): string | null {
+  const direct =
+    (payload['sub'] as string | undefined) ||
+    (payload['nameid'] as string | undefined) ||
+    (payload['userId'] as string | undefined) ||
+    (payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] as string | undefined);
+  return direct ?? null;
 }
 
 async function createDiscoveryMeeting(request, token, leadId) {
@@ -165,6 +224,54 @@ async function createDiscoveryMeeting(request, token, leadId) {
       ownerId: null
     }
   });
+}
+
+async function updateLeadApi(request, token, leadId, ownerId, lead, updates) {
+  const payload = {
+    firstName: lead.firstName,
+    lastName: lead.lastName,
+    email: lead.email,
+    phone: lead.phone,
+    companyName: lead.companyName,
+    jobTitle: lead.jobTitle,
+    status: updates.status ?? lead.status ?? 'New',
+    ownerId,
+    assignmentStrategy: 'Manual',
+    source: lead.source,
+    territory: lead.territory ?? '',
+    autoScore: true,
+    score: 0,
+    accountId: null,
+    contactId: null,
+    disqualifiedReason: updates.disqualifiedReason ?? '',
+    nurtureFollowUpAtUtc: updates.nurtureFollowUpAtUtc ?? null,
+    qualifiedNotes: updates.qualifiedNotes ?? '',
+    budgetAvailability: updates.budgetAvailability ?? '',
+    budgetEvidence: updates.budgetEvidence ?? 'No evidence yet',
+    readinessToSpend: updates.readinessToSpend ?? '',
+    readinessEvidence: updates.readinessEvidence ?? 'No evidence yet',
+    buyingTimeline: updates.buyingTimeline ?? '',
+    timelineEvidence: updates.timelineEvidence ?? 'No evidence yet',
+    problemSeverity: updates.problemSeverity ?? '',
+    problemEvidence: updates.problemEvidence ?? 'No evidence yet',
+    economicBuyer: updates.economicBuyer ?? '',
+    economicBuyerEvidence: updates.economicBuyerEvidence ?? 'No evidence yet',
+    icpFit: updates.icpFit ?? '',
+    icpFitEvidence: updates.icpFitEvidence ?? 'No evidence yet'
+  };
+
+  const response = await request.put(`${API_BASE_URL}/api/leads/${leadId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': TENANT_KEY,
+      'Content-Type': 'application/json'
+    },
+    data: payload
+  });
+  if (!response.ok()) {
+    console.log('lead update failed:', response.status(), await response.text());
+  }
+  return response.ok();
 }
 
 async function saveLeadUpdate(page) {
@@ -209,8 +316,7 @@ async function createLeadUI(page, lead) {
   await page.locator('input[name="phone"]').fill(lead.phone);
   await page.locator('input[name="jobTitle"]').fill(lead.jobTitle);
   await page.locator('input[name="source"]').fill(lead.source);
-  await selectByLabel(page, 'p-select[name="assignmentStrategy"]', 'Manual');
-  await selectByLabel(page, 'p-select[name="ownerId"]', lead.ownerName);
+  await selectByLabel(page, 'p-select[name="assignmentStrategy"]', 'Round robin');
 
   const [createResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/leads') && response.request().method() === 'POST'),
@@ -237,17 +343,17 @@ async function openLeadForEdit(page, companyName) {
 async function setQualificationFields(page) {
   await openTab(page, 'Qualification');
   await selectByLabel(page, 'p-select[name="budgetAvailability"]', 'Budget allocated and approved');
-  await selectByLabel(page, 'p-select[name="budgetEvidence"]', 'Written confirmation');
+  await setEvidence(page, 'budgetEvidence', 'Written confirmation');
   await selectByLabel(page, 'p-select[name="readinessToSpend"]', 'Actively evaluating solutions');
-  await selectByLabel(page, 'p-select[name="readinessEvidence"]', 'Direct buyer statement');
+  await setEvidence(page, 'readinessEvidence', 'Direct buyer statement');
   await selectByLabel(page, 'p-select[name="buyingTimeline"]', 'Target date verbally confirmed');
-  await selectByLabel(page, 'p-select[name="timelineEvidence"]', 'Observed behaviour');
+  await setEvidence(page, 'timelineEvidence', 'Observed behaviour');
   await selectByLabel(page, 'p-select[name="problemSeverity"]', 'Critical business impact');
-  await selectByLabel(page, 'p-select[name="problemEvidence"]', 'Direct buyer statement');
+  await setEvidence(page, 'problemEvidence', 'Direct buyer statement');
   await selectByLabel(page, 'p-select[name="economicBuyer"]', 'Buyer engaged in discussion');
-  await selectByLabel(page, 'p-select[name="economicBuyerEvidence"]', 'Direct buyer statement');
+  await setEvidence(page, 'economicBuyerEvidence', 'Direct buyer statement');
   await selectByLabel(page, 'p-select[name="icpFit"]', 'Strong ICP fit');
-  await selectByLabel(page, 'p-select[name="icpFitEvidence"]', 'Written confirmation');
+  await setEvidence(page, 'icpFitEvidence', 'Written confirmation');
   await page.locator('textarea[name="qualifiedNotes"]').fill('Qualified via Azure E2E seed.');
   await openTab(page, 'Overview');
 }
@@ -263,23 +369,29 @@ test.describe('seed azure dev CRM scenarios', () => {
     test(`seed scenarios for ${user.email}`, async ({ page, request }) => {
       const suffix = Date.now();
       const token = await login(page, request, user.email, user.password);
-      const ownerName = await getUserNameByEmail(request, token, user.email);
-      if (!ownerName) {
-        throw new Error(`Unable to resolve user name for ${user.email}`);
-      }
+      const payload = decodeJwtPayload(token) ?? {};
+      const ownerName =
+        (payload['name'] as string | undefined) ||
+        (payload['fullName'] as string | undefined) ||
+        (payload['given_name'] as string | undefined) ||
+        null;
+      const ownerId = getUserIdFromPayload(payload);
 
       const leads = Array.from({ length: 10 }).map((_, index) => {
         const industry = INDUSTRIES[index % INDUSTRIES.length];
         const companyName = `${industry} Lead ${suffix}-${index + 1}`;
+        const firstName = FIRST_NAMES[index % FIRST_NAMES.length];
+        const lastName = LAST_NAMES[index % LAST_NAMES.length];
         return {
-          firstName: `Lead${index + 1}`,
-          lastName: user.email.split('@')[0],
+          firstName,
+          lastName,
           companyName,
           email: `lead.${suffix}.${index + 1}@example.com`,
           phone: `+1555${String(suffix + index).slice(-7)}`,
           jobTitle: ['Director', 'Manager', 'VP', 'Analyst'][index % 4],
           source: ['Website', 'Referral', 'Event', 'Outbound'][index % 4],
-          ownerName
+          ownerName,
+          status: 'New'
         };
       });
 
@@ -302,6 +414,11 @@ test.describe('seed azure dev CRM scenarios', () => {
         const leadId = await createLeadUI(page, lead);
 
         if (!leadId || scenario.action === 'new') {
+          if (leadId && ownerId) {
+            await updateLeadApi(request, token, leadId, ownerId, lead, {
+              status: 'New'
+            });
+          }
           continue;
         }
 
@@ -309,46 +426,61 @@ test.describe('seed azure dev CRM scenarios', () => {
           await createDiscoveryMeeting(request, token, leadId);
         }
 
-        await openLeadForEdit(page, lead.companyName);
-
         if (scenario.action === 'nurture') {
-          await openTab(page, 'Overview');
-          await setStatus(page, 'Nurture');
-          await openTab(page, 'Qualification');
-          await setDateInputByOffset(page, 'p-datepicker[name="nurtureFollowUpAtUtc"]', 7);
-          await openTab(page, 'Overview');
-          await saveLeadUpdate(page);
+          const followUpAtUtc = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          await updateLeadApi(request, token, leadId, ownerId, lead, {
+            status: 'Nurture',
+            nurtureFollowUpAtUtc: followUpAtUtc
+          });
           continue;
         }
 
         if (scenario.action === 'disqualified') {
-          await openTab(page, 'Overview');
-          await setStatus(page, 'Disqualified');
-          await openTab(page, 'Qualification');
-          await page.locator('textarea[name="disqualifiedReason"]').fill('No fit / budget.');
-          await openTab(page, 'Overview');
-          await saveLeadUpdate(page);
+          await updateLeadApi(request, token, leadId, ownerId, lead, {
+            status: 'Disqualified',
+            disqualifiedReason: 'No fit / budget.'
+          });
           continue;
         }
 
-        await setQualificationFields(page);
-        await setStatus(page, 'Qualified');
-        await saveLeadUpdate(page);
+        await updateLeadApi(request, token, leadId, ownerId, lead, {
+          status: 'Qualified',
+          qualifiedNotes: 'Qualified via Azure E2E seed.',
+          budgetAvailability: 'Budget allocated and approved',
+          budgetEvidence: 'Written confirmation',
+          readinessToSpend: 'Actively evaluating solutions',
+          readinessEvidence: 'Direct buyer statement',
+          buyingTimeline: 'Target date verbally confirmed',
+          timelineEvidence: 'Observed behaviour',
+          problemSeverity: 'Critical business impact',
+          problemEvidence: 'Direct buyer statement',
+          economicBuyer: 'Buyer engaged in discussion',
+          economicBuyerEvidence: 'Direct buyer statement',
+          icpFit: 'Strong ICP fit',
+          icpFitEvidence: 'Written confirmation'
+        });
 
         if (scenario.action === 'convert') {
-          await page.locator('button:has-text("Convert lead")').first().click();
-          await page.waitForURL('**/app/leads/**/convert');
-          const [convertResponse] = await Promise.all([
-            page.waitForResponse(
-              (response) => response.url().includes('/convert') && response.request().method() === 'POST'
-            ),
-            page.locator('form.convert-form button:has-text("Convert lead")').click()
-          ]);
+          const convertResponse = await request.post(`${API_BASE_URL}/api/leads/${leadId}/convert`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'X-Tenant-Key': TENANT_KEY,
+              'Content-Type': 'application/json'
+            },
+            data: {
+              createAccount: true,
+              accountName: lead.companyName,
+              createContact: true,
+              createOpportunity: true,
+              opportunityName: `${lead.companyName} Opportunity`,
+              amount: 25000,
+              expectedCloseDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+            }
+          });
           if (!convertResponse.ok()) {
             console.log('convert failed:', convertResponse.status(), await convertResponse.text());
           }
           expect(convertResponse.ok()).toBeTruthy();
-          await page.waitForURL('**/app/leads');
         }
       }
     });

@@ -50,6 +50,8 @@ interface OwnerOption {
 interface OptionItem {
   label: string;
   value: string;
+  icon: string;
+  tone: 'unknown' | 'assumed' | 'verified' | 'invalid' | 'neutral';
 }
 interface CadenceChannelOption {
   label: string;
@@ -95,60 +97,60 @@ export class LeadFormPage implements OnInit {
     { label: 'Territory', value: 'Territory' }
   ];
   protected readonly budgetOptions: OptionItem[] = [
-    { label: 'Unknown / not yet discussed', value: 'Unknown / not yet discussed' },
-    { label: 'Indicative range mentioned', value: 'Indicative range mentioned' },
-    { label: 'Budget allocated and approved', value: 'Budget allocated and approved' },
-    { label: 'Budget identified but unapproved', value: 'Budget identified but unapproved' },
-    { label: 'No defined budget', value: 'No defined budget' },
-    { label: 'Budget explicitly unavailable', value: 'Budget explicitly unavailable' }
+    { label: 'Unknown / not yet discussed', value: 'Unknown / not yet discussed', icon: 'pi pi-question-circle', tone: 'unknown' },
+    { label: 'Indicative range mentioned', value: 'Indicative range mentioned', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Budget allocated and approved', value: 'Budget allocated and approved', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Budget identified but unapproved', value: 'Budget identified but unapproved', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'No defined budget', value: 'No defined budget', icon: 'pi pi-times-circle', tone: 'invalid' },
+    { label: 'Budget explicitly unavailable', value: 'Budget explicitly unavailable', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
   protected readonly readinessOptions: OptionItem[] = [
-    { label: 'Unknown / unclear', value: 'Unknown / unclear' },
-    { label: 'Interest expressed, no urgency', value: 'Interest expressed, no urgency' },
-    { label: 'Actively evaluating solutions', value: 'Actively evaluating solutions' },
-    { label: 'Internal decision in progress', value: 'Internal decision in progress' },
-    { label: 'Ready to proceed pending final step', value: 'Ready to proceed pending final step' },
-    { label: 'Not planning to spend', value: 'Not planning to spend' }
+    { label: 'Unknown / unclear', value: 'Unknown / unclear', icon: 'pi pi-question-circle', tone: 'unknown' },
+    { label: 'Interest expressed, no urgency', value: 'Interest expressed, no urgency', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Actively evaluating solutions', value: 'Actively evaluating solutions', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Internal decision in progress', value: 'Internal decision in progress', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Ready to proceed pending final step', value: 'Ready to proceed pending final step', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Not planning to spend', value: 'Not planning to spend', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
   protected readonly timelineOptions: OptionItem[] = [
-    { label: 'Unknown / not discussed', value: 'Unknown / not discussed' },
-    { label: 'Rough timeline mentioned', value: 'Rough timeline mentioned' },
-    { label: 'Target date verbally confirmed', value: 'Target date verbally confirmed' },
-    { label: 'Decision date confirmed internally', value: 'Decision date confirmed internally' },
-    { label: 'Date missed / repeatedly pushed', value: 'Date missed / repeatedly pushed' },
-    { label: 'No defined timeline', value: 'No defined timeline' }
+    { label: 'Unknown / not discussed', value: 'Unknown / not discussed', icon: 'pi pi-question-circle', tone: 'unknown' },
+    { label: 'Rough timeline mentioned', value: 'Rough timeline mentioned', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Target date verbally confirmed', value: 'Target date verbally confirmed', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Decision date confirmed internally', value: 'Decision date confirmed internally', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Date missed / repeatedly pushed', value: 'Date missed / repeatedly pushed', icon: 'pi pi-times-circle', tone: 'invalid' },
+    { label: 'No defined timeline', value: 'No defined timeline', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
   protected readonly problemOptions: OptionItem[] = [
-    { label: 'Unknown / not validated', value: 'Unknown / not validated' },
-    { label: 'Mild inconvenience', value: 'Mild inconvenience' },
-    { label: 'Recognized operational problem', value: 'Recognized operational problem' },
-    { label: 'Critical business impact', value: 'Critical business impact' },
-    { label: 'Executive-level priority', value: 'Executive-level priority' },
-    { label: 'Problem acknowledged but deprioritized', value: 'Problem acknowledged but deprioritized' }
+    { label: 'Unknown / not validated', value: 'Unknown / not validated', icon: 'pi pi-question-circle', tone: 'unknown' },
+    { label: 'Mild inconvenience', value: 'Mild inconvenience', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Recognized operational problem', value: 'Recognized operational problem', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Critical business impact', value: 'Critical business impact', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Executive-level priority', value: 'Executive-level priority', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Problem acknowledged but deprioritized', value: 'Problem acknowledged but deprioritized', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
   protected readonly economicBuyerOptions: OptionItem[] = [
-    { label: 'Unknown / not identified', value: 'Unknown / not identified' },
-    { label: 'Influencer identified', value: 'Influencer identified' },
-    { label: 'Buyer identified, not engaged', value: 'Buyer identified, not engaged' },
-    { label: 'Buyer engaged in discussion', value: 'Buyer engaged in discussion' },
-    { label: 'Buyer verbally supportive', value: 'Buyer verbally supportive' },
-    { label: 'Buyer explicitly not involved', value: 'Buyer explicitly not involved' }
+    { label: 'Unknown / not identified', value: 'Unknown / not identified', icon: 'pi pi-question-circle', tone: 'unknown' },
+    { label: 'Influencer identified', value: 'Influencer identified', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Buyer identified, not engaged', value: 'Buyer identified, not engaged', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Buyer engaged in discussion', value: 'Buyer engaged in discussion', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Buyer verbally supportive', value: 'Buyer verbally supportive', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Buyer explicitly not involved', value: 'Buyer explicitly not involved', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
   protected readonly icpFitOptions: OptionItem[] = [
-    { label: 'Unknown / not assessed', value: 'Unknown / not assessed' },
-    { label: 'Partial ICP fit', value: 'Partial ICP fit' },
-    { label: 'Strong ICP fit', value: 'Strong ICP fit' },
-    { label: 'Out-of-profile but exploratory', value: 'Out-of-profile but exploratory' },
-    { label: 'Clearly out of ICP', value: 'Clearly out of ICP' }
+    { label: 'Unknown / not assessed', value: 'Unknown / not assessed', icon: 'pi pi-question-circle', tone: 'unknown' },
+    { label: 'Partial ICP fit', value: 'Partial ICP fit', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Strong ICP fit', value: 'Strong ICP fit', icon: 'pi pi-check-circle', tone: 'verified' },
+    { label: 'Out-of-profile but exploratory', value: 'Out-of-profile but exploratory', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'Clearly out of ICP', value: 'Clearly out of ICP', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
   protected readonly evidenceOptions: OptionItem[] = [
-    { label: 'No evidence yet', value: 'No evidence yet' },
-    { label: 'Direct buyer statement', value: 'Direct buyer statement' },
-    { label: 'Written confirmation', value: 'Written confirmation' },
-    { label: 'Observed behaviour', value: 'Observed behaviour' },
-    { label: 'Third-party confirmation', value: 'Third-party confirmation' },
-    { label: 'Inferred from context', value: 'Inferred from context' },
-    { label: 'Historical / prior deal', value: 'Historical / prior deal' }
+    { label: 'No evidence yet', value: 'No evidence yet', icon: 'pi pi-minus-circle', tone: 'unknown' },
+    { label: 'Direct buyer statement', value: 'Direct buyer statement', icon: 'pi pi-comment', tone: 'verified' },
+    { label: 'Written confirmation', value: 'Written confirmation', icon: 'pi pi-file', tone: 'verified' },
+    { label: 'Observed behaviour', value: 'Observed behaviour', icon: 'pi pi-eye', tone: 'assumed' },
+    { label: 'Third-party confirmation', value: 'Third-party confirmation', icon: 'pi pi-users', tone: 'assumed' },
+    { label: 'Inferred from context', value: 'Inferred from context', icon: 'pi pi-compass', tone: 'invalid' },
+    { label: 'Historical / prior deal', value: 'Historical / prior deal', icon: 'pi pi-history', tone: 'neutral' }
   ];
   protected readonly ownerOptions = signal<OwnerOption[]>([]);
 
