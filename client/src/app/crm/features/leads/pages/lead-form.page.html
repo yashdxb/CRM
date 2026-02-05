@@ -133,7 +133,7 @@
               <i class="pi pi-user"></i>
               Lead basics
             </h2>
-            <div class="form-grid">
+            <div class="form-grid qualification-grid">
               <div class="field">
                 <label>First name <span class="required">*</span></label>
                 <input pInputText name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" class="w-full" />
@@ -332,22 +332,26 @@
                 <div class="qualification-feedback" *ngIf="qualificationFeedback() as feedback">
                   <span class="feedback-title">Qualification status</span>
                   <div class="feedback-metrics">
-                    <span class="feedback-item">
+                    <span class="feedback-item feedback-item--confidence">
+                      <i class="pi pi-chart-line feedback-icon" aria-hidden="true"></i>
                       Confidence:
                       <p-tag
                         [value]="feedback.confidenceLabel"
                         [severity]="feedback.confidenceLabel === 'High' ? 'success' : feedback.confidenceLabel === 'Medium' ? 'info' : 'warn'"
                       ></p-tag>
                     </span>
-                    <span class="feedback-item" *ngIf="truthCoverage() !== null">
+                    <span class="feedback-item feedback-item--truth" *ngIf="truthCoverage() !== null">
+                      <i class="pi pi-check-circle feedback-icon" aria-hidden="true"></i>
                       Truth coverage:
                       <strong>{{ truthCoveragePercent() }}%</strong>
                     </span>
-                    <span class="feedback-item" *ngIf="assumptionsOutstanding() !== null">
+                    <span class="feedback-item feedback-item--assumptions" *ngIf="assumptionsOutstanding() !== null">
+                      <i class="pi pi-exclamation-circle feedback-icon" aria-hidden="true"></i>
                       Assumptions outstanding:
                       <strong>{{ assumptionsOutstandingLabel() }}</strong>
                     </span>
-                    <span class="feedback-item" *ngIf="feedback.weakestSignal">
+                    <span class="feedback-item feedback-item--weakest" *ngIf="feedback.weakestSignal">
+                      <i class="pi pi-bolt feedback-icon" aria-hidden="true"></i>
                       Weakest signal:
                       <strong>{{ feedback.weakestSignal }}</strong>
                       <span class="feedback-state">({{ feedback.weakestState }})</span>
