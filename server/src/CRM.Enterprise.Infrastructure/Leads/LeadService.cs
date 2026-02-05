@@ -98,7 +98,13 @@ public sealed class LeadService : ILeadService
                 l.EconomicBuyer,
                 l.EconomicBuyerEvidence,
                 l.IcpFit,
-                l.IcpFitEvidence
+                l.IcpFitEvidence,
+                l.BudgetValidatedAtUtc,
+                l.ReadinessValidatedAtUtc,
+                l.BuyingTimelineValidatedAtUtc,
+                l.ProblemSeverityValidatedAtUtc,
+                l.EconomicBuyerValidatedAtUtc,
+                l.IcpFitValidatedAtUtc
             })
             .ToListAsync(cancellationToken);
 
@@ -113,16 +119,22 @@ public sealed class LeadService : ILeadService
             var insights = BuildQualificationInsights(
                 l.BudgetAvailability,
                 l.BudgetEvidence,
+                l.BudgetValidatedAtUtc,
                 l.ReadinessToSpend,
                 l.ReadinessEvidence,
+                l.ReadinessValidatedAtUtc,
                 l.BuyingTimeline,
                 l.TimelineEvidence,
+                l.BuyingTimelineValidatedAtUtc,
                 l.ProblemSeverity,
                 l.ProblemEvidence,
+                l.ProblemSeverityValidatedAtUtc,
                 l.EconomicBuyer,
                 l.EconomicBuyerEvidence,
+                l.EconomicBuyerValidatedAtUtc,
                 l.IcpFit,
-                l.IcpFitEvidence);
+                l.IcpFitEvidence,
+                l.IcpFitValidatedAtUtc);
 
             return new LeadListItemDto(
                 l.Id,
@@ -160,6 +172,10 @@ public sealed class LeadService : ILeadService
                 l.IcpFitEvidence,
                 insights.Confidence,
                 insights.ConfidenceLabel,
+                insights.TruthCoverage,
+                insights.AssumptionsOutstanding,
+                insights.WeakestSignal,
+                insights.WeakestState,
                 insights.Breakdown,
                 insights.RiskFlags);
         });
@@ -187,16 +203,22 @@ public sealed class LeadService : ILeadService
         var detailInsights = BuildQualificationInsights(
             lead.BudgetAvailability,
             lead.BudgetEvidence,
+            lead.BudgetValidatedAtUtc,
             lead.ReadinessToSpend,
             lead.ReadinessEvidence,
+            lead.ReadinessValidatedAtUtc,
             lead.BuyingTimeline,
             lead.TimelineEvidence,
+            lead.BuyingTimelineValidatedAtUtc,
             lead.ProblemSeverity,
             lead.ProblemEvidence,
+            lead.ProblemSeverityValidatedAtUtc,
             lead.EconomicBuyer,
             lead.EconomicBuyerEvidence,
+            lead.EconomicBuyerValidatedAtUtc,
             lead.IcpFit,
-            lead.IcpFitEvidence);
+            lead.IcpFitEvidence,
+            lead.IcpFitValidatedAtUtc);
 
         return new LeadListItemDto(
             lead.Id,
@@ -234,6 +256,10 @@ public sealed class LeadService : ILeadService
             lead.IcpFitEvidence,
             detailInsights.Confidence,
             detailInsights.ConfidenceLabel,
+            detailInsights.TruthCoverage,
+            detailInsights.AssumptionsOutstanding,
+            detailInsights.WeakestSignal,
+            detailInsights.WeakestState,
             detailInsights.Breakdown,
             detailInsights.RiskFlags);
     }
@@ -321,6 +347,7 @@ public sealed class LeadService : ILeadService
 
     public async Task<LeadOperationResult<LeadListItemDto>> CreateAsync(LeadUpsertRequest request, LeadActor actor, CancellationToken cancellationToken = default)
     {
+        request = NormalizeEvidence(request);
         var ownerId = await ResolveOwnerIdAsync(request.OwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
         var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
         var ownerExists = await _dbContext.Users.AnyAsync(u => u.Id == ownerId && u.IsActive && !u.IsDeleted, cancellationToken);
@@ -337,6 +364,7 @@ public sealed class LeadService : ILeadService
         }
 
         var score = ResolveLeadScore(request);
+        var now = DateTime.UtcNow;
         var lead = new Lead
         {
             FirstName = request.FirstName,
@@ -367,9 +395,10 @@ public sealed class LeadService : ILeadService
             EconomicBuyerEvidence = request.EconomicBuyerEvidence,
             IcpFit = request.IcpFit,
             IcpFitEvidence = request.IcpFitEvidence,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = now
         };
 
+        ApplyQualificationValidationDates(lead, request, now);
         lead.Status = status;
 
         _dbContext.Leads.Add(lead);
@@ -397,16 +426,22 @@ public sealed class LeadService : ILeadService
         var createInsights = BuildQualificationInsights(
             lead.BudgetAvailability,
             lead.BudgetEvidence,
+            lead.BudgetValidatedAtUtc,
             lead.ReadinessToSpend,
             lead.ReadinessEvidence,
+            lead.ReadinessValidatedAtUtc,
             lead.BuyingTimeline,
             lead.TimelineEvidence,
+            lead.BuyingTimelineValidatedAtUtc,
             lead.ProblemSeverity,
             lead.ProblemEvidence,
+            lead.ProblemSeverityValidatedAtUtc,
             lead.EconomicBuyer,
             lead.EconomicBuyerEvidence,
+            lead.EconomicBuyerValidatedAtUtc,
             lead.IcpFit,
-            lead.IcpFitEvidence);
+            lead.IcpFitEvidence,
+            lead.IcpFitValidatedAtUtc);
 
         var dto = new LeadListItemDto(
             lead.Id,
@@ -444,6 +479,10 @@ public sealed class LeadService : ILeadService
             lead.IcpFitEvidence,
             createInsights.Confidence,
             createInsights.ConfidenceLabel,
+            createInsights.TruthCoverage,
+            createInsights.AssumptionsOutstanding,
+            createInsights.WeakestSignal,
+            createInsights.WeakestState,
             createInsights.Breakdown,
             createInsights.RiskFlags);
 
@@ -452,6 +491,7 @@ public sealed class LeadService : ILeadService
 
     public async Task<LeadOperationResult<bool>> UpdateAsync(Guid id, LeadUpsertRequest request, LeadActor actor, CancellationToken cancellationToken = default)
     {
+        request = NormalizeEvidence(request);
         var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
         if (lead is null)
         {
@@ -461,6 +501,25 @@ public sealed class LeadService : ILeadService
         var previousStatusId = lead.LeadStatusId;
         var previousOwnerId = lead.OwnerId;
         var shouldAiScore = HasAiSignalChanges(lead, request);
+        var previousQualification = new QualificationSnapshot(
+            lead.BudgetAvailability,
+            lead.BudgetEvidence,
+            lead.BudgetValidatedAtUtc,
+            lead.ReadinessToSpend,
+            lead.ReadinessEvidence,
+            lead.ReadinessValidatedAtUtc,
+            lead.BuyingTimeline,
+            lead.TimelineEvidence,
+            lead.BuyingTimelineValidatedAtUtc,
+            lead.ProblemSeverity,
+            lead.ProblemEvidence,
+            lead.ProblemSeverityValidatedAtUtc,
+            lead.EconomicBuyer,
+            lead.EconomicBuyerEvidence,
+            lead.EconomicBuyerValidatedAtUtc,
+            lead.IcpFit,
+            lead.IcpFitEvidence,
+            lead.IcpFitValidatedAtUtc);
 
         lead.FirstName = request.FirstName;
         lead.LastName = request.LastName;
@@ -495,7 +554,9 @@ public sealed class LeadService : ILeadService
         lead.EconomicBuyerEvidence = request.EconomicBuyerEvidence;
         lead.IcpFit = request.IcpFit;
         lead.IcpFitEvidence = request.IcpFitEvidence;
-        lead.UpdatedAtUtc = DateTime.UtcNow;
+        var updatedAt = DateTime.UtcNow;
+        lead.UpdatedAtUtc = updatedAt;
+        UpdateQualificationValidationDates(lead, request, previousQualification, updatedAt);
 
         var validationError = ValidateOutcome(resolvedStatusName, request);
         if (validationError is not null)
@@ -1454,6 +1515,128 @@ public sealed class LeadService : ILeadService
         return count;
     }
 
+    private static LeadUpsertRequest NormalizeEvidence(LeadUpsertRequest request)
+    {
+        return request with
+        {
+            BudgetEvidence = NormalizeEvidenceValue(request.BudgetAvailability, request.BudgetEvidence),
+            ReadinessEvidence = NormalizeEvidenceValue(request.ReadinessToSpend, request.ReadinessEvidence),
+            TimelineEvidence = NormalizeEvidenceValue(request.BuyingTimeline, request.TimelineEvidence),
+            ProblemEvidence = NormalizeEvidenceValue(request.ProblemSeverity, request.ProblemEvidence),
+            EconomicBuyerEvidence = NormalizeEvidenceValue(request.EconomicBuyer, request.EconomicBuyerEvidence),
+            IcpFitEvidence = NormalizeEvidenceValue(request.IcpFit, request.IcpFitEvidence)
+        };
+    }
+
+    private static string NormalizeEvidenceValue(string? factorValue, string? evidenceValue)
+    {
+        if (IsUnknown(factorValue))
+        {
+            return "No evidence yet";
+        }
+
+        if (string.IsNullOrWhiteSpace(evidenceValue))
+        {
+            return "No evidence yet";
+        }
+
+        return evidenceValue.Trim();
+    }
+
+    private static void ApplyQualificationValidationDates(Lead lead, LeadUpsertRequest request, DateTime now)
+    {
+        lead.BudgetValidatedAtUtc = ResolveValidationDate(request.BudgetAvailability, now);
+        lead.ReadinessValidatedAtUtc = ResolveValidationDate(request.ReadinessToSpend, now);
+        lead.BuyingTimelineValidatedAtUtc = ResolveValidationDate(request.BuyingTimeline, now);
+        lead.ProblemSeverityValidatedAtUtc = ResolveValidationDate(request.ProblemSeverity, now);
+        lead.EconomicBuyerValidatedAtUtc = ResolveValidationDate(request.EconomicBuyer, now);
+        lead.IcpFitValidatedAtUtc = ResolveValidationDate(request.IcpFit, now);
+    }
+
+    private static void UpdateQualificationValidationDates(
+        Lead lead,
+        LeadUpsertRequest request,
+        QualificationSnapshot previous,
+        DateTime now)
+    {
+        lead.BudgetValidatedAtUtc = ResolveUpdatedValidationDate(
+            previous.BudgetAvailability,
+            previous.BudgetEvidence,
+            previous.BudgetValidatedAtUtc,
+            request.BudgetAvailability,
+            request.BudgetEvidence,
+            now);
+
+        lead.ReadinessValidatedAtUtc = ResolveUpdatedValidationDate(
+            previous.ReadinessToSpend,
+            previous.ReadinessEvidence,
+            previous.ReadinessValidatedAtUtc,
+            request.ReadinessToSpend,
+            request.ReadinessEvidence,
+            now);
+
+        lead.BuyingTimelineValidatedAtUtc = ResolveUpdatedValidationDate(
+            previous.BuyingTimeline,
+            previous.TimelineEvidence,
+            previous.BuyingTimelineValidatedAtUtc,
+            request.BuyingTimeline,
+            request.TimelineEvidence,
+            now);
+
+        lead.ProblemSeverityValidatedAtUtc = ResolveUpdatedValidationDate(
+            previous.ProblemSeverity,
+            previous.ProblemEvidence,
+            previous.ProblemSeverityValidatedAtUtc,
+            request.ProblemSeverity,
+            request.ProblemEvidence,
+            now);
+
+        lead.EconomicBuyerValidatedAtUtc = ResolveUpdatedValidationDate(
+            previous.EconomicBuyer,
+            previous.EconomicBuyerEvidence,
+            previous.EconomicBuyerValidatedAtUtc,
+            request.EconomicBuyer,
+            request.EconomicBuyerEvidence,
+            now);
+
+        lead.IcpFitValidatedAtUtc = ResolveUpdatedValidationDate(
+            previous.IcpFit,
+            previous.IcpFitEvidence,
+            previous.IcpFitValidatedAtUtc,
+            request.IcpFit,
+            request.IcpFitEvidence,
+            now);
+    }
+
+    private static DateTime? ResolveValidationDate(string? value, DateTime now)
+    {
+        return IsMeaningfulFactor(value) ? now : null;
+    }
+
+    private static DateTime? ResolveUpdatedValidationDate(
+        string? previousValue,
+        string? previousEvidence,
+        DateTime? previousValidatedAtUtc,
+        string? nextValue,
+        string? nextEvidence,
+        DateTime now)
+    {
+        if (IsUnknown(nextValue))
+        {
+            return null;
+        }
+
+        var valueChanged = !string.Equals(Normalize(previousValue), Normalize(nextValue), StringComparison.OrdinalIgnoreCase);
+        var evidenceChanged = !string.Equals(Normalize(previousEvidence), Normalize(nextEvidence), StringComparison.OrdinalIgnoreCase);
+
+        if (valueChanged || evidenceChanged)
+        {
+            return now;
+        }
+
+        return previousValidatedAtUtc ?? now;
+    }
+
     private static bool IsMeaningfulFactor(string? value)
     {
         return !string.IsNullOrWhiteSpace(value) && !IsUnknown(value);
@@ -1461,20 +1644,40 @@ public sealed class LeadService : ILeadService
 
     private static bool IsUnknown(string? value)
     {
-        return string.Equals(value, "Unknown", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        return value.Contains("unknown", StringComparison.OrdinalIgnoreCase);
     }
+
+    private sealed record QualificationSnapshot(
+        string? BudgetAvailability,
+        string? BudgetEvidence,
+        DateTime? BudgetValidatedAtUtc,
+        string? ReadinessToSpend,
+        string? ReadinessEvidence,
+        DateTime? ReadinessValidatedAtUtc,
+        string? BuyingTimeline,
+        string? TimelineEvidence,
+        DateTime? BuyingTimelineValidatedAtUtc,
+        string? ProblemSeverity,
+        string? ProblemEvidence,
+        DateTime? ProblemSeverityValidatedAtUtc,
+        string? EconomicBuyer,
+        string? EconomicBuyerEvidence,
+        DateTime? EconomicBuyerValidatedAtUtc,
+        string? IcpFit,
+        string? IcpFitEvidence,
+        DateTime? IcpFitValidatedAtUtc);
 
     private static int GetBudgetScore(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return 0;
         return value.Trim().ToLowerInvariant() switch
         {
-            "confirmed allocated" => 25,
-            "indicative / estimated" => 15,
-            "indicative/estimated" => 15,
+            "budget allocated and approved" => 25,
+            "budget identified but unapproved" => 15,
+            "indicative range mentioned" => 15,
             "no defined budget" => 5,
-            "insufficient" => 0,
-            "unknown" => 0,
+            "budget explicitly unavailable" => 0,
             _ => 0
         };
     }
@@ -1484,12 +1687,11 @@ public sealed class LeadService : ILeadService
         if (string.IsNullOrWhiteSpace(value)) return 0;
         return value.Trim().ToLowerInvariant() switch
         {
-            "actively evaluating" => 20,
-            "approved, timing tbd" => 15,
-            "approved timing tbd" => 15,
-            "early research" => 8,
-            "no initiative" => 0,
-            "unknown" => 0,
+            "interest expressed, no urgency" => 8,
+            "actively evaluating solutions" => 15,
+            "internal decision in progress" => 20,
+            "ready to proceed pending final step" => 20,
+            "not planning to spend" => 0,
             _ => 0
         };
     }
@@ -1499,12 +1701,11 @@ public sealed class LeadService : ILeadService
         if (string.IsNullOrWhiteSpace(value)) return 0;
         return value.Trim().ToLowerInvariant() switch
         {
-            "< 30 days" => 15,
-            "1–3 months" => 12,
-            "1-3 months" => 12,
-            "3–6 months" => 6,
-            "3-6 months" => 6,
-            "unknown" => 0,
+            "decision date confirmed internally" => 15,
+            "target date verbally confirmed" => 12,
+            "rough timeline mentioned" => 6,
+            "date missed / repeatedly pushed" => 0,
+            "no defined timeline" => 0,
             _ => 0
         };
     }
@@ -1514,12 +1715,11 @@ public sealed class LeadService : ILeadService
         if (string.IsNullOrWhiteSpace(value)) return 0;
         return value.Trim().ToLowerInvariant() switch
         {
-            "critical" => 20,
-            "high" => 15,
-            "moderate" => 8,
-            "nice-to-have" => 2,
-            "nice to have" => 2,
-            "unknown" => 0,
+            "executive-level priority" => 20,
+            "critical business impact" => 15,
+            "recognized operational problem" => 8,
+            "mild inconvenience" => 2,
+            "problem acknowledged but deprioritized" => 0,
             _ => 0
         };
     }
@@ -1529,9 +1729,11 @@ public sealed class LeadService : ILeadService
         if (string.IsNullOrWhiteSpace(value)) return 0;
         return value.Trim().ToLowerInvariant() switch
         {
-            "engaged" => 10,
-            "identified only" => 5,
-            "unknown" => 0,
+            "buyer engaged in discussion" => 10,
+            "buyer verbally supportive" => 10,
+            "buyer identified, not engaged" => 5,
+            "influencer identified" => 5,
+            "buyer explicitly not involved" => 0,
             _ => 0
         };
     }
@@ -1541,10 +1743,10 @@ public sealed class LeadService : ILeadService
         if (string.IsNullOrWhiteSpace(value)) return 0;
         return value.Trim().ToLowerInvariant() switch
         {
-            "strong" => 10,
-            "partial" => 5,
-            "weak" => 0,
-            "unknown" => 0,
+            "strong icp fit" => 10,
+            "partial icp fit" => 5,
+            "out-of-profile but exploratory" => 5,
+            "clearly out of icp" => 0,
             _ => 0
         };
     }
@@ -1552,16 +1754,22 @@ public sealed class LeadService : ILeadService
     private static QualificationInsights BuildQualificationInsights(
         string? budgetAvailability,
         string? budgetEvidence,
+        DateTime? budgetValidatedAtUtc,
         string? readinessToSpend,
         string? readinessEvidence,
+        DateTime? readinessValidatedAtUtc,
         string? buyingTimeline,
         string? timelineEvidence,
+        DateTime? buyingTimelineValidatedAtUtc,
         string? problemSeverity,
         string? problemEvidence,
+        DateTime? problemSeverityValidatedAtUtc,
         string? economicBuyer,
         string? economicBuyerEvidence,
+        DateTime? economicBuyerValidatedAtUtc,
         string? icpFit,
-        string? icpFitEvidence)
+        string? icpFitEvidence,
+        DateTime? icpFitValidatedAtUtc)
     {
         var breakdown = new List<LeadScoreBreakdownItem>
         {
@@ -1573,37 +1781,44 @@ public sealed class LeadService : ILeadService
             new("ICP Fit", GetIcpFitScore(icpFit), 10)
         };
 
-        var totalFactors = 6m;
-        var completedFactors = new[]
+        var factors = new List<EpistemicFactorInsight>
         {
-            budgetAvailability,
-            readinessToSpend,
-            buyingTimeline,
-            problemSeverity,
-            economicBuyer,
-            icpFit
-        }.Count(IsMeaningfulFactor);
+            BuildFactorInsight("Budget availability", ResolveBudgetState(budgetAvailability), budgetEvidence, budgetValidatedAtUtc, true),
+            BuildFactorInsight("Readiness to spend", ResolveReadinessState(readinessToSpend), readinessEvidence, readinessValidatedAtUtc, false),
+            BuildFactorInsight("Buying timeline", ResolveTimelineState(buyingTimeline), timelineEvidence, buyingTimelineValidatedAtUtc, true),
+            BuildFactorInsight("Problem severity", ResolveProblemState(problemSeverity), problemEvidence, problemSeverityValidatedAtUtc, false),
+            BuildFactorInsight("Economic buyer", ResolveEconomicBuyerState(economicBuyer), economicBuyerEvidence, economicBuyerValidatedAtUtc, true),
+            BuildFactorInsight("ICP fit", ResolveIcpFitState(icpFit), icpFitEvidence, icpFitValidatedAtUtc, false)
+        };
 
-        var confidence = totalFactors == 0 ? 0 : completedFactors / totalFactors;
-        var confidenceLabel = confidence >= 0.8m ? "High confidence"
-            : confidence >= 0.5m ? "Medium confidence"
-            : "Low confidence";
+        var confidence = factors.Count == 0 ? 0m : factors.Average(f => f.Confidence);
+        var confidenceLabel = ConfidenceLabelFor(confidence);
+
+        var truthCoverage = factors.Count == 0
+            ? 0m
+            : factors.Count(f => f.State == EpistemicState.Verified && f.Confidence >= 0.75m) / (decimal)factors.Count;
+
+        var assumptionsOutstanding = factors.Count(f => f.IsHighImpact && (f.State == EpistemicState.Unknown || f.State == EpistemicState.Assumed));
+
+        var weakest = factors.OrderBy(f => f.Confidence).FirstOrDefault();
 
         var riskFlags = new List<string>();
         if (!IsMeaningfulFactor(buyingTimeline))
         {
             riskFlags.Add("No buying timeline");
         }
-        if (!IsMeaningfulFactor(economicBuyer) || string.Equals(economicBuyer, "Identified only", StringComparison.OrdinalIgnoreCase))
+        if (!IsMeaningfulFactor(economicBuyer)
+            || string.Equals(economicBuyer, "Buyer identified, not engaged", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(economicBuyer, "Influencer identified", StringComparison.OrdinalIgnoreCase))
         {
             riskFlags.Add("Economic buyer not engaged");
         }
-        if (string.Equals(budgetAvailability, "Confirmed allocated", StringComparison.OrdinalIgnoreCase)
-            && string.Equals(readinessToSpend, "No initiative", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(budgetAvailability, "Budget allocated and approved", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(readinessToSpend, "Not planning to spend", StringComparison.OrdinalIgnoreCase))
         {
             riskFlags.Add("Budget confirmed but no initiative");
         }
-        if (string.Equals(icpFit, "Weak", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(icpFit, "Clearly out of ICP", StringComparison.OrdinalIgnoreCase))
         {
             riskFlags.Add("Weak ICP fit");
         }
@@ -1612,18 +1827,277 @@ public sealed class LeadService : ILeadService
             riskFlags.Add("Problem severity unclear");
         }
 
+        foreach (var factor in factors)
+        {
+            if (factor.State == EpistemicState.Unknown || factor.State == EpistemicState.Assumed)
+            {
+                riskFlags.Add($"{factor.Label} needs validation");
+            }
+            if (factor.DecayLevel is DecayLevel.Moderate or DecayLevel.Strong)
+            {
+                riskFlags.Add($"{factor.Label} is stale");
+            }
+        }
+
+        var dedupedFlags = riskFlags
+            .Where(flag => !string.IsNullOrWhiteSpace(flag))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(4)
+            .ToList();
+
         return new QualificationInsights(
             confidence,
             confidenceLabel,
+            truthCoverage,
+            assumptionsOutstanding,
+            weakest?.Label,
+            weakest?.StateLabel,
             breakdown,
-            riskFlags.Take(3).ToList());
+            dedupedFlags);
     }
 
     private sealed record QualificationInsights(
         decimal Confidence,
         string ConfidenceLabel,
+        decimal TruthCoverage,
+        int AssumptionsOutstanding,
+        string? WeakestSignal,
+        string? WeakestState,
         IReadOnlyList<LeadScoreBreakdownItem> Breakdown,
         IReadOnlyList<string> RiskFlags);
+
+    private enum EpistemicState
+    {
+        Unknown,
+        Assumed,
+        Verified,
+        Invalid
+    }
+
+    private enum DecayLevel
+    {
+        None,
+        Light,
+        Moderate,
+        Strong
+    }
+
+    private sealed record EpistemicFactorInsight(
+        string Label,
+        EpistemicState State,
+        string StateLabel,
+        decimal Confidence,
+        string ConfidenceLabel,
+        string? Evidence,
+        DateTime? ValidatedAtUtc,
+        DecayLevel DecayLevel,
+        bool IsHighImpact);
+
+    private static EpistemicFactorInsight BuildFactorInsight(
+        string label,
+        EpistemicState state,
+        string? evidence,
+        DateTime? validatedAtUtc,
+        bool isHighImpact)
+    {
+        var decayLevel = GetDecayLevel(validatedAtUtc);
+        var confidence = ComputeFactorConfidence(state, evidence, decayLevel);
+        var stateLabel = StateLabelFor(state);
+        var confidenceLabel = ConfidenceLabelFor(confidence);
+        return new EpistemicFactorInsight(
+            label,
+            state,
+            stateLabel,
+            confidence,
+            confidenceLabel,
+            evidence,
+            validatedAtUtc,
+            decayLevel,
+            isHighImpact);
+    }
+
+    private static EpistemicState ResolveBudgetState(string? value) => ResolveState(value, BudgetStateMap);
+    private static EpistemicState ResolveReadinessState(string? value) => ResolveState(value, ReadinessStateMap);
+    private static EpistemicState ResolveTimelineState(string? value) => ResolveState(value, TimelineStateMap);
+    private static EpistemicState ResolveProblemState(string? value) => ResolveState(value, ProblemStateMap);
+    private static EpistemicState ResolveEconomicBuyerState(string? value) => ResolveState(value, EconomicBuyerStateMap);
+    private static EpistemicState ResolveIcpFitState(string? value) => ResolveState(value, IcpFitStateMap);
+
+    private static EpistemicState ResolveState(string? value, IReadOnlyDictionary<string, EpistemicState> map)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return EpistemicState.Unknown;
+        }
+
+        var normalized = value.Trim().ToLowerInvariant();
+        if (map.TryGetValue(normalized, out var state))
+        {
+            return state;
+        }
+
+        return normalized.Contains("unknown", StringComparison.OrdinalIgnoreCase)
+            ? EpistemicState.Unknown
+            : EpistemicState.Assumed;
+    }
+
+    private static string StateLabelFor(EpistemicState state)
+    {
+        return state switch
+        {
+            EpistemicState.Verified => "Verified",
+            EpistemicState.Assumed => "Assumed",
+            EpistemicState.Invalid => "Invalid",
+            _ => "Unknown"
+        };
+    }
+
+    private static string ConfidenceLabelFor(decimal confidence)
+    {
+        if (confidence >= 0.75m) return "High";
+        if (confidence >= 0.5m) return "Medium";
+        if (confidence >= 0.2m) return "Neutral";
+        return "Zero";
+    }
+
+    private static decimal ComputeFactorConfidence(EpistemicState state, string? evidence, DecayLevel decayLevel)
+    {
+        if (state == EpistemicState.Invalid)
+        {
+            return 0m;
+        }
+
+        var baseConfidence = state switch
+        {
+            EpistemicState.Verified => 0.8m,
+            EpistemicState.Assumed => 0.55m,
+            EpistemicState.Unknown => 0.4m,
+            _ => 0.4m
+        };
+
+        var confidence = baseConfidence + EvidenceDelta(evidence) + DecayPenalty(decayLevel);
+
+        if (state == EpistemicState.Verified && IsInferredEvidence(evidence))
+        {
+            confidence = Math.Min(confidence, 0.6m);
+        }
+
+        if (state == EpistemicState.Verified && IsNoEvidence(evidence))
+        {
+            confidence -= 0.05m;
+        }
+
+        return Math.Clamp(confidence, 0m, 1m);
+    }
+
+    private static decimal EvidenceDelta(string? evidence)
+    {
+        if (IsNoEvidence(evidence)) return -0.1m;
+
+        var normalized = evidence!.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "written confirmation" => 0.2m,
+            "direct buyer statement" => 0.2m,
+            "observed behaviour" => 0.1m,
+            "third-party confirmation" => 0.1m,
+            "historical / prior deal" => -0.05m,
+            "inferred from context" => -0.1m,
+            _ => 0m
+        };
+    }
+
+    private static bool IsNoEvidence(string? evidence)
+    {
+        return string.IsNullOrWhiteSpace(evidence)
+               || string.Equals(evidence.Trim(), "No evidence yet", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsInferredEvidence(string? evidence)
+    {
+        if (string.IsNullOrWhiteSpace(evidence)) return false;
+        return string.Equals(evidence.Trim(), "Inferred from context", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DecayLevel GetDecayLevel(DateTime? validatedAtUtc)
+    {
+        if (!validatedAtUtc.HasValue) return DecayLevel.None;
+        var days = (DateTime.UtcNow - validatedAtUtc.Value).TotalDays;
+        if (days < 14) return DecayLevel.None;
+        if (days < 30) return DecayLevel.Light;
+        if (days < 60) return DecayLevel.Moderate;
+        return DecayLevel.Strong;
+    }
+
+    private static decimal DecayPenalty(DecayLevel level)
+    {
+        return level switch
+        {
+            DecayLevel.Light => -0.05m,
+            DecayLevel.Moderate => -0.1m,
+            DecayLevel.Strong => -0.2m,
+            _ => 0m
+        };
+    }
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> BudgetStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not yet discussed"] = EpistemicState.Unknown,
+        ["indicative range mentioned"] = EpistemicState.Assumed,
+        ["budget allocated and approved"] = EpistemicState.Verified,
+        ["budget identified but unapproved"] = EpistemicState.Assumed,
+        ["no defined budget"] = EpistemicState.Invalid,
+        ["budget explicitly unavailable"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> ReadinessStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / unclear"] = EpistemicState.Unknown,
+        ["interest expressed, no urgency"] = EpistemicState.Assumed,
+        ["actively evaluating solutions"] = EpistemicState.Assumed,
+        ["internal decision in progress"] = EpistemicState.Verified,
+        ["ready to proceed pending final step"] = EpistemicState.Verified,
+        ["not planning to spend"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> TimelineStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not discussed"] = EpistemicState.Unknown,
+        ["rough timeline mentioned"] = EpistemicState.Assumed,
+        ["target date verbally confirmed"] = EpistemicState.Assumed,
+        ["decision date confirmed internally"] = EpistemicState.Verified,
+        ["date missed / repeatedly pushed"] = EpistemicState.Invalid,
+        ["no defined timeline"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> ProblemStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not validated"] = EpistemicState.Unknown,
+        ["mild inconvenience"] = EpistemicState.Assumed,
+        ["recognized operational problem"] = EpistemicState.Assumed,
+        ["critical business impact"] = EpistemicState.Verified,
+        ["executive-level priority"] = EpistemicState.Verified,
+        ["problem acknowledged but deprioritized"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> EconomicBuyerStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not identified"] = EpistemicState.Unknown,
+        ["influencer identified"] = EpistemicState.Assumed,
+        ["buyer identified, not engaged"] = EpistemicState.Assumed,
+        ["buyer engaged in discussion"] = EpistemicState.Verified,
+        ["buyer verbally supportive"] = EpistemicState.Verified,
+        ["buyer explicitly not involved"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> IcpFitStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not assessed"] = EpistemicState.Unknown,
+        ["partial icp fit"] = EpistemicState.Assumed,
+        ["strong icp fit"] = EpistemicState.Verified,
+        ["out-of-profile but exploratory"] = EpistemicState.Assumed,
+        ["clearly out of icp"] = EpistemicState.Invalid
+    };
 
     private static bool HasAiSignals(LeadUpsertRequest request)
     {

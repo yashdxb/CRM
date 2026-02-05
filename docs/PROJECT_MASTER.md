@@ -156,6 +156,56 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 
 ---
 
+## 10.1) ClickUp Automation (Backlog + Governance)
+
+**Purpose:** Keep ClickUp aligned with the codebase and phase plan without manual drift.
+
+### Backlog Structure (Current)
+- **Epics list** (Product & Planning):
+  - `Phase 1`
+  - `Phase 2`
+  - `Phase 3`
+- **Phase 2 execution epics** (children of `Phase 2`):
+  - Epistemic State + Evidence Governance
+  - Feedback Loop + Weakest Signal
+  - Epistemic Metrics Core
+  - Risk & Cost of Not Knowing
+  - Conditional Forecasting
+  - Coaching & Management
+- **User Stories list**: stories are **subtasks** of the appropriate epic.
+- **Modules list**: one task per module (Leads, Opportunities, Dashboard, Settings, etc.).
+- **Linkage**: each story is linked to a module task and prefixed with `Module: <Module> | ...` for visibility.
+
+### Tagging Standard
+- Phase tags: `phase-1`, `phase-2`, `phase-3`
+- Module tags: `module:Leads`, `module:Opportunities`, `module:Dashboard`, `module:Settings`, etc.
+- Status tags: `done`, `partial`, `not-started`, `candidate`
+
+### Description Standard (Stories)
+```
+## Story
+<title>
+
+## Acceptance Criteria
+- ...
+- ...
+
+## Evidence
+- `path/to/source`
+```
+
+### Automation Rules (Operational)
+- **Source of truth** for completed items: `docs/PHASE1.md`, `docs/PHASE2.md` (Status: DONE).
+- **New backlog items** derived from phase docs (PARTIAL/NOT STARTED/UNKNOWN).
+- **Do not assume** status beyond documented evidence.
+
+### ClickUp API Integration
+- Personal API token stored in Azure App Service settings: `CLICKUP_API_TOKEN`.
+- Use ClickUp API for create/update/delete tasks and to attach tags/parent relationships.
+- ClickUp public API does **not** support Docs content CRUD; use tasks for documentation tracking instead.
+
+---
+
 ## 11) Issue Fix Patterns (Current Reality)
 - PrimeNG select edits: insert a temporary option when pre-filling forms so values render before options load.
 - Activity edit/list time: parse API timestamps as UTC (append `Z` when missing) and display in user local time.

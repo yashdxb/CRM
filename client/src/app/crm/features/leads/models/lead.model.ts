@@ -46,6 +46,10 @@ export interface Lead {
   icpFitEvidence?: string;
   qualificationConfidence?: number;
   qualificationConfidenceLabel?: string;
+  truthCoverage?: number;
+  assumptionsOutstanding?: number;
+  weakestSignal?: string;
+  weakestState?: string;
   scoreBreakdown?: LeadScoreBreakdownItem[];
   riskFlags?: string[];
 }

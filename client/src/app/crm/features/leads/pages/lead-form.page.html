@@ -69,6 +69,8 @@
               <span class="status-chip" [attr.data-status]="form.status">{{ form.status }}</span>
               <span class="score-chip">Score {{ form.score ?? 0 }} / 100</span>
               <span class="confidence-chip" *ngIf="qualificationConfidenceLabel()">{{ qualificationConfidenceLabel() }}</span>
+              <span class="truth-chip" *ngIf="truthCoverage() !== null">Truth {{ truthCoveragePercent() }}%</span>
+              <span class="assumption-chip" *ngIf="assumptionsOutstanding() !== null">{{ assumptionsOutstandingLabel() }}</span>
             </div>
           </div>
           <div class="lead-sticky-right">
@@ -327,6 +329,31 @@
                     </div>
                   </div>
                 </div>
+                <div class="qualification-feedback" *ngIf="qualificationFeedback() as feedback">
+                  <span class="feedback-title">Qualification status</span>
+                  <div class="feedback-metrics">
+                    <span class="feedback-item">
+                      Confidence:
+                      <p-tag
+                        [value]="feedback.confidenceLabel"
+                        [severity]="feedback.confidenceLabel === 'High' ? 'success' : feedback.confidenceLabel === 'Medium' ? 'info' : 'warn'"
+                      ></p-tag>
+                    </span>
+                    <span class="feedback-item" *ngIf="truthCoverage() !== null">
+                      Truth coverage:
+                      <strong>{{ truthCoveragePercent() }}%</strong>
+                    </span>
+                    <span class="feedback-item" *ngIf="assumptionsOutstanding() !== null">
+                      Assumptions outstanding:
+                      <strong>{{ assumptionsOutstandingLabel() }}</strong>
+                    </span>
+                    <span class="feedback-item" *ngIf="feedback.weakestSignal">
+                      Weakest signal:
+                      <strong>{{ feedback.weakestSignal }}</strong>
+                      <span class="feedback-state">({{ feedback.weakestState }})</span>
+                    </span>
+                  </div>
+                </div>
               </div>
               <div class="field">
                 <label>Budget availability</label>
@@ -337,7 +364,7 @@
                   optionValue="value"
                   [(ngModel)]="form.budgetAvailability"
                   (ngModelChange)="onQualificationFactorChange()"
-                  placeholder="Select"
+                  placeholder="Unknown / not yet discussed"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -389,7 +416,7 @@
                   optionValue="value"
                   [(ngModel)]="form.readinessToSpend"
                   (ngModelChange)="onQualificationFactorChange()"
-                  placeholder="Select"
+                  placeholder="Unknown / not yet discussed"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -441,7 +468,7 @@
                   optionValue="value"
                   [(ngModel)]="form.buyingTimeline"
                   (ngModelChange)="onQualificationFactorChange()"
-                  placeholder="Select"
+                  placeholder="Unknown / not yet discussed"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -493,7 +520,7 @@
                   optionValue="value"
                   [(ngModel)]="form.problemSeverity"
                   (ngModelChange)="onQualificationFactorChange()"
-                  placeholder="Select"
+                  placeholder="Unknown / not yet discussed"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -545,7 +572,7 @@
                   optionValue="value"
                   [(ngModel)]="form.economicBuyer"
                   (ngModelChange)="onQualificationFactorChange()"
-                  placeholder="Select"
+                  placeholder="Unknown / not yet discussed"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -604,7 +631,7 @@
                   optionValue="value"
                   [(ngModel)]="form.icpFit"
                   (ngModelChange)="onQualificationFactorChange()"
-                  placeholder="Select"
+                  placeholder="Unknown / not yet discussed"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>

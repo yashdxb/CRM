@@ -363,6 +363,9 @@ async function setStatus(page, status: string) {
 }
 
 test.describe('seed azure dev CRM scenarios', () => {
+  test.skip(({ baseURL }) => {
+    return !!baseURL && !baseURL.includes('localhost') && !baseURL.includes('127.0.0.1');
+  }, 'Seeding is disabled for Azure/dev. Run against local only.');
   test.setTimeout(300_000);
 
   for (const user of USERS) {

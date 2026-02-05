@@ -352,6 +352,10 @@ public class LeadsController : ControllerBase
             dto.IcpFitEvidence,
             dto.QualificationConfidence,
             dto.QualificationConfidenceLabel,
+            dto.TruthCoverage,
+            dto.AssumptionsOutstanding,
+            dto.WeakestSignal,
+            dto.WeakestState,
             dto.ScoreBreakdown.Select(item => new CRM.Enterprise.Api.Contracts.Leads.LeadScoreBreakdownItem(item.Factor, item.Score, item.MaxScore)),
             dto.RiskFlags);
     }

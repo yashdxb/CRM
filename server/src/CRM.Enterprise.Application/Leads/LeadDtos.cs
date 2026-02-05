@@ -36,6 +36,10 @@ public sealed record LeadListItemDto(
     string? IcpFitEvidence,
     decimal QualificationConfidence,
     string QualificationConfidenceLabel,
+    decimal TruthCoverage,
+    int AssumptionsOutstanding,
+    string? WeakestSignal,
+    string? WeakestState,
     IReadOnlyList<LeadScoreBreakdownItem> ScoreBreakdown,
     IReadOnlyList<string> RiskFlags);
 

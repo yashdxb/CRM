@@ -273,8 +273,13 @@ test('contacts edit + delete', async ({ page, request }) => {
   }
   expect(createResponse.ok()).toBeTruthy();
   await page.goto('/app/contacts');
-
+  await page.waitForResponse((response) => response.url().includes('/api/contacts') && response.status() === 200);
+  const originalSearch = page.waitForResponse((response) => {
+    const url = response.url();
+    return url.includes('/api/contacts') && url.includes(`search=${encodeURIComponent(originalName)}`);
+  });
   await searchWith(page, '.search-input', originalName);
+  await originalSearch;
   const row = page.locator('.contacts-table tbody tr').filter({ hasText: originalName }).first();
   await row.locator('button:has(.pi-pencil)').click();
   await page.waitForURL('**/app/contacts/**/edit');
@@ -288,8 +293,14 @@ test('contacts edit + delete', async ({ page, request }) => {
   }
   expect(updateResponse.ok()).toBeTruthy();
   await page.goto('/app/contacts');
+  await page.waitForResponse((response) => response.url().includes('/api/contacts') && response.status() === 200);
+  const updatedSearch = page.waitForResponse((response) => {
+    const url = response.url();
+    return url.includes('/api/contacts') && url.includes(`search=${encodeURIComponent(updatedName)}`);
+  });
   await searchWith(page, '.search-input', updatedName);
-  await expect(page.locator('.contacts-table')).toContainText(updatedName);
+  await updatedSearch;
+  await expect(page.locator('.contacts-table')).toContainText(updatedName, { timeout: 15000 });
 
   page.once('dialog', (dialog) => dialog.accept());
   const updatedRow = page.locator('.contacts-table tbody tr').filter({ hasText: updatedName }).first();
@@ -349,15 +360,26 @@ test('activities overdue highlighting + my tasks filter', async ({ page, request
 
   await page.goto('/app/activities');
   await page.waitForURL('**/app/activities');
+  await page.waitForResponse((response) => response.url().includes('/api/activities') && response.status() === 200);
+  const searchResponse = page.waitForResponse((response) => {
+    const url = response.url();
+    return url.includes('/api/activities') && url.includes(`search=${encodeURIComponent(subject)}`);
+  });
   await searchWith(page, '.search-box input', subject);
-  await expect(page.locator('.data-table')).toContainText(subject);
+  await searchResponse;
+  await expect(page.locator('.data-table .subject-text')).toContainText(subject, { timeout: 15000 });
   await expect(page.locator('.status-chip.overdue')).toBeVisible();
 
   await page.locator('.kpi-card', { hasText: 'Overdue' }).click();
-  await expect(page.locator('.data-table')).toContainText(subject);
+  await expect(page.locator('.data-table .subject-text')).toContainText(subject, { timeout: 15000 });
 
   const mineToggle = page.locator('button.pill.toggle', { hasText: 'Mine' });
   await mineToggle.click();
+  const mineSearchResponse = page.waitForResponse((response) => {
+    const url = response.url();
+    return url.includes('/api/activities') && url.includes(`search=${encodeURIComponent(subject)}`);
+  });
   await searchWith(page, '.search-box input', subject);
-  await expect(page.locator('.data-table')).toContainText(subject);
+  await mineSearchResponse;
+  await expect(page.locator('.data-table .subject-text')).toContainText(subject, { timeout: 15000 });
 });

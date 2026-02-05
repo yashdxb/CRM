@@ -1,6 +1,10 @@
 import { defineConfig } from '@playwright/test';
 
 const baseURL = process.env.E2E_BASE_URL || 'https://www.northedgesystem.com';
+const apiEnv = process.env.E2E_API_URL || process.env.API_BASE_URL;
+if (!apiEnv && !baseURL.includes('localhost') && !baseURL.includes('127.0.0.1')) {
+  process.env.E2E_API_URL = 'https://crm-enterprise-api-dev-01122345.azurewebsites.net';
+}
 const shouldStartServer =
   !process.env.E2E_SKIP_SERVER && (baseURL.startsWith('http://localhost') || baseURL.startsWith('http://127.0.0.1'));
 

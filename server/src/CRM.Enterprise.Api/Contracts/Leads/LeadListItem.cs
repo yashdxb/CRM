@@ -39,5 +39,9 @@ public record LeadListItem(
     string? IcpFitEvidence,
     decimal QualificationConfidence,
     string QualificationConfidenceLabel,
+    decimal TruthCoverage,
+    int AssumptionsOutstanding,
+    string? WeakestSignal,
+    string? WeakestState,
     IEnumerable<LeadScoreBreakdownItem> ScoreBreakdown,
     IEnumerable<string> RiskFlags);

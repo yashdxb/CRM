@@ -162,6 +162,13 @@ export class LeadFormPage implements OnInit {
   protected aiScoreConfidence = signal<number | null>(null);
   protected qualificationConfidenceLabel = signal<string | null>(null);
   protected qualificationConfidence = signal<number | null>(null);
+  protected truthCoverage = signal<number | null>(null);
+  protected assumptionsOutstanding = signal<number | null>(null);
+  protected qualificationFeedback = signal<{
+    confidenceLabel: string;
+    weakestSignal: string | null;
+    weakestState: string | null;
+  } | null>(null);
   protected scoreBreakdown = signal<LeadScoreBreakdownItem[]>([]);
   protected riskFlags = signal<string[]>([]);
   protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
@@ -341,6 +348,7 @@ export class LeadFormPage implements OnInit {
         }
         const message = isEdit ? 'Lead updated.' : 'Lead created.';
         this.raiseToast('success', message);
+        this.updateQualificationFeedback();
       },
       error: () => {
         this.saving.set(false);
@@ -372,18 +380,18 @@ export class LeadFormPage implements OnInit {
       disqualifiedReason: lead.disqualifiedReason ?? '',
       nurtureFollowUpAtUtc: this.toDateValue(lead.nurtureFollowUpAtUtc),
       qualifiedNotes: lead.qualifiedNotes ?? '',
-      budgetAvailability: lead.budgetAvailability ?? '',
-      budgetEvidence: lead.budgetEvidence ?? '',
-      readinessToSpend: lead.readinessToSpend ?? '',
-      readinessEvidence: lead.readinessEvidence ?? '',
-      buyingTimeline: lead.buyingTimeline ?? '',
-      timelineEvidence: lead.timelineEvidence ?? '',
-      problemSeverity: lead.problemSeverity ?? '',
-      problemEvidence: lead.problemEvidence ?? '',
-      economicBuyer: lead.economicBuyer ?? '',
-      economicBuyerEvidence: lead.economicBuyerEvidence ?? '',
-      icpFit: lead.icpFit ?? '',
-      icpFitEvidence: lead.icpFitEvidence ?? ''
+      budgetAvailability: lead.budgetAvailability || 'Unknown / not yet discussed',
+      budgetEvidence: lead.budgetEvidence || 'No evidence yet',
+      readinessToSpend: lead.readinessToSpend || 'Unknown / unclear',
+      readinessEvidence: lead.readinessEvidence || 'No evidence yet',
+      buyingTimeline: lead.buyingTimeline || 'Unknown / not discussed',
+      timelineEvidence: lead.timelineEvidence || 'No evidence yet',
+      problemSeverity: lead.problemSeverity || 'Unknown / not validated',
+      problemEvidence: lead.problemEvidence || 'No evidence yet',
+      economicBuyer: lead.economicBuyer || 'Unknown / not identified',
+      economicBuyerEvidence: lead.economicBuyerEvidence || 'No evidence yet',
+      icpFit: lead.icpFit || 'Unknown / not assessed',
+      icpFitEvidence: lead.icpFitEvidence || 'No evidence yet'
     };
     this.linkedAccountId.set(lead.accountId ?? null);
     this.linkedContactId.set(lead.contactId ?? null);
@@ -392,8 +400,13 @@ export class LeadFormPage implements OnInit {
     this.firstTouchedAtUtc.set(lead.firstTouchedAtUtc ?? null);
     this.qualificationConfidenceLabel.set(lead.qualificationConfidenceLabel ?? null);
     this.qualificationConfidence.set(lead.qualificationConfidence ?? null);
+    this.truthCoverage.set(lead.truthCoverage ?? null);
+    this.assumptionsOutstanding.set(lead.assumptionsOutstanding ?? null);
     this.scoreBreakdown.set(lead.scoreBreakdown ?? []);
     this.riskFlags.set(lead.riskFlags ?? []);
+    this.normalizeEvidence();
+    this.updateQualificationFeedback();
+    this.updateEpistemicSummary(true);
   }
 
   private loadStatusHistory(leadId: string) {
@@ -479,17 +492,17 @@ export class LeadFormPage implements OnInit {
       disqualifiedReason: '',
       nurtureFollowUpAtUtc: null,
       qualifiedNotes: '',
-      budgetAvailability: '',
+      budgetAvailability: 'Unknown / not yet discussed',
       budgetEvidence: 'No evidence yet',
-      readinessToSpend: '',
+      readinessToSpend: 'Unknown / unclear',
       readinessEvidence: 'No evidence yet',
-      buyingTimeline: '',
+      buyingTimeline: 'Unknown / not discussed',
       timelineEvidence: 'No evidence yet',
-      problemSeverity: '',
+      problemSeverity: 'Unknown / not validated',
       problemEvidence: 'No evidence yet',
-      economicBuyer: '',
+      economicBuyer: 'Unknown / not identified',
       economicBuyerEvidence: 'No evidence yet',
-      icpFit: '',
+      icpFit: 'Unknown / not assessed',
       icpFitEvidence: 'No evidence yet'
     };
   }
@@ -602,10 +615,10 @@ export class LeadFormPage implements OnInit {
 
   private getBudgetScore(value?: string | null): number {
     switch (value?.toLowerCase()) {
-      case 'confirmed allocated':
+      case 'budget allocated and approved':
         return 25;
-      case 'indicative / estimated':
-      case 'indicative/estimated':
+      case 'budget identified but unapproved':
+      case 'indicative range mentioned':
         return 15;
       case 'no defined budget':
         return 5;
@@ -616,12 +629,12 @@ export class LeadFormPage implements OnInit {
 
   private getReadinessScore(value?: string | null): number {
     switch (value?.toLowerCase()) {
-      case 'actively evaluating':
+      case 'internal decision in progress':
+      case 'ready to proceed pending final step':
         return 20;
-      case 'approved, timing tbd':
-      case 'approved timing tbd':
+      case 'actively evaluating solutions':
         return 15;
-      case 'early research':
+      case 'interest expressed, no urgency':
         return 8;
       default:
         return 0;
@@ -630,13 +643,11 @@ export class LeadFormPage implements OnInit {
 
   private getTimelineScore(value?: string | null): number {
     switch (value?.toLowerCase()) {
-      case '< 30 days':
+      case 'decision date confirmed internally':
         return 15;
-      case '1–3 months':
-      case '1-3 months':
+      case 'target date verbally confirmed':
         return 12;
-      case '3–6 months':
-      case '3-6 months':
+      case 'rough timeline mentioned':
         return 6;
       default:
         return 0;
@@ -645,14 +656,13 @@ export class LeadFormPage implements OnInit {
 
   private getProblemScore(value?: string | null): number {
     switch (value?.toLowerCase()) {
-      case 'critical':
+      case 'executive-level priority':
         return 20;
-      case 'high':
-        return 15;
-      case 'moderate':
+      case 'critical business impact':
+        return 20;
+      case 'recognized operational problem':
         return 8;
-      case 'nice-to-have':
-      case 'nice to have':
+      case 'mild inconvenience':
         return 2;
       default:
         return 0;
@@ -661,9 +671,11 @@ export class LeadFormPage implements OnInit {
 
   private getEconomicBuyerScore(value?: string | null): number {
     switch (value?.toLowerCase()) {
-      case 'engaged':
+      case 'buyer engaged in discussion':
+      case 'buyer verbally supportive':
         return 10;
-      case 'identified only':
+      case 'buyer identified, not engaged':
+      case 'influencer identified':
         return 5;
       default:
         return 0;
@@ -672,9 +684,10 @@ export class LeadFormPage implements OnInit {
 
   private getIcpFitScore(value?: string | null): number {
     switch (value?.toLowerCase()) {
-      case 'strong':
+      case 'strong icp fit':
         return 10;
-      case 'partial':
+      case 'partial icp fit':
+      case 'out-of-profile but exploratory':
         return 5;
       default:
         return 0;
@@ -814,11 +827,10 @@ export class LeadFormPage implements OnInit {
   }
 
   protected onQualificationFactorChange(): void {
-    if (!this.isEditMode()) {
-      return;
-    }
     this.normalizeEvidence();
     this.applyFollowUpDefaults();
+    this.updateQualificationFeedback();
+    this.updateEpistemicSummary();
   }
 
   protected isEvidenceDisabled(value?: string | null): boolean {
@@ -850,6 +862,125 @@ export class LeadFormPage implements OnInit {
     if (this.isEvidenceDisabled(this.form.icpFit)) {
       this.form.icpFitEvidence = 'No evidence yet';
     }
+  }
+
+  private updateQualificationFeedback(): void {
+    const factors = this.getQualificationFactors();
+    const weakest = this.getWeakestFactor(factors);
+    const confidenceLabel = this.deriveConfidenceLabel(factors);
+    this.qualificationFeedback.set({
+      confidenceLabel,
+      weakestSignal: weakest?.label ?? null,
+      weakestState: weakest?.state ?? null
+    });
+  }
+
+  private updateEpistemicSummary(preferServer = false): void {
+    const factors = this.getQualificationFactors();
+    const computedTruthCoverage = this.computeTruthCoverage(factors);
+    const computedAssumptions = this.computeAssumptionsOutstanding(factors);
+
+    if (preferServer) {
+      this.truthCoverage.set(this.truthCoverage() ?? computedTruthCoverage);
+      this.assumptionsOutstanding.set(this.assumptionsOutstanding() ?? computedAssumptions);
+    } else {
+      this.truthCoverage.set(computedTruthCoverage);
+      this.assumptionsOutstanding.set(computedAssumptions);
+    }
+  }
+
+  protected truthCoveragePercent(): number {
+    const coverage = this.truthCoverage();
+    if (coverage === null || Number.isNaN(coverage)) return 0;
+    return Math.round(coverage * 100);
+  }
+
+  protected assumptionsOutstandingLabel(): string {
+    const count = this.assumptionsOutstanding();
+    if (!count) return '0 assumptions';
+    return `${count} assumption${count === 1 ? '' : 's'}`;
+  }
+
+  private computeTruthCoverage(factors: Array<{ state: string }>): number {
+    if (!factors.length) return 0;
+    const verifiedCount = factors.filter((factor) => factor.state === 'Verified').length;
+    return verifiedCount / factors.length;
+  }
+
+  private computeAssumptionsOutstanding(factors: Array<{ label: string; state: string }>): number {
+    const highImpactLabels = new Set(['Budget availability', 'Buying timeline', 'Economic buyer']);
+    return factors.filter((factor) => highImpactLabels.has(factor.label) && (factor.state === 'Unknown' || factor.state === 'Assumed')).length;
+  }
+
+  private getQualificationFactors(): Array<{ label: string; state: string; weight: number }> {
+    return [
+      this.getFactorState('Budget availability', this.form.budgetAvailability, this.budgetOptions),
+      this.getFactorState('Readiness to spend', this.form.readinessToSpend, this.readinessOptions),
+      this.getFactorState('Buying timeline', this.form.buyingTimeline, this.timelineOptions),
+      this.getFactorState('Problem severity', this.form.problemSeverity, this.problemOptions),
+      this.getFactorState('Economic buyer', this.form.economicBuyer, this.economicBuyerOptions),
+      this.getFactorState('ICP fit', this.form.icpFit, this.icpFitOptions)
+    ];
+  }
+
+  private getFactorState(
+    label: string,
+    value: string | null | undefined,
+    options: OptionItem[]
+  ): { label: string; state: string; weight: number } {
+    const tone = this.resolveTone(value, options);
+    const weight = this.toneWeight(tone);
+    return { label, state: this.toneLabel(tone), weight };
+  }
+
+  private resolveTone(value: string | null | undefined, options: OptionItem[]): OptionItem['tone'] {
+    if (!value) return 'unknown';
+    const match = options.find((option) => option.value === value);
+    return match?.tone ?? (this.isUnknownValue(value) ? 'unknown' : 'assumed');
+  }
+
+  private toneWeight(tone: OptionItem['tone']): number {
+    switch (tone) {
+      case 'verified':
+        return 3;
+      case 'assumed':
+        return 2;
+      case 'unknown':
+        return 1;
+      case 'invalid':
+        return 0;
+      default:
+        return 2;
+    }
+  }
+
+  private toneLabel(tone: OptionItem['tone']): string {
+    switch (tone) {
+      case 'verified':
+        return 'Verified';
+      case 'assumed':
+        return 'Assumed';
+      case 'invalid':
+        return 'Invalid';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  private getWeakestFactor(factors: Array<{ label: string; state: string; weight: number }>) {
+    return factors.reduce((weakest, current) => {
+      if (!weakest) return current;
+      if (current.weight < weakest.weight) return current;
+      return weakest;
+    }, null as { label: string; state: string; weight: number } | null);
+  }
+
+  private deriveConfidenceLabel(factors: Array<{ weight: number }>): string {
+    if (!factors.length) return 'Neutral';
+    const average = factors.reduce((sum, factor) => sum + factor.weight, 0) / factors.length;
+    if (average >= 2.6) return 'High';
+    if (average >= 1.6) return 'Medium';
+    return 'Low';
   }
 
   private applyFollowUpDefaults(): void {

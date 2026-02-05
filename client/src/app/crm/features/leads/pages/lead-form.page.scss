@@ -316,7 +316,9 @@
 
     .status-chip,
     .score-chip,
-    .confidence-chip {
+    .confidence-chip,
+    .truth-chip,
+    .assumption-chip {
       display: inline-flex;
       align-items: center;
       padding: 0.3rem 0.65rem;
@@ -335,6 +337,16 @@
     .confidence-chip {
       background: rgba(14, 116, 144, 0.12);
       color: #0e7490;
+    }
+
+    .truth-chip {
+      background: rgba(16, 185, 129, 0.12);
+      color: #047857;
+    }
+
+    .assumption-chip {
+      background: rgba(234, 88, 12, 0.12);
+      color: #c2410c;
     }
 
     .lead-tabs {
@@ -481,6 +493,46 @@
       align-items: center;
       gap: 0.75rem;
       flex-wrap: wrap;
+    }
+
+    .qualification-feedback {
+      margin-top: 0.75rem;
+      padding: 0.65rem 0.9rem;
+      border-radius: 14px;
+      background: rgba(248, 250, 252, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .qualification-feedback .feedback-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(51, 65, 85, 0.8);
+    }
+
+    .qualification-feedback .feedback-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      align-items: center;
+      font-size: 0.92rem;
+      color: #1f2937;
+    }
+
+    .qualification-feedback .feedback-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      font-weight: 600;
+    }
+
+    .qualification-feedback .feedback-state {
+      font-weight: 600;
+      color: rgba(100, 116, 139, 0.9);
     }
 
     .legend-title {

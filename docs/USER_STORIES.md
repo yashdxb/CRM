@@ -4,6 +4,21 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
 
 ---
 
+## ClickUp Structure (Execution)
+- **Epics list**: `Phase 1`, `Phase 2`, `Phase 3`
+- **Phase 2 execution epics** (children of `Phase 2`):
+  - Epistemic State + Evidence Governance
+  - Feedback Loop + Weakest Signal
+  - Epistemic Metrics Core
+  - Risk & Cost of Not Knowing
+  - Conditional Forecasting
+  - Coaching & Management
+- **User stories** are stored as **subtasks** of the correct epic.
+- **Module linkage** is required (story title prefix: `Module: <Module> | ...`).
+- **Tags**: `phase-*`, `module:*`, and `done/partial/not-started/candidate`.
+
+---
+
 ## Strategic Benchmark & Differentiation (Current Plan)
 
 ### Positioning Goal
