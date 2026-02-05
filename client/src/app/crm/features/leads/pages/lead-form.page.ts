@@ -169,6 +169,8 @@ export class LeadFormPage implements OnInit {
     weakestSignal: string | null;
     weakestState: string | null;
   } | null>(null);
+  protected serverWeakestSignal = signal<string | null>(null);
+  protected serverWeakestState = signal<string | null>(null);
   protected scoreBreakdown = signal<LeadScoreBreakdownItem[]>([]);
   protected riskFlags = signal<string[]>([]);
   protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
@@ -402,10 +404,12 @@ export class LeadFormPage implements OnInit {
     this.qualificationConfidence.set(lead.qualificationConfidence ?? null);
     this.truthCoverage.set(lead.truthCoverage ?? null);
     this.assumptionsOutstanding.set(lead.assumptionsOutstanding ?? null);
+    this.serverWeakestSignal.set(lead.weakestSignal ?? null);
+    this.serverWeakestState.set(lead.weakestState ?? null);
     this.scoreBreakdown.set(lead.scoreBreakdown ?? []);
     this.riskFlags.set(lead.riskFlags ?? []);
     this.normalizeEvidence();
-    this.updateQualificationFeedback();
+    this.updateQualificationFeedback(true);
     this.updateEpistemicSummary(true);
   }
 
@@ -864,14 +868,16 @@ export class LeadFormPage implements OnInit {
     }
   }
 
-  private updateQualificationFeedback(): void {
+  private updateQualificationFeedback(preferServer = false): void {
     const factors = this.getQualificationFactors();
     const weakest = this.getWeakestFactor(factors);
+    const serverWeakestSignal = this.serverWeakestSignal();
+    const serverWeakestState = this.serverWeakestState();
     const confidenceLabel = this.deriveConfidenceLabel(factors);
     this.qualificationFeedback.set({
       confidenceLabel,
-      weakestSignal: weakest?.label ?? null,
-      weakestState: weakest?.state ?? null
+      weakestSignal: preferServer && serverWeakestSignal ? serverWeakestSignal : weakest?.label ?? null,
+      weakestState: preferServer && serverWeakestState ? serverWeakestState : weakest?.state ?? null
     });
   }
 

@@ -790,6 +790,38 @@ $status-lost: #ef4444;
   }
 }
 
+.lead-epistemic {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.epistemic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background: rgba($gray-100, 0.9);
+  color: $gray-600;
+}
+
+.epistemic-chip.truth {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: #047857;
+}
+
+.epistemic-chip.weakest {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #b45309;
+}
+
 .lead-card-footer {
   display: flex;
   align-items: center;
@@ -1619,6 +1651,24 @@ $status-lost: #ef4444;
   .lead-detail,
   .lead-owner {
     color: rgba(255, 255, 255, 0.5);
+  }
+
+  .epistemic-chip {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .epistemic-chip.truth {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+  }
+
+  .epistemic-chip.weakest {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.25);
+    color: #fcd34d;
   }
 
   .leads-table {
