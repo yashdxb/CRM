@@ -42,10 +42,15 @@ Acceptance criteria are written as testable statements (UI + API).
   - Lead conversion: `client/src/app/features/leads/pages/lead-convert.page.ts`
   - Assignment rules UI: `client/src/app/features/settings/pages/lead-assignment.page.ts`
   - API endpoints: `server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs`
+  - CQVS qualification UX + feedback: `client/src/app/crm/features/leads/pages/lead-form.page.html`
+  - CQVS styling + score breakdown UI: `client/src/app/crm/features/leads/pages/lead-form.page.scss`
+  - CQVS data + confidence logic: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+  - Qualification validation timestamps: `server/src/CRM.Enterprise.Infrastructure/Persistence/Migrations/20260204233855_AddLeadQualificationValidationDates.cs`
 - Acceptance criteria:
   - Leads can be created, assigned, converted.
   - Assignment rules apply deterministically.
   - Conversion creates account/contact/opportunity when selected.
+  - Qualification factors default to Unknown, evidence locks when Unknown, and inline feedback shows confidence + truth coverage + assumptions + weakest signal.
 
 4) Lead AI scoring
 - Status: DONE
