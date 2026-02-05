@@ -201,6 +201,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 
 ### ClickUp API Integration
 - Personal API token stored in Azure App Service settings: `CLICKUP_API_TOKEN`.
+- Personal ClickUp API token also stored in Azure Key Vault `kv-crm-dev-ca` as secret `clickup-api-token` (RBAC enabled).
 - Use ClickUp API for create/update/delete tasks and to attach tags/parent relationships.
 - ClickUp public API does **not** support Docs content CRUD; use tasks for documentation tracking instead.
 
