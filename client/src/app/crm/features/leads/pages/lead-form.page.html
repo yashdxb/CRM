@@ -245,6 +245,10 @@
                 <label>Source</label>
                 <input pInputText name="source" [(ngModel)]="form.source" placeholder="Web, Referral, Event" class="w-full" />
               </div>
+              <div class="field" *ngIf="routingReason()">
+                <label>Routing reason</label>
+                <input pInputText [ngModel]="routingReason()" class="w-full" [disabled]="true" />
+              </div>
             </div>
           </section>
 
@@ -684,10 +688,19 @@
                     <span>Score breakdown</span>
                     <span class="confidence-pill" *ngIf="qualificationConfidenceLabel()">{{ qualificationConfidenceLabel() }}</span>
                   </div>
-                  <div class="confidence-meter">
-                    <span>Confidence</span>
-                    <p-progressBar [value]="qualificationConfidencePercent()" styleClass="confidence-bar"></p-progressBar>
-                    <span class="confidence-value">{{ qualificationConfidencePercent() }}%</span>
+                  <div class="confidence-gauge">
+                    <div class="confidence-gauge__label">Confidence</div>
+                    <p-knob
+                      [ngModel]="qualificationConfidencePercent()"
+                      [ngModelOptions]="{ standalone: true }"
+                      [readonly]="true"
+                      [size]="86"
+                      [strokeWidth]="10"
+                      valueColor="var(--apple-teal)"
+                      rangeColor="rgba(var(--apple-gray-4), 0.35)"
+                      textColor="rgba(var(--apple-secondary), 0.9)"
+                      styleClass="confidence-gauge__knob"
+                    ></p-knob>
                   </div>
                   <p class="hint-text compact" *ngIf="qualificationConfidenceHint()">{{ qualificationConfidenceHint() }}</p>
                   <div class="score-breakdown__grid">

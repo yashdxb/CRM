@@ -91,6 +91,23 @@
             <label>Due date</label>
             <p-datePicker [(ngModel)]="quickAddActivityDueDate"></p-datePicker>
           </div>
+          <div class="field full">
+            <label>Outcome</label>
+            <textarea
+              pTextarea
+              [(ngModel)]="quickAddActivityOutcome"
+              rows="2"
+              placeholder="Capture outcome and key takeaways"
+            ></textarea>
+          </div>
+          <div class="field">
+            <label>Next step subject</label>
+            <input pInputText [(ngModel)]="quickAddActivityNextStepSubject" placeholder="Follow-up task" />
+          </div>
+          <div class="field">
+            <label>Next step due date</label>
+            <p-datePicker [(ngModel)]="quickAddActivityNextStepDueDate"></p-datePicker>
+          </div>
           <div class="field">
             <label>Related to</label>
             <p-select

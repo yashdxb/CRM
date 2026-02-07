@@ -33,7 +33,7 @@
           </h2>
           <div class="form-grid">
             <label class="checkbox-field">
-              <p-checkbox [(ngModel)]="form().createAccount" name="createAccount" binary="true"></p-checkbox>
+              <p-checkbox [(ngModel)]="form().createAccount" name="createAccount" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
               <span>Create new account</span>
             </label>
             <div class="field" *ngIf="form().createAccount">
@@ -50,7 +50,7 @@
           </h2>
           <div class="form-grid">
             <label class="checkbox-field">
-              <p-checkbox [(ngModel)]="form().createContact" name="createContact" binary="true"></p-checkbox>
+              <p-checkbox [(ngModel)]="form().createContact" name="createContact" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
               <span>Create contact from lead details</span>
             </label>
             <div class="field">
@@ -69,7 +69,7 @@
           </h2>
           <div class="form-grid">
             <label class="checkbox-field">
-              <p-checkbox [(ngModel)]="form().createOpportunity" name="createOpportunity" binary="true"></p-checkbox>
+              <p-checkbox [(ngModel)]="form().createOpportunity" name="createOpportunity" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
               <span>Create opportunity</span>
             </label>
             <div class="field" *ngIf="form().createOpportunity">
@@ -88,6 +88,118 @@
           <p class="hint" *ngIf="form().createOpportunity && !form().createAccount">
             Create an account to attach the opportunity.
           </p>
+        </section>
+
+        <section class="form-section qualification-section" *ngIf="lead() as leadData">
+          <h2 class="section-title">
+            <i class="pi pi-sliders-h"></i>
+            Qualification guardrails
+          </h2>
+          <div class="qualification-summary">
+            <div>
+              <span class="label">Score</span>
+              <strong>{{ leadData.score }}/100</strong>
+            </div>
+            <div>
+              <span class="label">Band</span>
+              <span class="pill" [attr.data-band]="qualificationDecision().band">{{ qualificationDecision().band }}</span>
+            </div>
+            <div>
+              <span class="label">Threshold</span>
+              <strong>{{ qualificationDecision().adjustedThreshold }}</strong>
+            </div>
+            <div class="summary-message">
+              {{ qualificationDecision().message }}
+            </div>
+          </div>
+
+          <div class="form-grid form-grid--2col">
+            <div class="field">
+              <label>Deal type</label>
+              <p-select
+                appendTo="body"
+                [options]="dealTypeOptions"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="form().dealType"
+                (ngModelChange)="onFormChange()"
+                name="dealType"
+                styleClass="w-full"
+              ></p-select>
+            </div>
+            <div class="field">
+              <label>Segment</label>
+              <p-select
+                appendTo="body"
+                [options]="segmentOptions"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="form().segment"
+                (ngModelChange)="onFormChange()"
+                name="segment"
+                styleClass="w-full"
+              ></p-select>
+            </div>
+            <div class="field">
+              <label>Stage</label>
+              <p-select
+                appendTo="body"
+                [options]="stageOptions"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="form().stage"
+                (ngModelChange)="onFormChange()"
+                name="stage"
+                styleClass="w-full"
+              ></p-select>
+            </div>
+            <div class="field">
+              <label>Velocity</label>
+              <p-select
+                appendTo="body"
+                [options]="velocityOptions"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="form().velocity"
+                (ngModelChange)="onFormChange()"
+                name="velocity"
+                styleClass="w-full"
+              ></p-select>
+            </div>
+          </div>
+
+          <div class="form-grid form-grid--2col">
+            <label class="checkbox-field">
+              <p-checkbox [(ngModel)]="form().isCompetitive" name="isCompetitive" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
+              <span>Competitive deal</span>
+            </label>
+            <label class="checkbox-field">
+              <p-checkbox [(ngModel)]="form().hasExecutiveChampion" name="hasExecutiveChampion" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
+              <span>Executive champion</span>
+            </label>
+            <label class="checkbox-field">
+              <p-checkbox [(ngModel)]="form().isStrategic" name="isStrategic" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
+              <span>Strategic account</span>
+            </label>
+          </div>
+
+          <div class="form-grid form-grid--2col" *ngIf="qualificationDecision().requiresManagerApproval || qualificationDecision().requiresOverrideReason">
+            <label class="checkbox-field" *ngIf="qualificationDecision().requiresManagerApproval">
+              <p-checkbox [(ngModel)]="form().managerApproved" name="managerApproved" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
+              <span>Manager approved</span>
+            </label>
+            <div class="field" *ngIf="qualificationDecision().requiresOverrideReason">
+              <label>Override reason</label>
+              <textarea
+                pTextarea
+                name="overrideReason"
+                [(ngModel)]="form().overrideReason"
+                (ngModelChange)="onFormChange()"
+                rows="3"
+                placeholder="Explain why you are converting below threshold"
+              ></textarea>
+            </div>
+          </div>
         </section>
 
         <footer class="form-actions">

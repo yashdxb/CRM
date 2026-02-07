@@ -9,4 +9,13 @@ public record LeadConversionRequest(
     bool CreateOpportunity,
     string? OpportunityName,
     decimal? Amount,
-    DateTime? ExpectedCloseDate);
+    DateTime? ExpectedCloseDate,
+    string? DealType,
+    string? Segment,
+    string? Stage,
+    bool? IsCompetitive,
+    bool? HasExecutiveChampion,
+    bool? IsStrategic,
+    string? Velocity,
+    bool? ManagerApproved,
+    string? OverrideReason);

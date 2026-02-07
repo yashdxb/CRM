@@ -4,6 +4,7 @@ public sealed record OpportunitySearchRequest(
     string? Search,
     string? Stage,
     Guid? AccountId,
+    bool? MissingNextStep,
     int Page,
     int PageSize);
 
@@ -23,6 +24,9 @@ public sealed record OpportunityUpsertRequest(
     string? ForecastCategory,
     string? OpportunityType,
     string? Summary,
+    string? Requirements,
+    string? BuyingProcess,
+    string? SuccessCriteria,
     decimal? DiscountPercent,
     decimal? DiscountAmount,
     string? PricingNotes,

@@ -32,7 +32,13 @@ public record DashboardSummaryDto(
     int AvgSalesCycle,
     decimal MonthlyRecurringRevenue,
     decimal CustomerLifetimeValue,
-    decimal ChurnRate);
+    decimal ChurnRate,
+    decimal AvgQualificationConfidence,
+    decimal AvgTruthCoverage,
+    decimal AvgTimeToTruthDays,
+    int RiskRegisterCount,
+    IReadOnlyList<RiskFlagSummaryDto> TopRiskFlags,
+    decimal ConfidenceWeightedPipelineValue);
 
 public record RecentAccountDto(
     Guid Id,
@@ -89,3 +95,5 @@ public record DashboardOpportunityDto(
     string Reason,
     DateTime? NextStepDueAtUtc,
     DateTime? LastActivityAtUtc);
+
+public record RiskFlagSummaryDto(string Label, int Count);

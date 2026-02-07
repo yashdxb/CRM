@@ -5,6 +5,8 @@ export interface Activity {
   subject: string;
   description?: string;
   outcome?: string;
+  nextStepSubject?: string;
+  nextStepDueDateUtc?: string;
   templateKey?: string;
   type: ActivityType;
   priority?: 'High' | 'Normal' | 'Low';

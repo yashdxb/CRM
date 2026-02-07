@@ -424,21 +424,22 @@ export class ActivityFormPage implements OnInit {
       return;
     }
 
+    if (!this.form.outcome || !this.form.outcome.trim()) {
+      this.raiseToast('error', 'Outcome is required for an activity.');
+      return;
+    }
+    if (!this.form.nextStepSubject || !this.form.nextStepSubject.trim()) {
+      this.raiseToast('error', 'Next step subject is required for an activity.');
+      return;
+    }
+    if (!this.form.nextStepDueDateUtc) {
+      this.raiseToast('error', 'Next step due date is required for an activity.');
+      return;
+    }
+
     if (this.activityStatus === 'Completed') {
-      if (!this.form.outcome || !this.form.outcome.trim()) {
-        this.raiseToast('error', 'Outcome is required to complete an activity.');
-        return;
-      }
       if (!this.form.dueDateUtc) {
         this.raiseToast('error', 'Due date is required to complete an activity.');
-        return;
-      }
-      if (!this.form.nextStepSubject || !this.form.nextStepSubject.trim()) {
-        this.raiseToast('error', 'Next step subject is required to complete an activity.');
-        return;
-      }
-      if (!this.form.nextStepDueDateUtc) {
-        this.raiseToast('error', 'Next step due date is required to complete an activity.');
         return;
       }
     }
@@ -447,8 +448,8 @@ export class ActivityFormPage implements OnInit {
     const payload: UpsertActivityRequest = {
       ...this.form,
       completedDateUtc: this.activityStatus === 'Completed' ? (this.form.completedDateUtc ?? new Date()) : undefined,
-      nextStepSubject: this.activityStatus === 'Completed' ? this.form.nextStepSubject : undefined,
-      nextStepDueDateUtc: this.activityStatus === 'Completed' ? this.form.nextStepDueDateUtc : undefined
+      nextStepSubject: this.form.nextStepSubject,
+      nextStepDueDateUtc: this.form.nextStepDueDateUtc
     };
     const request$ = this.editingId
       ? this.activityData.update(this.editingId, payload).pipe(map(() => null))
@@ -565,8 +566,8 @@ export class ActivityFormPage implements OnInit {
       priority: activity.priority ?? 'Normal',
       dueDateUtc: dueDate,
       completedDateUtc: completedDate,
-      nextStepSubject: '',
-      nextStepDueDateUtc: undefined,
+      nextStepSubject: activity.nextStepSubject ?? '',
+      nextStepDueDateUtc: activity.nextStepDueDateUtc ? this.parseUtcDate(activity.nextStepDueDateUtc) : undefined,
       relatedEntityType: activity.relatedEntityType ?? 'Account',
       relatedEntityId: activity.relatedEntityId,
       ownerId: activity.ownerId

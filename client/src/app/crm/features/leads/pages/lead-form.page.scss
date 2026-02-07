@@ -1382,30 +1382,27 @@
       margin-bottom: 0.5rem;
     }
 
-    .confidence-meter {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 0.5rem;
+    .confidence-gauge {
+      display: flex;
       align-items: center;
-      font-size: 0.7rem;
-      color: rgba(var(--apple-secondary), 0.7);
+      gap: 0.75rem;
       margin-bottom: 0.5rem;
+      color: rgba(var(--apple-secondary), 0.7);
     }
 
-    .confidence-value {
+    .confidence-gauge__label {
+      font-size: 0.7rem;
       font-weight: 600;
-      color: rgba(var(--apple-secondary), 0.85);
+      color: rgba(var(--apple-secondary), 0.8);
     }
 
-    :host ::ng-deep .confidence-bar {
-      height: 6px;
-      border-radius: 999px;
-      background: rgba(var(--apple-gray-4), 0.35);
-      overflow: hidden;
+    :host ::ng-deep .confidence-gauge__knob {
+      width: 86px;
     }
 
-    :host ::ng-deep .confidence-bar .p-progressbar-value {
-      background: linear-gradient(90deg, rgba(var(--apple-blue), 0.9), rgba(var(--apple-teal), 0.9));
+    :host ::ng-deep .confidence-gauge__knob .p-knob-text {
+      font-weight: 600;
+      font-size: 0.8rem;
     }
 
     .confidence-pill {

@@ -1,6 +1,6 @@
-import { DatePipe, DecimalPipe, NgFor, NgIf, CurrencyPipe, NgSwitch, NgSwitchCase, NgSwitchDefault, NgClass, NgTemplateOutlet, NgStyle } from '@angular/common';
-import { Component, computed, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { DatePipe, DecimalPipe, PercentPipe, NgFor, NgIf, CurrencyPipe, NgSwitch, NgSwitchCase, NgSwitchDefault, NgClass, NgTemplateOutlet, NgStyle } from '@angular/common';
+import { Component, computed, DestroyRef, effect, inject, OnInit, PLATFORM_ID, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, CdkDragEnd, CdkDragStart, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -16,7 +16,10 @@ import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CommandPaletteService } from '../../../../core/command-palette/command-palette.service';
+import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { AppToastService } from '../../../../core/app-toast.service';
+import { NotificationService } from '../../../../core/notifications';
+import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 
 type ChartId = 'revenue' | 'growth';
 type PriorityStreamType = 'task' | 'lead' | 'deal';
@@ -48,6 +51,7 @@ interface PriorityStreamItem {
     NgStyle,
     DatePipe,
     DecimalPipe,
+    PercentPipe,
     CurrencyPipe,
     FormsModule,
     DragDropModule,
@@ -70,6 +74,8 @@ export class DashboardPage implements OnInit {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly commandPaletteService = inject(CommandPaletteService);
   private readonly toastService = inject(AppToastService);
+  private readonly notificationService = inject(NotificationService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly emptySummary: DashboardSummary = {
     totalCustomers: 0,
     leads: 0,
@@ -98,9 +104,15 @@ export class DashboardPage implements OnInit {
     avgSalesCycle: 0,
     monthlyRecurringRevenue: 0,
     customerLifetimeValue: 0,
-    churnRate: 0
+    churnRate: 0,
+    avgQualificationConfidence: 0,
+    avgTruthCoverage: 0,
+    avgTimeToTruthDays: 0,
+    riskRegisterCount: 0,
+    topRiskFlags: [],
+    confidenceWeightedPipelineValue: 0
   };
-  private readonly summarySignal = toSignal(this.dashboardData.getSummary(), { initialValue: this.emptySummary });
+  private readonly summarySignal = signal<DashboardSummary>(this.emptySummary);
   private readonly emptyManagerHealth: ManagerPipelineHealth = {
     openOpportunities: 0,
     pipelineValueTotal: 0,
@@ -122,13 +134,7 @@ export class DashboardPage implements OnInit {
     reviewQueue: []
   };
   private readonly managerHealthRefresh$ = new Subject<void>();
-  private readonly managerHealthSignal = toSignal(
-    this.managerHealthRefresh$.pipe(
-      startWith(void 0),
-      switchMap(() => this.dashboardData.getManagerPipelineHealth())
-    ),
-    { initialValue: this.emptyManagerHealth }
-  );
+  private readonly managerHealthSignal = signal<ManagerPipelineHealth>(this.emptyManagerHealth);
 
   protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
   protected readonly managerHealth = computed(() => this.managerHealthSignal() ?? this.emptyManagerHealth);
@@ -192,6 +198,28 @@ export class DashboardPage implements OnInit {
       { label: 'Customer', value: data.activeCustomers, accent: 'emerald' }
     ];
   });
+
+  protected readonly topRiskFlags = computed(() => this.summary()?.topRiskFlags ?? []);
+
+  protected confidenceLabel(value: number): string {
+    if (value >= 0.75) return 'High';
+    if (value >= 0.5) return 'Medium';
+    if (value >= 0.2) return 'Neutral';
+    return 'Low';
+  }
+
+  protected confidenceTone(value: number): string {
+    if (value >= 0.75) return 'success';
+    if (value >= 0.5) return 'info';
+    if (value >= 0.2) return 'warning';
+    return 'danger';
+  }
+
+  protected weightedPipelineDelta(): number {
+    const data = this.summary();
+    if (!data) return 0;
+    return data.confidenceWeightedPipelineValue - data.pipelineValueTotal;
+  }
   
   protected readonly recentAccounts = computed(() => this.summary()?.recentCustomers?.slice(0, 5) ?? []);
   protected readonly upcomingActivities = computed(() => this.summary()?.activitiesNextWeek?.slice(0, 6) ?? []);
@@ -402,9 +430,20 @@ export class DashboardPage implements OnInit {
   protected layoutSizes: Record<string, 'sm' | 'md' | 'lg'> = {};
   protected layoutDimensions: Record<string, { width: number; height: number }> = {};
   private hasLocalLayoutPreference = false;
+  private hasLocalChartPreference = false;
+  private roleDefaultLayout: string[] = [];
+  private roleDefaultHiddenCharts = new Set<ChartId>();
+  protected roleDefaultLevel: number | null = null;
+  protected readonly canManageLayoutDefaults = computed(() => {
+    const payload = readTokenContext()?.payload ?? null;
+    return tokenHasPermission(payload, PERMISSION_KEYS.administrationManage);
+  });
   // Locked size map so customize layout never inflates card heights.
   private readonly defaultCardSizes: Record<string, 'sm' | 'md' | 'lg'> = {
     pipeline: 'lg',
+    'truth-metrics': 'md',
+    'risk-register': 'md',
+    'confidence-forecast': 'sm',
     accounts: 'md',
     'manager-health': 'md',
     'activity-mix': 'sm',
@@ -448,6 +487,9 @@ export class DashboardPage implements OnInit {
 
   protected readonly cardCatalog = [
     { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
+    { id: 'truth-metrics', label: 'Truth Metrics', icon: 'pi pi-verified' },
+    { id: 'risk-register', label: 'Risk Register', icon: 'pi pi-exclamation-triangle' },
+    { id: 'confidence-forecast', label: 'Confidence Forecast', icon: 'pi pi-chart-line' },
     { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },
     { id: 'manager-health', label: 'Pipeline Health', icon: 'pi pi-shield' },
     { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
@@ -473,21 +515,125 @@ export class DashboardPage implements OnInit {
   }
 
   ngOnInit(): void {
+    this.dashboardData.getSummary()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(summary => {
+        const resolvedSummary = summary ?? this.emptySummary;
+        this.summarySignal.set(resolvedSummary);
+        this.emitRiskAlerts(resolvedSummary);
+      });
+
+    this.managerHealthRefresh$
+      .pipe(
+        startWith(void 0),
+        switchMap(() => this.dashboardData.getManagerPipelineHealth()),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(health => {
+        this.managerHealthSignal.set(health ?? this.emptyManagerHealth);
+      });
+
     const { order, sizes, dimensions, hasLocalPreference } = this.loadLayoutPreferences();
     this.layoutOrder = order;
     this.layoutSizes = this.buildDefaultSizeMap();
     this.layoutDimensions = dimensions ?? {};
     this.hasLocalLayoutPreference = hasLocalPreference;
     this.loadChartVisibility();
+    this.dashboardData.getDefaultLayout().subscribe({
+      next: (response) => {
+        this.roleDefaultLayout = response.cardOrder ?? [];
+        this.roleDefaultLevel = response.roleLevel ?? null;
+        const hidden = response.hiddenCards ?? [];
+        this.roleDefaultHiddenCharts = new Set(
+          hidden.filter((id): id is ChartId => this.chartIdTypeGuard(id))
+        );
+        this.applyRoleDefaultCharts();
+        this.loadServerLayout();
+      },
+      error: () => {
+        this.roleDefaultLayout = [];
+        this.roleDefaultLevel = null;
+        this.roleDefaultHiddenCharts = new Set();
+        this.loadServerLayout();
+      }
+    });
 
+  }
+
+  protected onQuickAdd(): void {
+    this.commandPaletteService.requestQuickAdd('lead');
+  }
+
+  private emitRiskAlerts(summary: DashboardSummary): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const missingNextStep = summary.opportunitiesWithoutNextStep ?? 0;
+    const idleDeals = summary.atRiskDeals?.filter((deal) =>
+      deal.reason?.toLowerCase().includes('no recent activity')).length ?? 0;
+
+    const state = this.readRiskAlertState();
+    const alreadyShown = state?.date === today;
+    const shouldShowMissing = missingNextStep > 0 && (!alreadyShown || (state?.missingNextStep ?? 0) < missingNextStep);
+    const shouldShowIdle = idleDeals > 0 && (!alreadyShown || (state?.idleDeals ?? 0) < idleDeals);
+
+    if (!shouldShowMissing && !shouldShowIdle) {
+      return;
+    }
+
+    if (shouldShowMissing) {
+      this.notificationService.warning(
+        'Missing next steps',
+        `${missingNextStep} opportunity${missingNextStep === 1 ? '' : 'ies'} has no next step.`
+      );
+    }
+
+    if (shouldShowIdle) {
+      this.notificationService.warning(
+        'Idle deals',
+        `${idleDeals} opportunity${idleDeals === 1 ? '' : 'ies'} has no activity in the last 30 days.`
+      );
+    }
+
+    this.persistRiskAlertState({
+      date: today,
+      missingNextStep: Math.max(state?.missingNextStep ?? 0, missingNextStep),
+      idleDeals: Math.max(state?.idleDeals ?? 0, idleDeals)
+    });
+  }
+
+  private readRiskAlertState(): { date: string; missingNextStep: number; idleDeals: number } | null {
+    try {
+      const raw = localStorage.getItem('crm_risk_alerts_state');
+      if (!raw) return null;
+      return JSON.parse(raw) as { date: string; missingNextStep: number; idleDeals: number };
+    } catch {
+      return null;
+    }
+  }
+
+  private persistRiskAlertState(state: { date: string; missingNextStep: number; idleDeals: number }): void {
+    try {
+      localStorage.setItem('crm_risk_alerts_state', JSON.stringify(state));
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  private loadServerLayout(): void {
     this.dashboardData.getLayout().subscribe(({ cardOrder, sizes, dimensions, hiddenCards }) => {
-      const defaultOrder = this.dashboardData.getDefaultLayout();
-      const normalized = this.normalizeLayoutWithHidden(cardOrder, hiddenCards, defaultOrder);
+      const defaultOrder = this.getLayoutDefaultOrder();
+      const normalized = this.applyRoleDefault(
+        this.normalizeLayoutWithHidden(cardOrder, hiddenCards, defaultOrder),
+        defaultOrder
+      );
       const serverHasState = (hiddenCards?.length ?? 0) > 0
         || Object.keys(sizes ?? {}).length > 0
         || Object.keys(dimensions ?? {}).length > 0
         || !this.areArraysEqual(normalized, defaultOrder);
-      if (this.hasLocalLayoutPreference && !serverHasState) {
+      if (this.hasLocalLayoutPreference && !serverHasState && this.roleDefaultLayout.length === 0) {
         this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe();
         return;
       }
@@ -501,16 +647,16 @@ export class DashboardPage implements OnInit {
         this.persistLayoutPreferences();
       }, 0);
     });
-
-  }
-
-  protected onQuickAdd(): void {
-    this.commandPaletteService.requestQuickAdd('lead');
   }
 
   protected openLayoutDialog(): void {
     this.layoutDraft = this.getOrderedCards(this.layoutOrder);
     this.layoutDialogOpen = true;
+  }
+
+  protected getSelectableCards() {
+    const allowed = new Set(this.getLayoutDefaultOrder());
+    return this.cardCatalog.filter(card => allowed.has(card.id));
   }
 
   protected isCardVisible(cardId: string): boolean {
@@ -519,7 +665,7 @@ export class DashboardPage implements OnInit {
 
   protected onCardVisibilityChange(cardId: string, visible: boolean): void {
     // Keep the layout list as the single source of truth for which cards are displayed.
-    const defaultOrder = this.dashboardData.getDefaultLayout();
+    const defaultOrder = this.getLayoutDefaultOrder();
     const nextOrder = visible
       ? this.normalizeLayout([...this.layoutOrder, cardId], defaultOrder)
       : this.layoutOrder.filter(id => id !== cardId);
@@ -556,7 +702,7 @@ export class DashboardPage implements OnInit {
 
   protected saveLayout(): void {
     const order = this.layoutDraft.map(item => item.id);
-    const defaultOrder = this.dashboardData.getDefaultLayout();
+    const defaultOrder = this.getLayoutDefaultOrder();
     const requested = order.length === 0 ? [] : this.normalizeLayout(order, defaultOrder);
     this.layoutOrder = requested;
     this.ensureSizeDefaults();
@@ -583,22 +729,25 @@ export class DashboardPage implements OnInit {
   }
 
   protected resetLayout(): void {
-    const order = this.dashboardData.getDefaultLayout();
-    this.dashboardData.saveLayout(this.buildLayoutPayload(order)).subscribe({
+    this.dashboardData.resetLayout().subscribe({
       next: response => {
-        const defaultOrder = this.dashboardData.getDefaultLayout();
+        const defaultOrder = this.getLayoutDefaultOrder();
         this.layoutOrder = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
         this.layoutDimensions = response.dimensions ?? {};
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+        this.resetChartPreference();
+        this.applyRoleDefaultCharts();
       },
       error: () => {
-        this.layoutOrder = this.normalizeLayout(order, order);
-        this.layoutSizes = {};
+        const fallbackOrder = this.getLayoutDefaultOrder();
+        this.layoutOrder = this.normalizeLayout(fallbackOrder, fallbackOrder);
         this.ensureSizeDefaults();
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
+        this.resetChartPreference();
+        this.applyRoleDefaultCharts();
       }
     });
   }
@@ -611,7 +760,7 @@ export class DashboardPage implements OnInit {
     this.persistLayoutPreferences();
     this.dashboardData.saveLayout(this.buildLayoutPayload(nextOrder)).subscribe({
       next: response => {
-        const defaultOrder = this.dashboardData.getDefaultLayout();
+        const defaultOrder = this.getLayoutDefaultOrder();
         const normalized = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
@@ -621,7 +770,7 @@ export class DashboardPage implements OnInit {
         this.persistLayoutPreferences();
       },
       error: () => {
-        const defaultOrder = this.dashboardData.getDefaultLayout();
+        const defaultOrder = this.getLayoutDefaultOrder();
         this.layoutOrder = this.normalizeLayout(nextOrder, defaultOrder);
         this.persistLayoutPreferences();
       }
@@ -636,7 +785,7 @@ export class DashboardPage implements OnInit {
     this.persistLayoutPreferences();
     this.dashboardData.saveLayout(this.buildLayoutPayload(nextOrder)).subscribe({
       next: response => {
-        const defaultOrder = this.dashboardData.getDefaultLayout();
+        const defaultOrder = this.getLayoutDefaultOrder();
         const normalized = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutOrder = this.shouldHonorServerLayout(normalized, nextOrder, defaultOrder)
           ? normalized
@@ -646,7 +795,7 @@ export class DashboardPage implements OnInit {
         this.persistLayoutPreferences();
       },
       error: () => {
-        const defaultOrder = this.dashboardData.getDefaultLayout();
+        const defaultOrder = this.getLayoutDefaultOrder();
         this.layoutOrder = this.normalizeLayout(nextOrder, defaultOrder);
         this.persistLayoutPreferences();
       }
@@ -661,6 +810,25 @@ export class DashboardPage implements OnInit {
     }
     this.showCustomerGrowthChart = false;
     this.persistChartVisibility();
+  }
+
+  protected saveRoleDefaultLayout(): void {
+    if (!this.roleDefaultLevel) {
+      this.toastService.show('error', 'Role level is not configured for your role.', 3500);
+      return;
+    }
+    const order = this.layoutDraft.map(item => item.id);
+    const requested = order.length === 0 ? [] : this.normalizeLayout(order, this.cardCatalog.map(card => card.id));
+    const payload = this.buildDefaultLayoutPayload(requested);
+    this.dashboardData.saveDefaultLayout({ roleLevel: this.roleDefaultLevel, ...payload }).subscribe({
+      next: response => {
+        this.roleDefaultLayout = response.cardOrder ?? [];
+        this.toastService.show('success', `Default layout saved for L${this.roleDefaultLevel}.`, 3000);
+      },
+      error: () => {
+        this.toastService.show('error', 'Unable to save role default layout.', 3500);
+      }
+    });
   }
 
   protected onChartDrop(event: CdkDragDrop<ChartId[]>): void {
@@ -822,6 +990,7 @@ export class DashboardPage implements OnInit {
           this.chartOrder = filtered;
         }
       }
+      this.hasLocalChartPreference = true;
     } catch {
       // Ignore invalid local storage values.
     }
@@ -835,6 +1004,7 @@ export class DashboardPage implements OnInit {
       order: this.chartOrder
     };
     window.localStorage.setItem(this.chartVisibilityStorageKey, JSON.stringify(payload));
+    this.hasLocalChartPreference = true;
   }
 
   private loadKpiOrder(): string[] {
@@ -1209,7 +1379,7 @@ export class DashboardPage implements OnInit {
     dimensions: Record<string, { width: number; height: number }>;
     hasLocalPreference: boolean;
   } {
-    const defaultOrder = this.dashboardData.getDefaultLayout();
+    const defaultOrder = this.getLayoutDefaultOrder();
     if (!isPlatformBrowser(this.platformId)) {
       return { order: defaultOrder, sizes: {}, dimensions: {}, hasLocalPreference: false };
     }
@@ -1446,6 +1616,19 @@ export class DashboardPage implements OnInit {
     return this.normalizeLayout(visibleOrder, visibleFallback);
   }
 
+  private applyRoleDefault(order: string[], fallback: string[]): string[] {
+    if (this.roleDefaultLayout.length === 0) {
+      return order;
+    }
+
+    const allowed = new Set(fallback);
+    const filtered = order.filter(id => allowed.has(id));
+    if (filtered.length) {
+      return filtered;
+    }
+    return [...fallback];
+  }
+
   private getOrderedCards(order: string[]) {
     const map = new Map(this.cardCatalog.map(card => [card.id, card]));
     return order.map(id => map.get(id)).filter(Boolean) as Array<{ id: string; label: string; icon: string }>;
@@ -1453,7 +1636,7 @@ export class DashboardPage implements OnInit {
 
   private buildLayoutPayload(orderOverride?: string[]) {
     const cardOrder = orderOverride ?? this.layoutOrder;
-    const defaultOrder = this.dashboardData.getDefaultLayout();
+    const defaultOrder = this.getLayoutDefaultOrder();
     const hiddenCards = defaultOrder.filter(id => !cardOrder.includes(id));
     return {
       cardOrder,
@@ -1461,6 +1644,25 @@ export class DashboardPage implements OnInit {
       dimensions: this.buildLayoutDimensionsPayload(),
       hiddenCards
     };
+  }
+
+  private buildDefaultLayoutPayload(orderOverride?: string[]) {
+    const cardOrder = orderOverride ?? [];
+    const canonical = this.cardCatalog.map(card => card.id);
+    const hiddenCards = canonical.filter(id => !cardOrder.includes(id));
+    return {
+      cardOrder,
+      sizes: this.buildDefaultSizeMap(),
+      dimensions: this.buildLayoutDimensionsPayload(),
+      hiddenCards
+    };
+  }
+
+  private getLayoutDefaultOrder(): string[] {
+    if (this.roleDefaultLayout.length > 0) {
+      return [...this.roleDefaultLayout];
+    }
+    return this.cardCatalog.map(card => card.id);
   }
 
   private buildDefaultSizeMap() {
@@ -1474,6 +1676,21 @@ export class DashboardPage implements OnInit {
     const dimensions = this.layoutDimensions ?? {};
     if (!dimensions['my-tasks']) return {};
     return { 'my-tasks': dimensions['my-tasks'] };
+  }
+
+  private applyRoleDefaultCharts(): void {
+    if (this.hasLocalChartPreference) {
+      return;
+    }
+
+    this.showRevenueChart = !this.roleDefaultHiddenCharts.has('revenue');
+    this.showCustomerGrowthChart = !this.roleDefaultHiddenCharts.has('growth');
+  }
+
+  private resetChartPreference(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    window.localStorage.removeItem(this.chartVisibilityStorageKey);
+    this.hasLocalChartPreference = false;
   }
 
 }

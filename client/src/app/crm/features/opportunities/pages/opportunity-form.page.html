@@ -96,6 +96,8 @@
                   placeholder="Pick stage"
                   styleClass="w-full"
                 ></p-select>
+                <small class="field-hint" *ngIf="demoOutcomeGuidance() as guidance">{{ guidance }}</small>
+                <small class="field-hint" *ngIf="selectedStage === 'Commit'">Commit requires an expected close date and verified checklist items.</small>
               </div>
               <div class="field">
                 <label for="oppClose">Expected close</label>
@@ -170,6 +172,7 @@
                   placeholder="Select forecast"
                   styleClass="w-full"
                 ></p-select>
+                <small class="field-hint" *ngIf="forecastGuidance() as guidance">{{ guidance }}</small>
               </div>
               <div class="field">
                 <label for="oppType">Opportunity type</label>
@@ -227,6 +230,40 @@
                   name="summary"
                   [(ngModel)]="form.summary"
                   placeholder="Key notes, stakeholders, risks"
+                  class="w-full"
+                ></textarea>
+                <small class="field-hint" *ngIf="isPainConfirmationRequired()">Required before moving to Qualification or later stages.</small>
+              </div>
+              <div class="field full">
+                <label>Requirements <span class="required" *ngIf="isQualificationFitRequired()">*</span></label>
+                <textarea
+                  pTextarea
+                  rows="3"
+                  name="requirements"
+                  [(ngModel)]="form.requirements"
+                  placeholder="Key requirements, scope, constraints"
+                  class="w-full"
+                ></textarea>
+              </div>
+              <div class="field full">
+                <label>Buying process <span class="required" *ngIf="isQualificationFitRequired()">*</span></label>
+                <textarea
+                  pTextarea
+                  rows="3"
+                  name="buyingProcess"
+                  [(ngModel)]="form.buyingProcess"
+                  placeholder="Decision steps, stakeholders, approvals"
+                  class="w-full"
+                ></textarea>
+              </div>
+              <div class="field full">
+                <label>Success criteria <span class="required" *ngIf="isQualificationFitRequired()">*</span></label>
+                <textarea
+                  pTextarea
+                  rows="3"
+                  name="successCriteria"
+                  [(ngModel)]="form.successCriteria"
+                  placeholder="What must be true for a win"
                   class="w-full"
                 ></textarea>
               </div>

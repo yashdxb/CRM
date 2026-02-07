@@ -153,6 +153,7 @@
           <ng-template pTemplate="header">
             <tr>
               <th class="th-role">Role</th>
+              <th>Level</th>
               <th>Permissions</th>
               <th>Type</th>
               <th class="th-actions">Actions</th>
@@ -170,6 +171,11 @@
                     <span class="role-description">{{ role.description || 'No description provided' }}</span>
                   </div>
                 </div>
+              </td>
+              <td>
+                <span class="status-badge status-badge--info">
+                  {{ role.level ? ('L' + role.level) : 'Unset' }}
+                </span>
               </td>
               <td>
                 <div class="permission-pills">

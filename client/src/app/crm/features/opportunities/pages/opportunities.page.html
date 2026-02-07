@@ -236,12 +236,13 @@
         <button pButton type="button" class="stage-pill" [class.active]="stageFilter === 'all'" (click)="onStageChange('all')">All</button>
         <button pButton type="button" class="stage-pill" [class.active]="stageFilter === 'Prospecting'" (click)="onStageChange('Prospecting')">Prospecting</button>
         <button pButton type="button" class="stage-pill" [class.active]="stageFilter === 'Proposal'" (click)="onStageChange('Proposal')">Proposal</button>
+        <button pButton type="button" class="stage-pill stage-pill--warning" [class.active]="missingNextStepOnly" (click)="onMissingNextStepToggle()">No next step</button>
         <button pButton type="button" class="stage-pill stage-pill--success" [class.active]="stageFilter === 'Closed Won'" (click)="onStageChange('Closed Won')">Won</button>
         <button pButton type="button" class="stage-pill stage-pill--danger" [class.active]="stageFilter === 'Closed Lost'" (click)="onStageChange('Closed Lost')">Lost</button>
       </div>
 
       <div class="filter-actions">
-        <button pButton type="button" class="btn btn-ghost" (click)="onStageChange('all')">
+        <button pButton type="button" class="btn btn-ghost" (click)="clearFilters()">
           <i class="pi pi-times"></i>
           <span>Clear</span>
         </button>
@@ -252,7 +253,7 @@
       </div>
     </div>
 
-    <div class="filter-summary" *ngIf="searchTerm || stageFilter !== 'all'">
+    <div class="filter-summary" *ngIf="searchTerm || stageFilter !== 'all' || missingNextStepOnly">
       <span class="summary-label">Active filters:</span>
       <span class="filter-tag" *ngIf="searchTerm">
         "{{ searchTerm }}"
@@ -261,6 +262,10 @@
       <span class="filter-tag" *ngIf="stageFilter !== 'all'">
         {{ stageFilter }}
         <i class="pi pi-times" (click)="onStageChange('all')"></i>
+      </span>
+      <span class="filter-tag" *ngIf="missingNextStepOnly">
+        No next step
+        <i class="pi pi-times" (click)="onMissingNextStepToggle()"></i>
       </span>
     </div>
   </section>

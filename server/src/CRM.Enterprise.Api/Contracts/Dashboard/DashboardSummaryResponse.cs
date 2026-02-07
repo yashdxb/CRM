@@ -33,7 +33,13 @@ public record DashboardSummaryResponse(
     int AvgSalesCycle,
     decimal MonthlyRecurringRevenue,
     decimal CustomerLifetimeValue,
-    decimal ChurnRate);
+    decimal ChurnRate,
+    decimal AvgQualificationConfidence,
+    decimal AvgTruthCoverage,
+    decimal AvgTimeToTruthDays,
+    int RiskRegisterCount,
+    IEnumerable<RiskFlagSummaryItem> TopRiskFlags,
+    decimal ConfidenceWeightedPipelineValue);
 
 public record ChartDataPoint(string Label, decimal Value);
 
@@ -69,3 +75,5 @@ public record DashboardOpportunityItem(
     string Reason,
     DateTime? NextStepDueAtUtc,
     DateTime? LastActivityAtUtc);
+
+public record RiskFlagSummaryItem(string Label, int Count);

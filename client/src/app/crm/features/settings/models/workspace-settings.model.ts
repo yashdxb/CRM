@@ -6,6 +6,7 @@ export interface WorkspaceSettings {
   currency: string;
   approvalAmountThreshold?: number | null;
   approvalApproverRole?: string | null;
+  qualificationPolicy: QualificationPolicy;
 }
 
 export interface UpdateWorkspaceSettingsRequest {
@@ -14,4 +15,27 @@ export interface UpdateWorkspaceSettingsRequest {
   currency: string;
   approvalAmountThreshold?: number | null;
   approvalApproverRole?: string | null;
+  qualificationPolicy?: QualificationPolicy | null;
+}
+
+export interface QualificationPolicy {
+  defaultThreshold: number;
+  managerApprovalBelow: number;
+  blockBelow: number;
+  allowOverrides: boolean;
+  requireOverrideReason: boolean;
+  thresholdRules: QualificationThresholdRule[];
+  modifiers: QualificationModifierRule[];
+}
+
+export interface QualificationThresholdRule {
+  segment: string;
+  dealType: string;
+  stage: string;
+  threshold: number;
+}
+
+export interface QualificationModifierRule {
+  key: string;
+  delta: number;
 }

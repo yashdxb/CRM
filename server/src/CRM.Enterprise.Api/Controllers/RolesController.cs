@@ -116,7 +116,8 @@ public class RolesController : ControllerBase
         var role = new Role
         {
             Name = normalizedName,
-            Description = NormalizeDescription(request.Description)
+            Description = NormalizeDescription(request.Description),
+            Level = request.Level
         };
 
         _dbContext.Roles.Add(role);
@@ -165,6 +166,7 @@ public class RolesController : ControllerBase
 
         role.Name = normalizedName;
         role.Description = NormalizeDescription(request.Description);
+        role.Level = request.Level;
 
         await SyncRolePermissionsAsync(role.Id, request.Permissions, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -212,6 +214,11 @@ public class RolesController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Name))
         {
             return "Role name is required.";
+        }
+
+        if (request.Level.HasValue && request.Level.Value < 1)
+        {
+            return "Role level must be L1 or higher.";
         }
 
         if (request.Permissions is null || request.Permissions.Count == 0)
@@ -300,6 +307,7 @@ public class RolesController : ControllerBase
             role.Name,
             role.Description,
             IsSystemRole(role.Name),
+            role.Level,
             permissions);
     }
 }

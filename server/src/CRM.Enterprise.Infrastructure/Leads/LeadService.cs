@@ -1,11 +1,13 @@
 using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
+using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Infrastructure.Leads;
 
@@ -18,6 +20,7 @@ public sealed class LeadService : ILeadService
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
     private readonly IActivityService _activityService;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public LeadService(
         CrmDbContext dbContext,
@@ -77,6 +80,7 @@ public sealed class LeadService : ILeadService
                 l.Score,
                 l.CreatedAtUtc,
                 l.Source,
+                l.RoutingReason,
                 l.Territory,
                 l.JobTitle,
                 l.AccountId,
@@ -148,6 +152,7 @@ public sealed class LeadService : ILeadService
                 l.Score,
                 l.CreatedAtUtc,
                 l.Source,
+                l.RoutingReason,
                 l.Territory,
                 l.JobTitle,
                 l.AccountId,
@@ -232,6 +237,7 @@ public sealed class LeadService : ILeadService
             lead.Score,
             lead.CreatedAtUtc,
             lead.Source,
+            lead.RoutingReason,
             lead.Territory,
             lead.JobTitle,
             lead.AccountId,
@@ -348,9 +354,9 @@ public sealed class LeadService : ILeadService
     public async Task<LeadOperationResult<LeadListItemDto>> CreateAsync(LeadUpsertRequest request, LeadActor actor, CancellationToken cancellationToken = default)
     {
         request = NormalizeEvidence(request);
-        var ownerId = await ResolveOwnerIdAsync(request.OwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
+        var assignment = await ResolveOwnerAssignmentAsync(request.OwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
         var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
-        var ownerExists = await _dbContext.Users.AnyAsync(u => u.Id == ownerId && u.IsActive && !u.IsDeleted, cancellationToken);
+        var ownerExists = await _dbContext.Users.AnyAsync(u => u.Id == assignment.OwnerId && u.IsActive && !u.IsDeleted, cancellationToken);
         if (!ownerExists)
         {
             return LeadOperationResult<LeadListItemDto>.Fail("Unable to assign an active owner for this lead. Please select a valid owner.");
@@ -374,8 +380,9 @@ public sealed class LeadService : ILeadService
             CompanyName = request.CompanyName,
             JobTitle = request.JobTitle,
             LeadStatusId = status.Id,
-            OwnerId = ownerId,
+            OwnerId = assignment.OwnerId,
             Source = request.Source,
+            RoutingReason = assignment.RoutingReason,
             Territory = request.Territory,
             Score = score,
             AccountId = request.AccountId,
@@ -419,7 +426,7 @@ public sealed class LeadService : ILeadService
         }
 
         var ownerName = await _dbContext.Users
-            .Where(u => u.Id == ownerId)
+            .Where(u => u.Id == assignment.OwnerId)
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
 
@@ -450,11 +457,12 @@ public sealed class LeadService : ILeadService
             resolvedStatusName ?? "New",
             lead.Email,
             lead.Phone,
-            ownerId,
+            assignment.OwnerId,
             ownerName,
             lead.Score,
             lead.CreatedAtUtc,
             lead.Source,
+            lead.RoutingReason,
             lead.Territory,
             lead.JobTitle,
             lead.AccountId,
@@ -533,7 +541,9 @@ public sealed class LeadService : ILeadService
         var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
         var resolvedStatusName = statusName ?? request.Status ?? "New";
         var requestedOwnerId = request.OwnerId ?? lead.OwnerId;
-        lead.OwnerId = await ResolveOwnerIdAsync(requestedOwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
+        var assignment = await ResolveOwnerAssignmentAsync(requestedOwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
+        lead.OwnerId = assignment.OwnerId;
+        lead.RoutingReason = assignment.RoutingReason;
         lead.Source = request.Source;
         lead.Territory = request.Territory;
         lead.Score = ResolveLeadScore(request, lead.Score);
@@ -659,7 +669,14 @@ public sealed class LeadService : ILeadService
             return LeadOperationResult<LeadConversionResultDto>.Fail("Lead is already converted.");
         }
 
-        var ownerId = await ResolveOwnerIdAsync(lead.OwnerId, lead.Territory, "Manual", cancellationToken);
+        var qualificationDecision = await EvaluateConversionPolicyAsync(lead, request, cancellationToken);
+        if (!qualificationDecision.Allowed)
+        {
+            return LeadOperationResult<LeadConversionResultDto>.Fail(qualificationDecision.Message);
+        }
+
+        var assignment = await ResolveOwnerAssignmentAsync(lead.OwnerId, lead.Territory, "Manual", cancellationToken);
+        var ownerId = assignment.OwnerId;
         var now = DateTime.UtcNow;
 
         Guid? accountId = lead.AccountId;
@@ -748,17 +765,21 @@ public sealed class LeadService : ILeadService
         await AddAutoContactedHistoryAsync(lead, previousStatusId, lead.LeadStatusId, "Converted", actor, cancellationToken);
         AddStatusHistory(lead, lead.LeadStatusId, "Converted lead", actor);
 
+        await TransferLeadActivitiesAsync(lead.Id, accountId, opportunityId, actor, now, cancellationToken);
+
         await _auditEvents.TrackAsync(
             CreateAuditEntry(
                 lead.Id,
                 "Converted",
                 null,
                 null,
-                $"AccountId={accountId};ContactId={contactId};OpportunityId={opportunityId}",
+                BuildConversionAuditNote(accountId, contactId, opportunityId, qualificationDecision),
                 actor),
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await CreateConversionNoteActivityAsync(lead, accountId, contactId, opportunityId, actor, now, cancellationToken);
 
         await _mediator.Publish(new LeadConvertedEvent(
             lead.Id,
@@ -770,6 +791,272 @@ public sealed class LeadService : ILeadService
             DateTime.UtcNow), cancellationToken);
 
         return LeadOperationResult<LeadConversionResultDto>.Ok(new LeadConversionResultDto(lead.Id, accountId, contactId, opportunityId));
+    }
+
+    private async Task CreateConversionNoteActivityAsync(
+        Lead lead,
+        Guid? accountId,
+        Guid? contactId,
+        Guid? opportunityId,
+        LeadActor actor,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        ActivityRelationType? targetType = null;
+        Guid targetId = Guid.Empty;
+
+        if (opportunityId.HasValue)
+        {
+            targetType = ActivityRelationType.Opportunity;
+            targetId = opportunityId.Value;
+        }
+        else if (accountId.HasValue)
+        {
+            targetType = ActivityRelationType.Account;
+            targetId = accountId.Value;
+        }
+
+        if (targetType is null)
+        {
+            return;
+        }
+
+        var leadName = $"{lead.FirstName} {lead.LastName}".Trim();
+        var subject = string.IsNullOrWhiteSpace(leadName)
+            ? "Lead converted"
+            : $"Lead converted: {leadName}";
+        var description = $"Converted lead {lead.Id} to account {accountId?.ToString() ?? "none"}; contact {contactId?.ToString() ?? "none"}; opportunity {opportunityId?.ToString() ?? "none"}.";
+
+        _ = await _activityService.CreateAsync(
+            new ActivityUpsertRequest(
+                subject,
+                description,
+                "Converted",
+                null,
+                ActivityType.Task,
+                "Normal",
+                now,
+                now,
+                "Post-conversion follow-up",
+                now.AddDays(1),
+                targetType,
+                targetId,
+                lead.OwnerId),
+            new CRM.Enterprise.Application.Common.ActorContext(actor.UserId == Guid.Empty ? null : actor.UserId, actor.UserName),
+            cancellationToken);
+    }
+
+    private async Task TransferLeadActivitiesAsync(
+        Guid leadId,
+        Guid? accountId,
+        Guid? opportunityId,
+        LeadActor actor,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        ActivityRelationType? targetType = null;
+        Guid targetId = Guid.Empty;
+
+        if (opportunityId.HasValue)
+        {
+            targetType = ActivityRelationType.Opportunity;
+            targetId = opportunityId.Value;
+        }
+        else if (accountId.HasValue)
+        {
+            targetType = ActivityRelationType.Account;
+            targetId = accountId.Value;
+        }
+
+        if (targetType is null)
+        {
+            return;
+        }
+
+        var activities = await _dbContext.Activities
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Lead
+                        && a.RelatedEntityId == leadId)
+            .ToListAsync(cancellationToken);
+
+        if (activities.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var activity in activities)
+        {
+            activity.RelatedEntityType = targetType.Value;
+            activity.RelatedEntityId = targetId;
+            activity.UpdatedAtUtc = now;
+            activity.UpdatedBy = actor.UserName;
+        }
+    }
+
+    private async Task<ConversionDecision> EvaluateConversionPolicyAsync(
+        Lead lead,
+        LeadConversionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == lead.TenantId, cancellationToken);
+        var policy = ResolveQualificationPolicy(tenant);
+        var score = lead.Score;
+        var baseThreshold = ResolveThreshold(policy, request);
+        var adjustedThreshold = ApplyModifiers(baseThreshold, policy, request);
+        var requiresManagerApproval = score < policy.ManagerApprovalBelow;
+        var belowBlock = score < policy.BlockBelow;
+        var belowThreshold = score < adjustedThreshold;
+
+        if (belowBlock && !policy.AllowOverrides)
+        {
+            return ConversionDecision.Fail($"Qualification score {score}/100 is below the minimum threshold ({policy.BlockBelow}).");
+        }
+
+        if (belowThreshold && !policy.AllowOverrides)
+        {
+            return ConversionDecision.Fail($"Qualification score {score}/100 is below the required threshold ({adjustedThreshold}).");
+        }
+
+        if ((belowThreshold || belowBlock) && policy.AllowOverrides)
+        {
+            if (requiresManagerApproval && request.ManagerApproved != true)
+            {
+                return ConversionDecision.Fail("Manager approval is required to convert at this score.");
+            }
+
+            if (policy.RequireOverrideReason && string.IsNullOrWhiteSpace(request.OverrideReason))
+            {
+                return ConversionDecision.Fail("Override reason is required to convert at this score.");
+            }
+
+            return ConversionDecision.Override(adjustedThreshold, requiresManagerApproval);
+        }
+
+        if (requiresManagerApproval && request.ManagerApproved != true)
+        {
+            return ConversionDecision.Fail("Manager approval is required to convert at this score.");
+        }
+
+        return ConversionDecision.Allow(adjustedThreshold);
+    }
+
+    private static string BuildConversionAuditNote(Guid? accountId, Guid? contactId, Guid? opportunityId, ConversionDecision decision)
+    {
+        var note = $"AccountId={accountId};ContactId={contactId};OpportunityId={opportunityId}";
+        if (decision.IsOverride && !string.IsNullOrWhiteSpace(decision.Message))
+        {
+            note += $";Override={decision.Message}";
+        }
+        return note;
+    }
+
+    private static QualificationPolicy ResolveQualificationPolicy(Tenant? tenant)
+    {
+        if (tenant is null || string.IsNullOrWhiteSpace(tenant.QualificationPolicyJson))
+        {
+            return QualificationPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<QualificationPolicy>(tenant.QualificationPolicyJson, JsonOptions);
+            return parsed ?? QualificationPolicyDefaults.CreateDefault();
+        }
+        catch (JsonException)
+        {
+            return QualificationPolicyDefaults.CreateDefault();
+        }
+    }
+
+    private static int ResolveThreshold(QualificationPolicy policy, LeadConversionRequest request)
+    {
+        if (policy.ThresholdRules is null || policy.ThresholdRules.Count == 0)
+        {
+            return policy.DefaultThreshold;
+        }
+
+        var segment = request.Segment ?? "All";
+        var dealType = request.DealType ?? "All";
+        var stage = request.Stage ?? "All";
+
+        QualificationThresholdRule? best = null;
+        var bestScore = -1;
+        foreach (var rule in policy.ThresholdRules)
+        {
+            var score = 0;
+            if (!Matches(rule.Segment, segment)) continue;
+            if (!Matches(rule.DealType, dealType)) continue;
+            if (!Matches(rule.Stage, stage)) continue;
+            if (!IsWildcard(rule.Segment)) score++;
+            if (!IsWildcard(rule.DealType)) score++;
+            if (!IsWildcard(rule.Stage)) score++;
+            if (score > bestScore || (score == bestScore && rule.Threshold > (best?.Threshold ?? 0)))
+            {
+                best = rule;
+                bestScore = score;
+            }
+        }
+
+        return best?.Threshold ?? policy.DefaultThreshold;
+    }
+
+    private static int ApplyModifiers(int baseThreshold, QualificationPolicy policy, LeadConversionRequest request)
+    {
+        if (policy.Modifiers is null || policy.Modifiers.Count == 0)
+        {
+            return ClampScore(baseThreshold);
+        }
+
+        var adjusted = baseThreshold;
+        foreach (var modifier in policy.Modifiers)
+        {
+            if (IsModifierActive(modifier.Key, request))
+            {
+                adjusted += modifier.Delta;
+            }
+        }
+
+        return ClampScore(adjusted);
+    }
+
+    private static bool IsModifierActive(string key, LeadConversionRequest request)
+    {
+        var normalized = key?.Trim().ToLowerInvariant() ?? string.Empty;
+        return normalized switch
+        {
+            "competitive" => request.IsCompetitive == true,
+            "executivechampion" => request.HasExecutiveChampion == true,
+            "strategic" => request.IsStrategic == true,
+            "fastvelocity" => string.Equals(request.Velocity, "Fast", StringComparison.OrdinalIgnoreCase),
+            "slowvelocity" => string.Equals(request.Velocity, "Slow", StringComparison.OrdinalIgnoreCase),
+            _ => false
+        };
+    }
+
+    private static bool Matches(string ruleValue, string actual)
+    {
+        if (IsWildcard(ruleValue)) return true;
+        return string.Equals(ruleValue, actual, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsWildcard(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) || value.Equals("All", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static int ClampScore(int value)
+    {
+        return Math.Min(100, Math.Max(0, value));
+    }
+
+    private sealed record ConversionDecision(bool Allowed, bool IsOverride, string Message, int Threshold, bool RequiresManagerApproval)
+    {
+        public static ConversionDecision Fail(string message) => new(false, false, message, 0, false);
+        public static ConversionDecision Allow(int threshold) => new(true, false, string.Empty, threshold, false);
+        public static ConversionDecision Override(int threshold, bool requiresManager) =>
+            new(true, true, $"threshold={threshold};managerApproval={requiresManager}", threshold, requiresManager);
     }
 
     public async Task<LeadOperationResult<bool>> DeleteAsync(Guid id, LeadActor actor, CancellationToken cancellationToken = default)
@@ -1146,7 +1433,13 @@ public sealed class LeadService : ILeadService
         return status;
     }
 
-    private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, string? territory, string? assignmentStrategy, CancellationToken cancellationToken)
+    private sealed record OwnerAssignmentResult(Guid OwnerId, string? RoutingReason);
+
+    private async Task<OwnerAssignmentResult> ResolveOwnerAssignmentAsync(
+        Guid? requestedOwnerId,
+        string? territory,
+        string? assignmentStrategy,
+        CancellationToken cancellationToken)
     {
         var strategy = string.IsNullOrWhiteSpace(assignmentStrategy) ? string.Empty : assignmentStrategy.Trim();
 
@@ -1155,7 +1448,7 @@ public sealed class LeadService : ILeadService
             if (requestedOwnerId.HasValue && requestedOwnerId.Value != Guid.Empty)
             {
                 var exists = await _dbContext.Users.AnyAsync(u => u.Id == requestedOwnerId.Value && u.IsActive && !u.IsDeleted, cancellationToken);
-                if (exists) return requestedOwnerId.Value;
+                if (exists) return new OwnerAssignmentResult(requestedOwnerId.Value, "Manual assignment");
             }
         }
 
@@ -1167,7 +1460,7 @@ public sealed class LeadService : ILeadService
             if (territoryRule?.AssignedUserId is Guid territoryOwner && territoryOwner != Guid.Empty)
             {
                 var exists = await _dbContext.Users.AnyAsync(u => u.Id == territoryOwner && u.IsActive && !u.IsDeleted, cancellationToken);
-                if (exists) return territoryOwner;
+                if (exists) return new OwnerAssignmentResult(territoryOwner, $"Territory rule: {territory}");
             }
         }
 
@@ -1198,7 +1491,7 @@ public sealed class LeadService : ILeadService
                     rule.LastAssignedUserId = nextOwner;
                 }
 
-                return nextOwner;
+                return new OwnerAssignmentResult(nextOwner, "Round-robin rule");
             }
         }
 
@@ -1208,7 +1501,19 @@ public sealed class LeadService : ILeadService
             .Select(u => u.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return fallbackUserId == Guid.Empty ? Guid.NewGuid() : fallbackUserId;
+        return new OwnerAssignmentResult(
+            fallbackUserId == Guid.Empty ? Guid.NewGuid() : fallbackUserId,
+            "Fallback: first active user");
+    }
+
+    private async Task<Guid> ResolveOwnerIdAsync(
+        Guid? requestedOwnerId,
+        string? territory,
+        string? assignmentStrategy,
+        CancellationToken cancellationToken)
+    {
+        var assignment = await ResolveOwnerAssignmentAsync(requestedOwnerId, territory, assignmentStrategy, cancellationToken);
+        return assignment.OwnerId;
     }
 
     private async Task<Guid> ResolveOpportunityStageIdAsync(CancellationToken cancellationToken)

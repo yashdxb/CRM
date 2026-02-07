@@ -368,10 +368,10 @@
                 <textarea pTextarea name="description" [(ngModel)]="form.description" rows="3" placeholder="Add agenda notes"></textarea>
               </div>
               <div class="field full">
-                <label>Outcome</label>
-                <textarea pTextarea name="outcome" [(ngModel)]="form.outcome" rows="3" placeholder="Capture call outcome and next steps"></textarea>
+                <label>Outcome <span class="required">*</span></label>
+                <textarea pTextarea name="outcome" [(ngModel)]="form.outcome" rows="3" placeholder="Capture outcome and key takeaways"></textarea>
               </div>
-              <div class="field full" *ngIf="activityStatus === 'Completed'">
+              <div class="field full">
                 <label>Next step subject <span class="required">*</span></label>
                 <input
                   pInputText
@@ -381,7 +381,7 @@
                   class="w-full"
                 />
               </div>
-              <div class="field" *ngIf="activityStatus === 'Completed'">
+              <div class="field">
                 <label>Next step due date <span class="required">*</span></label>
                 <p-datePicker
                   name="nextStepDueDateUtc"

@@ -1,0 +1,166 @@
+.page-background {
+  position: relative;
+  padding: 2.5rem 2.5rem 4rem;
+  pointer-events: auto;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.page-background .animated-orb {
+  pointer-events: none;
+}
+
+.page-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.hero-content {
+  max-width: 720px;
+}
+
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.hero-title {
+  margin: 0.4rem 0 0.6rem;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.hero-subtitle {
+  margin: 0;
+  color: rgba(71, 85, 105, 0.9);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 1.5rem;
+}
+
+.pack-card {
+  backdrop-filter: blur(18px);
+}
+
+.pack-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.pack-title h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.3rem;
+  color: #0f172a;
+}
+
+.pack-title p {
+  margin: 0;
+  color: rgba(71, 85, 105, 0.85);
+}
+
+.pack-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.level-select {
+  min-width: 180px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.pack-subtitle {
+  margin: 1.5rem 0 0.75rem;
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.card-option {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.card-option p-checkbox {
+  pointer-events: auto;
+}
+
+.card-option:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 12px 24px rgba(30, 64, 175, 0.08);
+}
+
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.12);
+  display: grid;
+  place-items: center;
+  color: #2563eb;
+  font-size: 1rem;
+}
+
+.card-title {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.card-id {
+  font-size: 0.72rem;
+  color: rgba(100, 116, 139, 0.9);
+}
+
+.loading-state {
+  padding: 2rem;
+  text-align: center;
+  color: rgba(100, 116, 139, 0.9);
+}
+
+@media (max-width: 900px) {
+  .page-background {
+    padding: 1.5rem;
+  }
+
+  .pack-actions {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

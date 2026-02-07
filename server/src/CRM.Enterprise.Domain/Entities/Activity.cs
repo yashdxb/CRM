@@ -8,6 +8,8 @@ public class Activity : AuditableEntity
     public string Subject { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? Outcome { get; set; }
+    public string? NextStepSubject { get; set; }
+    public DateTime? NextStepDueDateUtc { get; set; }
     public string? TemplateKey { get; set; }
     public ActivityType Type { get; set; }
     public ActivityRelationType RelatedEntityType { get; set; }

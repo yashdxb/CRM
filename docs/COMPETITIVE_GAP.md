@@ -5,7 +5,7 @@ Goal: be “outstanding” vs market leaders without overbuilding. This is a pra
 Legend:
 - STRONG: we meet/exceed typical baseline
 - GAP: missing or partial vs competitors
-- OPPORTUNITY: feasible differentiator in Phase 2
+- OPPORTUNITY: feasible differentiator in Next
 
 ## Core CRM Foundations
 
@@ -55,16 +55,16 @@ Legend:
 ## Enterprise Expectations (Don’t chase early)
 
 1) Advanced permissions / field-level security
-- Status: GAP (acceptable for Phase 2)
+- Status: GAP (acceptable for Next)
 
 2) Workflow automation / sequences
-- Status: GAP (acceptable for Phase 2)
+- Status: GAP (acceptable for Next)
 
 3) Marketplace integrations (Slack, Teams, Zapier)
-- Status: GAP (acceptable for Phase 2)
+- Status: GAP (acceptable for Next)
 
 4) Custom objects / schema builder
-- Status: GAP (Phase 3+)
+- Status: GAP (Later+)
 
 ## Recommended “Outstanding” Path (Realistic)
 
@@ -102,4 +102,4 @@ Legend:
 
 ## Summary
 
-We are competitive on core CRM flows, but not “outstanding” vs Salesforce/Dynamics/HubSpot until AI, email/calendar, and reporting are shipped. Those are the highest‑impact gaps to close for Phase 2.
+We are competitive on core CRM flows, but not “outstanding” vs Salesforce/Dynamics/HubSpot until AI, email/calendar, and reporting are shipped. Those are the highest‑impact gaps to close for Next.

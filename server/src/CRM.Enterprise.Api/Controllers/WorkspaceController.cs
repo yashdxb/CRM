@@ -1,10 +1,13 @@
 using CRM.Enterprise.Api.Contracts.Workspace;
+using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -15,6 +18,7 @@ public class WorkspaceController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public WorkspaceController(CrmDbContext dbContext, ITenantProvider tenantProvider)
     {
@@ -42,7 +46,8 @@ public class WorkspaceController : ControllerBase
             tenant.TimeZone,
             tenant.Currency,
             tenant.ApprovalAmountThreshold,
-            tenant.ApprovalApproverRole));
+            tenant.ApprovalApproverRole,
+            ResolveQualificationPolicy(tenant)));
     }
 
     [HttpPut]
@@ -65,6 +70,10 @@ public class WorkspaceController : ControllerBase
         tenant.ApprovalApproverRole = string.IsNullOrWhiteSpace(request.ApprovalApproverRole)
             ? null
             : request.ApprovalApproverRole.Trim();
+        if (request.QualificationPolicy is not null)
+        {
+            tenant.QualificationPolicyJson = JsonSerializer.Serialize(request.QualificationPolicy, JsonOptions);
+        }
         tenant.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -76,6 +85,25 @@ public class WorkspaceController : ControllerBase
             tenant.TimeZone,
             tenant.Currency,
             tenant.ApprovalAmountThreshold,
-            tenant.ApprovalApproverRole));
+            tenant.ApprovalApproverRole,
+            ResolveQualificationPolicy(tenant)));
+    }
+
+    private static QualificationPolicy ResolveQualificationPolicy(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.QualificationPolicyJson))
+        {
+            return QualificationPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<QualificationPolicy>(tenant.QualificationPolicyJson, JsonOptions);
+            return parsed ?? QualificationPolicyDefaults.CreateDefault();
+        }
+        catch (JsonException)
+        {
+            return QualificationPolicyDefaults.CreateDefault();
+        }
     }
 }

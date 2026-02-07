@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using System.Security.Claims;
+using CRM.Enterprise.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using DashboardCardDimensionsResponse = CRM.Enterprise.Api.Contracts.Dashboard.DashboardCardDimensions;
 
 namespace CRM.Enterprise.Api.Controllers;
@@ -18,11 +20,13 @@ public class DashboardController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IDashboardLayoutService _layoutService;
+    private readonly CrmDbContext _dbContext;
 
-    public DashboardController(IMediator mediator, IDashboardLayoutService layoutService)
+    public DashboardController(IMediator mediator, IDashboardLayoutService layoutService, CrmDbContext dbContext)
     {
         _mediator = mediator;
         _layoutService = layoutService;
+        _dbContext = dbContext;
     }
 
     [HttpGet("summary")]
@@ -54,6 +58,8 @@ public class DashboardController : ControllerBase
                 null,
                 null,
                 null,
+                null,
+                null,
                 a.RelatedEntityId,
                 a.RelatedEntityName,
                 a.RelatedEntityType,
@@ -70,6 +76,8 @@ public class DashboardController : ControllerBase
                 a.Id,
                 a.Subject,
                 a.Type,
+                null,
+                null,
                 null,
                 null,
                 null,
@@ -135,7 +143,13 @@ public class DashboardController : ControllerBase
             summary.AvgSalesCycle,
             summary.MonthlyRecurringRevenue,
             summary.CustomerLifetimeValue,
-            summary.ChurnRate);
+            summary.ChurnRate,
+            summary.AvgQualificationConfidence,
+            summary.AvgTruthCoverage,
+            summary.AvgTimeToTruthDays,
+            summary.RiskRegisterCount,
+            summary.TopRiskFlags.Select(flag => new RiskFlagSummaryItem(flag.Label, flag.Count)).ToList(),
+            summary.ConfidenceWeightedPipelineValue);
 
         return Ok(response);
     }
@@ -186,11 +200,12 @@ public class DashboardController : ControllerBase
             return Unauthorized();
         }
 
+        var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
         var layout = await _layoutService.GetLayoutAsync(userId.Value, cancellationToken);
         var dimensions = layout.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel));
     }
 
     [HttpPut("layout")]
@@ -214,12 +229,84 @@ public class DashboardController : ControllerBase
         var responseDimensions = updated.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards));
+        var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
+        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, roleLevel));
+    }
+
+    [HttpGet("layout/default")]
+    public async Task<ActionResult<DashboardLayoutResponse>> GetDefaultLayout([FromQuery] int? level, CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
+        var targetLevel = level.HasValue && level.Value > 0 ? level.Value : roleLevel;
+        var layout = level.HasValue && level.Value > 0
+            ? await _layoutService.GetDefaultLayoutForLevelAsync(targetLevel, cancellationToken)
+            : await _layoutService.GetDefaultLayoutAsync(userId.Value, cancellationToken);
+        var dimensions = layout.Dimensions.ToDictionary(
+            item => item.Key,
+            item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, targetLevel));
+    }
+
+    [HttpPut("layout/default")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<ActionResult<DashboardLayoutResponse>> UpdateDefaultLayout(
+        [FromBody] UpdateDashboardDefaultLayoutRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request.RoleLevel < 1)
+        {
+            return BadRequest("Role level must be L1 or higher.");
+        }
+
+        var sizes = request.Sizes ?? new Dictionary<string, string>();
+        var dimensions = request.Dimensions?
+            .ToDictionary(item => item.Key, item => new Application.Dashboard.DashboardCardDimensions(item.Value.Width, item.Value.Height))
+            ?? new Dictionary<string, Application.Dashboard.DashboardCardDimensions>();
+        var hidden = request.HiddenCards ?? new List<string>();
+        var state = new Application.Dashboard.DashboardLayoutState(request.CardOrder, sizes, dimensions, hidden);
+        var updated = await _layoutService.UpdateDefaultLayoutAsync(request.RoleLevel, state, cancellationToken);
+        var responseDimensions = updated.Dimensions.ToDictionary(
+            item => item.Key,
+            item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
+        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, request.RoleLevel));
+    }
+
+    [HttpPost("layout/reset")]
+    public async Task<ActionResult<DashboardLayoutResponse>> ResetLayout(CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
+        var layout = await _layoutService.ResetLayoutAsync(userId.Value, cancellationToken);
+        var dimensions = layout.Dimensions.ToDictionary(
+            item => item.Key,
+            item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel));
     }
 
     private Guid? GetCurrentUserId()
     {
         var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(subject, out var userId) ? userId : null;
+    }
+
+    private async Task<int> GetCurrentUserRoleLevelAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var levels = await _dbContext.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role != null ? ur.Role.Level : null)
+            .ToListAsync(cancellationToken);
+
+        return levels.Where(level => level.HasValue).Select(level => level!.Value).DefaultIfEmpty(1).Max();
     }
 }

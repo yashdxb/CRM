@@ -413,13 +413,13 @@ Supported now (no system change):
 - Manager pipeline review (filter by stage/owner).
 - Lost opportunity with reason.
 
-Needs small change (Phase 2 polish):
+Needs small change (Next polish):
 - Activity outcome notes (done) + explicit “Completed at”.
 - Optional “Nurture/Inactive” lead status for cold leads.
 - Clear owner handoff step + audit.
 - Bulk actions + bulk task creation for outreach lists.
 
-Phase 3 (bigger changes):
+Later (bigger changes):
 1) Parent/child accounts + roll‑up reporting.
 2) Audit log / History tab (who changed what, when) for Leads, Opportunities, Accounts.
 3) Completed activity editing permissions (owner/admin only) + audit trail.
@@ -459,7 +459,7 @@ Phase 3 (bigger changes):
 2) Filter by owner and stage.
 3) Identify stalled opportunities and schedule follow‑ups.
 
-## Advanced Scenarios (Keep for Phase 3)
+## Advanced Scenarios (Keep for Later)
 - Parent‑child accounts with roll‑up reporting.
 - Competitor displacement tracking and analysis.
 - Quote/proposal document flow.

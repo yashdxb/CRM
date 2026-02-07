@@ -60,6 +60,25 @@
                 class="w-full"
               />
             </div>
+            <div class="field">
+              <label for="roleLevel">Role Level (L1 = lowest)</label>
+              <p-inputNumber
+                inputId="roleLevel"
+                formControlName="level"
+                [min]="1"
+                [max]="9"
+                [showButtons]="true"
+                placeholder="e.g. 1"
+                styleClass="w-full"
+                inputStyleClass="w-full"
+              ></p-inputNumber>
+              <small class="field-hint">Higher levels load higher dashboard packs by default.</small>
+            </div>
+          </div>
+          <div class="role-pack-link">
+            <i class="pi pi-th-large"></i>
+            <span>Manage default dashboard pack for this level</span>
+            <a routerLink="/app/settings/dashboard-packs">Open dashboard packs</a>
           </div>
         </section>
 

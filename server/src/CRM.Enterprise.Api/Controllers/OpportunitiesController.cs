@@ -37,12 +37,13 @@ public class OpportunitiesController : ControllerBase
         [FromQuery] string? search,
         [FromQuery] string? stage,
         [FromQuery] Guid? accountId,
+        [FromQuery] bool? missingNextStep,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
         var result = await _opportunityService.SearchAsync(
-            new OpportunitySearchRequest(search, stage, accountId, page, pageSize),
+            new OpportunitySearchRequest(search, stage, accountId, missingNextStep, page, pageSize),
             cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new OpportunitySearchResponse(items, result.Total));
@@ -280,6 +281,9 @@ public class OpportunitiesController : ControllerBase
             dto.OpportunityType,
             dto.RenewalOfOpportunityId,
             dto.RenewalOpportunityId,
+            dto.Requirements,
+            dto.BuyingProcess,
+            dto.SuccessCriteria,
             dto.DiscountPercent,
             dto.DiscountAmount,
             dto.PricingNotes,
@@ -361,6 +365,9 @@ public class OpportunitiesController : ControllerBase
             request.ForecastCategory,
             request.OpportunityType,
             request.Summary,
+            request.Requirements,
+            request.BuyingProcess,
+            request.SuccessCriteria,
             request.DiscountPercent,
             request.DiscountAmount,
             request.PricingNotes,

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CRM.Enterprise.Application.Dashboard;
+using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,9 +11,10 @@ public class DashboardLayoutService : IDashboardLayoutService
     private static readonly IReadOnlyList<string> DefaultOrder =
     [
         "pipeline",
+        "truth-metrics",
+        "risk-register",
+        "confidence-forecast",
         "accounts",
-        "new-leads",
-        "at-risk-deals",
         "manager-health",
         "activity-mix",
         "conversion",
@@ -22,12 +24,21 @@ public class DashboardLayoutService : IDashboardLayoutService
         "health"
     ];
 
-    private static readonly HashSet<string> AllowedIds = new(DefaultOrder);
-    private readonly CrmDbContext _dbContext;
+    private static readonly IReadOnlyList<string> ChartIds =
+    [
+        "revenue",
+        "growth"
+    ];
 
-    public DashboardLayoutService(CrmDbContext dbContext)
+    private static readonly HashSet<string> AllowedCardIds = new(DefaultOrder);
+    private static readonly HashSet<string> AllowedIds = new(DefaultOrder.Concat(ChartIds));
+    private readonly CrmDbContext _dbContext;
+    private readonly ITenantProvider _tenantProvider;
+
+    public DashboardLayoutService(CrmDbContext dbContext, ITenantProvider tenantProvider)
     {
         _dbContext = dbContext;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<DashboardLayoutState> GetLayoutAsync(Guid userId, CancellationToken cancellationToken)
@@ -36,7 +47,7 @@ public class DashboardLayoutService : IDashboardLayoutService
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is null || string.IsNullOrWhiteSpace(user.CommandCenterLayoutJson))
         {
-            return new DashboardLayoutState(DefaultOrder, new Dictionary<string, string>(), new Dictionary<string, DashboardCardDimensions>(), new List<string>());
+            return await GetDefaultLayoutAsync(userId, cancellationToken);
         }
 
         try
@@ -44,7 +55,12 @@ public class DashboardLayoutService : IDashboardLayoutService
             var document = JsonSerializer.Deserialize<LayoutPayload>(user.CommandCenterLayoutJson);
             if (document is not null)
             {
-                return NormalizePayload(document);
+                var normalized = NormalizePayload(document);
+                if (IsLegacyFullDefault(normalized))
+                {
+                    return await GetDefaultLayoutAsync(userId, cancellationToken);
+                }
+                return normalized;
             }
         }
         catch (JsonException)
@@ -55,15 +71,20 @@ public class DashboardLayoutService : IDashboardLayoutService
         try
         {
             var stored = JsonSerializer.Deserialize<List<string>>(user.CommandCenterLayoutJson);
-            return new DashboardLayoutState(
+            var normalized = new DashboardLayoutState(
                 NormalizeOrder(stored, Array.Empty<string>()),
                 new Dictionary<string, string>(),
                 new Dictionary<string, DashboardCardDimensions>(),
                 new List<string>());
+            if (IsLegacyFullDefault(normalized))
+            {
+                return await GetDefaultLayoutAsync(userId, cancellationToken);
+            }
+            return normalized;
         }
         catch (JsonException)
         {
-            return new DashboardLayoutState(DefaultOrder, new Dictionary<string, string>(), new Dictionary<string, DashboardCardDimensions>(), new List<string>());
+            return await GetDefaultLayoutAsync(userId, cancellationToken);
         }
     }
 
@@ -76,7 +97,7 @@ public class DashboardLayoutService : IDashboardLayoutService
             .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is null)
         {
-            return new DashboardLayoutState(DefaultOrder, new Dictionary<string, string>(), new Dictionary<string, DashboardCardDimensions>(), new List<string>());
+            return await GetDefaultLayoutAsync(userId, cancellationToken);
         }
 
         var normalized = NormalizePayload(new LayoutPayload(
@@ -94,15 +115,77 @@ public class DashboardLayoutService : IDashboardLayoutService
         return normalized;
     }
 
+    public async Task<DashboardLayoutState> GetDefaultLayoutAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var roleLevel = await GetUserRoleLevelAsync(userId, cancellationToken);
+        var tenantDefaults = await LoadTenantDefaultsAsync(cancellationToken);
+        var resolved = ResolveDefaultLayout(tenantDefaults, roleLevel);
+        return NormalizePayload(resolved ?? new LayoutPayload(DefaultOrder, null, null, null));
+    }
+
+    public async Task<DashboardLayoutState> GetDefaultLayoutForLevelAsync(int roleLevel, CancellationToken cancellationToken)
+    {
+        var tenantDefaults = await LoadTenantDefaultsAsync(cancellationToken);
+        var resolved = ResolveDefaultLayout(tenantDefaults, roleLevel);
+        return NormalizePayload(resolved ?? new LayoutPayload(DefaultOrder, null, null, null));
+    }
+
+    public async Task<DashboardLayoutState> UpdateDefaultLayoutAsync(
+        int roleLevel,
+        DashboardLayoutState layout,
+        CancellationToken cancellationToken)
+    {
+        if (roleLevel < 1)
+        {
+            return NormalizePayload(new LayoutPayload(DefaultOrder, null, null, null));
+        }
+
+        var tenantId = _tenantProvider.TenantId;
+        var tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant is null)
+        {
+            return NormalizePayload(new LayoutPayload(DefaultOrder, null, null, null));
+        }
+
+        var defaults = await LoadTenantDefaultsAsync(cancellationToken);
+        defaults.RemoveAll(item => item.RoleLevel == roleLevel);
+        defaults.Add(new RoleDefaultLayout(roleLevel, layout.CardOrder, layout.Sizes, layout.Dimensions, layout.HiddenCards));
+        tenant.DashboardLayoutDefaultsJson = JsonSerializer.Serialize(defaults);
+        tenant.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var updated = ResolveDefaultLayout(defaults, roleLevel) ?? new LayoutPayload(DefaultOrder, null, null, null);
+        return NormalizePayload(updated);
+    }
+
+    public async Task<DashboardLayoutState> ResetLayoutAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user is null)
+        {
+            return await GetDefaultLayoutAsync(userId, cancellationToken);
+        }
+
+        var defaultLayout = await GetDefaultLayoutAsync(userId, cancellationToken);
+        user.CommandCenterLayoutJson = JsonSerializer.Serialize(new LayoutPayload(
+            defaultLayout.CardOrder,
+            defaultLayout.Sizes,
+            defaultLayout.Dimensions,
+            defaultLayout.HiddenCards));
+        user.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return defaultLayout;
+    }
+
     private static DashboardLayoutState NormalizePayload(LayoutPayload payload)
     {
         var hidden = payload.HiddenCards?.Where(AllowedIds.Contains).Distinct().ToList() ?? new List<string>();
         var order = NormalizeOrder(payload.CardOrder, hidden);
         var sizes = payload.Sizes?
-            .Where(item => AllowedIds.Contains(item.Key))
+            .Where(item => AllowedCardIds.Contains(item.Key))
             .ToDictionary(item => item.Key, item => item.Value) ?? new Dictionary<string, string>();
         var dimensions = payload.Dimensions?
-            .Where(item => AllowedIds.Contains(item.Key))
+            .Where(item => AllowedCardIds.Contains(item.Key))
             .ToDictionary(item => item.Key, item => item.Value) ?? new Dictionary<string, DashboardCardDimensions>();
 
         return new DashboardLayoutState(order, sizes, dimensions, hidden);
@@ -120,7 +203,7 @@ public class DashboardLayoutService : IDashboardLayoutService
 
         foreach (var id in candidate)
         {
-            if (!AllowedIds.Contains(id))
+            if (!AllowedCardIds.Contains(id))
             {
                 continue;
             }
@@ -146,8 +229,80 @@ public class DashboardLayoutService : IDashboardLayoutService
         return normalized;
     }
 
+    private async Task<int> GetUserRoleLevelAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var levels = await _dbContext.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .Select(ur => ur.Role != null ? ur.Role.Level : null)
+            .ToListAsync(cancellationToken);
+
+        return levels.Where(level => level.HasValue).Select(level => level!.Value).DefaultIfEmpty(1).Max();
+    }
+
+    private async Task<List<RoleDefaultLayout>> LoadTenantDefaultsAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var tenant = await _dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant is null || string.IsNullOrWhiteSpace(tenant.DashboardLayoutDefaultsJson))
+        {
+            return new List<RoleDefaultLayout>();
+        }
+
+        try
+        {
+            var defaults = JsonSerializer.Deserialize<List<RoleDefaultLayout>>(tenant.DashboardLayoutDefaultsJson);
+            return defaults ?? new List<RoleDefaultLayout>();
+        }
+        catch (JsonException)
+        {
+            return new List<RoleDefaultLayout>();
+        }
+    }
+
+    private static LayoutPayload? ResolveDefaultLayout(IEnumerable<RoleDefaultLayout> defaults, int roleLevel)
+    {
+        var ordered = defaults
+            .Where(item => item.RoleLevel > 0)
+            .OrderBy(item => item.RoleLevel)
+            .ToList();
+        if (ordered.Count == 0)
+        {
+            return null;
+        }
+
+        var selected = ordered.LastOrDefault(item => item.RoleLevel <= roleLevel) ?? ordered.First();
+        return new LayoutPayload(selected.CardOrder, selected.Sizes, selected.Dimensions, selected.HiddenCards);
+    }
+
+    private static bool IsLegacyFullDefault(DashboardLayoutState state)
+    {
+        if (state.HiddenCards.Count > 0)
+        {
+            return false;
+        }
+
+        if (state.Sizes.Count > 0 || state.Dimensions.Count > 0)
+        {
+            return false;
+        }
+
+        if (state.CardOrder.Count != DefaultOrder.Count)
+        {
+            return false;
+        }
+
+        return state.CardOrder.SequenceEqual(DefaultOrder);
+    }
+
     private sealed record LayoutPayload(
         IReadOnlyList<string>? CardOrder,
+        IReadOnlyDictionary<string, string>? Sizes,
+        IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
+        IReadOnlyList<string>? HiddenCards);
+
+    private sealed record RoleDefaultLayout(
+        int RoleLevel,
+        IReadOnlyList<string> CardOrder,
         IReadOnlyDictionary<string, string>? Sizes,
         IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
         IReadOnlyList<string>? HiddenCards);

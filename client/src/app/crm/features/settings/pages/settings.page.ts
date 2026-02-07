@@ -95,6 +95,10 @@ export class SettingsPage {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
   });
+  protected readonly canViewAdmin = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationView);
+  });
   protected readonly canManageLeads = computed(() => {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);

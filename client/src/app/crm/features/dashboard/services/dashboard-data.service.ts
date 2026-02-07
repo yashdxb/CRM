@@ -8,18 +8,6 @@ import { DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.mod
 export class DashboardDataService {
   private readonly http = inject(HttpClient);
 
-  private readonly defaultLayout = [
-    'my-tasks',
-    'pipeline',
-    'accounts',
-    'manager-health',
-    'activity-mix',
-    'conversion',
-    'top-performers',
-    'timeline',
-    'health'
-  ];
-
   getSummary() {
     const url = `${environment.apiUrl}/api/dashboard/summary`;
     const empty: DashboardSummary = {
@@ -54,7 +42,15 @@ export class DashboardDataService {
       avgSalesCycle: 0,
       monthlyRecurringRevenue: 0,
       customerLifetimeValue: 0,
-      churnRate: 0
+      churnRate: 0,
+
+      // Epistemic metrics
+      avgQualificationConfidence: 0,
+      avgTruthCoverage: 0,
+      avgTimeToTruthDays: 0,
+      riskRegisterCount: 0,
+      topRiskFlags: [],
+      confidenceWeightedPipelineValue: 0
     };
 
     return this.http.get<DashboardSummary>(url).pipe(catchError(() => of(empty)));
@@ -102,8 +98,9 @@ export class DashboardDataService {
         sizes?: Record<string, 'sm' | 'md' | 'lg'>;
         dimensions?: Record<string, { width: number; height: number }>;
         hiddenCards?: string[];
+        roleLevel?: number | null;
       }>(url)
-      .pipe(catchError(() => of({ cardOrder: this.defaultLayout, sizes: {}, dimensions: {}, hiddenCards: [] })));
+      .pipe(catchError(() => of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], roleLevel: null })));
   }
 
   saveLayout(payload: {
@@ -118,10 +115,57 @@ export class DashboardDataService {
       sizes?: Record<string, 'sm' | 'md' | 'lg'>;
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
+      roleLevel?: number | null;
     }>(url, payload);
   }
 
   getDefaultLayout() {
-    return [...this.defaultLayout];
+    const url = `${environment.apiUrl}/api/dashboard/layout/default`;
+    return this.http.get<{
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+      roleLevel?: number | null;
+    }>(url);
+  }
+
+  getDefaultLayoutForLevel(level: number) {
+    const url = `${environment.apiUrl}/api/dashboard/layout/default`;
+    return this.http.get<{
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+      roleLevel?: number | null;
+    }>(url, { params: { level } });
+  }
+
+  resetLayout() {
+    const url = `${environment.apiUrl}/api/dashboard/layout/reset`;
+    return this.http.post<{
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+      roleLevel?: number | null;
+    }>(url, {});
+  }
+
+  saveDefaultLayout(payload: {
+    roleLevel: number;
+    cardOrder: string[];
+    sizes: Record<string, 'sm' | 'md' | 'lg'>;
+    dimensions: Record<string, { width: number; height: number }>;
+    hiddenCards: string[];
+  }) {
+    const url = `${environment.apiUrl}/api/dashboard/layout/default`;
+    return this.http.put<{
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+      roleLevel?: number | null;
+    }>(url, payload);
   }
 }

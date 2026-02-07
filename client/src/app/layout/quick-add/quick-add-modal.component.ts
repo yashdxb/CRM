@@ -63,6 +63,9 @@ export class QuickAddModalComponent {
   protected quickAddActivityType: UpsertActivityRequest['type'] = 'Task';
   protected quickAddActivityPriority: UpsertActivityRequest['priority'] = 'Normal';
   protected quickAddActivityDueDate?: string | Date;
+  protected quickAddActivityOutcome = '';
+  protected quickAddActivityNextStepSubject = '';
+  protected quickAddActivityNextStepDueDate?: string | Date;
   protected quickAddActivityRelationType: UpsertActivityRequest['relatedEntityType'] = 'Account';
   protected quickAddActivityRelationId: string | null = null;
   
@@ -104,7 +107,10 @@ export class QuickAddModalComponent {
     if (this.quickAddType === 'contact') {
       return !!this.quickAddContactName.trim();
     }
-    return !!this.quickAddActivitySubject.trim();
+    return !!this.quickAddActivitySubject.trim()
+      && !!this.quickAddActivityOutcome.trim()
+      && !!this.quickAddActivityNextStepSubject.trim()
+      && !!this.quickAddActivityNextStepDueDate;
   }
 
   protected submitQuickAdd() {
@@ -147,11 +153,18 @@ export class QuickAddModalComponent {
       this.quickAddActivityDueDate instanceof Date
         ? this.quickAddActivityDueDate.toISOString()
         : this.quickAddActivityDueDate;
+    const nextStepDueDate =
+      this.quickAddActivityNextStepDueDate instanceof Date
+        ? this.quickAddActivityNextStepDueDate.toISOString()
+        : this.quickAddActivityNextStepDueDate;
     const activityPayload: UpsertActivityRequest = {
       subject: this.quickAddActivitySubject,
       type: this.quickAddActivityType,
       priority: this.quickAddActivityPriority,
       dueDateUtc: dueDate,
+      outcome: this.quickAddActivityOutcome,
+      nextStepSubject: this.quickAddActivityNextStepSubject,
+      nextStepDueDateUtc: nextStepDueDate,
       relatedEntityType: this.quickAddActivityRelationType,
       relatedEntityId: this.quickAddActivityRelationId || undefined
     };
@@ -187,6 +200,9 @@ export class QuickAddModalComponent {
     this.quickAddActivityType = 'Task';
     this.quickAddActivityPriority = 'Normal';
     this.quickAddActivityDueDate = undefined;
+    this.quickAddActivityOutcome = '';
+    this.quickAddActivityNextStepSubject = '';
+    this.quickAddActivityNextStepDueDate = undefined;
     this.quickAddActivityRelationType = 'Account';
     this.quickAddActivityRelationId = null;
   }

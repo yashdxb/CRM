@@ -22,6 +22,7 @@ export interface Lead {
   score: number;
   createdAt: string;
   source?: string;
+  routingReason?: string;
   territory?: string;
   jobTitle?: string;
   accountId?: string;
@@ -74,6 +75,15 @@ export interface LeadConversionRequest {
   opportunityName?: string;
   amount?: number;
   expectedCloseDate?: string | Date;
+  dealType?: string;
+  segment?: string;
+  stage?: string;
+  isCompetitive?: boolean;
+  hasExecutiveChampion?: boolean;
+  isStrategic?: boolean;
+  velocity?: string;
+  managerApproved?: boolean;
+  overrideReason?: string;
 }
 
 export interface LeadConversionResponse {

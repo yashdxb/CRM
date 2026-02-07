@@ -8,6 +8,8 @@ public record ActivityListItem(
     string Type,
     string? Description,
     string? Outcome,
+    string? NextStepSubject,
+    DateTime? NextStepDueDateUtc,
     string? TemplateKey,
     string? Priority,
     Guid? RelatedEntityId,

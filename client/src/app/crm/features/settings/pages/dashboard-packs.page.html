@@ -1,0 +1,114 @@
+<section class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <header class="page-hero">
+    <div class="hero-content">
+      <span class="hero-eyebrow">
+        <i class="pi pi-th-large"></i>
+        Dashboard packs
+      </span>
+      <h1 class="hero-title">Role-based default dashboards</h1>
+      <p class="hero-subtitle">
+        Choose the default Command Center cards per role level (L1/L2/L3...).
+      </p>
+    </div>
+  </header>
+
+  <div class="glass-card pack-card">
+    <div class="pack-header">
+      <div class="pack-title">
+        <h2>Default pack by role level</h2>
+        <p>Select a level, then choose the cards that should appear by default.</p>
+      </div>
+      <div class="pack-actions">
+        <p-select
+          appendTo="body"
+          [options]="availableLevels()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedLevel()"
+          (ngModelChange)="onLevelChange($event)"
+          [disabled]="loadingRoles()"
+          placeholder="Select L1/L2/L3"
+          styleClass="level-select"
+        ></p-select>
+        <button
+          pButton
+          type="button"
+          class="btn-gradient"
+          [disabled]="savingDefaults() || !selectedLevel()"
+          (click)="saveDefaults()"
+        >
+          Save default pack
+        </button>
+      </div>
+    </div>
+
+    <div class="pack-body" *ngIf="!loadingDefaults(); else loadingState">
+      <div class="card-grid">
+        <div
+          class="card-option"
+          role="button"
+          tabindex="0"
+          *ngFor="let card of cardOptions()"
+          (click)="onCardClick(card.id, card.checked, $event)"
+          (keydown.enter)="toggleCard(card.id, !card.checked)"
+          (keydown.space)="toggleCard(card.id, !card.checked); $event.preventDefault()"
+        >
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="card.checked"
+            (ngModelChange)="toggleCard(card.id, $event)"
+            (click)="$event.stopPropagation()"
+          ></p-checkbox>
+          <div class="card-meta">
+            <div class="card-icon">
+              <i class="pi" [class]="card.icon"></i>
+            </div>
+            <div>
+              <div class="card-title">{{ card.label }}</div>
+              <div class="card-id">{{ card.id }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pack-subtitle">Chart widgets</div>
+      <div class="card-grid chart-grid">
+        <div
+          class="card-option"
+          role="button"
+          tabindex="0"
+          *ngFor="let chart of chartOptions()"
+          (click)="onChartClick(chart.id, chart.checked, $event)"
+          (keydown.enter)="toggleChart(chart.id, !chart.checked)"
+          (keydown.space)="toggleChart(chart.id, !chart.checked); $event.preventDefault()"
+        >
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="chart.checked"
+            (ngModelChange)="toggleChart(chart.id, $event)"
+            (click)="$event.stopPropagation()"
+          ></p-checkbox>
+          <div class="card-meta">
+            <div class="card-icon">
+              <i class="pi" [class]="chart.icon"></i>
+            </div>
+            <div>
+              <div class="card-title">{{ chart.label }}</div>
+              <div class="card-id">{{ chart.id }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #loadingState>
+      <div class="loading-state">Loading default pack...</div>
+    </ng-template>
+  </div>
+</section>

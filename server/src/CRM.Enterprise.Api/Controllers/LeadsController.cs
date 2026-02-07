@@ -328,6 +328,7 @@ public class LeadsController : ControllerBase
             dto.Score,
             dto.CreatedAtUtc,
             dto.Source,
+            dto.RoutingReason,
             dto.Territory,
             dto.JobTitle,
             dto.AccountId,
@@ -404,7 +405,16 @@ public class LeadsController : ControllerBase
             request.CreateOpportunity,
             request.OpportunityName,
             request.Amount,
-            request.ExpectedCloseDate);
+            request.ExpectedCloseDate,
+            request.DealType,
+            request.Segment,
+            request.Stage,
+            request.IsCompetitive,
+            request.HasExecutiveChampion,
+            request.IsStrategic,
+            request.Velocity,
+            request.ManagerApproved,
+            request.OverrideReason);
     }
 
     private LeadActor GetActor()

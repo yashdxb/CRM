@@ -2,6 +2,7 @@ export interface RoleSummary {
   id: string;
   name: string;
   description?: string | null;
+  level?: number | null;
   permissions: string[];
   isSystem: boolean;
 }
@@ -74,5 +75,6 @@ export interface ResetPasswordRequest {
 export interface UpsertRoleRequest {
   name: string;
   description?: string | null;
+  level?: number | null;
   permissions: string[];
 }

@@ -19,6 +19,9 @@ public class UpsertOpportunityRequest
     public string? ForecastCategory { get; set; }
     public string? OpportunityType { get; set; }
     public string? Summary { get; set; }
+    public string? Requirements { get; set; }
+    public string? BuyingProcess { get; set; }
+    public string? SuccessCriteria { get; set; }
     public decimal? DiscountPercent { get; set; }
     public decimal? DiscountAmount { get; set; }
     public string? PricingNotes { get; set; }

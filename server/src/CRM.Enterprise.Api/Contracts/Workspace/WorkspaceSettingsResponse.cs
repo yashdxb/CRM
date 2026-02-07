@@ -1,5 +1,7 @@
 namespace CRM.Enterprise.Api.Contracts.Workspace;
 
+using CRM.Enterprise.Application.Qualifications;
+
 public record WorkspaceSettingsResponse(
     Guid Id,
     string Key,
@@ -7,4 +9,5 @@ public record WorkspaceSettingsResponse(
     string TimeZone,
     string Currency,
     decimal? ApprovalAmountThreshold,
-    string? ApprovalApproverRole);
+    string? ApprovalApproverRole,
+    QualificationPolicy QualificationPolicy);

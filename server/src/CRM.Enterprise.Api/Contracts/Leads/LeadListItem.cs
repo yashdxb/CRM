@@ -15,6 +15,7 @@ public record LeadListItem(
     int Score,
     DateTime CreatedAt,
     string? Source,
+    string? RoutingReason,
     string? Territory,
     string? JobTitle,
     Guid? AccountId,

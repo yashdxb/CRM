@@ -98,6 +98,7 @@ export class OpportunitiesPage {
 
   protected searchTerm = '';
   protected stageFilter: string | 'all' = 'all';
+  protected missingNextStepOnly = false;
   protected pageIndex = 0;
   protected rows = 10;
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
@@ -118,6 +119,7 @@ export class OpportunitiesPage {
     const request: OpportunitySearchRequest = {
       search: this.searchTerm || undefined,
       stage,
+      missingNextStep: this.missingNextStepOnly ? true : undefined,
       page: this.pageIndex + 1,
       pageSize: this.rows
     };
@@ -165,6 +167,19 @@ export class OpportunitiesPage {
 
   protected onStageChange(stage: string | 'all') {
     this.stageFilter = stage;
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  protected onMissingNextStepToggle() {
+    this.missingNextStepOnly = !this.missingNextStepOnly;
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  protected clearFilters() {
+    this.stageFilter = 'all';
+    this.missingNextStepOnly = false;
     this.pageIndex = 0;
     this.load();
   }

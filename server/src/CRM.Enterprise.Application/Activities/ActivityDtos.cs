@@ -8,6 +8,8 @@ public sealed record ActivityListItemDto(
     string Type,
     string? Description,
     string? Outcome,
+    string? NextStepSubject,
+    DateTime? NextStepDueDateUtc,
     string? TemplateKey,
     string? Priority,
     Guid? RelatedEntityId,

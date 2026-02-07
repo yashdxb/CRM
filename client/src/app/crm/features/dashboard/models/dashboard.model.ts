@@ -34,6 +34,14 @@ export interface DashboardSummary {
   monthlyRecurringRevenue: number;
   customerLifetimeValue: number;
   churnRate: number;
+
+  // Epistemic metrics
+  avgQualificationConfidence: number;
+  avgTruthCoverage: number;
+  avgTimeToTruthDays: number;
+  riskRegisterCount: number;
+  topRiskFlags: RiskFlagSummary[];
+  confidenceWeightedPipelineValue: number;
 }
 
 export interface ChartDataPoint {
@@ -78,6 +86,11 @@ export interface DashboardOpportunity {
   reason: string;
   nextStepDueAtUtc?: string;
   lastActivityAtUtc?: string;
+}
+
+export interface RiskFlagSummary {
+  label: string;
+  count: number;
 }
 
 export interface ManagerPipelineHealth {

@@ -107,6 +107,8 @@ public class ActivitiesController : ControllerBase
             dto.Type,
             dto.Description,
             dto.Outcome,
+            dto.NextStepSubject,
+            dto.NextStepDueDateUtc,
             dto.TemplateKey,
             dto.Priority,
             dto.RelatedEntityId,

@@ -560,6 +560,104 @@ public class DashboardReadService : IDashboardReadService
             ? 0
             : (int)Math.Round(closedStatsRows.Average(row => (row.ClosedAt - row.CreatedAtUtc).TotalDays));
 
+        var leadTruthMetrics = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted)
+            .Select(l => new
+            {
+                l.CreatedAtUtc,
+                l.BudgetAvailability,
+                l.BudgetEvidence,
+                l.BudgetValidatedAtUtc,
+                l.ReadinessToSpend,
+                l.ReadinessEvidence,
+                l.ReadinessValidatedAtUtc,
+                l.BuyingTimeline,
+                l.TimelineEvidence,
+                l.BuyingTimelineValidatedAtUtc,
+                l.ProblemSeverity,
+                l.ProblemEvidence,
+                l.ProblemSeverityValidatedAtUtc,
+                l.EconomicBuyer,
+                l.EconomicBuyerEvidence,
+                l.EconomicBuyerValidatedAtUtc,
+                l.IcpFit,
+                l.IcpFitEvidence,
+                l.IcpFitValidatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var leadInsights = leadTruthMetrics.Select(l => BuildDashboardQualificationInsights(
+                l.BudgetAvailability,
+                l.BudgetEvidence,
+                l.BudgetValidatedAtUtc,
+                l.ReadinessToSpend,
+                l.ReadinessEvidence,
+                l.ReadinessValidatedAtUtc,
+                l.BuyingTimeline,
+                l.TimelineEvidence,
+                l.BuyingTimelineValidatedAtUtc,
+                l.ProblemSeverity,
+                l.ProblemEvidence,
+                l.ProblemSeverityValidatedAtUtc,
+                l.EconomicBuyer,
+                l.EconomicBuyerEvidence,
+                l.EconomicBuyerValidatedAtUtc,
+                l.IcpFit,
+                l.IcpFitEvidence,
+                l.IcpFitValidatedAtUtc))
+            .ToList();
+
+        var avgQualificationConfidence = leadInsights.Count == 0 ? 0m : leadInsights.Average(i => i.Confidence);
+        var avgTruthCoverage = leadInsights.Count == 0 ? 0m : leadInsights.Average(i => i.TruthCoverage);
+        var riskRegisterCount = leadInsights.Sum(i => i.RiskFlags.Count);
+        var topRiskFlags = leadInsights
+            .SelectMany(i => i.RiskFlags)
+            .Where(flag => !string.IsNullOrWhiteSpace(flag))
+            .GroupBy(flag => flag, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new RiskFlagSummaryDto(group.Key, group.Count()))
+            .OrderByDescending(item => item.Count)
+            .Take(5)
+            .ToList();
+
+        var timeToTruthDays = leadTruthMetrics.Select(l =>
+        {
+            var validations = new[]
+            {
+                l.BudgetValidatedAtUtc,
+                l.ReadinessValidatedAtUtc,
+                l.BuyingTimelineValidatedAtUtc,
+                l.ProblemSeverityValidatedAtUtc,
+                l.EconomicBuyerValidatedAtUtc,
+                l.IcpFitValidatedAtUtc
+            };
+
+            var lastValidation = validations.Where(v => v.HasValue).Select(v => v!.Value).DefaultIfEmpty().Max();
+            if (lastValidation == default)
+            {
+                return (double?)null;
+            }
+
+            return (lastValidation - l.CreatedAtUtc).TotalDays;
+        }).Where(v => v.HasValue).Select(v => v!.Value).ToList();
+
+        var avgTimeToTruthDays = timeToTruthDays.Count == 0 ? 0m : (decimal)Math.Round(timeToTruthDays.Average(), 1);
+
+        var confidenceWeightedPipelineValue = pipelineRows
+            .Sum(row =>
+            {
+                var stageConfidence = row.Stage switch
+                {
+                    "Qualification" => 0.35m,
+                    "Discovery" => 0.45m,
+                    "Proposal" => 0.6m,
+                    "Negotiation" => 0.75m,
+                    "Commit" => 0.85m,
+                    _ => 0.4m
+                };
+                return row.Amount * stageConfidence;
+            });
+
         return new DashboardSummaryDto(
             totalCustomers,
             leads,
@@ -589,7 +687,13 @@ public class DashboardReadService : IDashboardReadService
             avgSalesCycle,
             0,
             0,
-            0);
+            0,
+            Math.Round(avgQualificationConfidence, 2),
+            Math.Round(avgTruthCoverage, 2),
+            avgTimeToTruthDays,
+            riskRegisterCount,
+            topRiskFlags,
+            Math.Round(confidenceWeightedPipelineValue, 2));
     }
 
     public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(CancellationToken cancellationToken)
@@ -866,6 +970,301 @@ public class DashboardReadService : IDashboardReadService
             pipelineByStage,
             orderedReviewQueue);
     }
+
+    private sealed record DashboardQualificationInsights(
+        decimal Confidence,
+        decimal TruthCoverage,
+        IReadOnlyList<string> RiskFlags);
+
+    private sealed record DashboardEpistemicFactor(
+        string Label,
+        EpistemicState State,
+        decimal Confidence,
+        DecayLevel DecayLevel,
+        bool IsHighImpact);
+
+    private static DashboardQualificationInsights BuildDashboardQualificationInsights(
+        string? budgetAvailability,
+        string? budgetEvidence,
+        DateTime? budgetValidatedAtUtc,
+        string? readinessToSpend,
+        string? readinessEvidence,
+        DateTime? readinessValidatedAtUtc,
+        string? buyingTimeline,
+        string? timelineEvidence,
+        DateTime? buyingTimelineValidatedAtUtc,
+        string? problemSeverity,
+        string? problemEvidence,
+        DateTime? problemSeverityValidatedAtUtc,
+        string? economicBuyer,
+        string? economicBuyerEvidence,
+        DateTime? economicBuyerValidatedAtUtc,
+        string? icpFit,
+        string? icpFitEvidence,
+        DateTime? icpFitValidatedAtUtc)
+    {
+        var factors = new List<DashboardEpistemicFactor>
+        {
+            BuildDashboardFactor("Budget availability", ResolveBudgetState(budgetAvailability), budgetEvidence, budgetValidatedAtUtc, true),
+            BuildDashboardFactor("Readiness to spend", ResolveReadinessState(readinessToSpend), readinessEvidence, readinessValidatedAtUtc, false),
+            BuildDashboardFactor("Buying timeline", ResolveTimelineState(buyingTimeline), timelineEvidence, buyingTimelineValidatedAtUtc, true),
+            BuildDashboardFactor("Problem severity", ResolveProblemState(problemSeverity), problemEvidence, problemSeverityValidatedAtUtc, false),
+            BuildDashboardFactor("Economic buyer", ResolveEconomicBuyerState(economicBuyer), economicBuyerEvidence, economicBuyerValidatedAtUtc, true),
+            BuildDashboardFactor("ICP fit", ResolveIcpFitState(icpFit), icpFitEvidence, icpFitValidatedAtUtc, false)
+        };
+
+        var confidence = factors.Count == 0 ? 0m : factors.Average(f => f.Confidence);
+        var truthCoverage = factors.Count == 0
+            ? 0m
+            : factors.Count(f => f.State == EpistemicState.Verified && f.Confidence >= 0.75m) / (decimal)factors.Count;
+
+        var riskFlags = new List<string>();
+        if (!IsMeaningfulFactor(buyingTimeline))
+        {
+            riskFlags.Add("No buying timeline");
+        }
+        if (!IsMeaningfulFactor(economicBuyer)
+            || string.Equals(economicBuyer, "Buyer identified, not engaged", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(economicBuyer, "Influencer identified", StringComparison.OrdinalIgnoreCase))
+        {
+            riskFlags.Add("Economic buyer not engaged");
+        }
+        if (string.Equals(budgetAvailability, "Budget allocated and approved", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(readinessToSpend, "Not planning to spend", StringComparison.OrdinalIgnoreCase))
+        {
+            riskFlags.Add("Budget confirmed but no initiative");
+        }
+        if (string.Equals(icpFit, "Clearly out of ICP", StringComparison.OrdinalIgnoreCase))
+        {
+            riskFlags.Add("Weak ICP fit");
+        }
+        if (!IsMeaningfulFactor(problemSeverity))
+        {
+            riskFlags.Add("Problem severity unclear");
+        }
+
+        foreach (var factor in factors)
+        {
+            if (factor.State is EpistemicState.Unknown or EpistemicState.Assumed)
+            {
+                riskFlags.Add($"{factor.Label} needs validation");
+            }
+            if (factor.DecayLevel is DecayLevel.Moderate or DecayLevel.Strong)
+            {
+                riskFlags.Add($"{factor.Label} is stale");
+            }
+        }
+
+        var deduped = riskFlags
+            .Where(flag => !string.IsNullOrWhiteSpace(flag))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return new DashboardQualificationInsights(confidence, truthCoverage, deduped);
+    }
+
+    private static DashboardEpistemicFactor BuildDashboardFactor(
+        string label,
+        EpistemicState state,
+        string? evidence,
+        DateTime? validatedAtUtc,
+        bool isHighImpact)
+    {
+        var decayLevel = GetDecayLevel(validatedAtUtc);
+        var confidence = ComputeFactorConfidence(state, evidence, decayLevel);
+        return new DashboardEpistemicFactor(label, state, confidence, decayLevel, isHighImpact);
+    }
+
+    private enum EpistemicState
+    {
+        Unknown,
+        Assumed,
+        Verified,
+        Invalid
+    }
+
+    private enum DecayLevel
+    {
+        None,
+        Light,
+        Moderate,
+        Strong
+    }
+
+    private static EpistemicState ResolveBudgetState(string? value) => ResolveState(value, BudgetStateMap);
+    private static EpistemicState ResolveReadinessState(string? value) => ResolveState(value, ReadinessStateMap);
+    private static EpistemicState ResolveTimelineState(string? value) => ResolveState(value, TimelineStateMap);
+    private static EpistemicState ResolveProblemState(string? value) => ResolveState(value, ProblemStateMap);
+    private static EpistemicState ResolveEconomicBuyerState(string? value) => ResolveState(value, EconomicBuyerStateMap);
+    private static EpistemicState ResolveIcpFitState(string? value) => ResolveState(value, IcpFitStateMap);
+
+    private static EpistemicState ResolveState(string? value, IReadOnlyDictionary<string, EpistemicState> map)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return EpistemicState.Unknown;
+        }
+
+        var normalized = value.Trim().ToLowerInvariant();
+        if (map.TryGetValue(normalized, out var state))
+        {
+            return state;
+        }
+
+        return normalized.Contains("unknown", StringComparison.OrdinalIgnoreCase)
+            ? EpistemicState.Unknown
+            : EpistemicState.Assumed;
+    }
+
+    private static decimal ComputeFactorConfidence(EpistemicState state, string? evidence, DecayLevel decayLevel)
+    {
+        if (state == EpistemicState.Invalid)
+        {
+            return 0m;
+        }
+
+        var baseConfidence = state switch
+        {
+            EpistemicState.Verified => 0.8m,
+            EpistemicState.Assumed => 0.55m,
+            EpistemicState.Unknown => 0.4m,
+            _ => 0.4m
+        };
+
+        var confidence = baseConfidence + EvidenceDelta(evidence) + DecayPenalty(decayLevel);
+
+        if (state == EpistemicState.Verified && IsInferredEvidence(evidence))
+        {
+            confidence = Math.Min(confidence, 0.6m);
+        }
+
+        if (state == EpistemicState.Verified && IsNoEvidence(evidence))
+        {
+            confidence -= 0.05m;
+        }
+
+        return Math.Clamp(confidence, 0m, 1m);
+    }
+
+    private static decimal EvidenceDelta(string? evidence)
+    {
+        if (IsNoEvidence(evidence)) return -0.1m;
+
+        var normalized = evidence!.Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "written confirmation" => 0.2m,
+            "direct buyer statement" => 0.2m,
+            "observed behaviour" => 0.1m,
+            "third-party confirmation" => 0.1m,
+            "historical / prior deal" => -0.05m,
+            "inferred from context" => -0.1m,
+            _ => 0m
+        };
+    }
+
+    private static bool IsNoEvidence(string? evidence)
+    {
+        return string.IsNullOrWhiteSpace(evidence)
+               || string.Equals(evidence.Trim(), "No evidence yet", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsInferredEvidence(string? evidence)
+    {
+        if (string.IsNullOrWhiteSpace(evidence)) return false;
+        return string.Equals(evidence.Trim(), "Inferred from context", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static DecayLevel GetDecayLevel(DateTime? validatedAtUtc)
+    {
+        if (!validatedAtUtc.HasValue) return DecayLevel.None;
+        var days = (DateTime.UtcNow - validatedAtUtc.Value).TotalDays;
+        if (days < 14) return DecayLevel.None;
+        if (days < 30) return DecayLevel.Light;
+        if (days < 60) return DecayLevel.Moderate;
+        return DecayLevel.Strong;
+    }
+
+    private static decimal DecayPenalty(DecayLevel level)
+    {
+        return level switch
+        {
+            DecayLevel.Light => -0.05m,
+            DecayLevel.Moderate => -0.1m,
+            DecayLevel.Strong => -0.2m,
+            _ => 0m
+        };
+    }
+
+    private static bool IsMeaningfulFactor(string? value)
+    {
+        return !string.IsNullOrWhiteSpace(value) && !IsUnknown(value);
+    }
+
+    private static bool IsUnknown(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return true;
+        return value.Contains("unknown", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> BudgetStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not yet discussed"] = EpistemicState.Unknown,
+        ["indicative range mentioned"] = EpistemicState.Assumed,
+        ["budget allocated and approved"] = EpistemicState.Verified,
+        ["budget identified but unapproved"] = EpistemicState.Assumed,
+        ["no defined budget"] = EpistemicState.Invalid,
+        ["budget explicitly unavailable"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> ReadinessStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / unclear"] = EpistemicState.Unknown,
+        ["interest expressed, no urgency"] = EpistemicState.Assumed,
+        ["actively evaluating solutions"] = EpistemicState.Assumed,
+        ["internal decision in progress"] = EpistemicState.Verified,
+        ["ready to proceed pending final step"] = EpistemicState.Verified,
+        ["not planning to spend"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> TimelineStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not discussed"] = EpistemicState.Unknown,
+        ["rough timeline mentioned"] = EpistemicState.Assumed,
+        ["target date verbally confirmed"] = EpistemicState.Assumed,
+        ["decision date confirmed internally"] = EpistemicState.Verified,
+        ["date missed / repeatedly pushed"] = EpistemicState.Invalid,
+        ["no defined timeline"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> ProblemStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not validated"] = EpistemicState.Unknown,
+        ["mild inconvenience"] = EpistemicState.Assumed,
+        ["recognized operational problem"] = EpistemicState.Assumed,
+        ["critical business impact"] = EpistemicState.Verified,
+        ["executive-level priority"] = EpistemicState.Verified,
+        ["problem acknowledged but deprioritized"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> EconomicBuyerStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not identified"] = EpistemicState.Unknown,
+        ["influencer identified"] = EpistemicState.Assumed,
+        ["buyer identified, not engaged"] = EpistemicState.Assumed,
+        ["buyer engaged in discussion"] = EpistemicState.Verified,
+        ["buyer verbally supportive"] = EpistemicState.Verified,
+        ["buyer explicitly not involved"] = EpistemicState.Invalid
+    };
+
+    private static readonly IReadOnlyDictionary<string, EpistemicState> IcpFitStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["unknown / not assessed"] = EpistemicState.Unknown,
+        ["partial icp fit"] = EpistemicState.Assumed,
+        ["strong icp fit"] = EpistemicState.Verified,
+        ["out-of-profile but exploratory"] = EpistemicState.Assumed,
+        ["clearly out of icp"] = EpistemicState.Invalid
+    };
 
     private async Task<DashboardOpportunityDto> BuildAtRiskDetailAsync(
         Guid opportunityId,

@@ -3,6 +3,7 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
@@ -35,6 +36,7 @@ interface ScreenPermission {
   imports: [
     ButtonModule,
     InputTextModule,
+    InputNumberModule,
     TableModule,
     CheckboxModule,
     TooltipModule,
@@ -71,6 +73,7 @@ export class RoleFormPage {
   protected readonly roleForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
     description: ['', [Validators.maxLength(240)]],
+    level: [null as number | null, [Validators.min(1), Validators.max(9)]],
     permissions: [[] as string[]]
   });
 
@@ -286,6 +289,7 @@ export class RoleFormPage {
     this.roleForm.patchValue({
       name: role.name,
       description: role.description ?? '',
+      level: role.level ?? null,
       permissions: [...role.permissions]
     });
     // Populate selected permissions from role
@@ -309,6 +313,7 @@ export class RoleFormPage {
     const payload: UpsertRoleRequest = {
       name: this.roleForm.value.name?.trim() ?? '',
       description: this.roleForm.value.description?.trim() || undefined,
+      level: this.roleForm.value.level ?? null,
       permissions
     };
 

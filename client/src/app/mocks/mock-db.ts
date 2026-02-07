@@ -177,7 +177,22 @@ let mockWorkspaceSettings: WorkspaceSettings = {
   key: 'default',
   name: 'CRM Enterprise',
   timeZone: 'UTC',
-  currency: 'USD'
+  currency: 'USD',
+  qualificationPolicy: {
+    defaultThreshold: 75,
+    managerApprovalBelow: 50,
+    blockBelow: 25,
+    allowOverrides: true,
+    requireOverrideReason: true,
+    thresholdRules: [],
+    modifiers: [
+      { key: 'competitive', delta: 10 },
+      { key: 'executiveChampion', delta: -15 },
+      { key: 'strategic', delta: -15 },
+      { key: 'fastVelocity', delta: -10 },
+      { key: 'slowVelocity', delta: 10 }
+    ]
+  }
 };
 
 export const mockCustomers: Customer[] = [
@@ -554,6 +569,10 @@ export function searchOpportunities(query: OpportunitySearchRequest): Opportunit
     result = result.filter((opp) => opp.stage === query.stage);
   }
 
+  if (query.missingNextStep) {
+    result = result.filter((opp) => !opp.nextStepDueAtUtc);
+  }
+
   if (searchTerm) {
     result = result.filter((opp) =>
       [opp.name, opp.account, opp.owner].some((value) => value.toLowerCase().includes(searchTerm))
@@ -760,7 +779,17 @@ export function buildDashboardSummary(): DashboardSummary {
     avgSalesCycle: 28,
     monthlyRecurringRevenue: 125000,
     customerLifetimeValue: 185000,
-    churnRate: 2.4
+    churnRate: 2.4,
+    avgQualificationConfidence: 0.62,
+    avgTruthCoverage: 0.48,
+    avgTimeToTruthDays: 18.5,
+    riskRegisterCount: 12,
+    topRiskFlags: [
+      { label: 'Buying timeline needs validation', count: 5 },
+      { label: 'Economic buyer not engaged', count: 4 },
+      { label: 'Budget availability needs validation', count: 3 }
+    ],
+    confidenceWeightedPipelineValue: pipelineValueTotal * 0.68
   };
 }
 

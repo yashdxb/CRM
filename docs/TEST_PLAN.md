@@ -1,4 +1,4 @@
-# CRM Test Plan (Phase 1 + Phase 2)
+# CRM Test Plan (Now + Next)
 
 Scope: validate acceptance criteria in `docs/PHASE1.md` and `docs/PHASE2.md`.
 
@@ -8,7 +8,7 @@ Scope: validate acceptance criteria in `docs/PHASE1.md` and `docs/PHASE2.md`.
 - API checks: endpoint behavior, payloads, validation
 - UI checks: page rendering, filters, navigation
 
-## Phase 1 Test Matrix
+## Now Test Matrix
 
 1) Auth + Users
 - E2E: login/logout, user list visible, role list visible
@@ -37,7 +37,7 @@ Scope: validate acceptance criteria in `docs/PHASE1.md` and `docs/PHASE2.md`.
 7) Done-when flow
 - E2E: Account → Contact → Opportunity → Activity (already in `client/e2e/core-flows.spec.ts`)
 
-## Phase 2 Test Matrix
+## Next Test Matrix
 
 1) Multi-tenancy + workspace settings
 - API: tenant-scoped reads/writes; settings persist

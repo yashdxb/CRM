@@ -143,6 +143,12 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("Location")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime?>("NextStepDueDateUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NextStepSubject")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<Guid?>("OpportunityId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1349,6 +1355,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("ReadinessValidatedAtUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("RoutingReason")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("Score")
                         .HasColumnType("int");
 
@@ -1716,6 +1725,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("BuyingProcess")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("ContractEndDateUtc")
                         .HasColumnType("datetime2");
 
@@ -1821,6 +1833,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("RenewalOpportunityId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Requirements")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SecurityNotes")
                         .HasColumnType("nvarchar(max)");
 
@@ -1829,6 +1844,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("StageId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SuccessCriteria")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Summary")
                         .HasColumnType("nvarchar(max)");
@@ -2964,6 +2982,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<int?>("Level")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4157,6 +4178,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("DashboardLayoutDefaultsJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("IndustryModules")
                         .HasColumnType("nvarchar(max)");
 
@@ -4169,6 +4193,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QualificationPolicyJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("TimeZone")

@@ -26,6 +26,9 @@ export interface SaveOpportunityRequest {
   forecastCategory?: string | null;
   opportunityType?: string | null;
   summary?: string;
+  requirements?: string | null;
+  buyingProcess?: string | null;
+  successCriteria?: string | null;
   discountPercent?: number | null;
   discountAmount?: number | null;
   pricingNotes?: string | null;
@@ -60,6 +63,7 @@ export class OpportunityDataService {
     if (request.search) params = params.set('search', request.search);
     if (request.stage) params = params.set('stage', request.stage);
     if (request.accountId) params = params.set('accountId', request.accountId);
+    if (request.missingNextStep) params = params.set('missingNextStep', 'true');
     if (request.page) params = params.set('page', request.page);
     if (request.pageSize) params = params.set('pageSize', request.pageSize);
 

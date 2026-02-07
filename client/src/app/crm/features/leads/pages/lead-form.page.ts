@@ -11,6 +11,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
+import { KnobModule } from 'primeng/knob';
 
 import { map, Observable } from 'rxjs';
 
@@ -72,6 +73,7 @@ interface CadenceChannelOption {
     InputNumberModule,
     TextareaModule,
     ProgressBarModule,
+    KnobModule,
     TagModule,
     DatePickerModule,
     TooltipModule,
@@ -173,6 +175,7 @@ export class LeadFormPage implements OnInit {
   protected serverWeakestState = signal<string | null>(null);
   protected scoreBreakdown = signal<LeadScoreBreakdownItem[]>([]);
   protected riskFlags = signal<string[]>([]);
+  protected routingReason = signal<string | null>(null);
   protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
   protected cadenceTouches = signal<LeadCadenceTouch[]>([]);
   protected cadenceChannel: LeadCadenceChannel = 'Call';
@@ -400,6 +403,7 @@ export class LeadFormPage implements OnInit {
     this.linkedOpportunityId.set(lead.convertedOpportunityId ?? null);
     this.firstTouchDueAtUtc.set(lead.firstTouchDueAtUtc ?? null);
     this.firstTouchedAtUtc.set(lead.firstTouchedAtUtc ?? null);
+    this.routingReason.set(lead.routingReason ?? null);
     this.qualificationConfidenceLabel.set(lead.qualificationConfidenceLabel ?? null);
     this.qualificationConfidence.set(lead.qualificationConfidence ?? null);
     this.truthCoverage.set(lead.truthCoverage ?? null);

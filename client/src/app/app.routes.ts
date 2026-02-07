@@ -264,6 +264,12 @@ export const routes: Routes = [
             loadComponent: () => import('./crm/features/settings/pages/lead-assignment.page').then((m) => m.LeadAssignmentPage)
           },
           {
+            path: 'dashboard-packs',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Dashboard Packs' },
+            loadComponent: () => import('./crm/features/settings/pages/dashboard-packs.page').then((m) => m.DashboardPacksPage)
+          },
+          {
             path: 'lead-assignment/:id/edit',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'Edit Lead Assignment' },

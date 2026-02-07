@@ -86,6 +86,8 @@ public sealed class ActivityService : IActivityService
                 a.CompletedDateUtc,
                 a.Description,
                 a.Outcome,
+                a.NextStepSubject,
+                a.NextStepDueDateUtc,
                 a.TemplateKey,
                 a.Priority,
                 a.OwnerId,
@@ -187,6 +189,8 @@ public sealed class ActivityService : IActivityService
                     a.Type.ToString(),
                     a.Description,
                     a.Outcome,
+                    a.NextStepSubject,
+                    a.NextStepDueDateUtc,
                     a.TemplateKey,
                     a.Priority,
                     relatedId,
@@ -251,7 +255,13 @@ public sealed class ActivityService : IActivityService
 
     public async Task<ActivityOperationResult<ActivityListItemDto>> CreateAsync(ActivityUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
-        var validationError = ValidateCompletionRequirements(request);
+        var validationError = ValidateOutcomeAndNextStep(request);
+        if (validationError is not null)
+        {
+            return ActivityOperationResult<ActivityListItemDto>.Fail(validationError);
+        }
+
+        validationError = ValidateCompletionRequirements(request);
         if (validationError is not null)
         {
             return ActivityOperationResult<ActivityListItemDto>.Fail(validationError);
@@ -262,6 +272,8 @@ public sealed class ActivityService : IActivityService
             Subject = request.Subject,
             Description = request.Description,
             Outcome = request.Outcome,
+            NextStepSubject = request.NextStepSubject,
+            NextStepDueDateUtc = request.NextStepDueDateUtc,
             TemplateKey = request.TemplateKey,
             Type = request.Type,
             Priority = request.Priority,
@@ -311,6 +323,8 @@ public sealed class ActivityService : IActivityService
         activity.Subject = request.Subject;
         activity.Description = request.Description;
         activity.Outcome = request.Outcome;
+        activity.NextStepSubject = request.NextStepSubject;
+        activity.NextStepDueDateUtc = request.NextStepDueDateUtc;
         activity.TemplateKey = request.TemplateKey;
         activity.Type = request.Type;
         activity.Priority = request.Priority;
@@ -329,13 +343,16 @@ public sealed class ActivityService : IActivityService
         }
 
         var completedNow = previousCompletedAt != activity.CompletedDateUtc && activity.CompletedDateUtc.HasValue;
-        if (completedNow)
+        var validationError = ValidateOutcomeAndNextStep(request);
+        if (validationError is not null)
         {
-            var validationError = ValidateCompletionRequirements(request);
-            if (validationError is not null)
-            {
-                return ActivityOperationResult<bool>.Fail(validationError);
-            }
+            return ActivityOperationResult<bool>.Fail(validationError);
+        }
+
+        validationError = ValidateCompletionRequirements(request);
+        if (validationError is not null)
+        {
+            return ActivityOperationResult<bool>.Fail(validationError);
         }
 
         if (completedNow)
@@ -403,6 +420,31 @@ public sealed class ActivityService : IActivityService
         return "Upcoming";
     }
 
+    private static string? ValidateOutcomeAndNextStep(ActivityUpsertRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Outcome))
+        {
+            return "Outcome is required for an activity.";
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NextStepSubject))
+        {
+            return "Next step subject is required for an activity.";
+        }
+
+        if (!request.NextStepDueDateUtc.HasValue)
+        {
+            return "Next step due date is required for an activity.";
+        }
+
+        if (request.NextStepDueDateUtc.Value.Date < DateTime.UtcNow.Date)
+        {
+            return "Next step due date must be today or later.";
+        }
+
+        return null;
+    }
+
     private static string? ValidateCompletionRequirements(ActivityUpsertRequest request)
     {
         if (!request.CompletedDateUtc.HasValue)
@@ -410,29 +452,9 @@ public sealed class ActivityService : IActivityService
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(request.Outcome))
-        {
-            return "Outcome is required to complete an activity.";
-        }
-
         if (!request.DueDateUtc.HasValue)
         {
             return "Due date is required to complete an activity.";
-        }
-
-        if (string.IsNullOrWhiteSpace(request.NextStepSubject))
-        {
-            return "Next step subject is required to complete an activity.";
-        }
-
-        if (!request.NextStepDueDateUtc.HasValue)
-        {
-            return "Next step due date is required to complete an activity.";
-        }
-
-        if (request.NextStepDueDateUtc.Value.Date < DateTime.UtcNow.Date)
-        {
-            return "Next step due date must be today or later.";
         }
 
         return null;
@@ -544,6 +566,8 @@ public sealed class ActivityService : IActivityService
             activity.Type.ToString(),
             activity.Description,
             activity.Outcome,
+            activity.NextStepSubject,
+            activity.NextStepDueDateUtc,
             activity.TemplateKey,
             activity.Priority,
             activity.RelatedEntityId == Guid.Empty ? null : activity.RelatedEntityId,

@@ -124,7 +124,7 @@ This document defines the binding technical, UX, and delivery rules for the curr
 - Dashboard KPIs summarize accounts, pipeline, and tasks.
 
 ## Testing Expectations
-- Use `docs/TEST_PLAN.md` for phase validation and E2E coverage.
+- Use `docs/TEST_PLAN.md` for roadmap validation and E2E coverage.
 
 ## Supporting Docs (Merged by Reference)
 - Style Guides:

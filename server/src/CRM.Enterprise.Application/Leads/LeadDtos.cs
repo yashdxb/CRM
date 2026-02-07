@@ -12,6 +12,7 @@ public sealed record LeadListItemDto(
     int Score,
     DateTime CreatedAtUtc,
     string? Source,
+    string? RoutingReason,
     string? Territory,
     string? JobTitle,
     Guid? AccountId,

@@ -13,6 +13,7 @@ public class Lead : AuditableEntity
     public Guid LeadStatusId { get; set; }
     public Guid OwnerId { get; set; }
     public string? Source { get; set; }
+    public string? RoutingReason { get; set; }
     public string? Territory { get; set; }
     public int Score { get; set; }
     public int? AiScore { get; set; }

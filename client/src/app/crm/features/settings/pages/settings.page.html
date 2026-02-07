@@ -37,6 +37,10 @@
         <i class="pi pi-shield"></i>
         <span>Manage roles</span>
       </button>
+      <button pButton type="button" class="btn-glass" [disabled]="!canViewAdmin()" [routerLink]="canViewAdmin() ? ['/app/settings/dashboard-packs'] : null">
+        <i class="pi pi-th-large"></i>
+        <span>Dashboard packs</span>
+      </button>
       <button pButton type="button" class="btn-glass" [disabled]="!canManageLeads()" [routerLink]="canManageLeads() ? ['/app/settings/lead-assignment'] : null">
         <i class="pi pi-sitemap"></i>
         <span>Lead assignment</span>

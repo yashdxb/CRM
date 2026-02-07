@@ -167,6 +167,91 @@
           </div>
         </ng-container>
 
+        <!-- Truth Metrics -->
+        <ng-container *ngSwitchCase="'truth-metrics'">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-verified"></i>
+              Truth Metrics
+            </h3>
+            <div class="card-actions">
+              <span class="card-badge">{{ summary().avgTruthCoverage | percent:'1.0-0' }}</span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="truth-metrics-grid">
+              <div class="truth-metric">
+                <span class="truth-label">Truth Coverage</span>
+                <span class="truth-value">{{ summary().avgTruthCoverage | percent:'1.0-0' }}</span>
+              </div>
+              <div class="truth-metric">
+                <span class="truth-label">Confidence</span>
+                <span class="truth-value"
+                      [class]="confidenceTone(summary().avgQualificationConfidence)">
+                  {{ confidenceLabel(summary().avgQualificationConfidence) }}
+                </span>
+              </div>
+              <div class="truth-metric">
+                <span class="truth-label">Time-to-Truth</span>
+                <span class="truth-value">{{ summary().avgTimeToTruthDays | number:'1.0-1' }}d</span>
+              </div>
+            </div>
+            <div class="truth-subtext">
+              Based on current lead qualification signals.
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Risk Register -->
+        <ng-container *ngSwitchCase="'risk-register'">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-exclamation-triangle"></i>
+              Risk Register
+            </h3>
+            <div class="card-actions">
+              <span class="card-badge warn">{{ summary().riskRegisterCount }}</span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="risk-flags" *ngIf="topRiskFlags().length; else emptyRiskFlags">
+              <div class="risk-flag" *ngFor="let flag of topRiskFlags()">
+                <span class="risk-label">{{ flag.label }}</span>
+                <span class="risk-count">{{ flag.count }}</span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Confidence Forecast -->
+        <ng-container *ngSwitchCase="'confidence-forecast'">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-chart-line"></i>
+              Confidence Forecast
+            </h3>
+            <div class="card-actions">
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="forecast-value">
+              {{ summary().confidenceWeightedPipelineValue | currency:'USD':'symbol':'1.0-0' }}
+            </div>
+            <div class="forecast-meta">
+              <span>Weighted pipeline</span>
+              <span class="forecast-delta" [class.negative]="weightedPipelineDelta() < 0">
+                {{ weightedPipelineDelta() | currency:'USD':'symbol':'1.0-0' }}
+              </span>
+            </div>
+            <div class="forecast-footnote">
+              Raw pipeline: {{ totalPipelineValue() | currency:'USD':'symbol':'1.0-0' }}
+            </div>
+          </div>
+        </ng-container>
+
         <!-- Recent Accounts -->
         <ng-container *ngSwitchCase="'accounts'">
           <div class="card-header">
@@ -731,6 +816,16 @@
   </div>
 </ng-template>
 
+<ng-template #emptyRiskFlags>
+  <div class="empty-state">
+    <div class="empty-icon">
+      <i class="pi pi-shield"></i>
+    </div>
+    <h4>No risk flags</h4>
+    <p>Pipeline risk signals will appear here</p>
+  </div>
+</ng-template>
+
 <ng-template #cardControls let-cardId>
   <div class="card-controls">
     <button
@@ -804,7 +899,7 @@
   <div class="layout-chart-section">
     <h4>Command Center cards</h4>
     <div class="layout-chart-list">
-      <label class="layout-chart-item" *ngFor="let card of cardCatalog">
+      <label class="layout-chart-item" *ngFor="let card of getSelectableCards()">
         <input
           type="checkbox"
           [ngModel]="isCardVisible(card.id)"
@@ -831,7 +926,16 @@
   </div>
   <ng-template pTemplate="footer">
     <div class="layout-actions">
-      <button pButton type="button" class="btn-glass" (click)="resetLayout()">Reset to default</button>
+      <button pButton type="button" class="btn-glass" (click)="resetLayout()">Reset to role default</button>
+      <button
+        *ngIf="canManageLayoutDefaults()"
+        pButton
+        type="button"
+        class="btn-glass"
+        (click)="saveRoleDefaultLayout()"
+      >
+        Save as L{{ roleDefaultLevel ?? '?' }} default
+      </button>
       <button pButton type="button" class="btn-gradient" (click)="saveLayout()">Save layout</button>
     </div>
   </ng-template>

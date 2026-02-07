@@ -12,6 +12,8 @@ public class Tenant : Entity
     public string? IndustryModules { get; set; }
     public decimal? ApprovalAmountThreshold { get; set; }
     public string? ApprovalApproverRole { get; set; }
+    public string? DashboardLayoutDefaultsJson { get; set; }
+    public string? QualificationPolicyJson { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
 }

@@ -1,8 +1,11 @@
 namespace CRM.Enterprise.Api.Contracts.Workspace;
 
+using CRM.Enterprise.Application.Qualifications;
+
 public record UpdateWorkspaceSettingsRequest(
     string Name,
     string TimeZone,
     string Currency,
     decimal? ApprovalAmountThreshold,
-    string? ApprovalApproverRole);
+    string? ApprovalApproverRole,
+    QualificationPolicy? QualificationPolicy);

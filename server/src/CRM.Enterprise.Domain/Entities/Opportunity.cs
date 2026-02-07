@@ -23,6 +23,9 @@ public class Opportunity : AuditableEntity
     public DateTime? Renewal60TaskCreatedAtUtc { get; set; }
     public DateTime? Renewal30TaskCreatedAtUtc { get; set; }
     public string? Summary { get; set; }
+    public string? Requirements { get; set; }
+    public string? BuyingProcess { get; set; }
+    public string? SuccessCriteria { get; set; }
     public string? WinLossReason { get; set; }
     public bool IsClosed { get; set; }
     public bool IsWon { get; set; }

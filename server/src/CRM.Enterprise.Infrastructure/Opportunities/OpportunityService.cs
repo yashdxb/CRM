@@ -53,10 +53,25 @@ public sealed class OpportunityService : IOpportunityService
     {
         "Qualification",
         "Proposal",
-        "Negotiation"
+        "Negotiation",
+        "Commit"
     };
     private static readonly HashSet<string> StagesRequiringBuyingRole = new(StringComparer.OrdinalIgnoreCase)
     {
+        "Proposal",
+        "Negotiation",
+        "Commit"
+    };
+    private static readonly HashSet<string> StagesRequiringPainSummary = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Qualification",
+        "Proposal",
+        "Negotiation",
+        "Commit"
+    };
+    private static readonly HashSet<string> StagesRequiringQualificationFit = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Qualification",
         "Proposal",
         "Negotiation",
         "Commit"
@@ -131,6 +146,17 @@ public sealed class OpportunityService : IOpportunityService
             query = query.Where(o => o.AccountId == request.AccountId.Value);
         }
 
+        if (request.MissingNextStep == true)
+        {
+            query = query.Where(o => !o.IsClosed);
+            query = query.Where(o => !_dbContext.Activities.Any(a =>
+                !a.IsDeleted
+                && a.RelatedEntityType == ActivityRelationType.Opportunity
+                && a.RelatedEntityId == o.Id
+                && a.CompletedDateUtc == null
+                && a.DueDateUtc.HasValue));
+        }
+
         var total = await query.CountAsync(cancellationToken);
 
         var data = await query
@@ -154,6 +180,9 @@ public sealed class OpportunityService : IOpportunityService
                 o.OpportunityType,
                 o.RenewalOfOpportunityId,
                 o.RenewalOpportunityId,
+                o.Requirements,
+                o.BuyingProcess,
+                o.SuccessCriteria,
                 o.DiscountPercent,
                 o.DiscountAmount,
                 o.PricingNotes,
@@ -238,6 +267,9 @@ public sealed class OpportunityService : IOpportunityService
                 o.OpportunityType,
                 o.RenewalOfOpportunityId,
                 o.RenewalOpportunityId,
+                o.Requirements,
+                o.BuyingProcess,
+                o.SuccessCriteria,
                 o.DiscountPercent,
                 o.DiscountAmount,
                 o.PricingNotes,
@@ -302,6 +334,9 @@ public sealed class OpportunityService : IOpportunityService
             opp.OpportunityType,
             opp.RenewalOfOpportunityId,
             opp.RenewalOpportunityId,
+            opp.Requirements,
+            opp.BuyingProcess,
+            opp.SuccessCriteria,
             opp.DiscountPercent,
             opp.DiscountAmount,
             opp.PricingNotes,
@@ -442,6 +477,9 @@ public sealed class OpportunityService : IOpportunityService
             ForecastCategory = resolvedForecastCategory,
             OpportunityType = opportunityType,
             Summary = request.Summary,
+            Requirements = request.Requirements,
+            BuyingProcess = request.BuyingProcess,
+            SuccessCriteria = request.SuccessCriteria,
             DiscountPercent = request.DiscountPercent,
             DiscountAmount = request.DiscountAmount,
             PricingNotes = request.PricingNotes,
@@ -490,6 +528,9 @@ public sealed class OpportunityService : IOpportunityService
             opp.OpportunityType,
             opp.RenewalOfOpportunityId,
             opp.RenewalOpportunityId,
+            opp.Requirements,
+            opp.BuyingProcess,
+            opp.SuccessCriteria,
             opp.DiscountPercent,
             opp.DiscountAmount,
             opp.PricingNotes,
@@ -599,6 +640,18 @@ public sealed class OpportunityService : IOpportunityService
         opp.ForecastCategory = resolvedForecastCategory;
         opp.OpportunityType = opportunityType;
         opp.Summary = request.Summary;
+        if (request.Requirements is not null)
+        {
+            opp.Requirements = request.Requirements;
+        }
+        if (request.BuyingProcess is not null)
+        {
+            opp.BuyingProcess = request.BuyingProcess;
+        }
+        if (request.SuccessCriteria is not null)
+        {
+            opp.SuccessCriteria = request.SuccessCriteria;
+        }
         if (request.DiscountPercent.HasValue)
         {
             opp.DiscountPercent = request.DiscountPercent;
@@ -1871,6 +1924,34 @@ public sealed class OpportunityService : IOpportunityService
             if (!hasBuyingRole)
             {
                 return "Buying group role is required before moving to late-stage opportunities.";
+            }
+        }
+
+        if (StagesRequiringPainSummary.Contains(nextStageName))
+        {
+            var summary = request?.Summary ?? opportunity.Summary;
+            if (string.IsNullOrWhiteSpace(summary))
+            {
+                return $"Pain/problem summary is required before moving to {nextStageName}.";
+            }
+        }
+
+        if (StagesRequiringQualificationFit.Contains(nextStageName))
+        {
+            var requirements = request?.Requirements ?? opportunity.Requirements;
+            if (string.IsNullOrWhiteSpace(requirements))
+            {
+                return "Capture requirements before moving to qualification or later stages.";
+            }
+            var buyingProcess = request?.BuyingProcess ?? opportunity.BuyingProcess;
+            if (string.IsNullOrWhiteSpace(buyingProcess))
+            {
+                return "Capture buying process before moving to qualification or later stages.";
+            }
+            var successCriteria = request?.SuccessCriteria ?? opportunity.SuccessCriteria;
+            if (string.IsNullOrWhiteSpace(successCriteria))
+            {
+                return "Capture success criteria before moving to qualification or later stages.";
             }
         }
 

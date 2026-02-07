@@ -336,6 +336,19 @@ export class OpportunityFormPage implements OnInit {
     });
   }
 
+  protected forecastGuidance(): string | null {
+    const stage = this.selectedStage || this.form.stageName || 'Prospecting';
+    const required = this.estimateForecastCategory(stage);
+
+    if (stage.startsWith('Closed')) {
+      return `Required: ${required} for ${stage}.`;
+    }
+    if (stage === 'Commit') {
+      return 'Required: Commit before moving to the Commit stage.';
+    }
+    return `Default for ${stage}: ${required}.`;
+  }
+
   private loadOpportunity(id: string) {
     this.opportunityData.getById(id).subscribe({
       next: (opp) => {
@@ -775,7 +788,10 @@ export class OpportunityFormPage implements OnInit {
       expectedCloseDate: opp.closeDate ? new Date(opp.closeDate) : undefined,
       contractStartDateUtc: opp.contractStartDateUtc ? new Date(opp.contractStartDateUtc) : undefined,
       contractEndDateUtc: opp.contractEndDateUtc ? new Date(opp.contractEndDateUtc) : undefined,
-      summary: this.form.summary ?? '',
+      summary: opp.summary ?? '',
+      requirements: opp.requirements ?? '',
+      buyingProcess: opp.buyingProcess ?? '',
+      successCriteria: opp.successCriteria ?? '',
       discountPercent: opp.discountPercent ?? undefined,
       discountAmount: opp.discountAmount ?? undefined,
       pricingNotes: opp.pricingNotes ?? '',
@@ -818,6 +834,9 @@ export class OpportunityFormPage implements OnInit {
       contractStartDateUtc: undefined,
       contractEndDateUtc: undefined,
       summary: '',
+      requirements: '',
+      buyingProcess: '',
+      successCriteria: '',
       discountPercent: undefined,
       discountAmount: undefined,
       pricingNotes: '',
@@ -893,11 +912,31 @@ export class OpportunityFormPage implements OnInit {
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
+  protected isPainConfirmationRequired(): boolean {
+    const stage = this.selectedStage || 'Prospecting';
+    return ['Qualification', 'Proposal', 'Negotiation', 'Commit'].includes(stage);
+  }
+
+  protected isQualificationFitRequired(): boolean {
+    const stage = this.selectedStage || 'Prospecting';
+    return ['Qualification', 'Proposal', 'Negotiation', 'Commit'].includes(stage);
+  }
+
+  protected demoOutcomeGuidance(): string | null {
+    const stage = this.selectedStage || 'Prospecting';
+    if (['Proposal', 'Negotiation', 'Commit'].includes(stage)) {
+      return 'Demo/POC outcome is required before moving to late stages. Log a Demo/POC activity.';
+    }
+    return null;
+  }
+
   private validateStageRequirements(): string | null {
     const stage = this.selectedStage;
     const amountRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);
-    const closeDateRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);
+    const closeDateRequired = ['Qualification', 'Proposal', 'Negotiation', 'Commit'].includes(stage);
     const buyingRoleRequired = ['Proposal', 'Negotiation', 'Commit'].includes(stage);
+    const painRequired = ['Qualification', 'Proposal', 'Negotiation', 'Commit'].includes(stage);
+    const fitRequired = ['Qualification', 'Proposal', 'Negotiation', 'Commit'].includes(stage);
     const contractStart = this.form.contractStartDateUtc ? new Date(this.form.contractStartDateUtc) : null;
     const contractEnd = this.form.contractEndDateUtc ? new Date(this.form.contractEndDateUtc) : null;
 
@@ -915,6 +954,22 @@ export class OpportunityFormPage implements OnInit {
 
     if (buyingRoleRequired) {
       return 'A buying role contact is required before moving to late-stage opportunities.';
+    }
+
+    if (painRequired && !this.form.summary?.trim()) {
+      return `Pain/problem summary is required before moving to ${stage}.`;
+    }
+
+    if (fitRequired) {
+      if (!this.form.requirements?.trim()) {
+        return `Requirements are required before moving to ${stage}.`;
+      }
+      if (!this.form.buyingProcess?.trim()) {
+        return `Buying process is required before moving to ${stage}.`;
+      }
+      if (!this.form.successCriteria?.trim()) {
+        return `Success criteria is required before moving to ${stage}.`;
+      }
     }
 
     if (stage === 'Commit') {

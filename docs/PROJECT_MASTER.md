@@ -1,6 +1,6 @@
 # CRM Enterprise Project Master
 
-Single source of truth for the CRM Enterprise codebase. This document consolidates the current project contract, phases, style guides, issue fixes, lessons learned, user guide, use cases, test plan, and Azure roadmap. If any conflict exists, the **running codebase** is the source of truth and this document must be updated.
+Single source of truth for the CRM Enterprise codebase. This document consolidates the current project contract, roadmap, style guides, issue fixes, lessons learned, user guide, use cases, test plan, and Azure roadmap. If any conflict exists, the **running codebase** is the source of truth and this document must be updated.
 
 ---
 
@@ -132,6 +132,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Do not refactor or reorganize folders unless explicitly requested.
 - Do not hardcode environment-specific URLs in production builds.
 - Do not bypass tenant isolation or permission checks.
+- Do not hardcode role names or role-based layouts; use role levels + configured defaults.
 - Do not introduce inline HTML/CSS in components.
 - Do not commit or push unless explicitly instructed.
 
@@ -158,14 +159,14 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 
 ## 10.1) ClickUp Automation (Backlog + Governance)
 
-**Purpose:** Keep ClickUp aligned with the codebase and phase plan without manual drift.
+**Purpose:** Keep ClickUp aligned with the codebase and roadmap plan without manual drift.
 
 ### Backlog Structure (Current)
 - **Epics list** (Product & Planning):
-  - `Phase 1`
-  - `Phase 2`
-  - `Phase 3`
-- **Phase 2 execution epics** (children of `Phase 2`):
+  - `Now`
+  - `Next`
+  - `Later`
+- **Next execution epics** (children of `Next`):
   - Epistemic State + Evidence Governance
   - Feedback Loop + Weakest Signal
   - Epistemic Metrics Core
@@ -177,9 +178,21 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - **Linkage**: each story is linked to a module task and prefixed with `Module: <Module> | ...` for visibility.
 
 ### Tagging Standard
-- Phase tags: `phase-1`, `phase-2`, `phase-3`
+- Tier tags: `now`, `next`, `later`
 - Module tags: `module:Leads`, `module:Opportunities`, `module:Dashboard`, `module:Settings`, etc.
 - Status tags: `done`, `partial`, `not-started`, `candidate`
+
+### Dashboard Packs (Role Defaults)
+- **Role levels** are configured per role (L1 = lowest, L2/L3 = higher). No role names are hard-coded.
+- **Default layout per role level** is stored in workspace settings (tenant config) and can be updated via API/UI.
+- Users can customize layout; **Reset to Role Default** restores the role-level pack.
+- Configure role levels in **Settings → Roles**.
+
+### Qualification Policy (Conversion Thresholds)
+- Qualification thresholds are configurable in **Settings → Workspace**.
+- Policies support contextual rules (segment/deal type/stage) and modifiers (competitive, strategic, executive champion, velocity).
+- Conversion enforces thresholds server-side, with manager approval + override reason when below thresholds (configurable).
+- Storage is tenant-scoped (`QualificationPolicyJson` on `Tenants`) and returned via `GET /api/workspace`.
 
 ### Description Standard (Stories)
 ```
@@ -195,8 +208,10 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 ```
 
 ### Automation Rules (Operational)
-- **Source of truth** for completed items: `docs/PHASE1.md`, `docs/PHASE2.md` (Status: DONE).
-- **New backlog items** derived from phase docs (PARTIAL/NOT STARTED/UNKNOWN).
+- **Source of truth** for CRM backlog items and completion status: `docs/CRM_BACKLOG.md`.
+- **Source of truth** for supply-chain backlog items: `docs/SCM_BACKLOG.md`.
+- **Source of truth** for cross-cutting platform/infra backlog items: `docs/PROJECT_BACKLOG.md`.
+- **New backlog items** derived from `docs/CRM_BACKLOG.md`, `docs/SCM_BACKLOG.md`, and `docs/PROJECT_BACKLOG.md` (PARTIAL/NOT STARTED/UNKNOWN).
 - **Do not assume** status beyond documented evidence.
 
 ### ClickUp API Integration
@@ -204,6 +219,24 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Personal ClickUp API token also stored in Azure Key Vault `kv-crm-dev-ca` as secret `clickup-api-token` (RBAC enabled).
 - Use ClickUp API for create/update/delete tasks and to attach tags/parent relationships.
 - ClickUp public API does **not** support Docs content CRUD; use tasks for documentation tracking instead.
+
+### ClickUp Workspace Map (Current)
+- Workspace (team) name: `North Edge System's Workspace`
+- Workspace (team) id: `9017850483`
+- Primary space name: `CRM Platform`
+- Primary space id: `90173924925`
+- Secondary space name: `Team Space`
+- Secondary space id: `90173924936`
+- Folder: `Product & Planning` (id: `90176298145`)
+  - List: `Epics` (id: `901710553489`)
+- Folder: `CRM Modules` (id: `90176298150`)
+  - List: `List` (id: `901710553353`)
+- Folder: `Engineering` (id: `90176298161`)
+  - List: `List` (id: `901710553369`)
+- Folder: `QA & Release` (id: `90176298180`)
+  - List: `List` (id: `901710553388`)
+- Folder: `Operations` (id: `90176298195`)
+  - List: `List` (id: `901710553403`)
 
 ---
 
@@ -243,19 +276,19 @@ Reference: `docs/USER_STORIES.md` → “Strategic Benchmark & Differentiation (
 ### Positioning Goal
 Win on **execution discipline**, **speed to value**, and **AI‑guided next steps** rather than feature parity with enterprise CRMs.
 
-### Phase 1.5 (next 30–45 days)
+### Now (Immediate) (next 30–45 days)
 - Priority Stream finalization (filters, quick actions, next‑step enforcement)
 - Approval routing logic (role + amount + discount)
 - Rep activity metrics (calls/emails per rep, response time)
 
-### Phase 2 (next 60–90 days)
+### Next (next 60–90 days)
 - Lead scoring (rules‑based)
 - Workflow automation (stage triggers + task creation)
 - Forecast rollups (rep → manager)
 - Account hierarchy view
 - Email + calendar auto‑logging
 
-### Phase 3 (next 120–180 days)
+### Later (next 120–180 days)
 - Custom report builder
 - Win/loss analysis + competitor tracking
 - Next‑best‑action AI
@@ -578,7 +611,7 @@ These workflows define how non‑rep roles operate in the same CRM, with clear o
 
 ---
 
-## 17) Entra Migration Roadmap (Next Phase)
+## 17) Entra Migration Roadmap (Next Milestone)
 
 ### Goal
 Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant boundaries and roles.
@@ -600,9 +633,9 @@ Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant 
 
 ---
 
-## 18) Project Phases (Merged)
+## 18) Project Roadmap (Merged)
 
-The full phase checklists are included below to keep one source of truth.
+The full checklist sections are included below to keep one source of truth.
 
 # Current Execution Plan (Approved)
 
@@ -630,7 +663,7 @@ Goal: deliver the Sales Rep end-to-end flow first while adding microservice-read
 - Option 2 (scheduled next): expand in-process domain events beyond Leads (OpportunityStageChanged, ActivityCompleted) and wire handlers for audit/notifications.
 - Option 3 (scheduled after Option 2): apply the same service seam pattern to any remaining controllers still touching DbContext directly.
 
-# Phase 1 Checklist (Draft)
+# Now Checklist (Draft)
 
 Legend:
 - DONE: implemented and wired in UI + API
@@ -725,7 +758,7 @@ Legend:
   - Upcoming activities render.
   - Recently viewed accounts render.
 
-## 2) Architecture (Phase 1)
+## 2) Architecture (Now)
 
 1) Microservices: IdentityService + CrmCoreService
 - Status: PARTIAL
@@ -798,7 +831,7 @@ Legend:
 4) Runs fully on local SQL with migrations and seed data
 - Status: PARTIAL
 
-# Phase 2 Checklist (Draft)
+# Next Checklist (Draft)
 
 1) Multi-tenancy + workspace settings
 - Status: DONE
@@ -840,19 +873,16 @@ Legend:
 12) Activity templates
 - Status: DONE
 
-13) Saved filters/views per user
+13) Bulk actions on lists
 - Status: DONE
 
-14) Bulk actions on lists
+14) Inline edit for simple fields
 - Status: DONE
 
-15) Inline edit for simple fields
+15) Recently viewed lists in each module
 - Status: DONE
 
-16) Recently viewed lists in each module
-- Status: DONE
-
-17) AI Assistant (Foundry-backed internal chat)
+16) AI Assistant (Foundry-backed internal chat)
 - Status: DONE
 - Evidence:
   - API: `server/src/CRM.Enterprise.Api/Controllers/AssistantController.cs`
@@ -863,9 +893,9 @@ Legend:
 
 ---
 
-## Phase 2 vs Full B2B Sales Rep Flow (Gap Check)
+## Next vs Full B2B Sales Rep Flow (Gap Check)
 
-**Covered in Phase 2 (Sales Rep flow):**
+**Covered in Next (Sales Rep flow):**
 - Multi-tenancy + workspace settings
 - Lead lifecycle (CRUD + workflow + conversion + assignment rules)
 - Opportunity enhancements
@@ -874,7 +904,6 @@ Legend:
 - Stage exit criteria gates + at-risk deal detection
 - Security/Legal checklist tracking per opportunity stage
 - Activity templates
-- Saved filters/views per user
 - Bulk actions + inline edit
 - Notification center + preferences (in-app)
 - Ops hardening (background jobs, retries, health checks)
@@ -887,7 +916,7 @@ Legend:
 3) [P3] Expansion opportunity creation + signals — Implemented on January 27, 2026  
    - Acceptance: expansion signal creates draft opportunity with account link.
 
-## Phase 2 vs Full B2B Role Flows (Other Roles)
+## Next vs Full B2B Role Flows (Other Roles)
 
 **SDR / BDR gaps:**
 1) [P2] Multi-touch cadence tracking (call/email/LinkedIn sequences) — Implemented on January 27, 2026  
@@ -958,7 +987,7 @@ Legend:
 3) [P3] Case-to-account health feedback loop  
    - Acceptance: case trends affect account health.
 
-# Phase 3 Candidate Backlog (Draft)
+# Later Candidate Backlog (Draft)
 
 1) Next-best-action suggestions (LOW-MED)
 2) Deal risk alerts (LOW-MED)
@@ -970,7 +999,7 @@ Legend:
 8) Configurable Lead SLA rules in Settings (tenant defaults + source overrides)
 9) Qualification option lookups in API/DB (replace hard-coded UI options)
 
-# Phase 3 Options (Draft)
+# Later Options (Draft)
 
 - Approval workflow (multi-level) options
 
@@ -978,11 +1007,11 @@ Legend:
 
 ## 19) Resolved Conflicts (Applied)
 - Competitive gap vs current reality: email integration is **transactional only** today; full email sync/templates remain a gap.
-- Phase evidence paths updated to `client/src/app/crm/features/...` to match current structure.
+- Evidence paths updated to `client/src/app/crm/features/...` to match current structure.
 - Foundry agent 500s in Azure dev fixed by wiring `FoundryAgentOptions` into DI and setting App Service config (`FoundryAgent__*`).
 
 ## 20) Conflicts to Validate
-- Phase 2 says notification center is done, competitive gap previously marked it as missing. Current status is in-app toasts + preferences; confirm if the full notification center UI is complete.
+- Next says notification center is done, competitive gap previously marked it as missing. Current status is in-app toasts + preferences; confirm if the full notification center UI is complete.
 - Calendar sync is marked NOT STARTED; confirm whether any provider integration has been added.
 
 ---

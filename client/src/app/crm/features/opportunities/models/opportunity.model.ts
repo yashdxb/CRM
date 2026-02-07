@@ -16,6 +16,9 @@ export interface Opportunity {
   opportunityType?: string;
   renewalOfOpportunityId?: string | null;
   renewalOpportunityId?: string | null;
+  requirements?: string | null;
+  buyingProcess?: string | null;
+  successCriteria?: string | null;
   discountPercent?: number | null;
   discountAmount?: number | null;
   pricingNotes?: string | null;
@@ -44,6 +47,7 @@ export interface OpportunitySearchRequest {
   search?: string;
   stage?: string;
   accountId?: string;
+  missingNextStep?: boolean;
   page?: number;
   pageSize?: number;
 }
