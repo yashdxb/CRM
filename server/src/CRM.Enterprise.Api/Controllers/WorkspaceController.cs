@@ -47,6 +47,8 @@ public class WorkspaceController : ControllerBase
             tenant.TimeZone,
             tenant.Currency,
             tenant.LeadFirstTouchSlaHours,
+            tenant.DefaultContractTermMonths,
+            tenant.DefaultDeliveryOwnerRoleId,
             tenant.ApprovalAmountThreshold,
             tenant.ApprovalApproverRole,
             ResolveApprovalWorkflowPolicy(tenant),
@@ -70,6 +72,8 @@ public class WorkspaceController : ControllerBase
         tenant.TimeZone = request.TimeZone.Trim();
         tenant.Currency = request.Currency.Trim();
         tenant.LeadFirstTouchSlaHours = request.LeadFirstTouchSlaHours;
+        tenant.DefaultContractTermMonths = request.DefaultContractTermMonths;
+        tenant.DefaultDeliveryOwnerRoleId = request.DefaultDeliveryOwnerRoleId;
         tenant.ApprovalAmountThreshold = request.ApprovalAmountThreshold;
         tenant.ApprovalApproverRole = string.IsNullOrWhiteSpace(request.ApprovalApproverRole)
             ? null
@@ -93,6 +97,8 @@ public class WorkspaceController : ControllerBase
             tenant.TimeZone,
             tenant.Currency,
             tenant.LeadFirstTouchSlaHours,
+            tenant.DefaultContractTermMonths,
+            tenant.DefaultDeliveryOwnerRoleId,
             tenant.ApprovalAmountThreshold,
             tenant.ApprovalApproverRole,
             ResolveApprovalWorkflowPolicy(tenant),

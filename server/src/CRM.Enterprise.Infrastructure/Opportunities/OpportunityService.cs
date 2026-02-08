@@ -15,6 +15,7 @@ public sealed class OpportunityService : IOpportunityService
 {
     private const string OpportunityEntityType = "Opportunity";
     private const int AtRiskDays = 30;
+    private const int DefaultContractTermMonthsFallback = 12;
     private const decimal DiscountPercentApprovalThreshold = 10m;
     private const decimal DiscountAmountApprovalThreshold = 1000m;
     private const string ReviewSubjectPrefix = "Review:";
@@ -530,7 +531,7 @@ public sealed class OpportunityService : IOpportunityService
 
         if (opp.IsWon)
         {
-            await EnsureOnboardingDefaultsAsync(opp, actor, cancellationToken);
+            await ApplyClosedWonDefaultsAsync(opp, actor, cancellationToken);
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -654,11 +655,27 @@ public sealed class OpportunityService : IOpportunityService
             }
         }
 
+        var resolvedAccountId = await ResolveAccountIdAsync(request.AccountId, cancellationToken);
+        var resolvedOwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
+        if (wasClosed && wasWon
+            && HasLockedFieldChanges(
+                opp,
+                request,
+                resolvedAccountId,
+                resolvedOwnerId,
+                nextStageId,
+                resolvedForecastCategory,
+                opportunityType))
+        {
+            return OpportunityOperationResult<bool>.Fail(
+                "Closed won deals are locked. Only delivery handoff and renewal fields can be updated.");
+        }
+
         opp.Name = request.Name;
-        opp.AccountId = await ResolveAccountIdAsync(request.AccountId, cancellationToken);
+        opp.AccountId = resolvedAccountId;
         opp.PrimaryContactId = request.PrimaryContactId;
         opp.StageId = nextStageId;
-        opp.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
+        opp.OwnerId = resolvedOwnerId;
         opp.Amount = request.Amount;
         opp.Currency = string.IsNullOrWhiteSpace(request.Currency) ? "USD" : request.Currency;
         opp.Probability = request.Probability;
@@ -841,7 +858,7 @@ public sealed class OpportunityService : IOpportunityService
 
         if (!wasWon && opp.IsWon)
         {
-            await EnsureOnboardingDefaultsAsync(opp, actor, cancellationToken);
+            await ApplyClosedWonDefaultsAsync(opp, actor, cancellationToken);
         }
 
         await _auditEvents.TrackAsync(
@@ -1699,6 +1716,194 @@ public sealed class OpportunityService : IOpportunityService
         await _auditEvents.TrackAsync(
             CreateAuditEntry(opportunity.Id, "OnboardingSeeded", "Onboarding", null, $"{items.Count} items", actor),
             cancellationToken);
+    }
+
+    private async Task ApplyClosedWonDefaultsAsync(Opportunity opportunity, ActorContext actor, CancellationToken cancellationToken)
+    {
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == opportunity.TenantId, cancellationToken);
+
+        var termMonths = tenant?.DefaultContractTermMonths ?? DefaultContractTermMonthsFallback;
+        if (termMonths < 1)
+        {
+            termMonths = DefaultContractTermMonthsFallback;
+        }
+
+        var contractStart = opportunity.ContractStartDateUtc
+                            ?? opportunity.ExpectedCloseDate
+                            ?? DateTime.UtcNow;
+
+        if (!opportunity.ContractStartDateUtc.HasValue)
+        {
+            opportunity.ContractStartDateUtc = contractStart;
+        }
+
+        if (!opportunity.ContractEndDateUtc.HasValue)
+        {
+            opportunity.ContractEndDateUtc = contractStart.AddMonths(termMonths);
+        }
+
+        if (!opportunity.DeliveryOwnerId.HasValue)
+        {
+            opportunity.DeliveryOwnerId = await ResolveDefaultDeliveryOwnerAsync(
+                tenant,
+                opportunity.OwnerId,
+                cancellationToken);
+        }
+
+        if (string.IsNullOrWhiteSpace(opportunity.DeliveryStatus))
+        {
+            opportunity.DeliveryStatus = "Not Started";
+        }
+
+        await EnsureOnboardingDefaultsAsync(opportunity, actor, cancellationToken);
+    }
+
+    private async Task<Guid> ResolveDefaultDeliveryOwnerAsync(
+        Tenant? tenant,
+        Guid fallbackOwnerId,
+        CancellationToken cancellationToken)
+    {
+        var roleId = tenant?.DefaultDeliveryOwnerRoleId;
+        if (roleId.HasValue && roleId.Value != Guid.Empty)
+        {
+            var tenantId = _tenantProvider.TenantId;
+            var candidate = await _dbContext.UserRoles
+                .AsNoTracking()
+                .Where(ur => ur.RoleId == roleId.Value
+                             && !ur.IsDeleted
+                             && (tenantId == Guid.Empty || ur.TenantId == tenantId))
+                .Join(_dbContext.Users,
+                    ur => ur.UserId,
+                    user => user.Id,
+                    (ur, user) => new { ur, user })
+                .Where(x => x.user.IsActive && !x.user.IsDeleted)
+                .OrderBy(x => x.user.FullName)
+                .Select(x => x.user.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (candidate != Guid.Empty)
+            {
+                return candidate;
+            }
+        }
+
+        return fallbackOwnerId;
+    }
+
+    private static bool HasLockedFieldChanges(
+        Opportunity opportunity,
+        OpportunityUpsertRequest request,
+        Guid resolvedAccountId,
+        Guid resolvedOwnerId,
+        Guid nextStageId,
+        string? resolvedForecastCategory,
+        string opportunityType)
+    {
+        if (!string.Equals(opportunity.Name, request.Name, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (opportunity.AccountId != resolvedAccountId)
+        {
+            return true;
+        }
+        if (opportunity.PrimaryContactId != request.PrimaryContactId)
+        {
+            return true;
+        }
+        if (opportunity.StageId != nextStageId)
+        {
+            return true;
+        }
+        if (opportunity.OwnerId != resolvedOwnerId)
+        {
+            return true;
+        }
+        if (opportunity.Amount != request.Amount)
+        {
+            return true;
+        }
+        var currency = string.IsNullOrWhiteSpace(request.Currency) ? "USD" : request.Currency;
+        if (!string.Equals(opportunity.Currency, currency, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (opportunity.Probability != request.Probability)
+        {
+            return true;
+        }
+        if (opportunity.ExpectedCloseDate != request.ExpectedCloseDate)
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.ForecastCategory ?? string.Empty, resolvedForecastCategory ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.OpportunityType, opportunityType, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.Summary ?? string.Empty, request.Summary ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.Requirements ?? string.Empty, request.Requirements ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.BuyingProcess ?? string.Empty, request.BuyingProcess ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.SuccessCriteria ?? string.Empty, request.SuccessCriteria ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (opportunity.DiscountPercent != request.DiscountPercent)
+        {
+            return true;
+        }
+        if (opportunity.DiscountAmount != request.DiscountAmount)
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.PricingNotes ?? string.Empty, request.PricingNotes ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.SecurityReviewStatus ?? string.Empty, request.SecurityReviewStatus ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.SecurityNotes ?? string.Empty, request.SecurityNotes ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.LegalReviewStatus ?? string.Empty, request.LegalReviewStatus ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.LegalNotes ?? string.Empty, request.LegalNotes ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (opportunity.IsClosed != request.IsClosed)
+        {
+            return true;
+        }
+        if (opportunity.IsWon != request.IsWon)
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.WinLossReason ?? string.Empty, request.WinLossReason ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static string ComputeStatus(bool isClosed, bool isWon)

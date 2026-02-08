@@ -106,6 +106,8 @@ export class ApprovalSettingsPage {
       timeZone: this.loadedSettings.timeZone ?? 'UTC',
       currency: this.loadedSettings.currency ?? 'USD',
       leadFirstTouchSlaHours: this.loadedSettings.leadFirstTouchSlaHours ?? 24,
+      defaultContractTermMonths: this.loadedSettings.defaultContractTermMonths ?? null,
+      defaultDeliveryOwnerRoleId: this.loadedSettings.defaultDeliveryOwnerRoleId ?? null,
       approvalAmountThreshold: payload.approvalAmountThreshold ?? null,
       approvalApproverRole: payload.approvalApproverRole ?? '',
       approvalWorkflowPolicy: this.approvalWorkflowPolicy(),

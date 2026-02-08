@@ -114,6 +114,8 @@ export class QualificationThresholdsPage {
       timeZone: this.loadedSettings.timeZone ?? 'UTC',
       currency: this.loadedSettings.currency ?? 'USD',
       leadFirstTouchSlaHours: this.loadedSettings.leadFirstTouchSlaHours ?? 24,
+      defaultContractTermMonths: this.loadedSettings.defaultContractTermMonths ?? null,
+      defaultDeliveryOwnerRoleId: this.loadedSettings.defaultDeliveryOwnerRoleId ?? null,
       approvalAmountThreshold: this.loadedSettings.approvalAmountThreshold ?? null,
       approvalApproverRole: this.loadedSettings.approvalApproverRole ?? '',
       approvalWorkflowPolicy: this.loadedSettings.approvalWorkflowPolicy ?? null,

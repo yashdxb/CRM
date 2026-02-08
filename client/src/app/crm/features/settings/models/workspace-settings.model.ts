@@ -5,6 +5,8 @@ export interface WorkspaceSettings {
   timeZone: string;
   currency: string;
   leadFirstTouchSlaHours?: number | null;
+  defaultContractTermMonths?: number | null;
+  defaultDeliveryOwnerRoleId?: string | null;
   approvalAmountThreshold?: number | null;
   approvalApproverRole?: string | null;
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
@@ -16,6 +18,8 @@ export interface UpdateWorkspaceSettingsRequest {
   timeZone: string;
   currency: string;
   leadFirstTouchSlaHours?: number | null;
+  defaultContractTermMonths?: number | null;
+  defaultDeliveryOwnerRoleId?: string | null;
   approvalAmountThreshold?: number | null;
   approvalApproverRole?: string | null;
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;

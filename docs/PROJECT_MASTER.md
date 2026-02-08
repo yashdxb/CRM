@@ -152,6 +152,9 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Production frontend must target the production API host (do not point to dev API in prod builds).
 - SignalR hub is mapped to `/api/hubs/presence` and uses the same CORS policy.
 - **Deployment gate:** before any deploy, verify both client and API builds succeed.
+- **Deployment method:** push to `master` triggers GitHub Actions for both client and API.
+  - Client workflow: `.github/workflows/azure-static-web-apps-jolly-dune-0d9d1fe0f.yml`
+  - API workflow: `.github/workflows/deploy-api.yml`
 - **Daily ops log:** record daily issues and fixes in `docs/DAILY_OPERATIONS_LOG.md`, and only merge verified outcomes into this master file.
 - **Lead AI scoring:** Lead score refresh uses Azure OpenAI when configured, falls back to OpenAI, then rules-based scoring to keep the UI functional.
 

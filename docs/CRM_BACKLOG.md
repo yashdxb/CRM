@@ -612,7 +612,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Opportunities | As a Sales Rep, I want renewal tasks created and tracked like any opportunity. (ClickUp: 86dzp8x8w, Status: done)
 - Module: Opportunities | As a Sales Rep, I want stage‑specific activity templates so I can log actions faster. (ClickUp: 86dzp8xc4, Status: done)
 - Module: Opportunities | As a Sales Rep, I want stage‑specific exit criteria (required fields, next step) so stage progression reflects reality. (ClickUp: 86dzp8xc7, Status: done)
-- Module: Opportunities | As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal. (ClickUp: 86dzp8xa7, Status: backlog)
+- Module: Opportunities | As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal. (ClickUp: 86dzp8xa7, Status: done)
+  - Acceptance criteria:
+    - When an opportunity is marked Closed Won, onboarding tasks are auto-created if none exist.
+    - When Closed Won and delivery owner is empty, the system assigns the default delivery owner role (tenant setting) or falls back to the opportunity owner.
+    - When Closed Won and contract dates are missing, contract start defaults to close date (or now) and contract end is set using the default contract term months.
+    - After Closed Won, sales-critical fields are locked; only delivery handoff + renewal fields remain editable.
+  - Evidence:
+    - Close-won defaults + lock enforcement: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - Tenant defaults stored in workspace settings: `server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs`
+    - Workspace settings UI for defaults: `client/src/app/crm/features/settings/pages/workspace-settings.page.html`
 - Module: Opportunities | As a Sales Rep, I want to capture demo outcomes and feedback; stage progression should require a demo outcome. (ClickUp: 86dzp8xav, Status: backlog)
 - Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close. (ClickUp: 86dzp8xa9, Status: done)
 - Module: Opportunities | As a Sales Rep, I want to schedule discovery and log notes before leaving the stage. (ClickUp: 86dzp8xbq, Status: backlog)

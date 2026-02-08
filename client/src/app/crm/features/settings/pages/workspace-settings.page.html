@@ -209,6 +209,43 @@
 
           <section class="form-card">
             <h3 class="section-title section-title--info">
+              <i class="pi pi-briefcase"></i>
+              Delivery & Renewal Defaults
+            </h3>
+            <p class="section-description">Defaults applied when a deal is closed won</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>Default contract term (months)</label>
+                <p-inputNumber
+                  formControlName="defaultContractTermMonths"
+                  [min]="1"
+                  [max]="120"
+                  placeholder="12"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <small class="field-hint">Used to set renewal date if contract end is missing.</small>
+              </div>
+
+              <div class="field">
+                <label>Default delivery owner role</label>
+                <p-select
+                  appendTo="body"
+                  [options]="roleOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  formControlName="defaultDeliveryOwnerRoleId"
+                  placeholder="Select role"
+                  styleClass="w-full"
+                  [showClear]="true"
+                ></p-select>
+                <small class="field-hint">Assigns delivery ownership when a deal closes.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
               <i class="pi pi-globe"></i>
               Regional Settings
             </h3>

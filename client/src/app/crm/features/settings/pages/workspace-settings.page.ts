@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -15,6 +16,8 @@ import { readTokenContext, tokenHasPermission } from '../../../../core/auth/toke
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { TimeZoneService } from '../../../../core/services/time-zone.service';
 import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
+import { UserAdminDataService } from '../services/user-admin-data.service';
+import { RoleSummary } from '../models/user-admin.model';
 
 interface Option<T = string> {
   label: string;
@@ -26,6 +29,7 @@ interface Option<T = string> {
   standalone: true,
   imports: [
     ButtonModule,
+    InputNumberModule,
     InputTextModule,
     SelectModule,
     NgFor,
@@ -41,6 +45,7 @@ interface Option<T = string> {
 })
 export class WorkspaceSettingsPage {
   private readonly settingsService = inject(WorkspaceSettingsService);
+  private readonly userAdminData = inject(UserAdminDataService);
   private readonly toastService = inject(AppToastService);
   private readonly fb = inject(FormBuilder);
   private readonly timeZoneService = inject(TimeZoneService);
@@ -50,6 +55,7 @@ export class WorkspaceSettingsPage {
   protected readonly canManageAdmin = signal(
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
+  protected readonly roles = signal<RoleSummary[]>([]);
 
   // Shared time zone catalog keeps labels and flags consistent across settings screens.
   protected timeZoneOptions: TimeZoneOption[] = [];
@@ -68,12 +74,15 @@ export class WorkspaceSettingsPage {
     timeZone: ['UTC', [Validators.required]],
     currency: ['USD', [Validators.required]],
     leadFirstTouchSlaHours: [24, [Validators.min(1), Validators.max(168)]],
+    defaultContractTermMonths: [12, [Validators.min(1), Validators.max(120)]],
+    defaultDeliveryOwnerRoleId: [null as string | null]
   });
 
   constructor() {
     this.timeZoneService.getTimeZones().subscribe((options) => {
       this.timeZoneOptions = options;
     });
+    this.loadRoles();
     this.loadSettings();
   }
 
@@ -103,7 +112,9 @@ export class WorkspaceSettingsPage {
       name: payload.name ?? '',
       timeZone: payload.timeZone ?? 'UTC',
       currency: payload.currency ?? 'USD',
-      leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? 24
+      leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? 24,
+      defaultContractTermMonths: payload.defaultContractTermMonths ?? 12,
+      defaultDeliveryOwnerRoleId: payload.defaultDeliveryOwnerRoleId ?? null
     };
     this.saving.set(true);
     this.settingsService.updateSettings(safePayload).subscribe({
@@ -124,7 +135,9 @@ export class WorkspaceSettingsPage {
       name: settings.name,
       timeZone: settings.timeZone,
       currency: settings.currency,
-      leadFirstTouchSlaHours: settings.leadFirstTouchSlaHours ?? 24
+      leadFirstTouchSlaHours: settings.leadFirstTouchSlaHours ?? 24,
+      defaultContractTermMonths: settings.defaultContractTermMonths ?? 12,
+      defaultDeliveryOwnerRoleId: settings.defaultDeliveryOwnerRoleId ?? null
     });
   }
 
@@ -134,6 +147,17 @@ export class WorkspaceSettingsPage {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
+  }
+
+  protected roleOptions() {
+    return this.roles().map((role) => ({ label: role.name, value: role.id }));
+  }
+
+  private loadRoles() {
+    this.userAdminData.getRoles().subscribe({
+      next: (roles) => this.roles.set(roles ?? []),
+      error: () => this.roles.set([])
+    });
   }
 
 }

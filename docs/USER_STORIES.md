@@ -129,7 +129,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Opportunities | As a Sales Rep, I want renewal tasks created and tracked like any opportunity.
 - Module: Opportunities | As a Sales Rep, I want stage‑specific activity templates so I can log actions faster.
 - Module: Opportunities | As a Sales Rep, I want stage‑specific exit criteria (required fields, next step) so stage progression reflects reality.
-- Module: Opportunities | As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal.
+- Module: Opportunities | As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal. (Done)
 - Module: Opportunities | As a Sales Rep, I want to capture demo outcomes and feedback; stage progression should require a demo outcome.
 - Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close.
 - Module: Opportunities | As a Sales Rep, I want to schedule discovery and log notes before leaving the stage.

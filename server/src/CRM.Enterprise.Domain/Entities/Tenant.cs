@@ -16,6 +16,8 @@ public class Tenant : Entity
     public string? DashboardLayoutDefaultsJson { get; set; }
     public string? QualificationPolicyJson { get; set; }
     public int? LeadFirstTouchSlaHours { get; set; }
+    public int? DefaultContractTermMonths { get; set; }
+    public Guid? DefaultDeliveryOwnerRoleId { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
 }
