@@ -2123,6 +2123,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         try
         {
             _tenantProvider.SetTenant(tenant.Id, tenant.Key);
+            await SeedSecurityLevelsAsync(cancellationToken);
             await SeedRolesAsync(cancellationToken);
             await SeedUsersAsync(cancellationToken);
             await SeedLeadAssignmentRulesAsync(cancellationToken);
@@ -2135,6 +2136,55 @@ public class DatabaseInitializer : IDatabaseInitializer
         {
             _tenantProvider.SetTenant(originalTenantId, originalTenantKey);
         }
+    }
+
+    private readonly (string Name, string? Description, int Rank, bool IsDefault)[] _securityLevelDefinitions =
+    [
+        ("Read-only", "View data only", 1, false),
+        ("Standard", "Default operational access", 2, true),
+        ("Manager", "Team approvals + overrides", 3, false),
+        ("Admin", "Full administrative access", 4, false)
+    ];
+
+    private async Task SeedSecurityLevelsAsync(CancellationToken cancellationToken)
+    {
+        foreach (var (name, description, rank, isDefault) in _securityLevelDefinitions)
+        {
+            var existing = await _dbContext.SecurityLevelDefinitions
+                .FirstOrDefaultAsync(level => level.Name == name, cancellationToken);
+            if (existing is null)
+            {
+                _dbContext.SecurityLevelDefinitions.Add(new SecurityLevelDefinition
+                {
+                    Name = name,
+                    Description = description,
+                    Rank = rank,
+                    IsDefault = isDefault
+                });
+                continue;
+            }
+
+            existing.Description = description;
+            existing.Rank = rank;
+            if (isDefault && !existing.IsDefault)
+            {
+                existing.IsDefault = true;
+            }
+        }
+
+        if (_securityLevelDefinitions.Any(level => level.IsDefault))
+        {
+            var defaultName = _securityLevelDefinitions.First(level => level.IsDefault).Name;
+            var others = await _dbContext.SecurityLevelDefinitions
+                .Where(level => level.Name != defaultName && level.IsDefault)
+                .ToListAsync(cancellationToken);
+            foreach (var level in others)
+            {
+                level.IsDefault = false;
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task SeedAuditEventsAsync(Guid tenantId, CancellationToken cancellationToken)
@@ -2537,11 +2587,17 @@ public class DatabaseInitializer : IDatabaseInitializer
             return existing;
         }
 
+        var defaultSecurity = await _dbContext.SecurityLevelDefinitions
+            .OrderByDescending(level => level.IsDefault)
+            .ThenBy(level => level.Rank)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var role = new Role
         {
             Name = name,
             Description = description,
-            CreatedAtUtc = DateTime.UtcNow
+            CreatedAtUtc = DateTime.UtcNow,
+            SecurityLevelId = defaultSecurity?.Id
         };
         _dbContext.Roles.Add(role);
         await _dbContext.SaveChangesAsync(cancellationToken);

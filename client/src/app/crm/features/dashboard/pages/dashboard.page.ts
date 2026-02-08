@@ -131,6 +131,7 @@ export class DashboardPage implements OnInit {
     reviewAckOverdueCount: 0,
     reviewAckAvgHours: 0,
     pipelineByStage: [],
+    topTruthGaps: [],
     reviewQueue: []
   };
   private readonly managerHealthRefresh$ = new Subject<void>();
@@ -327,6 +328,7 @@ export class DashboardPage implements OnInit {
   protected readonly activityBreakdown = computed(() => this.summary()?.activityBreakdown ?? []);
   protected readonly pipelineValue = computed(() => this.summary()?.pipelineValue ?? []);
   protected readonly managerPipelineByStage = computed(() => this.managerHealth().pipelineByStage ?? []);
+  protected readonly managerTruthGaps = computed(() => this.managerHealth().topTruthGaps ?? []);
   protected readonly managerReviewQueue = computed(() => this.managerHealth().reviewQueue ?? []);
   protected readonly managerHealthStats = computed(() => {
     const data = this.managerHealth();
@@ -814,7 +816,7 @@ export class DashboardPage implements OnInit {
 
   protected saveRoleDefaultLayout(): void {
     if (!this.roleDefaultLevel) {
-      this.toastService.show('error', 'Role level is not configured for your role.', 3500);
+      this.toastService.show('error', 'Hierarchy level is not configured for your role.', 3500);
       return;
     }
     const order = this.layoutDraft.map(item => item.id);
@@ -823,7 +825,7 @@ export class DashboardPage implements OnInit {
     this.dashboardData.saveDefaultLayout({ roleLevel: this.roleDefaultLevel, ...payload }).subscribe({
       next: response => {
         this.roleDefaultLayout = response.cardOrder ?? [];
-        this.toastService.show('success', `Default layout saved for L${this.roleDefaultLevel}.`, 3000);
+        this.toastService.show('success', `Default layout saved for H${this.roleDefaultLevel}.`, 3000);
       },
       error: () => {
         this.toastService.show('error', 'Unable to save role default layout.', 3500);
@@ -1521,6 +1523,20 @@ export class DashboardPage implements OnInit {
     }
     // Normalize backend timestamps before DatePipe renders them in local time.
     return value instanceof Date ? value : this.parseUtcDate(value);
+  }
+
+  protected formatTruthCoverage(value?: number | null): string {
+    if (value === null || value === undefined) {
+      return '--';
+    }
+    return `${Math.round(value * 100)}%`;
+  }
+
+  protected formatTimeToTruth(value?: number | null): string {
+    if (value === null || value === undefined) {
+      return '--';
+    }
+    return `${value.toFixed(1)}d`;
   }
 
   protected getTaskDueClass(task: Activity): string {

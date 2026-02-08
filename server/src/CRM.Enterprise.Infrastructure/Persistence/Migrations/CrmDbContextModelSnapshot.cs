@@ -787,6 +787,64 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.ToTable("CustomFieldValues", "crm");
                 });
 
+            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.DashboardTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("LayoutJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "IsDefault")
+                        .HasFilter("[IsDefault] = 1 AND [IsDeleted] = 0");
+
+                    b.ToTable("DashboardTemplates", (string)null);
+                });
+
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.GoodsReceipt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1886,6 +1944,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid?>("ApprovalChainId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ApproverRole")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1936,8 +1997,82 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("StepOrder")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalChainId");
+
+                    b.HasIndex("OpportunityId");
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("OpportunityApprovals", "crm");
+                });
+
+            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.OpportunityApprovalChain", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CurrentStep")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("RequestedOn")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StepsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("TotalSteps")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAtUtc")
                         .HasColumnType("datetime2");
@@ -1951,7 +2086,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.ToTable("OpportunityApprovals", "crm");
+                    b.ToTable("OpportunityApprovalChains", "crm");
                 });
 
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.OpportunityOnboardingItem", b =>
@@ -2980,6 +3115,12 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("HierarchyLevel")
+                        .HasColumnType("int");
+
+                    b.Property<string>("HierarchyPath")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -2990,6 +3131,12 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("ParentRoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SecurityLevelId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2999,9 +3146,24 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("VisibilityScope")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.HasKey("Id");
 
+                    b.HasIndex("ParentRoleId");
+
+                    b.HasIndex("SecurityLevelId");
+
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "HierarchyPath")
+                        .HasFilter("[HierarchyPath] IS NOT NULL AND [IsDeleted] = 0");
+
+                    b.HasIndex("TenantId", "ParentRoleId")
+                        .HasFilter("[IsDeleted] = 0");
 
                     b.ToTable("Roles", "identity");
                 });
@@ -3133,6 +3295,67 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("SavingsTrackingSnapshots", "scm");
+                });
+
+            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.SecurityLevelDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("UpdatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "IsDefault")
+                        .HasFilter("[IsDefault] = 1 AND [IsDeleted] = 0");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasFilter("[IsDeleted] = 0");
+
+                    b.ToTable("SecurityLevelDefinitions", (string)null);
                 });
 
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.Shipment", b =>
@@ -4171,6 +4394,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("ApprovalWorkflowJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 
@@ -4740,6 +4966,23 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.OpportunityApproval", b =>
                 {
+                    b.HasOne("CRM.Enterprise.Domain.Entities.OpportunityApprovalChain", "ApprovalChain")
+                        .WithMany()
+                        .HasForeignKey("ApprovalChainId");
+
+                    b.HasOne("CRM.Enterprise.Domain.Entities.Opportunity", "Opportunity")
+                        .WithMany()
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ApprovalChain");
+
+                    b.Navigation("Opportunity");
+                });
+
+            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.OpportunityApprovalChain", b =>
+                {
                     b.HasOne("CRM.Enterprise.Domain.Entities.Opportunity", "Opportunity")
                         .WithMany()
                         .HasForeignKey("OpportunityId")
@@ -4940,6 +5183,21 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Navigation("ItemMaster");
 
                     b.Navigation("Rfq");
+                });
+
+            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.Role", b =>
+                {
+                    b.HasOne("CRM.Enterprise.Domain.Entities.Role", null)
+                        .WithMany()
+                        .HasForeignKey("ParentRoleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("CRM.Enterprise.Domain.Entities.SecurityLevelDefinition", "SecurityLevel")
+                        .WithMany()
+                        .HasForeignKey("SecurityLevelId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("SecurityLevel");
                 });
 
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.RolePermission", b =>

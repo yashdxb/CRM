@@ -98,6 +98,19 @@
   gap: 1.5rem;
 }
 
+.select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.select-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
 .role-pack-link {
   display: flex;
   align-items: center;

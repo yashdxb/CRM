@@ -120,14 +120,24 @@ public class DashboardLayoutService : IDashboardLayoutService
         var roleLevel = await GetUserRoleLevelAsync(userId, cancellationToken);
         var tenantDefaults = await LoadTenantDefaultsAsync(cancellationToken);
         var resolved = ResolveDefaultLayout(tenantDefaults, roleLevel);
-        return NormalizePayload(resolved ?? new LayoutPayload(DefaultOrder, null, null, null));
+        if (resolved is null)
+        {
+            var template = await GetDefaultTemplatePayloadAsync(cancellationToken);
+            resolved = template ?? new LayoutPayload(DefaultOrder, null, null, null);
+        }
+        return NormalizePayload(resolved);
     }
 
     public async Task<DashboardLayoutState> GetDefaultLayoutForLevelAsync(int roleLevel, CancellationToken cancellationToken)
     {
         var tenantDefaults = await LoadTenantDefaultsAsync(cancellationToken);
         var resolved = ResolveDefaultLayout(tenantDefaults, roleLevel);
-        return NormalizePayload(resolved ?? new LayoutPayload(DefaultOrder, null, null, null));
+        if (resolved is null)
+        {
+            var template = await GetDefaultTemplatePayloadAsync(cancellationToken);
+            resolved = template ?? new LayoutPayload(DefaultOrder, null, null, null);
+        }
+        return NormalizePayload(resolved);
     }
 
     public async Task<DashboardLayoutState> UpdateDefaultLayoutAsync(
@@ -175,6 +185,90 @@ public class DashboardLayoutService : IDashboardLayoutService
         user.UpdatedAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return defaultLayout;
+    }
+
+    public async Task<IReadOnlyList<DashboardTemplateState>> GetTemplatesAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var templates = await _dbContext.DashboardTemplates
+            .AsNoTracking()
+            .Where(t => !t.IsDeleted && t.TenantId == tenantId)
+            .OrderBy(t => t.Name)
+            .ToListAsync(cancellationToken);
+
+        return templates
+            .Select(template => ToTemplateState(template))
+            .ToList();
+    }
+
+    public async Task<DashboardTemplateState> CreateTemplateAsync(
+        DashboardTemplateState template,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var entity = new Domain.Entities.DashboardTemplate
+        {
+            TenantId = tenantId,
+            Name = template.Name.Trim(),
+            Description = template.Description,
+            LayoutJson = SerializeLayout(template.Layout),
+            IsDefault = template.IsDefault,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        if (entity.IsDefault)
+        {
+            await ClearDefaultTemplateAsync(tenantId, cancellationToken);
+        }
+
+        _dbContext.DashboardTemplates.Add(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToTemplateState(entity);
+    }
+
+    public async Task<DashboardTemplateState> UpdateTemplateAsync(
+        Guid templateId,
+        DashboardTemplateState template,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var entity = await _dbContext.DashboardTemplates
+            .FirstOrDefaultAsync(t => !t.IsDeleted && t.TenantId == tenantId && t.Id == templateId, cancellationToken);
+        if (entity is null)
+        {
+            throw new InvalidOperationException("Dashboard template not found.");
+        }
+
+        entity.Name = template.Name.Trim();
+        entity.Description = template.Description;
+        entity.LayoutJson = SerializeLayout(template.Layout);
+        entity.UpdatedAtUtc = DateTime.UtcNow;
+
+        if (template.IsDefault && !entity.IsDefault)
+        {
+            await ClearDefaultTemplateAsync(tenantId, cancellationToken);
+            entity.IsDefault = true;
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToTemplateState(entity);
+    }
+
+    public async Task<DashboardTemplateState> SetDefaultTemplateAsync(Guid templateId, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var entity = await _dbContext.DashboardTemplates
+            .FirstOrDefaultAsync(t => !t.IsDeleted && t.TenantId == tenantId && t.Id == templateId, cancellationToken);
+        if (entity is null)
+        {
+            throw new InvalidOperationException("Dashboard template not found.");
+        }
+
+        await ClearDefaultTemplateAsync(tenantId, cancellationToken);
+        entity.IsDefault = true;
+        entity.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ToTemplateState(entity);
     }
 
     private static DashboardLayoutState NormalizePayload(LayoutPayload payload)
@@ -233,10 +327,97 @@ public class DashboardLayoutService : IDashboardLayoutService
     {
         var levels = await _dbContext.UserRoles
             .Where(ur => ur.UserId == userId)
-            .Select(ur => ur.Role != null ? ur.Role.Level : null)
+            .Select(ur => ur.Role != null ? ur.Role.HierarchyLevel : null)
             .ToListAsync(cancellationToken);
 
         return levels.Where(level => level.HasValue).Select(level => level!.Value).DefaultIfEmpty(1).Max();
+    }
+
+    private async Task<LayoutPayload?> GetDefaultTemplatePayloadAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var template = await _dbContext.DashboardTemplates
+            .AsNoTracking()
+            .Where(t => !t.IsDeleted && t.TenantId == tenantId && t.IsDefault)
+            .OrderByDescending(t => t.UpdatedAtUtc ?? t.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (template is null || string.IsNullOrWhiteSpace(template.LayoutJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            var payload = JsonSerializer.Deserialize<LayoutPayload>(template.LayoutJson);
+            return payload;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private DashboardTemplateState ToTemplateState(Domain.Entities.DashboardTemplate template)
+    {
+        var layout = DeserializeLayout(template.LayoutJson);
+        return new DashboardTemplateState(
+            template.Id,
+            template.Name,
+            template.Description,
+            template.IsDefault,
+            layout);
+    }
+
+    private DashboardLayoutState DeserializeLayout(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return NormalizePayload(new LayoutPayload(DefaultOrder, null, null, null));
+        }
+
+        try
+        {
+            var payload = JsonSerializer.Deserialize<LayoutPayload>(json);
+            if (payload is not null)
+            {
+                return NormalizePayload(payload);
+            }
+        }
+        catch (JsonException)
+        {
+            // ignore
+        }
+
+        return NormalizePayload(new LayoutPayload(DefaultOrder, null, null, null));
+    }
+
+    private string SerializeLayout(DashboardLayoutState layout)
+    {
+        var normalized = NormalizePayload(new LayoutPayload(layout.CardOrder, layout.Sizes, layout.Dimensions, layout.HiddenCards));
+        return JsonSerializer.Serialize(new LayoutPayload(
+            normalized.CardOrder,
+            normalized.Sizes,
+            normalized.Dimensions,
+            normalized.HiddenCards));
+    }
+
+    private async Task ClearDefaultTemplateAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var defaults = await _dbContext.DashboardTemplates
+            .Where(t => !t.IsDeleted && t.TenantId == tenantId && t.IsDefault)
+            .ToListAsync(cancellationToken);
+
+        if (defaults.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var template in defaults)
+        {
+            template.IsDefault = false;
+            template.UpdatedAtUtc = DateTime.UtcNow;
+        }
     }
 
     private async Task<List<RoleDefaultLayout>> LoadTenantDefaultsAsync(CancellationToken cancellationToken)

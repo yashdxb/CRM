@@ -6,6 +6,7 @@ export interface WorkspaceSettings {
   currency: string;
   approvalAmountThreshold?: number | null;
   approvalApproverRole?: string | null;
+  approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy: QualificationPolicy;
 }
 
@@ -15,7 +16,20 @@ export interface UpdateWorkspaceSettingsRequest {
   currency: string;
   approvalAmountThreshold?: number | null;
   approvalApproverRole?: string | null;
+  approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy?: QualificationPolicy | null;
+}
+
+export interface ApprovalWorkflowPolicy {
+  enabled: boolean;
+  steps: ApprovalWorkflowStep[];
+}
+
+export interface ApprovalWorkflowStep {
+  order: number;
+  approverRole: string;
+  amountThreshold?: number | null;
+  purpose?: string | null;
 }
 
 export interface QualificationPolicy {

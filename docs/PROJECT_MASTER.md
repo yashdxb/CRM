@@ -78,6 +78,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Default tenant key comes from configuration (`Tenant:DefaultKey`) when not resolved.
 - Tenant provider is set per request; EF query filters rely on it.
 - System roles are defined in `CRM.Enterprise.Security.Permissions.RoleNames`.
+- **Security levels are tenant-defined. Do not hard-code role security tiers.**
 
 ---
 
@@ -132,7 +133,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Do not refactor or reorganize folders unless explicitly requested.
 - Do not hardcode environment-specific URLs in production builds.
 - Do not bypass tenant isolation or permission checks.
-- Do not hardcode role names or role-based layouts; use role levels + configured defaults.
+- Do not hardcode role names or role-based layouts; use hierarchy levels + configured defaults.
 - Do not introduce inline HTML/CSS in components.
 - Do not commit or push unless explicitly instructed.
 
@@ -183,10 +184,10 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Status tags: `done`, `partial`, `not-started`, `candidate`
 
 ### Dashboard Packs (Role Defaults)
-- **Role levels** are configured per role (L1 = lowest, L2/L3 = higher). No role names are hard-coded.
-- **Default layout per role level** is stored in workspace settings (tenant config) and can be updated via API/UI.
-- Users can customize layout; **Reset to Role Default** restores the role-level pack.
-- Configure role levels in **Settings → Roles**.
+- **Hierarchy levels** are computed from parent/child depth (H1 = top level). No role names are hard-coded.
+- **Default layout per hierarchy level** is stored in workspace settings (tenant config) and can be updated via API/UI.
+- Users can customize layout; **Reset to Role Default** restores the hierarchy-level pack.
+- Configure hierarchy via **Settings → Roles**.
 
 ### Qualification Policy (Conversion Thresholds)
 - Qualification thresholds are configurable in **Settings → Workspace**.
@@ -229,6 +230,9 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Secondary space id: `90173924936`
 - Folder: `Product & Planning` (id: `90176298145`)
   - List: `Epics` (id: `901710553489`)
+  - List: `SCM Backlog` (id: `901710734279`)
+  - List: `CRM Backlog` (id: `901710720381`)
+  - List: `Project Backlog` (id: `901710720382`)
 - Folder: `CRM Modules` (id: `90176298150`)
   - List: `List` (id: `901710553353`)
 - Folder: `Engineering` (id: `90176298161`)

@@ -33,6 +33,22 @@
         <i class="pi pi-sliders-h"></i>
         <span>Workspace settings</span>
       </button>
+      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/approvals'] : null">
+        <i class="pi pi-check-square"></i>
+        <span>Approval settings</span>
+      </button>
+      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/security-levels'] : null">
+        <i class="pi pi-lock"></i>
+        <span>Security levels</span>
+      </button>
+      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/qualification-policy'] : null">
+        <i class="pi pi-shield"></i>
+        <span>Qualification policy</span>
+      </button>
+      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/qualification-thresholds'] : null">
+        <i class="pi pi-filter"></i>
+        <span>Threshold rules</span>
+      </button>
       <button pButton type="button" class="btn-glass" routerLink="/app/settings/roles">
         <i class="pi pi-shield"></i>
         <span>Manage roles</span>

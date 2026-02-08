@@ -1574,6 +1574,51 @@
   gap: $space-2;
 }
 
+.manager-health__truth {
+  margin-top: $space-3;
+  padding: $space-2 $space-3;
+  border-radius: $radius-lg;
+  border: 1px dashed rgba($primary, 0.2);
+  background: rgba($primary, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.manager-health__truth--empty {
+  color: $text-muted;
+}
+
+.truth-heading {
+  font-size: $font-size-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $text-muted;
+  font-weight: 600;
+}
+
+.truth-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-1;
+}
+
+.truth-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px $space-2;
+  border-radius: $radius-full;
+  background: rgba($primary, 0.1);
+  color: $text-primary;
+  font-size: $font-size-xs;
+  font-weight: 600;
+}
+
+.truth-empty {
+  font-size: $font-size-xs;
+}
+
 .manager-deal {
   display: flex;
   gap: $space-3;
@@ -1627,6 +1672,15 @@
   font-weight: 700;
   color: $text-primary;
   font-size: $font-size-sm;
+}
+
+.manager-deal__metrics {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: $font-size-xs;
+  color: $text-muted;
 }
 
 .manager-deal__dates {

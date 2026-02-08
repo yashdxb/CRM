@@ -1,5 +1,6 @@
 using CRM.Enterprise.Domain.Common;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Application.Tenants;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +30,7 @@ public class CrmDbContext : DbContext
     public DbSet<OpportunityStageHistory> OpportunityStageHistories => Set<OpportunityStageHistory>();
     public DbSet<OpportunityReviewChecklistItem> OpportunityReviewChecklistItems => Set<OpportunityReviewChecklistItem>();
     public DbSet<OpportunityApproval> OpportunityApprovals => Set<OpportunityApproval>();
+    public DbSet<OpportunityApprovalChain> OpportunityApprovalChains => Set<OpportunityApprovalChain>();
     public DbSet<OpportunityTeamMember> OpportunityTeamMembers => Set<OpportunityTeamMember>();
     public DbSet<OpportunityOnboardingItem> OpportunityOnboardingItems => Set<OpportunityOnboardingItem>();
     public DbSet<Activity> Activities => Set<Activity>();
@@ -43,6 +45,8 @@ public class CrmDbContext : DbContext
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<DashboardTemplate> DashboardTemplates => Set<DashboardTemplate>();
+    public DbSet<SecurityLevelDefinition> SecurityLevelDefinitions => Set<SecurityLevelDefinition>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<SupplierCertification> SupplierCertifications => Set<SupplierCertification>();
     public DbSet<SupplierContact> SupplierContacts => Set<SupplierContact>();
@@ -115,6 +119,7 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<OpportunityStage>().ToTable("OpportunityStages", CrmSchema);
         modelBuilder.Entity<OpportunityStageHistory>().ToTable("OpportunityStageHistories", CrmSchema);
         modelBuilder.Entity<OpportunityApproval>().ToTable("OpportunityApprovals", CrmSchema);
+        modelBuilder.Entity<OpportunityApprovalChain>().ToTable("OpportunityApprovalChains", CrmSchema);
         modelBuilder.Entity<OpportunityReviewChecklistItem>().ToTable("OpportunityReviewChecklistItems", CrmSchema);
         modelBuilder.Entity<OpportunityTeamMember>().ToTable("OpportunityTeamMembers", CrmSchema);
         modelBuilder.Entity<OpportunityOnboardingItem>().ToTable("OpportunityOnboardingItems", CrmSchema);
@@ -220,6 +225,26 @@ public class CrmDbContext : DbContext
             .HasFilter("[EmailNormalized] IS NOT NULL AND [IsDeleted] = 0")
             .IsUnique();
         modelBuilder.Entity<Role>().ToTable("Roles", IdentitySchema);
+        modelBuilder.Entity<Role>()
+            .HasOne<Role>()
+            .WithMany()
+            .HasForeignKey(r => r.ParentRoleId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Role>()
+            .Property(r => r.VisibilityScope)
+            .HasDefaultValue(RoleVisibilityScope.Team)
+            .HasSentinel(RoleVisibilityScope.Team);
+        modelBuilder.Entity<Role>()
+            .HasOne(r => r.SecurityLevel)
+            .WithMany()
+            .HasForeignKey(r => r.SecurityLevelId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Role>()
+            .HasIndex(r => new { r.TenantId, r.ParentRoleId })
+            .HasFilter("[IsDeleted] = 0");
+        modelBuilder.Entity<Role>()
+            .HasIndex(r => new { r.TenantId, r.HierarchyPath })
+            .HasFilter("[HierarchyPath] IS NOT NULL AND [IsDeleted] = 0");
         modelBuilder.Entity<UserRole>().ToTable("UserRoles", IdentitySchema);
         modelBuilder.Entity<RolePermission>().ToTable("RolePermissions", IdentitySchema);
         modelBuilder.Entity<PermissionCatalogEntry>().ToTable("PermissionCatalog", IdentitySchema);
@@ -233,6 +258,43 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Tenant>()
             .Property(t => t.ApprovalApproverRole)
             .HasMaxLength(200);
+
+        modelBuilder.Entity<DashboardTemplate>().ToTable("DashboardTemplates");
+        modelBuilder.Entity<DashboardTemplate>()
+            .Property(t => t.Name)
+            .HasMaxLength(160)
+            .IsRequired();
+        modelBuilder.Entity<DashboardTemplate>()
+            .Property(t => t.Description)
+            .HasMaxLength(500);
+        modelBuilder.Entity<DashboardTemplate>()
+            .Property(t => t.LayoutJson)
+            .HasColumnType("nvarchar(max)");
+        modelBuilder.Entity<DashboardTemplate>()
+            .Property(t => t.IsDefault)
+            .HasDefaultValue(false);
+        modelBuilder.Entity<DashboardTemplate>()
+            .HasIndex(t => new { t.TenantId, t.IsDefault })
+            .HasFilter("[IsDefault] = 1 AND [IsDeleted] = 0");
+
+        modelBuilder.Entity<SecurityLevelDefinition>().ToTable("SecurityLevelDefinitions");
+        modelBuilder.Entity<SecurityLevelDefinition>()
+            .Property(s => s.Name)
+            .HasMaxLength(120)
+            .IsRequired();
+        modelBuilder.Entity<SecurityLevelDefinition>()
+            .Property(s => s.Description)
+            .HasMaxLength(500);
+        modelBuilder.Entity<SecurityLevelDefinition>()
+            .Property(s => s.IsDefault)
+            .HasDefaultValue(false);
+        modelBuilder.Entity<SecurityLevelDefinition>()
+            .HasIndex(s => new { s.TenantId, s.Name })
+            .HasFilter("[IsDeleted] = 0")
+            .IsUnique();
+        modelBuilder.Entity<SecurityLevelDefinition>()
+            .HasIndex(s => new { s.TenantId, s.IsDefault })
+            .HasFilter("[IsDefault] = 1 AND [IsDeleted] = 0");
 
         modelBuilder.Entity<OpportunityApproval>()
             .Property(a => a.Amount)

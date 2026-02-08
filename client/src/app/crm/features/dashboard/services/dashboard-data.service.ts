@@ -76,6 +76,7 @@ export class DashboardDataService {
       reviewAckOverdueCount: 0,
       reviewAckAvgHours: 0,
       pipelineByStage: [],
+      topTruthGaps: [],
       reviewQueue: []
     };
     return this.http.get<ManagerPipelineHealth>(url).pipe(catchError(() => of(empty)));
@@ -167,5 +168,77 @@ export class DashboardDataService {
       hiddenCards?: string[];
       roleLevel?: number | null;
     }>(url, payload);
+  }
+
+  getTemplates() {
+    const url = `${environment.apiUrl}/api/dashboard/templates`;
+    return this.http.get<{
+      id: string;
+      name: string;
+      description?: string | null;
+      isDefault: boolean;
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+    }[]>(url);
+  }
+
+  createTemplate(payload: {
+    name: string;
+    description?: string | null;
+    cardOrder: string[];
+    sizes: Record<string, 'sm' | 'md' | 'lg'>;
+    dimensions: Record<string, { width: number; height: number }>;
+    hiddenCards: string[];
+    isDefault?: boolean | null;
+  }) {
+    const url = `${environment.apiUrl}/api/dashboard/templates`;
+    return this.http.post<{
+      id: string;
+      name: string;
+      description?: string | null;
+      isDefault: boolean;
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+    }>(url, payload);
+  }
+
+  updateTemplate(templateId: string, payload: {
+    name: string;
+    description?: string | null;
+    cardOrder: string[];
+    sizes: Record<string, 'sm' | 'md' | 'lg'>;
+    dimensions: Record<string, { width: number; height: number }>;
+    hiddenCards: string[];
+    isDefault?: boolean | null;
+  }) {
+    const url = `${environment.apiUrl}/api/dashboard/templates/${templateId}`;
+    return this.http.put<{
+      id: string;
+      name: string;
+      description?: string | null;
+      isDefault: boolean;
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+    }>(url, payload);
+  }
+
+  setDefaultTemplate(templateId: string) {
+    const url = `${environment.apiUrl}/api/dashboard/templates/${templateId}/default`;
+    return this.http.post<{
+      id: string;
+      name: string;
+      description?: string | null;
+      isDefault: boolean;
+      cardOrder: string[];
+      sizes?: Record<string, 'sm' | 'md' | 'lg'>;
+      dimensions?: Record<string, { width: number; height: number }>;
+      hiddenCards?: string[];
+    }>(url, {});
   }
 }

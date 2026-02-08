@@ -3,8 +3,8 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -36,7 +36,7 @@ interface ScreenPermission {
   imports: [
     ButtonModule,
     InputTextModule,
-    InputNumberModule,
+    SelectModule,
     TableModule,
     CheckboxModule,
     TooltipModule,
@@ -62,10 +62,29 @@ export class RoleFormPage {
   protected readonly permissionCatalog = signal<PermissionDefinition[]>([]);
   protected readonly loadingPermissions = signal(true);
   protected readonly loadingRole = signal(false);
+  protected readonly loadingRoles = signal(false);
   protected readonly roleSaving = signal(false);
   protected readonly isEditMode = signal(false);
   protected readonly isSystemRole = signal(false);
   protected readonly canManageAdmin = signal(false);
+  protected readonly roles = signal<RoleSummary[]>([]);
+  protected readonly visibilityOptions = [
+    { label: 'Team (default)', value: 'Team', hint: 'See own + descendant roles' },
+    { label: 'Self only', value: 'Self', hint: 'See only own records' },
+    { label: 'All', value: 'All', hint: 'See all records' }
+  ];
+  protected readonly securityLevels = signal<{ id: string; name: string; description?: string | null; rank: number; isDefault: boolean }[]>([]);
+  protected readonly loadingSecurityLevels = signal(false);
+  protected readonly securityOptions = computed(() =>
+    this.securityLevels()
+      .slice()
+      .sort((a, b) => a.rank - b.rank)
+      .map(level => ({
+        label: level.name,
+        value: level.id,
+        hint: level.description ?? `Rank ${level.rank}`
+      }))
+  );
   
   // Selected permissions as a Set for easy toggle
   protected readonly selectedPermissions = signal<Set<string>>(new Set());
@@ -73,7 +92,9 @@ export class RoleFormPage {
   protected readonly roleForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
     description: ['', [Validators.maxLength(240)]],
-    level: [null as number | null, [Validators.min(1), Validators.max(9)]],
+    parentRoleId: [null as string | null],
+    visibilityScope: ['Team' as string],
+    securityLevelId: [null as string | null],
     permissions: [[] as string[]]
   });
 
@@ -186,6 +207,8 @@ export class RoleFormPage {
     this.roleId = this.route.snapshot.paramMap.get('id');
     this.isEditMode.set(!!this.roleId);
     this.loadPermissions();
+    this.loadRoles();
+    this.loadSecurityLevels();
     if (this.roleId) {
       this.loadRole(this.roleId);
     }
@@ -289,7 +312,9 @@ export class RoleFormPage {
     this.roleForm.patchValue({
       name: role.name,
       description: role.description ?? '',
-      level: role.level ?? null,
+      parentRoleId: role.parentRoleId ?? null,
+      visibilityScope: role.visibilityScope ?? 'Team',
+      securityLevelId: role.securityLevelId ?? this.defaultSecurityLevelId(),
       permissions: [...role.permissions]
     });
     // Populate selected permissions from role
@@ -313,7 +338,9 @@ export class RoleFormPage {
     const payload: UpsertRoleRequest = {
       name: this.roleForm.value.name?.trim() ?? '',
       description: this.roleForm.value.description?.trim() || undefined,
-      level: this.roleForm.value.level ?? null,
+      parentRoleId: this.roleForm.value.parentRoleId ?? null,
+      visibilityScope: this.roleForm.value.visibilityScope ?? 'Team',
+      securityLevelId: this.roleForm.value.securityLevelId ?? this.defaultSecurityLevelId(),
       permissions
     };
 
@@ -338,6 +365,71 @@ export class RoleFormPage {
   protected selectedPermissionCount() {
     const permissions = (this.roleForm.value.permissions ?? []) as string[];
     return permissions.length;
+  }
+
+  protected parentRoleOptions() {
+    const currentId = this.roleId;
+    return this.roles()
+      .filter(role => role.id !== currentId)
+      .map((role) => ({
+        label: role.name,
+        value: role.id,
+        meta: role.hierarchyLevel ? `H${role.hierarchyLevel}` : 'H?'
+      }));
+  }
+
+  protected hierarchyPreviewLabel() {
+    const parentId = this.roleForm.value.parentRoleId ?? null;
+    if (!parentId) {
+      return 'H1 (top level)';
+    }
+    const parent = this.roles().find(role => role.id === parentId);
+    if (!parent?.hierarchyLevel) {
+      return 'H?';
+    }
+    return `H${parent.hierarchyLevel + 1}`;
+  }
+
+  private loadRoles() {
+    this.loadingRoles.set(true);
+    this.dataService.getRoles().subscribe({
+      next: (roles) => {
+        this.roles.set(roles ?? []);
+        this.loadingRoles.set(false);
+      },
+      error: () => {
+        this.loadingRoles.set(false);
+        this.raiseToast('error', 'Unable to load roles');
+      }
+    });
+  }
+
+  private loadSecurityLevels() {
+    this.loadingSecurityLevels.set(true);
+    this.dataService.getSecurityLevels().subscribe({
+      next: (levels) => {
+        this.securityLevels.set(levels ?? []);
+        this.loadingSecurityLevels.set(false);
+        if (!this.roleForm.value.securityLevelId) {
+          this.roleForm.patchValue({
+            securityLevelId: this.defaultSecurityLevelId()
+          });
+        }
+      },
+      error: () => {
+        this.securityLevels.set([]);
+        this.loadingSecurityLevels.set(false);
+      }
+    });
+  }
+
+  private defaultSecurityLevelId(): string | null {
+    const levels = this.securityLevels();
+    if (levels.length === 0) {
+      return null;
+    }
+    const defaultLevel = levels.find(level => level.isDefault);
+    return (defaultLevel ?? levels[0]).id;
   }
 
   protected clearToast() {

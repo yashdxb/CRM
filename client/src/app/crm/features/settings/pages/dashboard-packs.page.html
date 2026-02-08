@@ -11,9 +11,9 @@
         <i class="pi pi-th-large"></i>
         Dashboard packs
       </span>
-      <h1 class="hero-title">Role-based default dashboards</h1>
+      <h1 class="hero-title">Hierarchy-based default dashboards</h1>
       <p class="hero-subtitle">
-        Choose the default Command Center cards per role level (L1/L2/L3...).
+        Choose the default Command Center cards per hierarchy level (H1/H2/H3...).
       </p>
     </div>
   </header>
@@ -21,8 +21,8 @@
   <div class="glass-card pack-card">
     <div class="pack-header">
       <div class="pack-title">
-        <h2>Default pack by role level</h2>
-        <p>Select a level, then choose the cards that should appear by default.</p>
+        <h2>Default pack by hierarchy level</h2>
+        <p>Select a hierarchy level, then choose the cards that should appear by default.</p>
       </div>
       <div class="pack-actions">
         <p-select
@@ -33,7 +33,7 @@
           [ngModel]="selectedLevel()"
           (ngModelChange)="onLevelChange($event)"
           [disabled]="loadingRoles()"
-          placeholder="Select L1/L2/L3"
+          placeholder="Select H1/H2/H3"
           styleClass="level-select"
         ></p-select>
         <button
@@ -109,6 +109,117 @@
 
     <ng-template #loadingState>
       <div class="loading-state">Loading default pack...</div>
+    </ng-template>
+  </div>
+
+  <div class="glass-card pack-card template-card">
+    <div class="pack-header">
+      <div class="pack-title">
+        <h2>Default dashboard templates</h2>
+        <p>Create named templates for default Command Center layouts (no hard-coded names).</p>
+      </div>
+      <div class="pack-actions">
+        <p-select
+          appendTo="body"
+          [options]="templateOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedTemplateId()"
+          (ngModelChange)="onTemplateChange($event)"
+          [disabled]="loadingTemplates()"
+          placeholder="Select template"
+          styleClass="level-select"
+        ></p-select>
+        <input
+          type="text"
+          pInputText
+          class="template-input"
+          [ngModel]="templateName()"
+          (ngModelChange)="templateName.set($event)"
+          placeholder="Template name"
+        />
+        <button
+          pButton
+          type="button"
+          class="btn-outline"
+          [disabled]="savingTemplate()"
+          (click)="saveTemplate()"
+        >
+          Save template
+        </button>
+        <button
+          pButton
+          type="button"
+          class="btn-gradient"
+          [disabled]="settingDefault() || !selectedTemplateId()"
+          (click)="setDefaultTemplate()"
+        >
+          Set as default
+        </button>
+      </div>
+    </div>
+
+    <div class="pack-body" *ngIf="!loadingTemplates(); else templateLoading">
+      <div class="card-grid">
+        <div
+          class="card-option"
+          role="button"
+          tabindex="0"
+          *ngFor="let card of templateCardOptions()"
+          (click)="onTemplateCardClick(card.id, card.checked, $event)"
+          (keydown.enter)="toggleTemplateCard(card.id, !card.checked)"
+          (keydown.space)="toggleTemplateCard(card.id, !card.checked); $event.preventDefault()"
+        >
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="card.checked"
+            (ngModelChange)="toggleTemplateCard(card.id, $event)"
+            (click)="$event.stopPropagation()"
+          ></p-checkbox>
+          <div class="card-meta">
+            <div class="card-icon">
+              <i class="pi" [class]="card.icon"></i>
+            </div>
+            <div>
+              <div class="card-title">{{ card.label }}</div>
+              <div class="card-id">{{ card.id }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pack-subtitle">Chart widgets</div>
+      <div class="card-grid chart-grid">
+        <div
+          class="card-option"
+          role="button"
+          tabindex="0"
+          *ngFor="let chart of templateChartOptions()"
+          (click)="onTemplateChartClick(chart.id, chart.checked, $event)"
+          (keydown.enter)="toggleTemplateChart(chart.id, !chart.checked)"
+          (keydown.space)="toggleTemplateChart(chart.id, !chart.checked); $event.preventDefault()"
+        >
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="chart.checked"
+            (ngModelChange)="toggleTemplateChart(chart.id, $event)"
+            (click)="$event.stopPropagation()"
+          ></p-checkbox>
+          <div class="card-meta">
+            <div class="card-icon">
+              <i class="pi" [class]="chart.icon"></i>
+            </div>
+            <div>
+              <div class="card-title">{{ chart.label }}</div>
+              <div class="card-id">{{ chart.id }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #templateLoading>
+      <div class="loading-state">Loading templates...</div>
     </ng-template>
   </div>
 </section>

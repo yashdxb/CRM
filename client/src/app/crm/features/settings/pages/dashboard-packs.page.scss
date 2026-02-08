@@ -56,6 +56,10 @@
   backdrop-filter: blur(18px);
 }
 
+.pack-card + .pack-card {
+  margin-top: 1.5rem;
+}
+
 .pack-header {
   display: flex;
   align-items: center;
@@ -84,6 +88,10 @@
 
 .level-select {
   min-width: 180px;
+}
+
+.template-input {
+  min-width: 200px;
 }
 
 .card-grid {

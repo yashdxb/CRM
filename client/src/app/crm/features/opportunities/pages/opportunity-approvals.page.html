@@ -68,6 +68,8 @@
           <th>Account</th>
           <th>Requested By</th>
           <th>Purpose</th>
+          <th>Step</th>
+          <th>Chain</th>
           <th>Status</th>
           <th>Amount</th>
           <th>Requested</th>
@@ -84,6 +86,8 @@
           <td>{{ item.accountName }}</td>
           <td>{{ item.requestedByName || '—' }}</td>
           <td>{{ item.purpose }}</td>
+          <td>{{ item.stepOrder || 1 }} / {{ item.totalSteps || 1 }}</td>
+          <td>{{ item.chainStatus || item.status }}</td>
           <td>
             <p-tag [value]="item.status" [severity]="statusSeverity(item.status)"></p-tag>
           </td>
@@ -118,7 +122,7 @@
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="8">
+          <td colspan="10">
             <div class="empty-state">No approvals match the selected filters.</div>
           </td>
         </tr>

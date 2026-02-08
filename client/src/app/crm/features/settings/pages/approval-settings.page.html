@@ -1,0 +1,240 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Approvals</span>
+      </div>
+
+      <h1 class="hero-title">
+        <span class="title-gradient">Approval</span>
+        <span class="title-light">Workflow</span>
+      </h1>
+
+      <p class="hero-description">
+        Configure approval thresholds and multi-step chains for high-value opportunities and pricing exceptions.
+      </p>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Settings</span>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/roles">
+          <i class="pi pi-shield"></i>
+          <span>Manage Roles</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" [disabled]="loading()" (click)="loadSettings()">
+          <i class="pi pi-refresh"></i>
+          <span>Reload</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-check-square"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Approval Chain</span>
+          <strong class="card-value">{{ approvalWorkflowPolicy().enabled ? 'Enabled' : 'Disabled' }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-diagram-project"></i>
+            {{ approvalWorkflowPolicy().steps.length }} step(s)
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-user"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Primary Approver Role</span>
+          <strong class="card-value">{{ settingsForm.value.approvalApproverRole || 'Unset' }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-lock"></i>
+            Threshold: {{ settingsForm.value.approvalAmountThreshold || 'None' }}
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="data-section">
+    <div class="settings-layout">
+      <div class="data-card">
+        <div class="data-header">
+          <div class="header-title">
+            <h2>Approval Settings</h2>
+            <span class="record-count">Control how approvals are requested and routed</span>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge status-badge--success" *ngIf="!loading()">
+              <i class="pi pi-check"></i> Ready
+            </span>
+          </div>
+        </div>
+
+        <div class="loading-state" *ngIf="loading()">
+          <div class="skeleton-row" *ngFor="let _ of [0, 1, 2]">
+            <div class="skeleton skeleton-text"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+        </div>
+
+        <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+          <section class="form-card">
+            <h3 class="section-title section-title--warning">
+              <i class="pi pi-check-square"></i>
+              Approval Thresholds
+            </h3>
+            <p class="section-description">Set the baseline rule for when approvals are required</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>Approval Threshold</label>
+                <p-inputNumber
+                  formControlName="approvalAmountThreshold"
+                  [min]="0"
+                  placeholder="Leave empty to disable"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <small class="field-hint">Require approval when closing above this amount</small>
+              </div>
+
+              <div class="field">
+                <label>
+                  Approver Role
+                  <i
+                    class="pi pi-info-circle info-icon"
+                    pTooltip="Select the role that must approve high-value or exception requests. The system routes approval to users with this role."
+                    tooltipPosition="top"
+                  ></i>
+                </label>
+                <p-select
+                  appendTo="body"
+                  [options]="roleOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  formControlName="approvalApproverRole"
+                  placeholder="Select a role"
+                  styleClass="w-full"
+                ></p-select>
+                <small class="field-hint">Role required to approve high-value opportunities</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--warning">
+              <i class="pi pi-diagram-project"></i>
+              Approval Workflow
+            </h3>
+            <p class="section-description">Configure multi-step approval chains for complex deals</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>Multi-step approvals</label>
+                <div class="toggle-row">
+                  <label class="checkbox-field">
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="approvalWorkflowPolicy().enabled"
+                      (ngModelChange)="setApprovalWorkflowEnabled($event)"
+                      [ngModelOptions]="{ standalone: true }"
+                    ></p-checkbox>
+                    <span>Enable approval chain</span>
+                  </label>
+                </div>
+                <small class="field-hint">Add as many approval steps as you need</small>
+              </div>
+            </div>
+
+            <div class="form-card-inner" *ngIf="approvalWorkflowPolicy().enabled">
+              <div class="section-header">
+                <h4>Approval Steps</h4>
+                <button pButton type="button" class="btn btn-secondary btn-sm" (click)="addApprovalStep()">
+                  <i class="pi pi-plus"></i>
+                  Add Step
+                </button>
+              </div>
+
+              <div class="approval-step" *ngFor="let step of approvalWorkflowPolicy().steps; let idx = index">
+                <div class="step-header">
+                  <span>Step {{ step.order }}</span>
+                  <button pButton type="button" class="btn btn-ghost btn-sm" (click)="removeApprovalStep(idx)">
+                    Remove
+                  </button>
+                </div>
+                <div class="form-grid form-grid--2col">
+                  <div class="field">
+                    <label>
+                      Approver Role
+                      <i
+                        class="pi pi-info-circle info-icon"
+                        pTooltip="Each step routes to a specific role. Approvals advance in order only after the current role approves."
+                        tooltipPosition="top"
+                      ></i>
+                    </label>
+                    <p-select
+                      appendTo="body"
+                      [options]="roleOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="step.approverRole"
+                      (ngModelChange)="updateApprovalStep(idx, { approverRole: $event })"
+                      [ngModelOptions]="{ standalone: true }"
+                      placeholder="Select a role"
+                      styleClass="w-full"
+                    ></p-select>
+                  </div>
+                  <div class="field">
+                    <label>Amount Threshold</label>
+                    <p-inputNumber
+                      [ngModel]="step.amountThreshold"
+                      (ngModelChange)="updateApprovalStep(idx, { amountThreshold: $event })"
+                      [ngModelOptions]="{ standalone: true }"
+                      [min]="0"
+                      placeholder="Leave empty for all"
+                      styleClass="w-full"
+                    ></p-inputNumber>
+                  </div>
+                  <div class="field">
+                    <label>Purpose</label>
+                    <input
+                      pInputText
+                      [ngModel]="step.purpose"
+                      (ngModelChange)="updateApprovalStep(idx, { purpose: $event })"
+                      [ngModelOptions]="{ standalone: true }"
+                      placeholder="Close / Discount / Update"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="form-actions">
+            <button pButton type="submit" class="btn btn-primary" [disabled]="saving() || !canManageAdmin()">
+              <i class="pi pi-save"></i>
+              <span>{{ saving() ? 'Saving…' : 'Save Approval Settings' }}</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>

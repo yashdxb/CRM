@@ -76,6 +76,13 @@ public sealed class OpportunityService : IOpportunityService
         "Negotiation",
         "Commit"
     };
+    private static readonly HashSet<string> StagesRequiringDiscovery = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Qualification",
+        "Proposal",
+        "Negotiation",
+        "Commit"
+    };
     private static readonly HashSet<string> StagesRequiringDemoOutcome = new(StringComparer.OrdinalIgnoreCase)
     {
         "Proposal",
@@ -418,6 +425,22 @@ public sealed class OpportunityService : IOpportunityService
 
     public async Task<OpportunityOperationResult<OpportunityListItemDto>> CreateAsync(OpportunityUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Opportunity name is required.");
+        }
+        if ((!request.StageId.HasValue || request.StageId == Guid.Empty) && string.IsNullOrWhiteSpace(request.StageName))
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Stage is required when creating an opportunity.");
+        }
+        if (request.Amount <= 0)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Amount is required when creating an opportunity.");
+        }
+        if (!request.ExpectedCloseDate.HasValue)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Expected close date is required when creating an opportunity.");
+        }
         if (request.IsClosed && string.IsNullOrWhiteSpace(request.WinLossReason))
         {
             return OpportunityOperationResult<OpportunityListItemDto>.Fail("Win/Loss reason is required when closing an opportunity.");
@@ -583,6 +606,11 @@ public sealed class OpportunityService : IOpportunityService
         if (discountApprovalError is not null)
         {
             return OpportunityOperationResult<bool>.Fail(discountApprovalError);
+        }
+        var highValueUpdateError = await ValidateHighValueUpdateApprovalAsync(opp, request, actor, cancellationToken);
+        if (highValueUpdateError is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(highValueUpdateError);
         }
 
         var previousStageId = opp.StageId;
@@ -1880,6 +1908,21 @@ public sealed class OpportunityService : IOpportunityService
                 cancellationToken);
     }
 
+    private async Task<bool> HasDiscoveryActivityAsync(Guid opportunityId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Activities
+            .AsNoTracking()
+            .AnyAsync(
+                a => !a.IsDeleted
+                     && a.RelatedEntityType == ActivityRelationType.Opportunity
+                     && a.RelatedEntityId == opportunityId
+                     && a.Type == ActivityType.Meeting
+                     && (a.Subject.Contains("Discovery", StringComparison.OrdinalIgnoreCase)
+                         || (a.Description ?? string.Empty).Contains("Discovery", StringComparison.OrdinalIgnoreCase))
+                     && (a.DueDateUtc.HasValue || a.CompletedDateUtc.HasValue),
+                cancellationToken);
+    }
+
     private async Task<string?> ValidateStageChangeAsync(
         Opportunity opportunity,
         string nextStageName,
@@ -1952,6 +1995,14 @@ public sealed class OpportunityService : IOpportunityService
             if (string.IsNullOrWhiteSpace(successCriteria))
             {
                 return "Capture success criteria before moving to qualification or later stages.";
+            }
+        }
+        if (StagesRequiringDiscovery.Contains(nextStageName))
+        {
+            var hasDiscovery = await HasDiscoveryActivityAsync(opportunity.Id, cancellationToken);
+            if (!hasDiscovery)
+            {
+                return $"Discovery meeting must be scheduled and notes captured before moving to {nextStageName}.";
             }
         }
 
@@ -2193,25 +2244,25 @@ public sealed class OpportunityService : IOpportunityService
             return "Approval required to close this opportunity. Save it first, then request approval.";
         }
 
-        var approved = await _dbContext.OpportunityApprovals
-            .AsNoTracking()
-            .AnyAsync(
-                a => a.OpportunityId == opportunityId.Value &&
-                     a.Status == "Approved",
-                cancellationToken);
+        var approved = await HasApprovedChainAsync(opportunityId.Value, "Close", cancellationToken);
 
         if (approved)
         {
             return null;
         }
 
-        await _approvalService.RequestAsync(
+        var approvalResult = await _approvalService.RequestAsync(
             opportunityId.Value,
             request.Amount,
             request.Currency,
             "Close",
             actor,
             cancellationToken);
+
+        if (!approvalResult.Success)
+        {
+            return approvalResult.Error ?? "Approval workflow could not be started.";
+        }
 
         return "Approval required. Request submitted for review.";
     }
@@ -2224,6 +2275,10 @@ public sealed class OpportunityService : IOpportunityService
     {
         var discountPercent = request.DiscountPercent ?? 0m;
         var discountAmount = request.DiscountAmount ?? 0m;
+        if ((discountPercent > 0 || discountAmount > 0) && string.IsNullOrWhiteSpace(request.PricingNotes))
+        {
+            return "Pricing notes and objections are required when applying discounts.";
+        }
         var requiresApproval = discountPercent >= DiscountPercentApprovalThreshold
                                || discountAmount >= DiscountAmountApprovalThreshold;
         if (!requiresApproval)
@@ -2236,13 +2291,7 @@ public sealed class OpportunityService : IOpportunityService
             return "Discount approval required. Save the opportunity first to request approval.";
         }
 
-        var approved = await _dbContext.OpportunityApprovals
-            .AsNoTracking()
-            .AnyAsync(
-                a => a.OpportunityId == opportunityId.Value
-                     && a.Purpose == "Discount"
-                     && a.Status == "Approved",
-                cancellationToken);
+        var approved = await HasApprovedChainAsync(opportunityId.Value, "Discount", cancellationToken);
 
         if (approved)
         {
@@ -2250,7 +2299,7 @@ public sealed class OpportunityService : IOpportunityService
         }
 
         var amount = discountAmount > 0 ? discountAmount : request.Amount;
-        await _approvalService.RequestAsync(
+        var approvalResult = await _approvalService.RequestAsync(
             opportunityId.Value,
             amount,
             request.Currency,
@@ -2258,7 +2307,102 @@ public sealed class OpportunityService : IOpportunityService
             actor,
             cancellationToken);
 
+        if (!approvalResult.Success)
+        {
+            return approvalResult.Error ?? "Approval workflow could not be started.";
+        }
+
         return "Discount approval required. Request submitted for review.";
+    }
+
+    private async Task<string?> ValidateHighValueUpdateApprovalAsync(
+        Opportunity opportunity,
+        OpportunityUpsertRequest request,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var tenant = await _dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant is null)
+        {
+            return null;
+        }
+
+        var threshold = tenant.ApprovalAmountThreshold;
+        if (!threshold.HasValue || threshold.Value <= 0)
+        {
+            return null;
+        }
+
+        var amount = request.Amount;
+        if (amount < threshold.Value)
+        {
+            return null;
+        }
+
+        var closeDateChanged = request.ExpectedCloseDate != opportunity.ExpectedCloseDate;
+        var probabilityChanged = request.Probability != opportunity.Probability;
+        if (!closeDateChanged && !probabilityChanged)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(tenant.ApprovalApproverRole))
+        {
+            return "Approval role must be configured before updating close date or probability on high-value opportunities.";
+        }
+
+        var approved = await HasApprovedChainAsync(opportunity.Id, "Update", cancellationToken);
+
+        if (approved)
+        {
+            return null;
+        }
+
+        var approvalResult = await _approvalService.RequestAsync(
+            opportunity.Id,
+            amount,
+            request.Currency,
+            "Update",
+            actor,
+            cancellationToken);
+
+        if (!approvalResult.Success)
+        {
+            return approvalResult.Error ?? "Approval workflow could not be started.";
+        }
+
+        return "Approval required to update close date or probability for high-value opportunities. Request submitted for review.";
+    }
+
+    private async Task<bool> HasApprovedChainAsync(Guid opportunityId, string purpose, CancellationToken cancellationToken)
+    {
+        var chainApproved = await _dbContext.OpportunityApprovalChains
+            .AsNoTracking()
+            .AnyAsync(
+                chain => chain.OpportunityId == opportunityId
+                         && chain.Purpose == purpose
+                         && chain.Status == "Approved",
+                cancellationToken);
+
+        if (chainApproved)
+        {
+            return true;
+        }
+
+        return await _dbContext.OpportunityApprovals
+            .AsNoTracking()
+            .AnyAsync(
+                approval => approval.OpportunityId == opportunityId
+                            && approval.Purpose == purpose
+                            && approval.Status == "Approved"
+                            && approval.ApprovalChainId == null,
+                cancellationToken);
     }
 
     private AuditEventEntry CreateAuditEntry(

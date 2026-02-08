@@ -1,0 +1,228 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Security Levels</span>
+      </div>
+
+      <h1 class="hero-title">
+        <span class="title-gradient">Security</span>
+        <span class="title-light">Tiers</span>
+      </h1>
+
+      <p class="hero-description">
+        Define configurable access tiers for high-impact actions (approvals, overrides, admin changes).
+      </p>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Settings</span>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/roles">
+          <i class="pi pi-shield"></i>
+          <span>Manage Roles</span>
+        </button>
+        <button
+          pButton
+          type="button"
+          class="btn btn-ghost"
+          [disabled]="loading()"
+          (click)="loadSecurityLevels()"
+        >
+          <i class="pi pi-refresh"></i>
+          <span>Reload</span>
+        </button>
+        <button
+          pButton
+          type="button"
+          class="btn btn-primary"
+          [disabled]="!canManageAdmin()"
+          (click)="openCreate()"
+        >
+          <i class="pi pi-plus"></i>
+          <span>New Level</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-shield"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Defined Levels</span>
+          <strong class="card-value">{{ securityLevels().length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-cog"></i>
+            Configurable by Super Admin
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-star"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Default Level</span>
+          <strong class="card-value">{{ defaultSecurityLevelName() }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-check-circle"></i>
+            Used for new roles
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="data-section">
+    <div class="data-card">
+      <div class="data-header">
+        <div class="header-title">
+          <h2>Security Level Catalog</h2>
+          <span class="record-count">Controls role access tiers for sensitive actions</span>
+        </div>
+        <div class="header-actions">
+          <span class="status-badge status-badge--success" *ngIf="!loading()">
+            <i class="pi pi-check"></i> Ready
+          </span>
+        </div>
+      </div>
+
+      <div class="loading-state" *ngIf="loading()">
+        <div class="skeleton-row" *ngFor="let _ of [0, 1, 2]">
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+      </div>
+
+      <div class="table-wrapper" *ngIf="!loading()">
+        <p-table [value]="securityLevels()" styleClass="data-table">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Rank</th>
+              <th>Default</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-level>
+            <tr>
+              <td>
+                <div class="level-name">
+                  <span class="name">{{ level.name }}</span>
+                  <p-tag
+                    [severity]="level.isDefault ? 'success' : 'info'"
+                    [value]="getHeaderLabel(level)"
+                  ></p-tag>
+                </div>
+              </td>
+              <td>
+                <span class="level-description">{{ level.description || '—' }}</span>
+              </td>
+              <td>
+                <span class="rank-chip">{{ level.rank }}</span>
+              </td>
+              <td>
+                <i
+                  class="pi"
+                  [ngClass]="level.isDefault ? 'pi-check-circle status-icon success' : 'pi-circle-off status-icon muted'"
+                ></i>
+              </td>
+              <td class="text-right">
+                <button
+                  pButton
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  [disabled]="!canManageAdmin()"
+                  (click)="openEdit(level)"
+                >
+                  Edit
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  class="btn btn-ghost btn-sm danger"
+                  [disabled]="!canManageAdmin() || level.isDefault"
+                  (click)="deleteSecurityLevel(level)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </div>
+  </section>
+
+  <p-dialog
+    header="{{ editing() ? 'Edit Security Level' : 'Create Security Level' }}"
+    [visible]="editorOpen()"
+    (visibleChange)="editorOpen.set($event)"
+    [modal]="true"
+    [style]="{ width: '32rem' }"
+    [draggable]="false"
+    [resizable]="false"
+    (onHide)="closeEditor()"
+  >
+    <form class="dialog-form" [formGroup]="securityForm" (ngSubmit)="saveSecurityLevel()">
+      <div class="dialog-body">
+        <div class="field">
+          <label>Name <span class="required">*</span></label>
+          <input pInputText formControlName="name" placeholder="e.g. High Risk Approval" />
+          <small class="field-hint">Displayed in role configuration dropdowns.</small>
+        </div>
+        <div class="field">
+          <label>Description</label>
+          <textarea
+            pInputText
+            formControlName="description"
+            rows="3"
+            placeholder="Optional description of this level"
+          ></textarea>
+        </div>
+        <div class="field">
+          <label>Rank</label>
+          <p-inputNumber
+            formControlName="rank"
+            [min]="0"
+            [showButtons]="true"
+            styleClass="w-full"
+            inputStyleClass="w-full"
+          ></p-inputNumber>
+          <small class="field-hint">Lower rank = lower clearance. Used for comparisons.</small>
+        </div>
+        <div class="field">
+          <label>Default Level</label>
+          <div class="toggle-row">
+            <label class="checkbox-field">
+              <p-checkbox formControlName="isDefault" [binary]="true"></p-checkbox>
+              <span>Set as default for new roles</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="dialog-footer">
+        <button pButton type="button" class="btn btn-ghost" (click)="closeEditor()">Cancel</button>
+        <button pButton type="submit" class="btn btn-primary" [disabled]="saving()">
+          <span>{{ saving() ? 'Saving…' : 'Save Level' }}</span>
+        </button>
+      </div>
+    </form>
+  </p-dialog>
+</div>

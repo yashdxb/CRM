@@ -362,6 +362,82 @@
   gap: 1rem;
 }
 
+.view-toggle {
+  display: inline-flex;
+  gap: 0.4rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.18);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.toggle-btn {
+  border: none;
+  background: transparent;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: rgba(71, 85, 105, 0.9);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn.active {
+  background: #ffffff;
+  color: #1d4ed8;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.orgchart-wrapper {
+  padding: 1.25rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+}
+
+.org-node {
+  min-width: 200px;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.1);
+}
+
+.org-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.org-name {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.org-badges {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.org-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.org-meta {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: rgba(71, 85, 105, 0.8);
+}
+
 .header-title {
   display: flex;
   flex-direction: column;
@@ -757,6 +833,11 @@
     background: rgba(59, 130, 246, 0.14);
     color: #1d4ed8;
   }
+}
+
+.status-badge__sub {
+  font-weight: 600;
+  color: rgba(15, 23, 42, 0.7);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────

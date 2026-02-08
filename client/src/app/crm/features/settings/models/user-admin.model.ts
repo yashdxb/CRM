@@ -2,7 +2,12 @@ export interface RoleSummary {
   id: string;
   name: string;
   description?: string | null;
-  level?: number | null;
+  parentRoleId?: string | null;
+  hierarchyLevel?: number | null;
+  hierarchyPath?: string | null;
+  visibilityScope?: string | null;
+  securityLevelId?: string | null;
+  securityLevelName?: string | null;
   permissions: string[];
   isSystem: boolean;
 }
@@ -75,6 +80,23 @@ export interface ResetPasswordRequest {
 export interface UpsertRoleRequest {
   name: string;
   description?: string | null;
-  level?: number | null;
+  parentRoleId?: string | null;
+  visibilityScope?: string | null;
+  securityLevelId?: string | null;
   permissions: string[];
+}
+
+export interface UpsertSecurityLevelRequest {
+  name: string;
+  description?: string | null;
+  rank: number;
+  isDefault?: boolean | null;
+}
+
+export interface SecurityLevelDefinition {
+  id: string;
+  name: string;
+  description?: string | null;
+  rank: number;
+  isDefault: boolean;
 }

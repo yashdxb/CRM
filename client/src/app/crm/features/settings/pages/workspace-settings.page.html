@@ -28,7 +28,7 @@
       </h1>
       
       <p class="hero-description">
-        Set the company name, time zone, and currency that shape every record in the CRM. Configure approval workflows for high-value opportunities.
+        Set the company name, time zone, and currency that shape every record in the CRM.
       </p>
 
       <div class="hero-actions">
@@ -136,23 +136,6 @@
       </div>
     </div>
 
-    <div class="metric-card metric-card--new">
-      <div class="metric-icon">
-        <i class="pi pi-check-square"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Approvals</span>
-        <strong class="metric-value">{{ settingsForm.value.approvalAmountThreshold ? 'On' : 'Off' }}</strong>
-      </div>
-      <div class="metric-ring">
-        <svg viewBox="0 0 36 36">
-          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-          <path class="ring-fill ring-fill--orange" 
-            [attr.stroke-dasharray]="(settingsForm.value.approvalAmountThreshold ? 100 : 30) + ', 100'"
-            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-        </svg>
-      </div>
-    </div>
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════
@@ -266,206 +249,6 @@
             </div>
           </section>
 
-          <section class="form-card">
-            <h3 class="section-title section-title--warning">
-              <i class="pi pi-check-square"></i>
-              Approval Workflow
-            </h3>
-            <p class="section-description">Configure approval rules for high-value opportunities</p>
-            
-            <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Approval Threshold</label>
-                <p-inputNumber
-                  formControlName="approvalAmountThreshold"
-                  [min]="0"
-                  placeholder="Leave empty to disable"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <small class="field-hint">Require approval when closing above this amount</small>
-              </div>
-
-              <div class="field">
-                <label>Approver Role</label>
-                <input pInputText formControlName="approvalApproverRole" placeholder="Sales Manager" class="w-full" />
-                <small class="field-hint">Role required to approve high-value opportunities</small>
-              </div>
-            </div>
-          </section>
-
-          <section class="form-card">
-            <h3 class="section-title section-title--info">
-              <i class="pi pi-sliders-h"></i>
-              Qualification Policy
-            </h3>
-            <p class="section-description">Define conversion thresholds with context-aware rules and modifiers</p>
-
-            <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Default Threshold</label>
-                <p-inputNumber
-                  [ngModel]="qualificationPolicy().defaultThreshold"
-                  (ngModelChange)="setPolicyField('defaultThreshold', $event)"
-                  [min]="0"
-                  [max]="100"
-                  [ngModelOptions]="{ standalone: true }"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <small class="field-hint">Baseline score required to convert</small>
-              </div>
-
-              <div class="field">
-                <label>Manager Approval Below</label>
-                <p-inputNumber
-                  [ngModel]="qualificationPolicy().managerApprovalBelow"
-                  (ngModelChange)="setPolicyField('managerApprovalBelow', $event)"
-                  [min]="0"
-                  [max]="100"
-                  [ngModelOptions]="{ standalone: true }"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <small class="field-hint">Require manager approval under this score</small>
-              </div>
-
-              <div class="field">
-                <label>Block Below</label>
-                <p-inputNumber
-                  [ngModel]="qualificationPolicy().blockBelow"
-                  (ngModelChange)="setPolicyField('blockBelow', $event)"
-                  [min]="0"
-                  [max]="100"
-                  [ngModelOptions]="{ standalone: true }"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <small class="field-hint">Hard stop unless overrides are enabled</small>
-              </div>
-
-              <div class="field">
-                <label>Overrides</label>
-                <div class="toggle-row">
-                  <label class="checkbox-field">
-                    <p-checkbox
-                      [binary]="true"
-                      [ngModel]="qualificationPolicy().allowOverrides"
-                      (ngModelChange)="setPolicyField('allowOverrides', $event)"
-                      [ngModelOptions]="{ standalone: true }"
-                    ></p-checkbox>
-                    <span>Allow overrides</span>
-                  </label>
-                  <label class="checkbox-field">
-                    <p-checkbox
-                      [binary]="true"
-                      [ngModel]="qualificationPolicy().requireOverrideReason"
-                      (ngModelChange)="setPolicyField('requireOverrideReason', $event)"
-                      [ngModelOptions]="{ standalone: true }"
-                    ></p-checkbox>
-                    <span>Require override reason</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div class="policy-block">
-              <div class="policy-header">
-                <h4>Contextual Threshold Rules</h4>
-                <button type="button" class="btn btn-secondary" (click)="addThresholdRule()">
-                  <i class="pi pi-plus"></i>
-                  Add rule
-                </button>
-              </div>
-              <div class="policy-list" *ngIf="qualificationPolicy().thresholdRules.length; else noRules">
-                <div class="policy-row" *ngFor="let rule of qualificationPolicy().thresholdRules; let i = index">
-                  <p-select
-                    appendTo="body"
-                    [options]="segmentOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    [ngModel]="rule.segment"
-                    (ngModelChange)="updateThresholdRule(i, { segment: $event })"
-                    [ngModelOptions]="{ standalone: true }"
-                    placeholder="Segment"
-                    styleClass="w-full"
-                  ></p-select>
-                  <p-select
-                    appendTo="body"
-                    [options]="dealTypeOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    [ngModel]="rule.dealType"
-                    (ngModelChange)="updateThresholdRule(i, { dealType: $event })"
-                    [ngModelOptions]="{ standalone: true }"
-                    placeholder="Deal type"
-                    styleClass="w-full"
-                  ></p-select>
-                  <p-select
-                    appendTo="body"
-                    [options]="stageOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    [ngModel]="rule.stage"
-                    (ngModelChange)="updateThresholdRule(i, { stage: $event })"
-                    [ngModelOptions]="{ standalone: true }"
-                    placeholder="Stage"
-                    styleClass="w-full"
-                  ></p-select>
-                  <p-inputNumber
-                    [ngModel]="rule.threshold"
-                    (ngModelChange)="updateThresholdRule(i, { threshold: $event })"
-                    [min]="0"
-                    [max]="100"
-                    [ngModelOptions]="{ standalone: true }"
-                    styleClass="w-full"
-                  ></p-inputNumber>
-                  <button type="button" class="btn btn-ghost" (click)="removeThresholdRule(i)">
-                    <i class="pi pi-times"></i>
-                  </button>
-                </div>
-              </div>
-              <ng-template #noRules>
-                <p class="hint">No contextual rules yet. Add rules to override the default threshold.</p>
-              </ng-template>
-            </div>
-
-            <div class="policy-block">
-              <div class="policy-header">
-                <h4>Modifiers</h4>
-                <button type="button" class="btn btn-secondary" (click)="addModifierRule()">
-                  <i class="pi pi-plus"></i>
-                  Add modifier
-                </button>
-              </div>
-              <div class="policy-list" *ngIf="qualificationPolicy().modifiers.length; else noModifiers">
-                <div class="policy-row policy-row--modifier" *ngFor="let modifier of qualificationPolicy().modifiers; let i = index">
-                  <p-select
-                    appendTo="body"
-                    [options]="modifierKeyOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    [ngModel]="modifier.key"
-                    (ngModelChange)="updateModifierRule(i, { key: $event })"
-                    [ngModelOptions]="{ standalone: true }"
-                    placeholder="Modifier"
-                    styleClass="w-full"
-                  ></p-select>
-                  <p-inputNumber
-                    [ngModel]="modifier.delta"
-                    (ngModelChange)="updateModifierRule(i, { delta: $event })"
-                    [min]="-50"
-                    [max]="50"
-                    [ngModelOptions]="{ standalone: true }"
-                    styleClass="w-full"
-                  ></p-inputNumber>
-                  <button type="button" class="btn btn-ghost" (click)="removeModifierRule(i)">
-                    <i class="pi pi-times"></i>
-                  </button>
-                </div>
-              </div>
-              <ng-template #noModifiers>
-                <p class="hint">No modifiers defined. Add signals to adjust the threshold dynamically.</p>
-              </ng-template>
-            </div>
-          </section>
-
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">
               <i class="pi pi-refresh"></i>
@@ -518,28 +301,6 @@
             <div>
               <span class="preview-item-label">Currency</span>
               <strong class="preview-item-value">{{ settingsForm.value.currency || 'USD' }}</strong>
-            </div>
-          </div>
-
-          <div class="preview-item">
-            <div class="preview-item-icon preview-item-icon--warning">
-              <i class="pi pi-chart-line"></i>
-            </div>
-            <div>
-              <span class="preview-item-label">Approval Threshold</span>
-              <strong class="preview-item-value">
-                {{ settingsForm.value.approvalAmountThreshold ? (settingsForm.value.approvalAmountThreshold | number:'1.0-0') : 'Disabled' }}
-              </strong>
-            </div>
-          </div>
-
-          <div class="preview-item">
-            <div class="preview-item-icon preview-item-icon--info">
-              <i class="pi pi-user"></i>
-            </div>
-            <div>
-              <span class="preview-item-label">Approver Role</span>
-              <strong class="preview-item-value">{{ settingsForm.value.approvalApproverRole || 'Not set' }}</strong>
             </div>
           </div>
         </div>

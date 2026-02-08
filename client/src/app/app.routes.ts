@@ -258,6 +258,26 @@ export const routes: Routes = [
             loadComponent: () => import('./crm/features/settings/pages/workspace-settings.page').then((m) => m.WorkspaceSettingsPage)
           },
           {
+            path: 'approvals',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Approval Settings' },
+            loadComponent: () => import('./crm/features/settings/pages/approval-settings.page').then((m) => m.ApprovalSettingsPage)
+          },
+          {
+            path: 'qualification-policy',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Qualification Policy' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/qualification-policy.page').then((m) => m.QualificationPolicyPage)
+          },
+          {
+            path: 'qualification-thresholds',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Qualification Threshold Rules' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/qualification-thresholds.page').then((m) => m.QualificationThresholdsPage)
+          },
+          {
             path: 'lead-assignment',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'Lead Assignment' },
@@ -268,6 +288,13 @@ export const routes: Routes = [
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Dashboard Packs' },
             loadComponent: () => import('./crm/features/settings/pages/dashboard-packs.page').then((m) => m.DashboardPacksPage)
+          },
+          {
+            path: 'security-levels',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Security Levels' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/security-levels.page').then((m) => m.SecurityLevelsPage)
           },
           {
             path: 'lead-assignment/:id/edit',

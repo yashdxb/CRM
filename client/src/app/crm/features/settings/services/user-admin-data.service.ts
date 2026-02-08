@@ -4,6 +4,8 @@ import { map } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import {
   PermissionDefinition,
+  SecurityLevelDefinition,
+  UpsertSecurityLevelRequest,
   ResetPasswordRequest,
   RoleSummary,
   UpsertRoleRequest,
@@ -79,6 +81,22 @@ export class UserAdminDataService {
           }))
         )
       );
+  }
+
+  getSecurityLevels() {
+    return this.http.get<SecurityLevelDefinition[]>(`${this.baseUrl}/api/security-levels`);
+  }
+
+  createSecurityLevel(payload: UpsertSecurityLevelRequest) {
+    return this.http.post<SecurityLevelDefinition>(`${this.baseUrl}/api/security-levels`, payload);
+  }
+
+  updateSecurityLevel(id: string, payload: UpsertSecurityLevelRequest) {
+    return this.http.put<SecurityLevelDefinition>(`${this.baseUrl}/api/security-levels/${id}`, payload);
+  }
+
+  deleteSecurityLevel(id: string) {
+    return this.http.delete<void>(`${this.baseUrl}/api/security-levels/${id}`);
   }
 
   createRole(payload: UpsertRoleRequest) {

@@ -61,23 +61,85 @@
               />
             </div>
             <div class="field">
-              <label for="roleLevel">Role Level (L1 = lowest)</label>
-              <p-inputNumber
-                inputId="roleLevel"
-                formControlName="level"
-                [min]="1"
-                [max]="9"
-                [showButtons]="true"
-                placeholder="e.g. 1"
+              <label>Hierarchy Level (computed)</label>
+              <input
+                pInputText
+                [value]="hierarchyPreviewLabel()"
+                readonly
+                class="w-full"
+              />
+              <small class="field-hint">Derived from parent role (no manual level input).</small>
+            </div>
+            <div class="field">
+              <label for="visibilityScope">Visibility Scope</label>
+              <p-select
+                inputId="visibilityScope"
+                formControlName="visibilityScope"
+                [options]="visibilityOptions"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
                 styleClass="w-full"
-                inputStyleClass="w-full"
-              ></p-inputNumber>
-              <small class="field-hint">Higher levels load higher dashboard packs by default.</small>
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option">
+                    <span>{{ option.label }}</span>
+                    <span class="select-meta">{{ option.hint }}</span>
+                  </div>
+                </ng-template>
+              </p-select>
+              <small class="field-hint">Controls reporting rollups and default visibility for this role.</small>
+            </div>
+            <div class="field">
+              <label for="securityLevel">Security Level</label>
+              <p-select
+                inputId="securityLevel"
+                formControlName="securityLevelId"
+                [options]="securityOptions()"
+                optionLabel="label"
+                optionValue="value"
+                appendTo="body"
+                styleClass="w-full"
+                [disabled]="loadingSecurityLevels()"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option">
+                    <span>{{ option.label }}</span>
+                    <span class="select-meta">{{ option.hint }}</span>
+                  </div>
+                </ng-template>
+              </p-select>
+              <small class="field-hint">Controls high-risk actions (approvals, overrides, admin changes).</small>
+              <small class="field-hint">
+                Manage levels in
+                <a routerLink="/app/settings/security-levels">Security levels</a>.
+              </small>
+            </div>
+            <div class="field">
+              <label for="roleParent">Parent Role</label>
+              <p-select
+                inputId="roleParent"
+                formControlName="parentRoleId"
+                [options]="parentRoleOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Top-level role"
+                appendTo="body"
+                styleClass="w-full"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option">
+                    <span>{{ option.label }}</span>
+                    <span class="select-meta">{{ option.meta }}</span>
+                  </div>
+                </ng-template>
+              </p-select>
+              <small class="field-hint">Hierarchy: {{ hierarchyPreviewLabel() }}</small>
             </div>
           </div>
           <div class="role-pack-link">
             <i class="pi pi-th-large"></i>
-            <span>Manage default dashboard pack for this level</span>
+            <span>Manage default dashboard pack for this hierarchy level</span>
             <a routerLink="/app/settings/dashboard-packs">Open dashboard packs</a>
           </div>
         </section>

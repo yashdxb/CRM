@@ -2,10 +2,12 @@ import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { OrganizationChartModule } from 'primeng/organizationchart';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
+import { TreeNode } from 'primeng/api';
 
 import { PermissionDefinition, RoleSummary } from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
@@ -19,6 +21,7 @@ import { AppToastService } from '../../../../core/app-toast.service';
   standalone: true,
   imports: [
     ButtonModule,
+    OrganizationChartModule,
     NgClass,
     NgFor,
     NgIf,
@@ -42,6 +45,8 @@ export class RolesPage {
   protected readonly loadingPermissions = signal(true);
   protected readonly roleSaving = signal(false);
   protected readonly canManageAdmin = signal(false);
+  protected readonly showHierarchy = signal(false);
+  protected readonly orgChartNodes = computed(() => this.buildOrgChartNodes());
 
   /** Count of system roles */
   protected readonly systemRolesCount = computed(() => this.roles().filter(r => r.isSystem).length);
@@ -106,6 +111,10 @@ export class RolesPage {
         this.raiseToast('error', 'Unable to delete role');
       }
     });
+  }
+
+  protected toggleView(mode: 'list' | 'hierarchy') {
+    this.showHierarchy.set(mode === 'hierarchy');
   }
 
   protected permissionLabel(key: string) {
@@ -191,6 +200,38 @@ export class RolesPage {
       return 'role-icon--system';
     }
     return 'role-icon--custom';
+  }
+
+  private buildOrgChartNodes(): TreeNode[] {
+    const roles = this.roles();
+    if (!roles.length) {
+      return [];
+    }
+
+    const nodesById = new Map<string, TreeNode>();
+    roles.forEach((role) => {
+      nodesById.set(role.id, {
+        label: role.name,
+        data: role,
+        expanded: true,
+        children: []
+      });
+    });
+
+    const roots: TreeNode[] = [];
+    roles.forEach((role) => {
+      const node = nodesById.get(role.id)!;
+      const parentId = role.parentRoleId ?? null;
+      if (parentId && nodesById.has(parentId)) {
+        const parent = nodesById.get(parentId)!;
+        parent.children = parent.children ?? [];
+        parent.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    });
+
+    return roots;
   }
 
   protected clearToast() {

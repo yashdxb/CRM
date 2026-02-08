@@ -1,4 +1,5 @@
 using CRM.Enterprise.Api.Contracts.Workspace;
+using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
@@ -47,6 +48,7 @@ public class WorkspaceController : ControllerBase
             tenant.Currency,
             tenant.ApprovalAmountThreshold,
             tenant.ApprovalApproverRole,
+            ResolveApprovalWorkflowPolicy(tenant),
             ResolveQualificationPolicy(tenant)));
     }
 
@@ -70,6 +72,10 @@ public class WorkspaceController : ControllerBase
         tenant.ApprovalApproverRole = string.IsNullOrWhiteSpace(request.ApprovalApproverRole)
             ? null
             : request.ApprovalApproverRole.Trim();
+        if (request.ApprovalWorkflowPolicy is not null)
+        {
+            tenant.ApprovalWorkflowJson = JsonSerializer.Serialize(request.ApprovalWorkflowPolicy, JsonOptions);
+        }
         if (request.QualificationPolicy is not null)
         {
             tenant.QualificationPolicyJson = JsonSerializer.Serialize(request.QualificationPolicy, JsonOptions);
@@ -86,6 +92,7 @@ public class WorkspaceController : ControllerBase
             tenant.Currency,
             tenant.ApprovalAmountThreshold,
             tenant.ApprovalApproverRole,
+            ResolveApprovalWorkflowPolicy(tenant),
             ResolveQualificationPolicy(tenant)));
     }
 
@@ -104,6 +111,30 @@ public class WorkspaceController : ControllerBase
         catch (JsonException)
         {
             return QualificationPolicyDefaults.CreateDefault();
+        }
+    }
+
+    private static ApprovalWorkflowPolicy ResolveApprovalWorkflowPolicy(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.ApprovalWorkflowJson))
+        {
+            return ApprovalWorkflowPolicyDefaults.FromTenantDefaults(
+                tenant.ApprovalAmountThreshold,
+                tenant.ApprovalApproverRole);
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<ApprovalWorkflowPolicy>(tenant.ApprovalWorkflowJson, JsonOptions);
+            return parsed ?? ApprovalWorkflowPolicyDefaults.FromTenantDefaults(
+                tenant.ApprovalAmountThreshold,
+                tenant.ApprovalApproverRole);
+        }
+        catch (JsonException)
+        {
+            return ApprovalWorkflowPolicyDefaults.FromTenantDefaults(
+                tenant.ApprovalAmountThreshold,
+                tenant.ApprovalApproverRole);
         }
     }
 }

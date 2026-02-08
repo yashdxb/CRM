@@ -21,6 +21,7 @@ public record ManagerPipelineHealthDto(
     int ReviewAckOverdueCount,
     decimal ReviewAckAvgHours,
     IReadOnlyList<PipelineStageDto> PipelineByStage,
+    IReadOnlyList<RiskFlagSummaryDto> TopTruthGaps,
     IReadOnlyList<ManagerReviewDealDto> ReviewQueue);
 
 public record ManagerReviewDealDto(
@@ -31,6 +32,8 @@ public record ManagerReviewDealDto(
     decimal Amount,
     string OwnerName,
     string Reason,
+    decimal? TruthCoverage,
+    decimal? TimeToTruthDays,
     DateTime? NextStepDueAtUtc,
     DateTime? LastActivityAtUtc,
     DateTime? ExpectedCloseDate);

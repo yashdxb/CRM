@@ -111,6 +111,7 @@ export interface ManagerPipelineHealth {
   reviewAckOverdueCount: number;
   reviewAckAvgHours: number;
   pipelineByStage: PipelineStage[];
+  topTruthGaps: RiskFlagSummary[];
   reviewQueue: ManagerReviewDeal[];
 }
 
@@ -122,6 +123,8 @@ export interface ManagerReviewDeal {
   amount: number;
   ownerName: string;
   reason: string;
+  truthCoverage?: number;
+  timeToTruthDays?: number;
   nextStepDueAtUtc?: string;
   lastActivityAtUtc?: string;
   expectedCloseDate?: string;

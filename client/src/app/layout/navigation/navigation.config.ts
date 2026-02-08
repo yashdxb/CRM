@@ -169,6 +169,10 @@ export const NAV_LINKS: NavLink[] = [
       { label: 'Roles', icon: 'pi-shield', path: '/app/settings/roles', permission: PERMISSION_KEYS.administrationView },
       { label: 'Invite', icon: 'pi-user-plus', path: '/app/settings/invite', permission: PERMISSION_KEYS.administrationManage },
       { label: 'Workspace', icon: 'pi-sliders-h', path: '/app/settings/workspace', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Approvals', icon: 'pi-check-square', path: '/app/settings/approvals', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Security levels', icon: 'pi-lock', path: '/app/settings/security-levels', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Qualification Policy', icon: 'pi-shield', path: '/app/settings/qualification-policy', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Qualification Thresholds', icon: 'pi-filter', path: '/app/settings/qualification-thresholds', permission: PERMISSION_KEYS.administrationManage },
       { label: 'Lead assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
       { label: 'Audit log', icon: 'pi-clipboard', path: '/app/settings/audit-log', permission: PERMISSION_KEYS.auditView },
       { label: 'Tenant configuration', icon: 'pi-building', path: '/app/settings/tenants', permission: PERMISSION_KEYS.tenantsView }

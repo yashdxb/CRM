@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { CheckboxModule } from 'primeng/checkbox';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -28,6 +29,7 @@ interface DashboardCardOption {
     ButtonModule,
     SelectModule,
     CheckboxModule,
+    InputTextModule,
     BreadcrumbsComponent
   ],
   templateUrl: './dashboard-packs.page.html',
@@ -47,10 +49,10 @@ export class DashboardPacksPage {
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly availableLevels = computed(() => {
     const levels = this.roles()
-      .map(role => role.level ?? null)
+      .map(role => role.hierarchyLevel ?? null)
       .filter((level): level is number => typeof level === 'number' && level > 0);
     const unique = Array.from(new Set(levels)).sort((a, b) => a - b);
-    return unique.map(level => ({ label: `L${level}`, value: level }));
+    return unique.map(level => ({ label: `H${level}`, value: level }));
   });
 
   protected readonly selectedLevel = signal<number | null>(null);
@@ -59,6 +61,15 @@ export class DashboardPacksPage {
   protected readonly defaultOrder = signal<string[]>([]);
   protected readonly loadingDefaults = signal(false);
   protected readonly savingDefaults = signal(false);
+  protected readonly templates = signal<{ id: string; name: string; isDefault: boolean; cardOrder: string[]; hiddenCards?: string[] }[]>([]);
+  protected readonly loadingTemplates = signal(false);
+  protected readonly savingTemplate = signal(false);
+  protected readonly settingDefault = signal(false);
+  protected readonly selectedTemplateId = signal<string | null>(null);
+  protected readonly templateName = signal('');
+  protected readonly templateSelectedCards = signal<Set<string>>(new Set());
+  protected readonly templateSelectedCharts = signal<Set<string>>(new Set());
+  protected readonly templateOrder = signal<string[]>([]);
 
   protected readonly cardCatalog: DashboardCardOption[] = [
     { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
@@ -91,9 +102,28 @@ export class DashboardPacksPage {
       checked: this.selectedCharts().has(chart.id)
     }))
   );
+  protected readonly templateCardOptions = computed(() =>
+    this.cardCatalog.map(card => ({
+      ...card,
+      checked: this.templateSelectedCards().has(card.id)
+    }))
+  );
+  protected readonly templateChartOptions = computed(() =>
+    this.chartCatalog.map(chart => ({
+      ...chart,
+      checked: this.templateSelectedCharts().has(chart.id)
+    }))
+  );
+  protected readonly templateOptions = computed(() =>
+    this.templates().map(template => ({
+      label: template.isDefault ? `${template.name} (Default)` : template.name,
+      value: template.id
+    }))
+  );
 
   constructor() {
     this.loadRoles();
+    this.loadTemplates();
   }
 
   protected onLevelChange(level: number | null) {
@@ -126,6 +156,26 @@ export class DashboardPacksPage {
     this.selectedCharts.set(next);
   }
 
+  protected toggleTemplateCard(cardId: string, checked: boolean) {
+    const next = new Set(this.templateSelectedCards());
+    if (checked) {
+      next.add(cardId);
+    } else {
+      next.delete(cardId);
+    }
+    this.templateSelectedCards.set(next);
+  }
+
+  protected toggleTemplateChart(chartId: string, checked: boolean) {
+    const next = new Set(this.templateSelectedCharts());
+    if (checked) {
+      next.add(chartId);
+    } else {
+      next.delete(chartId);
+    }
+    this.templateSelectedCharts.set(next);
+  }
+
   protected onCardClick(cardId: string, checked: boolean, event: Event) {
     const target = event.target as HTMLElement | null;
     if (target?.closest('.p-checkbox')) {
@@ -142,6 +192,22 @@ export class DashboardPacksPage {
     this.toggleChart(chartId, !checked);
   }
 
+  protected onTemplateCardClick(cardId: string, checked: boolean, event: Event) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.p-checkbox')) {
+      return;
+    }
+    this.toggleTemplateCard(cardId, !checked);
+  }
+
+  protected onTemplateChartClick(chartId: string, checked: boolean, event: Event) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('.p-checkbox')) {
+      return;
+    }
+    this.toggleTemplateChart(chartId, !checked);
+  }
+
   protected saveDefaults() {
     if (!this.canManageDefaults()) {
       this.toastService.show('error', 'You do not have permission to update defaults.', 3000);
@@ -149,7 +215,7 @@ export class DashboardPacksPage {
     }
     const level = this.selectedLevel();
     if (!level) {
-      this.toastService.show('error', 'Select a role level to save.', 3000);
+      this.toastService.show('error', 'Select a hierarchy level to save.', 3000);
       return;
     }
     const order = this.buildOrder();
@@ -175,7 +241,7 @@ export class DashboardPacksPage {
         next: () => {
           this.savingDefaults.set(false);
           this.defaultOrder.set(order);
-          this.toastService.show('success', `Default L${level} pack saved.`, 3000);
+          this.toastService.show('success', `Default H${level} pack saved.`, 3000);
         },
         error: (error) => {
           this.savingDefaults.set(false);
@@ -187,9 +253,128 @@ export class DashboardPacksPage {
       });
   }
 
+  protected onTemplateChange(templateId: string | null) {
+    this.selectedTemplateId.set(templateId);
+    if (!templateId) {
+      this.templateName.set('');
+      this.templateSelectedCards.set(new Set());
+      this.templateSelectedCharts.set(new Set());
+      this.templateOrder.set([]);
+      return;
+    }
+
+    const selected = this.templates().find(template => template.id === templateId);
+    if (!selected) {
+      return;
+    }
+
+    this.templateName.set(selected.name);
+    const order = selected.cardOrder ?? [];
+    const hidden = selected.hiddenCards ?? [];
+    this.templateOrder.set(order);
+    this.templateSelectedCards.set(new Set(order));
+    const selectedCharts = this.chartCatalog
+      .map(chart => chart.id)
+      .filter(id => !hidden.includes(id));
+    this.templateSelectedCharts.set(new Set(selectedCharts));
+  }
+
+  protected saveTemplate() {
+    if (!this.canManageDefaults()) {
+      this.toastService.show('error', 'You do not have permission to update templates.', 3000);
+      return;
+    }
+
+    const name = this.templateName().trim();
+    if (!name) {
+      this.toastService.show('error', 'Template name is required.', 3000);
+      return;
+    }
+
+    const order = this.buildTemplateOrder();
+    if (order.length === 0) {
+      this.toastService.show('error', 'Select at least one card.', 3000);
+      return;
+    }
+
+    this.savingTemplate.set(true);
+    const selectedCharts = this.templateSelectedCharts();
+    const hiddenCharts = this.chartCatalog.map(chart => chart.id).filter(id => !selectedCharts.has(id));
+    const payload = {
+      name,
+      description: null,
+      cardOrder: order,
+      sizes: {},
+      dimensions: {},
+      hiddenCards: [
+        ...this.cardCatalog.map(card => card.id).filter(id => !order.includes(id)),
+        ...hiddenCharts
+      ],
+      isDefault: null
+    };
+
+    const existingId = this.selectedTemplateId();
+    const request = existingId
+      ? this.dashboardData.updateTemplate(existingId, payload)
+      : this.dashboardData.createTemplate(payload);
+
+    request.subscribe({
+      next: (template) => {
+        this.savingTemplate.set(false);
+        this.templateOrder.set(order);
+        this.templateSelectedCards.set(new Set(order));
+        this.templateSelectedCharts.set(new Set(this.chartCatalog.map(chart => chart.id).filter(id => !payload.hiddenCards.includes(id))));
+        this.selectedTemplateId.set(template.id);
+        this.refreshTemplates(template.id);
+        this.toastService.show('success', 'Dashboard template saved.', 3000);
+      },
+      error: (error) => {
+        this.savingTemplate.set(false);
+        const message = typeof error?.error === 'string' && error.error.trim().length > 0
+          ? error.error
+          : 'Unable to save template.';
+        this.toastService.show('error', message, 3500);
+      }
+    });
+  }
+
+  protected setDefaultTemplate() {
+    const templateId = this.selectedTemplateId();
+    if (!templateId) {
+      this.toastService.show('error', 'Select a template first.', 3000);
+      return;
+    }
+
+    this.settingDefault.set(true);
+    this.dashboardData.setDefaultTemplate(templateId).subscribe({
+      next: (template) => {
+        this.settingDefault.set(false);
+        this.refreshTemplates(template.id);
+        this.toastService.show('success', 'Default dashboard template updated.', 3000);
+      },
+      error: () => {
+        this.settingDefault.set(false);
+        this.toastService.show('error', 'Unable to set default template.', 3500);
+      }
+    });
+  }
+
   private buildOrder(): string[] {
     const selected = this.selectedCards();
     const current = this.defaultOrder();
+    if (current.length === 0) {
+      return this.cardCatalog.map(card => card.id).filter(id => selected.has(id));
+    }
+    const inOrder = current.filter(id => selected.has(id));
+    const missing = this.cardCatalog
+      .map(card => card.id)
+      .filter(id => selected.has(id) && !inOrder.includes(id));
+    return [...inOrder, ...missing];
+  }
+
+  private buildTemplateOrder(): string[] {
+    const selected = this.templateSelectedCards();
+    const current = this.templateOrder();
     if (current.length === 0) {
       return this.cardCatalog.map(card => card.id).filter(id => selected.has(id));
     }
@@ -214,6 +399,49 @@ export class DashboardPacksPage {
       error: () => {
         this.loadingRoles.set(false);
         this.roles.set([]);
+      }
+    });
+  }
+
+  private loadTemplates() {
+    this.loadingTemplates.set(true);
+    this.dashboardData.getTemplates().subscribe({
+      next: (templates) => {
+        const normalized = (templates ?? []).map(template => ({
+          id: template.id,
+          name: template.name,
+          isDefault: template.isDefault,
+          cardOrder: template.cardOrder ?? [],
+          hiddenCards: template.hiddenCards ?? []
+        }));
+        this.templates.set(normalized);
+        this.loadingTemplates.set(false);
+        if (!this.selectedTemplateId() && normalized.length > 0) {
+          this.onTemplateChange(normalized[0].id);
+        }
+      },
+      error: () => {
+        this.templates.set([]);
+        this.loadingTemplates.set(false);
+      }
+    });
+  }
+
+  private refreshTemplates(selectId?: string | null) {
+    this.dashboardData.getTemplates().subscribe({
+      next: (templates) => {
+        const normalized = (templates ?? []).map(template => ({
+          id: template.id,
+          name: template.name,
+          isDefault: template.isDefault,
+          cardOrder: template.cardOrder ?? [],
+          hiddenCards: template.hiddenCards ?? []
+        }));
+        this.templates.set(normalized);
+        const target = selectId ?? this.selectedTemplateId();
+        if (target) {
+          this.onTemplateChange(target);
+        }
       }
     });
   }

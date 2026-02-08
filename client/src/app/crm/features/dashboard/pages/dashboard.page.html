@@ -320,6 +320,20 @@
                 <span class="health-pill__label">{{ stat.label }}</span>
               </div>
             </div>
+            <div class="manager-health__truth" *ngIf="managerTruthGaps().length; else noTruthGaps">
+              <div class="truth-heading">Top Truth Gaps</div>
+              <div class="truth-list">
+                <span class="truth-chip" *ngFor="let gap of managerTruthGaps()">
+                  {{ gap.label }} · {{ gap.count }}
+                </span>
+              </div>
+            </div>
+            <ng-template #noTruthGaps>
+              <div class="manager-health__truth manager-health__truth--empty">
+                <div class="truth-heading">Top Truth Gaps</div>
+                <span class="truth-empty">No gaps flagged</span>
+              </div>
+            </ng-template>
             <div class="manager-health__queue">
               <div class="manager-deal" *ngFor="let deal of managerReviewQueue()">
                 <div class="manager-deal__info">
@@ -338,6 +352,10 @@
                 </div>
                 <div class="manager-deal__side">
                   <div class="manager-deal__amount">{{ deal.amount | currency:'USD':'symbol':'1.0-0' }}</div>
+                  <div class="manager-deal__metrics">
+                    <span>Truth: {{ formatTruthCoverage(deal.truthCoverage) }}</span>
+                    <span>TtT: {{ formatTimeToTruth(deal.timeToTruthDays) }}</span>
+                  </div>
                   <div class="manager-deal__dates">
                     <span *ngIf="deal.nextStepDueAtUtc">Next: {{ asLocalDate(deal.nextStepDueAtUtc) | date: 'MMM d' }}</span>
                     <span *ngIf="deal.expectedCloseDate">Close: {{ asLocalDate(deal.expectedCloseDate) | date: 'MMM d' }}</span>

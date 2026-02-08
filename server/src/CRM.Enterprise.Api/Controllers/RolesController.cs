@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CRM.Enterprise.Api.Contracts.Roles;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
@@ -32,10 +33,12 @@ public class RolesController : ControllerBase
             .AsNoTracking()
             .Where(r => !r.IsDeleted)
             .Include(r => r.Permissions)
+            .Include(r => r.SecurityLevel)
             .OrderBy(r => r.Name)
             .ToListAsync(cancellationToken);
 
-        var responses = roles.Select(ToRoleResponse).ToList();
+        var defaultSecurity = await ResolveDefaultSecurityLevelAsync(cancellationToken);
+        var responses = roles.Select(role => ToRoleResponse(role, defaultSecurity)).ToList();
         return Ok(responses);
     }
 
@@ -43,7 +46,13 @@ public class RolesController : ControllerBase
     public async Task<ActionResult<RoleResponse>> GetRole(Guid id, CancellationToken cancellationToken)
     {
         var role = await FindRoleAsync(id, cancellationToken);
-        return role is null ? NotFound() : Ok(ToRoleResponse(role));
+        if (role is null)
+        {
+            return NotFound();
+        }
+
+        var defaultSecurity = await ResolveDefaultSecurityLevelAsync(cancellationToken);
+        return Ok(ToRoleResponse(role, defaultSecurity));
     }
 
     [HttpGet("permissions")]
@@ -117,11 +126,16 @@ public class RolesController : ControllerBase
         {
             Name = normalizedName,
             Description = NormalizeDescription(request.Description),
-            Level = request.Level
+            ParentRoleId = request.ParentRoleId,
+            VisibilityScope = ParseVisibilityScope(request.VisibilityScope),
+            SecurityLevelId = await ResolveSecurityLevelIdAsync(request.SecurityLevelId, cancellationToken)
         };
 
         _dbContext.Roles.Add(role);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var parentRole = await ResolveParentRoleAsync(request.ParentRoleId, cancellationToken);
+        await UpdateHierarchyAsync(role, parentRole, cancellationToken);
 
         await SyncRolePermissionsAsync(role.Id, request.Permissions, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -129,7 +143,7 @@ public class RolesController : ControllerBase
         var refreshed = await FindRoleAsync(role.Id, cancellationToken);
         return refreshed is null
             ? StatusCode(500, "Unable to materialize the created role.")
-            : CreatedAtAction(nameof(GetRole), new { id = refreshed.Id }, ToRoleResponse(refreshed));
+            : CreatedAtAction(nameof(GetRole), new { id = refreshed.Id }, ToRoleResponse(refreshed, await ResolveDefaultSecurityLevelAsync(cancellationToken)));
     }
 
     [HttpPut("{id:guid}")]
@@ -164,15 +178,40 @@ public class RolesController : ControllerBase
             return BadRequest("System role names cannot be changed.");
         }
 
+        var parentRole = await ResolveParentRoleAsync(request.ParentRoleId, cancellationToken);
+        if (request.ParentRoleId.HasValue && request.ParentRoleId.Value == role.Id)
+        {
+            return BadRequest("Role cannot be its own parent.");
+        }
+
+        if (parentRole is not null && parentRole.HierarchyPath is not null)
+        {
+            var parentPathParts = parentRole.HierarchyPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parentPathParts.Any(part => Guid.TryParse(part, out var parsed) && parsed == role.Id))
+            {
+                return BadRequest("Role hierarchy cannot be circular.");
+            }
+        }
+
+        var previousParent = role.ParentRoleId;
         role.Name = normalizedName;
         role.Description = NormalizeDescription(request.Description);
-        role.Level = request.Level;
+        role.ParentRoleId = request.ParentRoleId;
+        role.VisibilityScope = ParseVisibilityScope(request.VisibilityScope, role.VisibilityScope);
+        role.SecurityLevelId = await ResolveSecurityLevelIdAsync(request.SecurityLevelId, cancellationToken);
+
+        if (previousParent != role.ParentRoleId)
+        {
+            await UpdateHierarchyAsync(role, parentRole, cancellationToken);
+        }
 
         await SyncRolePermissionsAsync(role.Id, request.Permissions, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var refreshed = await FindRoleAsync(role.Id, cancellationToken);
-        return refreshed is null ? NotFound() : Ok(ToRoleResponse(refreshed));
+        return refreshed is null
+            ? NotFound()
+            : Ok(ToRoleResponse(refreshed, await ResolveDefaultSecurityLevelAsync(cancellationToken)));
     }
 
     [HttpDelete("{id:guid}")]
@@ -216,9 +255,30 @@ public class RolesController : ControllerBase
             return "Role name is required.";
         }
 
-        if (request.Level.HasValue && request.Level.Value < 1)
+        if (request.ParentRoleId.HasValue)
         {
-            return "Role level must be L1 or higher.";
+            var parentExists = await _dbContext.Roles
+                .AnyAsync(r => r.Id == request.ParentRoleId.Value && !r.IsDeleted, cancellationToken);
+            if (!parentExists)
+            {
+                return "Parent role does not exist.";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.VisibilityScope)
+            && !Enum.TryParse<RoleVisibilityScope>(request.VisibilityScope, true, out _))
+        {
+            return "Visibility scope must be Self, Team, or All.";
+        }
+
+        if (request.SecurityLevelId.HasValue)
+        {
+            var exists = await _dbContext.SecurityLevelDefinitions
+                .AnyAsync(s => s.Id == request.SecurityLevelId.Value && !s.IsDeleted, cancellationToken);
+            if (!exists)
+            {
+                return "Security level does not exist.";
+            }
         }
 
         if (request.Permissions is null || request.Permissions.Count == 0)
@@ -290,10 +350,11 @@ public class RolesController : ControllerBase
             .AsNoTracking()
             .Where(r => r.Id == id && !r.IsDeleted)
             .Include(r => r.Permissions)
+            .Include(r => r.SecurityLevel)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    private static RoleResponse ToRoleResponse(Role role)
+    private RoleResponse ToRoleResponse(Role role, SecurityLevelDefinition? defaultSecurity)
     {
         var permissions = role.Permissions
             .Where(rp => !rp.IsDeleted && !string.IsNullOrWhiteSpace(rp.Permission))
@@ -307,7 +368,99 @@ public class RolesController : ControllerBase
             role.Name,
             role.Description,
             IsSystemRole(role.Name),
-            role.Level,
+            role.ParentRoleId,
+            role.HierarchyLevel,
+            role.HierarchyPath,
+            role.VisibilityScope.ToString(),
+            role.SecurityLevelId ?? defaultSecurity?.Id,
+            role.SecurityLevel?.Name ?? defaultSecurity?.Name,
             permissions);
+    }
+
+    private static RoleVisibilityScope ParseVisibilityScope(string? scope, RoleVisibilityScope? fallback = null)
+    {
+        if (string.IsNullOrWhiteSpace(scope))
+        {
+            return fallback ?? RoleVisibilityScope.Team;
+        }
+
+        return Enum.TryParse<RoleVisibilityScope>(scope, true, out var parsed)
+            ? parsed
+            : fallback ?? RoleVisibilityScope.Team;
+    }
+
+    private async Task<SecurityLevelDefinition?> ResolveDefaultSecurityLevelAsync(CancellationToken cancellationToken)
+    {
+        return await _dbContext.SecurityLevelDefinitions
+            .AsNoTracking()
+            .Where(s => !s.IsDeleted && s.IsDefault)
+            .OrderByDescending(s => s.UpdatedAtUtc ?? s.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<Guid?> ResolveSecurityLevelIdAsync(Guid? securityLevelId, CancellationToken cancellationToken)
+    {
+        if (securityLevelId.HasValue)
+        {
+            return securityLevelId.Value;
+        }
+
+        var defaultSecurity = await ResolveDefaultSecurityLevelAsync(cancellationToken);
+        return defaultSecurity?.Id;
+    }
+
+    private async Task<Role?> ResolveParentRoleAsync(Guid? parentRoleId, CancellationToken cancellationToken)
+    {
+        if (!parentRoleId.HasValue)
+        {
+            return null;
+        }
+
+        return await _dbContext.Roles
+            .FirstOrDefaultAsync(r => r.Id == parentRoleId.Value && !r.IsDeleted, cancellationToken);
+    }
+
+    private async Task UpdateHierarchyAsync(Role role, Role? parentRole, CancellationToken cancellationToken)
+    {
+        var oldPath = role.HierarchyPath;
+        var oldLevel = role.HierarchyLevel ?? 1;
+
+        var newLevel = parentRole?.HierarchyLevel.HasValue == true
+            ? parentRole.HierarchyLevel.Value + 1
+            : 1;
+        var newPath = parentRole?.HierarchyPath is { Length: > 0 }
+            ? $"{parentRole.HierarchyPath}/{role.Id}"
+            : role.Id.ToString();
+
+        role.HierarchyLevel = newLevel;
+        role.HierarchyPath = newPath;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(oldPath) || oldPath == newPath)
+        {
+            return;
+        }
+
+        var prefix = oldPath + "/";
+        var descendants = await _dbContext.Roles
+            .Where(r => !r.IsDeleted && r.HierarchyPath != null && r.HierarchyPath.StartsWith(prefix))
+            .ToListAsync(cancellationToken);
+
+        if (descendants.Count == 0)
+        {
+            return;
+        }
+
+        var levelDelta = newLevel - oldLevel;
+        foreach (var descendant in descendants)
+        {
+            descendant.HierarchyPath = newPath + descendant.HierarchyPath!.Substring(oldPath.Length);
+            if (descendant.HierarchyLevel.HasValue)
+            {
+                descendant.HierarchyLevel = descendant.HierarchyLevel.Value + levelDelta;
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

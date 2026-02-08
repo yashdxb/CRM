@@ -1,0 +1,182 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Qualification</span>
+      </div>
+
+      <h1 class="hero-title">
+        <span class="title-gradient">Contextual</span>
+        <span class="title-light">Threshold Rules</span>
+      </h1>
+
+      <p class="hero-description">
+        Override the default qualification threshold by segment, deal type, and stage so your rules match real selling motions.
+      </p>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/qualification-policy">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Policy</span>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings">
+          <i class="pi pi-cog"></i>
+          <span>Settings Home</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" [disabled]="loading()" (click)="loadSettings()">
+          <i class="pi pi-refresh"></i>
+          <span>Reload</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-sliders-h"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Rules</span>
+          <strong class="card-value">{{ qualificationPolicy().thresholdRules.length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-filter"></i>
+            Default {{ qualificationPolicy().defaultThreshold }}
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-flag"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Segments</span>
+          <strong class="card-value">{{ segmentOptions.length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-list"></i>
+            Targeted thresholds
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="data-section">
+    <div class="settings-layout">
+      <div class="data-card">
+        <div class="data-header">
+          <div class="header-title">
+            <h2>Contextual Threshold Rules</h2>
+            <span class="record-count">Override the baseline threshold with specific conditions</span>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge status-badge--success" *ngIf="!loading()">
+              <i class="pi pi-check"></i> Ready
+            </span>
+          </div>
+        </div>
+
+        <div class="loading-state" *ngIf="loading()">
+          <div class="skeleton-row" *ngFor="let _ of [0, 1, 2]">
+            <div class="skeleton skeleton-text"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+        </div>
+
+        <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-sliders-h"></i>
+              Rules
+            </h3>
+            <p class="section-description">Each rule overrides the default threshold for matching deals</p>
+
+            <div class="policy-block">
+              <div class="policy-header">
+                <h4>Contextual Rules</h4>
+                <button type="button" class="btn btn-secondary" (click)="addThresholdRule()">
+                  <i class="pi pi-plus"></i>
+                  Add rule
+                </button>
+              </div>
+              <div class="policy-list" *ngIf="qualificationPolicy().thresholdRules.length; else noRules">
+                <div class="policy-row" *ngFor="let rule of qualificationPolicy().thresholdRules; let i = index">
+                  <p-select
+                    appendTo="body"
+                    [options]="segmentOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="rule.segment"
+                    (ngModelChange)="updateThresholdRule(i, { segment: $event })"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Segment"
+                    styleClass="w-full"
+                  ></p-select>
+                  <p-select
+                    appendTo="body"
+                    [options]="dealTypeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="rule.dealType"
+                    (ngModelChange)="updateThresholdRule(i, { dealType: $event })"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Deal type"
+                    styleClass="w-full"
+                  ></p-select>
+                  <p-select
+                    appendTo="body"
+                    [options]="stageOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="rule.stage"
+                    (ngModelChange)="updateThresholdRule(i, { stage: $event })"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Stage"
+                    styleClass="w-full"
+                  ></p-select>
+                  <p-inputNumber
+                    [ngModel]="rule.threshold"
+                    (ngModelChange)="updateThresholdRule(i, { threshold: $event })"
+                    [min]="0"
+                    [max]="100"
+                    [ngModelOptions]="{ standalone: true }"
+                    styleClass="w-full"
+                  ></p-inputNumber>
+                  <button type="button" class="btn btn-ghost" (click)="removeThresholdRule(i)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+              <ng-template #noRules>
+                <p class="hint">No contextual rules yet. Add rules to override the default threshold.</p>
+              </ng-template>
+            </div>
+          </section>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">
+              <i class="pi pi-refresh"></i>
+              Reset
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving() || !canManageAdmin()">
+              <i class="pi pi-save" *ngIf="!saving()"></i>
+              <i class="pi pi-spinner pi-spin" *ngIf="saving()"></i>
+              {{ saving() ? 'Saving...' : 'Save Threshold Rules' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>

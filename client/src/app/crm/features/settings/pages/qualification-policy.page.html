@@ -1,0 +1,233 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Qualification</span>
+      </div>
+
+      <h1 class="hero-title">
+        <span class="title-gradient">Qualification</span>
+        <span class="title-light">Policy</span>
+      </h1>
+
+      <p class="hero-description">
+        Define default conversion thresholds, manager approval guardrails, and signal modifiers that shape lead quality.
+      </p>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Settings</span>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/qualification-thresholds">
+          <i class="pi pi-sliders-h"></i>
+          <span>Contextual Threshold Rules</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" [disabled]="loading()" (click)="loadSettings()">
+          <i class="pi pi-refresh"></i>
+          <span>Reload</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-shield"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Default Threshold</span>
+          <strong class="card-value">{{ qualificationPolicy().defaultThreshold }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-lock"></i>
+            Block below {{ qualificationPolicy().blockBelow }}
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-chart-line"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Modifiers</span>
+          <strong class="card-value">{{ qualificationPolicy().modifiers.length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-bolt"></i>
+            Dynamic adjustments
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="data-section">
+    <div class="settings-layout">
+      <div class="data-card">
+        <div class="data-header">
+          <div class="header-title">
+            <h2>Qualification Policy</h2>
+            <span class="record-count">Protect conversion quality with rules and overrides</span>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge status-badge--success" *ngIf="!loading()">
+              <i class="pi pi-check"></i> Ready
+            </span>
+          </div>
+        </div>
+
+        <div class="loading-state" *ngIf="loading()">
+          <div class="skeleton-row" *ngFor="let _ of [0, 1, 2]">
+            <div class="skeleton skeleton-text"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+        </div>
+
+        <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-sliders-h"></i>
+              Thresholds & Guardrails
+            </h3>
+            <p class="section-description">Define base conversion thresholds and approval guardrails</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>Default Threshold</label>
+                <p-inputNumber
+                  [ngModel]="qualificationPolicy().defaultThreshold"
+                  (ngModelChange)="setPolicyField('defaultThreshold', $event)"
+                  [min]="0"
+                  [max]="100"
+                  [ngModelOptions]="{ standalone: true }"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <small class="field-hint">Baseline score required to convert</small>
+              </div>
+
+              <div class="field">
+                <label>Manager Approval Below</label>
+                <p-inputNumber
+                  [ngModel]="qualificationPolicy().managerApprovalBelow"
+                  (ngModelChange)="setPolicyField('managerApprovalBelow', $event)"
+                  [min]="0"
+                  [max]="100"
+                  [ngModelOptions]="{ standalone: true }"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <small class="field-hint">Require manager approval under this score</small>
+              </div>
+
+              <div class="field">
+                <label>Block Below</label>
+                <p-inputNumber
+                  [ngModel]="qualificationPolicy().blockBelow"
+                  (ngModelChange)="setPolicyField('blockBelow', $event)"
+                  [min]="0"
+                  [max]="100"
+                  [ngModelOptions]="{ standalone: true }"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <small class="field-hint">Hard stop unless overrides are enabled</small>
+              </div>
+
+              <div class="field">
+                <label>Overrides</label>
+                <div class="toggle-row">
+                  <label class="checkbox-field">
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="qualificationPolicy().allowOverrides"
+                      (ngModelChange)="setPolicyField('allowOverrides', $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                    ></p-checkbox>
+                    <span>Allow overrides</span>
+                  </label>
+                  <label class="checkbox-field">
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="qualificationPolicy().requireOverrideReason"
+                      (ngModelChange)="setPolicyField('requireOverrideReason', $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                    ></p-checkbox>
+                    <span>Require override reason</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-bolt"></i>
+              Modifiers
+            </h3>
+            <p class="section-description">Signals that adjust the effective threshold dynamically</p>
+
+            <div class="policy-block">
+              <div class="policy-header">
+                <h4>Qualification Modifiers</h4>
+                <button type="button" class="btn btn-secondary" (click)="addModifierRule()">
+                  <i class="pi pi-plus"></i>
+                  Add modifier
+                </button>
+              </div>
+              <div class="policy-list" *ngIf="qualificationPolicy().modifiers.length; else noModifiers">
+                <div class="policy-row policy-row--modifier" *ngFor="let modifier of qualificationPolicy().modifiers; let i = index">
+                  <p-select
+                    appendTo="body"
+                    [options]="modifierKeyOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [ngModel]="modifier.key"
+                    (ngModelChange)="updateModifierRule(i, { key: $event })"
+                    [ngModelOptions]="{ standalone: true }"
+                    placeholder="Modifier"
+                    styleClass="w-full"
+                  ></p-select>
+                  <p-inputNumber
+                    [ngModel]="modifier.delta"
+                    (ngModelChange)="updateModifierRule(i, { delta: $event })"
+                    [min]="-50"
+                    [max]="50"
+                    [ngModelOptions]="{ standalone: true }"
+                    styleClass="w-full"
+                  ></p-inputNumber>
+                  <button type="button" class="btn btn-ghost" (click)="removeModifierRule(i)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+              <ng-template #noModifiers>
+                <p class="hint">No modifiers defined. Add signals to adjust the threshold dynamically.</p>
+              </ng-template>
+            </div>
+          </section>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">
+              <i class="pi pi-refresh"></i>
+              Reset
+            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="saving() || !canManageAdmin()">
+              <i class="pi pi-save" *ngIf="!saving()"></i>
+              <i class="pi pi-spinner pi-spin" *ngIf="saving()"></i>
+              {{ saving() ? 'Saving...' : 'Save Qualification Policy' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>

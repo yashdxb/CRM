@@ -7,11 +7,15 @@ public sealed class OpportunityApproval : AuditableEntity
     public Guid OpportunityId { get; set; }
     public Opportunity? Opportunity { get; set; }
 
+    public Guid? ApprovalChainId { get; set; }
+    public OpportunityApprovalChain? ApprovalChain { get; set; }
+
     public string ApproverRole { get; set; } = string.Empty;
     public Guid? ApproverUserId { get; set; }
     public Guid? RequestedByUserId { get; set; }
     public string Status { get; set; } = "Pending";
     public string Purpose { get; set; } = "Close";
+    public int StepOrder { get; set; } = 1;
     public DateTime RequestedOn { get; set; } = DateTime.UtcNow;
     public DateTime? DecisionOn { get; set; }
     public string? Notes { get; set; }

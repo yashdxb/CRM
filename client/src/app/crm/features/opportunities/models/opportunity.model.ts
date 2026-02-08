@@ -16,6 +16,7 @@ export interface Opportunity {
   opportunityType?: string;
   renewalOfOpportunityId?: string | null;
   renewalOpportunityId?: string | null;
+  summary?: string | null;
   requirements?: string | null;
   buyingProcess?: string | null;
   successCriteria?: string | null;
@@ -94,6 +95,10 @@ export interface OpportunityApprovalItem {
   status: OpportunityApprovalStatus;
   purpose: string;
   approverRole: string;
+  approvalChainId?: string | null;
+  stepOrder?: number;
+  totalSteps?: number;
+  chainStatus?: string;
   approverUserId?: string | null;
   approverName?: string | null;
   requestedByUserId?: string | null;
@@ -124,6 +129,10 @@ export interface OpportunityApprovalInboxItem {
   status: OpportunityApprovalStatus;
   purpose: string;
   approverRole: string;
+  approvalChainId?: string | null;
+  stepOrder?: number;
+  totalSteps?: number;
+  chainStatus?: string;
   approverUserId?: string | null;
   approverName?: string | null;
   requestedByUserId?: string | null;

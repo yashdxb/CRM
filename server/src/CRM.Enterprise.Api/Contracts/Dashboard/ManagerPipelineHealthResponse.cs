@@ -21,6 +21,7 @@ public record ManagerPipelineHealthResponse(
     int ReviewAckOverdueCount,
     decimal ReviewAckAvgHours,
     IEnumerable<PipelineStageSummary> PipelineByStage,
+    IEnumerable<RiskFlagSummaryItem> TopTruthGaps,
     IEnumerable<ManagerReviewDealItem> ReviewQueue);
 
 public record ManagerReviewDealItem(
@@ -31,6 +32,8 @@ public record ManagerReviewDealItem(
     decimal Amount,
     string OwnerName,
     string Reason,
+    decimal? TruthCoverage,
+    decimal? TimeToTruthDays,
     DateTime? NextStepDueAtUtc,
     DateTime? LastActivityAtUtc,
     DateTime? ExpectedCloseDate);

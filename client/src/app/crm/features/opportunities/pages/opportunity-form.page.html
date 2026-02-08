@@ -97,6 +97,7 @@
                   styleClass="w-full"
                 ></p-select>
                 <small class="field-hint" *ngIf="demoOutcomeGuidance() as guidance">{{ guidance }}</small>
+                <small class="field-hint" *ngIf="discoveryGuidance() as discoveryGuidance">{{ discoveryGuidance }}</small>
                 <small class="field-hint" *ngIf="selectedStage === 'Commit'">Commit requires an expected close date and verified checklist items.</small>
               </div>
               <div class="field">
@@ -302,14 +303,14 @@
                 ></p-inputNumber>
               </div>
               <div class="field full">
-                <label for="oppPricingNotes">Pricing notes</label>
+                <label for="oppPricingNotes">Pricing notes & objections</label>
                 <textarea
                   pTextarea
                   id="oppPricingNotes"
                   rows="3"
                   name="pricingNotes"
                   [(ngModel)]="form.pricingNotes"
-                  placeholder="Discount rationale, approvals, or constraints"
+                  placeholder="Discount rationale, objections, approvals, or constraints"
                   class="w-full"
                 ></textarea>
               </div>
@@ -436,6 +437,12 @@
                 <div class="approval-details">
                   <span>Requested by {{ approval.requestedByName || 'Unknown' }}</span>
                   <span>{{ approval.requestedOn | date:'medium' }}</span>
+                  <span *ngIf="approval.totalSteps && approval.totalSteps > 1">
+                    Step {{ approval.stepOrder || 1 }} of {{ approval.totalSteps }}
+                  </span>
+                  <span *ngIf="approval.totalSteps && approval.totalSteps > 1">
+                    Chain status: {{ approval.chainStatus || approval.status }}
+                  </span>
                   <span *ngIf="approval.approverRole">Approver role: {{ approval.approverRole }}</span>
                   <span *ngIf="approval.approverName">Approved by: {{ approval.approverName }}</span>
                   <span *ngIf="approval.decisionOn">Decision: {{ approval.decisionOn | date:'medium' }}</span>

@@ -1,11 +1,13 @@
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Opportunities;
+using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Infrastructure.Opportunities;
 
@@ -13,6 +15,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
 {
     private const string OpportunityEntityType = "Opportunity";
     private const string ApprovalEntityType = "OpportunityApproval";
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditEventService _auditEvents;
@@ -46,6 +49,19 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             .OrderByDescending(a => a.RequestedOn)
             .ToListAsync(cancellationToken);
 
+        var chainIds = items
+            .Where(a => a.ApprovalChainId.HasValue)
+            .Select(a => a.ApprovalChainId!.Value)
+            .Distinct()
+            .ToList();
+
+        var chains = chainIds.Count == 0
+            ? new Dictionary<Guid, OpportunityApprovalChain>()
+            : await _dbContext.OpportunityApprovalChains
+                .AsNoTracking()
+                .Where(c => chainIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c, cancellationToken);
+
         var userIds = items
             .SelectMany(a => new[] { a.RequestedByUserId, a.ApproverUserId })
             .Where(id => id.HasValue && id.Value != Guid.Empty)
@@ -58,21 +74,29 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             .Select(u => new { u.Id, u.FullName })
             .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
-        return items.Select(a => new OpportunityApprovalDto(
-            a.Id,
-            a.OpportunityId,
-            a.Status,
-            a.Purpose,
-            a.ApproverRole,
-            a.ApproverUserId,
-            a.ApproverUserId.HasValue && users.TryGetValue(a.ApproverUserId.Value, out var approverName) ? approverName : null,
-            a.RequestedByUserId,
-            a.RequestedByUserId.HasValue && users.TryGetValue(a.RequestedByUserId.Value, out var requesterName) ? requesterName : null,
-            a.RequestedOn,
-            a.DecisionOn,
-            a.Notes,
-            a.Amount,
-            a.Currency)).ToList();
+        return items.Select(a =>
+        {
+            chains.TryGetValue(a.ApprovalChainId ?? Guid.Empty, out var chain);
+            return new OpportunityApprovalDto(
+                a.Id,
+                a.OpportunityId,
+                a.Status,
+                a.Purpose,
+                a.ApproverRole,
+                a.ApprovalChainId,
+                a.StepOrder,
+                chain?.TotalSteps ?? 1,
+                chain?.Status ?? a.Status,
+                a.ApproverUserId,
+                a.ApproverUserId.HasValue && users.TryGetValue(a.ApproverUserId.Value, out var approverName) ? approverName : null,
+                a.RequestedByUserId,
+                a.RequestedByUserId.HasValue && users.TryGetValue(a.RequestedByUserId.Value, out var requesterName) ? requesterName : null,
+                a.RequestedOn,
+                a.DecisionOn,
+                a.Notes,
+                a.Amount,
+                a.Currency);
+        }).ToList();
     }
 
     public async Task<IReadOnlyList<OpportunityApprovalInboxItemDto>> GetInboxAsync(
@@ -113,6 +137,20 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             .OrderByDescending(item => item.approval.RequestedOn)
             .ToListAsync(cancellationToken);
 
+        var chainIds = approvals
+            .Select(a => a.approval.ApprovalChainId)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .Distinct()
+            .ToList();
+
+        var chains = chainIds.Count == 0
+            ? new Dictionary<Guid, OpportunityApprovalChain>()
+            : await _dbContext.OpportunityApprovalChains
+                .AsNoTracking()
+                .Where(c => chainIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, c => c, cancellationToken);
+
         var userIds = approvals
             .SelectMany(a => new[] { a.approval.RequestedByUserId, a.approval.ApproverUserId })
             .Where(id => id.HasValue && id.Value != Guid.Empty)
@@ -125,23 +163,31 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             .Select(u => new { u.Id, u.FullName })
             .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
-        return approvals.Select(item => new OpportunityApprovalInboxItemDto(
-            item.approval.Id,
-            item.approval.OpportunityId,
-            item.opportunity.Name,
-            item.AccountName,
-            item.approval.Status,
-            item.approval.Purpose,
-            item.approval.ApproverRole,
-            item.approval.ApproverUserId,
-            item.approval.ApproverUserId.HasValue && users.TryGetValue(item.approval.ApproverUserId.Value, out var approverName) ? approverName : null,
-            item.approval.RequestedByUserId,
-            item.approval.RequestedByUserId.HasValue && users.TryGetValue(item.approval.RequestedByUserId.Value, out var requesterName) ? requesterName : null,
-            item.approval.RequestedOn,
-            item.approval.DecisionOn,
-            item.approval.Notes,
-            item.approval.Amount,
-            item.approval.Currency)).ToList();
+        return approvals.Select(item =>
+        {
+            chains.TryGetValue(item.approval.ApprovalChainId ?? Guid.Empty, out var chain);
+            return new OpportunityApprovalInboxItemDto(
+                item.approval.Id,
+                item.approval.OpportunityId,
+                item.opportunity.Name,
+                item.AccountName,
+                item.approval.Status,
+                item.approval.Purpose,
+                item.approval.ApproverRole,
+                item.approval.ApprovalChainId,
+                item.approval.StepOrder,
+                chain?.TotalSteps ?? 1,
+                chain?.Status ?? item.approval.Status,
+                item.approval.ApproverUserId,
+                item.approval.ApproverUserId.HasValue && users.TryGetValue(item.approval.ApproverUserId.Value, out var approverName) ? approverName : null,
+                item.approval.RequestedByUserId,
+                item.approval.RequestedByUserId.HasValue && users.TryGetValue(item.approval.RequestedByUserId.Value, out var requesterName) ? requesterName : null,
+                item.approval.RequestedOn,
+                item.approval.DecisionOn,
+                item.approval.Notes,
+                item.approval.Amount,
+                item.approval.Currency);
+        }).ToList();
     }
 
     public async Task<OpportunityOperationResult<OpportunityApprovalDto>> RequestAsync(
@@ -161,36 +207,71 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         }
 
         var tenantId = _tenantProvider.TenantId;
-        var approverRole = await _dbContext.Tenants
-            .Where(t => t.Id == tenantId)
-            .Select(t => t.ApprovalApproverRole)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (string.IsNullOrWhiteSpace(approverRole))
+        var workflow = await ResolveApprovalWorkflowAsync(tenantId, cancellationToken);
+        if (!workflow.Enabled || workflow.Steps.Count == 0)
         {
-            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval role must be configured before requesting approval.");
+            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval workflow must be configured before requesting approval.");
         }
 
         var normalizedPurpose = string.IsNullOrWhiteSpace(purpose) ? "Close" : purpose.Trim();
 
-        var existingPending = await _dbContext.OpportunityApprovals
+        var existingPending = await _dbContext.OpportunityApprovalChains
             .AsNoTracking()
-            .FirstOrDefaultAsync(
-                a => a.OpportunityId == opportunityId
-                     && a.Status == "Pending"
-                     && a.Purpose == normalizedPurpose,
-                cancellationToken);
+            .Where(c => c.OpportunityId == opportunityId && c.Status == "Pending" && c.Purpose == normalizedPurpose)
+            .OrderByDescending(c => c.RequestedOn)
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (existingPending is not null)
         {
-            var dto = await MapDtoAsync(existingPending, cancellationToken);
-            return OpportunityOperationResult<OpportunityApprovalDto>.Ok(dto);
+            var pendingApproval = await _dbContext.OpportunityApprovals
+                .AsNoTracking()
+                .Where(a => a.ApprovalChainId == existingPending.Id && a.Status == "Pending")
+                .OrderBy(a => a.StepOrder)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (pendingApproval is not null)
+            {
+                var dto = await MapDtoAsync(pendingApproval, existingPending, cancellationToken);
+                return OpportunityOperationResult<OpportunityApprovalDto>.Ok(dto);
+            }
         }
 
+        var steps = workflow.Steps
+            .Where(step =>
+                (string.IsNullOrWhiteSpace(step.Purpose) || string.Equals(step.Purpose, normalizedPurpose, StringComparison.OrdinalIgnoreCase)) &&
+                (!step.AmountThreshold.HasValue || amount >= step.AmountThreshold.Value))
+            .OrderBy(step => step.Order)
+            .ToList();
+
+        if (steps.Count == 0)
+        {
+            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval workflow has no matching steps for this request.");
+        }
+
+        if (steps.Any(step => string.IsNullOrWhiteSpace(step.ApproverRole)))
+        {
+            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval workflow steps must include an approver role.");
+        }
+
+        var chain = new OpportunityApprovalChain
+        {
+            OpportunityId = opportunityId,
+            RequestedByUserId = actor.UserId,
+            Purpose = normalizedPurpose,
+            Status = "Pending",
+            CurrentStep = steps[0].Order,
+            TotalSteps = steps.Count,
+            StepsJson = JsonSerializer.Serialize(steps, JsonOptions),
+            RequestedOn = DateTime.UtcNow
+        };
+        _dbContext.OpportunityApprovalChains.Add(chain);
+
+        var firstStep = steps.First();
         var approval = new OpportunityApproval
         {
             OpportunityId = opportunityId,
-            ApproverRole = approverRole,
+            ApprovalChainId = chain.Id,
+            StepOrder = firstStep.Order,
+            ApproverRole = firstStep.ApproverRole,
             RequestedByUserId = actor.UserId,
             Status = "Pending",
             Purpose = normalizedPurpose,
@@ -235,7 +316,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 approval.Purpose),
             cancellationToken);
 
-        var approvalDto = await MapDtoAsync(approval, cancellationToken);
+        var approvalDto = await MapDtoAsync(approval, chain, cancellationToken);
         return OpportunityOperationResult<OpportunityApprovalDto>.Ok(approvalDto);
     }
 
@@ -253,10 +334,10 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             return OpportunityOperationResult<OpportunityApprovalDto>.NotFoundResult();
         }
 
-        var approverRole = await ResolveApproverRoleAsync(cancellationToken);
+        var approverRole = approval.ApproverRole;
         if (string.IsNullOrWhiteSpace(approverRole))
         {
-            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval role must be configured before making a decision.");
+            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval role must be configured for this approval step.");
         }
 
         if (!await IsApproverAsync(actor.UserId, approverRole, cancellationToken))
@@ -268,6 +349,13 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         approval.DecisionOn = DateTime.UtcNow;
         approval.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
         approval.ApproverUserId = actor.UserId;
+
+        OpportunityApprovalChain? chain = null;
+        if (approval.ApprovalChainId.HasValue)
+        {
+            chain = await _dbContext.OpportunityApprovalChains
+                .FirstOrDefaultAsync(c => c.Id == approval.ApprovalChainId, cancellationToken);
+        }
 
         await _auditEvents.TrackAsync(
             new AuditEventEntry(
@@ -293,13 +381,76 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 actor.UserName),
             cancellationToken);
 
+        if (chain is not null)
+        {
+            if (!approved)
+            {
+                chain.Status = "Rejected";
+                chain.CompletedOn = DateTime.UtcNow;
+            }
+            else
+            {
+                var steps = JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(chain.StepsJson, JsonOptions) ?? new List<ApprovalWorkflowStep>();
+                var nextStep = steps.FirstOrDefault(s => s.Order > approval.StepOrder);
+                if (nextStep is null)
+                {
+                    chain.Status = "Approved";
+                    chain.CompletedOn = DateTime.UtcNow;
+                }
+                else
+                {
+                    chain.CurrentStep = nextStep.Order;
+                    var nextApproval = new OpportunityApproval
+                    {
+                        OpportunityId = approval.OpportunityId,
+                        ApprovalChainId = chain.Id,
+                        StepOrder = nextStep.Order,
+                        ApproverRole = nextStep.ApproverRole,
+                        RequestedByUserId = approval.RequestedByUserId,
+                        Status = "Pending",
+                        Purpose = approval.Purpose,
+                        RequestedOn = DateTime.UtcNow,
+                        Amount = approval.Amount,
+                        Currency = approval.Currency
+                    };
+                    _dbContext.OpportunityApprovals.Add(nextApproval);
+
+                    await _auditEvents.TrackAsync(
+                        new AuditEventEntry(
+                            OpportunityEntityType,
+                            approval.OpportunityId,
+                            "ApprovalStepQueued",
+                            "Status",
+                            null,
+                            nextApproval.Status,
+                            actor.UserId,
+                            actor.UserName),
+                        cancellationToken);
+
+                    await _approvalQueue.EnqueueAsync(
+                        new ApprovalQueueMessage(
+                            nextApproval.OpportunityId,
+                            nextApproval.RequestedByUserId,
+                            nextApproval.Amount,
+                            nextApproval.Currency,
+                            nextApproval.RequestedOn,
+                            nextApproval.ApproverRole,
+                            nextApproval.Purpose),
+                        cancellationToken);
+                }
+            }
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var dto = await MapDtoAsync(approval, cancellationToken);
+        var dto = await MapDtoAsync(approval, chain, cancellationToken);
         return OpportunityOperationResult<OpportunityApprovalDto>.Ok(dto);
     }
 
-    private async Task<OpportunityApprovalDto> MapDtoAsync(OpportunityApproval approval, CancellationToken cancellationToken)
+    private async Task<OpportunityApprovalDto> MapDtoAsync(
+        OpportunityApproval approval,
+        OpportunityApprovalChain? chain,
+        CancellationToken cancellationToken)
     {
         var userIds = new List<Guid>();
         if (approval.RequestedByUserId.HasValue) userIds.Add(approval.RequestedByUserId.Value);
@@ -316,6 +467,10 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             approval.Status,
             approval.Purpose,
             approval.ApproverRole,
+            approval.ApprovalChainId,
+            approval.StepOrder,
+            chain?.TotalSteps ?? 1,
+            chain?.Status ?? approval.Status,
             approval.ApproverUserId,
             approval.ApproverUserId.HasValue && users.TryGetValue(approval.ApproverUserId.Value, out var approverName) ? approverName : null,
             approval.RequestedByUserId,
@@ -327,13 +482,44 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             approval.Currency);
     }
 
-    private async Task<string?> ResolveApproverRoleAsync(CancellationToken cancellationToken)
+    private async Task<OpportunityApprovalDto> MapDtoAsync(
+        OpportunityApproval approval,
+        CancellationToken cancellationToken)
     {
-        var tenantId = _tenantProvider.TenantId;
-        return await _dbContext.Tenants
-            .Where(t => t.Id == tenantId)
-            .Select(t => t.ApprovalApproverRole)
-            .FirstOrDefaultAsync(cancellationToken);
+        OpportunityApprovalChain? chain = null;
+        if (approval.ApprovalChainId.HasValue)
+        {
+            chain = await _dbContext.OpportunityApprovalChains
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == approval.ApprovalChainId, cancellationToken);
+        }
+        return await MapDtoAsync(approval, chain, cancellationToken);
+    }
+
+    private async Task<ApprovalWorkflowPolicy> ResolveApprovalWorkflowAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant is null)
+        {
+            return ApprovalWorkflowPolicyDefaults.FromTenantDefaults(null, null);
+        }
+
+        if (string.IsNullOrWhiteSpace(tenant.ApprovalWorkflowJson))
+        {
+            return ApprovalWorkflowPolicyDefaults.FromTenantDefaults(tenant.ApprovalAmountThreshold, tenant.ApprovalApproverRole);
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<ApprovalWorkflowPolicy>(tenant.ApprovalWorkflowJson, JsonOptions);
+            return parsed ?? ApprovalWorkflowPolicyDefaults.FromTenantDefaults(tenant.ApprovalAmountThreshold, tenant.ApprovalApproverRole);
+        }
+        catch (JsonException)
+        {
+            return ApprovalWorkflowPolicyDefaults.FromTenantDefaults(tenant.ApprovalAmountThreshold, tenant.ApprovalApproverRole);
+        }
     }
 
     private async Task<bool> IsApproverAsync(Guid? userId, string approverRole, CancellationToken cancellationToken)

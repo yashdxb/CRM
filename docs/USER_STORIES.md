@@ -67,103 +67,85 @@ We will not try to out‑Salesforce Salesforce. We win on **speed to value**, **
 
 ## Sales Rep (Full B2B Flow)
 
-Canonical story list synced from `docs/CRM_BACKLOG.md` (ClickUp mirrored).
+Canonical story list synced from ClickUp CRM Backlog.
 
-- API flagging + storage
-- API for award detail
-- Add rationale formatting
 - Approval workflow (optional)
-- As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately.
-- As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.
-- As a Sales Rep, I want a structured checklist to flag risks early.
-- As a Sales Rep, I want alerts for deals with no next step or no activity in X days so I can recover risk early.
-- As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene.
-- As a Sales Rep, I want forecast category enforced at stage changes so forecasts stay accurate.
-- As a Sales Rep, I want insights on deals without activity or next steps so I can fix gaps early.
-- As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
-- As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.
-- As a Sales Rep, I want personal pipeline and forecast reports to track progress to quota.
-- As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction.
-- As a Sales Rep, I want renewal opportunities auto‑created at 90/60/30 days so renewal motions are never missed.
-- As a Sales Rep, I want renewal tasks created and tracked like any opportunity.
-- As a Sales Rep, I want review outcomes (Needs Work / Escalate) to create acknowledgment tasks with due dates.
-- As a Sales Rep, I want stage‑specific activity templates so I can log actions faster.
-- As a Sales Rep, I want stage‑specific exit criteria (required fields, next step) so stage progression reflects reality.
-- As a Sales Rep, I want the CRM to guide execution, not just store data — enforcing discipline, protecting forecast accuracy, and enabling clean handoffs.
-- As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach.
-- As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.
-- As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal.
-- As a Sales Rep, I want the system to surface opportunities missing next steps.
-- As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership.
-- As a Sales Rep, I want to capture demo outcomes and feedback; stage progression should require a demo outcome.
-- As a Sales Rep, I want to capture requirements, buying process, and success criteria to qualify fit.
-- As a Sales Rep, I want to confirm pain, decision maker, and next step before advancing.
-- As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded.
-- As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context.
-- As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs.
-- As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment.
-- As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
-- As a Sales Rep, I want to mark deals as Commit only when verified and expected to close.
-- As a Sales Rep, I want to provide handoff notes and trigger a kickoff.
-- As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
-- As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends.
-- As a Sales Rep, I want to schedule discovery and log notes before leaving the stage.
-- As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context.
-- As a Sales Rep, I want to set opportunity name, value, close date, and initial stage so the deal is trackable from day one.
-- As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback.
-- As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group.
-- As a Sales Rep, I want to track security questionnaire and legal redlines with status updates.
-- As a Sales Rep, I want to track technical risks before demo/validation.
-- As a manager, I can see Truth Coverage and Time-to-Truth per deal
-- As a manager, I see top truth gaps across pipeline
-- As a manager, score breakdown aligns with CQVS labels
 - As a manager, uncertainty exposure is quantified (Cost of Not Knowing)
-- As a rep, AI suggests next evidence to resolve weakest signal
-- As a rep, I can view Risk Register flags derived from CQVS
-- As a rep, I see "Unknown / not yet discussed" preselected for every qualification factor
-- As a rep, I see an inline qualification status summary with confidence + weakest signal
-- As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet"
-- As a system, automation creates tasks for unresolved high-impact factors
 - As a system, confidence is calibrated against outcomes
-- As an executive, I can view confidence-weighted pipeline totals
-- Audit trail display
-- CRUD endpoints
+- Coaching & Management
+- Conditional Forecasting
 - CSV import/export flow
-- Compose modal UI
-- Confidence-weighted forecast card
-- Configurable qualification policy + conversion guardrails
-- Confirm/send flow
-- Define risk rules
-- Define rules + inputs
-- Draft generator
-- Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth)
-- GET endpoints
-- KPI delta analysis
-- Latency monitoring
-- Narrative generator
-- Overrides schema
-- Permissions alignment
-- Later - Activity summaries
-- Later - Deal risk alerts
+- Epistemic Metrics Core
+- Epistemic State + Evidence Governance
+- Feedback Loop + Weakest Signal
 - Later - Dedicated Award Screen (SCM)
-- Later - Email draft suggestions
-- Later - Industry module pack toggle
-- Later - KPI explanations
-- Later - Next-best-action suggestions
-- Later - SCM Pricing MVP (read-only lists)
-- Later - SCM Pricing v1 (CRUD + import/export)
-- Later - SCM Pricing v2 (overrides + versioning)
-- Read-only UI lists
-- Risk Register summary widget
-- Role-based L1/L2 dashboard packs + reset
-- Route + menu gating
-- Schema for scm.PriceLists + Items
-- Summarization service
+- Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene.
+- Module: Activities | As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction.
+- Module: Activities | As a Sales Rep, I want review outcomes (Needs Work / Escalate) to create acknowledgment tasks with due dates.
+- Module: Activities | As a Sales Rep, I want the system to surface opportunities missing next steps.
+- Module: Activities | As a system, automation creates tasks for unresolved high-impact factors
+- Module: Contacts | As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership.
+- Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context.
+- Module: Contacts | As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group.
+- Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal
+- Module: Dashboard | As a manager, I see top truth gaps across pipeline
+- Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS
+- Module: Dashboard | As a Sales Rep, I want a structured checklist to flag risks early.
+- Module: Dashboard | As a Sales Rep, I want personal pipeline and forecast reports to track progress to quota.
+- Module: Dashboard | As a Sales Rep, I want renewal opportunities auto‑created at 90/60/30 days so renewal motions are never missed.
+- Module: Dashboard | As a Sales Rep, I want the CRM to guide execution, not just store data — enforcing discipline, protecting forecast accuracy, and enabling clean handoffs.
+- Module: Dashboard | As a Sales Rep, I want to capture requirements, buying process, and success criteria to qualify fit.
+- Module: Dashboard | As a Sales Rep, I want to confirm pain, decision maker, and next step before advancing.
+- Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context.
+- Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs.
+- Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment.
+- Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff.
+- Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates.
+- Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation.
+- Module: Dashboard | As an executive, I can view confidence-weighted pipeline totals
+- Module: Dashboard | Confidence-weighted forecast card
+- Module: Dashboard | Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth)
+- Module: Dashboard | Risk Register summary widget
+- Module: Dashboard | Hierarchy-based H1/H2 dashboard packs + reset
+- Module: Leads | As a manager, score breakdown aligns with CQVS labels
+- Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal
+- Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet"
+- Module: Leads | As a rep, I see "Unknown / not yet discussed" preselected for every qualification factor
+- Module: Leads | As a rep, I see an inline qualification status summary with confidence + weakest signal
+- Module: Leads | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately.
+- Module: Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.
+- Module: Leads | As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
+- Module: Leads | As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.
+- Module: Leads | As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach.
+- Module: Leads | As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.
+- Module: Leads | As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
+- Module: Leads | As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
+- Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends.
+- Module: Leads | Configurable qualification policy + conversion guardrails
+- Module: Opportunities | As a Sales Rep, I want alerts for deals with no next step or no activity in X days so I can recover risk early.
+- Module: Opportunities | As a Sales Rep, I want forecast category enforced at stage changes so forecasts stay accurate.
+- Module: Opportunities | As a Sales Rep, I want insights on deals without activity or next steps so I can fix gaps early.
+- Module: Opportunities | As a Sales Rep, I want renewal tasks created and tracked like any opportunity.
+- Module: Opportunities | As a Sales Rep, I want stage‑specific activity templates so I can log actions faster.
+- Module: Opportunities | As a Sales Rep, I want stage‑specific exit criteria (required fields, next step) so stage progression reflects reality.
+- Module: Opportunities | As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal.
+- Module: Opportunities | As a Sales Rep, I want to capture demo outcomes and feedback; stage progression should require a demo outcome.
+- Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close.
+- Module: Opportunities | As a Sales Rep, I want to schedule discovery and log notes before leaving the stage.
+- Module: Opportunities | As a Sales Rep, I want to set opportunity name, value, close date, and initial stage so the deal is trackable from day one.
+- Module: Settings | As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded.
+- Module: Settings | As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback.
+- Module: Settings | Approval Settings page
+- Module: Settings | Qualification Policy page
+- Module: Settings | Contextual Threshold Rules page
+- Module: Settings | As an Admin, I want permissions grouped by capability with role intent views so roles are consistent and easy to audit.
+- Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent.
+- Module: Settings | As an Admin, I want separate permissions for request/approve/override so edit rights do not grant approvals. (Must)
+- Module: Settings | As an Admin, I want H1/H2/H3 packs as presets with role drift tracking so I can safely customize roles.
+- Module: Settings | As an Admin, I want a role hierarchy with computed depth (no manual level input) so reporting lines are clear and consistent.
+- Module: Settings | As an Admin, I want reporting visibility scope per role (Self/Team/All) so manager rollups are correct and configurable.
+- Module: Settings | As an Admin, I want named dashboard templates so default Command Center layouts are not hard-coded and can be reused.
+- Module: Settings | As a Super Admin, I want to manage configurable security levels (create/edit/delete, set default) so high-risk actions are gated independently of hierarchy with no hard-coded tiers.
+- Next
+- Risk & Cost of Not Knowing
 - Tenant setting for module packs
-- UI award screen
-- UI badge + rationale
-- UI component for suggestions
-- UI display + regenerate
-- UI forms + validation
-- UI linkage to records
-- Versioning logic

@@ -104,17 +104,35 @@
        DATA SECTION
        ═══════════════════════════════════════════════════════════════════════════ -->
   <section class="data-section">
-    <div class="data-card">
-      <div class="data-header">
-        <div class="header-title">
-          <h2>Role Directory</h2>
-          <span class="record-count">{{ roles().length }} roles configured</span>
-        </div>
-        <div class="header-actions">
-          <button class="action-btn action-btn--primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
-            <i class="pi pi-plus"></i>
-            <span>Add Role</span>
-          </button>
+      <div class="data-card">
+        <div class="data-header">
+          <div class="header-title">
+            <h2>Role Directory</h2>
+            <span class="record-count">{{ roles().length }} roles configured</span>
+          </div>
+          <div class="view-toggle">
+            <button
+              type="button"
+              class="toggle-btn"
+              [class.active]="!showHierarchy()"
+              (click)="toggleView('list')"
+            >
+              List
+            </button>
+            <button
+              type="button"
+              class="toggle-btn"
+              [class.active]="showHierarchy()"
+              (click)="toggleView('hierarchy')"
+            >
+              Hierarchy
+            </button>
+          </div>
+          <div class="header-actions">
+            <button class="action-btn action-btn--primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
+              <i class="pi pi-plus"></i>
+              <span>Add Role</span>
+            </button>
         </div>
       </div>
 
@@ -143,7 +161,7 @@
       </div>
 
       <!-- Table -->
-      <div class="table-wrapper" *ngIf="!loadingRoles() && roles().length > 0">
+      <div class="table-wrapper" *ngIf="!loadingRoles() && roles().length > 0 && !showHierarchy()">
         <p-table
           class="data-table"
           [value]="roles()"
@@ -153,7 +171,7 @@
           <ng-template pTemplate="header">
             <tr>
               <th class="th-role">Role</th>
-              <th>Level</th>
+              <th>Hierarchy</th>
               <th>Permissions</th>
               <th>Type</th>
               <th class="th-actions">Actions</th>
@@ -174,7 +192,7 @@
               </td>
               <td>
                 <span class="status-badge status-badge--info">
-                  {{ role.level ? ('L' + role.level) : 'Unset' }}
+                  {{ role.hierarchyLevel ? ('H' + role.hierarchyLevel) : 'H1' }}
                 </span>
               </td>
               <td>
@@ -217,6 +235,24 @@
             </tr>
           </ng-template>
         </p-table>
+      </div>
+
+      <div class="orgchart-wrapper" *ngIf="!loadingRoles() && roles().length > 0 && showHierarchy()">
+        <p-organizationChart [value]="orgChartNodes()" selectionMode="single">
+          <ng-template pTemplate="person" let-node>
+            <div class="org-node">
+              <div class="org-title">
+                <span class="org-name">{{ node.data?.name }}</span>
+                <span class="org-badges">
+                  <span class="org-badge">H{{ node.data?.hierarchyLevel || '—' }}</span>
+                </span>
+              </div>
+              <div class="org-meta">
+                <span class="org-desc">{{ node.data?.description || 'No description' }}</span>
+              </div>
+            </div>
+          </ng-template>
+        </p-organizationChart>
       </div>
     </div>
   </section>

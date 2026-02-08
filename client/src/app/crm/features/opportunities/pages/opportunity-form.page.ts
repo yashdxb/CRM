@@ -930,6 +930,14 @@ export class OpportunityFormPage implements OnInit {
     return null;
   }
 
+  protected discoveryGuidance(): string | null {
+    const stage = this.selectedStage || 'Prospecting';
+    if (['Qualification', 'Proposal', 'Negotiation', 'Commit'].includes(stage)) {
+      return 'Discovery meeting + notes are required before moving to qualification or later. Schedule a Discovery activity.';
+    }
+    return null;
+  }
+
   private validateStageRequirements(): string | null {
     const stage = this.selectedStage;
     const amountRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);
@@ -944,8 +952,25 @@ export class OpportunityFormPage implements OnInit {
       return 'Contract end date must be after the contract start date.';
     }
 
+    if (!this.isEditMode()) {
+      if (!stage?.trim()) {
+        return 'Stage is required when creating an opportunity.';
+      }
+      if (!this.form.amount || this.form.amount <= 0) {
+        return 'Amount is required when creating an opportunity.';
+      }
+      if (!this.form.expectedCloseDate) {
+        return 'Expected close date is required when creating an opportunity.';
+      }
+    }
+
     if (amountRequired && (!this.form.amount || this.form.amount <= 0)) {
       return `Amount is required before moving to ${stage}.`;
+    }
+
+    if ((this.form.discountPercent || this.form.discountAmount)
+      && (!this.form.pricingNotes || !this.form.pricingNotes.trim())) {
+      return 'Pricing notes and objections are required when applying discounts.';
     }
 
     if (closeDateRequired && !this.form.expectedCloseDate) {

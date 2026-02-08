@@ -176,6 +176,7 @@ public class DashboardController : ControllerBase
             health.ReviewAckOverdueCount,
             health.ReviewAckAvgHours,
             health.PipelineByStage.Select(stage => new PipelineStageSummary(stage.Stage, stage.Count, stage.Value)).ToList(),
+            health.TopTruthGaps.Select(flag => new RiskFlagSummaryItem(flag.Label, flag.Count)).ToList(),
             health.ReviewQueue.Select(item => new ManagerReviewDealItem(
                 item.Id,
                 item.Name,
@@ -184,6 +185,8 @@ public class DashboardController : ControllerBase
                 item.Amount,
                 item.OwnerName,
                 item.Reason,
+                item.TruthCoverage,
+                item.TimeToTruthDays,
                 item.NextStepDueAtUtc,
                 item.LastActivityAtUtc,
                 item.ExpectedCloseDate)).ToList());
@@ -261,7 +264,7 @@ public class DashboardController : ControllerBase
     {
         if (request.RoleLevel < 1)
         {
-            return BadRequest("Role level must be L1 or higher.");
+            return BadRequest("Hierarchy level must be H1 or higher.");
         }
 
         var sizes = request.Sizes ?? new Dictionary<string, string>();
@@ -294,6 +297,82 @@ public class DashboardController : ControllerBase
         return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel));
     }
 
+    [HttpGet("templates")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<ActionResult<IReadOnlyList<DashboardTemplateResponse>>> GetTemplates(CancellationToken cancellationToken)
+    {
+        var templates = await _layoutService.GetTemplatesAsync(cancellationToken);
+        var responses = templates.Select(ToTemplateResponse).ToList();
+        return Ok(responses);
+    }
+
+    [HttpPost("templates")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<ActionResult<DashboardTemplateResponse>> CreateTemplate(
+        [FromBody] UpsertDashboardTemplateRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("Template name is required.");
+        }
+
+        var state = new Application.Dashboard.DashboardTemplateState(
+            Guid.Empty,
+            request.Name.Trim(),
+            request.Description,
+            request.IsDefault ?? false,
+            new Application.Dashboard.DashboardLayoutState(
+                request.CardOrder ?? Array.Empty<string>(),
+                request.Sizes ?? new Dictionary<string, string>(),
+                request.Dimensions?.ToDictionary(
+                    item => item.Key,
+                    item => new Application.Dashboard.DashboardCardDimensions(item.Value.Width, item.Value.Height))
+                ?? new Dictionary<string, Application.Dashboard.DashboardCardDimensions>(),
+                request.HiddenCards ?? new List<string>()));
+
+        var created = await _layoutService.CreateTemplateAsync(state, cancellationToken);
+        return CreatedAtAction(nameof(GetTemplates), new { id = created.Id }, ToTemplateResponse(created));
+    }
+
+    [HttpPut("templates/{id:guid}")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<ActionResult<DashboardTemplateResponse>> UpdateTemplate(
+        Guid id,
+        [FromBody] UpsertDashboardTemplateRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("Template name is required.");
+        }
+
+        var state = new Application.Dashboard.DashboardTemplateState(
+            id,
+            request.Name.Trim(),
+            request.Description,
+            request.IsDefault ?? false,
+            new Application.Dashboard.DashboardLayoutState(
+                request.CardOrder ?? Array.Empty<string>(),
+                request.Sizes ?? new Dictionary<string, string>(),
+                request.Dimensions?.ToDictionary(
+                    item => item.Key,
+                    item => new Application.Dashboard.DashboardCardDimensions(item.Value.Width, item.Value.Height))
+                ?? new Dictionary<string, Application.Dashboard.DashboardCardDimensions>(),
+                request.HiddenCards ?? new List<string>()));
+
+        var updated = await _layoutService.UpdateTemplateAsync(id, state, cancellationToken);
+        return Ok(ToTemplateResponse(updated));
+    }
+
+    [HttpPost("templates/{id:guid}/default")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<ActionResult<DashboardTemplateResponse>> SetDefaultTemplate(Guid id, CancellationToken cancellationToken)
+    {
+        var updated = await _layoutService.SetDefaultTemplateAsync(id, cancellationToken);
+        return Ok(ToTemplateResponse(updated));
+    }
+
     private Guid? GetCurrentUserId()
     {
         var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -304,9 +383,26 @@ public class DashboardController : ControllerBase
     {
         var levels = await _dbContext.UserRoles
             .Where(ur => ur.UserId == userId)
-            .Select(ur => ur.Role != null ? ur.Role.Level : null)
+            .Select(ur => ur.Role != null ? ur.Role.HierarchyLevel : null)
             .ToListAsync(cancellationToken);
 
         return levels.Where(level => level.HasValue).Select(level => level!.Value).DefaultIfEmpty(1).Max();
+    }
+
+    private static DashboardTemplateResponse ToTemplateResponse(Application.Dashboard.DashboardTemplateState template)
+    {
+        var dimensions = template.Layout.Dimensions.ToDictionary(
+            item => item.Key,
+            item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
+
+        return new DashboardTemplateResponse(
+            template.Id,
+            template.Name,
+            template.Description,
+            template.IsDefault,
+            template.Layout.CardOrder,
+            template.Layout.Sizes,
+            dimensions,
+            template.Layout.HiddenCards);
     }
 }

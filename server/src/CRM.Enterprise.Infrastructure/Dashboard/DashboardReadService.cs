@@ -32,19 +32,30 @@ public class DashboardReadService : IDashboardReadService
                 .FirstOrDefaultAsync(cancellationToken)
             : null;
 
-        var totalCustomers = await _dbContext.Accounts.CountAsync(a => !a.IsDeleted, cancellationToken);
-        var leads = await _dbContext.Accounts.CountAsync(a => !a.IsDeleted && a.LifecycleStage == "Lead", cancellationToken);
-        var prospects = await _dbContext.Accounts.CountAsync(a => !a.IsDeleted && a.LifecycleStage == "Prospect", cancellationToken);
-        var activeCustomers = await _dbContext.Accounts.CountAsync(
-            a => !a.IsDeleted && (a.LifecycleStage == "Customer" || a.LifecycleStage == null),
+        var visibility = await ResolveVisibilityAsync(userId, cancellationToken);
+
+        var accountQuery = _dbContext.Accounts.AsNoTracking().Where(a => !a.IsDeleted);
+        if (visibility.UserIds is not null)
+        {
+            accountQuery = accountQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
+        }
+
+        var totalCustomers = await accountQuery.CountAsync(cancellationToken);
+        var leads = await accountQuery.CountAsync(a => a.LifecycleStage == "Lead", cancellationToken);
+        var prospects = await accountQuery.CountAsync(a => a.LifecycleStage == "Prospect", cancellationToken);
+        var activeCustomers = await accountQuery.CountAsync(
+            a => a.LifecycleStage == "Customer" || a.LifecycleStage == null,
             cancellationToken);
 
-        var openOpportunities = await _dbContext.Opportunities.CountAsync(
-            o => !o.IsDeleted && !o.IsClosed,
-            cancellationToken);
+        var opportunitiesQuery = _dbContext.Opportunities.AsNoTracking().Where(o => !o.IsDeleted && !o.IsClosed);
+        if (visibility.UserIds is not null)
+        {
+            opportunitiesQuery = opportunitiesQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
 
-        var pipelineRows = await _dbContext.Opportunities
-            .Where(o => !o.IsDeleted && !o.IsClosed)
+        var openOpportunities = await opportunitiesQuery.CountAsync(cancellationToken);
+
+        var pipelineRows = await opportunitiesQuery
             .Select(o => new
             {
                 Stage = o.Stage != null ? o.Stage.Name : "Prospecting",
@@ -60,26 +71,29 @@ public class DashboardReadService : IDashboardReadService
 
         var pipelineValueTotal = pipelineValueStages.Sum(stage => stage.Value);
 
-        var tasksDueToday = await _dbContext.Activities.CountAsync(
-            a => !a.IsDeleted && !a.CompletedDateUtc.HasValue && a.DueDateUtc.HasValue &&
+        var activitiesQuery = _dbContext.Activities.AsNoTracking().Where(a => !a.IsDeleted);
+        if (visibility.UserIds is not null)
+        {
+            activitiesQuery = activitiesQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
+        }
+
+        var tasksDueToday = await activitiesQuery.CountAsync(
+            a => !a.CompletedDateUtc.HasValue && a.DueDateUtc.HasValue &&
                  a.DueDateUtc.Value >= startOfToday && a.DueDateUtc.Value < endOfToday,
             cancellationToken);
 
-        var upcomingActivitiesCount = await _dbContext.Activities.CountAsync(
-            a => !a.IsDeleted &&
-                 !a.CompletedDateUtc.HasValue &&
+        var upcomingActivitiesCount = await activitiesQuery.CountAsync(
+            a => !a.CompletedDateUtc.HasValue &&
                  a.DueDateUtc.HasValue &&
                  a.DueDateUtc.Value >= now &&
                  a.DueDateUtc.Value <= nextWeek,
             cancellationToken);
 
-        var overdueActivitiesCount = await _dbContext.Activities.CountAsync(
-            a => !a.IsDeleted && !a.CompletedDateUtc.HasValue && a.DueDateUtc < now,
+        var overdueActivitiesCount = await activitiesQuery.CountAsync(
+            a => !a.CompletedDateUtc.HasValue && a.DueDateUtc < now,
             cancellationToken);
 
-        var openOpportunityIds = await _dbContext.Opportunities
-            .AsNoTracking()
-            .Where(o => !o.IsDeleted && !o.IsClosed)
+        var openOpportunityIds = await opportunitiesQuery
             .Select(o => o.Id)
             .ToListAsync(cancellationToken);
 
@@ -88,7 +102,7 @@ public class DashboardReadService : IDashboardReadService
         var atRiskDetails = new List<DashboardOpportunityDto>();
         if (openOpportunityIds.Count > 0)
         {
-            var opportunityActivityRows = await _dbContext.Activities
+            var opportunityActivityRows = await activitiesQuery
                 .AsNoTracking()
                 .Where(a => !a.IsDeleted
                             && a.RelatedEntityType == ActivityRelationType.Opportunity
@@ -171,9 +185,15 @@ public class DashboardReadService : IDashboardReadService
             }
         }
 
-        var recentCustomersRaw = await _dbContext.Accounts
+        var recentCustomersQuery = _dbContext.Accounts
             .Include(a => a.Contacts)
-            .Where(a => !a.IsDeleted)
+            .Where(a => !a.IsDeleted);
+        if (visibility.UserIds is not null)
+        {
+            recentCustomersQuery = recentCustomersQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
+        }
+
+        var recentCustomersRaw = await recentCustomersQuery
             .OrderByDescending(a => a.LastViewedAtUtc ?? a.CreatedAtUtc)
             .Take(6)
             .Select(a => new
@@ -206,14 +226,20 @@ public class DashboardReadService : IDashboardReadService
                 rc.CreatedAtUtc))
             .ToList();
 
-        var activitiesNextWeekRaw = await _dbContext.Activities
+        var activitiesNextWeekQuery = _dbContext.Activities
             .AsNoTracking()
             .Where(a =>
                 !a.IsDeleted &&
                 !a.CompletedDateUtc.HasValue &&
                 a.DueDateUtc.HasValue &&
                 a.DueDateUtc.Value >= now &&
-                a.DueDateUtc.Value <= nextWeek)
+                a.DueDateUtc.Value <= nextWeek);
+        if (visibility.UserIds is not null)
+        {
+            activitiesNextWeekQuery = activitiesNextWeekQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
+        }
+
+        var activitiesNextWeekRaw = await activitiesNextWeekQuery
             .OrderBy(a => a.DueDateUtc)
             .Take(10)
             .Select(a => new DashboardActivityRaw(
@@ -355,9 +381,14 @@ public class DashboardReadService : IDashboardReadService
             bucket => (bucket.Year, bucket.Month),
             bucket => bucket.ToString("MMM yyyy", CultureInfo.InvariantCulture));
 
-        var revenueRows = await _dbContext.Opportunities
+        var revenueRowsQuery = _dbContext.Opportunities
             .AsNoTracking()
-            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon)
+            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon);
+        if (visibility.UserIds is not null)
+        {
+            revenueRowsQuery = revenueRowsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+        var revenueRows = await revenueRowsQuery
             .Select(o => new
             {
                 ClosedAt = o.ExpectedCloseDate ?? o.UpdatedAtUtc ?? o.CreatedAtUtc,
@@ -380,9 +411,14 @@ public class DashboardReadService : IDashboardReadService
             })
             .ToList();
 
-        var customerRows = await _dbContext.Accounts
+        var customerRowsQuery = _dbContext.Accounts
             .AsNoTracking()
-            .Where(a => !a.IsDeleted && a.CreatedAtUtc >= sixMonthStart && a.CreatedAtUtc < monthEnd)
+            .Where(a => !a.IsDeleted && a.CreatedAtUtc >= sixMonthStart && a.CreatedAtUtc < monthEnd);
+        if (visibility.UserIds is not null)
+        {
+            customerRowsQuery = customerRowsQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
+        }
+        var customerRows = await customerRowsQuery
             .Select(a => new { a.CreatedAtUtc })
             .ToListAsync(cancellationToken);
 
@@ -401,9 +437,14 @@ public class DashboardReadService : IDashboardReadService
             .ToList();
 
         var activityWindowStart = now.AddDays(-30);
-        var activityRows = await _dbContext.Activities
+        var activityRowsQuery = _dbContext.Activities
             .AsNoTracking()
-            .Where(a => !a.IsDeleted && a.CreatedAtUtc >= activityWindowStart)
+            .Where(a => !a.IsDeleted && a.CreatedAtUtc >= activityWindowStart);
+        if (visibility.UserIds is not null)
+        {
+            activityRowsQuery = activityRowsQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
+        }
+        var activityRows = await activityRowsQuery
             .Select(a => a.Type)
             .ToListAsync(cancellationToken);
 
@@ -419,9 +460,14 @@ public class DashboardReadService : IDashboardReadService
             .OrderByDescending(item => item.Count)
             .ToList();
 
-        var conversionRows = await _dbContext.Leads
+        var conversionRowsQuery = _dbContext.Leads
             .AsNoTracking()
-            .Where(l => !l.IsDeleted && l.CreatedAtUtc >= sixMonthStart && l.CreatedAtUtc < monthEnd)
+            .Where(l => !l.IsDeleted && l.CreatedAtUtc >= sixMonthStart && l.CreatedAtUtc < monthEnd);
+        if (visibility.UserIds is not null)
+        {
+            conversionRowsQuery = conversionRowsQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
+        }
+        var conversionRows = await conversionRowsQuery
             .Select(l => new { l.CreatedAtUtc, l.QualifiedAtUtc, l.ConvertedAtUtc })
             .ToListAsync(cancellationToken);
 
@@ -443,9 +489,14 @@ public class DashboardReadService : IDashboardReadService
             .ToList();
 
         var topWindowStart = now.AddDays(-90);
-        var performerRows = await _dbContext.Opportunities
+        var performerRowsQuery = _dbContext.Opportunities
             .AsNoTracking()
-            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon)
+            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon);
+        if (visibility.UserIds is not null)
+        {
+            performerRowsQuery = performerRowsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+        var performerRows = await performerRowsQuery
             .Select(o => new
             {
                 o.OwnerId,
@@ -482,27 +533,47 @@ public class DashboardReadService : IDashboardReadService
                 null))
             .ToList();
 
-        var monthLeadOwners = await _dbContext.Leads
+        var monthLeadOwnersQuery = _dbContext.Leads
             .AsNoTracking()
-            .Where(l => !l.IsDeleted && l.CreatedAtUtc >= monthStart && l.CreatedAtUtc < monthEnd)
+            .Where(l => !l.IsDeleted && l.CreatedAtUtc >= monthStart && l.CreatedAtUtc < monthEnd);
+        if (visibility.UserIds is not null)
+        {
+            monthLeadOwnersQuery = monthLeadOwnersQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
+        }
+        var monthLeadOwners = await monthLeadOwnersQuery
             .Select(l => l.OwnerId)
             .ToListAsync(cancellationToken);
 
-        var monthQualifiedOwners = await _dbContext.Leads
+        var monthQualifiedOwnersQuery = _dbContext.Leads
             .AsNoTracking()
-            .Where(l => !l.IsDeleted && l.QualifiedAtUtc.HasValue && l.QualifiedAtUtc.Value >= monthStart && l.QualifiedAtUtc.Value < monthEnd)
+            .Where(l => !l.IsDeleted && l.QualifiedAtUtc.HasValue && l.QualifiedAtUtc.Value >= monthStart && l.QualifiedAtUtc.Value < monthEnd);
+        if (visibility.UserIds is not null)
+        {
+            monthQualifiedOwnersQuery = monthQualifiedOwnersQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
+        }
+        var monthQualifiedOwners = await monthQualifiedOwnersQuery
             .Select(l => l.OwnerId)
             .ToListAsync(cancellationToken);
 
-        var monthOpportunityOwners = await _dbContext.Opportunities
+        var monthOpportunityOwnersQuery = _dbContext.Opportunities
             .AsNoTracking()
-            .Where(o => !o.IsDeleted && o.CreatedAtUtc >= monthStart && o.CreatedAtUtc < monthEnd)
+            .Where(o => !o.IsDeleted && o.CreatedAtUtc >= monthStart && o.CreatedAtUtc < monthEnd);
+        if (visibility.UserIds is not null)
+        {
+            monthOpportunityOwnersQuery = monthOpportunityOwnersQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+        var monthOpportunityOwners = await monthOpportunityOwnersQuery
             .Select(o => o.OwnerId)
             .ToListAsync(cancellationToken);
 
-        var monthWonRows = await _dbContext.Opportunities
+        var monthWonRowsQuery = _dbContext.Opportunities
             .AsNoTracking()
-            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon)
+            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon);
+        if (visibility.UserIds is not null)
+        {
+            monthWonRowsQuery = monthWonRowsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+        var monthWonRows = await monthWonRowsQuery
             .Select(o => new
             {
                 o.OwnerId,
@@ -538,9 +609,14 @@ public class DashboardReadService : IDashboardReadService
             .ToList();
 
         var closedStatsWindowStart = now.AddDays(-90);
-        var closedStatsRows = await _dbContext.Opportunities
+        var closedStatsRowsQuery = _dbContext.Opportunities
             .AsNoTracking()
-            .Where(o => !o.IsDeleted && o.IsClosed)
+            .Where(o => !o.IsDeleted && o.IsClosed);
+        if (visibility.UserIds is not null)
+        {
+            closedStatsRowsQuery = closedStatsRowsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+        var closedStatsRows = await closedStatsRowsQuery
             .Select(o => new
             {
                 o.Amount,
@@ -560,9 +636,14 @@ public class DashboardReadService : IDashboardReadService
             ? 0
             : (int)Math.Round(closedStatsRows.Average(row => (row.ClosedAt - row.CreatedAtUtc).TotalDays));
 
-        var leadTruthMetrics = await _dbContext.Leads
+        var leadTruthMetricsQuery = _dbContext.Leads
             .AsNoTracking()
-            .Where(l => !l.IsDeleted)
+            .Where(l => !l.IsDeleted);
+        if (visibility.UserIds is not null)
+        {
+            leadTruthMetricsQuery = leadTruthMetricsQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
+        }
+        var leadTruthMetrics = await leadTruthMetricsQuery
             .Select(l => new
             {
                 l.CreatedAtUtc,
@@ -738,6 +819,7 @@ public class DashboardReadService : IDashboardReadService
                 0,
                 0,
                 new List<PipelineStageDto>(),
+                new List<RiskFlagSummaryDto>(),
                 new List<ManagerReviewDealDto>());
         }
 
@@ -787,6 +869,71 @@ public class DashboardReadService : IDashboardReadService
             .Where(u => ownerIds.Contains(u.Id))
             .Select(u => new { u.Id, u.FullName })
             .ToListAsync(cancellationToken);
+
+        var leadQualificationRows = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted
+                        && l.ConvertedOpportunityId.HasValue
+                        && opportunityIds.Contains(l.ConvertedOpportunityId.Value))
+            .Select(l => new
+            {
+                l.ConvertedOpportunityId,
+                l.CreatedAtUtc,
+                l.BudgetAvailability,
+                l.BudgetEvidence,
+                l.BudgetValidatedAtUtc,
+                l.ReadinessToSpend,
+                l.ReadinessEvidence,
+                l.ReadinessValidatedAtUtc,
+                l.BuyingTimeline,
+                l.TimelineEvidence,
+                l.BuyingTimelineValidatedAtUtc,
+                l.ProblemSeverity,
+                l.ProblemEvidence,
+                l.ProblemSeverityValidatedAtUtc,
+                l.EconomicBuyer,
+                l.EconomicBuyerEvidence,
+                l.EconomicBuyerValidatedAtUtc,
+                l.IcpFit,
+                l.IcpFitEvidence,
+                l.IcpFitValidatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var leadByOpportunity = leadQualificationRows
+            .Where(l => l.ConvertedOpportunityId.HasValue)
+            .GroupBy(l => l.ConvertedOpportunityId!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(l => l.CreatedAtUtc).First());
+
+        var pipelineTruthGaps = leadQualificationRows
+            .Select(l => BuildDashboardQualificationInsights(
+                l.BudgetAvailability,
+                l.BudgetEvidence,
+                l.BudgetValidatedAtUtc,
+                l.ReadinessToSpend,
+                l.ReadinessEvidence,
+                l.ReadinessValidatedAtUtc,
+                l.BuyingTimeline,
+                l.TimelineEvidence,
+                l.BuyingTimelineValidatedAtUtc,
+                l.ProblemSeverity,
+                l.ProblemEvidence,
+                l.ProblemSeverityValidatedAtUtc,
+                l.EconomicBuyer,
+                l.EconomicBuyerEvidence,
+                l.EconomicBuyerValidatedAtUtc,
+                l.IcpFit,
+                l.IcpFitEvidence,
+                l.IcpFitValidatedAtUtc))
+            .SelectMany(i => i.RiskFlags)
+            .Where(flag => !string.IsNullOrWhiteSpace(flag))
+            .GroupBy(flag => flag, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new RiskFlagSummaryDto(group.Key, group.Count()))
+            .OrderByDescending(item => item.Count)
+            .Take(5)
+            .ToList();
 
         var pipelineByStage = openOpportunities
             .GroupBy(o => o.Stage)
@@ -860,6 +1007,49 @@ public class DashboardReadService : IDashboardReadService
                 continue;
             }
 
+            decimal? truthCoverage = null;
+            decimal? timeToTruthDays = null;
+            if (leadByOpportunity.TryGetValue(opportunity.Id, out var leadRow))
+            {
+                var insights = BuildDashboardQualificationInsights(
+                    leadRow.BudgetAvailability,
+                    leadRow.BudgetEvidence,
+                    leadRow.BudgetValidatedAtUtc,
+                    leadRow.ReadinessToSpend,
+                    leadRow.ReadinessEvidence,
+                    leadRow.ReadinessValidatedAtUtc,
+                    leadRow.BuyingTimeline,
+                    leadRow.TimelineEvidence,
+                    leadRow.BuyingTimelineValidatedAtUtc,
+                    leadRow.ProblemSeverity,
+                    leadRow.ProblemEvidence,
+                    leadRow.ProblemSeverityValidatedAtUtc,
+                    leadRow.EconomicBuyer,
+                    leadRow.EconomicBuyerEvidence,
+                    leadRow.EconomicBuyerValidatedAtUtc,
+                    leadRow.IcpFit,
+                    leadRow.IcpFitEvidence,
+                    leadRow.IcpFitValidatedAtUtc);
+
+                truthCoverage = Math.Round(insights.TruthCoverage, 2);
+
+                var validations = new[]
+                {
+                    leadRow.BudgetValidatedAtUtc,
+                    leadRow.ReadinessValidatedAtUtc,
+                    leadRow.BuyingTimelineValidatedAtUtc,
+                    leadRow.ProblemSeverityValidatedAtUtc,
+                    leadRow.EconomicBuyerValidatedAtUtc,
+                    leadRow.IcpFitValidatedAtUtc
+                };
+
+                var lastValidation = validations.Where(v => v.HasValue).Select(v => v!.Value).DefaultIfEmpty().Max();
+                if (lastValidation != default)
+                {
+                    timeToTruthDays = (decimal)Math.Round((lastValidation - leadRow.CreatedAtUtc).TotalDays, 1);
+                }
+            }
+
             var ownerName = owners.FirstOrDefault(o => o.Id == opportunity.OwnerId)?.FullName ?? "Unassigned";
             reviewQueue.Add(new ManagerReviewDealDto(
                 opportunity.Id,
@@ -869,6 +1059,8 @@ public class DashboardReadService : IDashboardReadService
                 opportunity.Amount,
                 ownerName,
                 string.Join(" • ", reasons),
+                truthCoverage,
+                timeToTruthDays,
                 nextStepDueAtUtc,
                 lastActivityAtUtc,
                 opportunity.ExpectedCloseDate));
@@ -968,6 +1160,7 @@ public class DashboardReadService : IDashboardReadService
             reviewAckOverdueCount,
             Math.Round(reviewAckAvgHours, 1),
             pipelineByStage,
+            pipelineTruthGaps,
             orderedReviewQueue);
     }
 
@@ -1339,6 +1532,124 @@ public class DashboardReadService : IDashboardReadService
             ActivityRelationType.Opportunity when opportunityLookup.TryGetValue(value, out var opportunityName) => opportunityName,
             _ => string.Empty
         };
+    }
+
+    private sealed record VisibilityContext(RoleVisibilityScope Scope, IReadOnlyCollection<Guid>? UserIds);
+
+    private async Task<VisibilityContext> ResolveVisibilityAsync(Guid? userId, CancellationToken cancellationToken)
+    {
+        if (!userId.HasValue)
+        {
+            return new VisibilityContext(RoleVisibilityScope.All, null);
+        }
+
+        var userInfo = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId.Value)
+            .Select(u => new { u.Id, u.TenantId })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (userInfo is null)
+        {
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
+        }
+
+        var roleRows = await _dbContext.UserRoles
+            .AsNoTracking()
+            .Where(ur => !ur.IsDeleted && ur.UserId == userId.Value)
+            .Join(_dbContext.Roles.AsNoTracking().Where(r => !r.IsDeleted && r.TenantId == userInfo.TenantId),
+                ur => ur.RoleId,
+                r => r.Id,
+                (ur, r) => new { r.Id, r.HierarchyPath, r.VisibilityScope })
+            .ToListAsync(cancellationToken);
+
+        if (roleRows.Count == 0)
+        {
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
+        }
+
+        var effectiveScope = ResolveVisibilityScope(roleRows.Select(r => r.VisibilityScope));
+        if (effectiveScope == RoleVisibilityScope.All)
+        {
+            return new VisibilityContext(RoleVisibilityScope.All, null);
+        }
+
+        if (effectiveScope == RoleVisibilityScope.Self)
+        {
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
+        }
+
+        var rolePaths = roleRows
+            .Select(r => r.HierarchyPath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var descendantRoleIds = new HashSet<Guid>();
+        if (rolePaths.Count > 0)
+        {
+            var tenantRoles = await _dbContext.Roles
+                .AsNoTracking()
+                .Where(r => !r.IsDeleted && r.TenantId == userInfo.TenantId && r.HierarchyPath != null)
+                .Select(r => new { r.Id, r.HierarchyPath })
+                .ToListAsync(cancellationToken);
+
+            foreach (var role in tenantRoles)
+            {
+                if (role.HierarchyPath is null)
+                {
+                    continue;
+                }
+
+                if (rolePaths.Any(path => !string.IsNullOrWhiteSpace(path)
+                                          && role.HierarchyPath.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+                {
+                    descendantRoleIds.Add(role.Id);
+                }
+            }
+        }
+        else
+        {
+            foreach (var role in roleRows)
+            {
+                descendantRoleIds.Add(role.Id);
+            }
+        }
+
+        if (descendantRoleIds.Count == 0)
+        {
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
+        }
+
+        var teamUserIds = await _dbContext.UserRoles
+            .AsNoTracking()
+            .Where(ur => !ur.IsDeleted && descendantRoleIds.Contains(ur.RoleId))
+            .Select(ur => ur.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        if (!teamUserIds.Contains(userId.Value))
+        {
+            teamUserIds.Add(userId.Value);
+        }
+
+        return new VisibilityContext(RoleVisibilityScope.Team, teamUserIds);
+    }
+
+    private static RoleVisibilityScope ResolveVisibilityScope(IEnumerable<RoleVisibilityScope> scopes)
+    {
+        var scopeList = scopes.ToList();
+        if (scopeList.Any(scope => scope == RoleVisibilityScope.All))
+        {
+            return RoleVisibilityScope.All;
+        }
+
+        if (scopeList.Any(scope => scope == RoleVisibilityScope.Team))
+        {
+            return RoleVisibilityScope.Team;
+        }
+
+        return RoleVisibilityScope.Self;
     }
 
     private sealed record DashboardActivityRaw(
