@@ -35,6 +35,14 @@
         </div>
       </div>
 
+      <div class="policy-gate-banner" *ngIf="policyGateMessage() as gateMessage">
+        <i class="pi pi-shield"></i>
+        <div>
+          <strong>Policy gate triggered</strong>
+          <p>{{ gateMessage }}</p>
+        </div>
+      </div>
+
       <section class="related-summary" *ngIf="isEditMode()">
         <div class="related-summary-label">Related record</div>
         <div class="related-summary-links" *ngIf="accountLink() as link; else noAccountSummary">

@@ -2236,12 +2236,18 @@ public sealed class OpportunityService : IOpportunityService
 
         if (string.IsNullOrWhiteSpace(tenant.ApprovalApproverRole))
         {
-            return "Approval role must be configured before closing high-value opportunities.";
+            await TrackPolicyGateAsync(
+                opportunityId,
+                "ApprovalRoleMissing",
+                $"Close>{threshold.Value:0.##} {request.Currency ?? "USD"}",
+                actor,
+                cancellationToken);
+            return $"Approval role must be configured before closing high-value opportunities (>{threshold.Value:0.##} {request.Currency ?? "USD"}).";
         }
 
         if (!opportunityId.HasValue || opportunityId.Value == Guid.Empty)
         {
-            return "Approval required to close this opportunity. Save it first, then request approval.";
+            return $"Approval required to close opportunities above {threshold.Value:0.##} {request.Currency ?? "USD"}. Save it first, then request approval.";
         }
 
         var approved = await HasApprovedChainAsync(opportunityId.Value, "Close", cancellationToken);
@@ -2264,7 +2270,13 @@ public sealed class OpportunityService : IOpportunityService
             return approvalResult.Error ?? "Approval workflow could not be started.";
         }
 
-        return "Approval required. Request submitted for review.";
+        await TrackPolicyGateAsync(
+            opportunityId,
+            "ApprovalRequiredClose",
+            $"Close>{threshold.Value:0.##} {request.Currency ?? "USD"}",
+            actor,
+            cancellationToken);
+        return $"Approval required to close opportunities above {threshold.Value:0.##} {request.Currency ?? "USD"}. Request submitted for review.";
     }
 
     private async Task<string?> ValidateDiscountApprovalAsync(
@@ -2288,7 +2300,7 @@ public sealed class OpportunityService : IOpportunityService
 
         if (!opportunityId.HasValue || opportunityId.Value == Guid.Empty)
         {
-            return "Discount approval required. Save the opportunity first to request approval.";
+            return $"Discount approval required (>= {DiscountPercentApprovalThreshold:0.##}% or >= {DiscountAmountApprovalThreshold:0.##} {request.Currency ?? "USD"}). Save the opportunity first to request approval.";
         }
 
         var approved = await HasApprovedChainAsync(opportunityId.Value, "Discount", cancellationToken);
@@ -2312,7 +2324,13 @@ public sealed class OpportunityService : IOpportunityService
             return approvalResult.Error ?? "Approval workflow could not be started.";
         }
 
-        return "Discount approval required. Request submitted for review.";
+        await TrackPolicyGateAsync(
+            opportunityId,
+            "DiscountApprovalRequired",
+            $">={DiscountPercentApprovalThreshold:0.##}% or >={DiscountAmountApprovalThreshold:0.##} {request.Currency ?? "USD"}",
+            actor,
+            cancellationToken);
+        return $"Discount approval required (>= {DiscountPercentApprovalThreshold:0.##}% or >= {DiscountAmountApprovalThreshold:0.##} {request.Currency ?? "USD"}). Request submitted for review.";
     }
 
     private async Task<string?> ValidateHighValueUpdateApprovalAsync(
@@ -2354,7 +2372,13 @@ public sealed class OpportunityService : IOpportunityService
 
         if (string.IsNullOrWhiteSpace(tenant.ApprovalApproverRole))
         {
-            return "Approval role must be configured before updating close date or probability on high-value opportunities.";
+            await TrackPolicyGateAsync(
+                opportunity.Id,
+                "ApprovalRoleMissing",
+                $"Update>{threshold.Value:0.##} {request.Currency ?? "USD"}",
+                actor,
+                cancellationToken);
+            return $"Approval role must be configured before updating close date or probability on high-value opportunities (>{threshold.Value:0.##} {request.Currency ?? "USD"}).";
         }
 
         var approved = await HasApprovedChainAsync(opportunity.Id, "Update", cancellationToken);
@@ -2377,7 +2401,30 @@ public sealed class OpportunityService : IOpportunityService
             return approvalResult.Error ?? "Approval workflow could not be started.";
         }
 
-        return "Approval required to update close date or probability for high-value opportunities. Request submitted for review.";
+        await TrackPolicyGateAsync(
+            opportunity.Id,
+            "ApprovalRequiredUpdate",
+            $"Update>{threshold.Value:0.##} {request.Currency ?? "USD"}",
+            actor,
+            cancellationToken);
+        return $"Approval required to update close date or probability for opportunities above {threshold.Value:0.##} {request.Currency ?? "USD"}. Request submitted for review.";
+    }
+
+    private async Task TrackPolicyGateAsync(
+        Guid? opportunityId,
+        string ruleName,
+        string thresholdSummary,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        if (!opportunityId.HasValue || opportunityId.Value == Guid.Empty)
+        {
+            return;
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(opportunityId.Value, "PolicyGateBlocked", ruleName, null, thresholdSummary, actor),
+            cancellationToken);
     }
 
     private async Task<bool> HasApprovedChainAsync(Guid opportunityId, string purpose, CancellationToken cancellationToken)

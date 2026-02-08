@@ -426,11 +426,15 @@ MoSCoW: Must
 
 16) Policy gates for high-risk actions (threshold enforcement)
 MoSCoW: Must
-- Status: NOT STARTED
+- Status: DONE
 - Acceptance criteria:
   - Approval/override thresholds are enforced server-side (discount %, deal size, stage gates).
   - UI displays the applicable policy gate when a user is blocked.
   - Gate violations are logged in audit trail with rule name and threshold.
+- Evidence:
+  - Server-side gates + audit: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+  - UI policy gate banner: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+  - UI policy gate logic: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
 
 17) Approval permissions separated from edit rights
 MoSCoW: Must
@@ -568,6 +572,7 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Settings | Approval Settings page (ClickUp: 86dzpdf2f, Status: done)
 - Module: Settings | As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded. (ClickUp: 86dzp8xah, Status: done)
 - Module: Settings | As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback. (ClickUp: 86dzp8x9c, Status: done)
+- Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (ClickUp: 86dzpf90r, Status: done)
 - Module: Settings | Contextual Threshold Rules page (ClickUp: 86dzpdf2h, Status: done)
 - Module: Settings | Qualification Policy page (ClickUp: 86dzpdf2g, Status: done)
 - Risk & Cost of Not Knowing (ClickUp: 86dzp8xf4, Status: backlog)

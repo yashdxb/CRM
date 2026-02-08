@@ -139,7 +139,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Settings | Qualification Policy page
 - Module: Settings | Contextual Threshold Rules page
 - Module: Settings | As an Admin, I want permissions grouped by capability with role intent views so roles are consistent and easy to audit.
-- Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent.
+- Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (Done)
 - Module: Settings | As an Admin, I want separate permissions for request/approve/override so edit rights do not grant approvals. (Must)
 - Module: Settings | As an Admin, I want H1/H2/H3 packs as presets with role drift tracking so I can safely customize roles.
 - Module: Settings | As an Admin, I want a role hierarchy with computed depth (no manual level input) so reporting lines are clear and consistent.

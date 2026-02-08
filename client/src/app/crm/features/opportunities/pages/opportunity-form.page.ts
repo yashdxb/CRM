@@ -134,6 +134,7 @@ export class OpportunityFormPage implements OnInit {
   protected approvalDecidingIds = new Set<string>();
   private approvalAmountLocked = false;
   private syncingApprovalAmount = false;
+  protected readonly policyGateMessage = signal<string | null>(null);
   protected readonly reviewOutcomeOptions: Option[] = [
     { label: 'Approved', value: 'Approved' },
     { label: 'Needs Work', value: 'Needs Work' },
@@ -272,10 +273,12 @@ export class OpportunityFormPage implements OnInit {
         next: () => {
           this.saving.set(false);
           this.originalStage = this.selectedStage;
+          this.policyGateMessage.set(null);
         },
         error: (err) => {
           this.saving.set(false);
           const message = typeof err?.error === 'string' ? err.error : 'Unable to save opportunity.';
+          this.handlePolicyGateMessage(message);
           this.toastService.show('error', message, 4000);
         }
       });
@@ -479,6 +482,15 @@ export class OpportunityFormPage implements OnInit {
     );
   }
 
+  private handlePolicyGateMessage(message: string) {
+    const normalized = message.toLowerCase();
+    const isPolicyGate =
+      normalized.includes('approval required') ||
+      normalized.includes('discount approval required') ||
+      normalized.includes('approval role must be configured');
+    this.policyGateMessage.set(isPolicyGate ? message : null);
+  }
+
   private validateTeamMembers(): string | null {
     if (!this.teamMembers.length) {
       return null;
@@ -576,6 +588,7 @@ export class OpportunityFormPage implements OnInit {
         error: (err) => {
           this.approvalRequesting.set(false);
           const message = typeof err?.error === 'string' ? err.error : 'Unable to request approval.';
+          this.handlePolicyGateMessage(message);
           this.toastService.show('error', message, 3500);
         }
       });
@@ -600,6 +613,7 @@ export class OpportunityFormPage implements OnInit {
         error: (err) => {
           this.approvalDecidingIds.delete(item.id);
           const message = typeof err?.error === 'string' ? err.error : 'Unable to update approval.';
+          this.handlePolicyGateMessage(message);
           this.toastService.show('error', message, 3500);
         }
       });
