@@ -284,6 +284,13 @@ export const routes: Routes = [
             loadComponent: () => import('./crm/features/settings/pages/lead-assignment.page').then((m) => m.LeadAssignmentPage)
           },
           {
+            path: 'opportunity-automation',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Opportunity Automation' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/opportunity-automation.page').then((m) => m.OpportunityAutomationPage)
+          },
+          {
             path: 'dashboard-packs',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Dashboard Packs' },

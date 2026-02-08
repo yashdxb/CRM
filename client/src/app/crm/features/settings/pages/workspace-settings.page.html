@@ -66,13 +66,13 @@
         <div class="card-icon">
           <i class="pi pi-cog"></i>
         </div>
-        <div class="card-content">
-          <span class="card-label">Settings</span>
-          <strong class="card-value">4</strong>
-          <span class="card-trend">
-            <i class="pi pi-sliders-h"></i> Configurable options
-          </span>
-        </div>
+      <div class="card-content">
+        <span class="card-label">Settings</span>
+        <strong class="card-value">5</strong>
+        <span class="card-trend">
+          <i class="pi pi-sliders-h"></i> Configurable options
+        </span>
+      </div>
         <div class="card-glow"></div>
       </div>
     </div>
@@ -179,6 +179,30 @@
                 <label>Company Name <span class="required">*</span></label>
                 <input pInputText formControlName="name" placeholder="Acme CRM Workspace" class="w-full" />
                 <small class="field-hint">The display name for your workspace</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--warning">
+              <i class="pi pi-stopwatch"></i>
+              Lead SLA
+            </h3>
+            <p class="section-description">Define how quickly new leads must be contacted</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>First-touch SLA (hours)</label>
+                <input
+                  pInputText
+                  type="number"
+                  min="1"
+                  max="168"
+                  formControlName="leadFirstTouchSlaHours"
+                  placeholder="24"
+                  class="w-full"
+                />
+                <small class="field-hint">Default is 24 hours. Used to create first-touch tasks and SLA alerts.</small>
               </div>
             </div>
           </section>

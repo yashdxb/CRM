@@ -2,7 +2,7 @@ using MediatR;
 
 namespace CRM.Enterprise.Application.Dashboard;
 
-public record GetManagerPipelineHealthQuery : IRequest<ManagerPipelineHealthDto>;
+public record GetManagerPipelineHealthQuery(Guid? UserId) : IRequest<ManagerPipelineHealthDto>;
 
 public class GetManagerPipelineHealthHandler : IRequestHandler<GetManagerPipelineHealthQuery, ManagerPipelineHealthDto>
 {
@@ -15,6 +15,6 @@ public class GetManagerPipelineHealthHandler : IRequestHandler<GetManagerPipelin
 
     public Task<ManagerPipelineHealthDto> Handle(GetManagerPipelineHealthQuery request, CancellationToken cancellationToken)
     {
-        return _dashboardReadService.GetManagerPipelineHealthAsync(cancellationToken);
+        return _dashboardReadService.GetManagerPipelineHealthAsync(request.UserId, cancellationToken);
     }
 }

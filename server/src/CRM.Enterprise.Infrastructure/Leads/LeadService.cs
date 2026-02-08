@@ -2,6 +2,7 @@ using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Leads;
+using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
@@ -14,8 +15,9 @@ namespace CRM.Enterprise.Infrastructure.Leads;
 public sealed class LeadService : ILeadService
 {
     private const string LeadEntityType = "Lead";
-    private static readonly TimeSpan FirstTouchSla = TimeSpan.FromHours(24);
+    private const int DefaultFirstTouchSlaHours = 24;
     private readonly CrmDbContext _dbContext;
+    private readonly ITenantProvider _tenantProvider;
     private readonly ILeadScoringService _leadScoringService;
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
@@ -24,12 +26,14 @@ public sealed class LeadService : ILeadService
 
     public LeadService(
         CrmDbContext dbContext,
+        ITenantProvider tenantProvider,
         ILeadScoringService leadScoringService,
         IAuditEventService auditEvents,
         IMediator mediator,
         IActivityService activityService)
     {
         _dbContext = dbContext;
+        _tenantProvider = tenantProvider;
         _leadScoringService = leadScoringService;
         _auditEvents = auditEvents;
         _mediator = mediator;
@@ -1644,7 +1648,8 @@ public sealed class LeadService : ILeadService
 
         if (!lead.FirstTouchDueAtUtc.HasValue)
         {
-            lead.FirstTouchDueAtUtc = DateTime.UtcNow.Add(FirstTouchSla);
+            var sla = await ResolveFirstTouchSlaAsync(cancellationToken);
+            lead.FirstTouchDueAtUtc = DateTime.UtcNow.Add(sla);
         }
 
         var existingTask = await _dbContext.Activities
@@ -1664,10 +1669,10 @@ public sealed class LeadService : ILeadService
                 existingTask.UpdatedAtUtc = DateTime.UtcNow;
             }
 
-            if (!existingTask.DueDateUtc.HasValue)
-            {
-                existingTask.DueDateUtc = lead.FirstTouchDueAtUtc;
-            }
+        if (!existingTask.DueDateUtc.HasValue)
+        {
+            existingTask.DueDateUtc = lead.FirstTouchDueAtUtc;
+        }
 
             return;
         }
@@ -1686,6 +1691,29 @@ public sealed class LeadService : ILeadService
             Priority = "High",
             CreatedAtUtc = DateTime.UtcNow
         });
+    }
+
+    private async Task<TimeSpan> ResolveFirstTouchSlaAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return TimeSpan.FromHours(DefaultFirstTouchSlaHours);
+        }
+
+        var hours = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == tenantId)
+            .Select(t => t.LeadFirstTouchSlaHours)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var resolved = hours.GetValueOrDefault(DefaultFirstTouchSlaHours);
+        if (resolved <= 0)
+        {
+            resolved = DefaultFirstTouchSlaHours;
+        }
+
+        return TimeSpan.FromHours(resolved);
     }
 
     private async Task EnsureNurtureFollowUpTaskAsync(

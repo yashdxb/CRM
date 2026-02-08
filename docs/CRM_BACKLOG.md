@@ -218,7 +218,44 @@ MoSCoW: Must
   - Overrides require manager approval and/or reason when below threshold.
   - Qualification factors default to Unknown, evidence locks when Unknown, and inline feedback shows confidence + truth coverage + assumptions + weakest signal.
 
-4) Lead AI scoring
+4) Lead SLA policy (first-touch SLA configurable)
+MoSCoW: Must
+- Status: DONE
+- Evidence:
+  - Workspace SLA field: `client/src/app/crm/features/settings/pages/workspace-settings.page.html`
+  - Workspace settings API: `server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs`
+  - SLA application in lead service: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+- Acceptance criteria:
+  - Admin can set first-touch SLA hours in workspace settings.
+  - New leads create a first-touch task using the configured SLA window.
+  - SLA due time is displayed on the Lead form.
+
+5) Workflow automation (stage triggers + task creation)
+MoSCoW: Must
+- Status: DONE
+- Evidence:
+  - Automation rules API: `server/src/CRM.Enterprise.Api/Controllers/OpportunityAutomationRulesController.cs`
+  - Rule persistence: `server/src/CRM.Enterprise.Domain/Entities/OpportunityStageAutomationRule.cs`
+  - Stage trigger handler: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityEventHandlers.cs`
+  - Automation rules UI: `client/src/app/crm/features/settings/pages/opportunity-automation.page.html`
+- Acceptance criteria:
+  - Admin can create/edit/delete stage automation rules.
+  - Rules trigger task creation when an opportunity enters the configured stage.
+  - Duplicate rule tasks are not created for the same opportunity.
+
+6) Forecast rollups (rep → manager) + pipeline accuracy controls
+MoSCoW: Must
+- Status: DONE
+- Evidence:
+  - Manager pipeline health rollup: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+  - Manager pipeline health API: `server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs`
+  - Role hierarchy visibility scoping: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+- Acceptance criteria:
+  - Manager pipeline health data is scoped to the manager’s role hierarchy.
+  - Pipeline counts/values roll up for descendants by default.
+  - Role visibility scope can restrict rollups to Self/Team/All.
+
+7) Lead AI scoring
 MoSCoW: Should
 - Status: DONE
 - Evidence:
@@ -230,7 +267,7 @@ MoSCoW: Should
   - AI score returns a confidence and rationale.
   - Score updates when key fields change.
 
-5) Opportunity enhancements (probability, stage history, win/loss reason, risk alerts)
+8) Opportunity enhancements (probability, stage history, win/loss reason, risk alerts)
 MoSCoW: Should
 - Status: DONE
 - Evidence:
@@ -241,7 +278,7 @@ MoSCoW: Should
   - Win/loss reason required on close.
   - Stalled deals flagged in pipeline view.
 
-6) Lightweight approval thresholds (single-level)
+9) Lightweight approval thresholds (single-level)
 MoSCoW: Must
 - Status: DONE
 - Evidence:
@@ -252,7 +289,7 @@ MoSCoW: Must
   - Opportunity close blocked when thresholds exceeded until approved.
   - Single approver role (default Sales Manager).
 
-7) Epistemic dashboard widgets (Truth Metrics, Risk Register, Confidence Forecast)
+10) Epistemic dashboard widgets (Truth Metrics, Risk Register, Confidence Forecast)
 MoSCoW: Must
 - Status: DONE
 - Evidence:
@@ -266,7 +303,7 @@ MoSCoW: Must
   - Risk Register card lists top risk flags and total count.
   - Confidence Forecast card shows confidence-weighted pipeline vs raw pipeline.
 
-8) Hierarchy-level dashboard packs (H1/H2/H3...) + reset
+11) Hierarchy-level dashboard packs (H1/H2/H3...) + reset
 MoSCoW: Should
 - Status: DONE
 - Evidence:
@@ -281,7 +318,7 @@ MoSCoW: Should
   - User customizations persist and override the default pack.
   - “Reset to Role Default” restores the role-level pack layout.
 
-9) Named default dashboard templates (admin-defined)
+12) Named default dashboard templates (admin-defined)
 MoSCoW: Should
 - Status: DONE
 - Evidence:
@@ -297,7 +334,7 @@ MoSCoW: Should
 
 ### Next: Integrations
 
-6) Calendar sync (Google/Outlook)
+13) Calendar sync (Google/Outlook)
 MoSCoW: Could
 - Status: NOT STARTED
 - Evidence:
@@ -306,7 +343,7 @@ MoSCoW: Could
   - OAuth connection to Google/Outlook.
   - 2-way sync for meetings/tasks.
 
-7) Email integration (send + sync + templates)
+14) Email integration (send + sync + templates)
 MoSCoW: Could
 - Status: NOT STARTED
 - Evidence:
@@ -316,7 +353,7 @@ MoSCoW: Could
   - Send email from CRM and log to timeline.
   - Inbox sync for replies.
 
-8) CSV import/export
+15) CSV import/export
 MoSCoW: Should
 - Status: DONE
 - Evidence:
@@ -342,11 +379,14 @@ MoSCoW: Should
   - In-app toast notifications: `client/src/app/core/notifications/notification.service.ts`
   - UI container: `client/src/app/core/notifications/notification-container.component.ts`
   - Preferences API: `server/src/CRM.Enterprise.Api/Controllers/NotificationPreferencesController.cs`
-  - Email delivery jobs: `server/src/CRM.Enterprise.Api/Jobs/NotificationEmailJobs.cs`
-  - Preferences UI: `client/src/app/features/settings/pages/notifications.page.ts`
+  - Email alert worker: `server/src/CRM.Enterprise.Infrastructure/Notifications/NotificationAlertWorker.cs`
+  - Preferences UI: `client/src/app/crm/features/settings/pages/notifications.page.ts`
 - Acceptance criteria:
   - Notification center with read/unread state.
   - Email notifications for tasks/opps with opt-out preferences.
+  - Email alert types (SLA/idle/coaching) are configurable per user.
+  - Idle-deal and coaching cooldown thresholds are configurable in the UI.
+  - Email alert toggles default to off until explicitly enabled.
 
 ### Next: Low-complexity UX wins
 
@@ -526,6 +566,7 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8xtg, Status: in progress)
 - Module: Dashboard | As a manager, I see top truth gaps across pipeline (ClickUp: 86dzp8y02, Status: in progress)
 - Module: Dashboard | As a manager, I see top truth gaps across pipeline (ClickUp: 86dzp8xt8, Status: in progress)
+- Module: Dashboard | As a manager, I want pipeline and forecast rollups across my role hierarchy by default. (ClickUp: 86dzpgeq0, Status: done)
 - Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS (ClickUp: 86dzp8xzq, Status: done)
 - Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS (ClickUp: 86dzp8xt5, Status: done)
 - Module: Dashboard | As a Sales Rep, I want a structured checklist to flag risks early. (ClickUp: 86dzp8xbh, Status: backlog)
@@ -576,6 +617,7 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close. (ClickUp: 86dzp8xa9, Status: done)
 - Module: Opportunities | As a Sales Rep, I want to schedule discovery and log notes before leaving the stage. (ClickUp: 86dzp8xbq, Status: backlog)
 - Module: Opportunities | As a Sales Rep, I want to set opportunity name, value, close date, and initial stage so the deal is trackable from day one. (ClickUp: 86dzp8xce, Status: done)
+- Module: Opportunities | As an Admin, I want stage automation rules that create tasks on stage entry. (ClickUp: 86dzpgepx, Status: done)
 - Module: Settings | Approval Settings page (ClickUp: 86dzpdf2f, Status: done)
 - Module: Settings | As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded. (ClickUp: 86dzp8xah, Status: done)
 - Module: Settings | As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback. (ClickUp: 86dzp8x9c, Status: done)
@@ -585,5 +627,6 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Settings | Role hierarchy (Salesforce-style reporting structure) (ClickUp: 86dzpegw4, Status: done)
 - Module: Settings | Contextual Threshold Rules page (ClickUp: 86dzpdf2h, Status: done)
 - Module: Settings | Qualification Policy page (ClickUp: 86dzpdf2g, Status: done)
+- Module: Settings | As a user, I want configurable email alert types and thresholds. (ClickUp: 86dzpgja2, Status: done)
 - Risk & Cost of Not Knowing (ClickUp: 86dzp8xf4, Status: backlog)
 - Tenant setting for module packs (ClickUp: 86dzp8xkf, Status: backlog)

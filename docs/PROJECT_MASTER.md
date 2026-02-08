@@ -135,7 +135,6 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Do not bypass tenant isolation or permission checks.
 - Do not hardcode role names or role-based layouts; use hierarchy levels + configured defaults.
 - Do not introduce inline HTML/CSS in components.
-- Do not commit or push unless explicitly instructed.
 
 ---
 

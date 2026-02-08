@@ -78,6 +78,113 @@
           ></p-toggleSwitch>
         </div>
         <div class="preference-divider"></div>
+        <div class="preference-row">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-stopwatch"></i>
+            </div>
+            <div>
+              <div class="preference-title">Lead SLA breach</div>
+              <div class="preference-subtitle">Email when first-touch SLA is missed.</div>
+            </div>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="preferences().emailAlerts.leadSla"
+            (ngModelChange)="toggleEmailAlert('leadSla', $event)"
+            [ngModelOptions]="{ standalone: true }"
+          ></p-toggleSwitch>
+        </div>
+        <div class="preference-row">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-clock"></i>
+            </div>
+            <div>
+              <div class="preference-title">Idle deal alert</div>
+              <div class="preference-subtitle">Email when opportunities are idle beyond the threshold.</div>
+            </div>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="preferences().emailAlerts.idleDeal"
+            (ngModelChange)="toggleEmailAlert('idleDeal', $event)"
+            [ngModelOptions]="{ standalone: true }"
+          ></p-toggleSwitch>
+        </div>
+        <div class="preference-row">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-flag"></i>
+            </div>
+            <div>
+              <div class="preference-title">Coaching escalation</div>
+              <div class="preference-subtitle">Email managers when coaching tasks are overdue.</div>
+            </div>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="preferences().emailAlerts.coachingEscalation"
+            (ngModelChange)="toggleEmailAlert('coachingEscalation', $event)"
+            [ngModelOptions]="{ standalone: true }"
+          ></p-toggleSwitch>
+        </div>
+        <div class="preference-divider"></div>
+        <div class="preference-row">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-calendar"></i>
+            </div>
+            <div>
+              <div class="preference-title">Idle deal threshold (days)</div>
+              <div class="preference-subtitle">Number of inactive days before alerting.</div>
+            </div>
+          </div>
+          <input
+            pInputText
+            type="number"
+            min="1"
+            [ngModel]="preferences().emailAlerts.idleDealDays"
+            (ngModelChange)="updateEmailAlertValue('idleDealDays', $event)"
+            [ngModelOptions]="{ standalone: true }"
+          />
+        </div>
+        <div class="preference-row">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-refresh"></i>
+            </div>
+            <div>
+              <div class="preference-title">Idle deal cooldown (days)</div>
+              <div class="preference-subtitle">Minimum days between repeated alerts.</div>
+            </div>
+          </div>
+          <input
+            pInputText
+            type="number"
+            min="1"
+            [ngModel]="preferences().emailAlerts.idleDealCooldownDays"
+            (ngModelChange)="updateEmailAlertValue('idleDealCooldownDays', $event)"
+            [ngModelOptions]="{ standalone: true }"
+          />
+        </div>
+        <div class="preference-row">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-refresh"></i>
+            </div>
+            <div>
+              <div class="preference-title">Coaching cooldown (days)</div>
+              <div class="preference-subtitle">Minimum days between coaching escalation emails.</div>
+            </div>
+          </div>
+          <input
+            pInputText
+            type="number"
+            min="1"
+            [ngModel]="preferences().emailAlerts.coachingEscalationCooldownDays"
+            (ngModelChange)="updateEmailAlertValue('coachingEscalationCooldownDays', $event)"
+            [ngModelOptions]="{ standalone: true }"
+          />
+        </div>
+        <div class="preference-divider"></div>
         <div class="preference-row" *ngFor="let option of options">
           <div class="preference-info">
             <div class="preference-icon">

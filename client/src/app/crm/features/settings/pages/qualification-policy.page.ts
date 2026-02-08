@@ -101,6 +101,7 @@ export class QualificationPolicyPage {
       name: this.loadedSettings.name ?? 'Workspace',
       timeZone: this.loadedSettings.timeZone ?? 'UTC',
       currency: this.loadedSettings.currency ?? 'USD',
+      leadFirstTouchSlaHours: this.loadedSettings.leadFirstTouchSlaHours ?? 24,
       approvalAmountThreshold: this.loadedSettings.approvalAmountThreshold ?? null,
       approvalApproverRole: this.loadedSettings.approvalApproverRole ?? '',
       approvalWorkflowPolicy: this.loadedSettings.approvalWorkflowPolicy ?? null,

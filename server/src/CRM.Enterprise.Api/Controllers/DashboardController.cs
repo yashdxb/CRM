@@ -157,7 +157,7 @@ public class DashboardController : ControllerBase
     [HttpGet("manager/pipeline-health")]
     public async Task<ActionResult<ManagerPipelineHealthResponse>> GetManagerPipelineHealth(CancellationToken cancellationToken)
     {
-        var health = await _mediator.Send(new GetManagerPipelineHealthQuery(), cancellationToken);
+        var health = await _mediator.Send(new GetManagerPipelineHealthQuery(GetCurrentUserId()), cancellationToken);
         var response = new ManagerPipelineHealthResponse(
             health.OpenOpportunities,
             health.PipelineValueTotal,

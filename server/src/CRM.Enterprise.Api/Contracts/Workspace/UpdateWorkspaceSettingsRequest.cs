@@ -7,6 +7,7 @@ public record UpdateWorkspaceSettingsRequest(
     string Name,
     string TimeZone,
     string Currency,
+    int? LeadFirstTouchSlaHours,
     decimal? ApprovalAmountThreshold,
     string? ApprovalApproverRole,
     ApprovalWorkflowPolicy? ApprovalWorkflowPolicy,

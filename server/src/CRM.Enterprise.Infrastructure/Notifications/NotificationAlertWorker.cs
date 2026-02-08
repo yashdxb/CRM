@@ -1,3 +1,4 @@
+using System;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Application.Tenants;
@@ -19,9 +20,9 @@ public sealed class NotificationAlertWorker : BackgroundService
     private const string CoachingEscalationAction = "CoachingEscalation";
     private const string SystemActor = "system";
     private static readonly TimeSpan CheckInterval = TimeSpan.FromMinutes(15);
-    private static readonly TimeSpan IdleDealThreshold = TimeSpan.FromDays(30);
-    private static readonly TimeSpan IdleAlertCooldown = TimeSpan.FromDays(7);
-    private static readonly TimeSpan CoachingEscalationCooldown = TimeSpan.FromDays(7);
+    private const int DefaultIdleDealDays = 30;
+    private const int DefaultIdleCooldownDays = 7;
+    private const int DefaultCoachingCooldownDays = 7;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -105,7 +106,8 @@ public sealed class NotificationAlertWorker : BackgroundService
         {
             if (owners.TryGetValue(lead.OwnerId, out var owner))
             {
-                if (IsAlertsEnabled(owner))
+                var settings = ResolveEmailAlertSettings(owner);
+                if (settings.AlertsEnabled && settings.LeadSla)
                 {
                     var subject = $"Lead SLA breach: {lead.FirstName} {lead.LastName}";
                     var body = BuildLeadSlaBody(lead, owner.FullName);
@@ -113,8 +115,14 @@ public sealed class NotificationAlertWorker : BackgroundService
                 }
             }
 
-            foreach (var manager in managerUsers.Where(IsAlertsEnabled))
+            foreach (var manager in managerUsers)
             {
+                var settings = ResolveEmailAlertSettings(manager);
+                if (!settings.AlertsEnabled || !settings.LeadSla)
+                {
+                    continue;
+                }
+
                 var subject = $"SLA breach (Lead): {lead.FirstName} {lead.LastName}";
                 var body = BuildLeadManagerBody(lead, manager.FullName);
                 await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
@@ -151,54 +159,84 @@ public sealed class NotificationAlertWorker : BackgroundService
             .Select(group => new { OpportunityId = group.Key, LastAt = group.Max(a => a.CompletedDateUtc ?? a.CreatedAtUtc) })
             .ToDictionaryAsync(entry => entry.OpportunityId, entry => (DateTime?)entry.LastAt, cancellationToken);
 
-        var idleOpportunities = opportunities.Where(opportunity =>
-        {
-            var lastActivityAtUtc = lastActivities.GetValueOrDefault(opportunity.Id);
-            var referenceAtUtc = lastActivityAtUtc ?? opportunity.CreatedAtUtc;
-            return now - referenceAtUtc > IdleDealThreshold;
-        }).ToList();
-
-        if (idleOpportunities.Count == 0)
-        {
-            return;
-        }
-
-        var idleIds = idleOpportunities.Select(opportunity => opportunity.Id).ToList();
-        var alertedIds = await dbContext.AuditEvents.AsNoTracking()
-            .Where(audit => audit.EntityType == nameof(Opportunity)
-                            && audit.Action == IdleDealAction
-                            && idleIds.Contains(audit.EntityId)
-                            && audit.CreatedAtUtc >= now.Subtract(IdleAlertCooldown))
-            .Select(audit => audit.EntityId)
-            .ToListAsync(cancellationToken);
+        var idleOpportunities = opportunities.ToList();
 
         var managerUsers = await GetSalesManagersAsync(dbContext, cancellationToken);
         var ownerIds = idleOpportunities.Select(opportunity => opportunity.OwnerId).Distinct().ToList();
         var owners = await GetUsersAsync(dbContext, ownerIds, cancellationToken);
+        var userSettings = new Dictionary<Guid, EmailAlertSettings>();
+        foreach (var owner in owners.Values)
+        {
+            userSettings[owner.Id] = ResolveEmailAlertSettings(owner);
+        }
+        foreach (var manager in managerUsers)
+        {
+            if (!userSettings.ContainsKey(manager.Id))
+            {
+                userSettings[manager.Id] = ResolveEmailAlertSettings(manager);
+            }
+        }
 
-        foreach (var opportunity in idleOpportunities.Where(opportunity => !alertedIds.Contains(opportunity.Id)))
+        var maxCooldownDays = userSettings.Values
+            .Select(s => s.IdleDealCooldownDays)
+            .DefaultIfEmpty(DefaultIdleCooldownDays)
+            .Max();
+
+        var idleIds = idleOpportunities.Select(opportunity => opportunity.Id).ToList();
+        var recentAlerts = await dbContext.AuditEvents.AsNoTracking()
+            .Where(audit => audit.EntityType == nameof(Opportunity)
+                            && audit.Action == IdleDealAction
+                            && idleIds.Contains(audit.EntityId)
+                            && audit.CreatedAtUtc >= now.Subtract(TimeSpan.FromDays(maxCooldownDays)))
+            .Select(audit => new { audit.EntityId, audit.CreatedAtUtc })
+            .ToListAsync(cancellationToken);
+        var recentAlertLookup = recentAlerts
+            .GroupBy(a => a.EntityId)
+            .ToDictionary(g => g.Key, g => g.Max(x => x.CreatedAtUtc));
+
+        foreach (var opportunity in idleOpportunities)
         {
             var lastActivityAtUtc = lastActivities.GetValueOrDefault(opportunity.Id);
+            var referenceAtUtc = lastActivityAtUtc ?? opportunity.CreatedAtUtc;
+            var sentAny = false;
             if (owners.TryGetValue(opportunity.OwnerId, out var owner))
             {
-                if (IsAlertsEnabled(owner))
+                if (userSettings.TryGetValue(owner.Id, out var settings)
+                    && settings.AlertsEnabled
+                    && settings.IdleDeal
+                    && now - referenceAtUtc > TimeSpan.FromDays(settings.IdleDealDays)
+                    && !WasAlertedRecently(recentAlertLookup, opportunity.Id, now, settings.IdleDealCooldownDays))
                 {
                     var subject = $"Idle deal alert: {opportunity.Name}";
                     var body = BuildIdleDealBody(opportunity, lastActivityAtUtc, owner.FullName);
                     await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                    sentAny = true;
                 }
             }
 
-            foreach (var manager in managerUsers.Where(IsAlertsEnabled))
+            foreach (var manager in managerUsers)
             {
+                if (!userSettings.TryGetValue(manager.Id, out var settings)
+                    || !settings.AlertsEnabled
+                    || !settings.IdleDeal
+                    || now - referenceAtUtc <= TimeSpan.FromDays(settings.IdleDealDays)
+                    || WasAlertedRecently(recentAlertLookup, opportunity.Id, now, settings.IdleDealCooldownDays))
+                {
+                    continue;
+                }
+
                 var subject = $"Idle deal alert: {opportunity.Name}";
                 var body = BuildIdleDealManagerBody(opportunity, lastActivityAtUtc, manager.FullName);
                 await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
+                sentAny = true;
             }
 
-            await auditEvents.TrackAsync(
-                CreateAuditEntry(nameof(Opportunity), opportunity.Id, IdleDealAction, "LastActivityAtUtc", lastActivityAtUtc?.ToString("O")),
-                cancellationToken);
+            if (sentAny)
+            {
+                await auditEvents.TrackAsync(
+                    CreateAuditEntry(nameof(Opportunity), opportunity.Id, IdleDealAction, "LastActivityAtUtc", lastActivityAtUtc?.ToString("O")),
+                    cancellationToken);
+            }
         }
     }
 
@@ -232,15 +270,25 @@ public sealed class NotificationAlertWorker : BackgroundService
         }
 
         var taskIds = overdueTasks.Select(t => t.Id).ToList();
-        var escalatedIds = await dbContext.AuditEvents.AsNoTracking()
+        var managers = await GetSalesManagersAsync(dbContext, cancellationToken);
+        var managerLookup = managers
+            .Select(manager => new { Manager = manager, Settings = ResolveEmailAlertSettings(manager) })
+            .Where(x => x.Settings.AlertsEnabled && x.Settings.CoachingEscalation)
+            .ToList();
+        var maxCooldownDays = managerLookup
+            .Select(x => x.Settings.CoachingEscalationCooldownDays)
+            .DefaultIfEmpty(DefaultCoachingCooldownDays)
+            .Max();
+        var escalatedRows = await dbContext.AuditEvents.AsNoTracking()
             .Where(a => a.EntityType == "Activity"
                         && a.Action == CoachingEscalationAction
                         && taskIds.Contains(a.EntityId)
-                        && a.CreatedAtUtc >= now.Subtract(CoachingEscalationCooldown))
-            .Select(a => a.EntityId)
+                        && a.CreatedAtUtc >= now.Subtract(TimeSpan.FromDays(maxCooldownDays)))
+            .Select(a => new { a.EntityId, a.CreatedAtUtc })
             .ToListAsync(cancellationToken);
-
-        var managers = await GetSalesManagersAsync(dbContext, cancellationToken);
+        var escalatedLookup = escalatedRows
+            .GroupBy(a => a.EntityId)
+            .ToDictionary(g => g.Key, g => g.Max(x => x.CreatedAtUtc));
         var ownerIds = overdueTasks.Select(t => t.OwnerId).Distinct().ToList();
         var owners = await GetUsersAsync(dbContext, ownerIds, cancellationToken);
 
@@ -250,7 +298,7 @@ public sealed class NotificationAlertWorker : BackgroundService
             .Select(o => new { o.Id, o.Name })
             .ToDictionaryAsync(o => o.Id, o => o.Name, cancellationToken);
 
-        foreach (var task in overdueTasks.Where(t => !escalatedIds.Contains(t.Id)))
+        foreach (var task in overdueTasks)
         {
             var ownerName = owners.TryGetValue(task.OwnerId, out var owner) ? owner.FullName : "Rep";
             var opportunityName = opportunities.TryGetValue(task.RelatedEntityId, out var name) ? name : "Opportunity";
@@ -258,14 +306,24 @@ public sealed class NotificationAlertWorker : BackgroundService
             var subject = $"Coaching SLA overdue: {opportunityName}";
             var body = $"<p>Coaching task for <strong>{opportunityName}</strong> assigned to {ownerName} is overdue. Due: {dueAt}.</p>";
 
-            foreach (var manager in managers.Where(IsAlertsEnabled))
+            var sentAny = false;
+            foreach (var manager in managerLookup)
             {
-                await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
+                if (WasAlertedRecently(escalatedLookup, task.Id, now, manager.Settings.CoachingEscalationCooldownDays))
+                {
+                    continue;
+                }
+
+                await SendAlertAsync(emailSender, manager.Manager.Email, subject, body, cancellationToken);
+                sentAny = true;
             }
 
-            await auditEvents.TrackAsync(
-                CreateAuditEntry("Activity", task.Id, CoachingEscalationAction, "CoachingTask", null),
-                cancellationToken);
+            if (sentAny)
+            {
+                await auditEvents.TrackAsync(
+                    CreateAuditEntry("Activity", task.Id, CoachingEscalationAction, "CoachingTask", null),
+                    cancellationToken);
+            }
         }
     }
 
@@ -329,32 +387,86 @@ public sealed class NotificationAlertWorker : BackgroundService
         await emailSender.SendAsync(toEmail, subject, htmlBody, htmlBody, cancellationToken);
     }
 
-    private static bool IsAlertsEnabled(User user)
+    private sealed record EmailAlertSettings(
+        bool AlertsEnabled,
+        bool LeadSla,
+        bool IdleDeal,
+        bool CoachingEscalation,
+        int IdleDealDays,
+        int IdleDealCooldownDays,
+        int CoachingEscalationCooldownDays);
+
+    private static EmailAlertSettings ResolveEmailAlertSettings(User user)
     {
         if (string.IsNullOrWhiteSpace(user.NotificationPreferencesJson))
         {
-            return true;
+            return DefaultEmailAlertSettings();
         }
 
         try
         {
             using var document = JsonDocument.Parse(user.NotificationPreferencesJson);
-            if (document.RootElement.TryGetProperty("alertsEnabled", out var enabled))
+            var alertsEnabled = document.RootElement.TryGetProperty("alertsEnabled", out var enabled)
+                ? enabled.ValueKind == JsonValueKind.True
+                : true;
+            if (!document.RootElement.TryGetProperty("emailAlerts", out var emailAlerts))
             {
-                return enabled.ValueKind switch
-                {
-                    JsonValueKind.True => true,
-                    JsonValueKind.False => false,
-                    _ => true
-                };
+                return DefaultEmailAlertSettings(alertsEnabled);
             }
+
+            var leadSla = emailAlerts.TryGetProperty("leadSla", out var leadValue) && leadValue.ValueKind == JsonValueKind.True;
+            var idleDeal = emailAlerts.TryGetProperty("idleDeal", out var idleValue) && idleValue.ValueKind == JsonValueKind.True;
+            var coaching = emailAlerts.TryGetProperty("coachingEscalation", out var coachingValue) && coachingValue.ValueKind == JsonValueKind.True;
+            var idleDays = emailAlerts.TryGetProperty("idleDealDays", out var idleDaysValue) && idleDaysValue.TryGetInt32(out var idleDaysParsed)
+                ? idleDaysParsed
+                : DefaultIdleDealDays;
+            var idleCooldown = emailAlerts.TryGetProperty("idleDealCooldownDays", out var idleCooldownValue) && idleCooldownValue.TryGetInt32(out var idleCooldownParsed)
+                ? idleCooldownParsed
+                : DefaultIdleCooldownDays;
+            var coachingCooldown = emailAlerts.TryGetProperty("coachingEscalationCooldownDays", out var coachingCooldownValue)
+                                   && coachingCooldownValue.TryGetInt32(out var coachingCooldownParsed)
+                ? coachingCooldownParsed
+                : DefaultCoachingCooldownDays;
+
+            return new EmailAlertSettings(
+                alertsEnabled,
+                leadSla,
+                idleDeal,
+                coaching,
+                Math.Max(1, idleDays),
+                Math.Max(1, idleCooldown),
+                Math.Max(1, coachingCooldown));
         }
         catch
         {
-            return true;
+            return DefaultEmailAlertSettings();
+        }
+    }
+
+    private static EmailAlertSettings DefaultEmailAlertSettings(bool alertsEnabled = true)
+    {
+        return new EmailAlertSettings(
+            alertsEnabled,
+            LeadSla: false,
+            IdleDeal: false,
+            CoachingEscalation: false,
+            IdleDealDays: DefaultIdleDealDays,
+            IdleDealCooldownDays: DefaultIdleCooldownDays,
+            CoachingEscalationCooldownDays: DefaultCoachingCooldownDays);
+    }
+
+    private static bool WasAlertedRecently(
+        IReadOnlyDictionary<Guid, DateTime> alerts,
+        Guid entityId,
+        DateTime now,
+        int cooldownDays)
+    {
+        if (!alerts.TryGetValue(entityId, out var lastAlert))
+        {
+            return false;
         }
 
-        return true;
+        return now - lastAlert < TimeSpan.FromDays(Math.Max(1, cooldownDays));
     }
 
     private static string BuildLeadSlaBody(Lead lead, string recipientName)

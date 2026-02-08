@@ -61,6 +61,10 @@
         <i class="pi pi-sitemap"></i>
         <span>Lead assignment</span>
       </button>
+      <button pButton type="button" class="btn-glass" [disabled]="!canManageOpportunities()" [routerLink]="canManageOpportunities() ? ['/app/settings/opportunity-automation'] : null">
+        <i class="pi pi-sliders-h"></i>
+        <span>Opportunity automation</span>
+      </button>
       <button pButton type="button" class="btn-glass" routerLink="/app/settings/notifications">
         <i class="pi pi-bell"></i>
         <span>Notifications</span>

@@ -1,0 +1,129 @@
+<div class="page-container">
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <header class="page-header">
+    <div>
+      <h1>Opportunity Automation</h1>
+      <p>Trigger tasks automatically when an opportunity enters a stage.</p>
+    </div>
+    <div class="header-actions">
+      <button pButton type="button" class="btn-secondary" routerLink="/app/settings">
+        <i class="pi pi-arrow-left"></i>
+        <span>Back to Settings</span>
+      </button>
+      <button pButton type="button" class="btn-ghost" [disabled]="loading()" (click)="loadRules()">
+        <i class="pi pi-refresh"></i>
+        <span>Reload</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="automation-grid">
+    <section class="glass-card rules-panel">
+      <div class="card-header">
+        <div>
+          <h2>Automation Rules</h2>
+          <p>Stage-based tasks used to keep deals moving.</p>
+        </div>
+        <span class="pill">{{ rules().length }} rules</span>
+      </div>
+
+      <div class="loading-state" *ngIf="loading()">
+        <div class="skeleton-row" *ngFor="let _ of [0,1,2]"></div>
+      </div>
+
+      <div class="rules-list" *ngIf="!loading() && rules().length">
+        <article class="rule-card" *ngFor="let rule of rules()">
+          <div class="rule-main">
+            <h3>{{ rule.name }}</h3>
+            <p class="rule-stage">Stage: {{ rule.stageName }}</p>
+            <p class="rule-task">{{ rule.taskSubject }}</p>
+            <p class="rule-meta">
+              <span>Due +{{ rule.dueInDays }} days</span>
+              <span *ngIf="rule.priority">Priority: {{ rule.priority }}</span>
+            </p>
+          </div>
+          <div class="rule-actions">
+            <button pButton type="button" class="btn-ghost" (click)="startEdit(rule)">
+              Edit
+            </button>
+            <button pButton type="button" class="btn-ghost" (click)="toggleActive(rule)">
+              {{ rule.isActive ? 'Pause' : 'Activate' }}
+            </button>
+            <button pButton type="button" class="btn-danger" (click)="deleteRule(rule)">
+              Delete
+            </button>
+          </div>
+        </article>
+      </div>
+
+      <div class="empty-state" *ngIf="!loading() && !rules().length">
+        <p>No automation rules yet.</p>
+        <p>Add your first stage trigger on the right.</p>
+      </div>
+    </section>
+
+    <section class="glass-card editor-panel">
+      <div class="card-header">
+        <div>
+          <h2>{{ editingId() ? 'Edit Rule' : 'Create Rule' }}</h2>
+          <p>Define the stage trigger and task details.</p>
+        </div>
+      </div>
+
+      <form class="rule-form" (ngSubmit)="saveRule()">
+        <div class="field">
+          <label>Rule name *</label>
+          <input pInputText [(ngModel)]="form.name" name="name" placeholder="Discovery follow-up" />
+        </div>
+
+        <div class="field">
+          <label>Stage name *</label>
+          <input pInputText [(ngModel)]="form.stageName" name="stageName" placeholder="Discovery (or Any)" />
+        </div>
+
+        <div class="field">
+          <label>Task subject *</label>
+          <input pInputText [(ngModel)]="form.taskSubject" name="taskSubject" placeholder="Schedule discovery recap" />
+          <small>Use {{ '{' }}Opportunity{{ '}' }} to include the deal name.</small>
+        </div>
+
+        <div class="field">
+          <label>Task description</label>
+          <input pInputText [(ngModel)]="form.taskDescription" name="taskDescription" placeholder="Notes sent within 24h." />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Due in days</label>
+            <input pInputText type="number" min="0" [(ngModel)]="form.dueInDays" name="dueInDays" />
+          </div>
+          <div class="field">
+            <label>Priority</label>
+            <p-select
+              appendTo="body"
+              [options]="priorityOptions"
+              optionLabel="label"
+              optionValue="value"
+              [(ngModel)]="form.priority"
+              name="priority"
+              placeholder="Medium"
+            ></p-select>
+          </div>
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" [(ngModel)]="form.isActive" name="isActive" />
+          <span>Active</span>
+        </label>
+
+        <div class="form-actions">
+          <button pButton type="submit" class="btn-primary" [disabled]="saving()">
+            {{ editingId() ? 'Update rule' : 'Create rule' }}
+          </button>
+          <button pButton type="button" class="btn-ghost" (click)="resetForm()">Reset</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>

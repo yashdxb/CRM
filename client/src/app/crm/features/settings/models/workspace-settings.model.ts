@@ -4,6 +4,7 @@ export interface WorkspaceSettings {
   name: string;
   timeZone: string;
   currency: string;
+  leadFirstTouchSlaHours?: number | null;
   approvalAmountThreshold?: number | null;
   approvalApproverRole?: string | null;
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
@@ -14,6 +15,7 @@ export interface UpdateWorkspaceSettingsRequest {
   name: string;
   timeZone: string;
   currency: string;
+  leadFirstTouchSlaHours?: number | null;
   approvalAmountThreshold?: number | null;
   approvalApproverRole?: string | null;
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;

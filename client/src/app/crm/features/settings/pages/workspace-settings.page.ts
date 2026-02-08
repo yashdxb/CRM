@@ -67,6 +67,7 @@ export class WorkspaceSettingsPage {
     name: ['', [Validators.required, Validators.maxLength(120)]],
     timeZone: ['UTC', [Validators.required]],
     currency: ['USD', [Validators.required]],
+    leadFirstTouchSlaHours: [24, [Validators.min(1), Validators.max(168)]],
   });
 
   constructor() {
@@ -101,7 +102,8 @@ export class WorkspaceSettingsPage {
       ...payload,
       name: payload.name ?? '',
       timeZone: payload.timeZone ?? 'UTC',
-      currency: payload.currency ?? 'USD'
+      currency: payload.currency ?? 'USD',
+      leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? 24
     };
     this.saving.set(true);
     this.settingsService.updateSettings(safePayload).subscribe({
@@ -122,6 +124,7 @@ export class WorkspaceSettingsPage {
       name: settings.name,
       timeZone: settings.timeZone,
       currency: settings.currency,
+      leadFirstTouchSlaHours: settings.leadFirstTouchSlaHours ?? 24
     });
   }
 

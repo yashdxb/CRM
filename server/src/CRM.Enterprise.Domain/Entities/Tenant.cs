@@ -15,6 +15,7 @@ public class Tenant : Entity
     public string? ApprovalWorkflowJson { get; set; }
     public string? DashboardLayoutDefaultsJson { get; set; }
     public string? QualificationPolicyJson { get; set; }
+    public int? LeadFirstTouchSlaHours { get; set; }
     public DateTime CreatedAtUtc { get; set; }
     public DateTime? UpdatedAtUtc { get; set; }
 }

@@ -103,6 +103,10 @@ export class SettingsPage {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
   });
+  protected readonly canManageOpportunities = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesManage);
+  });
 
   private readonly timeZoneByEmail = new Map<string, string>([
     ['jay.dissa@gmail.com', 'America/Toronto'],

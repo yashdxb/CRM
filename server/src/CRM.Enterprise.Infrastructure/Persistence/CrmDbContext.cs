@@ -33,6 +33,7 @@ public class CrmDbContext : DbContext
     public DbSet<OpportunityApprovalChain> OpportunityApprovalChains => Set<OpportunityApprovalChain>();
     public DbSet<OpportunityTeamMember> OpportunityTeamMembers => Set<OpportunityTeamMember>();
     public DbSet<OpportunityOnboardingItem> OpportunityOnboardingItems => Set<OpportunityOnboardingItem>();
+    public DbSet<OpportunityStageAutomationRule> OpportunityStageAutomationRules => Set<OpportunityStageAutomationRule>();
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
     public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
@@ -118,6 +119,9 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Opportunity>().ToTable("Opportunities", CrmSchema);
         modelBuilder.Entity<OpportunityStage>().ToTable("OpportunityStages", CrmSchema);
         modelBuilder.Entity<OpportunityStageHistory>().ToTable("OpportunityStageHistories", CrmSchema);
+        modelBuilder.Entity<OpportunityStageAutomationRule>().ToTable("OpportunityStageAutomationRules", CrmSchema);
+        modelBuilder.Entity<OpportunityStageAutomationRule>()
+            .HasIndex(r => new { r.TenantId, r.StageName, r.Name });
         modelBuilder.Entity<OpportunityApproval>().ToTable("OpportunityApprovals", CrmSchema);
         modelBuilder.Entity<OpportunityApprovalChain>().ToTable("OpportunityApprovalChains", CrmSchema);
         modelBuilder.Entity<OpportunityReviewChecklistItem>().ToTable("OpportunityReviewChecklistItems", CrmSchema);

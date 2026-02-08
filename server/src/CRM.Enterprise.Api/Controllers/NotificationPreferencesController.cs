@@ -45,7 +45,11 @@ public class NotificationPreferencesController : ControllerBase
             return Unauthorized();
         }
 
-        var payload = new NotificationPreferencesResponse(request.InApp, request.Email, request.AlertsEnabled);
+        var payload = new NotificationPreferencesResponse(
+            request.InApp,
+            request.Email,
+            request.EmailAlerts,
+            request.AlertsEnabled);
         user.NotificationPreferencesJson = JsonSerializer.Serialize(payload, JsonOptions);
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Ok(payload);
@@ -77,7 +81,21 @@ public class NotificationPreferencesController : ControllerBase
                 var prefs = JsonSerializer.Deserialize<NotificationPreferencesResponse>(
                     user.NotificationPreferencesJson,
                     JsonOptions);
-                return prefs ?? DefaultPreferences();
+                if (prefs is null)
+                {
+                    return DefaultPreferences();
+                }
+
+                if (!document.RootElement.TryGetProperty("emailAlerts", out _))
+                {
+                    return new NotificationPreferencesResponse(
+                        prefs.InApp,
+                        prefs.Email,
+                        DefaultEmailAlerts(),
+                        prefs.AlertsEnabled);
+                }
+
+                return prefs;
             }
 
             var legacy = JsonSerializer.Deserialize<LegacyNotificationPreferencesResponse>(
@@ -85,7 +103,7 @@ public class NotificationPreferencesController : ControllerBase
                 JsonOptions);
             return legacy is null
                 ? DefaultPreferences()
-                : new NotificationPreferencesResponse(legacy.InApp, legacy.Email, true);
+                : new NotificationPreferencesResponse(legacy.InApp, legacy.Email, DefaultEmailAlerts(), true);
         }
         catch
         {
@@ -97,7 +115,18 @@ public class NotificationPreferencesController : ControllerBase
     {
         var defaults = new NotificationChannelPreferences(true, true, true, true);
         var email = new NotificationChannelPreferences(false, false, false, false);
-        return new NotificationPreferencesResponse(defaults, email, true);
+        return new NotificationPreferencesResponse(defaults, email, DefaultEmailAlerts(), true);
+    }
+
+    private static EmailAlertPreferences DefaultEmailAlerts()
+    {
+        return new EmailAlertPreferences(
+            LeadSla: false,
+            IdleDeal: false,
+            CoachingEscalation: false,
+            IdleDealDays: 30,
+            IdleDealCooldownDays: 7,
+            CoachingEscalationCooldownDays: 7);
     }
 
     private record LegacyNotificationPreferencesResponse(

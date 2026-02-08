@@ -777,15 +777,23 @@ public class DashboardReadService : IDashboardReadService
             Math.Round(confidenceWeightedPipelineValue, 2));
     }
 
-    public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(CancellationToken cancellationToken)
+    public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(Guid? userId, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
+        var visibility = await ResolveVisibilityAsync(userId, cancellationToken);
 
-        var openOpportunities = await _dbContext.Opportunities
+        var opportunitiesQuery = _dbContext.Opportunities
             .AsNoTracking()
             .Include(o => o.Stage)
             .Include(o => o.Account)
-            .Where(o => !o.IsDeleted && !o.IsClosed)
+            .Where(o => !o.IsDeleted && !o.IsClosed);
+
+        if (visibility.UserIds is not null)
+        {
+            opportunitiesQuery = opportunitiesQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+
+        var openOpportunities = await opportunitiesQuery
             .Select(o => new
             {
                 o.Id,

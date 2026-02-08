@@ -102,6 +102,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff.
 - Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates.
 - Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation.
+- Module: Dashboard | As a manager, I want pipeline and forecast rollups to include my descendant roles by default so I see the full team view.
 - Module: Dashboard | As an executive, I can view confidence-weighted pipeline totals
 - Module: Dashboard | Confidence-weighted forecast card
 - Module: Dashboard | Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth)
@@ -133,6 +134,9 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close.
 - Module: Opportunities | As a Sales Rep, I want to schedule discovery and log notes before leaving the stage.
 - Module: Opportunities | As a Sales Rep, I want to set opportunity name, value, close date, and initial stage so the deal is trackable from day one.
+- Module: Settings | As an Admin, I want to set first-touch SLA hours so lead response expectations are enforced.
+- Module: Settings | As an Admin, I want to create stage automation rules that generate tasks when a deal enters a stage.
+- Module: Settings | As a user, I want to configure email alert types and thresholds so notifications match my workflow.
 - Module: Settings | As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded.
 - Module: Settings | As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback.
 - Module: Settings | Approval Settings page

@@ -2,10 +2,11 @@ import { Component, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { NotificationChannel, NotificationService, NotificationType } from '../../../../core/notifications';
+import { EmailAlertPreferences, NotificationChannel, NotificationService, NotificationType } from '../../../../core/notifications';
 import { NotificationPreferencesService } from '../../../../shared/services/notification-preferences.service';
 import { AppToastService } from '../../../../core/app-toast.service';
 
@@ -19,7 +20,7 @@ interface NotificationPreferenceOption {
 @Component({
   selector: 'app-notifications-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ToggleSwitchModule, ButtonModule, BreadcrumbsComponent],
+  imports: [CommonModule, FormsModule, ToggleSwitchModule, ButtonModule, InputTextModule, BreadcrumbsComponent],
   templateUrl: './notifications.page.html',
   styleUrl: './notifications.page.scss'
 })
@@ -60,6 +61,33 @@ export class NotificationsPage implements OnInit {
     const current = this.preferences();
     const resolved = this.resolveToggleValue(enabled);
     this.notificationService.setPreferences({ ...current, alertsEnabled: resolved });
+    this.syncPreferences();
+  }
+
+  protected toggleEmailAlert(key: keyof EmailAlertPreferences, enabled: boolean | { checked?: boolean }) {
+    const current = this.preferences();
+    const resolved = this.resolveToggleValue(enabled);
+    this.notificationService.setPreferences({
+      ...current,
+      emailAlerts: {
+        ...current.emailAlerts,
+        [key]: resolved
+      }
+    });
+    this.syncPreferences();
+  }
+
+  protected updateEmailAlertValue(key: keyof EmailAlertPreferences, value: number | string) {
+    const current = this.preferences();
+    const parsed = typeof value === 'number' ? value : Number(value);
+    const nextValue = Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
+    this.notificationService.setPreferences({
+      ...current,
+      emailAlerts: {
+        ...current.emailAlerts,
+        [key]: nextValue
+      }
+    });
     this.syncPreferences();
   }
 
