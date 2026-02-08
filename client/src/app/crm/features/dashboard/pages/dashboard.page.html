@@ -917,7 +917,7 @@
   <div class="layout-chart-section">
     <h4>Command Center cards</h4>
     <div class="layout-chart-list">
-      <label class="layout-chart-item" *ngFor="let card of getSelectableCards()">
+      <label class="layout-chart-item" *ngFor="let card of selectableCards()">
         <input
           type="checkbox"
           [ngModel]="isCardVisible(card.id)"

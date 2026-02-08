@@ -505,6 +505,7 @@ export class DashboardPage implements OnInit {
     { id: 'revenue', label: 'Revenue Trend', icon: 'pi pi-chart-line' },
     { id: 'growth', label: 'Customer Growth', icon: 'pi pi-users' }
   ];
+  protected readonly selectableCards = signal<Array<{ id: string; label: string; icon: string }>>([]);
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -541,6 +542,7 @@ export class DashboardPage implements OnInit {
     this.layoutDimensions = dimensions ?? {};
     this.hasLocalLayoutPreference = hasLocalPreference;
     this.loadChartVisibility();
+    this.refreshSelectableCards();
     this.dashboardData.getDefaultLayout().subscribe({
       next: (response) => {
         this.roleDefaultLayout = response.cardOrder ?? [];
@@ -550,12 +552,14 @@ export class DashboardPage implements OnInit {
           hidden.filter((id): id is ChartId => this.chartIdTypeGuard(id))
         );
         this.applyRoleDefaultCharts();
+        this.refreshSelectableCards();
         this.loadServerLayout();
       },
       error: () => {
         this.roleDefaultLayout = [];
         this.roleDefaultLevel = null;
         this.roleDefaultHiddenCharts = new Set();
+        this.refreshSelectableCards();
         this.loadServerLayout();
       }
     });
@@ -647,6 +651,7 @@ export class DashboardPage implements OnInit {
           ? serverDimensions
           : (this.layoutDimensions ?? {});
         this.persistLayoutPreferences();
+        this.refreshSelectableCards();
       }, 0);
     });
   }
@@ -1701,6 +1706,11 @@ export class DashboardPage implements OnInit {
 
     this.showRevenueChart = !this.roleDefaultHiddenCharts.has('revenue');
     this.showCustomerGrowthChart = !this.roleDefaultHiddenCharts.has('growth');
+  }
+
+  private refreshSelectableCards(): void {
+    const next = this.getSelectableCards();
+    this.selectableCards.set(next);
   }
 
   private resetChartPreference(): void {

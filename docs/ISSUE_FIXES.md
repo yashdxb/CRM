@@ -88,3 +88,24 @@ This file tracks recurring UI/data issues and how to fix them quickly.
 **Why this is safe**
 - It keeps CORS locked to the company domain while unblocking production traffic.
 - The E2E test verifies lead creation without exposing sensitive logs.
+
+## 5) Dashboard console error (NG0100 ExpressionChangedAfterItHasBeenCheckedError)
+**Symptoms**
+- Browser console shows `ExpressionChangedAfterItHasBeenCheckedError` when loading the dashboard.
+- Error references the dashboard card list changing after it was checked.
+
+**Root cause**
+- The selectable card list was computed in a template method and changed during initialization when role defaults arrived.
+- Angular detected the value change mid-cycle and logged NG0100.
+
+**Fix pattern**
+1) Cache selectable cards in a signal and update it when layout defaults change.
+2) Bind the template to the cached signal instead of calling a method.
+
+**Example implementation**
+- File: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+- File: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+
+**Why this is safe**
+- Keeps the UI stable during initial change detection.
+- Removes mid-cycle list mutation without changing the layout logic.
