@@ -1,3 +1,3 @@
 namespace CRM.Enterprise.Api.Contracts.Roles;
 
-public record PermissionDefinitionResponse(string Key, string Label, string Description);
+public record PermissionDefinitionResponse(string Key, string Label, string Description, string Capability);

@@ -138,11 +138,11 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Settings | Approval Settings page
 - Module: Settings | Qualification Policy page
 - Module: Settings | Contextual Threshold Rules page
-- Module: Settings | As an Admin, I want permissions grouped by capability with role intent views so roles are consistent and easy to audit.
+- Module: Settings | As an Admin, I want permissions grouped by capability with role intent views so roles are consistent and easy to audit. (Done)
 - Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (Done)
 - Module: Settings | As an Admin, I want separate permissions for request/approve/override so edit rights do not grant approvals. (Must)
-- Module: Settings | As an Admin, I want H1/H2/H3 packs as presets with role drift tracking so I can safely customize roles.
-- Module: Settings | As an Admin, I want a role hierarchy with computed depth (no manual level input) so reporting lines are clear and consistent.
+- Module: Settings | As an Admin, I want H1/H2/H3 packs as presets with role drift tracking so I can safely customize roles. (Done)
+- Module: Settings | As an Admin, I want a role hierarchy with computed depth (no manual level input) so reporting lines are clear and consistent. (Done)
 - Module: Settings | As an Admin, I want reporting visibility scope per role (Self/Team/All) so manager rollups are correct and configurable.
 - Module: Settings | As an Admin, I want named dashboard templates so default Command Center layouts are not hard-coded and can be reused.
 - Module: Settings | As a Super Admin, I want to manage configurable security levels (create/edit/delete, set default) so high-risk actions are gated independently of hierarchy with no hard-coded tiers.

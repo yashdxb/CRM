@@ -4,6 +4,8 @@ import { map } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import {
   PermissionDefinition,
+  PermissionPackPreset,
+  RoleIntentPack,
   SecurityLevelDefinition,
   UpsertSecurityLevelRequest,
   ResetPasswordRequest,
@@ -77,10 +79,19 @@ export class UserAdminDataService {
               definition.key ??
               (definition as any).Key ??
               '',
-            description: definition.description ?? (definition as any).Description ?? ''
+            description: definition.description ?? (definition as any).Description ?? '',
+            capability: definition.capability ?? (definition as any).Capability ?? 'General'
           }))
         )
       );
+  }
+
+  getRoleIntentPacks() {
+    return this.http.get<RoleIntentPack[]>(`${this.baseUrl}/api/roles/intent-packs`);
+  }
+
+  getPermissionPackPresets() {
+    return this.http.get<PermissionPackPreset[]>(`${this.baseUrl}/api/roles/permission-packs`);
   }
 
   getSecurityLevels() {

@@ -418,11 +418,15 @@ MoSCoW: Should
 
 15) Capability-first permission model with role intent
 MoSCoW: Must
-- Status: NOT STARTED
+- Status: DONE
 - Acceptance criteria:
   - Permissions are grouped by capability (not only by entity CRUD).
   - Role editor supports view by capability and view by role intent.
   - “Apply Default” resets to the role’s base pack while preserving drift notes.
+- Evidence:
+  - Capability/intent views: `client/src/app/crm/features/settings/pages/role-form.page.html`
+  - Capability grouping + drift handling: `client/src/app/crm/features/settings/pages/role-form.page.ts`
+  - Permission catalog w/ capability: `server/src/CRM.Enterprise.Domain/Security/Permissions.cs`
 
 16) Policy gates for high-risk actions (threshold enforcement)
 MoSCoW: Must
@@ -448,15 +452,19 @@ MoSCoW: Must
 
 18) Role drift + pack presets
 MoSCoW: Must
-- Status: NOT STARTED
+- Status: DONE
 - Acceptance criteria:
   - H1/H2/H3 permission pack presets are available; editing a role creates drift.
   - Role Drift panel shows deltas and reasons, with “Reset to Default” and “Accept Drift”.
   - Drift changes are stored with timestamp and editor identity.
+- Evidence:
+  - Drift panel + presets: `client/src/app/crm/features/settings/pages/role-form.page.html`
+  - Drift logic: `client/src/app/crm/features/settings/pages/role-form.page.ts`
+  - Base pack storage: `server/src/CRM.Enterprise.Domain/Entities/Role.cs`
 
 19) Role hierarchy (Salesforce-style reporting structure)
 MoSCoW: Must
-- Status: PARTIAL
+- Status: DONE
 - Acceptance criteria:
   - Roles can be arranged in a parent/child hierarchy.
   - Hierarchy level is computed from parent/child depth (no manual level input) and visible in roles list/edit view.
@@ -469,8 +477,7 @@ MoSCoW: Must
   - Role form parent selection: `client/src/app/crm/features/settings/pages/role-form.page.html`
   - Visibility scope in role form: `client/src/app/crm/features/settings/pages/role-form.page.html`
   - Dashboard rollup scoping: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
-- Gaps:
-  - Permission inheritance display still pending.
+  - Inherited permissions panel: `client/src/app/crm/features/settings/pages/role-form.page.html`
 
 20) Security level separate from hierarchy (configurable)
 MoSCoW: Should
@@ -573,6 +580,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Settings | As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded. (ClickUp: 86dzp8xah, Status: done)
 - Module: Settings | As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback. (ClickUp: 86dzp8x9c, Status: done)
 - Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (ClickUp: 86dzpf90r, Status: done)
+- Module: Settings | Capability-first permission model with role intent views (ClickUp: 86dzpfc1e, Status: done)
+- Module: Settings | Role drift + pack presets (ClickUp: 86dzpfc1x, Status: done)
+- Module: Settings | Role hierarchy (Salesforce-style reporting structure) (ClickUp: 86dzpegw4, Status: done)
 - Module: Settings | Contextual Threshold Rules page (ClickUp: 86dzpdf2h, Status: done)
 - Module: Settings | Qualification Policy page (ClickUp: 86dzpdf2g, Status: done)
 - Risk & Cost of Not Knowing (ClickUp: 86dzp8xf4, Status: backlog)

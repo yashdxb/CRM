@@ -14,6 +14,11 @@ public class Role : AuditableEntity
     public string? HierarchyPath { get; set; }
     public RoleVisibilityScope VisibilityScope { get; set; } = RoleVisibilityScope.Team;
     public Guid? SecurityLevelId { get; set; }
+    public string? BasePermissionsJson { get; set; }
+    public DateTime? BasePermissionsUpdatedAtUtc { get; set; }
+    public string? DriftNotes { get; set; }
+    public DateTime? DriftAcceptedAtUtc { get; set; }
+    public string? DriftAcceptedBy { get; set; }
 
     public SecurityLevelDefinition? SecurityLevel { get; set; }
 

@@ -52,22 +52,22 @@ public static class Permissions
 
     private static readonly PermissionDefinition[] DefinitionsSource =
     {
-        new(Policies.DashboardView, "Dashboard", "Access the unified pipeline snapshot, KPIs, and alerts."),
-        new(Policies.CustomersView, "Customers (View)", "View customers and account details."),
-        new(Policies.CustomersManage, "Customers (Manage)", "Create, edit, and report on customers and accounts."),
-        new(Policies.ContactsView, "Contacts (View)", "View contact records and linked accounts."),
-        new(Policies.ContactsManage, "Contacts (Manage)", "Manage contacts, enrichment data, and ownership."),
-        new(Policies.LeadsView, "Leads (View)", "View leads and conversion history."),
-        new(Policies.LeadsManage, "Leads (Manage)", "Work marketing-sourced leads and conversions."),
-        new(Policies.OpportunitiesView, "Opportunities (View)", "View opportunities, stages, and forecasting."),
-        new(Policies.OpportunitiesManage, "Opportunities (Manage)", "Advance deals through the selling stages."),
-        new(Policies.ActivitiesView, "Activities (View)", "View calls, meetings, and tasks tied to records."),
-        new(Policies.ActivitiesManage, "Activities (Manage)", "Log calls, meetings, and tasks tied to records."),
-        new(Policies.AdministrationView, "Administration (View)", "View users, roles, and workspace settings."),
-        new(Policies.AdministrationManage, "Administration (Manage)", "Invite users, edit roles, and configure workspace policies."),
-        new(Policies.AuditView, "Audit Log (View)", "View system audit history for records and changes."),
-        new(Policies.TenantsView, "Tenants (View)", "View tenant workspaces and status."),
-        new(Policies.TenantsManage, "Tenants (Manage)", "Provision and manage tenant workspaces.")
+        new(Policies.DashboardView, "Dashboard", "Access the unified pipeline snapshot, KPIs, and alerts.", "View & Analyze"),
+        new(Policies.CustomersView, "Customers (View)", "View customers and account details.", "View & Analyze"),
+        new(Policies.CustomersManage, "Customers (Manage)", "Create, edit, and report on customers and accounts.", "Create & Manage Records"),
+        new(Policies.ContactsView, "Contacts (View)", "View contact records and linked accounts.", "View & Analyze"),
+        new(Policies.ContactsManage, "Contacts (Manage)", "Manage contacts, enrichment data, and ownership.", "Create & Manage Records"),
+        new(Policies.LeadsView, "Leads (View)", "View leads and conversion history.", "View & Analyze"),
+        new(Policies.LeadsManage, "Leads (Manage)", "Work marketing-sourced leads and conversions.", "Create & Manage Records"),
+        new(Policies.OpportunitiesView, "Opportunities (View)", "View opportunities, stages, and forecasting.", "View & Analyze"),
+        new(Policies.OpportunitiesManage, "Opportunities (Manage)", "Advance deals through the selling stages.", "Create & Manage Records"),
+        new(Policies.ActivitiesView, "Activities (View)", "View calls, meetings, and tasks tied to records.", "View & Analyze"),
+        new(Policies.ActivitiesManage, "Activities (Manage)", "Log calls, meetings, and tasks tied to records.", "Create & Manage Records"),
+        new(Policies.AdministrationView, "Administration (View)", "View users, roles, and workspace settings.", "Configure System"),
+        new(Policies.AdministrationManage, "Administration (Manage)", "Invite users, edit roles, and configure workspace policies.", "Configure System"),
+        new(Policies.AuditView, "Audit Log (View)", "View system audit history for records and changes.", "Audit & Compliance"),
+        new(Policies.TenantsView, "Tenants (View)", "View tenant workspaces and status.", "Configure System"),
+        new(Policies.TenantsManage, "Tenants (Manage)", "Provision and manage tenant workspaces.", "Configure System")
     };
 
     public static IReadOnlyList<PermissionDefinition> Definitions { get; } = Array.AsReadOnly(DefinitionsSource);
@@ -79,6 +79,72 @@ public static class Permissions
             .Where(d => d.Key != Policies.TenantsManage && d.Key != Policies.TenantsView)
             .Select(d => d.Key)
             .ToArray());
+
+    private static readonly string[] SalesRepPermissions =
+    {
+        Policies.DashboardView,
+        Policies.CustomersView,
+        Policies.CustomersManage,
+        Policies.ContactsView,
+        Policies.ContactsManage,
+        Policies.LeadsView,
+        Policies.LeadsManage,
+        Policies.OpportunitiesView,
+        Policies.OpportunitiesManage,
+        Policies.ActivitiesView,
+        Policies.ActivitiesManage
+    };
+
+    private static readonly string[] SalesManagerPermissions = SalesRepPermissions;
+
+    private static readonly string[] AdminPermissions =
+        WorkspaceAdminKeys.Concat(new[] { Policies.AuditView }).Distinct().ToArray();
+
+    public static IReadOnlyList<RoleIntentDefinition> RoleIntents { get; } = Array.AsReadOnly(new[]
+    {
+        new RoleIntentDefinition(RoleNames.SalesRep, "Sales Rep", "Owns assigned accounts and opportunities.", SalesRepPermissions),
+        new RoleIntentDefinition(RoleNames.SalesManager, "Sales Manager", "Manages team pipeline and forecasts.", SalesManagerPermissions),
+        new RoleIntentDefinition(RoleNames.Admin, "Admin", "System administrator with workspace governance.", AdminPermissions),
+        new RoleIntentDefinition(RoleNames.MarketingOps, "Marketing Ops", "Runs campaigns and lead intake.", new[]
+        {
+            Policies.DashboardView,
+            Policies.LeadsView,
+            Policies.LeadsManage,
+            Policies.ActivitiesView,
+            Policies.ActivitiesManage
+        }),
+        new RoleIntentDefinition(RoleNames.CustomerSuccess, "Customer Success", "Manages onboarding and renewals.", new[]
+        {
+            Policies.DashboardView,
+            Policies.CustomersView,
+            Policies.CustomersManage,
+            Policies.ContactsView,
+            Policies.ContactsManage,
+            Policies.ActivitiesView,
+            Policies.ActivitiesManage
+        }),
+        new RoleIntentDefinition(RoleNames.Support, "Support", "Handles escalations and tickets.", new[]
+        {
+            Policies.DashboardView,
+            Policies.CustomersView,
+            Policies.CustomersManage,
+            Policies.ContactsView,
+            Policies.ContactsManage,
+            Policies.ActivitiesView,
+            Policies.ActivitiesManage
+        })
+    });
+
+    public static IReadOnlyList<PermissionPackPresetDefinition> PermissionPackPresets { get; } = Array.AsReadOnly(new[]
+    {
+        new PermissionPackPresetDefinition("H1", "H1 Base Pack", "Individual contributor baseline permissions.", 1, SalesRepPermissions),
+        new PermissionPackPresetDefinition("H2", "H2 Manager Pack", "Manager baseline permissions.", 2, SalesManagerPermissions),
+        new PermissionPackPresetDefinition("H3", "H3 Admin Pack", "Admin baseline permissions.", 3, AdminPermissions)
+    });
 }
 
-public record PermissionDefinition(string Key, string Label, string Description);
+public record PermissionDefinition(string Key, string Label, string Description, string Capability);
+
+public record RoleIntentDefinition(string Key, string Label, string Description, IReadOnlyList<string> Permissions);
+
+public record PermissionPackPresetDefinition(string Key, string Label, string Description, int HierarchyLevel, IReadOnlyList<string> Permissions);

@@ -4,13 +4,13 @@ import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angu
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
-import { TableModule } from 'primeng/table';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TooltipModule } from 'primeng/tooltip';
 
-import { PermissionDefinition, RoleSummary, UpsertRoleRequest } from '../models/user-admin.model';
+import { PermissionDefinition, PermissionPackPreset, RoleIntentPack, RoleSummary, UpsertRoleRequest } from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -36,8 +36,8 @@ interface ScreenPermission {
   imports: [
     ButtonModule,
     InputTextModule,
+    TextareaModule,
     SelectModule,
-    TableModule,
     CheckboxModule,
     TooltipModule,
     NgClass,
@@ -68,6 +68,14 @@ export class RoleFormPage {
   protected readonly isSystemRole = signal(false);
   protected readonly canManageAdmin = signal(false);
   protected readonly roles = signal<RoleSummary[]>([]);
+  protected readonly intentPacks = signal<RoleIntentPack[]>([]);
+  protected readonly loadingIntentPacks = signal(false);
+  protected readonly permissionPackPresets = signal<PermissionPackPreset[]>([]);
+  protected readonly loadingPackPresets = signal(false);
+  protected readonly permissionView = signal<'capability' | 'intent'>('capability');
+  protected readonly basePermissions = signal<string[]>([]);
+  protected readonly inheritedPermissions = signal<string[]>([]);
+  protected driftNotes = '';
   protected readonly visibilityOptions = [
     { label: 'Team (default)', value: 'Team', hint: 'See own + descendant roles' },
     { label: 'Self only', value: 'Self', hint: 'See only own records' },
@@ -88,6 +96,30 @@ export class RoleFormPage {
   
   // Selected permissions as a Set for easy toggle
   protected readonly selectedPermissions = signal<Set<string>>(new Set());
+
+  protected readonly capabilityGroups = computed(() => {
+    const catalog = this.permissionCatalog();
+    const groups = new Map<string, PermissionDefinition[]>();
+    for (const permission of catalog) {
+      const key = permission.capability || 'General';
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(permission);
+    }
+    return Array.from(groups.entries()).map(([capability, permissions]) => ({
+      capability,
+      permissions: permissions.slice().sort((a, b) => a.label.localeCompare(b.label))
+    }));
+  });
+
+  protected readonly driftSummary = computed(() => {
+    const current = this.selectedPermissions();
+    const base = new Set(this.basePermissions());
+    const added = Array.from(current).filter((permission) => !base.has(permission));
+    const removed = Array.from(base).filter((permission) => !current.has(permission));
+    return { added, removed };
+  });
 
   protected readonly roleForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
@@ -207,6 +239,8 @@ export class RoleFormPage {
     this.roleId = this.route.snapshot.paramMap.get('id');
     this.isEditMode.set(!!this.roleId);
     this.loadPermissions();
+    this.loadIntentPacks();
+    this.loadPermissionPackPresets();
     this.loadRoles();
     this.loadSecurityLevels();
     if (this.roleId) {
@@ -279,6 +313,69 @@ export class RoleFormPage {
     });
   }
 
+  protected applyIntentPack(pack: RoleIntentPack) {
+    if (this.roleSaving() || !pack?.permissions?.length) {
+      return;
+    }
+    this.selectedPermissions.set(new Set(pack.permissions));
+    this.syncFormPermissions();
+  }
+
+  protected applyPermissionPack(pack: PermissionPackPreset) {
+    if (this.roleSaving() || !pack?.permissions?.length) {
+      return;
+    }
+    this.selectedPermissions.set(new Set(pack.permissions));
+    this.syncFormPermissions();
+  }
+
+  protected resetToDefault() {
+    if (this.roleSaving()) {
+      return;
+    }
+    const base = this.basePermissions();
+    if (!base.length) {
+      this.raiseToast('error', 'No base pack found for this role.');
+      return;
+    }
+    this.selectedPermissions.set(new Set(base));
+    this.syncFormPermissions();
+  }
+
+  protected acceptDrift() {
+    if (!this.roleId || this.roleSaving()) {
+      return;
+    }
+    const permissions = (this.roleForm.value.permissions ?? []) as string[];
+    if (permissions.length === 0) {
+      this.raiseToast('error', 'Select at least one permission');
+      return;
+    }
+    const payload: UpsertRoleRequest = {
+      name: this.roleForm.value.name?.trim() ?? '',
+      description: this.roleForm.value.description?.trim() || undefined,
+      parentRoleId: this.roleForm.value.parentRoleId ?? null,
+      visibilityScope: this.roleForm.value.visibilityScope ?? 'Team',
+      securityLevelId: this.roleForm.value.securityLevelId ?? this.defaultSecurityLevelId(),
+      permissions,
+      acceptDrift: true,
+      driftNotes: this.driftNotes?.trim() || undefined
+    };
+
+    this.roleSaving.set(true);
+    this.dataService.updateRole(this.roleId, payload).subscribe({
+      next: (role) => {
+        this.roleSaving.set(false);
+        this.applyRole(role);
+        this.raiseToast('success', 'Drift accepted and base pack updated.');
+      },
+      error: () => {
+        this.roleSaving.set(false);
+        this.raiseToast('error', 'Unable to accept drift');
+      }
+    });
+  }
+
   protected loadPermissions() {
     this.loadingPermissions.set(true);
     this.dataService.getPermissionCatalog().subscribe({
@@ -289,6 +386,34 @@ export class RoleFormPage {
       error: () => {
         this.loadingPermissions.set(false);
         this.raiseToast('error', 'Unable to load permissions');
+      }
+    });
+  }
+
+  protected loadIntentPacks() {
+    this.loadingIntentPacks.set(true);
+    this.dataService.getRoleIntentPacks().subscribe({
+      next: (packs) => {
+        this.intentPacks.set(packs ?? []);
+        this.loadingIntentPacks.set(false);
+      },
+      error: () => {
+        this.intentPacks.set([]);
+        this.loadingIntentPacks.set(false);
+      }
+    });
+  }
+
+  protected loadPermissionPackPresets() {
+    this.loadingPackPresets.set(true);
+    this.dataService.getPermissionPackPresets().subscribe({
+      next: (packs) => {
+        this.permissionPackPresets.set(packs ?? []);
+        this.loadingPackPresets.set(false);
+      },
+      error: () => {
+        this.permissionPackPresets.set([]);
+        this.loadingPackPresets.set(false);
       }
     });
   }
@@ -319,6 +444,9 @@ export class RoleFormPage {
     });
     // Populate selected permissions from role
     this.selectedPermissions.set(new Set(role.permissions));
+    this.basePermissions.set(role.basePermissions ?? []);
+    this.inheritedPermissions.set(role.inheritedPermissions ?? []);
+    this.driftNotes = role.driftNotes ?? '';
     this.isSystemRole.set(role.isSystem);
   }
 
@@ -341,7 +469,8 @@ export class RoleFormPage {
       parentRoleId: this.roleForm.value.parentRoleId ?? null,
       visibilityScope: this.roleForm.value.visibilityScope ?? 'Team',
       securityLevelId: this.roleForm.value.securityLevelId ?? this.defaultSecurityLevelId(),
-      permissions
+      permissions,
+      driftNotes: this.driftNotes?.trim() || undefined
     };
 
     this.roleSaving.set(true);
@@ -434,6 +563,14 @@ export class RoleFormPage {
 
   protected clearToast() {
     this.toastService.clear();
+  }
+
+  protected setPermissionView(view: 'capability' | 'intent') {
+    this.permissionView.set(view);
+  }
+
+  protected permissionLabel(key: string) {
+    return this.permissionCatalog().find((item) => item.key === key)?.label ?? key;
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {

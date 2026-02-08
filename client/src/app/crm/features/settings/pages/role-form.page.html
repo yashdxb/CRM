@@ -148,157 +148,134 @@
           <div class="permissions-header">
             <h3 class="section-title">
               <i class="pi pi-shield"></i>
-              Screen Permissions
+              Permissions
             </h3>
             <div class="permission-meta">
+              <div class="view-toggle">
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="permissionView() === 'capability'"
+                  (click)="setPermissionView('capability')"
+                >
+                  View by Capability
+                </button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="permissionView() === 'intent'"
+                  (click)="setPermissionView('intent')"
+                >
+                  View by Role Intent
+                </button>
+              </div>
               <span class="badge">{{ selectedPermissionCount() }} selected</span>
-              <span class="badge muted">{{ screenPermissions().length }} screens</span>
             </div>
           </div>
 
           <p class="section-description">
-            Configure access by screen. Toggle individual CRUD actions or use the All checkbox to grant full access.
+            Switch between capability-based permissions or role intent presets. Use Apply Default to reset to the base pack.
           </p>
 
           <ng-container *ngIf="!loadingPermissions(); else permissionsLoading">
-            <div class="permissions-table-wrapper">
-              <p-table
-                [value]="screenPermissions()"
-                styleClass="permissions-table"
-                [scrollable]="true"
-              >
-                <ng-template pTemplate="header">
-                  <tr>
-                    <th class="col-screen">Screen</th>
-                    <th class="col-crud">
-                      <div class="crud-header">
-                        <span class="crud-label" pTooltip="Create new records">
-                          <i class="pi pi-plus-circle"></i>
-                          Create
-                        </span>
-                      </div>
-                    </th>
-                    <th class="col-crud">
-                      <div class="crud-header">
-                        <span class="crud-label" pTooltip="View and read records">
-                          <i class="pi pi-eye"></i>
-                          Read
-                        </span>
-                      </div>
-                    </th>
-                    <th class="col-crud">
-                      <div class="crud-header">
-                        <span class="crud-label" pTooltip="Edit existing records">
-                          <i class="pi pi-pencil"></i>
-                          Update
-                        </span>
-                      </div>
-                    </th>
-                    <th class="col-crud">
-                      <div class="crud-header">
-                        <span class="crud-label" pTooltip="Remove records">
-                          <i class="pi pi-trash"></i>
-                          Delete
-                        </span>
-                      </div>
-                    </th>
-                    <th class="col-all">
-                      <div class="crud-header">
-                        <span class="crud-label" pTooltip="Toggle all permissions">
-                          <i class="pi pi-check-circle"></i>
-                          All
-                        </span>
-                      </div>
-                    </th>
-                  </tr>
+            <div *ngIf="permissionView() === 'capability'" class="capability-grid">
+              <div class="capability-card" *ngFor="let group of capabilityGroups()">
+                <div class="capability-header">
+                  <h4>{{ group.capability }}</h4>
+                  <span class="badge muted">{{ group.permissions.length }} permissions</span>
+                </div>
+                <div class="capability-list">
+                  <div class="capability-row" *ngFor="let permission of group.permissions">
+                    <div class="capability-meta">
+                      <span class="capability-label">{{ permission.label }}</span>
+                      <span class="capability-desc">{{ permission.description }}</span>
+                    </div>
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="isPermissionSelected(permission.key)"
+                      [ngModelOptions]="{standalone: true}"
+                      (onChange)="togglePermission(permission.key)"
+                      [disabled]="roleSaving()"
+                    ></p-checkbox>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="permissionView() === 'intent'" class="intent-grid">
+              <div class="intent-card">
+                <h4>Role intent packs</h4>
+                <p>Pick a baseline role intent and apply its permissions.</p>
+                <div class="intent-list" *ngIf="intentPacks().length; else noIntentPacks">
+                  <div class="intent-row" *ngFor="let pack of intentPacks()">
+                    <div>
+                      <strong>{{ pack.label }}</strong>
+                      <p>{{ pack.description }}</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" (click)="applyIntentPack(pack)" [disabled]="roleSaving()">
+                      Apply
+                    </button>
+                  </div>
+                </div>
+                <ng-template #noIntentPacks>
+                  <p class="empty-state">No intent packs available.</p>
                 </ng-template>
-                <ng-template pTemplate="body" let-screen>
-                  <tr
-                    [class.row-selected]="isAllSelectedForScreen(screen)"
-                    [class.row-partial]="isSomeSelectedForScreen(screen)"
-                  >
-                    <td class="col-screen">
-                      <div class="screen-info">
-                        <div class="screen-icon">
-                          <i class="pi" [ngClass]="screen.icon"></i>
-                        </div>
-                        <div class="screen-meta">
-                          <span class="screen-name">{{ screen.screenName }}</span>
-                          <span class="screen-desc">{{ screen.description }}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="col-crud">
-                      <div class="crud-cell" [class.disabled]="!screen.permissions.create">
-                        <p-checkbox
-                          *ngIf="screen.permissions.create"
-                          [binary]="true"
-                          [ngModel]="isPermissionSelected(screen.permissions.create)"
-                          [ngModelOptions]="{standalone: true}"
-                          (onChange)="togglePermission(screen.permissions.create)"
-                          [disabled]="roleSaving()"
-                          styleClass="crud-checkbox"
-                        ></p-checkbox>
-                        <span *ngIf="!screen.permissions.create" class="na-indicator">—</span>
-                      </div>
-                    </td>
-                    <td class="col-crud">
-                      <div class="crud-cell" [class.disabled]="!screen.permissions.read">
-                        <p-checkbox
-                          *ngIf="screen.permissions.read"
-                          [binary]="true"
-                          [ngModel]="isPermissionSelected(screen.permissions.read)"
-                          [ngModelOptions]="{standalone: true}"
-                          (onChange)="togglePermission(screen.permissions.read)"
-                          [disabled]="roleSaving()"
-                          styleClass="crud-checkbox"
-                        ></p-checkbox>
-                        <span *ngIf="!screen.permissions.read" class="na-indicator">—</span>
-                      </div>
-                    </td>
-                    <td class="col-crud">
-                      <div class="crud-cell" [class.disabled]="!screen.permissions.update">
-                        <p-checkbox
-                          *ngIf="screen.permissions.update"
-                          [binary]="true"
-                          [ngModel]="isPermissionSelected(screen.permissions.update)"
-                          [ngModelOptions]="{standalone: true}"
-                          (onChange)="togglePermission(screen.permissions.update)"
-                          [disabled]="roleSaving()"
-                          styleClass="crud-checkbox"
-                        ></p-checkbox>
-                        <span *ngIf="!screen.permissions.update" class="na-indicator">—</span>
-                      </div>
-                    </td>
-                    <td class="col-crud">
-                      <div class="crud-cell" [class.disabled]="!screen.permissions.delete">
-                        <p-checkbox
-                          *ngIf="screen.permissions.delete"
-                          [binary]="true"
-                          [ngModel]="isPermissionSelected(screen.permissions.delete)"
-                          [ngModelOptions]="{standalone: true}"
-                          (onChange)="togglePermission(screen.permissions.delete)"
-                          [disabled]="roleSaving()"
-                          styleClass="crud-checkbox"
-                        ></p-checkbox>
-                        <span *ngIf="!screen.permissions.delete" class="na-indicator">—</span>
-                      </div>
-                    </td>
-                    <td class="col-all">
-                      <div class="crud-cell all-cell">
-                        <p-checkbox
-                          [binary]="true"
-                          [ngModel]="isAllSelectedForScreen(screen)"
-                          [ngModelOptions]="{standalone: true}"
-                          (onChange)="toggleAllForScreen(screen, $event.checked)"
-                          [disabled]="roleSaving()"
-                          styleClass="crud-checkbox all-checkbox"
-                        ></p-checkbox>
-                      </div>
-                    </td>
-                  </tr>
+              </div>
+
+              <div class="intent-card">
+                <h4>Hierarchy permission presets</h4>
+                <p>Use H1/H2/H3 permission packs as a starting point.</p>
+                <div class="intent-list" *ngIf="permissionPackPresets().length; else noPackPresets">
+                  <div class="intent-row" *ngFor="let pack of permissionPackPresets()">
+                    <div>
+                      <strong>{{ pack.label }}</strong>
+                      <p>{{ pack.description }}</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary" (click)="applyPermissionPack(pack)" [disabled]="roleSaving()">
+                      Apply
+                    </button>
+                  </div>
+                </div>
+                <ng-template #noPackPresets>
+                  <p class="empty-state">No permission packs available.</p>
                 </ng-template>
-              </p-table>
+              </div>
+
+              <div class="intent-card drift-card">
+                <h4>Role drift</h4>
+                <p>Track changes from the base pack and keep an audit trail.</p>
+                <div class="drift-list">
+                  <div class="drift-column">
+                    <span class="drift-title">Added</span>
+                    <span *ngIf="driftSummary().added.length === 0" class="empty-state">No additions</span>
+                    <span class="drift-pill" *ngFor="let key of driftSummary().added">{{ permissionLabel(key) }}</span>
+                  </div>
+                  <div class="drift-column">
+                    <span class="drift-title">Removed</span>
+                    <span *ngIf="driftSummary().removed.length === 0" class="empty-state">No removals</span>
+                    <span class="drift-pill removed" *ngFor="let key of driftSummary().removed">{{ permissionLabel(key) }}</span>
+                  </div>
+                </div>
+                <div class="drift-actions">
+                  <button type="button" class="btn btn-ghost" (click)="resetToDefault()" [disabled]="roleSaving()">
+                    Reset to Default
+                  </button>
+                  <button type="button" class="btn btn-primary" (click)="acceptDrift()" [disabled]="roleSaving()">
+                    Accept Drift
+                  </button>
+                </div>
+                <div class="drift-notes">
+                  <label for="driftNotes">Drift notes</label>
+                  <textarea
+                    id="driftNotes"
+                    rows="3"
+                    pInputTextarea
+                    [(ngModel)]="driftNotes"
+                    [ngModelOptions]="{standalone: true}"
+                    placeholder="Explain why this role differs from the base pack."
+                  ></textarea>
+                </div>
+              </div>
             </div>
           </ng-container>
 
@@ -307,6 +284,26 @@
               <p-skeleton height="52px" *ngFor="let _ of [0, 1, 2, 3, 4]"></p-skeleton>
             </div>
           </ng-template>
+        </section>
+
+        <section class="form-card inherited-card" *ngIf="inheritedPermissions().length">
+          <div class="permissions-header">
+            <h3 class="section-title">
+              <i class="pi pi-sitemap"></i>
+              Inherited Permissions
+            </h3>
+            <div class="permission-meta">
+              <span class="badge muted">{{ inheritedPermissions().length }} inherited</span>
+            </div>
+          </div>
+          <p class="section-description">
+            These permissions are inherited from parent roles and cannot be edited here.
+          </p>
+          <div class="inherited-pills">
+            <span class="permission-pill" *ngFor="let key of inheritedPermissions()">
+              {{ permissionLabel(key) }}
+            </span>
+          </div>
         </section>
 
         <div class="form-actions">
@@ -352,8 +349,8 @@
               <span class="metric-label">Permissions</span>
             </div>
             <div class="metric-card">
-              <span class="metric-value">{{ screenPermissions().length }}</span>
-              <span class="metric-label">Screens</span>
+              <span class="metric-value">{{ permissionCatalog().length }}</span>
+              <span class="metric-label">Catalog</span>
             </div>
           </div>
 

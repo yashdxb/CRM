@@ -9,6 +9,12 @@ export interface RoleSummary {
   securityLevelId?: string | null;
   securityLevelName?: string | null;
   permissions: string[];
+  inheritedPermissions: string[];
+  basePermissions: string[];
+  basePermissionsUpdatedAtUtc?: string | null;
+  driftNotes?: string | null;
+  driftAcceptedAtUtc?: string | null;
+  driftAcceptedBy?: string | null;
   isSystem: boolean;
 }
 
@@ -16,6 +22,22 @@ export interface PermissionDefinition {
   key: string;
   label: string;
   description: string;
+  capability: string;
+}
+
+export interface RoleIntentPack {
+  key: string;
+  label: string;
+  description: string;
+  permissions: string[];
+}
+
+export interface PermissionPackPreset {
+  key: string;
+  label: string;
+  description: string;
+  hierarchyLevel: number;
+  permissions: string[];
 }
 
 export interface UserListItem {
@@ -84,6 +106,8 @@ export interface UpsertRoleRequest {
   visibilityScope?: string | null;
   securityLevelId?: string | null;
   permissions: string[];
+  acceptDrift?: boolean | null;
+  driftNotes?: string | null;
 }
 
 export interface UpsertSecurityLevelRequest {

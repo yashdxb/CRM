@@ -797,77 +797,92 @@ const permissionCatalog: PermissionDefinition[] = [
   {
     key: PERMISSION_KEYS.dashboardView,
     label: 'Dashboard',
-    description: 'Access real-time company and pipeline health dashboards.'
+    description: 'Access real-time company and pipeline health dashboards.',
+    capability: 'View & Analyze'
   },
   {
     key: PERMISSION_KEYS.customersView,
     label: 'Customers (View)',
-    description: 'View customer accounts and account details.'
+    description: 'View customer accounts and account details.',
+    capability: 'View & Analyze'
   },
   {
     key: PERMISSION_KEYS.customersManage,
     label: 'Customers (Manage)',
-    description: 'Create, edit, and manage customer accounts.'
+    description: 'Create, edit, and manage customer accounts.',
+    capability: 'Create & Manage Records'
   },
   {
     key: PERMISSION_KEYS.contactsView,
     label: 'Contacts (View)',
-    description: 'View contact records tied to customers and leads.'
+    description: 'View contact records tied to customers and leads.',
+    capability: 'View & Analyze'
   },
   {
     key: PERMISSION_KEYS.contactsManage,
     label: 'Contacts (Manage)',
-    description: 'Manage contact records tied to customers and leads.'
+    description: 'Manage contact records tied to customers and leads.',
+    capability: 'Create & Manage Records'
   },
   {
     key: PERMISSION_KEYS.leadsView,
     label: 'Leads (View)',
-    description: 'View lead details and conversion history.'
+    description: 'View lead details and conversion history.',
+    capability: 'View & Analyze'
   },
   {
     key: PERMISSION_KEYS.leadsManage,
     label: 'Leads (Manage)',
-    description: 'Work every lead stage from prospecting through conversion.'
+    description: 'Work every lead stage from prospecting through conversion.',
+    capability: 'Create & Manage Records'
   },
   {
     key: PERMISSION_KEYS.opportunitiesView,
     label: 'Opportunities (View)',
-    description: 'View pipelines, stages, and forecasting.'
+    description: 'View pipelines, stages, and forecasting.',
+    capability: 'View & Analyze'
   },
   {
     key: PERMISSION_KEYS.opportunitiesManage,
     label: 'Opportunities (Manage)',
-    description: 'Forecast, update, and close opportunities across pipelines.'
+    description: 'Forecast, update, and close opportunities across pipelines.',
+    capability: 'Create & Manage Records'
   },
   {
     key: PERMISSION_KEYS.activitiesView,
     label: 'Activities (View)',
-    description: 'View calls, meetings, and tasks.'
+    description: 'View calls, meetings, and tasks.',
+    capability: 'View & Analyze'
   },
   {
     key: PERMISSION_KEYS.activitiesManage,
     label: 'Activities (Manage)',
-    description: 'Schedule, assign, and complete calls, meetings, and tasks.'
+    description: 'Schedule, assign, and complete calls, meetings, and tasks.',
+    capability: 'Create & Manage Records'
   },
   {
     key: PERMISSION_KEYS.administrationView,
     label: 'Administration (View)',
-    description: 'View users, roles, and workspace settings.'
+    description: 'View users, roles, and workspace settings.',
+    capability: 'Configure System'
   },
   {
     key: PERMISSION_KEYS.administrationManage,
     label: 'Administration (Manage)',
-    description: 'Invite teammates, assign roles, and configure workspace guardrails.'
+    description: 'Invite teammates, assign roles, and configure workspace guardrails.',
+    capability: 'Configure System'
   },
   {
     key: PERMISSION_KEYS.tenantsView,
     label: 'Tenants (View)',
-    description: 'View tenant workspaces and status.'
+    description: 'View tenant workspaces and status.',
+    capability: 'Configure System'
   },
   {
     key: PERMISSION_KEYS.tenantsManage,
     label: 'Tenants (Manage)',
-    description: 'Provision and manage tenant workspaces.'
+    description: 'Provision and manage tenant workspaces.',
+    capability: 'Configure System'
   }
 ];
 
@@ -877,6 +892,8 @@ let mockRoles: RoleSummary[] = [
     name: 'System Administrator',
     description: 'Full access to every workspace capability.',
     permissions: permissionCatalog.map((p) => p.key),
+    inheritedPermissions: [],
+    basePermissions: permissionCatalog.map((p) => p.key),
     isSystem: true
   },
   {
@@ -884,6 +901,20 @@ let mockRoles: RoleSummary[] = [
     name: 'Sales Manager',
     description: 'Manages pipeline, customers, and activities.',
     permissions: [
+      PERMISSION_KEYS.dashboardView,
+      PERMISSION_KEYS.customersView,
+      PERMISSION_KEYS.customersManage,
+      PERMISSION_KEYS.contactsView,
+      PERMISSION_KEYS.contactsManage,
+      PERMISSION_KEYS.leadsView,
+      PERMISSION_KEYS.leadsManage,
+      PERMISSION_KEYS.opportunitiesView,
+      PERMISSION_KEYS.opportunitiesManage,
+      PERMISSION_KEYS.activitiesView,
+      PERMISSION_KEYS.activitiesManage
+    ],
+    inheritedPermissions: [],
+    basePermissions: [
       PERMISSION_KEYS.dashboardView,
       PERMISSION_KEYS.customersView,
       PERMISSION_KEYS.customersManage,
@@ -908,6 +939,13 @@ let mockRoles: RoleSummary[] = [
       PERMISSION_KEYS.activitiesView,
       PERMISSION_KEYS.activitiesManage
     ],
+    inheritedPermissions: [],
+    basePermissions: [
+      PERMISSION_KEYS.dashboardView,
+      PERMISSION_KEYS.customersView,
+      PERMISSION_KEYS.activitiesView,
+      PERMISSION_KEYS.activitiesManage
+    ],
     isSystem: false
   },
   {
@@ -915,6 +953,12 @@ let mockRoles: RoleSummary[] = [
     name: 'Support Agent',
     description: 'Limited read/write for customers and activities.',
     permissions: [
+      PERMISSION_KEYS.customersView,
+      PERMISSION_KEYS.activitiesView,
+      PERMISSION_KEYS.activitiesManage
+    ],
+    inheritedPermissions: [],
+    basePermissions: [
       PERMISSION_KEYS.customersView,
       PERMISSION_KEYS.activitiesView,
       PERMISSION_KEYS.activitiesManage
@@ -1045,6 +1089,8 @@ export const createRole = (payload: UpsertRoleRequest): RoleSummary => {
     name: payload.name,
     description: payload.description ?? undefined,
     permissions: [...payload.permissions],
+    inheritedPermissions: [],
+    basePermissions: [...payload.permissions],
     isSystem: false
   };
   mockRoles = [...mockRoles, role];
@@ -1059,6 +1105,9 @@ export const updateRole = (id: string, payload: UpsertRoleRequest): RoleSummary 
   target.name = payload.name;
   target.description = payload.description ?? undefined;
   target.permissions = [...payload.permissions];
+  if (payload.acceptDrift) {
+    target.basePermissions = [...payload.permissions];
+  }
   return { ...target, permissions: [...target.permissions] };
 };
 

@@ -9,4 +9,6 @@ public record UpsertRoleRequest(
     Guid? ParentRoleId,
     string? VisibilityScope,
     Guid? SecurityLevelId,
-    IReadOnlyCollection<string> Permissions);
+    IReadOnlyCollection<string> Permissions,
+    bool? AcceptDrift,
+    string? DriftNotes);

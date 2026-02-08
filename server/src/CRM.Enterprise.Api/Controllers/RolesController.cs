@@ -9,6 +9,7 @@ using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -38,7 +39,12 @@ public class RolesController : ControllerBase
             .ToListAsync(cancellationToken);
 
         var defaultSecurity = await ResolveDefaultSecurityLevelAsync(cancellationToken);
-        var responses = roles.Select(role => ToRoleResponse(role, defaultSecurity)).ToList();
+        var responses = new List<RoleResponse>();
+        foreach (var role in roles)
+        {
+            var inherited = await ResolveInheritedPermissionsAsync(role, cancellationToken);
+            responses.Add(ToRoleResponse(role, defaultSecurity, inherited));
+        }
         return Ok(responses);
     }
 
@@ -52,7 +58,8 @@ public class RolesController : ControllerBase
         }
 
         var defaultSecurity = await ResolveDefaultSecurityLevelAsync(cancellationToken);
-        return Ok(ToRoleResponse(role, defaultSecurity));
+        var inherited = await ResolveInheritedPermissionsAsync(role, cancellationToken);
+        return Ok(ToRoleResponse(role, defaultSecurity, inherited));
     }
 
     [HttpGet("permissions")]
@@ -95,10 +102,28 @@ public class RolesController : ControllerBase
 
         var permissions = catalog
             .OrderBy(entry => entry.Label)
-            .Select(entry => new PermissionDefinitionResponse(entry.Key, entry.Label, entry.Description))
+            .Select(entry =>
+            {
+                var capability = definitions.TryGetValue(entry.Key, out var definition)
+                    ? definition.Capability
+                    : "General";
+                return new PermissionDefinitionResponse(entry.Key, entry.Label, entry.Description, capability);
+            })
             .ToList();
 
         return Ok(permissions);
+    }
+
+    [HttpGet("intent-packs")]
+    public ActionResult<IReadOnlyList<RoleIntentDefinition>> GetRoleIntentPacks()
+    {
+        return Ok(Permissions.RoleIntents);
+    }
+
+    [HttpGet("permission-packs")]
+    public ActionResult<IReadOnlyList<PermissionPackPresetDefinition>> GetPermissionPackPresets()
+    {
+        return Ok(Permissions.PermissionPackPresets);
     }
 
     [HttpPost]
@@ -128,7 +153,10 @@ public class RolesController : ControllerBase
             Description = NormalizeDescription(request.Description),
             ParentRoleId = request.ParentRoleId,
             VisibilityScope = ParseVisibilityScope(request.VisibilityScope),
-            SecurityLevelId = await ResolveSecurityLevelIdAsync(request.SecurityLevelId, cancellationToken)
+            SecurityLevelId = await ResolveSecurityLevelIdAsync(request.SecurityLevelId, cancellationToken),
+            BasePermissionsJson = SerializePermissions(request.Permissions),
+            BasePermissionsUpdatedAtUtc = DateTime.UtcNow,
+            DriftNotes = string.IsNullOrWhiteSpace(request.DriftNotes) ? null : request.DriftNotes.Trim()
         };
 
         _dbContext.Roles.Add(role);
@@ -141,9 +169,16 @@ public class RolesController : ControllerBase
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var refreshed = await FindRoleAsync(role.Id, cancellationToken);
-        return refreshed is null
-            ? StatusCode(500, "Unable to materialize the created role.")
-            : CreatedAtAction(nameof(GetRole), new { id = refreshed.Id }, ToRoleResponse(refreshed, await ResolveDefaultSecurityLevelAsync(cancellationToken)));
+        if (refreshed is null)
+        {
+            return StatusCode(500, "Unable to materialize the created role.");
+        }
+
+        var createdInherited = await ResolveInheritedPermissionsAsync(refreshed, cancellationToken);
+        return CreatedAtAction(
+            nameof(GetRole),
+            new { id = refreshed.Id },
+            ToRoleResponse(refreshed, await ResolveDefaultSecurityLevelAsync(cancellationToken), createdInherited));
     }
 
     [HttpPut("{id:guid}")]
@@ -199,6 +234,16 @@ public class RolesController : ControllerBase
         role.ParentRoleId = request.ParentRoleId;
         role.VisibilityScope = ParseVisibilityScope(request.VisibilityScope, role.VisibilityScope);
         role.SecurityLevelId = await ResolveSecurityLevelIdAsync(request.SecurityLevelId, cancellationToken);
+        var actorName = User?.Identity?.Name ?? "system";
+        if (string.IsNullOrWhiteSpace(role.BasePermissionsJson))
+        {
+            role.BasePermissionsJson = SerializePermissions(request.Permissions);
+            role.BasePermissionsUpdatedAtUtc = DateTime.UtcNow;
+        }
+        if (!string.IsNullOrWhiteSpace(request.DriftNotes))
+        {
+            role.DriftNotes = request.DriftNotes.Trim();
+        }
 
         if (previousParent != role.ParentRoleId)
         {
@@ -206,12 +251,23 @@ public class RolesController : ControllerBase
         }
 
         await SyncRolePermissionsAsync(role.Id, request.Permissions, cancellationToken);
+        if (request.AcceptDrift == true)
+        {
+            role.BasePermissionsJson = SerializePermissions(request.Permissions);
+            role.BasePermissionsUpdatedAtUtc = DateTime.UtcNow;
+            role.DriftAcceptedAtUtc = DateTime.UtcNow;
+            role.DriftAcceptedBy = actorName;
+        }
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var refreshed = await FindRoleAsync(role.Id, cancellationToken);
-        return refreshed is null
-            ? NotFound()
-            : Ok(ToRoleResponse(refreshed, await ResolveDefaultSecurityLevelAsync(cancellationToken)));
+        if (refreshed is null)
+        {
+            return NotFound();
+        }
+
+        var updatedInherited = await ResolveInheritedPermissionsAsync(refreshed, cancellationToken);
+        return Ok(ToRoleResponse(refreshed, await ResolveDefaultSecurityLevelAsync(cancellationToken), updatedInherited));
     }
 
     [HttpDelete("{id:guid}")]
@@ -354,7 +410,7 @@ public class RolesController : ControllerBase
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    private RoleResponse ToRoleResponse(Role role, SecurityLevelDefinition? defaultSecurity)
+    private RoleResponse ToRoleResponse(Role role, SecurityLevelDefinition? defaultSecurity, IReadOnlyList<string>? inheritedPermissions = null)
     {
         var permissions = role.Permissions
             .Where(rp => !rp.IsDeleted && !string.IsNullOrWhiteSpace(rp.Permission))
@@ -362,6 +418,8 @@ public class RolesController : ControllerBase
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(permission => permission)
             .ToList();
+        var basePermissions = DeserializePermissions(role.BasePermissionsJson);
+        var inherited = inheritedPermissions ?? Array.Empty<string>();
 
         return new RoleResponse(
             role.Id,
@@ -374,7 +432,81 @@ public class RolesController : ControllerBase
             role.VisibilityScope.ToString(),
             role.SecurityLevelId ?? defaultSecurity?.Id,
             role.SecurityLevel?.Name ?? defaultSecurity?.Name,
-            permissions);
+            permissions,
+            inherited,
+            basePermissions,
+            role.BasePermissionsUpdatedAtUtc,
+            role.DriftNotes,
+            role.DriftAcceptedAtUtc,
+            role.DriftAcceptedBy);
+    }
+
+    private static List<string> DeserializePermissions(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return new List<string>();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
+
+    private static string SerializePermissions(IReadOnlyCollection<string> permissions)
+    {
+        var normalized = permissions
+            .Where(permission => !string.IsNullOrWhiteSpace(permission))
+            .Select(permission => permission.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(permission => permission)
+            .ToList();
+        return JsonSerializer.Serialize(normalized);
+    }
+
+    private async Task<IReadOnlyList<string>> ResolveInheritedPermissionsAsync(Role role, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(role.HierarchyPath))
+        {
+            return Array.Empty<string>();
+        }
+
+        var parts = role.HierarchyPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length <= 1)
+        {
+            return Array.Empty<string>();
+        }
+
+        var ancestorIds = parts
+            .Select(part => Guid.TryParse(part, out var parsed) ? parsed : Guid.Empty)
+            .Where(id => id != Guid.Empty && id != role.Id)
+            .ToList();
+
+        if (ancestorIds.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var ancestors = await _dbContext.Roles
+            .AsNoTracking()
+            .Where(r => ancestorIds.Contains(r.Id) && !r.IsDeleted)
+            .Include(r => r.Permissions)
+            .ToListAsync(cancellationToken);
+
+        var inherited = ancestors
+            .SelectMany(r => r.Permissions)
+            .Where(rp => !rp.IsDeleted && !string.IsNullOrWhiteSpace(rp.Permission))
+            .Select(rp => rp.Permission.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(permission => permission)
+            .ToList();
+
+        return inherited;
     }
 
     private static RoleVisibilityScope ParseVisibilityScope(string? scope, RoleVisibilityScope? fallback = null)

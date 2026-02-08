@@ -13,4 +13,10 @@ public record RoleResponse(
     string VisibilityScope,
     Guid? SecurityLevelId,
     string? SecurityLevelName,
-    IReadOnlyList<string> Permissions);
+    IReadOnlyList<string> Permissions,
+    IReadOnlyList<string> InheritedPermissions,
+    IReadOnlyList<string> BasePermissions,
+    DateTime? BasePermissionsUpdatedAtUtc,
+    string? DriftNotes,
+    DateTime? DriftAcceptedAtUtc,
+    string? DriftAcceptedBy);
