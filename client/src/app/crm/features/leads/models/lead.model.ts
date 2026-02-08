@@ -29,6 +29,9 @@ export interface Lead {
   contactId?: string;
   convertedOpportunityId?: string;
   disqualifiedReason?: string;
+  lossReason?: string;
+  lossCompetitor?: string;
+  lossNotes?: string;
   nurtureFollowUpAtUtc?: string;
   qualifiedNotes?: string;
   firstTouchDueAtUtc?: string;

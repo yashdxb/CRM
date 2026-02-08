@@ -20,6 +20,9 @@ public class UpsertLeadRequest
     public Guid? AccountId { get; set; }
     public Guid? ContactId { get; set; }
     public string? DisqualifiedReason { get; set; }
+    public string? LossReason { get; set; }
+    public string? LossCompetitor { get; set; }
+    public string? LossNotes { get; set; }
     public DateTime? NurtureFollowUpAtUtc { get; set; }
     public string? QualifiedNotes { get; set; }
     public string? BudgetAvailability { get; set; }

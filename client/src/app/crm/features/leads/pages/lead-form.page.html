@@ -735,7 +735,7 @@
                   styleClass="w-full"
                 ></p-datepicker>
               </div>
-              <div class="field full-row" *ngIf="form.status === 'Lost' || form.status === 'Disqualified'">
+              <div class="field full-row" *ngIf="form.status === 'Disqualified'">
                 <label>Disqualified reason <span class="required">*</span></label>
                 <textarea
                   pTextarea
@@ -744,6 +744,38 @@
                   placeholder="Reason for disqualification"
                   class="w-full"
                   [(ngModel)]="form.disqualifiedReason"
+                ></textarea>
+              </div>
+              <div class="field full-row" *ngIf="form.status === 'Lost'">
+                <label>Loss reason <span class="required">*</span></label>
+                <textarea
+                  pTextarea
+                  name="lossReason"
+                  rows="3"
+                  placeholder="Primary reason the lead was lost"
+                  class="w-full"
+                  [(ngModel)]="form.lossReason"
+                ></textarea>
+              </div>
+              <div class="field" *ngIf="form.status === 'Lost'">
+                <label>Competitor <span class="required">*</span></label>
+                <input
+                  pInputText
+                  name="lossCompetitor"
+                  placeholder="Competitor name"
+                  class="w-full"
+                  [(ngModel)]="form.lossCompetitor"
+                />
+              </div>
+              <div class="field full-row" *ngIf="form.status === 'Lost'">
+                <label>Loss notes <span class="required">*</span></label>
+                <textarea
+                  pTextarea
+                  name="lossNotes"
+                  rows="4"
+                  placeholder="Context and details about the loss"
+                  class="w-full"
+                  [(ngModel)]="form.lossNotes"
                 ></textarea>
               </div>
             </div>

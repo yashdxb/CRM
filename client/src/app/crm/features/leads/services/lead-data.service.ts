@@ -31,6 +31,9 @@ export interface SaveLeadRequest {
   autoScore?: boolean;
   score?: number;
   disqualifiedReason?: string;
+  lossReason?: string;
+  lossCompetitor?: string;
+  lossNotes?: string;
   nurtureFollowUpAtUtc?: string | Date | null;
   qualifiedNotes?: string;
   budgetAvailability?: string;

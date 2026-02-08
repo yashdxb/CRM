@@ -94,6 +94,9 @@ public sealed class LeadImportService : ILeadImportService
                 null,
                 null,
                 null,
+                null,
+                null,
+                null,
                 null);
 
             var resolvedOwnerId = await ResolveOwnerIdAsync(ownerId, territory, assignmentStrategy, cancellationToken);

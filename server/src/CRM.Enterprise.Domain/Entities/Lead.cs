@@ -26,6 +26,9 @@ public class Lead : AuditableEntity
     public DateTime? QualifiedAtUtc { get; set; }
     public DateTime? ConvertedAtUtc { get; set; }
     public string? DisqualifiedReason { get; set; }
+    public string? LossReason { get; set; }
+    public string? LossCompetitor { get; set; }
+    public string? LossNotes { get; set; }
     public DateTime? NurtureFollowUpAtUtc { get; set; }
     public string? QualifiedNotes { get; set; }
     public DateTime? FirstTouchDueAtUtc { get; set; }

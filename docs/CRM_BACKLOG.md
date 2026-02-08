@@ -604,7 +604,14 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Leads | As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work. (ClickUp: 86dzp8xcz, Status: done)
 - Module: Leads | As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date. (ClickUp: 86dzp8xdf, Status: done)
 - Module: Leads | As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward. (ClickUp: 86dzp8xd6, Status: done)
-- Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends. (ClickUp: 86dzp8x9q, Status: backlog)
+- Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends. (ClickUp: 86dzp8x9q, Status: done)
+  - Acceptance criteria:
+    - When lead status is set to Lost, loss reason, competitor, and loss notes are required.
+    - Lost details are stored on the lead and returned in lead detail responses.
+  - Evidence:
+    - Validation + persistence: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+    - API contract fields: `server/src/CRM.Enterprise.Api/Contracts/Leads/UpsertLeadRequest.cs`
+    - Lead UI fields: `client/src/app/crm/features/leads/pages/lead-form.page.html`
 - Module: Leads | Configurable qualification policy + conversion guardrails (ClickUp: 86dzp8xe3, Status: done)
 - Module: Opportunities | As a Sales Rep, I want alerts for deals with no next step or no activity in X days so I can recover risk early. (ClickUp: 86dzp8xdx, Status: done)
 - Module: Opportunities | As a Sales Rep, I want forecast category enforced at stage changes so forecasts stay accurate. (ClickUp: 86dzp8xcc, Status: done)

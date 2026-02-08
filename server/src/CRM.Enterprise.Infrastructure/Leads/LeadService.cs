@@ -91,6 +91,9 @@ public sealed class LeadService : ILeadService
                 l.ContactId,
                 l.ConvertedOpportunityId,
                 l.DisqualifiedReason,
+                l.LossReason,
+                l.LossCompetitor,
+                l.LossNotes,
                 l.NurtureFollowUpAtUtc,
                 l.QualifiedNotes,
                 l.FirstTouchDueAtUtc,
@@ -163,6 +166,9 @@ public sealed class LeadService : ILeadService
                 l.ContactId,
                 l.ConvertedOpportunityId,
                 l.DisqualifiedReason,
+                l.LossReason,
+                l.LossCompetitor,
+                l.LossNotes,
                 l.NurtureFollowUpAtUtc,
                 l.QualifiedNotes,
                 l.FirstTouchDueAtUtc,
@@ -248,6 +254,9 @@ public sealed class LeadService : ILeadService
             lead.ContactId,
             lead.ConvertedOpportunityId,
             lead.DisqualifiedReason,
+            lead.LossReason,
+            lead.LossCompetitor,
+            lead.LossNotes,
             lead.NurtureFollowUpAtUtc,
             lead.QualifiedNotes,
             lead.FirstTouchDueAtUtc,
@@ -392,6 +401,9 @@ public sealed class LeadService : ILeadService
             AccountId = request.AccountId,
             ContactId = request.ContactId,
             DisqualifiedReason = request.DisqualifiedReason,
+            LossReason = request.LossReason,
+            LossCompetitor = request.LossCompetitor,
+            LossNotes = request.LossNotes,
             NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc,
             QualifiedNotes = request.QualifiedNotes,
             BudgetAvailability = request.BudgetAvailability,
@@ -473,6 +485,9 @@ public sealed class LeadService : ILeadService
             lead.ContactId,
             lead.ConvertedOpportunityId,
             lead.DisqualifiedReason,
+            lead.LossReason,
+            lead.LossCompetitor,
+            lead.LossNotes,
             lead.NurtureFollowUpAtUtc,
             lead.QualifiedNotes,
             lead.FirstTouchDueAtUtc,
@@ -554,6 +569,9 @@ public sealed class LeadService : ILeadService
         lead.AccountId = request.AccountId;
         lead.ContactId = request.ContactId;
         lead.DisqualifiedReason = request.DisqualifiedReason;
+        lead.LossReason = request.LossReason;
+        lead.LossCompetitor = request.LossCompetitor;
+        lead.LossNotes = request.LossNotes;
         lead.NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc;
         lead.QualifiedNotes = request.QualifiedNotes;
         lead.BudgetAvailability = request.BudgetAvailability;
@@ -1609,11 +1627,27 @@ public sealed class LeadService : ILeadService
 
     private static string? ValidateOutcome(string statusName, LeadUpsertRequest request)
     {
-        if (string.Equals(statusName, "Disqualified", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(statusName, "Lost", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(statusName, "Disqualified", StringComparison.OrdinalIgnoreCase))
         {
             return string.IsNullOrWhiteSpace(request.DisqualifiedReason)
                 ? "Disqualified reason is required when closing a lead."
+                : null;
+        }
+
+        if (string.Equals(statusName, "Lost", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(request.LossReason))
+            {
+                return "Loss reason is required when marking a lead as Lost.";
+            }
+
+            if (string.IsNullOrWhiteSpace(request.LossCompetitor))
+            {
+                return "Competitor is required when marking a lead as Lost.";
+            }
+
+            return string.IsNullOrWhiteSpace(request.LossNotes)
+                ? "Loss notes are required when marking a lead as Lost."
                 : null;
         }
 

@@ -121,7 +121,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Leads | As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.
 - Module: Leads | As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
 - Module: Leads | As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
-- Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends.
+- Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends. (Done)
 - Module: Leads | Configurable qualification policy + conversion guardrails
 - Module: Opportunities | As a Sales Rep, I want alerts for deals with no next step or no activity in X days so I can recover risk early.
 - Module: Opportunities | As a Sales Rep, I want forecast category enforced at stage changes so forecasts stay accurate.
