@@ -622,9 +622,18 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Close-won defaults + lock enforcement: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
     - Tenant defaults stored in workspace settings: `server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs`
     - Workspace settings UI for defaults: `client/src/app/crm/features/settings/pages/workspace-settings.page.html`
-- Module: Opportunities | As a Sales Rep, I want to capture demo outcomes and feedback; stage progression should require a demo outcome. (ClickUp: 86dzp8xav, Status: backlog)
+- Module: Opportunities | As a Sales Rep, I want to capture demo outcomes and feedback; stage progression should require a demo outcome. (ClickUp: 86dzp8xav, Status: done)
+  - Acceptance criteria:
+    - Moving to stages that require a demo/POC is blocked unless a completed demo activity with an outcome exists.
+    - Demo outcome validation uses activity template keys to ensure consistent enforcement.
+  - Evidence:
+    - Demo outcome gate + validation: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
 - Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close. (ClickUp: 86dzp8xa9, Status: done)
-- Module: Opportunities | As a Sales Rep, I want to schedule discovery and log notes before leaving the stage. (ClickUp: 86dzp8xbq, Status: backlog)
+- Module: Opportunities | As a Sales Rep, I want to schedule discovery and log notes before leaving the stage. (ClickUp: 86dzp8xbq, Status: done)
+  - Acceptance criteria:
+    - Moving to stages that require discovery is blocked unless a discovery meeting exists with notes and a scheduled/completed time.
+  - Evidence:
+    - Discovery gate + validation: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
 - Module: Opportunities | As a Sales Rep, I want to set opportunity name, value, close date, and initial stage so the deal is trackable from day one. (ClickUp: 86dzp8xce, Status: done)
 - Module: Opportunities | As an Admin, I want stage automation rules that create tasks on stage entry. (ClickUp: 86dzpgepx, Status: done)
 - Module: Settings | Approval Settings page (ClickUp: 86dzpdf2f, Status: done)
