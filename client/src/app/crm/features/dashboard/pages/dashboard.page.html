@@ -278,6 +278,52 @@
           </div>
         </ng-container>
 
+        <!-- Expansion Signals -->
+        <ng-container *ngSwitchCase="'expansion-signals'">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-sparkles"></i>
+              Expansion Signals
+            </h3>
+            <div class="card-actions">
+              <span class="card-badge">{{ expansionSignalsCount() }}</span>
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="expansion-signals" *ngIf="!expansionLoading(); else expansionLoadingTpl">
+              <div class="expansion-item" *ngFor="let signal of expansionSignals()">
+                <div class="expansion-info">
+                  <div class="expansion-title">{{ signal.accountName }}</div>
+                  <div class="expansion-meta">
+                    {{ signal.opportunityName }} · {{ signal.signalCount }} signals ·
+                    Last {{ signal.lastSignalAtUtc | date:'MMM d' }}
+                  </div>
+                  <div class="expansion-meta" *ngIf="signal.contractEndDateUtc">
+                    Contract ends {{ signal.contractEndDateUtc | date:'MMM d, yyyy' }}
+                  </div>
+                </div>
+                <div class="expansion-actions">
+                  <button
+                    pButton
+                    type="button"
+                    class="crm-button crm-button--primary"
+                    label="Create expansion"
+                    icon="pi pi-plus"
+                    [disabled]="signal.hasExpansionOpportunity || isExpansionSubmitting(signal)"
+                    (click)="createExpansionOpportunity(signal)"
+                  ></button>
+                  <span class="expansion-status" *ngIf="signal.hasExpansionOpportunity">Expansion created</span>
+                </div>
+              </div>
+              <div class="empty-state" *ngIf="!expansionSignals().length">No expansion signals yet.</div>
+            </div>
+            <ng-template #expansionLoadingTpl>
+              <div class="empty-state">Loading expansion signals...</div>
+            </ng-template>
+          </div>
+        </ng-container>
+
         <!-- Confidence Forecast -->
         <ng-container *ngSwitchCase="'confidence-forecast'">
           <div class="card-header">

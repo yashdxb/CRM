@@ -599,7 +599,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
   - Evidence:
     - High-impact task creation: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
 - Module: Contacts | As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership. (ClickUp: 86dzp8xcg, Status: done)
-- Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context. (ClickUp: 86dzp8xcw, Status: backlog)
+- Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context. (ClickUp: 86dzp8xcw, Status: done)
+  - Acceptance criteria:
+    - Contact workspace shows linked account history (recent activities on the account).
+    - Contact workspace lists related accounts (parent/child/sibling) with navigation.
+    - Relationship labels are derived from the account hierarchy (parent/child/sibling).
+  - Evidence:
+    - Related accounts API: `server/src/CRM.Enterprise.Api/Controllers/CustomersController.cs`
+    - Related accounts query: `server/src/CRM.Enterprise.Infrastructure/Customers/CustomerService.cs`
+    - Contact workspace UI: `client/src/app/crm/features/contacts/pages/contact-form.page.html`
+    - Contact workspace logic: `client/src/app/crm/features/contacts/pages/contact-form.page.ts`
 - Module: Contacts | As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group. (ClickUp: 86dzp8xcr, Status: done)
 - Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8y0j, Status: done)
 - Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8xtg, Status: done)
@@ -644,7 +653,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
   - Evidence:
     - Stage gating + decision maker check: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
     - UI guidance copy: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
-- Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (ClickUp: 86dzp8x8p, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (ClickUp: 86dzp8x8p, Status: done)
+  - Acceptance criteria:
+    - Expansion Signals card lists accounts with recent expansion signal activity.
+    - Each signal shows signal count, last signal date, and contract end date (when available).
+    - Rep can create an Expansion opportunity from a signal and the card reflects it.
+  - Evidence:
+    - Expansion signals API: `server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs`
+    - Expansion signals logic: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - Dashboard card UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Dashboard card logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
 - Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs. (ClickUp: 86dzp8xat, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (ClickUp: 86dzp8x9z, Status: backlog)

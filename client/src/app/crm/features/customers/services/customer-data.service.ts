@@ -44,6 +44,10 @@ export class CustomerDataService {
     return this.http.get<Customer>(`${this.baseUrl}/api/customers/${id}`);
   }
 
+  getRelatedAccounts(id: string) {
+    return this.http.get<Customer[]>(`${this.baseUrl}/api/customers/${id}/related-accounts`);
+  }
+
   create(payload: SaveCustomerRequest) {
     return this.http.post<Customer>(`${this.baseUrl}/api/customers`, payload);
   }

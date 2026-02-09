@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../../../environments/environment';
 import {
   Opportunity,
+  ExpansionSignal,
   OpportunityReviewThreadItem,
   OpportunityStageHistoryItem,
   OpportunitySearchRequest,
@@ -120,5 +121,13 @@ export class OpportunityDataService {
 
   updateTeam(id: string, payload: UpdateOpportunityTeamRequest) {
     return this.http.put<OpportunityTeamMember[]>(`${this.baseUrl}/api/opportunities/${id}/team`, payload);
+  }
+
+  getExpansionSignals() {
+    return this.http.get<ExpansionSignal[]>(`${this.baseUrl}/api/opportunities/expansion-signals`);
+  }
+
+  createExpansion(opportunityId: string) {
+    return this.http.post<Opportunity>(`${this.baseUrl}/api/opportunities/${opportunityId}/expansion`, {});
   }
 }

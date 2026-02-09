@@ -49,6 +49,14 @@ public class CustomersController : ControllerBase
         return Ok(ToApiItem(customer));
     }
 
+    [HttpGet("{id:guid}/related-accounts")]
+    public async Task<ActionResult<IEnumerable<CustomerListItem>>> GetRelatedAccounts(Guid id, CancellationToken cancellationToken)
+    {
+        var related = await _customerService.GetRelatedAccountsAsync(id, cancellationToken);
+        var items = related.Select(ToApiItem);
+        return Ok(items);
+    }
+
     [HttpPost]
     [Authorize(Policy = Permissions.Policies.CustomersManage)]
     public async Task<ActionResult<CustomerListItem>> Create([FromBody] ApiUpsertCustomerRequest request, CancellationToken cancellationToken)

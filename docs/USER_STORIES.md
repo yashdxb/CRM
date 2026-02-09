@@ -85,7 +85,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Activities | As a Sales Rep, I want the system to surface opportunities missing next steps.
 - Module: Activities | As a system, automation creates tasks for unresolved high-impact factors
 - Module: Contacts | As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership.
-- Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context.
+- Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context. (Done)
 - Module: Contacts | As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group.
 - Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal
 - Module: Dashboard | As a manager, I see top truth gaps across pipeline
@@ -96,7 +96,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Dashboard | As a Sales Rep, I want the CRM to guide execution, not just store data — enforcing discipline, protecting forecast accuracy, and enabling clean handoffs.
 - Module: Dashboard | As a Sales Rep, I want to capture requirements, buying process, and success criteria to qualify fit.
 - Module: Dashboard | As a Sales Rep, I want to confirm pain, decision maker, and next step before advancing.
-- Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context.
+- Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (Done)
 - Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs.
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment.
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff.

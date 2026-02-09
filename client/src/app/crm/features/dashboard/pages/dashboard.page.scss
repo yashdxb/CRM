@@ -1463,6 +1463,47 @@
   color: $text-muted;
 }
 
+.expansion-signals {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.expansion-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: $space-3;
+  border-radius: $radius-lg;
+  background: rgba($info, 0.08);
+  border: 1px solid rgba($info, 0.18);
+}
+
+.expansion-title {
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: 2px;
+}
+
+.expansion-meta {
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.expansion-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: $space-1;
+}
+
+.expansion-status {
+  font-size: $font-size-xs;
+  color: $success;
+  font-weight: 600;
+}
+
 .forecast-value {
   font-size: $font-size-xl;
   font-weight: 700;

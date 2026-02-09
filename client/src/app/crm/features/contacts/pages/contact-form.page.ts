@@ -72,6 +72,9 @@ export class ContactFormPage implements OnInit {
   protected readonly activities = signal<Activity[]>([]);
   protected readonly notes = signal<Activity[]>([]);
   protected readonly relatedOpportunities = signal<Opportunity[]>([]);
+  protected readonly relatedAccounts = signal<Customer[]>([]);
+  protected readonly accountHistory = signal<Activity[]>([]);
+  protected readonly accountHistoryLoading = signal(false);
   protected readonly attachments = signal<AttachmentItem[]>([]);
   protected readonly timelineLoading = signal(false);
   protected readonly noteSaving = signal(false);
@@ -245,6 +248,20 @@ export class ContactFormPage implements OnInit {
     );
   }
 
+  protected relatedAccountsSorted() {
+    return [...this.relatedAccounts()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  protected relatedAccountRelation(account: Customer): string {
+    const currentId = this.form.accountId;
+    const currentParent = this.linkedAccount()?.parentAccountId;
+    if (!currentId) return 'Related';
+    if (account.id === currentParent) return 'Parent';
+    if (account.parentAccountId === currentId) return 'Child';
+    if (currentParent && account.parentAccountId === currentParent) return 'Sibling';
+    return 'Related';
+  }
+
   protected opportunityCount() {
     return this.relatedOpportunities().length;
   }
@@ -303,6 +320,33 @@ export class ContactFormPage implements OnInit {
         next: (res) => this.relatedOpportunities.set(res.items),
         error: () => this.raiseToast('error', 'Unable to load opportunities.')
       });
+
+      this.customerData.getRelatedAccounts(this.form.accountId).subscribe({
+        next: (res) => this.relatedAccounts.set(res),
+        error: () => this.raiseToast('error', 'Unable to load related accounts.')
+      });
+
+      this.accountHistoryLoading.set(true);
+      this.activityData
+        .search({
+          relatedEntityType: 'Account',
+          relatedEntityId: this.form.accountId,
+          page: 1,
+          pageSize: 20
+        })
+        .subscribe({
+          next: (res) => {
+            const ordered = [...res.items].sort(
+              (a, b) => (b.createdAtUtc ?? '').localeCompare(a.createdAtUtc ?? '')
+            );
+            this.accountHistory.set(ordered);
+            this.accountHistoryLoading.set(false);
+          },
+          error: () => {
+            this.accountHistoryLoading.set(false);
+            this.raiseToast('error', 'Unable to load account history.');
+          }
+        });
     }
 
     this.attachmentData.list('Contact', this.editingId).subscribe({

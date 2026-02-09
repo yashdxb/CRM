@@ -58,6 +58,17 @@ export interface OpportunitySearchResponse {
   total: number;
 }
 
+export interface ExpansionSignal {
+  opportunityId: string;
+  accountId: string;
+  accountName: string;
+  opportunityName: string;
+  contractEndDateUtc?: string | null;
+  lastSignalAtUtc: string;
+  signalCount: number;
+  hasExpansionOpportunity: boolean;
+}
+
 export interface OpportunityStageHistoryItem {
   id: string;
   stage: string;

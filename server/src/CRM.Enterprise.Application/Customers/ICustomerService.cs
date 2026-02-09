@@ -13,4 +13,5 @@ public interface ICustomerService
     Task<CustomerOperationResult<bool>> UpdateLifecycleAsync(Guid id, string lifecycle, ActorContext actor, CancellationToken cancellationToken = default);
     Task<CustomerOperationResult<int>> BulkAssignOwnerAsync(IReadOnlyCollection<Guid> ids, Guid ownerId, CancellationToken cancellationToken = default);
     Task<CustomerOperationResult<int>> BulkUpdateLifecycleAsync(IReadOnlyCollection<Guid> ids, string lifecycle, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerListItemDto>> GetRelatedAccountsAsync(Guid accountId, CancellationToken cancellationToken = default);
 }
