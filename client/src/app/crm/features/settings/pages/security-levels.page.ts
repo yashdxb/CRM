@@ -5,6 +5,8 @@ import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -27,6 +29,8 @@ import { readTokenContext, tokenHasPermission } from '../../../../core/auth/toke
     ButtonModule,
     CheckboxModule,
     DialogModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     InputNumberModule,
     InputTextModule,
     NgClass,
