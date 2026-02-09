@@ -75,7 +75,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Coaching & Management
 - Conditional Forecasting
 - CSV import/export flow
-- Epistemic Metrics Core
+- Epistemic Metrics Core (Done)
 - Epistemic State + Evidence Governance
 - Feedback Loop + Weakest Signal
 - Later - Dedicated Award Screen (SCM)

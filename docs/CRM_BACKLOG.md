@@ -576,7 +576,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Coaching & Management (ClickUp: 86dzp8xeu, Status: in progress)
 - Conditional Forecasting (ClickUp: 86dzp8xey, Status: in progress)
 - CSV import/export flow (ClickUp: 86dzp8xh9, Status: done)
-- Epistemic Metrics Core (ClickUp: 86dzp8xf6, Status: in progress)
+- Epistemic Metrics Core (ClickUp: 86dzp8xf6, Status: done)
+  - Acceptance criteria:
+    - Dashboard shows confidence-weighted pipeline totals.
+    - Calibration score and sample size are displayed on the forecast card.
+    - Cost of Not Knowing is surfaced with a deal count and value.
+  - Evidence:
+    - Metrics computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - API summary fields: `server/src/CRM.Enterprise.Application/Dashboard/DashboardSummaryDto.cs`
+    - Dashboard UI cards: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
 - Epistemic State + Evidence Governance (ClickUp: 86dzp8xfc, Status: in progress)
 - Feedback Loop + Weakest Signal (ClickUp: 86dzp8xf9, Status: backlog)
 - Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene. (ClickUp: 86dzp8x9n, Status: done)
