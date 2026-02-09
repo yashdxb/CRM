@@ -1,6 +1,7 @@
 # Mobile Backlog (Flutter)
 
 Purpose: Separate backlog for the Flutter mobile app. Keep ClickUp in sync with this document.
+Mobile repo: https://github.com/yashdxb/crm-enterprise-mobile
 
 Legend:
 - DONE: implemented and wired in UI + API
