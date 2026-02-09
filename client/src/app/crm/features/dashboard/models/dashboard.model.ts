@@ -42,6 +42,12 @@ export interface DashboardSummary {
   riskRegisterCount: number;
   topRiskFlags: RiskFlagSummary[];
   confidenceWeightedPipelineValue: number;
+  costOfNotKnowingValue: number;
+  costOfNotKnowingDeals: number;
+  confidenceCalibrationScore: number;
+  confidenceCalibrationSample: number;
+  myPipelineValueTotal: number;
+  myConfidenceWeightedPipelineValue: number;
 }
 
 export interface ChartDataPoint {

@@ -8,6 +8,17 @@ namespace CRM.Enterprise.Infrastructure.Dashboard;
 
 public class DashboardReadService : IDashboardReadService
 {
+    private static readonly IReadOnlyDictionary<string, decimal> DefaultStageConfidence = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Qualification"] = 0.35m,
+        ["Discovery"] = 0.45m,
+        ["Proposal"] = 0.6m,
+        ["Negotiation"] = 0.75m,
+        ["Commit"] = 0.85m,
+        ["Prospecting"] = 0.25m
+    };
+
+    private sealed record CalibrationRow(string Stage, bool IsWon);
     private readonly CrmDbContext _dbContext;
     private const int InactivityThresholdDays = 30;
     private const int StuckStageThresholdDays = 21;
@@ -59,7 +70,12 @@ public class DashboardReadService : IDashboardReadService
             .Select(o => new
             {
                 Stage = o.Stage != null ? o.Stage.Name : "Prospecting",
-                o.Amount
+                o.Amount,
+                o.OwnerId,
+                o.Summary,
+                o.Requirements,
+                o.BuyingProcess,
+                o.SuccessCriteria
             })
             .ToListAsync(cancellationToken);
 
@@ -70,6 +86,45 @@ public class DashboardReadService : IDashboardReadService
             .ToList();
 
         var pipelineValueTotal = pipelineValueStages.Sum(stage => stage.Value);
+
+        var calibrationWindowStart = now.AddDays(-180);
+        var calibrationRowsQuery = _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && o.IsClosed);
+        if (visibility.UserIds is not null)
+        {
+            calibrationRowsQuery = calibrationRowsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+
+        var calibrationRows = await calibrationRowsQuery
+            .Select(o => new
+            {
+                Stage = o.Stage != null ? o.Stage.Name : "Prospecting",
+                o.IsWon,
+                ClosedAt = o.UpdatedAtUtc ?? o.CreatedAtUtc
+            })
+            .Where(o => o.ClosedAt >= calibrationWindowStart)
+            .Select(o => new CalibrationRow(o.Stage, o.IsWon))
+            .ToListAsync(cancellationToken);
+
+        var stageConfidenceMap = BuildStageConfidenceMap(calibrationRows);
+        var confidenceCalibrationScore = ComputeCalibrationScore(calibrationRows, stageConfidenceMap);
+        var confidenceCalibrationSample = calibrationRows.Count;
+
+        var costOfNotKnowingValue = 0m;
+        var costOfNotKnowingDeals = 0;
+        foreach (var row in pipelineRows)
+        {
+            var qualificationScore = ComputeQualificationScore(row.Summary, row.Requirements, row.BuyingProcess, row.SuccessCriteria);
+            var stageConfidence = GetStageConfidence(stageConfidenceMap, row.Stage);
+            var confidenceScore = Math.Clamp((stageConfidence + qualificationScore) / 2m, 0m, 1m);
+            var uncertaintyCost = row.Amount * (1m - confidenceScore);
+            costOfNotKnowingValue += uncertaintyCost;
+            if (confidenceScore < 0.6m)
+            {
+                costOfNotKnowingDeals += 1;
+            }
+        }
 
         var activitiesQuery = _dbContext.Activities.AsNoTracking().Where(a => !a.IsDeleted);
         if (visibility.UserIds is not null)
@@ -725,19 +780,16 @@ public class DashboardReadService : IDashboardReadService
         var avgTimeToTruthDays = timeToTruthDays.Count == 0 ? 0m : (decimal)Math.Round(timeToTruthDays.Average(), 1);
 
         var confidenceWeightedPipelineValue = pipelineRows
-            .Sum(row =>
-            {
-                var stageConfidence = row.Stage switch
-                {
-                    "Qualification" => 0.35m,
-                    "Discovery" => 0.45m,
-                    "Proposal" => 0.6m,
-                    "Negotiation" => 0.75m,
-                    "Commit" => 0.85m,
-                    _ => 0.4m
-                };
-                return row.Amount * stageConfidence;
-            });
+            .Sum(row => row.Amount * GetStageConfidence(stageConfidenceMap, row.Stage));
+
+        var myPipelineValueTotal = 0m;
+        var myConfidenceWeightedPipelineValue = 0m;
+        if (userId.HasValue)
+        {
+            var myRows = pipelineRows.Where(row => row.OwnerId == userId.Value).ToList();
+            myPipelineValueTotal = myRows.Sum(row => row.Amount);
+            myConfidenceWeightedPipelineValue = myRows.Sum(row => row.Amount * GetStageConfidence(stageConfidenceMap, row.Stage));
+        }
 
         return new DashboardSummaryDto(
             totalCustomers,
@@ -774,7 +826,13 @@ public class DashboardReadService : IDashboardReadService
             avgTimeToTruthDays,
             riskRegisterCount,
             topRiskFlags,
-            Math.Round(confidenceWeightedPipelineValue, 2));
+            Math.Round(confidenceWeightedPipelineValue, 2),
+            Math.Round(costOfNotKnowingValue, 2),
+            costOfNotKnowingDeals,
+            Math.Round(confidenceCalibrationScore, 1),
+            confidenceCalibrationSample,
+            Math.Round(myPipelineValueTotal, 2),
+            Math.Round(myConfidenceWeightedPipelineValue, 2));
     }
 
     public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(Guid? userId, CancellationToken cancellationToken)
@@ -1395,6 +1453,83 @@ public class DashboardReadService : IDashboardReadService
             DecayLevel.Strong => -0.2m,
             _ => 0m
         };
+    }
+
+    private static IReadOnlyDictionary<string, decimal> BuildStageConfidenceMap(
+        IEnumerable<CalibrationRow> calibrationRows)
+    {
+        var stageConfidence = new Dictionary<string, decimal>(DefaultStageConfidence, StringComparer.OrdinalIgnoreCase);
+        var grouped = calibrationRows
+            .GroupBy(row => row.Stage, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new
+            {
+                Stage = group.Key,
+                Count = group.Count(),
+                WinRate = group.Count(r => r.IsWon) / (decimal)group.Count()
+            })
+            .ToList();
+
+        foreach (var item in grouped)
+        {
+            if (item.Count < 5)
+            {
+                continue;
+            }
+
+            stageConfidence[item.Stage] = Math.Clamp(item.WinRate, 0.1m, 0.9m);
+        }
+
+        return stageConfidence;
+    }
+
+    private static decimal ComputeCalibrationScore(
+        IEnumerable<CalibrationRow> calibrationRows,
+        IReadOnlyDictionary<string, decimal> stageConfidenceMap)
+    {
+        var rows = calibrationRows.ToList();
+        if (rows.Count == 0)
+        {
+            return 0m;
+        }
+
+        var meanError = rows.Average(row =>
+        {
+            var predicted = GetStageConfidence(stageConfidenceMap, row.Stage);
+            var actual = row.IsWon ? 1m : 0m;
+            return Math.Abs(predicted - actual);
+        });
+
+        var score = 1m - meanError;
+        return Math.Clamp(score * 100m, 0m, 100m);
+    }
+
+    private static decimal GetStageConfidence(IReadOnlyDictionary<string, decimal> stageConfidenceMap, string stage)
+    {
+        if (stageConfidenceMap.TryGetValue(stage, out var confidence))
+        {
+            return confidence;
+        }
+
+        if (DefaultStageConfidence.TryGetValue(stage, out var fallback))
+        {
+            return fallback;
+        }
+
+        return 0.4m;
+    }
+
+    private static decimal ComputeQualificationScore(
+        string? summary,
+        string? requirements,
+        string? buyingProcess,
+        string? successCriteria)
+    {
+        var total = 0m;
+        if (!string.IsNullOrWhiteSpace(summary)) total += 1m;
+        if (!string.IsNullOrWhiteSpace(requirements)) total += 1m;
+        if (!string.IsNullOrWhiteSpace(buyingProcess)) total += 1m;
+        if (!string.IsNullOrWhiteSpace(successCriteria)) total += 1m;
+        return total / 4m;
     }
 
     private static bool IsMeaningfulFactor(string? value)

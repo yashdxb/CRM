@@ -247,7 +247,13 @@
               </div>
               <div class="field" *ngIf="routingReason()">
                 <label>Routing reason</label>
-                <input pInputText [ngModel]="routingReason()" class="w-full" [disabled]="true" />
+                <input
+                  pInputText
+                  [ngModel]="routingReason()"
+                  [ngModelOptions]="{ standalone: true }"
+                  class="w-full"
+                  [disabled]="true"
+                />
               </div>
             </div>
           </section>

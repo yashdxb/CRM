@@ -558,7 +558,13 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Activities | As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction. (ClickUp: 86dzp8xdt, Status: done)
 - Module: Activities | As a Sales Rep, I want review outcomes (Needs Work / Escalate) to create acknowledgment tasks with due dates. (ClickUp: 86dzp8x97, Status: done)
 - Module: Activities | As a Sales Rep, I want the system to surface opportunities missing next steps. (ClickUp: 86dzp8x9k, Status: done)
-- Module: Activities | As a system, automation creates tasks for unresolved high-impact factors (ClickUp: 86dzp8xyj, Status: backlog)
+- Module: Activities | As a system, automation creates tasks for unresolved high-impact factors (ClickUp: 86dzp8xyj, Status: done)
+  - Acceptance criteria:
+    - High-impact risk flags on a lead create Task activities for the lead owner (up to 3 items).
+    - Tasks are not created for Lost, Disqualified, or Converted leads.
+    - Existing open tasks for the same lead + risk label are not duplicated.
+  - Evidence:
+    - High-impact task creation: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
 - Module: Contacts | As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership. (ClickUp: 86dzp8xcg, Status: done)
 - Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context. (ClickUp: 86dzp8xcw, Status: backlog)
 - Module: Contacts | As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group. (ClickUp: 86dzp8xcr, Status: done)
@@ -569,12 +575,33 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Dashboard | As a manager, I want pipeline and forecast rollups across my role hierarchy by default. (ClickUp: 86dzpgeq0, Status: done)
 - Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS (ClickUp: 86dzp8xzq, Status: done)
 - Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS (ClickUp: 86dzp8xt5, Status: done)
-- Module: Dashboard | As a Sales Rep, I want a structured checklist to flag risks early. (ClickUp: 86dzp8xbh, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want a structured checklist to flag risks early. (ClickUp: 86dzp8xbh, Status: done)
+  - Acceptance criteria:
+    - Risk Checklist card lists top risk flags with counts.
+    - Checklist items can be checked/unchecked and persist locally per user.
+  - Evidence:
+    - Risk checklist UI + state: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Risk checklist logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+    - Risk checklist styling: `client/src/app/crm/features/dashboard/pages/dashboard.page.scss`
 - Module: Dashboard | As a Sales Rep, I want personal pipeline and forecast reports to track progress to quota. (ClickUp: 86dzp8x8g, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want renewal opportunities auto‑created at 90/60/30 days so renewal motions are never missed. (ClickUp: 86dzp8x92, Status: done)
-- Module: Dashboard | As a Sales Rep, I want the CRM to guide execution, not just store data — enforcing discipline, protecting forecast accuracy, and enabling clean handoffs. (ClickUp: 86dzp8x89, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want the CRM to guide execution, not just store data — enforcing discipline, protecting forecast accuracy, and enabling clean handoffs. (ClickUp: 86dzp8x89, Status: done)
+  - Acceptance criteria:
+    - Execution Guide card shows counts for missing next steps, at-risk opportunities, overdue activities, and newly assigned leads.
+    - Card is available in the default command center layout.
+  - Evidence:
+    - Execution guide UI + logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Execution guide data bindings: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+    - Default layout order: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardLayoutService.cs`
 - Module: Dashboard | As a Sales Rep, I want to capture requirements, buying process, and success criteria to qualify fit. (ClickUp: 86dzp8xbp, Status: done)
 - Module: Dashboard | As a Sales Rep, I want to confirm pain, decision maker, and next step before advancing. (ClickUp: 86dzp8xc1, Status: done)
+  - Acceptance criteria:
+    - Moving to Qualification+ requires a pain/problem summary.
+    - Moving to Qualification+ requires a Decision Maker contact on the account (or primary contact flagged as Decision Maker).
+    - Changing stages (non-closed) requires a scheduled next step (open activity with a due date).
+  - Evidence:
+    - Stage gating + decision maker check: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - UI guidance copy: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
 - Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (ClickUp: 86dzp8x8p, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs. (ClickUp: 86dzp8xat, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: backlog)
@@ -614,7 +641,22 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Lead UI fields: `client/src/app/crm/features/leads/pages/lead-form.page.html`
 - Module: Leads | Configurable qualification policy + conversion guardrails (ClickUp: 86dzp8xe3, Status: done)
 - Module: Opportunities | As a Sales Rep, I want alerts for deals with no next step or no activity in X days so I can recover risk early. (ClickUp: 86dzp8xdx, Status: done)
+  - Acceptance criteria:
+    - Alerts are disabled by default for new users.
+    - Users can enable idle deal alerts and choose whether to trigger on no next step, no activity threshold, or both.
+    - No-activity threshold is configurable (days) and cooldown prevents repeated alerts.
+  - Evidence:
+    - Alert rules + thresholds: `server/src/CRM.Enterprise.Infrastructure/Notifications/NotificationAlertWorker.cs`
+    - Default alert prefs: `server/src/CRM.Enterprise.Api/Controllers/NotificationPreferencesController.cs`
+    - UI settings + toggles: `client/src/app/crm/features/settings/pages/notifications.page.html`
 - Module: Opportunities | As a Sales Rep, I want forecast category enforced at stage changes so forecasts stay accurate. (ClickUp: 86dzp8xcc, Status: done)
+  - Acceptance criteria:
+    - Stage change validates forecast category against the stage default.
+    - Forecast category is locked to the stage default in the opportunity edit UI.
+    - Commit/Closed stages enforce their required forecast category values.
+  - Evidence:
+    - Stage forecast validation: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - Forecast lock + guidance: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
 - Module: Opportunities | As a Sales Rep, I want insights on deals without activity or next steps so I can fix gaps early. (ClickUp: 86dzp8x8e, Status: done)
 - Module: Opportunities | As a Sales Rep, I want renewal tasks created and tracked like any opportunity. (ClickUp: 86dzp8x8w, Status: done)
 - Module: Opportunities | As a Sales Rep, I want stage‑specific activity templates so I can log actions faster. (ClickUp: 86dzp8xc4, Status: done)

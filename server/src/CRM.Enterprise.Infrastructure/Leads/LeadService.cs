@@ -16,6 +16,14 @@ public sealed class LeadService : ILeadService
 {
     private const string LeadEntityType = "Lead";
     private const int DefaultFirstTouchSlaHours = 24;
+    private static readonly string[] HighImpactRiskFlagPrefixes =
+    [
+        "No buying timeline",
+        "Economic buyer not engaged",
+        "Budget confirmed but no initiative",
+        "Weak ICP fit",
+        "Problem severity unclear"
+    ];
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly ILeadScoringService _leadScoringService;
@@ -435,6 +443,7 @@ public sealed class LeadService : ILeadService
         await EnsureFirstTouchTaskAsync(lead, actor, cancellationToken);
         await EnsureNurtureFollowUpTaskAsync(lead, resolvedStatusName, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await EnsureHighImpactTasksAsync(lead, resolvedStatusName, actor, cancellationToken);
 
         if (HasAiSignals(request))
         {
@@ -635,6 +644,7 @@ public sealed class LeadService : ILeadService
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await EnsureHighImpactTasksAsync(lead, resolvedStatusName, actor, cancellationToken);
 
         if (ownerChanged)
         {
@@ -1671,6 +1681,113 @@ public sealed class LeadService : ILeadService
         }
 
         return null;
+    }
+
+    private async Task EnsureHighImpactTasksAsync(
+        Lead lead,
+        string resolvedStatusName,
+        LeadActor actor,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(resolvedStatusName, "Lost", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(resolvedStatusName, "Disqualified", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(resolvedStatusName, "Converted", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var insights = BuildQualificationInsights(
+            lead.BudgetAvailability,
+            lead.BudgetEvidence,
+            lead.BudgetValidatedAtUtc,
+            lead.ReadinessToSpend,
+            lead.ReadinessEvidence,
+            lead.ReadinessValidatedAtUtc,
+            lead.BuyingTimeline,
+            lead.TimelineEvidence,
+            lead.BuyingTimelineValidatedAtUtc,
+            lead.ProblemSeverity,
+            lead.ProblemEvidence,
+            lead.ProblemSeverityValidatedAtUtc,
+            lead.EconomicBuyer,
+            lead.EconomicBuyerEvidence,
+            lead.EconomicBuyerValidatedAtUtc,
+            lead.IcpFit,
+            lead.IcpFitEvidence,
+            lead.IcpFitValidatedAtUtc);
+
+        var highImpactFlags = insights.RiskFlags
+            .Where(IsHighImpactFlag)
+            .Take(3)
+            .ToList();
+        if (highImpactFlags.Count == 0)
+        {
+            return;
+        }
+
+        var existingSubjects = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.CompletedDateUtc == null
+                        && a.RelatedEntityType == ActivityRelationType.Lead
+                        && a.RelatedEntityId == lead.Id
+                        && a.Type == ActivityType.Task)
+            .Select(a => a.Subject ?? string.Empty)
+            .ToListAsync(cancellationToken);
+
+        var existingSet = new HashSet<string>(existingSubjects, StringComparer.OrdinalIgnoreCase);
+        var actorContext = new CRM.Enterprise.Application.Common.ActorContext(
+            actor.UserId == Guid.Empty ? null : actor.UserId,
+            actor.UserName);
+        var dueDate = DateTime.UtcNow.AddDays(2);
+
+        foreach (var flag in highImpactFlags)
+        {
+            var subject = $"Resolve risk: {flag}";
+            if (existingSet.Contains(subject))
+            {
+                continue;
+            }
+
+            await _activityService.CreateAsync(
+                new ActivityUpsertRequest(
+                    subject,
+                    $"Resolve high-impact qualification risk for lead {lead.FirstName} {lead.LastName}.",
+                    null,
+                    null,
+                    ActivityType.Task,
+                    "High",
+                    dueDate,
+                    null,
+                    null,
+                    null,
+                    ActivityRelationType.Lead,
+                    lead.Id,
+                    lead.OwnerId),
+                actorContext,
+                cancellationToken);
+        }
+    }
+
+    private static bool IsHighImpactFlag(string flag)
+    {
+        if (string.IsNullOrWhiteSpace(flag))
+        {
+            return false;
+        }
+
+        if (HighImpactRiskFlagPrefixes.Any(prefix =>
+            flag.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (flag.Contains("needs validation", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return flag.Contains("is stale", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task EnsureFirstTouchTaskAsync(Lead lead, LeadActor actor, CancellationToken cancellationToken)

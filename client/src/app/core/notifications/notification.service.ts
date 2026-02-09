@@ -14,6 +14,8 @@ export interface NotificationChannelPreferences {
 export interface EmailAlertPreferences {
   leadSla: boolean;
   idleDeal: boolean;
+  idleDealNoNextStep: boolean;
+  idleDealNoActivity: boolean;
   coachingEscalation: boolean;
   idleDealDays: number;
   idleDealCooldownDays: number;
@@ -257,7 +259,7 @@ export class NotificationService {
         inApp: parsed.inApp,
         email: parsed.email,
         emailAlerts: parsed.emailAlerts ?? this.defaultPreferences().emailAlerts,
-        alertsEnabled: typeof parsed.alertsEnabled === 'boolean' ? parsed.alertsEnabled : true
+        alertsEnabled: typeof parsed.alertsEnabled === 'boolean' ? parsed.alertsEnabled : false
       };
     } catch {
       return this.defaultPreferences();
@@ -290,12 +292,14 @@ export class NotificationService {
       emailAlerts: {
         leadSla: false,
         idleDeal: false,
+        idleDealNoNextStep: false,
+        idleDealNoActivity: false,
         coachingEscalation: false,
         idleDealDays: 30,
         idleDealCooldownDays: 7,
         coachingEscalationCooldownDays: 7
       },
-      alertsEnabled: true
+      alertsEnabled: false
     };
   }
 

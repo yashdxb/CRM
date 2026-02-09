@@ -11,6 +11,8 @@ public record NotificationChannelPreferences(
 public record EmailAlertPreferences(
     [property: JsonPropertyName("leadSla")] bool LeadSla,
     [property: JsonPropertyName("idleDeal")] bool IdleDeal,
+    [property: JsonPropertyName("idleDealNoNextStep")] bool IdleDealNoNextStep,
+    [property: JsonPropertyName("idleDealNoActivity")] bool IdleDealNoActivity,
     [property: JsonPropertyName("coachingEscalation")] bool CoachingEscalation,
     [property: JsonPropertyName("idleDealDays")] int IdleDealDays,
     [property: JsonPropertyName("idleDealCooldownDays")] int IdleDealCooldownDays,

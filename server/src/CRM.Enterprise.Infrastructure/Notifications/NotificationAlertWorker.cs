@@ -151,13 +151,33 @@ public sealed class NotificationAlertWorker : BackgroundService
         }
 
         var opportunityIds = opportunities.Select(opportunity => opportunity.Id).ToList();
-        var lastActivities = await dbContext.Activities.AsNoTracking()
+        var activitySnapshot = await dbContext.Activities.AsNoTracking()
             .Where(activity => !activity.IsDeleted
                                && activity.RelatedEntityType == ActivityRelationType.Opportunity
                                && opportunityIds.Contains(activity.RelatedEntityId))
+            .Select(activity => new
+            {
+                activity.RelatedEntityId,
+                activity.CompletedDateUtc,
+                activity.CreatedAtUtc,
+                activity.DueDateUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var activityLookup = activitySnapshot
             .GroupBy(activity => activity.RelatedEntityId)
-            .Select(group => new { OpportunityId = group.Key, LastAt = group.Max(a => a.CompletedDateUtc ?? a.CreatedAtUtc) })
-            .ToDictionaryAsync(entry => entry.OpportunityId, entry => (DateTime?)entry.LastAt, cancellationToken);
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var lastAt = group.Max(a => (DateTime?)(a.CompletedDateUtc ?? a.CreatedAtUtc));
+                    var nextStepDueAtUtc = group
+                        .Where(a => !a.CompletedDateUtc.HasValue && a.DueDateUtc.HasValue)
+                        .OrderBy(a => a.DueDateUtc)
+                        .Select(a => a.DueDateUtc)
+                        .FirstOrDefault();
+                    return (lastAt, nextStepDueAtUtc);
+                });
 
         var idleOpportunities = opportunities.ToList();
 
@@ -196,7 +216,9 @@ public sealed class NotificationAlertWorker : BackgroundService
 
         foreach (var opportunity in idleOpportunities)
         {
-            var lastActivityAtUtc = lastActivities.GetValueOrDefault(opportunity.Id);
+            activityLookup.TryGetValue(opportunity.Id, out var activityInfo);
+            var lastActivityAtUtc = activityInfo.lastAt;
+            var nextStepDueAtUtc = activityInfo.nextStepDueAtUtc;
             var referenceAtUtc = lastActivityAtUtc ?? opportunity.CreatedAtUtc;
             var sentAny = false;
             if (owners.TryGetValue(opportunity.OwnerId, out var owner))
@@ -204,11 +226,13 @@ public sealed class NotificationAlertWorker : BackgroundService
                 if (userSettings.TryGetValue(owner.Id, out var settings)
                     && settings.AlertsEnabled
                     && settings.IdleDeal
-                    && now - referenceAtUtc > TimeSpan.FromDays(settings.IdleDealDays)
+                    && (ShouldAlertForNoNextStep(settings, nextStepDueAtUtc)
+                        || ShouldAlertForNoActivity(settings, now, referenceAtUtc))
                     && !WasAlertedRecently(recentAlertLookup, opportunity.Id, now, settings.IdleDealCooldownDays))
                 {
+                    var reason = BuildIdleDealReason(settings, now, referenceAtUtc, nextStepDueAtUtc);
                     var subject = $"Idle deal alert: {opportunity.Name}";
-                    var body = BuildIdleDealBody(opportunity, lastActivityAtUtc, owner.FullName);
+                    var body = BuildIdleDealBody(opportunity, lastActivityAtUtc, owner.FullName, reason);
                     await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
                     sentAny = true;
                 }
@@ -219,14 +243,16 @@ public sealed class NotificationAlertWorker : BackgroundService
                 if (!userSettings.TryGetValue(manager.Id, out var settings)
                     || !settings.AlertsEnabled
                     || !settings.IdleDeal
-                    || now - referenceAtUtc <= TimeSpan.FromDays(settings.IdleDealDays)
+                    || (!ShouldAlertForNoNextStep(settings, nextStepDueAtUtc)
+                        && !ShouldAlertForNoActivity(settings, now, referenceAtUtc))
                     || WasAlertedRecently(recentAlertLookup, opportunity.Id, now, settings.IdleDealCooldownDays))
                 {
                     continue;
                 }
 
+                var reason = BuildIdleDealReason(settings, now, referenceAtUtc, nextStepDueAtUtc);
                 var subject = $"Idle deal alert: {opportunity.Name}";
-                var body = BuildIdleDealManagerBody(opportunity, lastActivityAtUtc, manager.FullName);
+                var body = BuildIdleDealManagerBody(opportunity, lastActivityAtUtc, manager.FullName, reason);
                 await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
                 sentAny = true;
             }
@@ -391,6 +417,8 @@ public sealed class NotificationAlertWorker : BackgroundService
         bool AlertsEnabled,
         bool LeadSla,
         bool IdleDeal,
+        bool IdleDealNoNextStep,
+        bool IdleDealNoActivity,
         bool CoachingEscalation,
         int IdleDealDays,
         int IdleDealCooldownDays,
@@ -408,7 +436,7 @@ public sealed class NotificationAlertWorker : BackgroundService
             using var document = JsonDocument.Parse(user.NotificationPreferencesJson);
             var alertsEnabled = document.RootElement.TryGetProperty("alertsEnabled", out var enabled)
                 ? enabled.ValueKind == JsonValueKind.True
-                : true;
+                : false;
             if (!document.RootElement.TryGetProperty("emailAlerts", out var emailAlerts))
             {
                 return DefaultEmailAlertSettings(alertsEnabled);
@@ -416,6 +444,10 @@ public sealed class NotificationAlertWorker : BackgroundService
 
             var leadSla = emailAlerts.TryGetProperty("leadSla", out var leadValue) && leadValue.ValueKind == JsonValueKind.True;
             var idleDeal = emailAlerts.TryGetProperty("idleDeal", out var idleValue) && idleValue.ValueKind == JsonValueKind.True;
+            var idleDealNoNextStep = emailAlerts.TryGetProperty("idleDealNoNextStep", out var idleNextStepValue)
+                                     && idleNextStepValue.ValueKind == JsonValueKind.True;
+            var idleDealNoActivity = emailAlerts.TryGetProperty("idleDealNoActivity", out var idleActivityValue)
+                                     && idleActivityValue.ValueKind == JsonValueKind.True;
             var coaching = emailAlerts.TryGetProperty("coachingEscalation", out var coachingValue) && coachingValue.ValueKind == JsonValueKind.True;
             var idleDays = emailAlerts.TryGetProperty("idleDealDays", out var idleDaysValue) && idleDaysValue.TryGetInt32(out var idleDaysParsed)
                 ? idleDaysParsed
@@ -432,6 +464,8 @@ public sealed class NotificationAlertWorker : BackgroundService
                 alertsEnabled,
                 leadSla,
                 idleDeal,
+                idleDealNoNextStep,
+                idleDealNoActivity,
                 coaching,
                 Math.Max(1, idleDays),
                 Math.Max(1, idleCooldown),
@@ -443,12 +477,14 @@ public sealed class NotificationAlertWorker : BackgroundService
         }
     }
 
-    private static EmailAlertSettings DefaultEmailAlertSettings(bool alertsEnabled = true)
+    private static EmailAlertSettings DefaultEmailAlertSettings(bool alertsEnabled = false)
     {
         return new EmailAlertSettings(
             alertsEnabled,
             LeadSla: false,
             IdleDeal: false,
+            IdleDealNoNextStep: false,
+            IdleDealNoActivity: false,
             CoachingEscalation: false,
             IdleDealDays: DefaultIdleDealDays,
             IdleDealCooldownDays: DefaultIdleCooldownDays,
@@ -485,15 +521,40 @@ public sealed class NotificationAlertWorker : BackgroundService
         return $"<p>Hi {recipientName},</p><p>Lead SLA breach for <strong>{leadName}</strong> ({company}). Owner ID: {lead.OwnerId}. Due: {dueAt}.</p>";
     }
 
-    private static string BuildIdleDealBody(Opportunity opportunity, DateTime? lastActivityAtUtc, string recipientName)
+    private static bool ShouldAlertForNoNextStep(EmailAlertSettings settings, DateTime? nextStepDueAtUtc)
     {
-        var lastActivity = lastActivityAtUtc?.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "No activity logged";
-        return $"<p>Hi {recipientName},</p><p>The opportunity <strong>{opportunity.Name}</strong> appears idle. Last activity: {lastActivity}.</p>";
+        return settings.IdleDealNoNextStep && !nextStepDueAtUtc.HasValue;
     }
 
-    private static string BuildIdleDealManagerBody(Opportunity opportunity, DateTime? lastActivityAtUtc, string recipientName)
+    private static bool ShouldAlertForNoActivity(EmailAlertSettings settings, DateTime now, DateTime referenceAtUtc)
+    {
+        return settings.IdleDealNoActivity && now - referenceAtUtc > TimeSpan.FromDays(settings.IdleDealDays);
+    }
+
+    private static string BuildIdleDealReason(EmailAlertSettings settings, DateTime now, DateTime referenceAtUtc, DateTime? nextStepDueAtUtc)
+    {
+        if (settings.IdleDealNoNextStep && !nextStepDueAtUtc.HasValue)
+        {
+            return "No next step scheduled.";
+        }
+
+        if (settings.IdleDealNoActivity && now - referenceAtUtc > TimeSpan.FromDays(settings.IdleDealDays))
+        {
+            return $"No activity for {settings.IdleDealDays} days.";
+        }
+
+        return "Idle deal alert triggered.";
+    }
+
+    private static string BuildIdleDealBody(Opportunity opportunity, DateTime? lastActivityAtUtc, string recipientName, string reason)
     {
         var lastActivity = lastActivityAtUtc?.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "No activity logged";
-        return $"<p>Hi {recipientName},</p><p>Idle deal alert for <strong>{opportunity.Name}</strong>. Owner ID: {opportunity.OwnerId}. Last activity: {lastActivity}.</p>";
+        return $"<p>Hi {recipientName},</p><p>The opportunity <strong>{opportunity.Name}</strong> appears idle.</p><p>Reason: {reason}</p><p>Last activity: {lastActivity}.</p>";
+    }
+
+    private static string BuildIdleDealManagerBody(Opportunity opportunity, DateTime? lastActivityAtUtc, string recipientName, string reason)
+    {
+        var lastActivity = lastActivityAtUtc?.ToString("yyyy-MM-dd HH:mm 'UTC'") ?? "No activity logged";
+        return $"<p>Hi {recipientName},</p><p>Idle deal alert for <strong>{opportunity.Name}</strong>.</p><p>Reason: {reason}</p><p>Owner ID: {opportunity.OwnerId}. Last activity: {lastActivity}.</p>";
     }
 }

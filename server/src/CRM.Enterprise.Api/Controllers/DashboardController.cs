@@ -149,7 +149,13 @@ public class DashboardController : ControllerBase
             summary.AvgTimeToTruthDays,
             summary.RiskRegisterCount,
             summary.TopRiskFlags.Select(flag => new RiskFlagSummaryItem(flag.Label, flag.Count)).ToList(),
-            summary.ConfidenceWeightedPipelineValue);
+            summary.ConfidenceWeightedPipelineValue,
+            summary.CostOfNotKnowingValue,
+            summary.CostOfNotKnowingDeals,
+            summary.ConfidenceCalibrationScore,
+            summary.ConfidenceCalibrationSample,
+            summary.MyPipelineValueTotal,
+            summary.MyConfidenceWeightedPipelineValue);
 
         return Ok(response);
     }

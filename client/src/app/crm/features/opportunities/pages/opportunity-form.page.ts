@@ -217,10 +217,7 @@ export class OpportunityFormPage implements OnInit {
     this.form.probability = this.estimateProbability(stage);
     this.form.isClosed = stage.startsWith('Closed');
     this.form.isWon = stage === 'Closed Won';
-    const defaultForecast = this.estimateForecastCategory(stage);
-    if (!this.form.forecastCategory || stage.startsWith('Closed') || stage === 'Commit') {
-      this.form.forecastCategory = defaultForecast;
-    }
+    this.form.forecastCategory = this.estimateForecastCategory(stage);
   }
 
   protected onSave() {
@@ -349,7 +346,19 @@ export class OpportunityFormPage implements OnInit {
     if (stage === 'Commit') {
       return 'Required: Commit before moving to the Commit stage.';
     }
-    return `Default for ${stage}: ${required}.`;
+    return `Forecast locked to ${required} for ${stage}.`;
+  }
+
+  protected decisionMakerGuidance(): string | null {
+    const stage = this.selectedStage || this.form.stageName || 'Prospecting';
+    if (['Qualification', 'Proposal', 'Negotiation', 'Commit'].includes(stage)) {
+      return 'Decision maker confirmation is required before moving beyond qualification.';
+    }
+    return null;
+  }
+
+  protected isForecastLocked(): boolean {
+    return true;
   }
 
   private loadOpportunity(id: string) {

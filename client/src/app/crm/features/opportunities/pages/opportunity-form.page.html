@@ -106,6 +106,7 @@
                 ></p-select>
                 <small class="field-hint" *ngIf="demoOutcomeGuidance() as guidance">{{ guidance }}</small>
                 <small class="field-hint" *ngIf="discoveryGuidance() as discoveryGuidance">{{ discoveryGuidance }}</small>
+                <small class="field-hint" *ngIf="decisionMakerGuidance() as decisionGuidance">{{ decisionGuidance }}</small>
                 <small class="field-hint" *ngIf="selectedStage === 'Commit'">Commit requires an expected close date and verified checklist items.</small>
               </div>
               <div class="field">
@@ -179,6 +180,7 @@
                   name="forecastCategory"
                   [(ngModel)]="form.forecastCategory"
                   placeholder="Select forecast"
+                  [disabled]="isForecastLocked()"
                   styleClass="w-full"
                 ></p-select>
                 <small class="field-hint" *ngIf="forecastGuidance() as guidance">{{ guidance }}</small>
@@ -746,6 +748,7 @@
                   pInputText
                   type="text"
                   [(ngModel)]="item.title"
+                  [ngModelOptions]="{ standalone: true }"
                   (blur)="saveOnboardingItem(item)"
                   class="w-full"
                 />
@@ -755,12 +758,14 @@
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="item.status"
+                  [ngModelOptions]="{ standalone: true }"
                   (onChange)="saveOnboardingItem(item)"
                   styleClass="w-full"
                 ></p-select>
                 <p-datePicker
                   appendTo="body"
                   [(ngModel)]="item.dueDateUtc"
+                  [ngModelOptions]="{ standalone: true }"
                   (onSelect)="saveOnboardingItem(item)"
                   [showIcon]="true"
                   styleClass="w-full"
@@ -769,6 +774,7 @@
                   pTextarea
                   rows="2"
                   [(ngModel)]="item.notes"
+                  [ngModelOptions]="{ standalone: true }"
                   (blur)="saveOnboardingItem(item)"
                   placeholder="Notes"
                   class="w-full"
@@ -803,6 +809,7 @@
                   pInputText
                   type="text"
                   [(ngModel)]="item.title"
+                  [ngModelOptions]="{ standalone: true }"
                   (blur)="saveOnboardingItem(item)"
                   class="w-full"
                 />
@@ -812,12 +819,14 @@
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="item.status"
+                  [ngModelOptions]="{ standalone: true }"
                   (onChange)="saveOnboardingItem(item)"
                   styleClass="w-full"
                 ></p-select>
                 <p-datePicker
                   appendTo="body"
                   [(ngModel)]="item.dueDateUtc"
+                  [ngModelOptions]="{ standalone: true }"
                   (onSelect)="saveOnboardingItem(item)"
                   [showIcon]="true"
                   styleClass="w-full"
@@ -826,6 +835,7 @@
                   pTextarea
                   rows="2"
                   [(ngModel)]="item.notes"
+                  [ngModelOptions]="{ standalone: true }"
                   (blur)="saveOnboardingItem(item)"
                   placeholder="Notes"
                   class="w-full"

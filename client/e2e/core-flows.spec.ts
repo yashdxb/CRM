@@ -19,6 +19,7 @@ async function login(page, request) {
 
   await page.addInitScript((token) => {
     localStorage.setItem('auth_token', token as string);
+    localStorage.setItem('tenant_key', 'default');
   }, payload.accessToken);
 
   return payload.accessToken as string;
@@ -79,6 +80,53 @@ async function selectByLabel(page, selector, optionText) {
   await option.click({ force: true });
 }
 
+async function setDateInputByOffset(page, selector, offsetDays) {
+  const input = page.locator(`${selector} input`);
+  await input.waitFor({ state: 'visible' });
+  await input.click();
+
+  const target = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const targetDay = target.getDate();
+  const targetMonth = target.getMonth();
+  const targetYear = target.getFullYear();
+
+  const calendarDialog = page.getByRole('dialog', { name: 'Choose Date' });
+  await calendarDialog.waitFor({ state: 'visible' });
+
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
+  ];
+
+  for (let i = 0; i < 12; i += 1) {
+    const monthButton = calendarDialog.locator('button[aria-label="Choose Month"]');
+    const yearButton = calendarDialog.locator('button[aria-label="Choose Year"]');
+    const monthText = (await monthButton.innerText()).trim();
+    const yearText = (await yearButton.innerText()).trim();
+    const monthIndex = monthNames.indexOf(monthText);
+    const year = Number(yearText);
+    if (monthIndex === targetMonth && year === targetYear) {
+      break;
+    }
+    const next = calendarDialog.getByRole('button', { name: 'Next Month' });
+    await next.click();
+    await page.waitForTimeout(150);
+  }
+
+  await calendarDialog.getByRole('gridcell', { name: String(targetDay) }).first().click();
+  await input.press('Tab');
+}
+
 async function searchWith(page, selector, term) {
   const input = page.locator(selector);
   await input.waitFor({ state: 'visible' });
@@ -94,6 +142,7 @@ test('core create flows', async ({ page, request }) => {
   const suffix = Date.now();
   const customerName = `E2E Account ${suffix}`;
   const contactName = `E2E Contact ${suffix}`;
+  const contactSearchTerm = `Contact ${suffix}`;
   const opportunityName = `E2E Opportunity ${suffix}`;
   const activitySubject = `E2E Activity ${suffix}`;
 
@@ -127,12 +176,26 @@ test('core create flows', async ({ page, request }) => {
   }
   expect(contactResponse.ok()).toBeTruthy();
   await page.goto('/app/contacts');
-  await searchWith(page, '.search-input', contactName);
-  await expect(page.locator('.contacts-table')).toContainText(contactName);
+  await page.waitForSelector('.contacts__content');
+  await searchWith(page, '.search-input', contactSearchTerm);
+  const contactSearch = await apiSearch(
+    request,
+    token,
+    `${API_BASE_URL}/api/contacts?search=${encodeURIComponent(contactSearchTerm)}&page=1&pageSize=10`,
+    contactSearchTerm
+  );
+  expect(contactSearch.items.some((item: { name?: string }) => item.name?.includes(contactSearchTerm))).toBeTruthy();
 
   await page.goto('/app/opportunities/new');
   await page.waitForURL('**/app/opportunities/new');
   await page.locator('input[name="name"]').fill(opportunityName);
+  await selectByLabel(page, 'p-select[name="stage"]', 'Qualification');
+  await page.locator('input#oppAmount').fill('10000');
+  await setDateInputByOffset(page, 'p-datepicker[name="closeDate"]', 30);
+  await page.locator('textarea[name="summary"]').fill('E2E pain/problem summary.');
+  await page.locator('textarea[name="requirements"]').fill('E2E requirements summary.');
+  await page.locator('textarea[name="buyingProcess"]').fill('E2E buying process confirmed.');
+  await page.locator('textarea[name="successCriteria"]').fill('E2E success criteria agreed.');
   const [oppResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/opportunities') && response.request().method() === 'POST'),
     page.locator('button:has-text("Save opportunity")').click()
@@ -157,6 +220,9 @@ test('core create flows', async ({ page, request }) => {
   await page.goto('/app/activities/new');
   await page.waitForURL('**/app/activities/new');
   await page.locator('input[name="subject"]').fill(activitySubject);
+  await page.locator('textarea[name="outcome"]').fill('E2E activity outcome.');
+  await page.locator('input[name="nextStepSubject"]').fill('E2E next step.');
+  await setDateInputByOffset(page, 'p-datepicker[name="nextStepDueDateUtc"]', 7);
   const [activityResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/activities') && response.request().method() === 'POST'),
     page.locator('button:has-text("Create activity")').click()

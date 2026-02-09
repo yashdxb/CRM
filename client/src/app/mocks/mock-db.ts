@@ -789,7 +789,13 @@ export function buildDashboardSummary(): DashboardSummary {
       { label: 'Economic buyer not engaged', count: 4 },
       { label: 'Budget availability needs validation', count: 3 }
     ],
-    confidenceWeightedPipelineValue: pipelineValueTotal * 0.68
+    confidenceWeightedPipelineValue: pipelineValueTotal * 0.68,
+    costOfNotKnowingValue: pipelineValueTotal * 0.22,
+    costOfNotKnowingDeals: Math.max(1, Math.floor(openOpportunities * 0.4)),
+    confidenceCalibrationScore: 72,
+    confidenceCalibrationSample: 48,
+    myPipelineValueTotal: pipelineValueTotal * 0.38,
+    myConfidenceWeightedPipelineValue: pipelineValueTotal * 0.25
   };
 }
 

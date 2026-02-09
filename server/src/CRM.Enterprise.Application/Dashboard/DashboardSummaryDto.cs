@@ -38,7 +38,13 @@ public record DashboardSummaryDto(
     decimal AvgTimeToTruthDays,
     int RiskRegisterCount,
     IReadOnlyList<RiskFlagSummaryDto> TopRiskFlags,
-    decimal ConfidenceWeightedPipelineValue);
+    decimal ConfidenceWeightedPipelineValue,
+    decimal CostOfNotKnowingValue,
+    int CostOfNotKnowingDeals,
+    decimal ConfidenceCalibrationScore,
+    int ConfidenceCalibrationSample,
+    decimal MyPipelineValueTotal,
+    decimal MyConfidenceWeightedPipelineValue);
 
 public record RecentAccountDto(
     Guid Id,

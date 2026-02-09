@@ -107,10 +107,7 @@ export class QuickAddModalComponent {
     if (this.quickAddType === 'contact') {
       return !!this.quickAddContactName.trim();
     }
-    return !!this.quickAddActivitySubject.trim()
-      && !!this.quickAddActivityOutcome.trim()
-      && !!this.quickAddActivityNextStepSubject.trim()
-      && !!this.quickAddActivityNextStepDueDate;
+    return !!this.quickAddActivitySubject.trim();
   }
 
   protected submitQuickAdd() {
@@ -153,17 +150,22 @@ export class QuickAddModalComponent {
       this.quickAddActivityDueDate instanceof Date
         ? this.quickAddActivityDueDate.toISOString()
         : this.quickAddActivityDueDate;
+    const fallbackOutcome = this.quickAddActivityOutcome?.trim() || 'Logged via quick add';
+    const fallbackNextStepSubject = this.quickAddActivityNextStepSubject?.trim() || 'Follow-up';
+    const fallbackNextStepDueDate = this.quickAddActivityNextStepDueDate
+      ? this.quickAddActivityNextStepDueDate
+      : new Date(Date.now() + 24 * 60 * 60 * 1000);
     const nextStepDueDate =
-      this.quickAddActivityNextStepDueDate instanceof Date
-        ? this.quickAddActivityNextStepDueDate.toISOString()
-        : this.quickAddActivityNextStepDueDate;
+      fallbackNextStepDueDate instanceof Date
+        ? fallbackNextStepDueDate.toISOString()
+        : fallbackNextStepDueDate;
     const activityPayload: UpsertActivityRequest = {
-      subject: this.quickAddActivitySubject,
+      subject: this.quickAddActivitySubject.trim(),
       type: this.quickAddActivityType,
       priority: this.quickAddActivityPriority,
       dueDateUtc: dueDate,
-      outcome: this.quickAddActivityOutcome,
-      nextStepSubject: this.quickAddActivityNextStepSubject,
+      outcome: fallbackOutcome,
+      nextStepSubject: fallbackNextStepSubject,
       nextStepDueDateUtc: nextStepDueDate,
       relatedEntityType: this.quickAddActivityRelationType,
       relatedEntityId: this.quickAddActivityRelationId || undefined

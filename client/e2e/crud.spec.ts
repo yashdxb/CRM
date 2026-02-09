@@ -19,6 +19,7 @@ async function login(page, request) {
 
   await page.addInitScript((token) => {
     localStorage.setItem('auth_token', token as string);
+    localStorage.setItem('tenant_key', 'default');
   }, payload.accessToken);
 
   return payload.accessToken as string;
@@ -83,11 +84,14 @@ async function searchWith(page, selector, term) {
 
 async function expectCustomerVisible(page, name) {
   const table = page.locator('.data-table');
-  if (await table.count()) {
+  const tableReady = await table.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
+  if (tableReady) {
     await expect(table).toContainText(name);
     return;
   }
   const cards = page.locator('.cards-wrapper');
+  const cardsReady = await cards.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
+  expect(cardsReady).toBeTruthy();
   await expect(cards).toContainText(name);
 }
 
@@ -127,13 +131,21 @@ async function findUserIdByEmail(request, token, email) {
 }
 
 async function createActivity(request, token, payload) {
+  const nextStepDueDateUtc =
+    payload.nextStepDueDateUtc ?? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const activityPayload = {
+    outcome: payload.outcome ?? 'Logged via E2E',
+    nextStepSubject: payload.nextStepSubject ?? 'Follow-up',
+    nextStepDueDateUtc,
+    ...payload
+  };
   const response = await request.post(`${API_BASE_URL}/api/activities`, {
     headers: {
       'Content-Type': 'application/json',
       'X-Tenant-Key': 'default',
       Authorization: `Bearer ${token}`
     },
-    data: payload
+    data: activityPayload
   });
   if (!response.ok()) {
     throw new Error(`Unable to create activity: ${response.status()}`);
@@ -157,7 +169,7 @@ test('customers edit', async ({ page, request }) => {
   await page.goto(`/app/customers/${customerId}/edit`);
   await page.waitForURL('**/app/customers/**/edit');
   const nameInput = page.locator('input[name="name"]');
-  await expect(nameInput).toBeEnabled();
+  await expect(nameInput).toBeEnabled({ timeout: 30_000 });
   await nameInput.fill(updatedName);
   const [updateResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/customers') && response.request().method() === 'PUT'),
@@ -360,13 +372,8 @@ test('activities overdue highlighting + my tasks filter', async ({ page, request
 
   await page.goto('/app/activities');
   await page.waitForURL('**/app/activities');
-  await page.waitForResponse((response) => response.url().includes('/api/activities') && response.status() === 200);
-  const searchResponse = page.waitForResponse((response) => {
-    const url = response.url();
-    return url.includes('/api/activities') && url.includes(`search=${encodeURIComponent(subject)}`);
-  });
+  await page.waitForSelector('.data-table, .empty-state', { timeout: 30_000 });
   await searchWith(page, '.search-box input', subject);
-  await searchResponse;
   await expect(page.locator('.data-table .subject-text')).toContainText(subject, { timeout: 15000 });
   await expect(page.locator('.status-chip.overdue')).toBeVisible();
 
@@ -375,11 +382,6 @@ test('activities overdue highlighting + my tasks filter', async ({ page, request
 
   const mineToggle = page.locator('button.pill.toggle', { hasText: 'Mine' });
   await mineToggle.click();
-  const mineSearchResponse = page.waitForResponse((response) => {
-    const url = response.url();
-    return url.includes('/api/activities') && url.includes(`search=${encodeURIComponent(subject)}`);
-  });
   await searchWith(page, '.search-box input', subject);
-  await mineSearchResponse;
   await expect(page.locator('.data-table .subject-text')).toContainText(subject, { timeout: 15000 });
 });

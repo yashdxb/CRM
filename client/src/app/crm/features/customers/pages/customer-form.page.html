@@ -76,7 +76,7 @@
                   <label for="parentAccountId">Parent account</label>
                   <p-select
                     id="parentAccountId"
-                    [options]="parentAccountOptions"
+                    [options]="parentAccountOptions()"
                     optionLabel="label"
                     optionValue="value"
                     name="parentAccountId"
@@ -250,13 +250,14 @@
               <p-tabpanel value="notes">
               <div class="notes">
                 <div class="note-editor">
-                  <textarea
-                    pTextarea
-                    rows="4"
-                    placeholder="Add a note about this customer..."
-                    class="w-full"
-                    [(ngModel)]="noteText"
-                  ></textarea>
+        <textarea 
+          pTextarea 
+          rows="4" 
+          placeholder="Add a note about this customer..." 
+          class="w-full"
+          [(ngModel)]="noteText"
+          [ngModelOptions]="{ standalone: true }"
+        ></textarea>
                   <div class="note-actions">
                     <button
                       pButton

@@ -66,6 +66,7 @@ async function login(page, request, email: string, password: string) {
 
   await page.addInitScript((token) => {
     localStorage.setItem('auth_token', token as string);
+    localStorage.setItem('tenant_key', 'default');
   }, payload.accessToken);
   await page.goto('/app/dashboard');
   return payload.accessToken as string;

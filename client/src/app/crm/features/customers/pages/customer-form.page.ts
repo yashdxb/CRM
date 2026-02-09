@@ -74,7 +74,7 @@ export class CustomerFormPage implements OnInit {
   protected readonly attachments = signal<AttachmentItem[]>([]);
   protected readonly timelineLoading = signal(false);
   protected readonly noteSaving = signal(false);
-  protected parentAccountOptions: { label: string; value: string }[] = [];
+  protected readonly parentAccountOptions = signal<{ label: string; value: string }[]>([]);
 
   protected noteText = '';
 
@@ -110,7 +110,7 @@ export class CustomerFormPage implements OnInit {
         .filter((item) => item.id !== this.customerId)
         .map((item) => ({ label: item.name, value: item.id }));
       setTimeout(() => {
-        this.parentAccountOptions = items;
+        this.parentAccountOptions.set(items);
       }, 0);
     });
   }

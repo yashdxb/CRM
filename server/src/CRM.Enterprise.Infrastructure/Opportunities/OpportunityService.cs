@@ -63,6 +63,13 @@ public sealed class OpportunityService : IOpportunityService
         "Negotiation",
         "Commit"
     };
+    private static readonly HashSet<string> StagesRequiringDecisionMaker = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Qualification",
+        "Proposal",
+        "Negotiation",
+        "Commit"
+    };
     private static readonly HashSet<string> StagesRequiringPainSummary = new(StringComparer.OrdinalIgnoreCase)
     {
         "Qualification",
@@ -102,6 +109,7 @@ public sealed class OpportunityService : IOpportunityService
         "Procurement",
         "Technical Evaluator"
     };
+    private const string DecisionMakerRole = "Decision Maker";
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditEventService _auditEvents;
@@ -468,7 +476,7 @@ public sealed class OpportunityService : IOpportunityService
         var stageName = await ResolveStageNameAsync(stageId, cancellationToken) ?? request.StageName ?? "Prospecting";
         var stageForecastCategory = await ResolveStageForecastCategoryAsync(stageId, cancellationToken);
         var resolvedForecastCategory = ResolveForecastCategory(request.ForecastCategory, stageForecastCategory);
-        var forecastError = ValidateForecastCategory(stageName, resolvedForecastCategory, request.IsClosed, request.IsWon);
+        var forecastError = ValidateForecastCategory(stageName, resolvedForecastCategory, stageForecastCategory, request.IsClosed, request.IsWon);
         if (forecastError is not null)
         {
             return OpportunityOperationResult<OpportunityListItemDto>.Fail(forecastError);
@@ -630,7 +638,7 @@ public sealed class OpportunityService : IOpportunityService
         var nextStageName = await ResolveStageNameAsync(nextStageId, cancellationToken) ?? request.StageName ?? "Prospecting";
         var stageForecastCategory = await ResolveStageForecastCategoryAsync(nextStageId, cancellationToken);
         var resolvedForecastCategory = ResolveForecastCategory(request.ForecastCategory, stageForecastCategory, opp.ForecastCategory);
-        var forecastError = ValidateForecastCategory(nextStageName, resolvedForecastCategory, request.IsClosed, request.IsWon);
+        var forecastError = ValidateForecastCategory(nextStageName, resolvedForecastCategory, stageForecastCategory, request.IsClosed, request.IsWon);
         if (forecastError is not null)
         {
             return OpportunityOperationResult<bool>.Fail(forecastError);
@@ -931,7 +939,7 @@ public sealed class OpportunityService : IOpportunityService
         var nextStageId = await ResolveStageIdAsync(null, stageName, cancellationToken);
         var stageForecastCategory = await ResolveStageForecastCategoryAsync(nextStageId, cancellationToken);
         var resolvedForecastCategory = ResolveForecastCategory(null, stageForecastCategory, opp.ForecastCategory);
-        var forecastError = ValidateForecastCategory(stageName, resolvedForecastCategory, opp.IsClosed, opp.IsWon);
+        var forecastError = ValidateForecastCategory(stageName, resolvedForecastCategory, stageForecastCategory, opp.IsClosed, opp.IsWon);
         if (forecastError is not null)
         {
             return OpportunityOperationResult<bool>.Fail(forecastError);
@@ -2076,7 +2084,7 @@ public sealed class OpportunityService : IOpportunityService
                          && !c.IsDeleted
                          && c.BuyingRole != null
                          && BuyingRoles.Contains(c.BuyingRole),
-                    cancellationToken);
+                cancellationToken);
             if (primaryHasRole)
             {
                 return true;
@@ -2095,6 +2103,39 @@ public sealed class OpportunityService : IOpportunityService
                      && !c.IsDeleted
                      && c.BuyingRole != null
                      && BuyingRoles.Contains(c.BuyingRole),
+                cancellationToken);
+    }
+
+    private async Task<bool> HasDecisionMakerAsync(Opportunity opportunity, CancellationToken cancellationToken)
+    {
+        if (opportunity.PrimaryContactId.HasValue)
+        {
+            var primaryDecisionMaker = await _dbContext.Contacts
+                .AsNoTracking()
+                .AnyAsync(
+                    c => c.Id == opportunity.PrimaryContactId.Value
+                         && !c.IsDeleted
+                         && c.BuyingRole != null
+                         && string.Equals(c.BuyingRole, DecisionMakerRole, StringComparison.OrdinalIgnoreCase),
+                    cancellationToken);
+            if (primaryDecisionMaker)
+            {
+                return true;
+            }
+        }
+
+        if (opportunity.AccountId == Guid.Empty)
+        {
+            return false;
+        }
+
+        return await _dbContext.Contacts
+            .AsNoTracking()
+            .AnyAsync(
+                c => c.AccountId == opportunity.AccountId
+                     && !c.IsDeleted
+                     && c.BuyingRole != null
+                     && string.Equals(c.BuyingRole, DecisionMakerRole, StringComparison.OrdinalIgnoreCase),
                 cancellationToken);
     }
 
@@ -2172,6 +2213,15 @@ public sealed class OpportunityService : IOpportunityService
             if (!hasBuyingRole)
             {
                 return "Buying group role is required before moving to late-stage opportunities.";
+            }
+        }
+
+        if (StagesRequiringDecisionMaker.Contains(nextStageName))
+        {
+            var hasDecisionMaker = await HasDecisionMakerAsync(opportunity, cancellationToken);
+            if (!hasDecisionMaker)
+            {
+                return "Decision maker contact is required before moving beyond qualification.";
             }
         }
 
@@ -2332,7 +2382,7 @@ public sealed class OpportunityService : IOpportunityService
         return string.IsNullOrWhiteSpace(candidate) ? null : candidate.Trim();
     }
 
-    private static string? ValidateForecastCategory(string stageName, string? forecastCategory, bool isClosed, bool isWon)
+    private static string? ValidateForecastCategory(string stageName, string? forecastCategory, string? stageForecastCategory, bool isClosed, bool isWon)
     {
         var isClosedStage = stageName.StartsWith("Closed", StringComparison.OrdinalIgnoreCase);
         var requiresClosedForecast = isClosed || isClosedStage;
@@ -2351,6 +2401,13 @@ public sealed class OpportunityService : IOpportunityService
             && !string.Equals(forecastCategory, "Commit", StringComparison.OrdinalIgnoreCase))
         {
             return "Forecast category must be Commit before moving to the Commit stage.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(stageForecastCategory)
+            && !string.IsNullOrWhiteSpace(forecastCategory)
+            && !string.Equals(forecastCategory, stageForecastCategory, StringComparison.OrdinalIgnoreCase))
+        {
+            return $"Forecast category must be {stageForecastCategory} for {stageName} stage.";
         }
 
         if (requiresClosedForecast)

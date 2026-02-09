@@ -110,7 +110,13 @@ export class DashboardPage implements OnInit {
     avgTimeToTruthDays: 0,
     riskRegisterCount: 0,
     topRiskFlags: [],
-    confidenceWeightedPipelineValue: 0
+    confidenceWeightedPipelineValue: 0,
+    costOfNotKnowingValue: 0,
+    costOfNotKnowingDeals: 0,
+    confidenceCalibrationScore: 0,
+    confidenceCalibrationSample: 0,
+    myPipelineValueTotal: 0,
+    myConfidenceWeightedPipelineValue: 0
   };
   private readonly summarySignal = signal<DashboardSummary>(this.emptySummary);
   private readonly emptyManagerHealth: ManagerPipelineHealth = {
@@ -201,6 +207,41 @@ export class DashboardPage implements OnInit {
   });
 
   protected readonly topRiskFlags = computed(() => this.summary()?.topRiskFlags ?? []);
+  protected readonly riskChecklistItems = computed(() => {
+    const flags = this.topRiskFlags();
+    return flags.map((flag) => ({
+      key: flag.label,
+      label: flag.label,
+      count: flag.count
+    }));
+  });
+
+  protected readonly executionGuideItems = computed(() => {
+    const data = this.summary();
+    if (!data) return [];
+    return [
+      {
+        key: 'next-step',
+        label: 'Schedule next steps for open deals',
+        count: data.opportunitiesWithoutNextStep
+      },
+      {
+        key: 'at-risk',
+        label: 'Recover at-risk opportunities',
+        count: data.atRiskOpportunities
+      },
+      {
+        key: 'overdue',
+        label: 'Clear overdue activities',
+        count: data.overdueActivities
+      },
+      {
+        key: 'new-leads',
+        label: 'Work newly assigned leads',
+        count: data.newlyAssignedLeads?.length ?? 0
+      }
+    ];
+  });
 
   protected confidenceLabel(value: number): string {
     if (value >= 0.75) return 'High';
@@ -220,6 +261,16 @@ export class DashboardPage implements OnInit {
     const data = this.summary();
     if (!data) return 0;
     return data.confidenceWeightedPipelineValue - data.pipelineValueTotal;
+  }
+
+  protected isRiskChecklistChecked(key: string): boolean {
+    return this.riskChecklistState()[key] ?? false;
+  }
+
+  protected toggleRiskChecklist(key: string, checked: boolean) {
+    const next = { ...this.riskChecklistState(), [key]: checked };
+    this.riskChecklistState.set(next);
+    this.persistRiskChecklistState(next);
   }
   
   protected readonly recentAccounts = computed(() => this.summary()?.recentCustomers?.slice(0, 5) ?? []);
@@ -445,7 +496,10 @@ export class DashboardPage implements OnInit {
     pipeline: 'lg',
     'truth-metrics': 'md',
     'risk-register': 'md',
+    'risk-checklist': 'md',
+    'execution-guide': 'sm',
     'confidence-forecast': 'sm',
+    'my-forecast': 'sm',
     accounts: 'md',
     'manager-health': 'md',
     'activity-mix': 'sm',
@@ -466,6 +520,8 @@ export class DashboardPage implements OnInit {
 
   private readonly layoutStorageKey = 'crm.dashboard.command-center.layout';
   private readonly chartVisibilityStorageKey = 'crm.dashboard.charts.visibility';
+  private readonly riskChecklistStorageKey = 'crm.dashboard.risk.checklist';
+  private readonly riskChecklistState = signal<Record<string, boolean>>({});
   protected showRevenueChart = true;
   protected showCustomerGrowthChart = true;
   protected chartOrder: ChartId[] = [...this.chartIdDefaultOrder];
@@ -491,7 +547,10 @@ export class DashboardPage implements OnInit {
     { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
     { id: 'truth-metrics', label: 'Truth Metrics', icon: 'pi pi-verified' },
     { id: 'risk-register', label: 'Risk Register', icon: 'pi pi-exclamation-triangle' },
+    { id: 'risk-checklist', label: 'Risk Checklist', icon: 'pi pi-list-check' },
+    { id: 'execution-guide', label: 'Execution Guide', icon: 'pi pi-compass' },
     { id: 'confidence-forecast', label: 'Confidence Forecast', icon: 'pi pi-chart-line' },
+    { id: 'my-forecast', label: 'My Forecast', icon: 'pi pi-bolt' },
     { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },
     { id: 'manager-health', label: 'Pipeline Health', icon: 'pi pi-shield' },
     { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
@@ -515,6 +574,7 @@ export class DashboardPage implements OnInit {
       });
     }
     this.kpiOrder.set(this.loadKpiOrder());
+    this.loadRiskChecklistState();
   }
 
   ngOnInit(): void {
@@ -1012,6 +1072,34 @@ export class DashboardPage implements OnInit {
     };
     window.localStorage.setItem(this.chartVisibilityStorageKey, JSON.stringify(payload));
     this.hasLocalChartPreference = true;
+  }
+
+  private loadRiskChecklistState(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      const raw = window.localStorage.getItem(this.riskChecklistStorageKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object') return;
+      const normalized: Record<string, boolean> = {};
+      for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof value === 'boolean') {
+          normalized[key] = value;
+        }
+      }
+      this.riskChecklistState.set(normalized);
+    } catch {
+      // Ignore invalid local storage values.
+    }
+  }
+
+  private persistRiskChecklistState(state: Record<string, boolean>): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+    try {
+      window.localStorage.setItem(this.riskChecklistStorageKey, JSON.stringify(state));
+    } catch {
+      // Ignore storage errors.
+    }
   }
 
   private loadKpiOrder(): string[] {

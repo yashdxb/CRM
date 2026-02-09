@@ -39,7 +39,13 @@ public record DashboardSummaryResponse(
     decimal AvgTimeToTruthDays,
     int RiskRegisterCount,
     IEnumerable<RiskFlagSummaryItem> TopRiskFlags,
-    decimal ConfidenceWeightedPipelineValue);
+    decimal ConfidenceWeightedPipelineValue,
+    decimal CostOfNotKnowingValue,
+    int CostOfNotKnowingDeals,
+    decimal ConfidenceCalibrationScore,
+    int ConfidenceCalibrationSample,
+    decimal MyPipelineValueTotal,
+    decimal MyConfidenceWeightedPipelineValue);
 
 public record ChartDataPoint(string Label, decimal Value);
 

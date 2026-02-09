@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 import fs from 'node:fs';
 
-const storageStatePath = 'client/.auth/clickup.json';
+const storageStatePath = '.auth/clickup.json';
 
 test.describe('ClickUp Docs automation', () => {
   test.use({ storageState: storageStatePath });

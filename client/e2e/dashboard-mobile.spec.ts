@@ -35,6 +35,7 @@ async function loginWithoutTenantHeader(page, request) {
 
   await page.addInitScript((token, tenantKey) => {
     localStorage.setItem('auth_token', token as string);
+    localStorage.setItem('tenant_key', 'default');
     localStorage.setItem('tenant_key', tenantKey as string);
   }, payload.accessToken, payload.tenantKey ?? 'default');
 }

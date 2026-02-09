@@ -49,6 +49,7 @@ async function authenticate(page, request) {
 
   await page.addInitScript((token, tenantKey) => {
     localStorage.setItem('auth_token', token as string);
+    localStorage.setItem('tenant_key', 'default');
     localStorage.setItem('tenant_key', tenantKey as string);
   }, payload.accessToken, payload.tenantKey ?? 'default');
 
@@ -79,7 +80,7 @@ async function authenticate(page, request) {
 test('priority stream replaces new leads and at-risk cards', async ({ page, request }) => {
   await authenticate(page, request);
 
-  await page.goto('/app/dashboard', { waitUntil: 'networkidle' });
+  await page.goto('/app/dashboard', { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByRole('heading', { name: /My Tasks/i })).toBeVisible();
   await expect(page.locator('.dashboard-card .card-title', { hasText: 'Newly Assigned Leads' })).toHaveCount(0);

@@ -103,7 +103,7 @@ public class NotificationPreferencesController : ControllerBase
                 JsonOptions);
             return legacy is null
                 ? DefaultPreferences()
-                : new NotificationPreferencesResponse(legacy.InApp, legacy.Email, DefaultEmailAlerts(), true);
+                : new NotificationPreferencesResponse(legacy.InApp, legacy.Email, DefaultEmailAlerts(), false);
         }
         catch
         {
@@ -115,7 +115,7 @@ public class NotificationPreferencesController : ControllerBase
     {
         var defaults = new NotificationChannelPreferences(true, true, true, true);
         var email = new NotificationChannelPreferences(false, false, false, false);
-        return new NotificationPreferencesResponse(defaults, email, DefaultEmailAlerts(), true);
+        return new NotificationPreferencesResponse(defaults, email, DefaultEmailAlerts(), false);
     }
 
     private static EmailAlertPreferences DefaultEmailAlerts()
@@ -123,6 +123,8 @@ public class NotificationPreferencesController : ControllerBase
         return new EmailAlertPreferences(
             LeadSla: false,
             IdleDeal: false,
+            IdleDealNoNextStep: false,
+            IdleDealNoActivity: false,
             CoachingEscalation: false,
             IdleDealDays: 30,
             IdleDealCooldownDays: 7,

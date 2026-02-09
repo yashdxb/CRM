@@ -101,12 +101,46 @@
             </div>
             <div>
               <div class="preference-title">Idle deal alert</div>
-              <div class="preference-subtitle">Email when opportunities are idle beyond the threshold.</div>
+              <div class="preference-subtitle">Email when opportunities are missing next steps or inactive beyond the threshold.</div>
             </div>
           </div>
           <p-toggleSwitch
             [ngModel]="preferences().emailAlerts.idleDeal"
             (ngModelChange)="toggleEmailAlert('idleDeal', $event)"
+            [ngModelOptions]="{ standalone: true }"
+          ></p-toggleSwitch>
+        </div>
+        <div class="preference-row preference-row--compact">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-list-check"></i>
+            </div>
+            <div>
+              <div class="preference-title">No next step</div>
+              <div class="preference-subtitle">Alert when an open opportunity has no next step scheduled.</div>
+            </div>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="preferences().emailAlerts.idleDealNoNextStep"
+            (ngModelChange)="toggleEmailAlert('idleDealNoNextStep', $event)"
+            [disabled]="!alertsEnabled || !preferences().emailAlerts.idleDeal"
+            [ngModelOptions]="{ standalone: true }"
+          ></p-toggleSwitch>
+        </div>
+        <div class="preference-row preference-row--compact">
+          <div class="preference-info">
+            <div class="preference-icon">
+              <i class="pi pi-hourglass"></i>
+            </div>
+            <div>
+              <div class="preference-title">No activity threshold</div>
+              <div class="preference-subtitle">Alert when there is no activity for the selected number of days.</div>
+            </div>
+          </div>
+          <p-toggleSwitch
+            [ngModel]="preferences().emailAlerts.idleDealNoActivity"
+            (ngModelChange)="toggleEmailAlert('idleDealNoActivity', $event)"
+            [disabled]="!alertsEnabled || !preferences().emailAlerts.idleDeal"
             [ngModelOptions]="{ standalone: true }"
           ></p-toggleSwitch>
         </div>
@@ -133,7 +167,7 @@
               <i class="pi pi-calendar"></i>
             </div>
             <div>
-              <div class="preference-title">Idle deal threshold (days)</div>
+              <div class="preference-title">No-activity threshold (days)</div>
               <div class="preference-subtitle">Number of inactive days before alerting.</div>
             </div>
           </div>
@@ -143,6 +177,7 @@
             min="1"
             [ngModel]="preferences().emailAlerts.idleDealDays"
             (ngModelChange)="updateEmailAlertValue('idleDealDays', $event)"
+            [disabled]="!alertsEnabled || !preferences().emailAlerts.idleDeal || !preferences().emailAlerts.idleDealNoActivity"
             [ngModelOptions]="{ standalone: true }"
           />
         </div>

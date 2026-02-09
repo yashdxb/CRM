@@ -17,32 +17,33 @@
             optionLabel="label"
             optionValue="value"
             [(ngModel)]="quickAddType"
+            [ngModelOptions]="{ standalone: true }"
           ></p-select>
         </div>
 
         <div *ngIf="quickAddType === 'lead'" class="quick-add__grid">
           <div class="field">
             <label>Name</label>
-            <input pInputText [(ngModel)]="quickAddLeadName" placeholder="Lead name" />
+            <input pInputText [(ngModel)]="quickAddLeadName" [ngModelOptions]="{ standalone: true }" placeholder="Lead name" />
           </div>
           <div class="field">
             <label>Company</label>
-            <input pInputText [(ngModel)]="quickAddLeadCompany" placeholder="Company" />
+            <input pInputText [(ngModel)]="quickAddLeadCompany" [ngModelOptions]="{ standalone: true }" placeholder="Company" />
           </div>
           <div class="field">
             <label>Email</label>
-            <input pInputText [(ngModel)]="quickAddLeadEmail" placeholder="name@company.com" />
+            <input pInputText [(ngModel)]="quickAddLeadEmail" [ngModelOptions]="{ standalone: true }" placeholder="name@company.com" />
           </div>
           <div class="field">
             <label>Phone</label>
-            <input pInputText [(ngModel)]="quickAddLeadPhone" placeholder="+1 555 000 0000" />
+            <input pInputText [(ngModel)]="quickAddLeadPhone" [ngModelOptions]="{ standalone: true }" placeholder="+1 555 000 0000" />
           </div>
         </div>
 
         <div *ngIf="quickAddType === 'contact'" class="quick-add__grid">
           <div class="field">
             <label>Name</label>
-            <input pInputText [(ngModel)]="quickAddContactName" placeholder="Contact name" />
+            <input pInputText [(ngModel)]="quickAddContactName" [ngModelOptions]="{ standalone: true }" placeholder="Contact name" />
           </div>
           <div class="field">
             <label>Account</label>
@@ -51,23 +52,24 @@
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddContactAccountId"
+              [ngModelOptions]="{ standalone: true }"
               placeholder="Select account"
             ></p-select>
           </div>
           <div class="field">
             <label>Email</label>
-            <input pInputText [(ngModel)]="quickAddContactEmail" placeholder="name@company.com" />
+            <input pInputText [(ngModel)]="quickAddContactEmail" [ngModelOptions]="{ standalone: true }" placeholder="name@company.com" />
           </div>
           <div class="field">
             <label>Phone</label>
-            <input pInputText [(ngModel)]="quickAddContactPhone" placeholder="+1 555 000 0000" />
+            <input pInputText [(ngModel)]="quickAddContactPhone" [ngModelOptions]="{ standalone: true }" placeholder="+1 555 000 0000" />
           </div>
         </div>
 
         <div *ngIf="quickAddType === 'activity'" class="quick-add__grid">
           <div class="field">
             <label>Subject</label>
-            <input pInputText [(ngModel)]="quickAddActivitySubject" placeholder="Follow up call" />
+            <input pInputText [(ngModel)]="quickAddActivitySubject" [ngModelOptions]="{ standalone: true }" placeholder="Follow up call" />
           </div>
           <div class="field">
             <label>Type</label>
@@ -76,6 +78,7 @@
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityType"
+              [ngModelOptions]="{ standalone: true }"
             ></p-select>
           </div>
           <div class="field">
@@ -85,28 +88,30 @@
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityPriority"
+              [ngModelOptions]="{ standalone: true }"
             ></p-select>
           </div>
           <div class="field">
             <label>Due date</label>
-            <p-datePicker [(ngModel)]="quickAddActivityDueDate"></p-datePicker>
+            <p-datePicker [(ngModel)]="quickAddActivityDueDate" [ngModelOptions]="{ standalone: true }"></p-datePicker>
           </div>
           <div class="field full">
             <label>Outcome</label>
             <textarea
               pTextarea
               [(ngModel)]="quickAddActivityOutcome"
+              [ngModelOptions]="{ standalone: true }"
               rows="2"
               placeholder="Capture outcome and key takeaways"
             ></textarea>
           </div>
           <div class="field">
             <label>Next step subject</label>
-            <input pInputText [(ngModel)]="quickAddActivityNextStepSubject" placeholder="Follow-up task" />
+            <input pInputText [(ngModel)]="quickAddActivityNextStepSubject" [ngModelOptions]="{ standalone: true }" placeholder="Follow-up task" />
           </div>
           <div class="field">
             <label>Next step due date</label>
-            <p-datePicker [(ngModel)]="quickAddActivityNextStepDueDate"></p-datePicker>
+            <p-datePicker [(ngModel)]="quickAddActivityNextStepDueDate" [ngModelOptions]="{ standalone: true }"></p-datePicker>
           </div>
           <div class="field">
             <label>Related to</label>
@@ -116,6 +121,7 @@
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationType"
               (ngModelChange)="onQuickAddRelationTypeChange($event)"
+              [ngModelOptions]="{ standalone: true }"
             ></p-select>
           </div>
           <div class="field" *ngIf="quickAddActivityRelationType === 'Account'">
@@ -125,6 +131,7 @@
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationId"
+              [ngModelOptions]="{ standalone: true }"
               placeholder="Select account"
             ></p-select>
           </div>
@@ -135,6 +142,7 @@
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationId"
+              [ngModelOptions]="{ standalone: true }"
               placeholder="Select contact"
             ></p-select>
           </div>
@@ -145,6 +153,7 @@
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationId"
+              [ngModelOptions]="{ standalone: true }"
               placeholder="Select opportunity"
             ></p-select>
           </div>
