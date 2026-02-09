@@ -1600,6 +1600,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.LeadsManage,
                 Permissions.Policies.OpportunitiesView,
                 Permissions.Policies.OpportunitiesManage,
+                Permissions.Policies.OpportunitiesApprovalsRequest,
+                Permissions.Policies.OpportunitiesApprovalsApprove,
                 Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage
             }
@@ -1618,6 +1620,7 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.LeadsManage,
                 Permissions.Policies.OpportunitiesView,
                 Permissions.Policies.OpportunitiesManage,
+                Permissions.Policies.OpportunitiesApprovalsRequest,
                 Permissions.Policies.ActivitiesView,
                 Permissions.Policies.ActivitiesManage
             }

@@ -153,6 +153,12 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.OpportunitiesView));
     options.AddPolicy(Permissions.Policies.OpportunitiesManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.OpportunitiesManage));
+    options.AddPolicy(Permissions.Policies.OpportunitiesApprovalsRequest, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.OpportunitiesApprovalsRequest));
+    options.AddPolicy(Permissions.Policies.OpportunitiesApprovalsApprove, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.OpportunitiesApprovalsApprove));
+    options.AddPolicy(Permissions.Policies.OpportunitiesApprovalsOverride, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.OpportunitiesApprovalsOverride));
     options.AddPolicy(Permissions.Policies.ActivitiesView, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ActivitiesView));
     options.AddPolicy(Permissions.Policies.ActivitiesManage, policy =>

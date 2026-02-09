@@ -103,6 +103,17 @@ export class OpportunityFormPage implements OnInit {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesManage);
   });
+  protected readonly canRequestApproval = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesApprovalsRequest);
+  });
+  protected readonly canDecideApproval = computed(() => {
+    const context = readTokenContext();
+    return (
+      tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesApprovalsApprove) ||
+      tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesApprovalsOverride)
+    );
+  });
   protected readonly isManager = computed(() => {
     const payload = readTokenContext()?.payload ?? null;
     return tokenHasRole(payload, 'Sales Manager') || tokenHasRole(payload, 'System Administrator');
@@ -597,7 +608,10 @@ export class OpportunityFormPage implements OnInit {
         },
         error: (err) => {
           this.approvalRequesting.set(false);
-          const message = typeof err?.error === 'string' ? err.error : 'Unable to request approval.';
+          const message =
+            err?.status === 403
+              ? 'You do not have permission to request approvals.'
+              : (typeof err?.error === 'string' ? err.error : 'Unable to request approval.');
           this.handlePolicyGateMessage(message);
           this.toastService.show('error', message, 3500);
         }
@@ -622,7 +636,10 @@ export class OpportunityFormPage implements OnInit {
         },
         error: (err) => {
           this.approvalDecidingIds.delete(item.id);
-          const message = typeof err?.error === 'string' ? err.error : 'Unable to update approval.';
+          const message =
+            err?.status === 403
+              ? 'You do not have permission to approve or override approvals.'
+              : (typeof err?.error === 'string' ? err.error : 'Unable to update approval.');
           this.handlePolicyGateMessage(message);
           this.toastService.show('error', message, 3500);
         }

@@ -12,10 +12,14 @@ using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Opportunities;
+using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Infrastructure.Persistence;
 // using CRM.Enterprise.Api.Jobs; // Removed Hangfire
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Linq;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -25,11 +29,19 @@ namespace CRM.Enterprise.Api.Controllers;
 public class OpportunitiesController : ControllerBase
 {
     private readonly IOpportunityService _opportunityService;
+    private readonly CrmDbContext _dbContext;
+    private readonly ITenantProvider _tenantProvider;
+    private const decimal DiscountPercentApprovalThreshold = 10m;
+    private const decimal DiscountAmountApprovalThreshold = 1000m;
 
     public OpportunitiesController(
-        IOpportunityService opportunityService)
+        IOpportunityService opportunityService,
+        CrmDbContext dbContext,
+        ITenantProvider tenantProvider)
     {
         _opportunityService = opportunityService;
+        _dbContext = dbContext;
+        _tenantProvider = tenantProvider;
     }
 
     [HttpGet]
@@ -89,6 +101,12 @@ public class OpportunitiesController : ControllerBase
     [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<ActionResult<OpportunityListItem>> Create([FromBody] ApiOpportunityUpsertRequest request, CancellationToken cancellationToken)
     {
+        var approvalGate = await BlockApprovalRequestIfUnauthorizedAsync(request, null, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(approvalGate))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, approvalGate);
+        }
+
         var result = await _opportunityService.CreateAsync(MapUpsertRequest(request), GetActor(), cancellationToken);
         if (!result.Success) return BadRequest(result.Error);
         return CreatedAtAction(nameof(GetOpportunity), new { id = result.Value!.Id }, ToApiItem(result.Value!));
@@ -98,6 +116,18 @@ public class OpportunitiesController : ControllerBase
     [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] ApiOpportunityUpsertRequest request, CancellationToken cancellationToken)
     {
+        var existing = await _opportunityService.GetAsync(id, cancellationToken);
+        if (existing is null)
+        {
+            return NotFound();
+        }
+
+        var approvalGate = await BlockApprovalRequestIfUnauthorizedAsync(request, existing, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(approvalGate))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, approvalGate);
+        }
+
         var result = await _opportunityService.UpdateAsync(id, MapUpsertRequest(request), GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
@@ -386,12 +416,72 @@ public class OpportunitiesController : ControllerBase
             request.WinLossReason);
     }
 
+    private async Task<string?> BlockApprovalRequestIfUnauthorizedAsync(
+        ApiOpportunityUpsertRequest request,
+        OpportunityListItemDto? existing,
+        CancellationToken cancellationToken)
+    {
+        if (HasPermission(Permissions.Policies.OpportunitiesApprovalsRequest))
+        {
+            return null;
+        }
+
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var tenant = await _dbContext.Tenants.AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant is null)
+        {
+            return null;
+        }
+
+        var threshold = tenant.ApprovalAmountThreshold;
+        var requiresCloseApproval = request.IsClosed
+                                    && threshold.HasValue
+                                    && threshold.Value > 0
+                                    && request.Amount >= threshold.Value;
+
+        var discountPercent = request.DiscountPercent ?? 0m;
+        var discountAmount = request.DiscountAmount ?? 0m;
+        var requiresDiscountApproval = discountPercent >= DiscountPercentApprovalThreshold
+                                       || discountAmount >= DiscountAmountApprovalThreshold;
+
+        var requiresUpdateApproval = false;
+        if (existing is not null
+            && threshold.HasValue
+            && threshold.Value > 0
+            && request.Amount >= threshold.Value)
+        {
+            var closeDateChanged = request.ExpectedCloseDate != existing.ExpectedCloseDate;
+            var probabilityChanged = request.Probability != existing.Probability;
+            requiresUpdateApproval = closeDateChanged || probabilityChanged;
+        }
+
+        if (requiresCloseApproval || requiresDiscountApproval || requiresUpdateApproval)
+        {
+            return "You do not have permission to request approvals for this change.";
+        }
+
+        return null;
+    }
+
     private ActorContext GetActor()
     {
         var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var userId = Guid.TryParse(subject, out var parsed) ? parsed : (Guid?)null;
         var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
         return new ActorContext(userId, name);
+    }
+
+    private bool HasPermission(string permission)
+    {
+        return User.Claims.Any(claim =>
+            string.Equals(claim.Type, Permissions.ClaimType, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(claim.Value, permission, StringComparison.OrdinalIgnoreCase));
     }
 
     private bool IsManagerActor()

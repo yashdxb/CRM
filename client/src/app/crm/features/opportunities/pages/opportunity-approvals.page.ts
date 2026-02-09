@@ -67,7 +67,10 @@ export class OpportunityApprovalsPage {
 
   protected readonly canManage = computed(() => {
     const context = readTokenContext();
-    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesManage);
+    return (
+      tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesApprovalsApprove) ||
+      tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesApprovalsOverride)
+    );
   });
 
   constructor() {

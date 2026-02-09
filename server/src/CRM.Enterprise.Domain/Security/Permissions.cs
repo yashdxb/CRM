@@ -19,6 +19,9 @@ public static class Permissions
         public const string LeadsManage = "Permissions.Leads.Manage";
         public const string OpportunitiesView = "Permissions.Opportunities.View";
         public const string OpportunitiesManage = "Permissions.Opportunities.Manage";
+        public const string OpportunitiesApprovalsRequest = "Permissions.Opportunities.Approvals.Request";
+        public const string OpportunitiesApprovalsApprove = "Permissions.Opportunities.Approvals.Approve";
+        public const string OpportunitiesApprovalsOverride = "Permissions.Opportunities.Approvals.Override";
         public const string ActivitiesView = "Permissions.Activities.View";
         public const string ActivitiesManage = "Permissions.Activities.Manage";
         public const string AdministrationView = "Permissions.Administration.View";
@@ -61,6 +64,9 @@ public static class Permissions
         new(Policies.LeadsManage, "Leads (Manage)", "Work marketing-sourced leads and conversions.", "Create & Manage Records"),
         new(Policies.OpportunitiesView, "Opportunities (View)", "View opportunities, stages, and forecasting.", "View & Analyze"),
         new(Policies.OpportunitiesManage, "Opportunities (Manage)", "Advance deals through the selling stages.", "Create & Manage Records"),
+        new(Policies.OpportunitiesApprovalsRequest, "Approvals (Request)", "Request approvals for discounts, close exceptions, and overrides.", "Approve & Override"),
+        new(Policies.OpportunitiesApprovalsApprove, "Approvals (Approve)", "Approve or reject pending approval requests.", "Approve & Override"),
+        new(Policies.OpportunitiesApprovalsOverride, "Approvals (Override)", "Override approvals when policy gates require escalation.", "Approve & Override"),
         new(Policies.ActivitiesView, "Activities (View)", "View calls, meetings, and tasks tied to records.", "View & Analyze"),
         new(Policies.ActivitiesManage, "Activities (Manage)", "Log calls, meetings, and tasks tied to records.", "Create & Manage Records"),
         new(Policies.AdministrationView, "Administration (View)", "View users, roles, and workspace settings.", "Configure System"),
@@ -91,14 +97,22 @@ public static class Permissions
         Policies.LeadsManage,
         Policies.OpportunitiesView,
         Policies.OpportunitiesManage,
+        Policies.OpportunitiesApprovalsRequest,
         Policies.ActivitiesView,
         Policies.ActivitiesManage
     };
 
-    private static readonly string[] SalesManagerPermissions = SalesRepPermissions;
+    private static readonly string[] SalesManagerPermissions =
+        SalesRepPermissions.Concat(new[] { Policies.OpportunitiesApprovalsApprove }).Distinct().ToArray();
 
     private static readonly string[] AdminPermissions =
-        WorkspaceAdminKeys.Concat(new[] { Policies.AuditView }).Distinct().ToArray();
+        WorkspaceAdminKeys.Concat(new[]
+        {
+            Policies.AuditView,
+            Policies.OpportunitiesApprovalsRequest,
+            Policies.OpportunitiesApprovalsApprove,
+            Policies.OpportunitiesApprovalsOverride
+        }).Distinct().ToArray();
 
     public static IReadOnlyList<RoleIntentDefinition> RoleIntents { get; } = Array.AsReadOnly(new[]
     {

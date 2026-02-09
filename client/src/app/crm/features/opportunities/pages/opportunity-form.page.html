@@ -424,7 +424,7 @@
                     pButton
                     type="button"
                     class="crm-button--primary"
-                    [disabled]="!canManage() || approvalRequesting()"
+                    [disabled]="!canRequestApproval() || approvalRequesting()"
                     (click)="requestApproval()"
                   >
                     <span *ngIf="!approvalRequesting()">Request approval</span>
@@ -432,7 +432,12 @@
                   </button>
                 </div>
               </div>
-              <p class="helper-text">Request approval before closing or applying large discounts.</p>
+              <p class="helper-text" *ngIf="canRequestApproval(); else noApprovalPermission">
+                Request approval before closing or applying large discounts.
+              </p>
+              <ng-template #noApprovalPermission>
+                <p class="helper-text muted">You don’t have permission to request approvals.</p>
+              </ng-template>
             </div>
 
             <div class="approval-list" *ngIf="approvals.length; else noApprovals">
@@ -472,7 +477,7 @@
                     pButton
                     type="button"
                     class="crm-button--primary"
-                    [disabled]="!canManage() || approvalDecidingIds.has(approval.id)"
+                    [disabled]="!canDecideApproval() || approvalDecidingIds.has(approval.id)"
                     (click)="decideApproval(approval, true)"
                   >
                     Approve
@@ -481,11 +486,14 @@
                     pButton
                     type="button"
                     class="crm-button--ghost"
-                    [disabled]="!canManage() || approvalDecidingIds.has(approval.id)"
+                    [disabled]="!canDecideApproval() || approvalDecidingIds.has(approval.id)"
                     (click)="decideApproval(approval, false)"
                   >
                     Reject
                   </button>
+                  <p class="helper-text muted" *ngIf="!canDecideApproval()">
+                    You don’t have permission to approve or override approvals.
+                  </p>
                 </div>
               </div>
             </div>

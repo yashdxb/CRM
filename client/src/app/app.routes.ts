@@ -158,7 +158,7 @@ export const routes: Routes = [
       {
         path: 'opportunities/approvals',
         canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Approvals', icon: 'pi-check-circle' },
+        data: { permission: PERMISSION_KEYS.opportunitiesApprovalsApprove, breadcrumb: 'Approvals', icon: 'pi-check-circle' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
       },

@@ -482,13 +482,24 @@ MoSCoW: Must
 
 17) Approval permissions separated from edit rights
 MoSCoW: Must
-- Status: IN PROGRESS
+- Status: DONE
 - Acceptance criteria:
   - “Request approval”, “Approve”, and “Override” are separate permissions.
   - Users can edit opportunities without automatically gaining approval rights.
   - Approval actions are blocked if user lacks the specific approval permission.
 - Evidence:
-  - ClickUp task created in CRM Backlog (see ClickUp sync).
+  - Permission keys + catalog: `server/src/CRM.Enterprise.Domain/Security/Permissions.cs`
+  - Policies registered: `server/src/CRM.Enterprise.Api/Program.cs`
+  - Approval request/decide gating: `server/src/CRM.Enterprise.Api/Controllers/OpportunityApprovalsController.cs`
+  - Approval request blocked on update without permission: `server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs`
+  - Client permissions + UI gating: `client/src/app/core/auth/permission.constants.ts`
+  - Opportunity approval UI: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
+  - Approval actions UI: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+  - Approval inbox gating: `client/src/app/crm/features/opportunities/pages/opportunity-approvals.page.ts`
+  - Approvals route permission: `client/src/app/app.routes.ts`
+  - Navigation permission: `client/src/app/layout/navigation/navigation.config.ts`
+  - Mock permission catalog: `client/src/app/mocks/mock-db.ts`
+  - Seeded role permissions: `server/src/CRM.Enterprise.Infrastructure/Persistence/DatabaseInitializer.cs`
 
 18) Role drift + pack presets
 MoSCoW: Must
@@ -582,10 +593,10 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Contacts | As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership. (ClickUp: 86dzp8xcg, Status: done)
 - Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context. (ClickUp: 86dzp8xcw, Status: backlog)
 - Module: Contacts | As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group. (ClickUp: 86dzp8xcr, Status: done)
-- Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8y0j, Status: in progress)
-- Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8xtg, Status: in progress)
-- Module: Dashboard | As a manager, I see top truth gaps across pipeline (ClickUp: 86dzp8y02, Status: in progress)
-- Module: Dashboard | As a manager, I see top truth gaps across pipeline (ClickUp: 86dzp8xt8, Status: in progress)
+- Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8y0j, Status: done)
+- Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8xtg, Status: done)
+- Module: Dashboard | As a manager, I see top truth gaps across pipeline (ClickUp: 86dzp8y02, Status: done)
+- Module: Dashboard | As a manager, I see top truth gaps across pipeline (ClickUp: 86dzp8xt8, Status: done)
 - Module: Dashboard | As a manager, I want pipeline and forecast rollups across my role hierarchy by default. (ClickUp: 86dzpgeq0, Status: done)
 - Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS (ClickUp: 86dzp8xzq, Status: done)
 - Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS (ClickUp: 86dzp8xt5, Status: done)
@@ -631,8 +642,8 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (ClickUp: 86dzp8x9z, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates. (ClickUp: 86dzp8xan, Status: done)
 - Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation. (ClickUp: 86dzp8xb3, Status: backlog)
-- Module: Dashboard | As an executive, I can view confidence-weighted pipeline totals (ClickUp: 86dzp8y09, Status: in progress)
-- Module: Dashboard | As an executive, I can view confidence-weighted pipeline totals (ClickUp: 86dzp8xtc, Status: in progress)
+- Module: Dashboard | As an executive, I can view confidence-weighted pipeline totals (ClickUp: 86dzp8y09, Status: done)
+- Module: Dashboard | As an executive, I can view confidence-weighted pipeline totals (ClickUp: 86dzp8xtc, Status: done)
 - Module: Dashboard | Confidence-weighted forecast card (ClickUp: 86dzp8xed, Status: done)
 - Module: Dashboard | Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth) (ClickUp: 86dzp8xen, Status: done)
 - Module: Dashboard | Risk Register summary widget (ClickUp: 86dzp8xef, Status: done)

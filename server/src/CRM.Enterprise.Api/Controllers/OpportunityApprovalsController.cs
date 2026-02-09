@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Linq;
 using CRM.Enterprise.Api.Contracts.Opportunities;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Opportunities;
@@ -42,7 +43,7 @@ public class OpportunityApprovalsController : ControllerBase
     }
 
     [HttpPost("api/opportunities/{id:guid}/approvals")]
-    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesApprovalsRequest)]
     public async Task<ActionResult<OpportunityApprovalItem>> RequestApproval(
         Guid id,
         [FromBody] OpportunityApprovalRequest request,
@@ -70,12 +71,16 @@ public class OpportunityApprovalsController : ControllerBase
     }
 
     [HttpPatch("api/opportunity-approvals/{approvalId:guid}")]
-    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<ActionResult<OpportunityApprovalItem>> Decide(
         Guid approvalId,
         [FromBody] OpportunityApprovalDecisionRequest request,
         CancellationToken cancellationToken)
     {
+        if (!CanApprove())
+        {
+            return Forbid();
+        }
+
         var result = await _approvalService.DecideAsync(
             approvalId,
             request.Approved,
@@ -150,5 +155,18 @@ public class OpportunityApprovalsController : ControllerBase
         var userId = Guid.TryParse(subject, out var parsed) ? parsed : (Guid?)null;
         var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
         return new ActorContext(userId, name);
+    }
+
+    private bool CanApprove()
+    {
+        return HasPermission(Permissions.Policies.OpportunitiesApprovalsApprove)
+               || HasPermission(Permissions.Policies.OpportunitiesApprovalsOverride);
+    }
+
+    private bool HasPermission(string permission)
+    {
+        return User.Claims.Any(claim =>
+            string.Equals(claim.Type, Permissions.ClaimType, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(claim.Value, permission, StringComparison.OrdinalIgnoreCase));
     }
 }

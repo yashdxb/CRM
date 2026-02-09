@@ -901,6 +901,24 @@ const permissionCatalog: PermissionDefinition[] = [
     capability: 'Create & Manage Records'
   },
   {
+    key: PERMISSION_KEYS.opportunitiesApprovalsRequest,
+    label: 'Approvals (Request)',
+    description: 'Request approvals for discounts, close exceptions, and overrides.',
+    capability: 'Approve & Override'
+  },
+  {
+    key: PERMISSION_KEYS.opportunitiesApprovalsApprove,
+    label: 'Approvals (Approve)',
+    description: 'Approve or reject pending approval requests.',
+    capability: 'Approve & Override'
+  },
+  {
+    key: PERMISSION_KEYS.opportunitiesApprovalsOverride,
+    label: 'Approvals (Override)',
+    description: 'Override approvals when policy gates require escalation.',
+    capability: 'Approve & Override'
+  },
+  {
     key: PERMISSION_KEYS.activitiesView,
     label: 'Activities (View)',
     description: 'View calls, meetings, and tasks.',
