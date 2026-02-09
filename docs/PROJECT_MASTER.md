@@ -155,6 +155,9 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - **Deployment method:** push to `master` triggers GitHub Actions for both client and API.
   - Client workflow: `.github/workflows/azure-static-web-apps-jolly-dune-0d9d1fe0f.yml`
   - API workflow: `.github/workflows/deploy-api.yml`
+- **Mobile app CI/CD:** Flutter mobile ships from a **separate repo** and its own GitHub Actions workflows.
+  - Mobile workflows: `ci.yml` (analyze/test), `release-android.yml`, `release-ios.yml`.
+  - Store signing keys and mobile secrets stay isolated in the mobile repo.
 - **Daily ops log:** record daily issues and fixes in `docs/DAILY_OPERATIONS_LOG.md`, and only merge verified outcomes into this master file.
 - **Lead AI scoring:** Lead score refresh uses Azure OpenAI when configured, falls back to OpenAI, then rules-based scoring to keep the UI functional.
 
