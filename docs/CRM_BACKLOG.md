@@ -650,7 +650,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Dashboard | Hierarchy-based H1/H2 dashboard packs + reset (ClickUp: 86dzp8xea, Status: done)
 - Module: Leads | As a manager, score breakdown aligns with CQVS labels (ClickUp: 86dzp8y10, Status: done)
 - Module: Leads | As a manager, score breakdown aligns with CQVS labels (ClickUp: 86dzp8xtn, Status: done)
-- Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal (ClickUp: 86dzp8xz6, Status: backlog)
+- Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal (ClickUp: 86dzp8xz6, Status: done)
+  - Acceptance criteria:
+    - Qualification status shows a "Suggested next evidence" list tied to the weakest factor.
+    - Suggestions update when qualification factors change.
+    - Server-provided suggestions take precedence when available.
+  - Evidence:
+    - Server suggestion builder: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+    - UI suggestions block: `client/src/app/crm/features/leads/pages/lead-form.page.html`
+    - UI state + fallback logic: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
 - Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet" (ClickUp: 86dzp8y1d, Status: done)
 - Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet" (ClickUp: 86dzp8xtu, Status: done)
 - Module: Leads | As a rep, I see "Unknown / not yet discussed" preselected for every qualification factor (ClickUp: 86dzp8y1u, Status: done)

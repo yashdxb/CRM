@@ -54,6 +54,7 @@ export interface Lead {
   assumptionsOutstanding?: number;
   weakestSignal?: string;
   weakestState?: string;
+  nextEvidenceSuggestions?: string[];
   scoreBreakdown?: LeadScoreBreakdownItem[];
   riskFlags?: string[];
 }

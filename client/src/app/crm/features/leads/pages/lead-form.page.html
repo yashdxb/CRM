@@ -367,6 +367,12 @@
                       <span class="feedback-state">({{ feedback.weakestState }})</span>
                     </span>
                   </div>
+                  <div class="feedback-suggestions" *ngIf="nextEvidenceSuggestions().length">
+                    <span class="feedback-title">Suggested next evidence</span>
+                    <ul class="feedback-suggestions-list">
+                      <li *ngFor="let suggestion of nextEvidenceSuggestions()">{{ suggestion }}</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
               <div class="field">

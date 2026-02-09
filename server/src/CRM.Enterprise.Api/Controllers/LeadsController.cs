@@ -360,6 +360,7 @@ public class LeadsController : ControllerBase
             dto.AssumptionsOutstanding,
             dto.WeakestSignal,
             dto.WeakestState,
+            dto.NextEvidenceSuggestions,
             dto.ScoreBreakdown.Select(item => new CRM.Enterprise.Api.Contracts.Leads.LeadScoreBreakdownItem(item.Factor, item.Score, item.MaxScore)),
             dto.RiskFlags);
     }
