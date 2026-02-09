@@ -1,8 +1,12 @@
 using CRM.Enterprise.Application.Dashboard;
+using CRM.Enterprise.Application.Qualifications;
+using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Globalization;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Infrastructure.Dashboard;
 
@@ -19,13 +23,49 @@ public class DashboardReadService : IDashboardReadService
     };
 
     private sealed record CalibrationRow(string Stage, bool IsWon);
+    private sealed record PipelineExposureRow(
+        Guid Id,
+        string Name,
+        string AccountName,
+        string Stage,
+        decimal Amount,
+        Guid OwnerId,
+        string? Summary,
+        string? Requirements,
+        string? BuyingProcess,
+        string? SuccessCriteria,
+        DateTime CreatedAtUtc);
+    private sealed record LeadQualificationRow(
+        Guid OpportunityId,
+        DateTime CreatedAtUtc,
+        string? BudgetAvailability,
+        string? BudgetEvidence,
+        DateTime? BudgetValidatedAtUtc,
+        string? ReadinessToSpend,
+        string? ReadinessEvidence,
+        DateTime? ReadinessValidatedAtUtc,
+        string? BuyingTimeline,
+        string? TimelineEvidence,
+        DateTime? BuyingTimelineValidatedAtUtc,
+        string? ProblemSeverity,
+        string? ProblemEvidence,
+        DateTime? ProblemSeverityValidatedAtUtc,
+        string? EconomicBuyer,
+        string? EconomicBuyerEvidence,
+        DateTime? EconomicBuyerValidatedAtUtc,
+        string? IcpFit,
+        string? IcpFitEvidence,
+        DateTime? IcpFitValidatedAtUtc);
     private readonly CrmDbContext _dbContext;
+    private readonly ITenantProvider _tenantProvider;
     private const int InactivityThresholdDays = 30;
     private const int StuckStageThresholdDays = 21;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public DashboardReadService(CrmDbContext dbContext)
+    public DashboardReadService(CrmDbContext dbContext, ITenantProvider tenantProvider)
     {
         _dbContext = dbContext;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<DashboardSummaryDto> GetSummaryAsync(Guid? userId, CancellationToken cancellationToken)
@@ -66,18 +106,55 @@ public class DashboardReadService : IDashboardReadService
 
         var openOpportunities = await opportunitiesQuery.CountAsync(cancellationToken);
 
+        var exposureWeights = await ResolveExposureWeightsAsync(cancellationToken);
         var pipelineRows = await opportunitiesQuery
-            .Select(o => new
-            {
-                Stage = o.Stage != null ? o.Stage.Name : "Prospecting",
+            .Select(o => new PipelineExposureRow(
+                o.Id,
+                o.Name,
+                o.Account != null ? o.Account.Name : string.Empty,
+                o.Stage != null ? o.Stage.Name : "Prospecting",
                 o.Amount,
                 o.OwnerId,
                 o.Summary,
                 o.Requirements,
                 o.BuyingProcess,
-                o.SuccessCriteria
-            })
+                o.SuccessCriteria,
+                o.CreatedAtUtc))
             .ToListAsync(cancellationToken);
+
+        var leadQualificationRows = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted
+                        && l.ConvertedOpportunityId.HasValue
+                        && pipelineRows.Select(p => p.Id).Contains(l.ConvertedOpportunityId.Value))
+            .Select(l => new LeadQualificationRow(
+                l.ConvertedOpportunityId!.Value,
+                l.CreatedAtUtc,
+                l.BudgetAvailability,
+                l.BudgetEvidence,
+                l.BudgetValidatedAtUtc,
+                l.ReadinessToSpend,
+                l.ReadinessEvidence,
+                l.ReadinessValidatedAtUtc,
+                l.BuyingTimeline,
+                l.TimelineEvidence,
+                l.BuyingTimelineValidatedAtUtc,
+                l.ProblemSeverity,
+                l.ProblemEvidence,
+                l.ProblemSeverityValidatedAtUtc,
+                l.EconomicBuyer,
+                l.EconomicBuyerEvidence,
+                l.EconomicBuyerValidatedAtUtc,
+                l.IcpFit,
+                l.IcpFitEvidence,
+                l.IcpFitValidatedAtUtc))
+            .ToListAsync(cancellationToken);
+
+        var leadByOpportunity = leadQualificationRows
+            .GroupBy(row => row.OpportunityId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(row => row.CreatedAtUtc).First());
 
         var pipelineValueStages = pipelineRows
             .GroupBy(row => row.Stage)
@@ -113,6 +190,7 @@ public class DashboardReadService : IDashboardReadService
 
         var costOfNotKnowingValue = 0m;
         var costOfNotKnowingDeals = 0;
+        var costOfNotKnowingBreakdown = new List<CostOfNotKnowingDealDto>();
         foreach (var row in pipelineRows)
         {
             var qualificationScore = ComputeQualificationScore(row.Summary, row.Requirements, row.BuyingProcess, row.SuccessCriteria);
@@ -124,7 +202,27 @@ public class DashboardReadService : IDashboardReadService
             {
                 costOfNotKnowingDeals += 1;
             }
+
+            leadByOpportunity.TryGetValue(row.Id, out var leadRow);
+            var factorBreakdown = BuildExposureBreakdown(leadRow, exposureWeights, uncertaintyCost);
+            if (factorBreakdown.Count > 0)
+            {
+                costOfNotKnowingBreakdown.Add(new CostOfNotKnowingDealDto(
+                    row.Id,
+                    row.Name,
+                    row.AccountName,
+                    row.Stage,
+                    row.Amount,
+                    Math.Round(uncertaintyCost, 2),
+                    factorBreakdown));
+            }
         }
+
+        var sortedCostBreakdown = costOfNotKnowingBreakdown
+            .OrderByDescending(item => item.CostOfNotKnowingValue)
+            .ToList();
+
+        var costOfNotKnowingTrend = BuildCostOfNotKnowingTrend(pipelineRows, stageConfidenceMap, now);
 
         var activitiesQuery = _dbContext.Activities.AsNoTracking().Where(a => !a.IsDeleted);
         if (visibility.UserIds is not null)
@@ -192,8 +290,7 @@ public class DashboardReadService : IDashboardReadService
                 var nextStepDueAtUtc = info.nextStepDueAtUtc;
                 var lastActivityAtUtc = info.lastActivityAtUtc;
 
-                var hasNextStep = nextStepDueAtUtc.HasValue;
-                if (!hasNextStep)
+                if (nextStepDueAtUtc is null)
                 {
                     opportunitiesWithoutNextStep++;
                     atRiskOpportunities++;
@@ -784,11 +881,17 @@ public class DashboardReadService : IDashboardReadService
 
         var myPipelineValueTotal = 0m;
         var myConfidenceWeightedPipelineValue = 0m;
+        decimal? myQuotaTarget = null;
         if (userId.HasValue)
         {
             var myRows = pipelineRows.Where(row => row.OwnerId == userId.Value).ToList();
             myPipelineValueTotal = myRows.Sum(row => row.Amount);
             myConfidenceWeightedPipelineValue = myRows.Sum(row => row.Amount * GetStageConfidence(stageConfidenceMap, row.Stage));
+            myQuotaTarget = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.Id == userId.Value && !u.IsDeleted)
+                .Select(u => u.MonthlyQuota)
+                .SingleOrDefaultAsync(cancellationToken);
         }
 
         return new DashboardSummaryDto(
@@ -829,10 +932,13 @@ public class DashboardReadService : IDashboardReadService
             Math.Round(confidenceWeightedPipelineValue, 2),
             Math.Round(costOfNotKnowingValue, 2),
             costOfNotKnowingDeals,
+            sortedCostBreakdown,
+            costOfNotKnowingTrend,
             Math.Round(confidenceCalibrationScore, 1),
             confidenceCalibrationSample,
             Math.Round(myPipelineValueTotal, 2),
-            Math.Round(myConfidenceWeightedPipelineValue, 2));
+            Math.Round(myConfidenceWeightedPipelineValue, 2),
+            myQuotaTarget);
     }
 
     public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(Guid? userId, CancellationToken cancellationToken)
@@ -941,9 +1047,8 @@ public class DashboardReadService : IDashboardReadService
             .Where(l => !l.IsDeleted
                         && l.ConvertedOpportunityId.HasValue
                         && opportunityIds.Contains(l.ConvertedOpportunityId.Value))
-            .Select(l => new
-            {
-                l.ConvertedOpportunityId,
+            .Select(l => new LeadQualificationRow(
+                l.ConvertedOpportunityId!.Value,
                 l.CreatedAtUtc,
                 l.BudgetAvailability,
                 l.BudgetEvidence,
@@ -962,13 +1067,11 @@ public class DashboardReadService : IDashboardReadService
                 l.EconomicBuyerValidatedAtUtc,
                 l.IcpFit,
                 l.IcpFitEvidence,
-                l.IcpFitValidatedAtUtc
-            })
+                l.IcpFitValidatedAtUtc))
             .ToListAsync(cancellationToken);
 
         var leadByOpportunity = leadQualificationRows
-            .Where(l => l.ConvertedOpportunityId.HasValue)
-            .GroupBy(l => l.ConvertedOpportunityId!.Value)
+            .GroupBy(l => l.OpportunityId)
             .ToDictionary(
                 group => group.Key,
                 group => group.OrderByDescending(l => l.CreatedAtUtc).First());
@@ -1334,6 +1437,157 @@ public class DashboardReadService : IDashboardReadService
         return new DashboardEpistemicFactor(label, state, confidence, decayLevel, isHighImpact);
     }
 
+    private sealed record ExposureFactor(
+        string Key,
+        string Label,
+        EpistemicState State,
+        decimal Weight,
+        decimal Contribution);
+
+    private static IReadOnlyList<CostOfNotKnowingFactorDto> BuildExposureBreakdown(
+        LeadQualificationRow? leadRow,
+        IReadOnlyDictionary<string, decimal> exposureWeights,
+        decimal uncertaintyCost)
+    {
+        var factors = BuildExposureFactors(leadRow, exposureWeights);
+        var missing = factors.Where(f => f.State != EpistemicState.Verified && f.Weight > 0).ToList();
+        if (missing.Count == 0)
+        {
+            return Array.Empty<CostOfNotKnowingFactorDto>();
+        }
+
+        var totalWeight = missing.Sum(f => f.Weight);
+        if (totalWeight <= 0)
+        {
+            return Array.Empty<CostOfNotKnowingFactorDto>();
+        }
+
+        var distributed = missing
+            .Select(f => f with
+            {
+                Contribution = Math.Round(uncertaintyCost * (f.Weight / totalWeight), 2)
+            })
+            .OrderByDescending(f => f.Contribution)
+            .Take(3)
+            .Select(f => new CostOfNotKnowingFactorDto(
+                f.Key,
+                f.Label,
+                f.Weight,
+                f.Contribution,
+                f.State.ToString()))
+            .ToList();
+
+        return distributed;
+    }
+
+    private static IReadOnlyList<ChartDataPointDto> BuildCostOfNotKnowingTrend(
+        IReadOnlyList<PipelineExposureRow> pipelineRows,
+        IReadOnlyDictionary<string, decimal> stageConfidenceMap,
+        DateTime now)
+    {
+        if (pipelineRows.Count == 0)
+        {
+            return Array.Empty<ChartDataPointDto>();
+        }
+
+        var startOfWindow = now.Date.AddDays(-7 * 7);
+        var points = new List<ChartDataPointDto>();
+
+        for (var i = 0; i < 8; i += 1)
+        {
+            var windowStart = startOfWindow.AddDays(i * 7);
+            var windowEnd = windowStart.AddDays(7);
+            var label = windowStart.ToString("MMM d", CultureInfo.InvariantCulture);
+
+            var windowRows = pipelineRows
+                .Where(row => row.CreatedAtUtc < windowEnd)
+                .ToList();
+
+            if (windowRows.Count == 0)
+            {
+                points.Add(new ChartDataPointDto(label, 0));
+                continue;
+            }
+
+            var totalExposure = windowRows.Sum(row =>
+            {
+                var qualificationScore = ComputeQualificationScore(row.Summary, row.Requirements, row.BuyingProcess, row.SuccessCriteria);
+                var stageConfidence = GetStageConfidence(stageConfidenceMap, row.Stage);
+                var confidenceScore = Math.Clamp((stageConfidence + qualificationScore) / 2m, 0m, 1m);
+                return row.Amount * (1m - confidenceScore);
+            });
+
+            points.Add(new ChartDataPointDto(label, Math.Round(totalExposure, 2)));
+        }
+
+        return points;
+    }
+
+    private static IReadOnlyList<ExposureFactor> BuildExposureFactors(
+        LeadQualificationRow? leadRow,
+        IReadOnlyDictionary<string, decimal> exposureWeights)
+    {
+        var budget = BuildDashboardFactor(
+            "Budget availability",
+            ResolveBudgetState(leadRow?.BudgetAvailability),
+            leadRow?.BudgetEvidence,
+            leadRow?.BudgetValidatedAtUtc,
+            true);
+        var readiness = BuildDashboardFactor(
+            "Readiness to spend",
+            ResolveReadinessState(leadRow?.ReadinessToSpend),
+            leadRow?.ReadinessEvidence,
+            leadRow?.ReadinessValidatedAtUtc,
+            false);
+        var timeline = BuildDashboardFactor(
+            "Buying timeline",
+            ResolveTimelineState(leadRow?.BuyingTimeline),
+            leadRow?.TimelineEvidence,
+            leadRow?.BuyingTimelineValidatedAtUtc,
+            true);
+        var problem = BuildDashboardFactor(
+            "Problem severity",
+            ResolveProblemState(leadRow?.ProblemSeverity),
+            leadRow?.ProblemEvidence,
+            leadRow?.ProblemSeverityValidatedAtUtc,
+            false);
+        var economic = BuildDashboardFactor(
+            "Economic buyer",
+            ResolveEconomicBuyerState(leadRow?.EconomicBuyer),
+            leadRow?.EconomicBuyerEvidence,
+            leadRow?.EconomicBuyerValidatedAtUtc,
+            true);
+        var icp = BuildDashboardFactor(
+            "ICP fit",
+            ResolveIcpFitState(leadRow?.IcpFit),
+            leadRow?.IcpFitEvidence,
+            leadRow?.IcpFitValidatedAtUtc,
+            false);
+
+        return new List<ExposureFactor>
+        {
+            new("budget", budget.Label, budget.State, ResolveExposureWeight(exposureWeights, "budget", 25), 0m),
+            new("timeline", timeline.Label, timeline.State, ResolveExposureWeight(exposureWeights, "timeline", 20), 0m),
+            new("economicBuyer", economic.Label, economic.State, ResolveExposureWeight(exposureWeights, "economicBuyer", 20), 0m),
+            new("problem", problem.Label, problem.State, ResolveExposureWeight(exposureWeights, "problem", 15), 0m),
+            new("readiness", readiness.Label, readiness.State, ResolveExposureWeight(exposureWeights, "readiness", 10), 0m),
+            new("icpFit", icp.Label, icp.State, ResolveExposureWeight(exposureWeights, "icpFit", 10), 0m)
+        };
+    }
+
+    private static decimal ResolveExposureWeight(
+        IReadOnlyDictionary<string, decimal> exposureWeights,
+        string key,
+        decimal fallback)
+    {
+        if (exposureWeights.TryGetValue(key, out var weight))
+        {
+            return weight;
+        }
+
+        return fallback;
+    }
+
     private enum EpistemicState
     {
         Unknown,
@@ -1541,6 +1795,44 @@ public class DashboardReadService : IDashboardReadService
     {
         if (string.IsNullOrWhiteSpace(value)) return true;
         return value.Contains("unknown", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<IReadOnlyDictionary<string, decimal>> ResolveExposureWeightsAsync(
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+
+        var policy = ResolveQualificationPolicy(tenant);
+        var weights = policy.ExposureWeights ?? Array.Empty<QualificationExposureWeight>();
+        if (weights.Count == 0)
+        {
+            weights = QualificationPolicyDefaults.CreateDefault().ExposureWeights;
+        }
+
+        return weights
+            .GroupBy(w => w.Key, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.Last().Weight);
+    }
+
+    private static QualificationPolicy ResolveQualificationPolicy(Tenant? tenant)
+    {
+        if (tenant is null || string.IsNullOrWhiteSpace(tenant.QualificationPolicyJson))
+        {
+            return QualificationPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<QualificationPolicy>(tenant.QualificationPolicyJson, JsonOptions);
+            return parsed ?? QualificationPolicyDefaults.CreateDefault();
+        }
+        catch (JsonException)
+        {
+            return QualificationPolicyDefaults.CreateDefault();
+        }
     }
 
     private static readonly IReadOnlyDictionary<string, EpistemicState> BudgetStateMap = new Dictionary<string, EpistemicState>(StringComparer.OrdinalIgnoreCase)

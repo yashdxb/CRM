@@ -86,7 +86,7 @@
             <i class="pi pi-dollar"></i>
           </div>
           <div class="metric-body">
-            <div class="metric-value-large">{{ totalPipelineValue() | currency:'USD':'symbol':'1.0-0' }}</div>
+            <div class="metric-value-large">{{ totalPipelineValue() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</div>
             <div class="metric-label">Total Pipeline Value</div>
             <div class="metric-trend up">
               <i class="pi pi-trending-up"></i>
@@ -150,7 +150,7 @@
               Pipeline by Stage
             </h3>
             <div class="card-actions">
-              <span class="card-badge">{{ totalPipelineValue() | currency:'USD':'symbol':'1.0-0' }}</span>
+              <span class="card-badge">{{ totalPipelineValue() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
               <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
             </div>
           </div>
@@ -291,21 +291,21 @@
           </div>
           <div class="card-body">
             <div class="forecast-value">
-              {{ summary().confidenceWeightedPipelineValue | currency:'USD':'symbol':'1.0-0' }}
+              {{ summary().confidenceWeightedPipelineValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
             </div>
             <div class="forecast-meta">
               <span>Weighted pipeline</span>
               <span class="forecast-delta" [class.negative]="weightedPipelineDelta() < 0">
-                {{ weightedPipelineDelta() | currency:'USD':'symbol':'1.0-0' }}
+                {{ weightedPipelineDelta() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
               </span>
             </div>
             <div class="forecast-footnote">
-              Raw pipeline: {{ totalPipelineValue() | currency:'USD':'symbol':'1.0-0' }}
+              Raw pipeline: {{ totalPipelineValue() | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
             </div>
             <div class="forecast-aux">
               <div class="forecast-row">
                 <span>Cost of Not Knowing</span>
-                <span>{{ summary().costOfNotKnowingValue | currency:'USD':'symbol':'1.0-0' }}</span>
+                <span>{{ summary().costOfNotKnowingValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
               </div>
               <div class="forecast-row">
                 <span>Low-confidence deals</span>
@@ -318,6 +318,44 @@
               <div class="forecast-row" *ngIf="summary().confidenceCalibrationSample > 0">
                 <span>Calibration sample</span>
                 <span>{{ summary().confidenceCalibrationSample }}</span>
+              </div>
+            </div>
+            <div class="cost-breakdown" *ngIf="summary().costOfNotKnowingBreakdown.length">
+              <div class="cost-breakdown__header">
+                <h4>Top Cost Drivers</h4>
+                <button
+                  *ngIf="summary().costOfNotKnowingBreakdown.length > 5"
+                  type="button"
+                  class="btn btn-ghost btn-sm"
+                  (click)="openCostBreakdownDialog()"
+                >
+                  View all
+                </button>
+              </div>
+              <div class="cost-deal" *ngFor="let deal of topCostBreakdown()">
+                <div class="cost-deal__header">
+                  <div>
+                    <div class="cost-deal__name">{{ deal.opportunityName }}</div>
+                    <div class="cost-deal__meta">{{ deal.accountName }} • {{ deal.stage }}</div>
+                  </div>
+                  <div class="cost-deal__value">
+                    {{ deal.costOfNotKnowingValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+                  </div>
+                </div>
+                <div class="cost-deal__factors">
+                  <span class="cost-factor" *ngFor="let factor of deal.topFactors">
+                    {{ factor.label }}: {{ factor.contribution | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="cost-trend" *ngIf="costTrendChartData">
+              <div class="cost-trend__header">
+                <h4>Exposure Trend</h4>
+                <span class="hint">Last 8 weeks</span>
+              </div>
+              <div class="chart-container small">
+                <p-chart type="line" [data]="costTrendChartData" [options]="costTrendChartOptions" height="140px"></p-chart>
               </div>
             </div>
           </div>
@@ -336,17 +374,30 @@
           </div>
           <div class="card-body">
             <div class="forecast-value">
-              {{ summary().myConfidenceWeightedPipelineValue | currency:'USD':'symbol':'1.0-0' }}
+              {{ summary().myConfidenceWeightedPipelineValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
             </div>
             <div class="forecast-meta">
               <span>Weighted pipeline</span>
               <span class="forecast-delta" [class.negative]="summary().myConfidenceWeightedPipelineValue - summary().myPipelineValueTotal < 0">
-                {{ (summary().myConfidenceWeightedPipelineValue - summary().myPipelineValueTotal) | currency:'USD':'symbol':'1.0-0' }}
+                {{ (summary().myConfidenceWeightedPipelineValue - summary().myPipelineValueTotal) | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
               </span>
             </div>
             <div class="forecast-footnote">
-              Raw pipeline: {{ summary().myPipelineValueTotal | currency:'USD':'symbol':'1.0-0' }}
+              Raw pipeline: {{ summary().myPipelineValueTotal | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
             </div>
+            <div class="forecast-aux" *ngIf="myQuotaTarget() as quota; else noQuota">
+              <div class="forecast-row">
+                <span>Quota</span>
+                <span>{{ quota | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
+              </div>
+              <div class="forecast-row">
+                <span>Progress</span>
+                <span>{{ myQuotaProgress() }}%</span>
+              </div>
+            </div>
+            <ng-template #noQuota>
+              <div class="forecast-footnote">Quota: Not set</div>
+            </ng-template>
           </div>
         </ng-container>
 
@@ -449,7 +500,7 @@
                   </div>
                 </div>
                 <div class="manager-deal__side">
-                  <div class="manager-deal__amount">{{ deal.amount | currency:'USD':'symbol':'1.0-0' }}</div>
+                  <div class="manager-deal__amount">{{ deal.amount | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</div>
                   <div class="manager-deal__metrics">
                     <span>Truth: {{ formatTruthCoverage(deal.truthCoverage) }}</span>
                     <span>TtT: {{ formatTimeToTruth(deal.timeToTruthDays) }}</span>
@@ -551,7 +602,7 @@
                   <div class="performer-stats">
                     <span>{{ performer.deals }} deals</span>
                     <span class="separator">•</span>
-                    <span class="revenue">{{ performer.revenue | currency:'USD':'symbol':'1.0-0' }}</span>
+                    <span class="revenue">{{ performer.revenue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
                   </div>
                 </div>
                 <div class="performer-badge" *ngIf="i === 0">
@@ -804,7 +855,7 @@
               <div class="health-metric">
                 <i class="pi pi-heart-fill"></i>
                 <div class="metric-content">
-                    <span class="metric-value">{{ summary().customerLifetimeValue | currency:'USD':'symbol':'1.0-0' }}</span>
+                    <span class="metric-value">{{ summary().customerLifetimeValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
                   <span class="metric-label">Avg CLV</span>
                 </div>
               </div>
@@ -1003,6 +1054,70 @@
     ></button>
   </div>
 </ng-template>
+
+<p-dialog
+  header="Cost of Not Knowing - Deal Breakdown"
+  [(visible)]="costBreakdownDialogOpen"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body"
+  [style]="{ width: 'min(720px, 95vw)' }"
+  [contentStyle]="{ maxHeight: '70vh', overflow: 'auto' }"
+>
+  <div class="cost-breakdown-dialog">
+    <div class="dialog-controls">
+      <label for="cost-sort">Sort by</label>
+      <select id="cost-sort" class="dialog-select" [(ngModel)]="costBreakdownSortKey">
+        <option value="exposure">Exposure</option>
+        <option value="amount">Deal amount</option>
+        <option value="stage">Stage</option>
+        <option value="name">Opportunity</option>
+      </select>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="toggleCostBreakdownSortDirection()">
+        {{ costBreakdownSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
+      </button>
+    </div>
+
+    <div class="cost-breakdown-list" *ngIf="summary().costOfNotKnowingBreakdown.length; else noCostBreakdown">
+      <div class="cost-breakdown-row" *ngFor="let deal of costBreakdownSorted()">
+        <div class="cost-breakdown-main">
+          <div class="cost-breakdown-name">{{ deal.opportunityName }}</div>
+          <div class="cost-breakdown-meta">{{ deal.accountName }} • {{ deal.stage }}</div>
+          <div class="cost-breakdown-factors">
+            <span class="cost-factor" *ngFor="let factor of deal.topFactors">
+              {{ factor.label }}: {{ factor.contribution | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+            </span>
+          </div>
+        </div>
+        <div class="cost-breakdown-values">
+          <div class="cost-breakdown-amount">
+            {{ deal.amount | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+          </div>
+          <div class="cost-breakdown-exposure">
+            {{ deal.costOfNotKnowingValue | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noCostBreakdown>
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i class="pi pi-shield"></i>
+        </div>
+        <h4>No exposure breakdown</h4>
+        <p>Cost of Not Knowing details will appear once there are active opportunities.</p>
+      </div>
+    </ng-template>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="layout-actions">
+      <button pButton type="button" class="btn-glass" (click)="closeCostBreakdownDialog()">Close</button>
+    </div>
+  </ng-template>
+</p-dialog>
 
 
 <p-dialog

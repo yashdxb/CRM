@@ -164,18 +164,50 @@ export const NAV_LINKS: NavLink[] = [
     path: '/app/settings',
     permission: PERMISSION_KEYS.administrationView,
     children: [
-      { label: 'Users', icon: 'pi-users', path: '/app/settings/users', permission: PERMISSION_KEYS.administrationView },
-      { label: 'Notifications', icon: 'pi-bell', path: '/app/settings/notifications', permission: PERMISSION_KEYS.administrationView },
-      { label: 'Roles', icon: 'pi-shield', path: '/app/settings/roles', permission: PERMISSION_KEYS.administrationView },
-      { label: 'Invite', icon: 'pi-user-plus', path: '/app/settings/invite', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Workspace', icon: 'pi-sliders-h', path: '/app/settings/workspace', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Approvals', icon: 'pi-check-square', path: '/app/settings/approvals', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Security levels', icon: 'pi-lock', path: '/app/settings/security-levels', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Qualification Policy', icon: 'pi-shield', path: '/app/settings/qualification-policy', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Qualification Thresholds', icon: 'pi-filter', path: '/app/settings/qualification-thresholds', permission: PERMISSION_KEYS.administrationManage },
-      { label: 'Lead assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
-      { label: 'Audit log', icon: 'pi-clipboard', path: '/app/settings/audit-log', permission: PERMISSION_KEYS.auditView },
-      { label: 'Tenant configuration', icon: 'pi-building', path: '/app/settings/tenants', permission: PERMISSION_KEYS.tenantsView }
+      {
+        label: 'People & Access',
+        icon: 'pi-users',
+        path: '/app/settings/users',
+        permission: PERMISSION_KEYS.administrationView,
+        children: [
+          { label: 'Users', icon: 'pi-users', path: '/app/settings/users', permission: PERMISSION_KEYS.administrationView },
+          { label: 'Invite', icon: 'pi-user-plus', path: '/app/settings/invite', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Roles & Permissions', icon: 'pi-shield', path: '/app/settings/roles', permission: PERMISSION_KEYS.administrationView },
+          { label: 'Security Levels', icon: 'pi-lock', path: '/app/settings/security-levels', permission: PERMISSION_KEYS.administrationManage }
+        ]
+      },
+      {
+        label: 'Workspace & Org',
+        icon: 'pi-building',
+        path: '/app/settings/workspace',
+        permission: PERMISSION_KEYS.administrationManage,
+        children: [
+          { label: 'Workspace', icon: 'pi-sliders-h', path: '/app/settings/workspace', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Tenant Configuration', icon: 'pi-building', path: '/app/settings/tenants', permission: PERMISSION_KEYS.tenantsView }
+        ]
+      },
+      {
+        label: 'Workflow & Rules',
+        icon: 'pi-sitemap',
+        path: '/app/settings/approvals',
+        permission: PERMISSION_KEYS.administrationManage,
+        children: [
+          { label: 'Approvals', icon: 'pi-check-square', path: '/app/settings/approvals', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Notifications', icon: 'pi-bell', path: '/app/settings/notifications', permission: PERMISSION_KEYS.administrationView },
+          { label: 'Lead Assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
+          { label: 'Qualification Policy', icon: 'pi-shield', path: '/app/settings/qualification-policy', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Qualification Thresholds', icon: 'pi-filter', path: '/app/settings/qualification-thresholds', permission: PERMISSION_KEYS.administrationManage }
+        ]
+      },
+      {
+        label: 'Trust & Audit',
+        icon: 'pi-clipboard',
+        path: '/app/settings/audit-log',
+        permission: PERMISSION_KEYS.auditView,
+        children: [
+          { label: 'Audit Log', icon: 'pi-clipboard', path: '/app/settings/audit-log', permission: PERMISSION_KEYS.auditView }
+        ]
+      }
     ]
   }
 ];

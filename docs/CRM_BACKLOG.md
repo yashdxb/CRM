@@ -546,8 +546,22 @@ Not done yet. Core CRM enhancements are strong, but integration and engagement i
 Source: ClickUp list `CRM Backlog` (id: 901710720381).
 
 - Approval workflow (optional) (ClickUp: 86dzp8xfq, Status: done)
-- As a manager, uncertainty exposure is quantified (Cost of Not Knowing) (ClickUp: 86dzp8xyv, Status: backlog)
-- As a system, confidence is calibrated against outcomes (ClickUp: 86dzp8xzj, Status: backlog)
+- As a manager, uncertainty exposure is quantified (Cost of Not Knowing) (ClickUp: 86dzp8xyv, Status: done)
+  - Acceptance criteria:
+    - Dashboard shows Cost of Not Knowing value and number of high-uncertainty deals.
+    - Cost of Not Knowing is derived from pipeline amounts and confidence scoring.
+  - Evidence:
+    - Cost of Not Knowing computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - Dashboard API exposure: `server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs`
+    - Dashboard UI display: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+- As a system, confidence is calibrated against outcomes (ClickUp: 86dzp8xzj, Status: done)
+  - Acceptance criteria:
+    - Calibration score is calculated from closed-won/lost outcomes over a lookback window.
+    - Calibration score and sample size are exposed to the dashboard.
+  - Evidence:
+    - Calibration logic: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - API contract: `server/src/CRM.Enterprise.Application/Dashboard/DashboardSummaryDto.cs`
+    - Dashboard UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
 - Coaching & Management (ClickUp: 86dzp8xeu, Status: in progress)
 - Conditional Forecasting (ClickUp: 86dzp8xey, Status: in progress)
 - CSV import/export flow (ClickUp: 86dzp8xh9, Status: done)
@@ -583,7 +597,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Risk checklist UI + state: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
     - Risk checklist logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
     - Risk checklist styling: `client/src/app/crm/features/dashboard/pages/dashboard.page.scss`
-- Module: Dashboard | As a Sales Rep, I want personal pipeline and forecast reports to track progress to quota. (ClickUp: 86dzp8x8g, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want personal pipeline and forecast reports to track progress to quota. (ClickUp: 86dzp8x8g, Status: done)
+  - Acceptance criteria:
+    - Dashboard shows personal pipeline and confidence-weighted pipeline totals.
+    - Forecast card includes deltas vs raw pipeline for the current user.
+    - Quota targets can be configured per user and displayed alongside personal pipeline.
+  - Evidence:
+    - My forecast values + quota target: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - Dashboard API response: `server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs`
+    - Dashboard UI cards + quota display: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - User quota field: `client/src/app/crm/features/settings/pages/user-edit.page.html`
 - Module: Dashboard | As a Sales Rep, I want renewal opportunities auto‑created at 90/60/30 days so renewal motions are never missed. (ClickUp: 86dzp8x92, Status: done)
 - Module: Dashboard | As a Sales Rep, I want the CRM to guide execution, not just store data — enforcing discipline, protecting forecast accuracy, and enabling clean handoffs. (ClickUp: 86dzp8x89, Status: done)
   - Acceptance criteria:
@@ -688,6 +711,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Settings | Approval Settings page (ClickUp: 86dzpdf2f, Status: done)
 - Module: Settings | As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded. (ClickUp: 86dzp8xah, Status: done)
 - Module: Settings | As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback. (ClickUp: 86dzp8x9c, Status: done)
+- Module: Settings | As an Admin, I want currencies sourced from the system reference data so selectors stay consistent. (ClickUp: 86dzq0q00, Status: done)
+  - Acceptance criteria:
+    - Currency dropdowns load from the server-side currencies catalog.
+    - Only active currencies are returned, ordered by sort order.
+    - UI falls back to the local list if the API is unavailable.
+  - Evidence:
+    - `server/src/CRM.Enterprise.Api/Controllers/SystemCurrenciesController.cs`
+    - `server/src/CRM.Enterprise.Infrastructure/Persistence/DatabaseInitializer.cs`
+    - `client/src/app/core/services/reference-data.service.ts`
 - Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (ClickUp: 86dzpf90r, Status: done)
 - Module: Settings | Capability-first permission model with role intent views (ClickUp: 86dzpfc1e, Status: done)
 - Module: Settings | Role drift + pack presets (ClickUp: 86dzpfc1x, Status: done)
@@ -695,5 +727,39 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Settings | Contextual Threshold Rules page (ClickUp: 86dzpdf2h, Status: done)
 - Module: Settings | Qualification Policy page (ClickUp: 86dzpdf2g, Status: done)
 - Module: Settings | As a user, I want configurable email alert types and thresholds. (ClickUp: 86dzpgja2, Status: done)
-- Risk & Cost of Not Knowing (ClickUp: 86dzp8xf4, Status: backlog)
+- Risk & Cost of Not Knowing (ClickUp: 86dzp8xf4, Status: done)
+  - Module: Dashboard | As a manager, I want a deal-level Cost of Not Knowing breakdown so I can see which missing factors drive exposure. (ClickUp: 86dzpr31w, Status: done)
+    - Acceptance criteria:
+      - Each opportunity shows a Cost of Not Knowing value and its top contributing missing factors.
+      - Opening a deal reveals the factor-level breakdown (factor, missing evidence, weight, contribution).
+      - Only opportunities within the user’s visibility scope are included.
+    - Evidence:
+      - Cost of Not Knowing breakdown computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+      - Dashboard summary contract: `server/src/CRM.Enterprise.Application/Dashboard/DashboardSummaryDto.cs`
+      - Dashboard UI breakdown: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+  - Module: Dashboard | As a manager, I want an exposure rollup with drill-down to the top contributing deals so I can focus coaching. (ClickUp: 86dzpr32x, Status: done)
+    - Acceptance criteria:
+      - Dashboard shows total exposure and top 5 contributing deals by default.
+      - Drill-down lists all contributing deals with sortable exposure values.
+      - Rollup matches the sum of included deals for the user’s visibility scope.
+    - Evidence:
+      - Rollup + drill-down UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+      - Sorting logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+  - Module: Dashboard | As a manager, I want an exposure trend line (4–8 weeks) to see if uncertainty is improving or worsening. (ClickUp: 86dzpr337, Status: done)
+    - Acceptance criteria:
+      - Trend chart shows weekly exposure values for the last 4–8 weeks (default 8).
+      - A clear indicator shows whether exposure is improving or worsening.
+      - Trend respects the user’s visibility scope.
+    - Evidence:
+      - Trend series generation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+      - Trend chart UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+  - Module: Settings | As an admin, I want configurable exposure weights per qualification factor so Cost of Not Knowing reflects my business. (ClickUp: 86dzpr33p, Status: done)
+    - Acceptance criteria:
+      - Admin can create/edit weights per qualification factor and save.
+      - Weights are validated (numeric, non-negative) and persisted per tenant.
+      - Changes affect Cost of Not Knowing calculations after refresh.
+    - Evidence:
+      - Qualification policy model + defaults: `server/src/CRM.Enterprise.Application/Qualifications/QualificationPolicy.cs`
+      - Qualification policy UI: `client/src/app/crm/features/settings/pages/qualification-policy.page.html`
+      - Exposure weights persistence: `server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs`
 - Tenant setting for module packs (ClickUp: 86dzp8xkf, Status: backlog)

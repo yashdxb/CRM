@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Azure.Messaging.ServiceBus;
+using CRM.Enterprise.Infrastructure;
 using Microsoft.Extensions.Options;
 
 namespace CRM.Enterprise.Infrastructure.Approvals;
@@ -9,9 +10,10 @@ public sealed class ServiceBusApprovalQueue
     private readonly ServiceBusSender? _sender;
     private readonly ApprovalQueueOptions _options;
 
-    public ServiceBusApprovalQueue(ServiceBusClient? client, IOptions<ApprovalQueueOptions> options)
+    public ServiceBusApprovalQueue(ServiceBusClientProvider clientProvider, IOptions<ApprovalQueueOptions> options)
     {
         _options = options.Value;
+        var client = clientProvider.Client;
         if (client is null || !_options.Enabled || string.IsNullOrWhiteSpace(_options.QueueName))
         {
             return;

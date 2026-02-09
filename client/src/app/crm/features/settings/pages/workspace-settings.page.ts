@@ -18,6 +18,7 @@ import { TimeZoneService } from '../../../../core/services/time-zone.service';
 import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { RoleSummary } from '../models/user-admin.model';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 
 interface Option<T = string> {
   label: string;
@@ -49,6 +50,7 @@ export class WorkspaceSettingsPage {
   private readonly toastService = inject(AppToastService);
   private readonly fb = inject(FormBuilder);
   private readonly timeZoneService = inject(TimeZoneService);
+  private readonly referenceData = inject(ReferenceDataService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -61,18 +63,12 @@ export class WorkspaceSettingsPage {
   protected timeZoneOptions: TimeZoneOption[] = [];
   protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
-  protected readonly currencyOptions: Option[] = [
-    { label: 'USD', value: 'USD' },
-    { label: 'CAD', value: 'CAD' },
-    { label: 'EUR', value: 'EUR' },
-    { label: 'GBP', value: 'GBP' },
-    { label: 'INR', value: 'INR' }
-  ];
+  protected currencyOptions: Option[] = [];
 
   protected readonly settingsForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     timeZone: ['UTC', [Validators.required]],
-    currency: ['USD', [Validators.required]],
+    currency: ['', [Validators.required]],
     leadFirstTouchSlaHours: [24, [Validators.min(1), Validators.max(168)]],
     defaultContractTermMonths: [12, [Validators.min(1), Validators.max(120)]],
     defaultDeliveryOwnerRoleId: [null as string | null]
@@ -82,6 +78,7 @@ export class WorkspaceSettingsPage {
     this.timeZoneService.getTimeZones().subscribe((options) => {
       this.timeZoneOptions = options;
     });
+    this.loadCurrencies();
     this.loadRoles();
     this.loadSettings();
   }
@@ -111,7 +108,7 @@ export class WorkspaceSettingsPage {
       ...payload,
       name: payload.name ?? '',
       timeZone: payload.timeZone ?? 'UTC',
-      currency: payload.currency ?? 'USD',
+      currency: this.resolveCurrency(payload.currency ?? null),
       leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? 24,
       defaultContractTermMonths: payload.defaultContractTermMonths ?? 12,
       defaultDeliveryOwnerRoleId: payload.defaultDeliveryOwnerRoleId ?? null
@@ -134,7 +131,7 @@ export class WorkspaceSettingsPage {
     this.settingsForm.patchValue({
       name: settings.name,
       timeZone: settings.timeZone,
-      currency: settings.currency,
+      currency: this.resolveCurrency(settings.currency ?? null),
       leadFirstTouchSlaHours: settings.leadFirstTouchSlaHours ?? 24,
       defaultContractTermMonths: settings.defaultContractTermMonths ?? 12,
       defaultDeliveryOwnerRoleId: settings.defaultDeliveryOwnerRoleId ?? null
@@ -158,6 +155,29 @@ export class WorkspaceSettingsPage {
       next: (roles) => this.roles.set(roles ?? []),
       error: () => this.roles.set([])
     });
+  }
+
+  protected currentCurrency() {
+    return this.settingsForm.value.currency || this.currencyOptions[0]?.value || '';
+  }
+
+  private loadCurrencies() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      this.currencyOptions = items
+        .filter((currency) => currency.isActive)
+        .map((currency) => ({
+          label: currency.code,
+          value: currency.code
+        }));
+      const fallback = this.currencyOptions[0]?.value;
+      if (fallback && !this.settingsForm.value.currency) {
+        this.settingsForm.patchValue({ currency: fallback });
+      }
+    });
+  }
+
+  private resolveCurrency(value: string | null) {
+    return value || this.currencyOptions[0]?.value || '';
   }
 
 }

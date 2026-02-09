@@ -298,6 +298,14 @@ export class LeadConvertPage implements OnInit {
         { key: 'strategic', delta: -15 },
         { key: 'fastVelocity', delta: -10 },
         { key: 'slowVelocity', delta: 10 }
+      ],
+      exposureWeights: [
+        { key: 'budget', weight: 25 },
+        { key: 'timeline', weight: 20 },
+        { key: 'economicBuyer', weight: 20 },
+        { key: 'problem', weight: 15 },
+        { key: 'readiness', weight: 10 },
+        { key: 'icpFit', weight: 10 }
       ]
     };
   }

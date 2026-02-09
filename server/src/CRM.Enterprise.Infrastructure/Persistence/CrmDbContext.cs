@@ -39,6 +39,7 @@ public class CrmDbContext : DbContext
     public DbSet<ImportJob> ImportJobs => Set<ImportJob>();
     public DbSet<User> Users => Set<User>();
     public DbSet<TimeZoneDefinition> TimeZones => Set<TimeZoneDefinition>();
+    public DbSet<CurrencyDefinition> Currencies => Set<CurrencyDefinition>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
@@ -152,6 +153,23 @@ public class CrmDbContext : DbContext
             .Property(zone => zone.FlagCode)
             .HasMaxLength(8)
             .IsRequired();
+        // System-wide currency catalog (not tenant-scoped).
+        modelBuilder.Entity<CurrencyDefinition>().ToTable("Currencies", CrmSchema);
+        modelBuilder.Entity<CurrencyDefinition>()
+            .HasIndex(currency => currency.Code)
+            .IsUnique();
+        modelBuilder.Entity<CurrencyDefinition>()
+            .Property(currency => currency.Code)
+            .HasMaxLength(8)
+            .IsRequired();
+        modelBuilder.Entity<CurrencyDefinition>()
+            .Property(currency => currency.Name)
+            .HasMaxLength(120)
+            .IsRequired();
+        modelBuilder.Entity<CurrencyDefinition>()
+            .Property(currency => currency.Symbol)
+            .HasMaxLength(16)
+            .IsRequired();
         modelBuilder.Entity<CustomFieldDefinition>().ToTable("CustomFieldDefinitions", CrmSchema);
         modelBuilder.Entity<CustomFieldValue>().ToTable("CustomFieldValues", CrmSchema);
         modelBuilder.Entity<Supplier>().ToTable("Suppliers", SupplyChainSchema);
@@ -224,6 +242,9 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<User>()
             .Property(u => u.MustChangePassword)
             .HasDefaultValue(false);
+        modelBuilder.Entity<User>()
+            .Property(u => u.MonthlyQuota)
+            .HasPrecision(18, 2);
         modelBuilder.Entity<User>()
             .HasIndex(u => new { u.TenantId, u.EmailNormalized })
             .HasFilter("[EmailNormalized] IS NOT NULL AND [IsDeleted] = 0")

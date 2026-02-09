@@ -28,7 +28,7 @@
               </span>
               <span class="meta-chip">
                 <i class="pi pi-money-bill"></i>
-                {{ form.currency || 'USD' }}
+                {{ form.currency || resolveCurrencyCode() }}
               </span>
             </div>
           </div>

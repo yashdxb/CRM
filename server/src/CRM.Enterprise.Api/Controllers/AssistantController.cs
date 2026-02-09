@@ -57,7 +57,7 @@ public class AssistantController : ControllerBase
             Response.Headers["Retry-After"] = ex.RetryAfterSeconds.ToString();
             return StatusCode(429, new { error = ex.Message, retryAfterSeconds = ex.RetryAfterSeconds });
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
             return StatusCode(503, new { error = "Assistant is unavailable right now. Please try again shortly." });
         }

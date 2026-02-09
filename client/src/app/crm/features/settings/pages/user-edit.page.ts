@@ -16,6 +16,8 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { TimeZoneService } from '../../../../core/services/time-zone.service';
 import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
+import { WorkspaceSettingsService } from '../services/workspace-settings.service';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 
 @Component({
   selector: 'app-user-edit-page',
@@ -41,11 +43,15 @@ export class UserEditPage implements OnInit {
   private readonly router = inject(Router);
   private readonly toastService = inject(AppToastService);
   private readonly timeZoneService = inject(TimeZoneService);
+  private readonly settingsService = inject(WorkspaceSettingsService);
+  private readonly referenceData = inject(ReferenceDataService);
   protected readonly user = signal<UserDetailResponse | null>(null);
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
+  protected readonly currencyCode = signal<string>('');
+  private currencyFallback = '';
   protected readonly canManageAdmin = signal(
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
@@ -68,6 +74,7 @@ export class UserEditPage implements OnInit {
     timeZone: ['UTC', Validators.required],
     locale: ['en-US', Validators.required],
     roleIds: [[] as string[]],
+    monthlyQuota: [null as number | null, [Validators.min(0)]],
     isActive: [true],
     temporaryPassword: ['']
   });
@@ -82,6 +89,7 @@ export class UserEditPage implements OnInit {
     this.timeZoneService.getTimeZones().subscribe((options) => {
       this.timezoneOptions = options;
     });
+    this.loadCurrencyContext();
 
     this.loading.set(true);
     this.dataService.getRoles().subscribe({
@@ -98,6 +106,7 @@ export class UserEditPage implements OnInit {
           timeZone: detail.timeZone ?? 'UTC',
           locale: detail.locale ?? 'en-US',
           roleIds: detail.roleIds,
+          monthlyQuota: detail.monthlyQuota ?? null,
           isActive: detail.isActive,
           temporaryPassword: ''
         });
@@ -131,6 +140,7 @@ export class UserEditPage implements OnInit {
       email: this.form.value.email?.trim().toLowerCase() ?? '',
       timeZone: this.form.value.timeZone,
       locale: this.form.value.locale,
+      monthlyQuota: this.form.value.monthlyQuota ?? null,
       isActive: !!this.form.value.isActive,
       roleIds: (this.form.value.roleIds ?? []) as string[],
       temporaryPassword: this.form.value.temporaryPassword?.trim() || undefined
@@ -161,6 +171,25 @@ export class UserEditPage implements OnInit {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
+  }
+
+  private loadCurrencyContext() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      const active = items.filter((currency) => currency.isActive);
+      this.currencyFallback = active[0]?.code ?? items[0]?.code ?? '';
+      if (!this.currencyCode() && this.currencyFallback) {
+        this.currencyCode.set(this.currencyFallback);
+      }
+    });
+
+    this.settingsService.getSettings().subscribe({
+      next: (settings) => {
+        const resolved = settings.currency || this.currencyFallback;
+        if (resolved) {
+          this.currencyCode.set(resolved);
+        }
+      }
+    });
   }
 
   private generatePasswordValue() {

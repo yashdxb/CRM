@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Azure.Messaging.ServiceBus;
+using CRM.Enterprise.Infrastructure;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,13 +13,13 @@ public class EmailQueueWorker : BackgroundService
     private readonly AcsEmailSender _sender;
     private readonly ILogger<EmailQueueWorker> _logger;
 
-    public EmailQueueWorker(ServiceBusClient? client, IOptions<AcsEmailOptions> options, AcsEmailSender sender, ILogger<EmailQueueWorker> logger)
+    public EmailQueueWorker(ServiceBusClientProvider clientProvider, IOptions<AcsEmailOptions> options, AcsEmailSender sender, ILogger<EmailQueueWorker> logger)
     {
         _sender = sender;
         _logger = logger;
 
         var queueName = options.Value?.QueueName ?? "email-outbox";
-        _processor = client?.CreateProcessor(queueName, new ServiceBusProcessorOptions
+        _processor = clientProvider.Client?.CreateProcessor(queueName, new ServiceBusProcessorOptions
         {
             AutoCompleteMessages = false,
             MaxConcurrentCalls = 2

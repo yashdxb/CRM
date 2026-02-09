@@ -71,6 +71,7 @@ export interface UserDetailResponse {
   email: string;
   timeZone?: string | null;
   locale?: string | null;
+  monthlyQuota?: number | null;
   isActive: boolean;
   createdAtUtc: string;
   lastLoginAtUtc?: string | null;
@@ -90,6 +91,7 @@ export interface UpsertUserRequest {
   email: string;
   timeZone?: string | null;
   locale?: string | null;
+  monthlyQuota?: number | null;
   isActive: boolean;
   roleIds: string[];
   temporaryPassword?: string | null;

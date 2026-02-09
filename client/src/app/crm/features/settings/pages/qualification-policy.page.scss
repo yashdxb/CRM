@@ -1121,6 +1121,16 @@
   grid-template-columns: 1fr 120px auto;
 }
 
+.factor-label {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.factor-suffix {
+  font-weight: 600;
+  color: #64748b;
+}
+
 .policy-row .btn {
   height: 40px;
   align-self: center;

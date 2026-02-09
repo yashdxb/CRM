@@ -14,8 +14,10 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 import {
   QualificationModifierRule,
+  QualificationExposureWeight,
   QualificationPolicy,
   WorkspaceSettings
 } from '../models/workspace-settings.model';
@@ -49,6 +51,7 @@ export class QualificationPolicyPage {
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly toastService = inject(AppToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly referenceData = inject(ReferenceDataService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -59,7 +62,7 @@ export class QualificationPolicyPage {
   protected readonly settingsForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     timeZone: ['UTC', [Validators.required]],
-    currency: ['USD', [Validators.required]]
+    currency: ['', [Validators.required]]
   });
 
   protected readonly qualificationPolicy = signal<QualificationPolicy>(QualificationPolicyPage.defaultPolicy());
@@ -72,9 +75,20 @@ export class QualificationPolicyPage {
     { label: 'Slow velocity', value: 'slowVelocity' }
   ];
 
+  protected readonly exposureWeightOptions: Array<{ key: string; label: string }> = [
+    { key: 'budget', label: 'Budget availability' },
+    { key: 'timeline', label: 'Buying timeline' },
+    { key: 'economicBuyer', label: 'Economic buyer' },
+    { key: 'problem', label: 'Problem severity' },
+    { key: 'readiness', label: 'Readiness to spend' },
+    { key: 'icpFit', label: 'ICP fit' }
+  ];
+
   private loadedSettings: WorkspaceSettings | null = null;
+  private currencyFallback = '';
 
   constructor() {
+    this.loadCurrencyFallback();
     this.loadSettings();
   }
 
@@ -100,7 +114,7 @@ export class QualificationPolicyPage {
     const safePayload = {
       name: this.loadedSettings.name ?? 'Workspace',
       timeZone: this.loadedSettings.timeZone ?? 'UTC',
-      currency: this.loadedSettings.currency ?? 'USD',
+      currency: this.resolveCurrency(this.loadedSettings.currency ?? null),
       leadFirstTouchSlaHours: this.loadedSettings.leadFirstTouchSlaHours ?? 24,
       defaultContractTermMonths: this.loadedSettings.defaultContractTermMonths ?? null,
       defaultDeliveryOwnerRoleId: this.loadedSettings.defaultDeliveryOwnerRoleId ?? null,
@@ -129,9 +143,17 @@ export class QualificationPolicyPage {
     this.settingsForm.patchValue({
       name: settings.name,
       timeZone: settings.timeZone,
-      currency: settings.currency
+      currency: this.resolveCurrency(settings.currency ?? null)
     });
-    this.qualificationPolicy.set(settings.qualificationPolicy ?? QualificationPolicyPage.defaultPolicy());
+    const policy = settings.qualificationPolicy ?? QualificationPolicyPage.defaultPolicy();
+    const normalized = {
+      ...QualificationPolicyPage.defaultPolicy(),
+      ...policy,
+      exposureWeights: (policy.exposureWeights && policy.exposureWeights.length > 0)
+        ? policy.exposureWeights
+        : QualificationPolicyPage.defaultPolicy().exposureWeights
+    };
+    this.qualificationPolicy.set(normalized);
   }
 
   protected addModifierRule() {
@@ -141,6 +163,32 @@ export class QualificationPolicyPage {
       ...current,
       modifiers: [...current.modifiers, nextRule]
     });
+  }
+
+  protected updateExposureWeight(key: string, weight: number | null) {
+    const safeWeight = Number.isFinite(weight) ? Math.max(0, Math.min(100, weight ?? 0)) : 0;
+    const current = this.qualificationPolicy();
+    const next = (current.exposureWeights ?? []).map((item) =>
+      item.key === key ? { ...item, weight: safeWeight } : item
+    );
+    this.qualificationPolicy.set({ ...current, exposureWeights: next });
+  }
+
+  protected exposureWeightFor(key: string) {
+    return (this.qualificationPolicy().exposureWeights ?? []).find((item) => item.key === key)?.weight ?? 0;
+  }
+
+  protected exposureWeightTotal() {
+    return (this.qualificationPolicy().exposureWeights ?? []).reduce(
+      (sum, item) => sum + (item.weight ?? 0),
+      0
+    );
+  }
+
+  protected exposureWeightsMissing() {
+    return this.exposureWeightOptions.filter(
+      (option) => !(this.qualificationPolicy().exposureWeights ?? []).some((w) => w.key === option.key)
+    );
   }
 
   protected removeModifierRule(index: number) {
@@ -168,6 +216,20 @@ export class QualificationPolicyPage {
     this.toastService.show(tone, message, 3000);
   }
 
+  private loadCurrencyFallback() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      const active = items.filter((currency) => currency.isActive);
+      this.currencyFallback = active[0]?.code ?? items[0]?.code ?? '';
+      if (!this.settingsForm.value.currency && this.currencyFallback) {
+        this.settingsForm.patchValue({ currency: this.currencyFallback });
+      }
+    });
+  }
+
+  private resolveCurrency(value: string | null) {
+    return value || this.currencyFallback || '';
+  }
+
   private static defaultPolicy(): QualificationPolicy {
     return {
       defaultThreshold: 75,
@@ -182,6 +244,14 @@ export class QualificationPolicyPage {
         { key: 'strategic', delta: -15 },
         { key: 'fastVelocity', delta: -10 },
         { key: 'slowVelocity', delta: 10 }
+      ],
+      exposureWeights: [
+        { key: 'budget', weight: 25 },
+        { key: 'timeline', weight: 20 },
+        { key: 'economicBuyer', weight: 20 },
+        { key: 'problem', weight: 15 },
+        { key: 'readiness', weight: 10 },
+        { key: 'icpFit', weight: 10 }
       ]
     };
   }

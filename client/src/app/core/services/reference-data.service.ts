@@ -1,5 +1,7 @@
-import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import { PAYMENT_TERMS_SEED_DATA } from '../../packs/supply-chain/system-admin/reference-data/data/payment-terms-seed.data';
 import { INCOTERMS_SEED_DATA } from '../../packs/supply-chain/system-admin/reference-data/data/incoterms-seed.data';
@@ -11,6 +13,7 @@ import { PaymentTerm } from '../../packs/supply-chain/system-admin/reference-dat
 import { Incoterm } from '../../packs/supply-chain/system-admin/reference-data/data/incoterm.model';
 import { ShippingLane } from '../../packs/supply-chain/system-admin/reference-data/data/shipping-lane.model';
 import { ShippingRate } from '../../packs/supply-chain/system-admin/reference-data/data/shipping-rate.model';
+import { environment } from '../../../environments/environment';
 
 export interface CurrencyReference {
   id: string;
@@ -60,6 +63,8 @@ export interface TransportationModeReference {
 
 @Injectable({ providedIn: 'root' })
 export class ReferenceDataService {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = environment.apiUrl;
   private readonly currencies: CurrencyReference[] = [
     { id: 'cur-USD', code: 'USD', name: 'US Dollar', symbol: '$', isActive: true },
     { id: 'cur-EUR', code: 'EUR', name: 'Euro', symbol: '€', isActive: true },
@@ -152,7 +157,9 @@ export class ReferenceDataService {
   ];
 
   getCurrencies(): Observable<CurrencyReference[]> {
-    return of(this.currencies.slice());
+    return this.http.get<CurrencyReference[]>(`${this.baseUrl}/api/system/currencies`).pipe(
+      catchError(() => of(this.currencies.slice()))
+    );
   }
 
   getPaymentTerms(): Observable<PaymentTerm[]> {

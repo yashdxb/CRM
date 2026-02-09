@@ -20,6 +20,8 @@ import { UserAdminDataService } from '../../settings/services/user-admin-data.se
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
+import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 
 interface StageOption {
   label: string;
@@ -63,7 +65,11 @@ export class OpportunitiesPage {
   protected readonly opportunities = signal<Opportunity[]>([]);
   protected readonly total = signal(0);
   protected readonly loading = signal(true);
+  protected readonly currencyCode = signal<string>('');
+  private currencyFallback = '';
   private readonly toastService = inject(AppToastService);
+  private readonly settingsService = inject(WorkspaceSettingsService);
+  private readonly referenceData = inject(ReferenceDataService);
   protected readonly canManage = computed(() => {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesManage);
@@ -110,6 +116,7 @@ export class OpportunitiesPage {
   ) {
     this.load();
     this.loadOwners();
+    this.loadCurrencyContext();
   }
 
   protected load() {
@@ -204,6 +211,29 @@ export class OpportunitiesPage {
       { header: 'Owner', value: (row) => row.owner }
     ];
     exportToCsv(rows, columns, 'opportunities.csv');
+  }
+
+  private loadCurrencyContext() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      const active = items.filter((currency) => currency.isActive);
+      this.currencyFallback = active[0]?.code ?? items[0]?.code ?? '';
+      if (!this.currencyCode() && this.currencyFallback) {
+        this.currencyCode.set(this.currencyFallback);
+      }
+    });
+
+    this.settingsService.getSettings().subscribe({
+      next: (settings) => {
+        const resolved = settings.currency || this.currencyFallback;
+        if (resolved) {
+          this.currencyCode.set(resolved);
+        }
+      }
+    });
+  }
+
+  protected resolveCurrencyCode() {
+    return this.currencyCode() || this.currencyFallback || '';
   }
 
   protected onInlineStageChange(row: Opportunity, stage: string) {

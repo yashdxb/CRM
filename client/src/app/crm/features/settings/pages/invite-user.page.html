@@ -102,6 +102,19 @@
               styleClass="w-full"
             ></p-select>
           </div>
+          <div class="field">
+            <label for="monthlyQuota">Monthly quota ({{ currencyCode() || 'N/A' }})</label>
+            <input
+              pInputText
+              id="monthlyQuota"
+              type="number"
+              min="0"
+              step="0.01"
+              formControlName="monthlyQuota"
+              placeholder="e.g. 75000"
+              class="w-full"
+            />
+          </div>
           <div class="field full">
             <label for="roles">Roles</label>
             <p-multiSelect

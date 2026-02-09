@@ -18,6 +18,7 @@ import { CreateTenantRequest } from '../models/tenant-admin.model';
 import { TenantAdminDataService } from '../services/tenant-admin-data.service';
 import { TimeZoneService } from '../../../../core/services/time-zone.service';
 import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 
 interface Option<T = string> {
   label: string;
@@ -61,6 +62,7 @@ export class TenantCreatePage {
   private readonly formBuilder = inject(FormBuilder);
   private readonly toastService = inject(AppToastService);
   private readonly timeZoneService = inject(TimeZoneService);
+  private readonly referenceData = inject(ReferenceDataService);
   protected readonly router = inject(Router);
 
   protected readonly saving = signal(false);
@@ -176,7 +178,7 @@ export class TenantCreatePage {
     adminEmail: ['', [Validators.required, Validators.email]],
     adminPassword: ['', Validators.required],
     timeZone: ['UTC'],
-    currency: ['USD'],
+    currency: [''],
     supplyChainEnabled: [false],
     modules: this.modulesForm
   });
@@ -185,18 +187,13 @@ export class TenantCreatePage {
   protected timeZoneOptions: TimeZoneOption[] = [];
   protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
-  protected readonly currencyOptions: Option[] = [
-    { label: 'USD', value: 'USD', icon: 'pi-dollar', iconClass: 'icon-green' },
-    { label: 'CAD', value: 'CAD', icon: 'pi-wallet', iconClass: 'icon-blue' },
-    { label: 'EUR', value: 'EUR', icon: 'pi-euro', iconClass: 'icon-indigo' },
-    { label: 'GBP', value: 'GBP', icon: 'pi-pound', iconClass: 'icon-rose' },
-    { label: 'INR', value: 'INR', icon: 'pi-credit-card', iconClass: 'icon-amber' }
-  ];
+  protected currencyOptions: Array<Option & { symbol?: string; name?: string }> = [];
 
   constructor() {
     this.timeZoneService.getTimeZones().subscribe((options) => {
       this.timeZoneOptions = options;
     });
+    this.loadCurrencies();
   }
 
   protected onSupplyChainToggle() {
@@ -238,7 +235,11 @@ export class TenantCreatePage {
       next: (tenant) => {
         this.saving.set(false);
         this.raiseToast('success', `Tenant ${tenant.key} created`);
-        this.tenantForm.reset({ timeZone: 'UTC', currency: 'USD', supplyChainEnabled: false });
+        this.tenantForm.reset({
+          timeZone: 'UTC',
+          currency: this.currencyOptions[0]?.value ?? '',
+          supplyChainEnabled: false
+        });
         this.resetModuleSelections();
       },
       error: () => {
@@ -257,6 +258,21 @@ export class TenantCreatePage {
     return this.supplyChainModules
       .map((module) => module.key)
       .filter((key) => values[key]);
+  }
+
+  private loadCurrencies() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      const active = items.filter((currency) => currency.isActive);
+      this.currencyOptions = active.map((currency) => ({
+        label: currency.code,
+        value: currency.code,
+        symbol: currency.symbol,
+        name: currency.name
+      }));
+      if (!this.tenantForm.value.currency && this.currencyOptions.length > 0) {
+        this.tenantForm.patchValue({ currency: this.currencyOptions[0].value });
+      }
+    });
   }
 
   private resetModuleSelections() {

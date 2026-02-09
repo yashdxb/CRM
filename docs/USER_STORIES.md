@@ -142,6 +142,8 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Settings | Approval Settings page
 - Module: Settings | Qualification Policy page
 - Module: Settings | Contextual Threshold Rules page
+- Module: Settings | As an Admin, I want currencies sourced from the system reference data so selectors stay consistent. (Done)
+- Module: Settings | As an Admin, I want settings navigation grouped into People & Access, Workspace & Org, Workflow & Rules, and Trust & Audit so I can find policies quickly and scale as new settings are added.
 - Module: Settings | As an Admin, I want permissions grouped by capability with role intent views so roles are consistent and easy to audit. (Done)
 - Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (Done)
 - Module: Settings | As an Admin, I want separate permissions for request/approve/override so edit rights do not grant approvals. (Must)
@@ -152,4 +154,8 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Settings | As a Super Admin, I want to manage configurable security levels (create/edit/delete, set default) so high-risk actions are gated independently of hierarchy with no hard-coded tiers.
 - Next
 - Risk & Cost of Not Knowing
+  - Module: Dashboard | As a manager, I want a deal-level Cost of Not Knowing breakdown so I can see which missing factors drive exposure. (Done)
+  - Module: Dashboard | As a manager, I want an exposure rollup with drill-down to the top contributing deals so I can focus coaching. (Done)
+  - Module: Dashboard | As a manager, I want an exposure trend line (4–8 weeks) to see if uncertainty is improving or worsening. (Done)
+  - Module: Settings | As an admin, I want configurable exposure weights per qualification factor so Cost of Not Knowing reflects my business. (Done)
 - Tenant setting for module packs

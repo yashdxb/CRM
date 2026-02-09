@@ -1672,6 +1672,7 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         await SeedPermissionCatalogAsync(cancellationToken);
         await SeedTimeZonesAsync(cancellationToken);
+        await SeedCurrenciesAsync(cancellationToken);
 
         var defaultTenant = await EnsureDefaultTenantAsync(cancellationToken);
         var seedTenants = await EnsureSeedTenantsAsync(defaultTenant.Key, cancellationToken);
@@ -1791,6 +1792,28 @@ public class DatabaseInitializer : IDatabaseInitializer
         };
 
         _dbContext.TimeZones.AddRange(timeZones);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SeedCurrenciesAsync(CancellationToken cancellationToken)
+    {
+        if (await _dbContext.Currencies.AnyAsync(cancellationToken))
+        {
+            return;
+        }
+
+        var currencies = new[]
+        {
+            new CurrencyDefinition { Code = "USD", Name = "US Dollar", Symbol = "$", IsActive = true, SortOrder = 1 },
+            new CurrencyDefinition { Code = "EUR", Name = "Euro", Symbol = "€", IsActive = true, SortOrder = 2 },
+            new CurrencyDefinition { Code = "GBP", Name = "British Pound", Symbol = "£", IsActive = true, SortOrder = 3 },
+            new CurrencyDefinition { Code = "CAD", Name = "Canadian Dollar", Symbol = "C$", IsActive = true, SortOrder = 4 },
+            new CurrencyDefinition { Code = "JPY", Name = "Japanese Yen", Symbol = "¥", IsActive = true, SortOrder = 5 },
+            new CurrencyDefinition { Code = "AUD", Name = "Australian Dollar", Symbol = "A$", IsActive = true, SortOrder = 6 },
+            new CurrencyDefinition { Code = "CHF", Name = "Swiss Franc", Symbol = "CHF", IsActive = true, SortOrder = 7 }
+        };
+
+        _dbContext.Currencies.AddRange(currencies);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 

@@ -175,6 +175,7 @@
     [visible]="editorOpen()"
     (visibleChange)="editorOpen.set($event)"
     [modal]="true"
+    styleClass="security-level-dialog"
     [style]="{ width: '32rem' }"
     [draggable]="false"
     [resizable]="false"
@@ -182,12 +183,25 @@
   >
     <form class="dialog-form" [formGroup]="securityForm" (ngSubmit)="saveSecurityLevel()">
       <div class="dialog-body">
-        <div class="field">
-          <label>Name <span class="required">*</span></label>
-          <input pInputText formControlName="name" placeholder="e.g. High Risk Approval" />
-          <small class="field-hint">Displayed in role configuration dropdowns.</small>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Name <span class="required">*</span></label>
+            <input pInputText formControlName="name" placeholder="e.g. High Risk Approval" />
+            <small class="field-hint">Shown in role configuration dropdowns.</small>
+          </div>
+          <div class="form-row">
+            <label>Rank</label>
+            <p-inputNumber
+              formControlName="rank"
+              [min]="0"
+              [showButtons]="true"
+              styleClass="w-full"
+              inputStyleClass="w-full"
+            ></p-inputNumber>
+            <small class="field-hint">Lower rank = lower clearance. Used for comparisons.</small>
+          </div>
         </div>
-        <div class="field">
+        <div class="form-row">
           <label>Description</label>
           <textarea
             pInputText
@@ -196,24 +210,11 @@
             placeholder="Optional description of this level"
           ></textarea>
         </div>
-        <div class="field">
-          <label>Rank</label>
-          <p-inputNumber
-            formControlName="rank"
-            [min]="0"
-            [showButtons]="true"
-            styleClass="w-full"
-            inputStyleClass="w-full"
-          ></p-inputNumber>
-          <small class="field-hint">Lower rank = lower clearance. Used for comparisons.</small>
-        </div>
-        <div class="field">
-          <label>Default Level</label>
-          <div class="toggle-row">
-            <label class="checkbox-field">
-              <p-checkbox formControlName="isDefault" [binary]="true"></p-checkbox>
-              <span>Set as default for new roles</span>
-            </label>
+        <div class="form-row checkbox-row">
+          <p-checkbox formControlName="isDefault" [binary]="true"></p-checkbox>
+          <div class="checkbox-copy">
+            <span>Set as default for new roles</span>
+            <small>Only one security level can be default at a time.</small>
           </div>
         </div>
       </div>

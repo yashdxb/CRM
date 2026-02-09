@@ -12,6 +12,7 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 import {
   QualificationPolicy,
   QualificationThresholdRule,
@@ -45,6 +46,7 @@ export class QualificationThresholdsPage {
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly toastService = inject(AppToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly referenceData = inject(ReferenceDataService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -55,7 +57,7 @@ export class QualificationThresholdsPage {
   protected readonly settingsForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     timeZone: ['UTC', [Validators.required]],
-    currency: ['USD', [Validators.required]]
+    currency: ['', [Validators.required]]
   });
 
   protected readonly qualificationPolicy = signal<QualificationPolicy>(QualificationThresholdsPage.defaultPolicy());
@@ -84,8 +86,10 @@ export class QualificationThresholdsPage {
   ];
 
   private loadedSettings: WorkspaceSettings | null = null;
+  private currencyFallback = '';
 
   constructor() {
+    this.loadCurrencyFallback();
     this.loadSettings();
   }
 
@@ -112,7 +116,7 @@ export class QualificationThresholdsPage {
     const safePayload = {
       name: this.loadedSettings.name ?? 'Workspace',
       timeZone: this.loadedSettings.timeZone ?? 'UTC',
-      currency: this.loadedSettings.currency ?? 'USD',
+      currency: this.resolveCurrency(this.loadedSettings.currency ?? null),
       leadFirstTouchSlaHours: this.loadedSettings.leadFirstTouchSlaHours ?? 24,
       defaultContractTermMonths: this.loadedSettings.defaultContractTermMonths ?? null,
       defaultDeliveryOwnerRoleId: this.loadedSettings.defaultDeliveryOwnerRoleId ?? null,
@@ -144,9 +148,17 @@ export class QualificationThresholdsPage {
     this.settingsForm.patchValue({
       name: settings.name,
       timeZone: settings.timeZone,
-      currency: settings.currency
+      currency: this.resolveCurrency(settings.currency ?? null)
     });
-    this.qualificationPolicy.set(settings.qualificationPolicy ?? QualificationThresholdsPage.defaultPolicy());
+    const policy = settings.qualificationPolicy ?? QualificationThresholdsPage.defaultPolicy();
+    const normalized = {
+      ...QualificationThresholdsPage.defaultPolicy(),
+      ...policy,
+      exposureWeights: (policy.exposureWeights && policy.exposureWeights.length > 0)
+        ? policy.exposureWeights
+        : QualificationThresholdsPage.defaultPolicy().exposureWeights
+    };
+    this.qualificationPolicy.set(normalized);
   }
 
   protected addThresholdRule() {
@@ -183,6 +195,20 @@ export class QualificationThresholdsPage {
     this.toastService.show(tone, message, 3000);
   }
 
+  private loadCurrencyFallback() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      const active = items.filter((currency) => currency.isActive);
+      this.currencyFallback = active[0]?.code ?? items[0]?.code ?? '';
+      if (!this.settingsForm.value.currency && this.currencyFallback) {
+        this.settingsForm.patchValue({ currency: this.currencyFallback });
+      }
+    });
+  }
+
+  private resolveCurrency(value: string | null) {
+    return value || this.currencyFallback || '';
+  }
+
   private static defaultPolicy(): QualificationPolicy {
     return {
       defaultThreshold: 75,
@@ -197,6 +223,14 @@ export class QualificationThresholdsPage {
         { key: 'strategic', delta: -15 },
         { key: 'fastVelocity', delta: -10 },
         { key: 'slowVelocity', delta: 10 }
+      ],
+      exposureWeights: [
+        { key: 'budget', weight: 25 },
+        { key: 'timeline', weight: 20 },
+        { key: 'economicBuyer', weight: 20 },
+        { key: 'problem', weight: 15 },
+        { key: 'readiness', weight: 10 },
+        { key: 'icpFit', weight: 10 }
       ]
     };
   }

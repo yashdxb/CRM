@@ -44,7 +44,7 @@ public sealed class RfqAwardReadService : IRfqAwardReadService
             .AsNoTracking()
             .Include(a => a.Supplier)
             .Include(a => a.Rfq)
-            .ThenInclude(r => r.Lines)
+            .ThenInclude(r => r!.Lines)
             .ThenInclude(line => line.ItemMaster)
             .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
 

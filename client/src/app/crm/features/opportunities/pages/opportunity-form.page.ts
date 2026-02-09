@@ -29,6 +29,8 @@ import { readTokenContext, tokenHasPermission, tokenHasRole } from '../../../../
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { UserListItem } from '../../settings/models/user-admin.model';
+import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 
 interface Option<T = string> {
   label: string;
@@ -65,12 +67,7 @@ export class OpportunityFormPage implements OnInit {
     { label: 'Closed Lost', value: 'Closed Lost' }
   ];
 
-  protected readonly currencyOptions: Option[] = [
-    { label: 'USD', value: 'USD' },
-    { label: 'CAD', value: 'CAD' },
-    { label: 'EUR', value: 'EUR' },
-    { label: 'GBP', value: 'GBP' }
-  ];
+  protected currencyOptions: Option[] = [];
 
   protected readonly reviewStatusOptions: Option[] = [
     { label: 'Not Started', value: 'Not Started' },
@@ -127,7 +124,7 @@ export class OpportunityFormPage implements OnInit {
   protected approvalRequest = {
     purpose: 'Close',
     amount: 0,
-    currency: 'USD'
+    currency: ''
   };
   protected approvalRequesting = signal(false);
   protected approvalDecisionNotes: Record<string, string> = {};
@@ -177,13 +174,17 @@ export class OpportunityFormPage implements OnInit {
   private readonly checklistService = inject(OpportunityReviewChecklistService);
   private readonly onboardingService = inject(OpportunityOnboardingService);
   private readonly userAdminData = inject(UserAdminDataService);
+  private readonly settingsService = inject(WorkspaceSettingsService);
+  private readonly referenceData = inject(ReferenceDataService);
   protected readonly router = inject(Router);
   protected readonly customerData = inject(CustomerDataService);
   private readonly toastService = inject(AppToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
+  private currencyFallback = '';
 
   ngOnInit() {
+    this.loadCurrencyContext();
     this.loadAccounts();
     this.reviewAckDueLocal = this.defaultReviewDueLocal();
     this.route.paramMap.subscribe((params) => {
@@ -585,7 +586,7 @@ export class OpportunityFormPage implements OnInit {
     this.approvalService
       .requestApproval(this.editingId, {
         amount,
-        currency: this.approvalRequest.currency ?? 'USD',
+        currency: this.approvalRequest.currency || this.resolveCurrencyCode(),
         purpose: this.approvalRequest.purpose
       })
       .subscribe({
@@ -804,7 +805,7 @@ export class OpportunityFormPage implements OnInit {
       accountId: resolvedAccountId,
       stageName: stage,
       amount: opp.amount ?? 0,
-      currency: opp.currency ?? 'USD',
+      currency: this.resolveCurrency(opp.currency),
       probability: opp.probability ?? this.estimateProbability(stage),
       forecastCategory: opp.forecastCategory ?? this.estimateForecastCategory(stage),
       opportunityType: opp.opportunityType ?? 'New',
@@ -849,7 +850,7 @@ export class OpportunityFormPage implements OnInit {
       accountId: undefined,
       stageName: 'Prospecting',
       amount: 0,
-      currency: 'USD',
+      currency: this.resolveCurrencyCode(),
       probability: this.estimateProbability('Prospecting'),
       forecastCategory: this.estimateForecastCategory('Prospecting'),
       opportunityType: 'New',
@@ -933,6 +934,43 @@ export class OpportunityFormPage implements OnInit {
     }
     const parsed = new Date(localValue);
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+
+  private loadCurrencyContext() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      const active = items.filter((currency) => currency.isActive);
+      this.currencyOptions = active.map((currency) => ({
+        label: currency.code,
+        value: currency.code
+      }));
+      this.currencyFallback = active[0]?.code ?? items[0]?.code ?? '';
+      this.applyCurrencyDefaults(this.currencyFallback);
+    });
+
+    this.settingsService.getSettings().subscribe({
+      next: (settings) => {
+        const resolved = settings.currency || this.currencyFallback;
+        this.applyCurrencyDefaults(resolved);
+      }
+    });
+  }
+
+  private applyCurrencyDefaults(currencyCode: string) {
+    if (!currencyCode) return;
+    if (!this.form.currency) {
+      this.form.currency = currencyCode;
+    }
+    if (!this.approvalRequest.currency) {
+      this.approvalRequest.currency = currencyCode;
+    }
+  }
+
+  private resolveCurrency(value?: string | null) {
+    return value || this.resolveCurrencyCode();
+  }
+
+  protected resolveCurrencyCode() {
+    return this.form.currency || this.currencyFallback || this.currencyOptions[0]?.value || '';
   }
 
   protected isPainConfirmationRequired(): boolean {

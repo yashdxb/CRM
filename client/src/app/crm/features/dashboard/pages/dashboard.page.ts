@@ -20,6 +20,8 @@ import { readTokenContext, tokenHasPermission } from '../../../../core/auth/toke
 import { AppToastService } from '../../../../core/app-toast.service';
 import { NotificationService } from '../../../../core/notifications';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
+import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 
 type ChartId = 'revenue' | 'growth';
 type PriorityStreamType = 'task' | 'lead' | 'deal';
@@ -75,6 +77,8 @@ export class DashboardPage implements OnInit {
   private readonly commandPaletteService = inject(CommandPaletteService);
   private readonly toastService = inject(AppToastService);
   private readonly notificationService = inject(NotificationService);
+  private readonly settingsService = inject(WorkspaceSettingsService);
+  private readonly referenceData = inject(ReferenceDataService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly emptySummary: DashboardSummary = {
     totalCustomers: 0,
@@ -113,6 +117,8 @@ export class DashboardPage implements OnInit {
     confidenceWeightedPipelineValue: 0,
     costOfNotKnowingValue: 0,
     costOfNotKnowingDeals: 0,
+    costOfNotKnowingBreakdown: [],
+    costOfNotKnowingTrend: [],
     confidenceCalibrationScore: 0,
     confidenceCalibrationSample: 0,
     myPipelineValueTotal: 0,
@@ -145,6 +151,8 @@ export class DashboardPage implements OnInit {
 
   protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
   protected readonly managerHealth = computed(() => this.managerHealthSignal() ?? this.emptyManagerHealth);
+  protected readonly currencyCode = signal<string>('');
+  private currencyFallback = '';
   protected coachingDialogOpen = false;
   protected coachingComment = '';
   protected coachingDueLocal = '';
@@ -165,6 +173,11 @@ export class DashboardPage implements OnInit {
   protected pipelineChartOptions: any;
   protected conversionChartData: any;
   protected conversionChartOptions: any;
+  protected costTrendChartData: any;
+  protected costTrendChartOptions: any;
+  protected costBreakdownDialogOpen = false;
+  protected costBreakdownSortKey: 'exposure' | 'amount' | 'stage' | 'name' = 'exposure';
+  protected costBreakdownSortDirection: 'asc' | 'desc' = 'desc';
   
   protected readonly kpis = computed(() => {
     const data = this.summary();
@@ -207,6 +220,9 @@ export class DashboardPage implements OnInit {
   });
 
   protected readonly topRiskFlags = computed(() => this.summary()?.topRiskFlags ?? []);
+  protected readonly topCostBreakdown = computed(() =>
+    (this.summary()?.costOfNotKnowingBreakdown ?? []).slice(0, 5)
+  );
   protected readonly riskChecklistItems = computed(() => {
     const flags = this.topRiskFlags();
     return flags.map((flag) => ({
@@ -279,6 +295,15 @@ export class DashboardPage implements OnInit {
   protected readonly topPerformers = computed(() => this.summary()?.topPerformers ?? []);
   protected readonly newlyAssignedLeads = computed(() => this.summary()?.newlyAssignedLeads?.slice(0, 6) ?? []);
   protected readonly atRiskDeals = computed(() => this.summary()?.atRiskDeals?.slice(0, 6) ?? []);
+  protected readonly myQuotaTarget = computed(() => this.summary()?.myQuotaTarget ?? null);
+  protected readonly myQuotaProgress = computed(() => {
+    const quota = this.myQuotaTarget();
+    if (!quota || quota <= 0) {
+      return null;
+    }
+    const weighted = this.summary()?.myConfidenceWeightedPipelineValue ?? 0;
+    return Math.min(100, Math.round((weighted / quota) * 100));
+  });
   protected readonly priorityStreamItems = computed(() => {
     const items: PriorityStreamItem[] = [];
     const tasks = this.myTasks();
@@ -342,7 +367,7 @@ export class DashboardPage implements OnInit {
             : 'Log activity',
         meta: [
           `Stage: ${deal.stage}`,
-          `Amount: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(deal.amount ?? 0)}`
+          `Amount: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: this.resolveCurrencyCode(), maximumFractionDigits: 0 }).format(deal.amount ?? 0)}`
         ],
         priorityScore: 65
       });
@@ -575,6 +600,7 @@ export class DashboardPage implements OnInit {
     }
     this.kpiOrder.set(this.loadKpiOrder());
     this.loadRiskChecklistState();
+    this.loadCurrencyContext();
   }
 
   ngOnInit(): void {
@@ -1162,6 +1188,37 @@ export class DashboardPage implements OnInit {
     this.priorityFilter.set(this.priorityFilter() === filter ? 'all' : filter);
   }
 
+  protected openCostBreakdownDialog(): void {
+    this.costBreakdownDialogOpen = true;
+  }
+
+  protected closeCostBreakdownDialog(): void {
+    this.costBreakdownDialogOpen = false;
+  }
+
+  protected toggleCostBreakdownSortDirection(): void {
+    this.costBreakdownSortDirection = this.costBreakdownSortDirection === 'asc' ? 'desc' : 'asc';
+  }
+
+  protected costBreakdownSorted(): DashboardSummary['costOfNotKnowingBreakdown'] {
+    const items = [...(this.summary()?.costOfNotKnowingBreakdown ?? [])];
+    const direction = this.costBreakdownSortDirection === 'asc' ? 1 : -1;
+    const key = this.costBreakdownSortKey;
+
+    return items.sort((a, b) => {
+      if (key === 'name') {
+        return a.opportunityName.localeCompare(b.opportunityName) * direction;
+      }
+      if (key === 'stage') {
+        return a.stage.localeCompare(b.stage) * direction;
+      }
+      if (key === 'amount') {
+        return (a.amount - b.amount) * direction;
+      }
+      return (a.costOfNotKnowingValue - b.costOfNotKnowingValue) * direction;
+    });
+  }
+
   private initCharts(summary: DashboardSummary): void {
     const documentStyle = getComputedStyle(document.documentElement);
     const textColor = '#64748b';
@@ -1204,6 +1261,18 @@ export class DashboardPage implements OnInit {
           { label: 'W4', value: 28 },
           { label: 'W5', value: 32 },
           { label: 'W6', value: 38 }
+        ];
+    const costTrendSeries = summary.costOfNotKnowingTrend.length
+      ? summary.costOfNotKnowingTrend
+      : [
+          { label: 'W1', value: 52000 },
+          { label: 'W2', value: 48000 },
+          { label: 'W3', value: 45000 },
+          { label: 'W4', value: 42000 },
+          { label: 'W5', value: 39000 },
+          { label: 'W6', value: 41000 },
+          { label: 'W7', value: 37000 },
+          { label: 'W8', value: 35000 }
         ];
     const pipelineSeries = summary.pipelineValue.length
       ? summary.pipelineValue
@@ -1463,6 +1532,57 @@ export class DashboardPage implements OnInit {
           },
           min: 0,
           max: 50
+        }
+      }
+    };
+
+    // Cost of Not Knowing Trend (Line)
+    this.costTrendChartData = {
+      labels: costTrendSeries.map(item => item.label),
+      datasets: [
+        {
+          label: 'Exposure',
+          data: costTrendSeries.map(item => Number(item.value)),
+          fill: false,
+          borderColor: orangeColor,
+          tension: 0.35,
+          borderWidth: 3,
+          pointBackgroundColor: orangeColor,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    };
+
+    this.costTrendChartOptions = {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          titleColor: '#1e293b',
+          bodyColor: '#64748b',
+          borderColor: 'rgba(148, 163, 184, 0.2)',
+          borderWidth: 1,
+          padding: 12,
+          callbacks: {
+            label: (ctx: any) => `${this.formatCurrency(ctx.raw)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: textColorSecondary }
+        },
+        y: {
+          grid: { color: surfaceBorder },
+          ticks: {
+            color: textColorSecondary,
+            callback: (value: number) => `$${(value / 1000)}k`
+          }
         }
       }
     };
@@ -1805,6 +1925,43 @@ export class DashboardPage implements OnInit {
     if (!isPlatformBrowser(this.platformId)) return;
     window.localStorage.removeItem(this.chartVisibilityStorageKey);
     this.hasLocalChartPreference = false;
+  }
+
+  private loadCurrencyContext() {
+    this.referenceData
+      .getCurrencies()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((items) => {
+        const active = items.filter((currency) => currency.isActive);
+        this.currencyFallback = active[0]?.code ?? items[0]?.code ?? '';
+        if (!this.currencyCode() && this.currencyFallback) {
+          this.currencyCode.set(this.currencyFallback);
+        }
+      });
+
+    this.settingsService
+      .getSettings()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (settings) => {
+          const resolved = settings.currency || this.currencyFallback;
+          if (resolved) {
+            this.currencyCode.set(resolved);
+          }
+        }
+      });
+  }
+
+  protected resolveCurrencyCode() {
+    return this.currencyCode() || this.currencyFallback || '';
+  }
+
+  private formatCurrency(value: number) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: this.resolveCurrencyCode() || 'USD',
+      maximumFractionDigits: 0
+    }).format(value ?? 0);
   }
 
 }

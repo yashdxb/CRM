@@ -9,6 +9,7 @@ public record UserDetailResponse(
     string Email,
     string? TimeZone,
     string? Locale,
+    decimal? MonthlyQuota,
     bool IsActive,
     DateTime CreatedAtUtc,
     DateTime? LastLoginAtUtc,

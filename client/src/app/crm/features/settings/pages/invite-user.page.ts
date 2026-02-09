@@ -15,6 +15,8 @@ import { readTokenContext, tokenHasPermission, tokenHasRole } from '../../../../
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { TimeZoneService } from '../../../../core/services/time-zone.service';
 import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time-zone.model';
+import { WorkspaceSettingsService } from '../services/workspace-settings.service';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 
 @Component({
   selector: 'app-invite-user-page',
@@ -38,6 +40,8 @@ export class InviteUserPage {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly timeZoneService = inject(TimeZoneService);
+  private readonly settingsService = inject(WorkspaceSettingsService);
+  private readonly referenceData = inject(ReferenceDataService);
   private readonly fieldLabels: Record<string, string> = {
     fullName: 'Full name',
     email: 'Email',
@@ -51,6 +55,8 @@ export class InviteUserPage {
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
   protected readonly status = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
+  protected readonly currencyCode = signal<string>('');
+  private currencyFallback = '';
   // Re-evaluate permissions from storage so freshly issued tokens unlock the button without reloads.
   protected readonly canManageAdmin = computed(() => {
     const payload = readTokenContext()?.payload ?? null;
@@ -93,6 +99,7 @@ export class InviteUserPage {
     timeZone: ['UTC', Validators.required],
     locale: ['en-US', Validators.required],
     roleIds: [[] as string[]],
+    monthlyQuota: [null as number | null, [Validators.min(0)]],
     isActive: [true],
     temporaryPassword: ['']
   });
@@ -103,6 +110,7 @@ export class InviteUserPage {
     this.timeZoneService.getTimeZones().subscribe((options) => {
       this.timezoneOptions = options;
     });
+    this.loadCurrencyContext();
     // Clear the manual "roles required" error once the user selects at least one role.
     this.form.get('roleIds')?.valueChanges.subscribe((roles) => {
       if ((roles ?? []).length > 0) {
@@ -149,6 +157,7 @@ export class InviteUserPage {
       email: this.form.value.email?.trim().toLowerCase() ?? '',
       timeZone: this.form.value.timeZone,
       locale: this.form.value.locale,
+      monthlyQuota: this.form.value.monthlyQuota ?? null,
       isActive: !!this.form.value.isActive,
       roleIds: (this.form.value.roleIds ?? []) as string[],
       temporaryPassword: this.form.value.temporaryPassword?.trim() || undefined
@@ -171,6 +180,7 @@ export class InviteUserPage {
           timeZone: 'UTC',
           locale: 'en-US',
           roleIds: [],
+          monthlyQuota: null,
           isActive: true,
           temporaryPassword: ''
         });
@@ -187,6 +197,25 @@ export class InviteUserPage {
     const value = this.generatePasswordValue();
     this.form.patchValue({ temporaryPassword: value });
     this.generatedPassword.set(value);
+  }
+
+  private loadCurrencyContext() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      const active = items.filter((currency) => currency.isActive);
+      this.currencyFallback = active[0]?.code ?? items[0]?.code ?? '';
+      if (!this.currencyCode() && this.currencyFallback) {
+        this.currencyCode.set(this.currencyFallback);
+      }
+    });
+
+    this.settingsService.getSettings().subscribe({
+      next: (settings) => {
+        const resolved = settings.currency || this.currencyFallback;
+        if (resolved) {
+          this.currencyCode.set(resolved);
+        }
+      }
+    });
   }
 
   protected handleInviteClick(event: Event) {

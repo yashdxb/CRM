@@ -71,15 +71,13 @@ public static class DependencyInjection
         services.AddScoped<LoginLocationService>();
         services.AddHttpClient<GraphEmailSender>();
         services.AddSingleton<AcsEmailSender>();
-        services.AddSingleton<ServiceBusClient?>(sp =>
+        services.AddSingleton(sp =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AcsEmailOptions>>().Value;
-            if (string.IsNullOrWhiteSpace(options.ServiceBusConnectionString))
-            {
-                return null;
-            }
-
-            return new ServiceBusClient(options.ServiceBusConnectionString);
+            var client = string.IsNullOrWhiteSpace(options.ServiceBusConnectionString)
+                ? null
+                : new ServiceBusClient(options.ServiceBusConnectionString);
+            return new ServiceBusClientProvider(client);
         });
         services.AddSingleton<ServiceBusEmailQueue>();
         services.AddSingleton<ServiceBusApprovalQueue>();

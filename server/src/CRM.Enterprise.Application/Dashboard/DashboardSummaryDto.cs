@@ -41,10 +41,13 @@ public record DashboardSummaryDto(
     decimal ConfidenceWeightedPipelineValue,
     decimal CostOfNotKnowingValue,
     int CostOfNotKnowingDeals,
+    IReadOnlyList<CostOfNotKnowingDealDto> CostOfNotKnowingBreakdown,
+    IReadOnlyList<ChartDataPointDto> CostOfNotKnowingTrend,
     decimal ConfidenceCalibrationScore,
     int ConfidenceCalibrationSample,
     decimal MyPipelineValueTotal,
-    decimal MyConfidenceWeightedPipelineValue);
+    decimal MyConfidenceWeightedPipelineValue,
+    decimal? MyQuotaTarget);
 
 public record RecentAccountDto(
     Guid Id,
@@ -103,3 +106,19 @@ public record DashboardOpportunityDto(
     DateTime? LastActivityAtUtc);
 
 public record RiskFlagSummaryDto(string Label, int Count);
+
+public record CostOfNotKnowingDealDto(
+    Guid OpportunityId,
+    string OpportunityName,
+    string AccountName,
+    string Stage,
+    decimal Amount,
+    decimal CostOfNotKnowingValue,
+    IReadOnlyList<CostOfNotKnowingFactorDto> TopFactors);
+
+public record CostOfNotKnowingFactorDto(
+    string Key,
+    string Label,
+    decimal Weight,
+    decimal Contribution,
+    string State);

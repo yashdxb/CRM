@@ -152,10 +152,25 @@ public class DashboardController : ControllerBase
             summary.ConfidenceWeightedPipelineValue,
             summary.CostOfNotKnowingValue,
             summary.CostOfNotKnowingDeals,
+            summary.CostOfNotKnowingBreakdown.Select(deal => new CostOfNotKnowingDealItem(
+                deal.OpportunityId,
+                deal.OpportunityName,
+                deal.AccountName,
+                deal.Stage,
+                deal.Amount,
+                deal.CostOfNotKnowingValue,
+                deal.TopFactors.Select(factor => new CostOfNotKnowingFactorItem(
+                    factor.Key,
+                    factor.Label,
+                    factor.Weight,
+                    factor.Contribution,
+                    factor.State)).ToList())).ToList(),
+            summary.CostOfNotKnowingTrend.Select(point => new ChartDataPoint(point.Label, point.Value)).ToList(),
             summary.ConfidenceCalibrationScore,
             summary.ConfidenceCalibrationSample,
             summary.MyPipelineValueTotal,
-            summary.MyConfidenceWeightedPipelineValue);
+            summary.MyConfidenceWeightedPipelineValue,
+            summary.MyQuotaTarget);
 
         return Ok(response);
     }

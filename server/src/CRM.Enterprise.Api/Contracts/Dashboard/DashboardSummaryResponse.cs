@@ -42,10 +42,13 @@ public record DashboardSummaryResponse(
     decimal ConfidenceWeightedPipelineValue,
     decimal CostOfNotKnowingValue,
     int CostOfNotKnowingDeals,
+    IEnumerable<CostOfNotKnowingDealItem> CostOfNotKnowingBreakdown,
+    IEnumerable<ChartDataPoint> CostOfNotKnowingTrend,
     decimal ConfidenceCalibrationScore,
     int ConfidenceCalibrationSample,
     decimal MyPipelineValueTotal,
-    decimal MyConfidenceWeightedPipelineValue);
+    decimal MyConfidenceWeightedPipelineValue,
+    decimal? MyQuotaTarget);
 
 public record ChartDataPoint(string Label, decimal Value);
 
@@ -83,3 +86,19 @@ public record DashboardOpportunityItem(
     DateTime? LastActivityAtUtc);
 
 public record RiskFlagSummaryItem(string Label, int Count);
+
+public record CostOfNotKnowingDealItem(
+    Guid OpportunityId,
+    string OpportunityName,
+    string AccountName,
+    string Stage,
+    decimal Amount,
+    decimal CostOfNotKnowingValue,
+    IEnumerable<CostOfNotKnowingFactorItem> TopFactors);
+
+public record CostOfNotKnowingFactorItem(
+    string Key,
+    string Label,
+    decimal Weight,
+    decimal Contribution,
+    string State);

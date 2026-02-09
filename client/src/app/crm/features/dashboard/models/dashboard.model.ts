@@ -44,10 +44,13 @@ export interface DashboardSummary {
   confidenceWeightedPipelineValue: number;
   costOfNotKnowingValue: number;
   costOfNotKnowingDeals: number;
+  costOfNotKnowingBreakdown: CostOfNotKnowingDeal[];
+  costOfNotKnowingTrend: ChartDataPoint[];
   confidenceCalibrationScore: number;
   confidenceCalibrationSample: number;
   myPipelineValueTotal: number;
   myConfidenceWeightedPipelineValue: number;
+  myQuotaTarget?: number | null;
 }
 
 export interface ChartDataPoint {
@@ -97,6 +100,24 @@ export interface DashboardOpportunity {
 export interface RiskFlagSummary {
   label: string;
   count: number;
+}
+
+export interface CostOfNotKnowingDeal {
+  opportunityId: string;
+  opportunityName: string;
+  accountName: string;
+  stage: string;
+  amount: number;
+  costOfNotKnowingValue: number;
+  topFactors: CostOfNotKnowingFactor[];
+}
+
+export interface CostOfNotKnowingFactor {
+  key: string;
+  label: string;
+  weight: number;
+  contribution: number;
+  state: string;
 }
 
 export interface ManagerPipelineHealth {

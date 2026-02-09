@@ -46,6 +46,7 @@ export interface QualificationPolicy {
   requireOverrideReason: boolean;
   thresholdRules: QualificationThresholdRule[];
   modifiers: QualificationModifierRule[];
+  exposureWeights: QualificationExposureWeight[];
 }
 
 export interface QualificationThresholdRule {
@@ -58,4 +59,9 @@ export interface QualificationThresholdRule {
 export interface QualificationModifierRule {
   key: string;
   delta: number;
+}
+
+export interface QualificationExposureWeight {
+  key: string;
+  weight: number;
 }

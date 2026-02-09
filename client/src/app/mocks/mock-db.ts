@@ -191,6 +191,14 @@ let mockWorkspaceSettings: WorkspaceSettings = {
       { key: 'strategic', delta: -15 },
       { key: 'fastVelocity', delta: -10 },
       { key: 'slowVelocity', delta: 10 }
+    ],
+    exposureWeights: [
+      { key: 'budget', weight: 25 },
+      { key: 'timeline', weight: 20 },
+      { key: 'economicBuyer', weight: 20 },
+      { key: 'problem', weight: 15 },
+      { key: 'readiness', weight: 10 },
+      { key: 'icpFit', weight: 10 }
     ]
   }
 };
@@ -792,6 +800,44 @@ export function buildDashboardSummary(): DashboardSummary {
     confidenceWeightedPipelineValue: pipelineValueTotal * 0.68,
     costOfNotKnowingValue: pipelineValueTotal * 0.22,
     costOfNotKnowingDeals: Math.max(1, Math.floor(openOpportunities * 0.4)),
+    costOfNotKnowingBreakdown: [
+      {
+        opportunityId: mockOpportunities[0]?.id ?? '',
+        opportunityName: mockOpportunities[0]?.name ?? 'Expansion - Acme',
+        accountName: mockCustomers[0]?.company ?? 'Acme Corporation',
+        stage: mockOpportunities[0]?.stage ?? 'Qualification',
+        amount: mockOpportunities[0]?.amount ?? 85000,
+        costOfNotKnowingValue: 18000,
+        topFactors: [
+          { key: 'economicBuyer', label: 'Economic buyer', weight: 20, contribution: 7000, state: 'Unknown' },
+          { key: 'timeline', label: 'Buying timeline', weight: 20, contribution: 6000, state: 'Assumed' },
+          { key: 'budget', label: 'Budget availability', weight: 25, contribution: 5000, state: 'Unknown' }
+        ]
+      },
+      {
+        opportunityId: mockOpportunities[1]?.id ?? '',
+        opportunityName: mockOpportunities[1]?.name ?? 'Renewal - Northwind',
+        accountName: mockCustomers[1]?.company ?? 'Northwind Labs',
+        stage: mockOpportunities[1]?.stage ?? 'Discovery',
+        amount: mockOpportunities[1]?.amount ?? 52000,
+        costOfNotKnowingValue: 11000,
+        topFactors: [
+          { key: 'problem', label: 'Problem severity', weight: 15, contribution: 4200, state: 'Unknown' },
+          { key: 'readiness', label: 'Readiness to spend', weight: 10, contribution: 3400, state: 'Assumed' },
+          { key: 'icpFit', label: 'ICP fit', weight: 10, contribution: 3400, state: 'Unknown' }
+        ]
+      }
+    ],
+    costOfNotKnowingTrend: [
+      { label: 'W1', value: pipelineValueTotal * 0.28 },
+      { label: 'W2', value: pipelineValueTotal * 0.26 },
+      { label: 'W3', value: pipelineValueTotal * 0.24 },
+      { label: 'W4', value: pipelineValueTotal * 0.23 },
+      { label: 'W5', value: pipelineValueTotal * 0.21 },
+      { label: 'W6', value: pipelineValueTotal * 0.22 },
+      { label: 'W7', value: pipelineValueTotal * 0.2 },
+      { label: 'W8', value: pipelineValueTotal * 0.19 }
+    ],
     confidenceCalibrationScore: 72,
     confidenceCalibrationSample: 48,
     myPipelineValueTotal: pipelineValueTotal * 0.38,

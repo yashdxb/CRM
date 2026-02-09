@@ -161,6 +161,7 @@ public class UsersController : ControllerBase
             EmailNormalized = normalizedEmail,
             TimeZone = string.IsNullOrWhiteSpace(request.TimeZone) ? "UTC" : request.TimeZone,
             Locale = string.IsNullOrWhiteSpace(request.Locale) ? "en-US" : request.Locale,
+            MonthlyQuota = NormalizeQuota(request.MonthlyQuota),
             IsActive = request.IsActive,
             // Invited users must replace the temporary password on first sign-in.
             MustChangePassword = true,
@@ -226,6 +227,7 @@ public class UsersController : ControllerBase
         user.EmailNormalized = normalizedEmail;
         user.TimeZone = request.TimeZone;
         user.Locale = request.Locale;
+        user.MonthlyQuota = NormalizeQuota(request.MonthlyQuota);
         user.IsActive = request.IsActive;
 
         await AssignRolesAsync(user, roleIds, cancellationToken);
@@ -383,6 +385,7 @@ public class UsersController : ControllerBase
                 u.Email,
                 u.TimeZone,
                 u.Locale,
+                u.MonthlyQuota,
                 u.IsActive,
                 u.CreatedAtUtc,
                 u.LastLoginAtUtc,
@@ -416,6 +419,16 @@ public class UsersController : ControllerBase
     private static string NormalizeEmail(string? email)
     {
         return (email ?? string.Empty).Trim().ToLowerInvariant();
+    }
+
+    private static decimal? NormalizeQuota(decimal? value)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
+
+        return value.Value < 0 ? 0 : value.Value;
     }
 
     private async Task SendInviteEmailAsync(User user, string temporaryPassword, string inviteToken, CancellationToken cancellationToken)

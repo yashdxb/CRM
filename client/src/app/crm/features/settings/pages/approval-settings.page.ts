@@ -17,6 +17,7 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { RoleSummary } from '../models/user-admin.model';
+import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 import {
   ApprovalWorkflowPolicy,
   ApprovalWorkflowStep,
@@ -49,6 +50,7 @@ export class ApprovalSettingsPage {
   private readonly userAdminData = inject(UserAdminDataService);
   private readonly toastService = inject(AppToastService);
   private readonly fb = inject(FormBuilder);
+  private readonly referenceData = inject(ReferenceDataService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -67,8 +69,10 @@ export class ApprovalSettingsPage {
   protected readonly roles = signal<RoleSummary[]>([]);
 
   private loadedSettings: WorkspaceSettings | null = null;
+  private currencyFallback = '';
 
   constructor() {
+    this.loadCurrencyFallback();
     this.loadRoles();
     this.loadSettings();
   }
@@ -104,7 +108,7 @@ export class ApprovalSettingsPage {
     const safePayload = {
       name: this.loadedSettings.name ?? 'Workspace',
       timeZone: this.loadedSettings.timeZone ?? 'UTC',
-      currency: this.loadedSettings.currency ?? 'USD',
+      currency: this.loadedSettings.currency ?? this.currencyFallback,
       leadFirstTouchSlaHours: this.loadedSettings.leadFirstTouchSlaHours ?? 24,
       defaultContractTermMonths: this.loadedSettings.defaultContractTermMonths ?? null,
       defaultDeliveryOwnerRoleId: this.loadedSettings.defaultDeliveryOwnerRoleId ?? null,
@@ -175,6 +179,13 @@ export class ApprovalSettingsPage {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
+  }
+
+  private loadCurrencyFallback() {
+    this.referenceData.getCurrencies().subscribe((items) => {
+      const active = items.filter((currency) => currency.isActive);
+      this.currencyFallback = active[0]?.code ?? items[0]?.code ?? '';
+    });
   }
 
   protected roleOptions() {

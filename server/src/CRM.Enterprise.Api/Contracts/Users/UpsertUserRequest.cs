@@ -8,6 +8,7 @@ public record UpsertUserRequest(
     string Email,
     string? TimeZone,
     string? Locale,
+    decimal? MonthlyQuota,
     bool IsActive,
     IReadOnlyCollection<Guid>? RoleIds,
     string? TemporaryPassword);

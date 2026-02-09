@@ -7,7 +7,8 @@ public sealed record QualificationPolicy(
     bool AllowOverrides,
     bool RequireOverrideReason,
     IReadOnlyList<QualificationThresholdRule> ThresholdRules,
-    IReadOnlyList<QualificationModifierRule> Modifiers);
+    IReadOnlyList<QualificationModifierRule> Modifiers,
+    IReadOnlyList<QualificationExposureWeight> ExposureWeights);
 
 public sealed record QualificationThresholdRule(
     string Segment,
@@ -18,6 +19,10 @@ public sealed record QualificationThresholdRule(
 public sealed record QualificationModifierRule(
     string Key,
     int Delta);
+
+public sealed record QualificationExposureWeight(
+    string Key,
+    decimal Weight);
 
 public static class QualificationPolicyDefaults
 {
@@ -37,6 +42,15 @@ public static class QualificationPolicyDefaults
                 new QualificationModifierRule("strategic", -15),
                 new QualificationModifierRule("fastVelocity", -10),
                 new QualificationModifierRule("slowVelocity", 10)
+            },
+            ExposureWeights: new[]
+            {
+                new QualificationExposureWeight("budget", 25),
+                new QualificationExposureWeight("timeline", 20),
+                new QualificationExposureWeight("economicBuyer", 20),
+                new QualificationExposureWeight("problem", 15),
+                new QualificationExposureWeight("readiness", 10),
+                new QualificationExposureWeight("icpFit", 10)
             });
     }
 }

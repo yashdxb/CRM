@@ -191,13 +191,13 @@
                     >
                       <ng-template pTemplate="item" let-option>
                         <div class="select-option">
-                          <i class="pi" [ngClass]="[option.icon, option.iconClass]"></i>
+                          <span class="currency-symbol">{{ option.symbol || option.label }}</span>
                           <span>{{ option.label }}</span>
                         </div>
                       </ng-template>
                       <ng-template pTemplate="value" let-option>
                         <div class="select-option" *ngIf="option; else currencyPlaceholder">
-                          <i class="pi" [ngClass]="[option.icon, option.iconClass]"></i>
+                          <span class="currency-symbol">{{ option.symbol || option.label }}</span>
                           <span>{{ option.label }}</span>
                         </div>
                         <ng-template #currencyPlaceholder>
