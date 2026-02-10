@@ -663,7 +663,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Expansion signals logic: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
     - Dashboard card UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
     - Dashboard card logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
-- Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs. (ClickUp: 86dzp8xat, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs. (ClickUp: 86dzp8xat, Status: done)
+  - Acceptance criteria:
+    - Proposal status, link, notes, and generated/sent dates are captured on the opportunity.
+    - Pricing notes + discount fields persist and can be submitted for approval.
+    - Security/legal review status and checklists are tracked and required before Commit.
+  - Evidence:
+    - Proposal fields + actions: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+    - Proposal form state + save mapping: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
+    - Opportunity persistence: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (ClickUp: 86dzp8x9z, Status: done)
   - Acceptance criteria:

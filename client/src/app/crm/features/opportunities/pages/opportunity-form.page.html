@@ -329,6 +329,85 @@
 
           <section class="form-card">
             <h3 class="section-title">
+              <i class="pi pi-file-edit"></i>
+              Quote / Proposal
+            </h3>
+            <p class="section-subtitle">Generate and track the proposal before sending to the customer.</p>
+            <div class="form-grid">
+              <div class="field">
+                <label for="oppProposalStatus">Proposal status</label>
+                <p-select
+                  inputId="oppProposalStatus"
+                  appendTo="body"
+                  [options]="proposalStatusOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="proposalStatus"
+                  [(ngModel)]="form.proposalStatus"
+                  placeholder="Select status"
+                  styleClass="w-full"
+                ></p-select>
+              </div>
+              <div class="field">
+                <label for="oppProposalLink">Proposal link</label>
+                <input
+                  pInputText
+                  id="oppProposalLink"
+                  name="proposalLink"
+                  [(ngModel)]="form.proposalLink"
+                  placeholder="Paste proposal URL"
+                  class="w-full"
+                />
+              </div>
+              <div class="field">
+                <label for="oppProposalGenerated">Generated on</label>
+                <p-datePicker
+                  inputId="oppProposalGenerated"
+                  [(ngModel)]="form.proposalGeneratedAtUtc"
+                  name="proposalGeneratedAtUtc"
+                  [showIcon]="true"
+                  appendTo="body"
+                  class="w-full"
+                ></p-datePicker>
+              </div>
+              <div class="field">
+                <label for="oppProposalSent">Sent on</label>
+                <p-datePicker
+                  inputId="oppProposalSent"
+                  [(ngModel)]="form.proposalSentAtUtc"
+                  name="proposalSentAtUtc"
+                  [showIcon]="true"
+                  appendTo="body"
+                  class="w-full"
+                ></p-datePicker>
+              </div>
+              <div class="field full">
+                <label for="oppProposalNotes">Proposal summary</label>
+                <textarea
+                  pTextarea
+                  id="oppProposalNotes"
+                  rows="3"
+                  name="proposalNotes"
+                  [(ngModel)]="form.proposalNotes"
+                  placeholder="Scope summary, key terms, or customer notes"
+                  class="w-full"
+                ></textarea>
+              </div>
+            </div>
+            <div class="team-actions">
+              <button type="button" class="btn-glass" (click)="generateProposal()">
+                <i class="pi pi-file"></i>
+                Generate proposal
+              </button>
+              <button type="button" class="btn-glass" (click)="markProposalSent()">
+                <i class="pi pi-send"></i>
+                Mark sent
+              </button>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title">
               <i class="pi pi-users"></i>
               Pre-Sales Team
             </h3>

@@ -37,6 +37,11 @@ export interface SaveOpportunityRequest {
   securityNotes?: string | null;
   legalReviewStatus?: string | null;
   legalNotes?: string | null;
+  proposalStatus?: string | null;
+  proposalNotes?: string | null;
+  proposalLink?: string | null;
+  proposalGeneratedAtUtc?: string | Date | null;
+  proposalSentAtUtc?: string | Date | null;
   deliveryOwnerId?: string | null;
   deliveryHandoffScope?: string | null;
   deliveryHandoffRisks?: string | null;

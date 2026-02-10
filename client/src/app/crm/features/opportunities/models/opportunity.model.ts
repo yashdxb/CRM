@@ -27,6 +27,11 @@ export interface Opportunity {
   securityNotes?: string | null;
   legalReviewStatus?: string | null;
   legalNotes?: string | null;
+  proposalStatus?: string | null;
+  proposalNotes?: string | null;
+  proposalLink?: string | null;
+  proposalGeneratedAtUtc?: string | null;
+  proposalSentAtUtc?: string | null;
   deliveryOwnerId?: string | null;
   deliveryHandoffScope?: string | null;
   deliveryHandoffRisks?: string | null;

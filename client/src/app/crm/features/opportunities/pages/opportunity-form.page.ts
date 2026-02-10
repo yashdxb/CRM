@@ -75,6 +75,13 @@ export class OpportunityFormPage implements OnInit {
     { label: 'Approved', value: 'Approved' },
     { label: 'Blocked', value: 'Blocked' }
   ];
+  protected readonly proposalStatusOptions: Option[] = [
+    { label: 'Not Started', value: 'Not Started' },
+    { label: 'Draft', value: 'Draft' },
+    { label: 'Sent', value: 'Sent' },
+    { label: 'Accepted', value: 'Accepted' },
+    { label: 'Declined', value: 'Declined' }
+  ];
   protected readonly onboardingStatusOptions: Option[] = [
     { label: 'Pending', value: 'Pending' },
     { label: 'In Progress', value: 'In Progress' },
@@ -264,12 +271,22 @@ export class OpportunityFormPage implements OnInit {
     const deliveryCompletedAtUtc = rawDeliveryCompleted instanceof Date
       ? rawDeliveryCompleted.toISOString()
       : (typeof rawDeliveryCompleted === 'string' && rawDeliveryCompleted.trim() ? rawDeliveryCompleted : undefined);
+    const rawProposalGenerated = this.form.proposalGeneratedAtUtc as unknown;
+    const proposalGeneratedAtUtc = rawProposalGenerated instanceof Date
+      ? rawProposalGenerated.toISOString()
+      : (typeof rawProposalGenerated === 'string' && rawProposalGenerated.trim() ? rawProposalGenerated : undefined);
+    const rawProposalSent = this.form.proposalSentAtUtc as unknown;
+    const proposalSentAtUtc = rawProposalSent instanceof Date
+      ? rawProposalSent.toISOString()
+      : (typeof rawProposalSent === 'string' && rawProposalSent.trim() ? rawProposalSent : undefined);
     const payload: SaveOpportunityRequest = {
       ...this.form,
       expectedCloseDate,
       contractStartDateUtc,
       contractEndDateUtc,
       deliveryCompletedAtUtc,
+      proposalGeneratedAtUtc,
+      proposalSentAtUtc,
       stageName: this.selectedStage,
       winLossReason: this.form.winLossReason || null
     };
@@ -730,6 +747,31 @@ export class OpportunityFormPage implements OnInit {
     this.approvalRequest.currency = currency;
   }
 
+  protected generateProposal() {
+    const now = new Date();
+    const status = this.form.proposalStatus || 'Not Started';
+    if (status === 'Not Started') {
+      this.form.proposalStatus = 'Draft';
+    }
+    if (!this.form.proposalGeneratedAtUtc) {
+      this.form.proposalGeneratedAtUtc = now;
+    }
+    if (!this.form.proposalNotes && this.form.pricingNotes) {
+      this.form.proposalNotes = this.form.pricingNotes;
+    }
+    this.toastService.show('success', 'Proposal draft created.', 2500);
+  }
+
+  protected markProposalSent() {
+    const now = new Date();
+    if (!this.form.proposalGeneratedAtUtc) {
+      this.form.proposalGeneratedAtUtc = now;
+    }
+    this.form.proposalStatus = 'Sent';
+    this.form.proposalSentAtUtc = now;
+    this.toastService.show('success', 'Proposal marked as sent.', 2500);
+  }
+
   protected addChecklistItem(type: 'Security' | 'Legal' | 'Technical') {
     const title = (type === 'Security'
       ? this.newSecurityItem
@@ -893,6 +935,11 @@ export class OpportunityFormPage implements OnInit {
       securityNotes: opp.securityNotes ?? '',
       legalReviewStatus: opp.legalReviewStatus ?? 'Not Started',
       legalNotes: opp.legalNotes ?? '',
+      proposalStatus: opp.proposalStatus ?? 'Not Started',
+      proposalNotes: opp.proposalNotes ?? '',
+      proposalLink: opp.proposalLink ?? '',
+      proposalGeneratedAtUtc: opp.proposalGeneratedAtUtc ? new Date(opp.proposalGeneratedAtUtc) : undefined,
+      proposalSentAtUtc: opp.proposalSentAtUtc ? new Date(opp.proposalSentAtUtc) : undefined,
       deliveryOwnerId: opp.deliveryOwnerId ?? undefined,
       deliveryHandoffScope: opp.deliveryHandoffScope ?? '',
       deliveryHandoffRisks: opp.deliveryHandoffRisks ?? '',
@@ -938,6 +985,11 @@ export class OpportunityFormPage implements OnInit {
       securityNotes: '',
       legalReviewStatus: 'Not Started',
       legalNotes: '',
+      proposalStatus: 'Not Started',
+      proposalNotes: '',
+      proposalLink: '',
+      proposalGeneratedAtUtc: undefined,
+      proposalSentAtUtc: undefined,
       deliveryOwnerId: undefined,
       deliveryHandoffScope: '',
       deliveryHandoffRisks: '',

@@ -343,6 +343,12 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Opportunity>()
             .Property(o => o.DiscountAmount)
             .HasPrecision(18, 2);
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.ProposalStatus)
+            .HasMaxLength(40);
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.ProposalLink)
+            .HasMaxLength(1024);
 
         modelBuilder.Entity<PermissionCatalogEntry>()
             .HasIndex(entry => entry.Key)

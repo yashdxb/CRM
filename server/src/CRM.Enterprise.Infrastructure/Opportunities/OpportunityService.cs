@@ -206,6 +206,11 @@ public sealed class OpportunityService : IOpportunityService
                 o.SecurityNotes,
                 o.LegalReviewStatus,
                 o.LegalNotes,
+                o.ProposalStatus,
+                o.ProposalNotes,
+                o.ProposalLink,
+                o.ProposalGeneratedAtUtc,
+                o.ProposalSentAtUtc,
                 o.DeliveryOwnerId,
                 o.DeliveryHandoffScope,
                 o.DeliveryHandoffRisks,
@@ -293,6 +298,11 @@ public sealed class OpportunityService : IOpportunityService
                 o.SecurityNotes,
                 o.LegalReviewStatus,
                 o.LegalNotes,
+                o.ProposalStatus,
+                o.ProposalNotes,
+                o.ProposalLink,
+                o.ProposalGeneratedAtUtc,
+                o.ProposalSentAtUtc,
                 o.DeliveryOwnerId,
                 o.DeliveryHandoffScope,
                 o.DeliveryHandoffRisks,
@@ -360,6 +370,11 @@ public sealed class OpportunityService : IOpportunityService
             opp.SecurityNotes,
             opp.LegalReviewStatus,
             opp.LegalNotes,
+            opp.ProposalStatus,
+            opp.ProposalNotes,
+            opp.ProposalLink,
+            opp.ProposalGeneratedAtUtc,
+            opp.ProposalSentAtUtc,
             opp.DeliveryOwnerId,
             opp.DeliveryHandoffScope,
             opp.DeliveryHandoffRisks,
@@ -519,6 +534,11 @@ public sealed class OpportunityService : IOpportunityService
             SecurityNotes = request.SecurityNotes,
             LegalReviewStatus = string.IsNullOrWhiteSpace(request.LegalReviewStatus) ? "Not Started" : request.LegalReviewStatus,
             LegalNotes = request.LegalNotes,
+            ProposalStatus = string.IsNullOrWhiteSpace(request.ProposalStatus) ? "Not Started" : request.ProposalStatus,
+            ProposalNotes = request.ProposalNotes,
+            ProposalLink = request.ProposalLink,
+            ProposalGeneratedAtUtc = request.ProposalGeneratedAtUtc,
+            ProposalSentAtUtc = request.ProposalSentAtUtc,
             DeliveryOwnerId = request.DeliveryOwnerId,
             DeliveryHandoffScope = request.DeliveryHandoffScope,
             DeliveryHandoffRisks = request.DeliveryHandoffRisks,
@@ -570,6 +590,11 @@ public sealed class OpportunityService : IOpportunityService
             opp.SecurityNotes,
             opp.LegalReviewStatus,
             opp.LegalNotes,
+            opp.ProposalStatus,
+            opp.ProposalNotes,
+            opp.ProposalLink,
+            opp.ProposalGeneratedAtUtc,
+            opp.ProposalSentAtUtc,
             opp.DeliveryOwnerId,
             opp.DeliveryHandoffScope,
             opp.DeliveryHandoffRisks,
@@ -732,6 +757,26 @@ public sealed class OpportunityService : IOpportunityService
         if (request.LegalNotes is not null)
         {
             opp.LegalNotes = request.LegalNotes;
+        }
+        if (request.ProposalStatus is not null)
+        {
+            opp.ProposalStatus = request.ProposalStatus;
+        }
+        if (request.ProposalNotes is not null)
+        {
+            opp.ProposalNotes = request.ProposalNotes;
+        }
+        if (request.ProposalLink is not null)
+        {
+            opp.ProposalLink = request.ProposalLink;
+        }
+        if (request.ProposalGeneratedAtUtc.HasValue)
+        {
+            opp.ProposalGeneratedAtUtc = request.ProposalGeneratedAtUtc;
+        }
+        if (request.ProposalSentAtUtc.HasValue)
+        {
+            opp.ProposalSentAtUtc = request.ProposalSentAtUtc;
         }
         if (request.DeliveryOwnerId.HasValue)
         {
@@ -1895,6 +1940,26 @@ public sealed class OpportunityService : IOpportunityService
             return true;
         }
         if (!string.Equals(opportunity.LegalNotes ?? string.Empty, request.LegalNotes ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.ProposalStatus ?? string.Empty, request.ProposalStatus ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.ProposalNotes ?? string.Empty, request.ProposalNotes ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.ProposalLink ?? string.Empty, request.ProposalLink ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (opportunity.ProposalGeneratedAtUtc != request.ProposalGeneratedAtUtc)
+        {
+            return true;
+        }
+        if (opportunity.ProposalSentAtUtc != request.ProposalSentAtUtc)
         {
             return true;
         }

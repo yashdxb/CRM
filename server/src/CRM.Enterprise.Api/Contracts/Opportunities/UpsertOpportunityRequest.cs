@@ -29,6 +29,11 @@ public class UpsertOpportunityRequest
     public string? SecurityNotes { get; set; }
     public string? LegalReviewStatus { get; set; }
     public string? LegalNotes { get; set; }
+    public string? ProposalStatus { get; set; }
+    public string? ProposalNotes { get; set; }
+    public string? ProposalLink { get; set; }
+    public DateTime? ProposalGeneratedAtUtc { get; set; }
+    public DateTime? ProposalSentAtUtc { get; set; }
     public Guid? DeliveryOwnerId { get; set; }
     public string? DeliveryHandoffScope { get; set; }
     public string? DeliveryHandoffRisks { get; set; }

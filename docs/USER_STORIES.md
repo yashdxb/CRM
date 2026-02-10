@@ -97,7 +97,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Dashboard | As a Sales Rep, I want to capture requirements, buying process, and success criteria to qualify fit.
 - Module: Dashboard | As a Sales Rep, I want to confirm pain, decision maker, and next step before advancing.
 - Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (Done)
-- Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs.
+- Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs. (Done)
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment.
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (Done)
 - Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates.
