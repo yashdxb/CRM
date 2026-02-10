@@ -44,6 +44,7 @@ public sealed record LeadListItemDto(
     int AssumptionsOutstanding,
     string? WeakestSignal,
     string? WeakestState,
+    IReadOnlyList<string> NextEvidenceSuggestions,
     IReadOnlyList<LeadScoreBreakdownItem> ScoreBreakdown,
     IReadOnlyList<string> RiskFlags);
 

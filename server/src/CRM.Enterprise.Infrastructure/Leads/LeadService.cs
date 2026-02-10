@@ -199,6 +199,7 @@ public sealed class LeadService : ILeadService
                 insights.AssumptionsOutstanding,
                 insights.WeakestSignal,
                 insights.WeakestState,
+                insights.NextEvidenceSuggestions,
                 insights.Breakdown,
                 insights.RiskFlags);
         });
@@ -287,6 +288,7 @@ public sealed class LeadService : ILeadService
             detailInsights.AssumptionsOutstanding,
             detailInsights.WeakestSignal,
             detailInsights.WeakestState,
+            detailInsights.NextEvidenceSuggestions,
             detailInsights.Breakdown,
             detailInsights.RiskFlags);
     }
@@ -519,6 +521,7 @@ public sealed class LeadService : ILeadService
             createInsights.AssumptionsOutstanding,
             createInsights.WeakestSignal,
             createInsights.WeakestState,
+            createInsights.NextEvidenceSuggestions,
             createInsights.Breakdown,
             createInsights.RiskFlags);
 
@@ -2285,6 +2288,7 @@ public sealed class LeadService : ILeadService
         var assumptionsOutstanding = factors.Count(f => f.IsHighImpact && (f.State == EpistemicState.Unknown || f.State == EpistemicState.Assumed));
 
         var weakest = factors.OrderBy(f => f.Confidence).FirstOrDefault();
+        var nextEvidenceSuggestions = BuildNextEvidenceSuggestions(weakest);
 
         var riskFlags = new List<string>();
         if (!IsMeaningfulFactor(buyingTimeline))
@@ -2336,6 +2340,7 @@ public sealed class LeadService : ILeadService
             assumptionsOutstanding,
             weakest?.Label,
             weakest?.StateLabel,
+            nextEvidenceSuggestions,
             breakdown,
             dedupedFlags);
     }
@@ -2347,6 +2352,7 @@ public sealed class LeadService : ILeadService
         int AssumptionsOutstanding,
         string? WeakestSignal,
         string? WeakestState,
+        IReadOnlyList<string> NextEvidenceSuggestions,
         IReadOnlyList<LeadScoreBreakdownItem> Breakdown,
         IReadOnlyList<string> RiskFlags);
 
@@ -2376,6 +2382,65 @@ public sealed class LeadService : ILeadService
         DateTime? ValidatedAtUtc,
         DecayLevel DecayLevel,
         bool IsHighImpact);
+
+    private static IReadOnlyList<string> BuildNextEvidenceSuggestions(EpistemicFactorInsight? weakest)
+    {
+        if (weakest is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        if (weakest.State == EpistemicState.Verified)
+        {
+            return Array.Empty<string>();
+        }
+
+        var label = weakest.Label;
+        return label switch
+        {
+            "Budget availability" => new[]
+            {
+                "Confirm budget owner and approval path in writing.",
+                "Capture budget range and funding source.",
+                "Attach a budget confirmation note or email."
+            },
+            "Readiness to spend" => new[]
+            {
+                "Ask what event triggers purchase timing.",
+                "Capture internal decision timeline and blockers.",
+                "Document next step date with the buyer."
+            },
+            "Buying timeline" => new[]
+            {
+                "Confirm target decision date and milestone dates.",
+                "Capture urgency driver and quarter/period.",
+                "Ask what must happen before signing."
+            },
+            "Problem severity" => new[]
+            {
+                "Quantify impact (cost, risk, lost time).",
+                "Capture business metric tied to the problem.",
+                "Collect buyer statement on urgency."
+            },
+            "Economic buyer" => new[]
+            {
+                "Identify the economic buyer by name and role.",
+                "Confirm engagement level and next meeting.",
+                "Capture approval path and signing authority."
+            },
+            "ICP fit" => new[]
+            {
+                "Validate firmographic fit (size, industry, region).",
+                "Confirm use case matches target ICP.",
+                "Document any fit gaps and mitigation."
+            },
+            _ => new[]
+            {
+                "Capture direct buyer evidence for the weakest factor.",
+                "Document validation steps for this signal."
+            }
+        };
+    }
 
     private static EpistemicFactorInsight BuildFactorInsight(
         string label,

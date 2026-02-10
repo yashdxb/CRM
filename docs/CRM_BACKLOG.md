@@ -576,7 +576,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Coaching & Management (ClickUp: 86dzp8xeu, Status: in progress)
 - Conditional Forecasting (ClickUp: 86dzp8xey, Status: in progress)
 - CSV import/export flow (ClickUp: 86dzp8xh9, Status: done)
-- Epistemic Metrics Core (ClickUp: 86dzp8xf6, Status: in progress)
+- Epistemic Metrics Core (ClickUp: 86dzp8xf6, Status: done)
+  - Acceptance criteria:
+    - Dashboard shows confidence-weighted pipeline totals.
+    - Calibration score and sample size are displayed on the forecast card.
+    - Cost of Not Knowing is surfaced with a deal count and value.
+  - Evidence:
+    - Metrics computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - API summary fields: `server/src/CRM.Enterprise.Application/Dashboard/DashboardSummaryDto.cs`
+    - Dashboard UI cards: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
 - Epistemic State + Evidence Governance (ClickUp: 86dzp8xfc, Status: in progress)
 - Feedback Loop + Weakest Signal (ClickUp: 86dzp8xf9, Status: backlog)
 - Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene. (ClickUp: 86dzp8x9n, Status: done)
@@ -591,7 +599,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
   - Evidence:
     - High-impact task creation: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
 - Module: Contacts | As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership. (ClickUp: 86dzp8xcg, Status: done)
-- Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context. (ClickUp: 86dzp8xcw, Status: backlog)
+- Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context. (ClickUp: 86dzp8xcw, Status: done)
+  - Acceptance criteria:
+    - Contact workspace shows linked account history (recent activities on the account).
+    - Contact workspace lists related accounts (parent/child/sibling) with navigation.
+    - Relationship labels are derived from the account hierarchy (parent/child/sibling).
+  - Evidence:
+    - Related accounts API: `server/src/CRM.Enterprise.Api/Controllers/CustomersController.cs`
+    - Related accounts query: `server/src/CRM.Enterprise.Infrastructure/Customers/CustomerService.cs`
+    - Contact workspace UI: `client/src/app/crm/features/contacts/pages/contact-form.page.html`
+    - Contact workspace logic: `client/src/app/crm/features/contacts/pages/contact-form.page.ts`
 - Module: Contacts | As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group. (ClickUp: 86dzp8xcr, Status: done)
 - Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8y0j, Status: done)
 - Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8xtg, Status: done)
@@ -636,7 +653,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
   - Evidence:
     - Stage gating + decision maker check: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
     - UI guidance copy: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
-- Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (ClickUp: 86dzp8x8p, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (ClickUp: 86dzp8x8p, Status: done)
+  - Acceptance criteria:
+    - Expansion Signals card lists accounts with recent expansion signal activity.
+    - Each signal shows signal count, last signal date, and contract end date (when available).
+    - Rep can create an Expansion opportunity from a signal and the card reflects it.
+  - Evidence:
+    - Expansion signals API: `server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs`
+    - Expansion signals logic: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - Dashboard card UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Dashboard card logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
 - Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs. (ClickUp: 86dzp8xat, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (ClickUp: 86dzp8x9z, Status: backlog)
@@ -650,7 +676,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Dashboard | Hierarchy-based H1/H2 dashboard packs + reset (ClickUp: 86dzp8xea, Status: done)
 - Module: Leads | As a manager, score breakdown aligns with CQVS labels (ClickUp: 86dzp8y10, Status: done)
 - Module: Leads | As a manager, score breakdown aligns with CQVS labels (ClickUp: 86dzp8xtn, Status: done)
-- Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal (ClickUp: 86dzp8xz6, Status: backlog)
+- Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal (ClickUp: 86dzp8xz6, Status: done)
+  - Acceptance criteria:
+    - Qualification status shows a "Suggested next evidence" list tied to the weakest factor.
+    - Suggestions update when qualification factors change.
+    - Server-provided suggestions take precedence when available.
+  - Evidence:
+    - Server suggestion builder: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+    - UI suggestions block: `client/src/app/crm/features/leads/pages/lead-form.page.html`
+    - UI state + fallback logic: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
 - Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet" (ClickUp: 86dzp8y1d, Status: done)
 - Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet" (ClickUp: 86dzp8xtu, Status: done)
 - Module: Leads | As a rep, I see "Unknown / not yet discussed" preselected for every qualification factor (ClickUp: 86dzp8y1u, Status: done)

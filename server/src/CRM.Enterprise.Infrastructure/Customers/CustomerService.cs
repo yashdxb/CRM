@@ -298,6 +298,97 @@ public sealed class CustomerService : ICustomerService
         return CustomerOperationResult<int>.Ok(accounts.Count);
     }
 
+    public async Task<IReadOnlyList<CustomerListItemDto>> GetRelatedAccountsAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        var account = await _dbContext.Accounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == accountId && !a.IsDeleted, cancellationToken);
+
+        if (account is null)
+        {
+            return Array.Empty<CustomerListItemDto>();
+        }
+
+        var relatedIds = new HashSet<Guid>();
+
+        if (account.ParentAccountId.HasValue)
+        {
+            relatedIds.Add(account.ParentAccountId.Value);
+        }
+
+        var childIds = await _dbContext.Accounts
+            .AsNoTracking()
+            .Where(a => a.ParentAccountId == accountId && !a.IsDeleted)
+            .Select(a => a.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var id in childIds)
+        {
+            relatedIds.Add(id);
+        }
+
+        if (account.ParentAccountId.HasValue)
+        {
+            var siblingIds = await _dbContext.Accounts
+                .AsNoTracking()
+                .Where(a => a.ParentAccountId == account.ParentAccountId && a.Id != accountId && !a.IsDeleted)
+                .Select(a => a.Id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var id in siblingIds)
+            {
+                relatedIds.Add(id);
+            }
+        }
+
+        if (relatedIds.Count == 0)
+        {
+            return Array.Empty<CustomerListItemDto>();
+        }
+
+        var relatedAccounts = await _dbContext.Accounts
+            .Include(a => a.Contacts)
+            .Include(a => a.ParentAccount)
+            .AsNoTracking()
+            .Where(a => relatedIds.Contains(a.Id) && !a.IsDeleted)
+            .Select(a => new
+            {
+                a.Id,
+                a.Name,
+                Email = a.Contacts.Select(c => c.Email).FirstOrDefault(email => !string.IsNullOrEmpty(email)),
+                a.Phone,
+                Status = a.LifecycleStage ?? "Customer",
+                a.OwnerId,
+                a.ParentAccountId,
+                ParentAccountName = a.ParentAccount != null ? a.ParentAccount.Name : null,
+                a.CreatedAtUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        var ownerIds = relatedAccounts.Select(i => i.OwnerId).Distinct().ToList();
+        var owners = await _dbContext.Users
+            .Where(u => ownerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToListAsync(cancellationToken);
+
+        return relatedAccounts.Select(i =>
+        {
+            var ownerName = owners.FirstOrDefault(o => o.Id == i.OwnerId)?.FullName ?? "Unassigned";
+            return new CustomerListItemDto(
+                i.Id,
+                i.Name,
+                i.Name,
+                i.Email,
+                i.Phone,
+                i.Status,
+                i.OwnerId,
+                ownerName,
+                i.ParentAccountId,
+                i.ParentAccountName,
+                i.CreatedAtUtc);
+        }).ToList();
+    }
+
     private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, ActorContext actor, CancellationToken cancellationToken)
     {
         if (requestedOwnerId.HasValue && requestedOwnerId.Value != Guid.Empty)

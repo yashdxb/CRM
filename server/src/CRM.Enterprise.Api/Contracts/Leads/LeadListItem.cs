@@ -47,5 +47,6 @@ public record LeadListItem(
     int AssumptionsOutstanding,
     string? WeakestSignal,
     string? WeakestState,
+    IEnumerable<string> NextEvidenceSuggestions,
     IEnumerable<LeadScoreBreakdownItem> ScoreBreakdown,
     IEnumerable<string> RiskFlags);

@@ -14,6 +14,8 @@ import { DashboardDataService } from '../services/dashboard-data.service';
 import { DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal } from '../models/dashboard.model';
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
+import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
+import { ExpansionSignal } from '../../opportunities/models/opportunity.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CommandPaletteService } from '../../../../core/command-palette/command-palette.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -79,6 +81,7 @@ export class DashboardPage implements OnInit {
   private readonly notificationService = inject(NotificationService);
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly referenceData = inject(ReferenceDataService);
+  private readonly opportunityData = inject(OpportunityDataService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly emptySummary: DashboardSummary = {
     totalCustomers: 0,
@@ -148,6 +151,9 @@ export class DashboardPage implements OnInit {
   };
   private readonly managerHealthRefresh$ = new Subject<void>();
   private readonly managerHealthSignal = signal<ManagerPipelineHealth>(this.emptyManagerHealth);
+  protected readonly expansionSignals = signal<ExpansionSignal[]>([]);
+  protected readonly expansionLoading = signal(false);
+  protected readonly expansionSubmitting = signal<Record<string, boolean>>({});
 
   protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
   protected readonly managerHealth = computed(() => this.managerHealthSignal() ?? this.emptyManagerHealth);
@@ -159,6 +165,7 @@ export class DashboardPage implements OnInit {
   protected coachingPriority = 'High';
   protected coachingSubmitting = false;
   private coachingDeal: ManagerReviewDeal | null = null;
+  protected expansionDialogOpen = false;
 
   protected readonly greeting = this.getGreeting();
   
@@ -525,6 +532,7 @@ export class DashboardPage implements OnInit {
     'execution-guide': 'sm',
     'confidence-forecast': 'sm',
     'my-forecast': 'sm',
+    'expansion-signals': 'md',
     accounts: 'md',
     'manager-health': 'md',
     'activity-mix': 'sm',
@@ -576,6 +584,7 @@ export class DashboardPage implements OnInit {
     { id: 'execution-guide', label: 'Execution Guide', icon: 'pi pi-compass' },
     { id: 'confidence-forecast', label: 'Confidence Forecast', icon: 'pi pi-chart-line' },
     { id: 'my-forecast', label: 'My Forecast', icon: 'pi pi-bolt' },
+    { id: 'expansion-signals', label: 'Expansion Signals', icon: 'pi pi-sparkles' },
     { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },
     { id: 'manager-health', label: 'Pipeline Health', icon: 'pi pi-shield' },
     { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
@@ -611,6 +620,8 @@ export class DashboardPage implements OnInit {
         this.summarySignal.set(resolvedSummary);
         this.emitRiskAlerts(resolvedSummary);
       });
+
+    this.loadExpansionSignals();
 
     this.managerHealthRefresh$
       .pipe(
@@ -694,6 +705,67 @@ export class DashboardPage implements OnInit {
       missingNextStep: Math.max(state?.missingNextStep ?? 0, missingNextStep),
       idleDeals: Math.max(state?.idleDeals ?? 0, idleDeals)
     });
+  }
+
+  protected expansionSignalsCount(): number {
+    return this.expansionSignals().length;
+  }
+
+  protected isExpansionSubmitting(signal: ExpansionSignal): boolean {
+    return !!this.expansionSubmitting()[signal.opportunityId];
+  }
+
+  protected createExpansionOpportunity(signal: ExpansionSignal): void {
+    if (signal.hasExpansionOpportunity || this.isExpansionSubmitting(signal)) {
+      return;
+    }
+
+    this.expansionSubmitting.update((current) => ({
+      ...current,
+      [signal.opportunityId]: true
+    }));
+
+    this.opportunityData.createExpansion(signal.opportunityId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.expansionSignals.update((current) =>
+            current.map((item) =>
+              item.opportunityId === signal.opportunityId
+                ? { ...item, hasExpansionOpportunity: true }
+                : item
+            )
+          );
+          this.expansionSubmitting.update((current) => ({
+            ...current,
+            [signal.opportunityId]: false
+          }));
+          this.toastService.show('success', 'Expansion opportunity created.', 3000);
+        },
+        error: () => {
+          this.expansionSubmitting.update((current) => ({
+            ...current,
+            [signal.opportunityId]: false
+          }));
+          this.toastService.show('error', 'Unable to create expansion opportunity.', 3000);
+        }
+      });
+  }
+
+  private loadExpansionSignals(): void {
+    this.expansionLoading.set(true);
+    this.opportunityData.getExpansionSignals()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (signals) => {
+          this.expansionSignals.set(signals ?? []);
+          this.expansionLoading.set(false);
+        },
+        error: () => {
+          this.expansionLoading.set(false);
+          this.toastService.show('error', 'Unable to load expansion signals.', 3000);
+        }
+      });
   }
 
   private readRiskAlertState(): { date: string; missingNextStep: number; idleDeals: number } | null {

@@ -155,6 +155,10 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - **Deployment method:** push to `master` triggers GitHub Actions for both client and API.
   - Client workflow: `.github/workflows/azure-static-web-apps-jolly-dune-0d9d1fe0f.yml`
   - API workflow: `.github/workflows/deploy-api.yml`
+- **Mobile app CI/CD:** Flutter mobile ships from a **separate repo** and its own GitHub Actions workflows.
+  - Mobile repo: `https://github.com/yashdxb/crm-enterprise-mobile`
+  - Mobile workflows: `ci.yml` (analyze/test), `release-android.yml`, `release-ios.yml`.
+  - Store signing keys and mobile secrets stay isolated in the mobile repo.
 - **Daily ops log:** record daily issues and fixes in `docs/DAILY_OPERATIONS_LOG.md`, and only merge verified outcomes into this master file.
 - **Lead AI scoring:** Lead score refresh uses Azure OpenAI when configured, falls back to OpenAI, then rules-based scoring to keep the UI functional.
 
@@ -212,9 +216,10 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 
 ### Automation Rules (Operational)
 - **Source of truth** for CRM backlog items and completion status: `docs/CRM_BACKLOG.md`.
+- **Source of truth** for mobile app backlog items and completion status: `docs/MOBILE_BACKLOG.md`.
 - **Source of truth** for supply-chain backlog items: `docs/SCM_BACKLOG.md`.
 - **Source of truth** for cross-cutting platform/infra backlog items: `docs/PROJECT_BACKLOG.md`.
-- **New backlog items** derived from `docs/CRM_BACKLOG.md`, `docs/SCM_BACKLOG.md`, and `docs/PROJECT_BACKLOG.md` (PARTIAL/NOT STARTED/UNKNOWN).
+- **New backlog items** derived from `docs/CRM_BACKLOG.md`, `docs/MOBILE_BACKLOG.md`, `docs/SCM_BACKLOG.md`, and `docs/PROJECT_BACKLOG.md` (PARTIAL/NOT STARTED/UNKNOWN).
 - **Do not assume** status beyond documented evidence.
 
 ### ClickUp API Integration
@@ -235,6 +240,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
   - List: `SCM Backlog` (id: `901710734279`)
   - List: `CRM Backlog` (id: `901710720381`)
   - List: `Project Backlog` (id: `901710720382`)
+  - List: `Mobile Backlog` (id: `901710789774`)
 - Folder: `CRM Modules` (id: `90176298150`)
   - List: `List` (id: `901710553353`)
 - Folder: `Engineering` (id: `90176298161`)

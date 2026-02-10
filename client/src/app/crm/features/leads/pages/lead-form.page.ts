@@ -166,6 +166,8 @@ export class LeadFormPage implements OnInit {
   protected qualificationConfidence = signal<number | null>(null);
   protected truthCoverage = signal<number | null>(null);
   protected assumptionsOutstanding = signal<number | null>(null);
+  protected serverNextEvidenceSuggestions = signal<string[]>([]);
+  protected nextEvidenceSuggestions = signal<string[]>([]);
   protected qualificationFeedback = signal<{
     confidenceLabel: string;
     weakestSignal: string | null;
@@ -413,6 +415,7 @@ export class LeadFormPage implements OnInit {
     this.assumptionsOutstanding.set(lead.assumptionsOutstanding ?? null);
     this.serverWeakestSignal.set(lead.weakestSignal ?? null);
     this.serverWeakestState.set(lead.weakestState ?? null);
+    this.serverNextEvidenceSuggestions.set(lead.nextEvidenceSuggestions ?? []);
     this.scoreBreakdown.set(lead.scoreBreakdown ?? []);
     this.riskFlags.set(lead.riskFlags ?? []);
     this.normalizeEvidence();
@@ -883,12 +886,17 @@ export class LeadFormPage implements OnInit {
     const weakest = this.getWeakestFactor(factors);
     const serverWeakestSignal = this.serverWeakestSignal();
     const serverWeakestState = this.serverWeakestState();
+    const serverSuggestions = this.serverNextEvidenceSuggestions();
     const confidenceLabel = this.deriveConfidenceLabel(factors);
+    const suggestions = preferServer && serverSuggestions.length
+      ? serverSuggestions
+      : this.buildNextEvidenceSuggestions(weakest?.label ?? null);
     this.qualificationFeedback.set({
       confidenceLabel,
       weakestSignal: preferServer && serverWeakestSignal ? serverWeakestSignal : weakest?.label ?? null,
       weakestState: preferServer && serverWeakestState ? serverWeakestState : weakest?.state ?? null
     });
+    this.nextEvidenceSuggestions.set(suggestions);
   }
 
   private updateEpistemicSummary(preferServer = false): void {
@@ -926,6 +934,46 @@ export class LeadFormPage implements OnInit {
   private computeAssumptionsOutstanding(factors: Array<{ label: string; state: string }>): number {
     const highImpactLabels = new Set(['Budget availability', 'Buying timeline', 'Economic buyer']);
     return factors.filter((factor) => highImpactLabels.has(factor.label) && (factor.state === 'Unknown' || factor.state === 'Assumed')).length;
+  }
+
+  private buildNextEvidenceSuggestions(label: string | null): string[] {
+    switch (label) {
+      case 'Budget availability':
+        return [
+          'Capture budget range and approval owner.',
+          'Ask for confirmation of funding source and timeline.'
+        ];
+      case 'Readiness to spend':
+        return [
+          'Confirm internal priority vs competing initiatives.',
+          'Ask for target decision date and blockers.'
+        ];
+      case 'Buying timeline':
+        return [
+          'Document target go-live date and procurement steps.',
+          'Confirm key milestones and dependencies.'
+        ];
+      case 'Problem severity':
+        return [
+          'Capture quantified impact (time/cost/risk).',
+          'Ask for a recent example or incident.'
+        ];
+      case 'Economic buyer':
+        return [
+          'Identify budget owner and approval chain.',
+          'Confirm who signs and who influences.'
+        ];
+      case 'ICP fit':
+        return [
+          'Validate company size, industry, and stack fit.',
+          'Confirm urgency relative to ICP triggers.'
+        ];
+      default:
+        return [
+          'Log specific evidence for the weakest factor.',
+          'Confirm the next step and decision owner.'
+        ];
+    }
   }
 
   private getQualificationFactors(): Array<{ label: string; state: string; weight: number }> {

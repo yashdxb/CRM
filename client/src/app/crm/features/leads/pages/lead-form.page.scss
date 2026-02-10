@@ -605,6 +605,19 @@
       color: rgba(71, 85, 105, 0.95);
     }
 
+    .qualification-feedback .feedback-suggestions {
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .qualification-feedback .feedback-suggestions-list {
+      margin: 0;
+      padding-left: 1.1rem;
+      color: rgba(30, 64, 175, 0.85);
+      font-size: 0.9rem;
+      line-height: 1.3;
+    }
+
     .legend-title {
       font-size: 0.8rem;
       font-weight: 600;
