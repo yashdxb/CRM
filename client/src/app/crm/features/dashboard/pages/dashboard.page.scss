@@ -1550,6 +1550,56 @@
   gap: $space-2;
 }
 
+.forecast-scenarios {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.scenario-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-2 $space-3;
+  border-radius: $radius-md;
+  background: $glass-bg-subtle;
+}
+
+.scenario-label {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.scenario-name {
+  font-weight: 600;
+  color: $text-primary;
+}
+
+.scenario-count {
+  font-size: $font-size-xs;
+  color: $text-muted;
+}
+
+.scenario-value {
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.scenario-delta {
+  font-weight: 700;
+  color: $text-muted;
+
+  &.positive {
+    color: $success;
+  }
+
+  &.negative {
+    color: $danger;
+  }
+}
+
 .cost-breakdown {
   margin-top: $space-4;
   display: flex;

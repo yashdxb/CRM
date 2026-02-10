@@ -407,6 +407,40 @@
           </div>
         </ng-container>
 
+        <!-- Forecast Scenarios -->
+        <ng-container *ngSwitchCase="'forecast-scenarios'">
+          <div class="card-header">
+            <h3 class="card-title">
+              <i class="pi pi-sliders-h"></i>
+              Forecast Scenarios
+            </h3>
+            <div class="card-actions">
+              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
+            </div>
+          </div>
+          <div class="card-body">
+            <ng-container *ngIf="summary().forecastScenarios.length; else noScenarios">
+              <div class="forecast-scenarios">
+                <div class="scenario-row" *ngFor="let scenario of summary().forecastScenarios">
+                  <div class="scenario-label">
+                    <span class="scenario-name">{{ scenario.label }}</span>
+                    <span class="scenario-count">{{ scenario.dealCount }} deals</span>
+                  </div>
+                  <div class="scenario-value">
+                    {{ scenario.value | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+                  </div>
+                  <div class="scenario-delta" [class.negative]="scenario.deltaFromBase < 0" [class.positive]="scenario.deltaFromBase > 0">
+                    {{ scenario.deltaFromBase | currency:resolveCurrencyCode():'symbol':'1.0-0' }}
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+            <ng-template #noScenarios>
+              <div class="empty-state">No scenarios available.</div>
+            </ng-template>
+          </div>
+        </ng-container>
+
         <!-- My Forecast -->
         <ng-container *ngSwitchCase="'my-forecast'">
           <div class="card-header">

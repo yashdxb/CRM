@@ -585,7 +585,19 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Coaching UI dialog + actions: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
     - Coaching UI logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
     - Review acknowledgment flow: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
-- Conditional Forecasting (ClickUp: 86dzp8xey, Status: in progress)
+- Conditional Forecasting (ClickUp: 86dzp8xey, Status: done)
+  - Acceptance criteria:
+    - Dashboard shows a Forecast Scenarios card with Base, Conservative, and Commit-only totals.
+    - Each scenario displays total amount and deal count, plus delta vs Base.
+    - Scenario values are derived from forecast categories on opportunities (category on opportunity or stage default).
+  - Evidence:
+    - Scenario computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - API contract: `server/src/CRM.Enterprise.Application/Dashboard/DashboardSummaryDto.cs`
+    - API response mapping: `server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs`
+    - Response model: `server/src/CRM.Enterprise.Api/Contracts/Dashboard/DashboardSummaryResponse.cs`
+    - Dashboard card UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Dashboard card config: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+    - Dashboard card styles: `client/src/app/crm/features/dashboard/pages/dashboard.page.scss`
 - CSV import/export flow (ClickUp: 86dzp8xh9, Status: done)
 - Epistemic Metrics Core (ClickUp: 86dzp8xf6, Status: done)
   - Acceptance criteria:

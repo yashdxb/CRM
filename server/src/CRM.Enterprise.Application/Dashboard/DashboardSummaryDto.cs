@@ -47,7 +47,8 @@ public record DashboardSummaryDto(
     int ConfidenceCalibrationSample,
     decimal MyPipelineValueTotal,
     decimal MyConfidenceWeightedPipelineValue,
-    decimal? MyQuotaTarget);
+    decimal? MyQuotaTarget,
+    IReadOnlyList<ForecastScenarioDto> ForecastScenarios);
 
 public record RecentAccountDto(
     Guid Id,
@@ -122,3 +123,10 @@ public record CostOfNotKnowingFactorDto(
     decimal Weight,
     decimal Contribution,
     string State);
+
+public record ForecastScenarioDto(
+    string Key,
+    string Label,
+    decimal Value,
+    int DealCount,
+    decimal DeltaFromBase);

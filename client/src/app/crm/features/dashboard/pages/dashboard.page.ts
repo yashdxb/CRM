@@ -125,7 +125,9 @@ export class DashboardPage implements OnInit {
     confidenceCalibrationScore: 0,
     confidenceCalibrationSample: 0,
     myPipelineValueTotal: 0,
-    myConfidenceWeightedPipelineValue: 0
+    myConfidenceWeightedPipelineValue: 0,
+    myQuotaTarget: null,
+    forecastScenarios: []
   };
   private readonly summarySignal = signal<DashboardSummary>(this.emptySummary);
   private readonly emptyManagerHealth: ManagerPipelineHealth = {
@@ -531,6 +533,7 @@ export class DashboardPage implements OnInit {
     'risk-checklist': 'md',
     'execution-guide': 'sm',
     'confidence-forecast': 'sm',
+    'forecast-scenarios': 'sm',
     'my-forecast': 'sm',
     'expansion-signals': 'md',
     accounts: 'md',
@@ -583,6 +586,7 @@ export class DashboardPage implements OnInit {
     { id: 'risk-checklist', label: 'Risk Checklist', icon: 'pi pi-list-check' },
     { id: 'execution-guide', label: 'Execution Guide', icon: 'pi pi-compass' },
     { id: 'confidence-forecast', label: 'Confidence Forecast', icon: 'pi pi-chart-line' },
+    { id: 'forecast-scenarios', label: 'Forecast Scenarios', icon: 'pi pi-sliders-h' },
     { id: 'my-forecast', label: 'My Forecast', icon: 'pi pi-bolt' },
     { id: 'expansion-signals', label: 'Expansion Signals', icon: 'pi pi-sparkles' },
     { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },

@@ -16,6 +16,7 @@ public class DashboardLayoutService : IDashboardLayoutService
         "risk-checklist",
         "execution-guide",
         "confidence-forecast",
+        "forecast-scenarios",
         "my-forecast",
         "accounts",
         "manager-health",

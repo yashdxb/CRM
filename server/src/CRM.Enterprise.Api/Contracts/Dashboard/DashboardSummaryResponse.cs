@@ -48,7 +48,8 @@ public record DashboardSummaryResponse(
     int ConfidenceCalibrationSample,
     decimal MyPipelineValueTotal,
     decimal MyConfidenceWeightedPipelineValue,
-    decimal? MyQuotaTarget);
+    decimal? MyQuotaTarget,
+    IEnumerable<ForecastScenarioItem> ForecastScenarios);
 
 public record ChartDataPoint(string Label, decimal Value);
 
@@ -102,3 +103,10 @@ public record CostOfNotKnowingFactorItem(
     decimal Weight,
     decimal Contribution,
     string State);
+
+public record ForecastScenarioItem(
+    string Key,
+    string Label,
+    decimal Value,
+    int DealCount,
+    decimal DeltaFromBase);

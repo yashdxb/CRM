@@ -51,6 +51,7 @@ export interface DashboardSummary {
   myPipelineValueTotal: number;
   myConfidenceWeightedPipelineValue: number;
   myQuotaTarget?: number | null;
+  forecastScenarios: ForecastScenario[];
 }
 
 export interface ChartDataPoint {
@@ -118,6 +119,14 @@ export interface CostOfNotKnowingFactor {
   weight: number;
   contribution: number;
   state: string;
+}
+
+export interface ForecastScenario {
+  key: string;
+  label: string;
+  value: number;
+  dealCount: number;
+  deltaFromBase: number;
 }
 
 export interface ManagerPipelineHealth {

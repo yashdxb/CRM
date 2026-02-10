@@ -59,7 +59,8 @@ export class DashboardDataService {
       confidenceCalibrationSample: 0,
       myPipelineValueTotal: 0,
       myConfidenceWeightedPipelineValue: 0,
-      myQuotaTarget: null
+      myQuotaTarget: null,
+      forecastScenarios: []
     };
 
     return this.http.get<DashboardSummary>(url).pipe(catchError(() => of(empty)));

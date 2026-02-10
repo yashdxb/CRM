@@ -841,7 +841,12 @@ export function buildDashboardSummary(): DashboardSummary {
     confidenceCalibrationScore: 72,
     confidenceCalibrationSample: 48,
     myPipelineValueTotal: pipelineValueTotal * 0.38,
-    myConfidenceWeightedPipelineValue: pipelineValueTotal * 0.25
+    myConfidenceWeightedPipelineValue: pipelineValueTotal * 0.25,
+    forecastScenarios: [
+      { key: 'base', label: 'Base forecast', value: pipelineValueTotal * 0.68, dealCount: openOpportunities, deltaFromBase: 0 },
+      { key: 'conservative', label: 'Conservative', value: pipelineValueTotal * 0.52, dealCount: Math.floor(openOpportunities * 0.8), deltaFromBase: pipelineValueTotal * -0.16 },
+      { key: 'commit', label: 'Commit only', value: pipelineValueTotal * 0.3, dealCount: Math.floor(openOpportunities * 0.35), deltaFromBase: pipelineValueTotal * -0.38 }
+    ]
   };
 }
 

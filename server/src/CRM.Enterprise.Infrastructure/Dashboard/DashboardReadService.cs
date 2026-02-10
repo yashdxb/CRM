@@ -28,6 +28,7 @@ public class DashboardReadService : IDashboardReadService
         string Name,
         string AccountName,
         string Stage,
+        string? ForecastCategory,
         decimal Amount,
         Guid OwnerId,
         string? Summary,
@@ -113,6 +114,7 @@ public class DashboardReadService : IDashboardReadService
                 o.Name,
                 o.Account != null ? o.Account.Name : string.Empty,
                 o.Stage != null ? o.Stage.Name : "Prospecting",
+                o.ForecastCategory ?? (o.Stage != null ? o.Stage.ForecastCategory : null),
                 o.Amount,
                 o.OwnerId,
                 o.Summary,
@@ -894,6 +896,8 @@ public class DashboardReadService : IDashboardReadService
                 .SingleOrDefaultAsync(cancellationToken);
         }
 
+        var forecastScenarios = BuildForecastScenarios(pipelineRows, confidenceWeightedPipelineValue);
+
         return new DashboardSummaryDto(
             totalCustomers,
             leads,
@@ -938,7 +942,8 @@ public class DashboardReadService : IDashboardReadService
             confidenceCalibrationSample,
             Math.Round(myPipelineValueTotal, 2),
             Math.Round(myConfidenceWeightedPipelineValue, 2),
-            myQuotaTarget);
+            myQuotaTarget,
+            forecastScenarios);
     }
 
     public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(Guid? userId, CancellationToken cancellationToken)
@@ -1755,6 +1760,58 @@ public class DashboardReadService : IDashboardReadService
 
         var score = 1m - meanError;
         return Math.Clamp(score * 100m, 0m, 100m);
+    }
+
+    private static IReadOnlyList<ForecastScenarioDto> BuildForecastScenarios(
+        IReadOnlyList<PipelineExposureRow> pipelineRows,
+        decimal baseWeightedValue)
+    {
+        if (pipelineRows.Count == 0)
+        {
+            return Array.Empty<ForecastScenarioDto>();
+        }
+
+        var baseValue = Math.Round(baseWeightedValue, 2);
+        var baseCount = pipelineRows.Count;
+
+        decimal conservativeValue = 0m;
+        var conservativeCount = 0;
+        foreach (var row in pipelineRows)
+        {
+            var category = row.ForecastCategory ?? string.Empty;
+            var factor = category switch
+            {
+                var value when value.Equals("Best Case", StringComparison.OrdinalIgnoreCase) => 0m,
+                var value when value.Equals("Pipeline", StringComparison.OrdinalIgnoreCase) => 0.5m,
+                var value when value.Equals("Commit", StringComparison.OrdinalIgnoreCase) => 1m,
+                var value when value.Equals("Closed", StringComparison.OrdinalIgnoreCase) => 1m,
+                var value when value.Equals("Omitted", StringComparison.OrdinalIgnoreCase) => 0m,
+                _ => 1m
+            };
+
+            if (factor <= 0m)
+            {
+                continue;
+            }
+
+            conservativeCount += 1;
+            conservativeValue += row.Amount * factor;
+        }
+
+        var commitRows = pipelineRows
+            .Where(row => string.Equals(row.ForecastCategory, "Commit", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var commitValue = commitRows.Sum(row => row.Amount);
+
+        var conservativeRounded = Math.Round(conservativeValue, 2);
+        var commitRounded = Math.Round(commitValue, 2);
+
+        return new[]
+        {
+            new ForecastScenarioDto("base", "Base forecast", baseValue, baseCount, 0m),
+            new ForecastScenarioDto("conservative", "Conservative", conservativeRounded, conservativeCount, Math.Round(conservativeRounded - baseValue, 2)),
+            new ForecastScenarioDto("commit", "Commit only", commitRounded, commitRows.Count, Math.Round(commitRounded - baseValue, 2))
+        };
     }
 
     private static decimal GetStageConfidence(IReadOnlyDictionary<string, decimal> stageConfidenceMap, string stage)

@@ -170,7 +170,13 @@ public class DashboardController : ControllerBase
             summary.ConfidenceCalibrationSample,
             summary.MyPipelineValueTotal,
             summary.MyConfidenceWeightedPipelineValue,
-            summary.MyQuotaTarget);
+            summary.MyQuotaTarget,
+            summary.ForecastScenarios.Select(scenario => new ForecastScenarioItem(
+                scenario.Key,
+                scenario.Label,
+                scenario.Value,
+                scenario.DealCount,
+                scenario.DeltaFromBase)).ToList());
 
         return Ok(response);
     }
