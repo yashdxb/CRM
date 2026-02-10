@@ -585,7 +585,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Metrics computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
     - API summary fields: `server/src/CRM.Enterprise.Application/Dashboard/DashboardSummaryDto.cs`
     - Dashboard UI cards: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
-- Epistemic State + Evidence Governance (ClickUp: 86dzp8xfc, Status: in progress)
+- Epistemic State + Evidence Governance (ClickUp: 86dzp8xfc, Status: done)
+  - Acceptance criteria:
+    - Qualification factors default to `Unknown` and are visually represented in the lead detail.
+    - Evidence inputs are disabled when a factor is `Unknown` and unlocked only when the factor is set.
+    - Lead detail shows an inline qualification summary with confidence and weakest signal.
+  - Evidence:
+    - Qualification rules + factor defaults: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+    - Lead detail CQVS UI: `client/src/app/crm/features/leads/pages/lead-form.page.html`
+    - Lead detail logic: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
+    - CQVS styling: `client/src/app/crm/features/leads/pages/lead-form.page.scss`
 - Feedback Loop + Weakest Signal (ClickUp: 86dzp8xf9, Status: done)
   - Acceptance criteria:
     - Lead detail shows weakest signal with confidence + rationale.
