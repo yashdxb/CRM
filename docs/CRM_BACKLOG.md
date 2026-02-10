@@ -573,7 +573,18 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Calibration logic: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
     - API contract: `server/src/CRM.Enterprise.Application/Dashboard/DashboardSummaryDto.cs`
     - Dashboard UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
-- Coaching & Management (ClickUp: 86dzp8xeu, Status: in progress)
+- Coaching & Management (ClickUp: 86dzp8xeu, Status: done)
+  - Acceptance criteria:
+    - Managers can create coaching tasks on at-risk deals with comment, due date, and priority.
+    - Coaching tasks appear in manager health metrics (open/overdue/escalations).
+    - Review outcomes that require acknowledgment create follow-up tasks with due dates.
+  - Evidence:
+    - Coaching API + task creation: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - Coaching endpoint: `server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs`
+    - Manager health metrics: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - Coaching UI dialog + actions: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Coaching UI logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+    - Review acknowledgment flow: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
 - Conditional Forecasting (ClickUp: 86dzp8xey, Status: in progress)
 - CSV import/export flow (ClickUp: 86dzp8xh9, Status: done)
 - Epistemic Metrics Core (ClickUp: 86dzp8xf6, Status: done)
