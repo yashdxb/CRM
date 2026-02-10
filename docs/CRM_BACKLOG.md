@@ -586,7 +586,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - API summary fields: `server/src/CRM.Enterprise.Application/Dashboard/DashboardSummaryDto.cs`
     - Dashboard UI cards: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
 - Epistemic State + Evidence Governance (ClickUp: 86dzp8xfc, Status: in progress)
-- Feedback Loop + Weakest Signal (ClickUp: 86dzp8xf9, Status: backlog)
+- Feedback Loop + Weakest Signal (ClickUp: 86dzp8xf9, Status: done)
+  - Acceptance criteria:
+    - Lead detail shows weakest signal with confidence + rationale.
+    - Next-evidence suggestions appear for the weakest factor to guide rep action.
+    - Lead list surfaces weakest-signal chips for quick triage.
+  - Evidence:
+    - Weakest signal + suggestions logic: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+    - Lead detail UI: `client/src/app/crm/features/leads/pages/lead-form.page.html`
+    - Lead detail behavior: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
+    - Lead list chips: `client/src/app/crm/features/leads/pages/leads.page.html`
 - Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene. (ClickUp: 86dzp8x9n, Status: done)
 - Module: Activities | As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction. (ClickUp: 86dzp8xdt, Status: done)
 - Module: Activities | As a Sales Rep, I want review outcomes (Needs Work / Escalate) to create acknowledgment tasks with due dates. (ClickUp: 86dzp8x97, Status: done)
