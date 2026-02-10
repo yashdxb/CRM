@@ -176,11 +176,6 @@
                 <p class="status-note" *ngIf="isEditMode() && form.status === 'Converted'">
                   This lead is already converted. Update the opportunity instead.
                 </p>
-                <p class="status-rule">{{ qualificationRuleMessage() }}</p>
-                <p class="status-error" *ngIf="qualificationInlineError()">{{ qualificationInlineError() }}</p>
-                <p class="status-note" *ngIf="isEditMode() && form.status !== 'Converted'">
-                  Convert via the "Convert lead" button after qualification.
-                </p>
               </div>
               <div class="field">
                 <label>Assignment</label>
@@ -316,6 +311,13 @@
               Qualification
             </h2>
             <div class="form-grid">
+              <div class="field full-row">
+                <p class="status-rule">{{ qualificationRuleMessage() }}</p>
+                <p class="status-error" *ngIf="qualificationInlineError()">{{ qualificationInlineError() }}</p>
+                <p class="status-note" *ngIf="isEditMode() && form.status !== 'Converted'">
+                  Convert via the "Convert lead" button after qualification.
+                </p>
+              </div>
               <div class="field full-row" *ngIf="isEditMode()">
                 <p class="status-note" *ngIf="firstTouchDueAtUtc()">
                   First touch due: {{ firstTouchDueAtUtc() | date:'medium' }}
