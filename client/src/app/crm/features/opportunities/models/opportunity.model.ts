@@ -80,7 +80,7 @@ export interface OpportunityStageHistoryItem {
 export interface OpportunityReviewChecklistItem {
   id: string;
   opportunityId: string;
-  type: 'Security' | 'Legal';
+  type: 'Security' | 'Legal' | 'Technical';
   title: string;
   status: string;
   notes?: string | null;

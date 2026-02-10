@@ -123,8 +123,10 @@ export class OpportunityFormPage implements OnInit {
   );
   protected securityChecklist: OpportunityReviewChecklistItem[] = [];
   protected legalChecklist: OpportunityReviewChecklistItem[] = [];
+  protected technicalChecklist: OpportunityReviewChecklistItem[] = [];
   protected newSecurityItem = '';
   protected newLegalItem = '';
+  protected newTechnicalItem = '';
   protected checklistSavingIds = new Set<string>();
   protected checklistSavedIds = new Set<string>();
   protected approvals: OpportunityApprovalItem[] = [];
@@ -397,6 +399,12 @@ export class OpportunityFormPage implements OnInit {
     this.checklistService.get(opportunityId, 'Legal').subscribe({
       next: (items) => {
         this.legalChecklist = items;
+        this.cdr.detectChanges();
+      }
+    });
+    this.checklistService.get(opportunityId, 'Technical').subscribe({
+      next: (items) => {
+        this.technicalChecklist = items;
         this.cdr.detectChanges();
       }
     });
@@ -686,8 +694,12 @@ export class OpportunityFormPage implements OnInit {
     this.approvalRequest.currency = currency;
   }
 
-  protected addChecklistItem(type: 'Security' | 'Legal') {
-    const title = (type === 'Security' ? this.newSecurityItem : this.newLegalItem).trim();
+  protected addChecklistItem(type: 'Security' | 'Legal' | 'Technical') {
+    const title = (type === 'Security'
+      ? this.newSecurityItem
+      : type === 'Legal'
+        ? this.newLegalItem
+        : this.newTechnicalItem).trim();
     if (!title || !this.editingId) {
       return;
     }
@@ -698,9 +710,12 @@ export class OpportunityFormPage implements OnInit {
         if (type === 'Security') {
           this.securityChecklist = [...this.securityChecklist, item];
           this.newSecurityItem = '';
-        } else {
+        } else if (type === 'Legal') {
           this.legalChecklist = [...this.legalChecklist, item];
           this.newLegalItem = '';
+        } else {
+          this.technicalChecklist = [...this.technicalChecklist, item];
+          this.newTechnicalItem = '';
         }
       });
   }
@@ -732,8 +747,10 @@ export class OpportunityFormPage implements OnInit {
     this.checklistService.delete(item.id).subscribe(() => {
       if (item.type === 'Security') {
         this.securityChecklist = this.securityChecklist.filter((i) => i.id !== item.id);
-      } else {
+      } else if (item.type === 'Legal') {
         this.legalChecklist = this.legalChecklist.filter((i) => i.id !== item.id);
+      } else {
+        this.technicalChecklist = this.technicalChecklist.filter((i) => i.id !== item.id);
       }
     });
   }
@@ -1072,6 +1089,12 @@ export class OpportunityFormPage implements OnInit {
       }
       if (!this.form.successCriteria?.trim()) {
         return `Success criteria is required before moving to ${stage}.`;
+      }
+    }
+
+    if (['Proposal', 'Security / Legal Review', 'Negotiation', 'Commit'].includes(stage)) {
+      if (!this.technicalChecklist.length) {
+        return 'Log at least one technical risk before demo/validation.';
       }
     }
 

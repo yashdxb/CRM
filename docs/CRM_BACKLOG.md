@@ -667,7 +667,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (ClickUp: 86dzp8x9z, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates. (ClickUp: 86dzp8xan, Status: done)
-- Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation. (ClickUp: 86dzp8xb3, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation. (ClickUp: 86dzp8xb3, Status: done)
+  - Acceptance criteria:
+    - Opportunity form includes a Technical risk checklist with status + notes.
+    - At least one technical risk must be logged before moving to Proposal/Validation stages.
+    - Technical risks can be created, updated, and removed like other review checklist items.
+  - Evidence:
+    - Checklist type support: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityReviewChecklistService.cs`
+    - UI checklist: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+    - Stage gating: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
 - Module: Dashboard | As an executive, I can view confidence-weighted pipeline totals (ClickUp: 86dzp8y09, Status: done)
 - Module: Dashboard | As an executive, I can view confidence-weighted pipeline totals (ClickUp: 86dzp8xtc, Status: done)
 - Module: Dashboard | Confidence-weighted forecast card (ClickUp: 86dzp8xed, Status: done)

@@ -200,6 +200,10 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
         {
             return "Legal";
         }
+        if (string.Equals(type, "Technical", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Technical";
+        }
         return "Security";
     }
 }

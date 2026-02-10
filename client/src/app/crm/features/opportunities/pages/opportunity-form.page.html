@@ -655,6 +655,66 @@
                   <p class="helper-text">No legal checklist items yet.</p>
                 </ng-template>
               </div>
+
+              <div class="field full review-checklist">
+                <div class="checklist-header">
+                  <h4>Technical risk checklist</h4>
+                  <div class="checklist-add">
+                    <input
+                      pInputText
+                      name="newTechnicalItem"
+                      [(ngModel)]="newTechnicalItem"
+                      placeholder="Add technical risk"
+                      class="w-full"
+                    />
+                    <button pButton type="button" class="btn-glass btn-sm" (click)="addChecklistItem('Technical')">
+                      <i class="pi pi-plus"></i>
+                      Add
+                    </button>
+                  </div>
+                </div>
+                <div class="checklist-list" *ngIf="technicalChecklist.length; else emptyTechnicalChecklist">
+                  <div class="checklist-item" *ngFor="let item of technicalChecklist">
+                    <input
+                      pInputText
+                      [(ngModel)]="item.title"
+                      name="technicalTitle{{item.id}}"
+                      (blur)="saveChecklistItem(item)"
+                      class="w-full"
+                    />
+                    <p-select
+                      appendTo="body"
+                      [options]="reviewStatusOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="item.status"
+                      name="technicalStatus{{item.id}}"
+                      (onChange)="saveChecklistItem(item)"
+                      styleClass="w-full"
+                    ></p-select>
+                    <input
+                      pInputText
+                      [(ngModel)]="item.notes"
+                      name="technicalNotes{{item.id}}"
+                      placeholder="Notes (optional)"
+                      (blur)="saveChecklistItem(item)"
+                      class="w-full"
+                    />
+                    <span class="checklist-status" *ngIf="isChecklistSaving(item)">
+                      Saving…
+                    </span>
+                    <span class="checklist-status saved" *ngIf="isChecklistSaved(item)">
+                      Saved
+                    </span>
+                    <button pButton type="button" class="btn-glass btn-sm" (click)="deleteChecklistItem(item)">
+                      <i class="pi pi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+                <ng-template #emptyTechnicalChecklist>
+                  <p class="helper-text">No technical risks logged yet.</p>
+                </ng-template>
+              </div>
             </div>
           </section>
 

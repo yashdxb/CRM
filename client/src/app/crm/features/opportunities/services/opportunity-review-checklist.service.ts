@@ -7,7 +7,7 @@ export interface SaveOpportunityReviewChecklistItem {
   title: string;
   status?: string | null;
   notes?: string | null;
-  type?: 'Security' | 'Legal';
+  type?: 'Security' | 'Legal' | 'Technical';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -15,7 +15,7 @@ export class OpportunityReviewChecklistService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
 
-  get(opportunityId: string, type?: 'Security' | 'Legal') {
+  get(opportunityId: string, type?: 'Security' | 'Legal' | 'Technical') {
     let params = new HttpParams();
     if (type) {
       params = params.set('type', type);
