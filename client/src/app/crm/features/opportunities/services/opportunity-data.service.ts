@@ -42,6 +42,8 @@ export interface SaveOpportunityRequest {
   proposalLink?: string | null;
   proposalGeneratedAtUtc?: string | Date | null;
   proposalSentAtUtc?: string | Date | null;
+  preSalesScope?: string | null;
+  preSalesApproach?: string | null;
   deliveryOwnerId?: string | null;
   deliveryHandoffScope?: string | null;
   deliveryHandoffRisks?: string | null;

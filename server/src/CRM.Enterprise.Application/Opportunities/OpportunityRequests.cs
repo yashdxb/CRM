@@ -39,6 +39,8 @@ public sealed record OpportunityUpsertRequest(
     string? ProposalLink,
     DateTime? ProposalGeneratedAtUtc,
     DateTime? ProposalSentAtUtc,
+    string? PreSalesScope,
+    string? PreSalesApproach,
     Guid? DeliveryOwnerId,
     string? DeliveryHandoffScope,
     string? DeliveryHandoffRisks,

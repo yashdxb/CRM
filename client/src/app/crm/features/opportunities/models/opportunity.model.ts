@@ -32,6 +32,8 @@ export interface Opportunity {
   proposalLink?: string | null;
   proposalGeneratedAtUtc?: string | null;
   proposalSentAtUtc?: string | null;
+  preSalesScope?: string | null;
+  preSalesApproach?: string | null;
   deliveryOwnerId?: string | null;
   deliveryHandoffScope?: string | null;
   deliveryHandoffRisks?: string | null;

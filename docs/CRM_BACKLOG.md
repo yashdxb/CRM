@@ -672,7 +672,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Proposal fields + actions: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
     - Proposal form state + save mapping: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
     - Opportunity persistence: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
-- Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: done)
+  - Acceptance criteria:
+    - Pre-sales team members can be added with roles on the opportunity.
+    - Scope summary and approach notes are captured on the opportunity.
+    - Pre-sales notes persist and are editable alongside team members.
+  - Evidence:
+    - Pre-sales team + scope/approach UI: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+    - Opportunity form state + save mapping: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
+    - Opportunity persistence: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
 - Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (ClickUp: 86dzp8x9z, Status: done)
   - Acceptance criteria:
     - Sales Rep can capture handoff scope, risks, delivery owner, and timeline before Closed Won.

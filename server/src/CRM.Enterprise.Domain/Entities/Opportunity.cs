@@ -41,6 +41,8 @@ public class Opportunity : AuditableEntity
     public string? ProposalLink { get; set; }
     public DateTime? ProposalGeneratedAtUtc { get; set; }
     public DateTime? ProposalSentAtUtc { get; set; }
+    public string? PreSalesScope { get; set; }
+    public string? PreSalesApproach { get; set; }
     public Guid? DeliveryOwnerId { get; set; }
     public string? DeliveryHandoffScope { get; set; }
     public string? DeliveryHandoffRisks { get; set; }

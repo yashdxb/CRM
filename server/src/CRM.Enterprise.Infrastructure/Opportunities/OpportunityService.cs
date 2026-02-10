@@ -211,6 +211,8 @@ public sealed class OpportunityService : IOpportunityService
                 o.ProposalLink,
                 o.ProposalGeneratedAtUtc,
                 o.ProposalSentAtUtc,
+                o.PreSalesScope,
+                o.PreSalesApproach,
                 o.DeliveryOwnerId,
                 o.DeliveryHandoffScope,
                 o.DeliveryHandoffRisks,
@@ -303,6 +305,8 @@ public sealed class OpportunityService : IOpportunityService
                 o.ProposalLink,
                 o.ProposalGeneratedAtUtc,
                 o.ProposalSentAtUtc,
+                o.PreSalesScope,
+                o.PreSalesApproach,
                 o.DeliveryOwnerId,
                 o.DeliveryHandoffScope,
                 o.DeliveryHandoffRisks,
@@ -375,6 +379,8 @@ public sealed class OpportunityService : IOpportunityService
             opp.ProposalLink,
             opp.ProposalGeneratedAtUtc,
             opp.ProposalSentAtUtc,
+            opp.PreSalesScope,
+            opp.PreSalesApproach,
             opp.DeliveryOwnerId,
             opp.DeliveryHandoffScope,
             opp.DeliveryHandoffRisks,
@@ -539,6 +545,8 @@ public sealed class OpportunityService : IOpportunityService
             ProposalLink = request.ProposalLink,
             ProposalGeneratedAtUtc = request.ProposalGeneratedAtUtc,
             ProposalSentAtUtc = request.ProposalSentAtUtc,
+            PreSalesScope = request.PreSalesScope,
+            PreSalesApproach = request.PreSalesApproach,
             DeliveryOwnerId = request.DeliveryOwnerId,
             DeliveryHandoffScope = request.DeliveryHandoffScope,
             DeliveryHandoffRisks = request.DeliveryHandoffRisks,
@@ -595,6 +603,8 @@ public sealed class OpportunityService : IOpportunityService
             opp.ProposalLink,
             opp.ProposalGeneratedAtUtc,
             opp.ProposalSentAtUtc,
+            opp.PreSalesScope,
+            opp.PreSalesApproach,
             opp.DeliveryOwnerId,
             opp.DeliveryHandoffScope,
             opp.DeliveryHandoffRisks,
@@ -777,6 +787,14 @@ public sealed class OpportunityService : IOpportunityService
         if (request.ProposalSentAtUtc.HasValue)
         {
             opp.ProposalSentAtUtc = request.ProposalSentAtUtc;
+        }
+        if (request.PreSalesScope is not null)
+        {
+            opp.PreSalesScope = request.PreSalesScope;
+        }
+        if (request.PreSalesApproach is not null)
+        {
+            opp.PreSalesApproach = request.PreSalesApproach;
         }
         if (request.DeliveryOwnerId.HasValue)
         {
@@ -1960,6 +1978,14 @@ public sealed class OpportunityService : IOpportunityService
             return true;
         }
         if (opportunity.ProposalSentAtUtc != request.ProposalSentAtUtc)
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.PreSalesScope ?? string.Empty, request.PreSalesScope ?? string.Empty, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        if (!string.Equals(opportunity.PreSalesApproach ?? string.Empty, request.PreSalesApproach ?? string.Empty, StringComparison.Ordinal))
         {
             return true;
         }

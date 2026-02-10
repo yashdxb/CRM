@@ -450,6 +450,32 @@
                 Add teammate
               </button>
             </div>
+            <div class="form-grid">
+              <div class="field full">
+                <label for="oppPreSalesScope">Scope summary</label>
+                <textarea
+                  pTextarea
+                  id="oppPreSalesScope"
+                  rows="3"
+                  name="preSalesScope"
+                  [(ngModel)]="form.preSalesScope"
+                  placeholder="Solution scope, deliverables, and boundaries"
+                  class="w-full"
+                ></textarea>
+              </div>
+              <div class="field full">
+                <label for="oppPreSalesApproach">Approach / solution outline</label>
+                <textarea
+                  pTextarea
+                  id="oppPreSalesApproach"
+                  rows="3"
+                  name="preSalesApproach"
+                  [(ngModel)]="form.preSalesApproach"
+                  placeholder="Proposed approach, timeline, and key assumptions"
+                  class="w-full"
+                ></textarea>
+              </div>
+            </div>
           </section>
 
           <section class="form-card" *ngIf="isEditMode()">
