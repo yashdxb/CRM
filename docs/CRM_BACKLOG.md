@@ -665,7 +665,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Dashboard card logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
 - Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs. (ClickUp: 86dzp8xat, Status: backlog)
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: backlog)
-- Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (ClickUp: 86dzp8x9z, Status: backlog)
+- Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (ClickUp: 86dzp8x9z, Status: done)
+  - Acceptance criteria:
+    - Sales Rep can capture handoff scope, risks, delivery owner, and timeline before Closed Won.
+    - “Trigger kickoff” creates an onboarding milestone and confirms success.
+    - Closed Won requires handoff fields to be completed.
+  - Evidence:
+    - Handoff fields + kickoff CTA: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+    - Handoff validation + kickoff trigger: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
+    - Onboarding milestone API client: `client/src/app/crm/features/opportunities/services/opportunity-onboarding.service.ts`
 - Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates. (ClickUp: 86dzp8xan, Status: done)
 - Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation. (ClickUp: 86dzp8xb3, Status: done)
   - Acceptance criteria:

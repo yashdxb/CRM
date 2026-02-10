@@ -789,6 +789,17 @@
                   class="w-full"
                 ></textarea>
               </div>
+              <div class="field full">
+                <button
+                  pButton
+                  type="button"
+                  class="crm-button crm-button--primary"
+                  icon="pi pi-calendar-plus"
+                  label="Trigger kickoff"
+                  [disabled]="!isEditMode()"
+                  (click)="triggerKickoff()"
+                ></button>
+              </div>
             </div>
           </section>
 

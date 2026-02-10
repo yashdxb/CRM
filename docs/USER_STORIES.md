@@ -99,7 +99,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (Done)
 - Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs.
 - Module: Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment.
-- Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff.
+- Module: Dashboard | As a Sales Rep, I want to provide handoff notes and trigger a kickoff. (Done)
 - Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates.
 - Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation. (Done)
 - Module: Dashboard | As a manager, I want pipeline and forecast rollups to include my descendant roles by default so I see the full team view.

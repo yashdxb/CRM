@@ -295,6 +295,42 @@ export class OpportunityFormPage implements OnInit {
       });
   }
 
+  protected triggerKickoff() {
+    if (!this.editingId) {
+      return;
+    }
+    const handoffError = this.validateHandoffRequirements();
+    if (handoffError) {
+      this.toastService.show('error', handoffError, 4000);
+      return;
+    }
+    const existing = this.onboardingMilestones.find((item) =>
+      item.title.toLowerCase().includes('kickoff'));
+    if (existing) {
+      this.toastService.show('success', 'Kickoff milestone already exists.', 2500);
+      return;
+    }
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 7);
+    this.onboardingService
+      .create(this.editingId, {
+        type: 'Milestone',
+        title: 'Kickoff meeting scheduled',
+        status: 'Pending',
+        dueDateUtc: dueDate,
+        notes: this.form.deliveryHandoffScope ?? null
+      })
+      .subscribe({
+        next: (item) => {
+          this.onboardingMilestones = [...this.onboardingMilestones, item];
+          this.toastService.show('success', 'Kickoff milestone created.', 2500);
+        },
+        error: () => {
+          this.toastService.show('error', 'Unable to create kickoff milestone.', 3000);
+        }
+      });
+  }
+
   protected addTeamMember() {
     this.teamMembers = [
       ...this.teamMembers,
@@ -1119,12 +1155,35 @@ export class OpportunityFormPage implements OnInit {
       }
     }
 
+    if (this.form.isClosed && this.form.isWon) {
+      const handoffError = this.validateHandoffRequirements();
+      if (handoffError) {
+        return handoffError;
+      }
+    }
+
     if (this.isEditMode() && this.originalStage && stage !== this.originalStage && !stage.startsWith('Closed')) {
       if (!this.nextStepDueAtUtc) {
         return 'Next step is required before changing stage. Log an activity with a due date.';
       }
     }
 
+    return null;
+  }
+
+  private validateHandoffRequirements(): string | null {
+    if (!this.form.deliveryOwnerId) {
+      return 'Delivery owner is required for handoff.';
+    }
+    if (!this.form.deliveryHandoffScope?.trim()) {
+      return 'Handoff scope is required before kickoff.';
+    }
+    if (!this.form.deliveryHandoffRisks?.trim()) {
+      return 'Handoff risks are required before kickoff.';
+    }
+    if (!this.form.deliveryHandoffTimeline?.trim()) {
+      return 'Handoff timeline is required before kickoff.';
+    }
     return null;
   }
 }
