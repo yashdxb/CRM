@@ -18,7 +18,8 @@ export class PresenceService {
   }
 
   connect() {
-    const token = readTokenContext()?.token ?? localStorage.getItem('auth_token') ?? '';
+    const context = readTokenContext();
+    const token = context?.token ?? '';
     if (!token) {
       return;
     }
@@ -43,7 +44,7 @@ export class PresenceService {
 
     this.connection = new HubConnectionBuilder()
       .withUrl(`${environment.apiUrl}/api/hubs/presence`, {
-        accessTokenFactory: () => readTokenContext()?.token ?? localStorage.getItem('auth_token') ?? '',
+        accessTokenFactory: () => readTokenContext()?.token ?? '',
         withCredentials: false,
         headers
       })
