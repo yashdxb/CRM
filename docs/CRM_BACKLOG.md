@@ -682,34 +682,19 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
   - Evidence:
 - Module: Activities | As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction. (ClickUp: 86dzp8xdt, Status: done) Flow: 05
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/activities/pages/activity-form.page.html
-    - client/src/app/crm/features/activities/pages/activity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/ActivitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Activities/ActivityService.cs
+    - Command center shows quick actions for Activity, Task, and Meeting.
+    - Quick action opens modal and saves without leaving the dashboard.
+    - Successful save shows toast and updates recent activity list.
 - Module: Activities | As a Sales Rep, I want review outcomes (Needs Work / Escalate) to create acknowledgment tasks with due dates. (ClickUp: 86dzp8x97, Status: done) Flow: 05
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want review outcomes (Needs Work / Escalate) to create acknowledgment tasks with due dates.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/activities/pages/activity-form.page.html
-    - client/src/app/crm/features/activities/pages/activity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/ActivitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Activities/ActivityService.cs
+    - Review outcome options include Needs Work and Escalate.
+    - Selecting Needs Work or Escalate creates an acknowledgment task with due date.
+    - Acknowledgment tasks appear in Activities and dashboard task list.
 - Module: Activities | As a Sales Rep, I want the system to surface opportunities missing next steps. (ClickUp: 86dzp8x9k, Status: done) Flow: 05
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want the system to surface opportunities missing next steps.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/activities/pages/activity-form.page.html
-    - client/src/app/crm/features/activities/pages/activity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/ActivitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Activities/ActivityService.cs
+    - Dashboard shows a “Missing Next Step” list for open opportunities.
+    - An opportunity is flagged when no open next-step activity exists.
+    - Clicking the item navigates to the opportunity detail.
 - Module: Activities | As a system, automation creates tasks for unresolved high-impact factors (ClickUp: 86dzp8xyj, Status: done) Flow: 05
   - Acceptance criteria:
     - High-impact risk flags on a lead create Task activities for the lead owner (up to 3 items).
@@ -719,14 +704,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - High-impact task creation: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
 - Module: Contacts | As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership. (ClickUp: 86dzp8xcg, Status: done) Flow: 03
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/contacts/pages/contact-form.page.html
-    - client/src/app/crm/features/contacts/pages/contact-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/ContactsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Contacts/ContactService.cs
+    - Account team section supports adding members with role (Pre-sales/Manager).
+    - Team members persist and display on account/opportunity detail.
+    - Removing a member updates ownership display immediately.
 - Module: Contacts | As a Sales Rep, I want to see account history and related accounts so I can avoid duplication and understand context. (ClickUp: 86dzp8xcw, Status: done) Flow: 03
   - Acceptance criteria:
     - Contact workspace shows linked account history (recent activities on the account).
@@ -739,14 +719,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Contact workspace logic: `client/src/app/crm/features/contacts/pages/contact-form.page.ts`
 - Module: Contacts | As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group. (ClickUp: 86dzp8xcr, Status: done) Flow: 03
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/contacts/pages/contact-form.page.html
-    - client/src/app/crm/features/contacts/pages/contact-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/ContactsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Contacts/ContactService.cs
+    - Contact form includes “Buying Role” multi-select with the 5 roles.
+    - Selected roles persist and display on contact detail.
+    - Buying role is available in contact list columns/filters.
 - Module: Dashboard | As a Sales Manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8y0j, Status: done) Flow: 06
   - Acceptance criteria:
     - Manager dashboard lists deals with Truth Coverage % and Time-to-Truth value per deal.
@@ -820,14 +795,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Default layout order: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardLayoutService.cs`
 - Module: Dashboard | As a Sales Rep, I want to capture requirements, buying process, and success criteria to qualify fit. (ClickUp: 86dzp8xbp, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to capture requirements, buying process, and success criteria to qualify fit.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.html
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs
+    - Opportunity form includes fields: `requirements`, `buyingProcess`, `successCriteria`.
+    - Fields are required before advancing beyond Qualification.
+    - Values persist and display on reload.
 - Module: Dashboard | As a Sales Rep, I want to confirm pain, decision maker, and next step before advancing. (ClickUp: 86dzp8xc1, Status: done) Flow: 06
   - Acceptance criteria:
     - Moving to Qualification+ requires `summary` (pain/problem).
@@ -898,44 +868,23 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Dashboard UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
 - Module: Dashboard | Confidence-weighted forecast card (ClickUp: 86dzp8xed, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: Confidence-weighted forecast card
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.html
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs
+    - Dashboard shows raw pipeline total and confidence‑weighted total.
+    - Card displays delta between weighted and raw totals.
+    - Values use user currency and update with pipeline changes.
 - Module: Dashboard | Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth) (ClickUp: 86dzp8xen, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth)
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.html
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs
+    - Dashboard shows Truth Coverage %, Confidence label, and Time‑to‑Truth.
+    - Values update based on CQVS factor states and evidence.
+    - Widgets are included in default dashboard pack.
 - Module: Dashboard | Risk Register summary widget (ClickUp: 86dzp8xef, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: Risk Register summary widget
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.html
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs
+    - Dashboard shows total risk flag count and top risk labels.
+    - Clicking a flag filters/links to the related deal or lead.
 - Module: Dashboard | Hierarchy-based H1/H2 dashboard packs + reset (ClickUp: 86dzp8xea, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: Hierarchy-based H1/H2 dashboard packs + reset
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.html
-    - client/src/app/crm/features/dashboard/pages/dashboard.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs
+    - Default pack is selected by role hierarchy level.
+    - User can customize dashboard and reset to role default.
+    - Reset restores pack layout and visibility settings.
 - Module: Leads | As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors. (ClickUp: 86dzp8y10, Status: done) Flow: 02
   - Acceptance criteria:
     - CQVS breakdown lists the four labeled factors (C/Q/V/S) with clear titles.
@@ -980,14 +929,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Weakest signal + confidence: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
 - Module: Leads | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately. (ClickUp: 86dzp8xe0, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
+    - Dashboard command center shows sections for Tasks Due/Overdue and New Leads.
+    - Pipeline by stage and At‑risk deals are visible in the same view.
+    - Forecast snapshot shows raw and confidence‑weighted totals.
 - Module: Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes. (ClickUp: 86dzp8xd2, Status: done) Flow: 02
   - Acceptance criteria:
     - Convert action creates Account, Contact, Opportunity in one submission.
@@ -1023,14 +967,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
   - Evidence:
 - Module: Leads | As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward. (ClickUp: 86dzp8xd6, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
+    - Lead CQVS factors include Company Fit, Authority, Need, Timing.
+    - Lead cannot be marked Qualified until factors are set (not all Unknown).
+    - Qualification state is persisted and visible on reload.
 - Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends. (ClickUp: 86dzp8x9q, Status: done) Flow: 02
   - Acceptance criteria:
     - When lead status is set to Lost, loss reason, competitor, and loss notes are required.
@@ -1041,14 +980,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Lead UI fields: `client/src/app/crm/features/leads/pages/lead-form.page.html`
 - Module: Leads | Configurable qualification policy + conversion guardrails (ClickUp: 86dzp8xe3, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: Configurable qualification policy + conversion guardrails
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
+    - Settings allow `defaultThreshold`, `managerApprovalBelow`, and `blockBelow`.
+    - Lead conversion is blocked below `blockBelow` unless override is allowed.
+    - Override requires reason when `requireOverrideReason` is enabled.
 - Module: Opportunities | As a Sales Rep, I want alerts for deals with no next step or no activity in X days so I can recover risk early. (ClickUp: 86dzp8xdx, Status: done) Flow: 04
   - Acceptance criteria:
     - Idle-deal alerts respect `idleDeal`, `idleDealNoNextStep`, and `idleDealNoActivity` settings.
@@ -1063,34 +997,17 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
   - Evidence:
 - Module: Opportunities | As a Sales Rep, I want insights on deals without activity or next steps so I can fix gaps early. (ClickUp: 86dzp8x8e, Status: done) Flow: 04
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want insights on deals without activity or next steps so I can fix gaps early.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.html
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
+    - Dashboard shows “No activity” and “No next step” counts for open deals.
+    - Counts link to filtered lists of affected opportunities.
 - Module: Opportunities | As a Sales Rep, I want renewal tasks created and tracked like any opportunity. (ClickUp: 86dzp8x8w, Status: done) Flow: 04
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want renewal tasks created and tracked like any opportunity.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.html
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
+    - Renewal reminder tasks are created at 90/60/30 days.
+    - Tasks are linked to the renewal opportunity and appear in Activities.
 - Module: Opportunities | As a Sales Rep, I want stage‑specific activity templates so I can log actions faster. (ClickUp: 86dzp8xc4, Status: done) Flow: 04
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want stage‑specific activity templates so I can log actions faster.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.html
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
+    - Activity form supports stage‑based template selection.
+    - Templates prefill subject, type, and description.
+    - Changing stage updates available templates.
 - Module: Opportunities | As a Sales Rep, I want stage‑specific exit criteria (required fields, next step) so stage progression reflects reality. (ClickUp: 86dzp8xc7, Status: done) Flow: 04
   - Acceptance criteria:
     - Stage change validates required fields for the target stage.
@@ -1114,14 +1031,8 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Demo outcome gate + validation: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
 - Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close. (ClickUp: 86dzp8xa9, Status: done) Flow: 04
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to mark deals as Commit only when verified and expected to close.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.html
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
+    - Commit forecast category requires `expectedCloseDate` and `probability`.
+    - Commit selection is blocked if key stage gates are incomplete.
 - Module: Opportunities | As a Sales Rep, I want to schedule discovery and log notes before leaving the stage. (ClickUp: 86dzp8xbq, Status: done) Flow: 04
   - Acceptance criteria:
     - Moving to stages that require discovery is blocked unless a discovery meeting exists with notes and a scheduled/completed time.
@@ -1129,24 +1040,13 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Discovery gate + validation: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
 - Module: Opportunities | As a Sales Rep, I want to set opportunity name, value, close date, and initial stage so the deal is trackable from day one. (ClickUp: 86dzp8xce, Status: done) Flow: 04
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to set opportunity name, value, close date, and initial stage so the deal is trackable from day one.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.html
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
+    - Opportunity create requires `name`, `amount`, `expectedCloseDate`, `stage`.
+    - Defaults are applied for stage and forecast category if not provided.
 - Module: Opportunities | As an Admin, I want stage automation rules that create tasks on stage entry. (ClickUp: 86dzpgepx, Status: done) Flow: 04
   - Acceptance criteria:
-    - UI supports: As an Admin, I want stage automation rules that create tasks on stage entry.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.html
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
+    - Admin can define rule with `stage`, `taskTemplate`, and `dueInDays`.
+    - On stage entry, tasks are created for the opportunity owner.
+    - Rules can be enabled/disabled per stage.
 - Module: Settings | Approval Settings page (ClickUp: 86dzpdf2f, Status: done) Flow: 07
   - Acceptance criteria:
     - Approval Threshold field (`approvalAmountThreshold`) saves and reloads correctly.
@@ -1160,24 +1060,14 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
 - Module: Settings | As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded. (ClickUp: 86dzp8xah, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to finalize pricing, record objections, and update probability/close date with approvals if thresholds are exceeded.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/settings/pages/approval-settings.page.html
-    - client/src/app/crm/features/settings/pages/approval-settings.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunityApprovalsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
+    - Opportunity form includes `pricingNotes`, `discountPercent`, `discountAmount`.
+    - Updating `probability` or `expectedCloseDate` above threshold requires approval.
+    - Submit approval creates an approval request and shows status.
 - Module: Settings | As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback. (ClickUp: 86dzp8x9c, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to submit pricing/discount approvals and see status + manager feedback.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/settings/pages/approval-settings.page.html
-    - client/src/app/crm/features/settings/pages/approval-settings.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunityApprovalsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
+    - Approval section shows request status and approver feedback.
+    - Request approval button is enabled only when thresholds are met.
+    - Approval decisions update the status in the opportunity view.
 - Module: Settings | As an Admin, I want currencies sourced from the system reference data so selectors stay consistent. (ClickUp: 86dzq0q00, Status: done) Flow: 07
   - Acceptance criteria:
     - Currency dropdowns load from the server-side currencies catalog.
@@ -1189,31 +1079,18 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - `client/src/app/core/services/reference-data.service.ts`
 - Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (ClickUp: 86dzpf90r, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/settings/pages/workspace-settings.page.html
-    - client/src/app/crm/features/settings/pages/workspace-settings.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs
+    - High‑risk thresholds are configurable in Settings.
+    - Discount or high‑value updates are blocked unless approval is granted.
+    - Stage gates enforce required fields for target stage.
 - Module: Settings | Capability-first permission model with role intent views (ClickUp: 86dzpfc1e, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: Capability-first permission model with role intent views
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/settings/pages/roles.page.html
-    - client/src/app/crm/features/settings/pages/roles.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/RolesController.cs
+    - Role editor supports capability‑grouped permission view.
+    - Summary shows effective access by capability.
+    - Role intent view highlights common presets.
 - Module: Settings | Role drift + pack presets (ClickUp: 86dzpfc1x, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: Role drift + pack presets
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - client/src/app/crm/features/settings/pages/roles.page.html
-    - client/src/app/crm/features/settings/pages/roles.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/RolesController.cs
+    - Role summary shows drift count vs default pack.
+    - Admin can reset role to default pack preset.
 - Module: Settings | Role hierarchy (Salesforce-style reporting structure) (ClickUp: 86dzpegw4, Status: done) Flow: 07
   - Acceptance criteria:
     - Role form supports selecting `parentRoleId` (Parent Role) and shows hierarchy preview.
