@@ -15,6 +15,16 @@ Use this order when a new rep logs in with no data (only lookup values).
 7. Log activity outcome + next step.
 8. Review Dashboard (lead/opportunity appears, confidence + weakest signal visible).
 
+### Lead Stories Used in This Flow
+- As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately.
+- As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.
+- As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach.
+- As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
+- As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
+- As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
+- As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.
+- As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.
+
 ## Sales Rep E2E
 
 ### Flow 02B | Leads
