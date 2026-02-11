@@ -4,6 +4,15 @@ This document lists **exact story text** from `docs/CRM_BACKLOG.md`, plus UI fie
 
 ## Sales Rep Day 1 (Empty Data) E2E
 
+Flow 01A: Login (user can access dashboard)
+Flow 01B: Create first Lead (Quick Add or Leads → New)
+Flow 01C: Qualify Lead (set CQVS factors; at least 1–2 not Unknown)
+Flow 01D: Create first Activity (Call/Meeting) with outcome + next step + due date
+Flow 01E: Convert Lead → Account + Contact + Opportunity
+Flow 01F: Update Opportunity stage (confirm pain/decision maker/next step)
+Flow 01G: Log activity outcome + next step
+Flow 01H: Review Dashboard (lead/opportunity appears; confidence + weakest signal visible)
+
 Use this order when a new rep logs in with no data (only lookup values).
 
 1. Login → Dashboard (confirm access and empty state).
