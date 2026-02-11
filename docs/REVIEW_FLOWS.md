@@ -16,14 +16,91 @@ Use this order when a new rep logs in with no data (only lookup values).
 8. Review Dashboard (lead/opportunity appears, confidence + weakest signal visible).
 
 ### Lead Stories Used in This Flow
-- As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately.
-- As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.
-- As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach.
-- As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
-- As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
-- As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
-- As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.
-- As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.
+- Story: As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately.
+  - ClickUp: 86dzp8xe0
+  - Acceptance criteria:
+    - Dashboard command center shows sections for Tasks Due/Overdue and New Leads.
+    - Pipeline by stage and At‑risk deals are visible in the same view.
+    - Forecast snapshot shows raw and confidence‑weighted totals.
+  - UI fields: (see lead form)
+  - Use case sample:
+    - Precondition: Lead exists (or create a new lead).
+    - Action: Open Lead → update qualification fields and save.
+    - Expected: Changes persist, and dependent UI sections update accordingly.
+- Story: As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.
+  - ClickUp: 86dzp8xdn
+  - Acceptance criteria:
+    - New leads assigned to an owner based on assignment rules.
+    - SLA deadline (`slaDueAtUtc`) is set on creation.
+    - First-touch task is created for the assigned owner.
+  - UI fields: slaDueAtUtc
+  - Use case sample:
+    - Precondition: Lead exists (or create a new lead).
+    - Action: Open Lead → set fields: slaDueAtUtc. Save.
+    - Expected: Changes persist, and dependent UI sections update accordingly.
+- Story: As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach.
+  - ClickUp: 86dzp8xdm
+  - Acceptance criteria:
+    - Lead detail displays `source`, `aiScore`, and `routingReason`.
+    - Score and rationale refresh when key fields change.
+  - UI fields: source, aiScore, routingReason
+  - Use case sample:
+    - Precondition: Lead exists (or create a new lead).
+    - Action: Open Lead → set fields: source, aiScore, routingReason. Save.
+    - Expected: Changes persist, and dependent UI sections update accordingly.
+- Story: As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
+  - ClickUp: 86dzp8xd6
+  - Acceptance criteria:
+    - Lead CQVS factors include Company Fit, Authority, Need, Timing.
+    - Lead cannot be marked Qualified until factors are set (not all Unknown).
+    - Qualification state is persisted and visible on reload.
+  - UI fields: (see lead form)
+  - Use case sample:
+    - Precondition: Lead exists (or create a new lead).
+    - Action: Open Lead → update qualification fields and save.
+    - Expected: Changes persist, and dependent UI sections update accordingly.
+- Story: As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
+  - ClickUp: 86dzp8xdf
+  - Acceptance criteria:
+    - Activity form provides outcome options and requires selection.
+    - Next-step fields are required and create follow-up activity.
+  - UI fields: (see lead form)
+  - Use case sample:
+    - Precondition: Lead exists (or create a new lead).
+    - Action: Open Lead → update qualification fields and save.
+    - Expected: Changes persist, and dependent UI sections update accordingly.
+- Story: As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
+  - ClickUp: 86dzp8xd5
+  - Acceptance criteria:
+    - Disqualified requires `disqualifiedReason`.
+    - Nurture requires `nurtureFollowUpDate`.
+    - Qualified requires `qualifiedNotes` and CQVS factors not all Unknown.
+  - UI fields: disqualifiedReason, nurtureFollowUpDate, qualifiedNotes
+  - Use case sample:
+    - Precondition: Lead exists (or create a new lead).
+    - Action: Open Lead → set fields: disqualifiedReason, nurtureFollowUpDate, qualifiedNotes. Save.
+    - Expected: Changes persist, and dependent UI sections update accordingly.
+- Story: As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.
+  - ClickUp: 86dzp8xd2
+  - Acceptance criteria:
+    - Convert action creates Account, Contact, Opportunity in one submission.
+    - Selected fields map correctly (lead->account/contact/opportunity).
+    - Activities/notes from lead are linked to the created opportunity/account.
+  - UI fields: (see lead form)
+  - Use case sample:
+    - Precondition: Lead exists (or create a new lead).
+    - Action: Open Lead → update qualification fields and save.
+    - Expected: Changes persist, and dependent UI sections update accordingly.
+- Story: As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.
+  - ClickUp: 86dzp8xcz
+  - Acceptance criteria:
+    - Converting a lead sets status to Closed/Converted.
+    - Converted leads are excluded from active lead lists.
+  - UI fields: (see lead form)
+  - Use case sample:
+    - Precondition: Lead exists (or create a new lead).
+    - Action: Open Lead → update qualification fields and save.
+    - Expected: Changes persist, and dependent UI sections update accordingly.
 
 ## Sales Rep E2E
 
