@@ -82,10 +82,11 @@ MoSCoW: Must
 - Evidence:
   - JWT setup: `server/src/CRM.Enterprise.Api/Program.cs`
   - Login/logout endpoints: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`
+  - Login UI: `client/src/app/public/auth/login.page.html`
+  - Login UI logic: `client/src/app/public/auth/login.page.ts`
 - Acceptance criteria:
   - Login returns access token + expiry.
   - Logout returns 204 and requires auth.
-    - UI note: Not implemented yet — no UI reference found in current codebase.
 
 3) Accounts (CRUD, list/search/filter, pagination)
 MoSCoW: Must
@@ -106,12 +107,12 @@ MoSCoW: Must
 - Status: PARTIAL
 - Evidence:
   - Entities store CreatedAtUtc/UpdatedAtUtc in multiple controllers
+  - UI note: Not implemented yet — list views do not surface OwnerId/audit fields in current UI.
 - Gaps:
   - Consistency across all entities and UI display
 - Acceptance criteria:
   - Each entity (Account, Contact, Opportunity, Activity) stores CreatedAtUtc and UpdatedAtUtc on create/update.
   - OwnerId is persisted and surfaced in list views.
-    - UI note: Not implemented yet — no UI reference found in current codebase.
 
 5) Contacts (CRUD, linked to Account)
 MoSCoW: Must
@@ -181,10 +182,11 @@ MoSCoW: Must
 MoSCoW: Must
 - Status: DONE
 - Evidence:
-  - Shell layout + UI usage in client
+  - Shell layout: `client/src/app/layout/shell.component.html`
+  - Shell styles: `client/src/app/layout/shell.component.scss`
+  - PrimeNG usage in lists/forms: `client/src/app/crm/features/*/pages/*.html`
 - Acceptance criteria:
   - Layout is consistent across pages and uses PrimeNG tables/dialogs/toasts.
-    - UI note: Not implemented yet — no UI reference found in current codebase.
 
 ### 3) Done When
 
@@ -299,11 +301,11 @@ MoSCoW: Must
   - Manager pipeline health rollup: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
   - Manager pipeline health API: `server/src/CRM.Enterprise.Api/Controllers/DashboardController.cs`
   - Role hierarchy visibility scoping: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+  - Role scope UI: `client/src/app/crm/features/settings/pages/role-form.page.html`
 - Acceptance criteria:
   - Manager pipeline health data is scoped to the manager’s role hierarchy.
   - Pipeline counts/values roll up for descendants by default.
   - Role visibility scope can restrict rollups to Self/Team/All.
-    - UI note: Not implemented yet — no UI reference found in current codebase.
 
 7) Lead AI scoring
 MoSCoW: Should
@@ -397,12 +399,12 @@ MoSCoW: Could
 MoSCoW: Could
 - Status: NOT STARTED
 - Evidence:
-  - No API or UI references found
+  - UI note: Not implemented yet — no email send/sync or template UI in codebase.
+  - API note: No email integration endpoints found.
 - Acceptance criteria:
   - Email templates CRUD.
   - Send email from CRM and log to timeline.
   - Inbox sync for replies.
-    - UI note: Not implemented yet — no UI reference found in current codebase.
 
 15) CSV import/export
 MoSCoW: Should
