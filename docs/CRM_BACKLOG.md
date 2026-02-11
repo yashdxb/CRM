@@ -793,8 +793,8 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Dashboard | Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth) (ClickUp: 86dzp8xen, Status: done) Flow: 06
 - Module: Dashboard | Risk Register summary widget (ClickUp: 86dzp8xef, Status: done) Flow: 06
 - Module: Dashboard | Hierarchy-based H1/H2 dashboard packs + reset (ClickUp: 86dzp8xea, Status: done) Flow: 06
-- Module: Leads | As a manager, score breakdown aligns with CQVS labels (ClickUp: 86dzp8y10, Status: done) Flow: 02
-- Module: Leads | As a manager, score breakdown aligns with CQVS labels (ClickUp: 86dzp8xtn, Status: done) Flow: 02
+- Module: Leads | As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors. (ClickUp: 86dzp8y10, Status: done) Flow: 02
+- Module: Leads | As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors. (ClickUp: 86dzp8xtn, Status: done) Flow: 02
 - Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal (ClickUp: 86dzp8xz6, Status: done) Flow: 02
   - Acceptance criteria:
     - Qualification status shows a "Suggested next evidence" list tied to the weakest factor.
