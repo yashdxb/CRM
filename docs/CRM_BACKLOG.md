@@ -676,14 +676,10 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Lead list chips: `client/src/app/crm/features/leads/pages/leads.page.html`
 - Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene. (ClickUp: 86dzp8x9n, Status: done) Flow: 05
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Activity form requires `outcome`, `nextStepSubject`, and `nextStepDueDateUtc` before save.
+    - Submitting creates the activity and auto-creates a next-step task when provided.
+    - Validation errors appear when required fields are missing.
   - Evidence:
-    - client/src/app/crm/features/activities/pages/activity-form.page.html
-    - client/src/app/crm/features/activities/pages/activity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/ActivitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Activities/ActivityService.cs
 - Module: Activities | As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction. (ClickUp: 86dzp8xdt, Status: done) Flow: 05
   - Acceptance criteria:
     - UI supports: As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction.
@@ -834,12 +830,10 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs
 - Module: Dashboard | As a Sales Rep, I want to confirm pain, decision maker, and next step before advancing. (ClickUp: 86dzp8xc1, Status: done) Flow: 06
   - Acceptance criteria:
-    - Moving to Qualification+ requires a pain/problem summary.
-    - Moving to Qualification+ requires a Decision Maker contact on the account (or primary contact flagged as Decision Maker).
-    - Changing stages (non-closed) requires a scheduled next step (open activity with a due date).
+    - Moving to Qualification+ requires `summary` (pain/problem).
+    - Moving to Qualification+ requires a contact tagged as Decision Maker.
+    - Stage change (non-closed) requires a scheduled next step (open activity with due date).
   - Evidence:
-    - Stage gating + decision maker check: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
-    - UI guidance copy: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
 - Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (ClickUp: 86dzp8x8p, Status: done) Flow: 06
   - Acceptance criteria:
     - Opportunity form includes an “Expansion signals” section with signal type, date, and notes.
@@ -996,64 +990,37 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Module: Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes. (ClickUp: 86dzp8xd2, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Convert action creates Account, Contact, Opportunity in one submission.
+    - Selected fields map correctly (lead->account/contact/opportunity).
+    - Activities/notes from lead are linked to the created opportunity/account.
   - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Module: Leads | As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean. (ClickUp: 86dzp8xd5, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Disqualified requires `disqualifiedReason`.
+    - Nurture requires `nurtureFollowUpDate`.
+    - Qualified requires `qualifiedNotes` and CQVS factors not all Unknown.
   - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Module: Leads | As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach. (ClickUp: 86dzp8xdn, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - New leads assigned to an owner based on assignment rules.
+    - SLA deadline (`slaDueAtUtc`) is set on creation.
+    - First-touch task is created for the assigned owner.
   - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Module: Leads | As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach. (ClickUp: 86dzp8xdm, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Lead detail displays `source`, `aiScore`, and `routingReason`.
+    - Score and rationale refresh when key fields change.
   - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Module: Leads | As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work. (ClickUp: 86dzp8xcz, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Converting a lead sets status to Closed/Converted.
+    - Converted leads are excluded from active lead lists.
   - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Module: Leads | As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date. (ClickUp: 86dzp8xdf, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Activity form provides outcome options and requires selection.
+    - Next-step fields are required and create follow-up activity.
   - Evidence:
-    - client/src/app/crm/features/leads/pages/lead-form.page.html
-    - client/src/app/crm/features/leads/pages/lead-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Module: Leads | As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward. (ClickUp: 86dzp8xd6, Status: done) Flow: 02
   - Acceptance criteria:
     - UI supports: As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.
@@ -1084,21 +1051,16 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Module: Opportunities | As a Sales Rep, I want alerts for deals with no next step or no activity in X days so I can recover risk early. (ClickUp: 86dzp8xdx, Status: done) Flow: 04
   - Acceptance criteria:
-    - Alerts are disabled by default for new users.
-    - Users can enable idle deal alerts and choose whether to trigger on no next step, no activity threshold, or both.
-    - No-activity threshold is configurable (days) and cooldown prevents repeated alerts.
+    - Idle-deal alerts respect `idleDeal`, `idleDealNoNextStep`, and `idleDealNoActivity` settings.
+    - No-next-step is true when an open opportunity has no next-step activity scheduled.
+    - No-activity uses `idleDealDays` threshold and `idleDealCooldownDays` for repeat alerts.
   - Evidence:
-    - Alert rules + thresholds: `server/src/CRM.Enterprise.Infrastructure/Notifications/NotificationAlertWorker.cs`
-    - Default alert prefs: `server/src/CRM.Enterprise.Api/Controllers/NotificationPreferencesController.cs`
-    - UI settings + toggles: `client/src/app/crm/features/settings/pages/notifications.page.html`
 - Module: Opportunities | As a Sales Rep, I want forecast category enforced at stage changes so forecasts stay accurate. (ClickUp: 86dzp8xcc, Status: done) Flow: 04
   - Acceptance criteria:
-    - Stage change validates forecast category against the stage default.
-    - Forecast category is locked to the stage default in the opportunity edit UI.
-    - Commit/Closed stages enforce their required forecast category values.
+    - On stage change, `forecastCategory` is validated against the stage default.
+    - Closed Won forces `Closed`; Closed Lost forces `Omitted`.
+    - UI shows guidance and blocks save on invalid forecast category.
   - Evidence:
-    - Stage forecast validation: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
-    - Forecast lock + guidance: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
 - Module: Opportunities | As a Sales Rep, I want insights on deals without activity or next steps so I can fix gaps early. (ClickUp: 86dzp8x8e, Status: done) Flow: 04
   - Acceptance criteria:
     - UI supports: As a Sales Rep, I want insights on deals without activity or next steps so I can fix gaps early.
@@ -1131,14 +1093,9 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
 - Module: Opportunities | As a Sales Rep, I want stage‑specific exit criteria (required fields, next step) so stage progression reflects reality. (ClickUp: 86dzp8xc7, Status: done) Flow: 04
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want stage‑specific exit criteria (required fields, next step) so stage progression reflects reality.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Stage change validates required fields for the target stage.
+    - Missing requirements block save with inline errors.
   - Evidence:
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.html
-    - client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts
-    - server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs
-    - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
 - Module: Opportunities | As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal. (ClickUp: 86dzp8xa7, Status: done) Flow: 04
   - Acceptance criteria:
     - When an opportunity is marked Closed Won, onboarding tasks are auto-created if none exist.
