@@ -808,8 +808,8 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
 - Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet" (ClickUp: 86dzp8xtu, Status: done) Flow: 02
 - Module: Leads | As a rep, I see "Unknown / not yet discussed" preselected for every qualification factor (ClickUp: 86dzp8y1u, Status: done) Flow: 02
 - Module: Leads | As a rep, I see "Unknown / not yet discussed" preselected for every qualification factor (ClickUp: 86dzp8xtz, Status: done) Flow: 02
-- Module: Leads | As a rep, I see an inline qualification status summary with confidence + weakest signal (ClickUp: 86dzp8y19, Status: done) Flow: 02
-- Module: Leads | As a rep, I see an inline qualification status summary with confidence + weakest signal (ClickUp: 86dzp8xtp, Status: done) Flow: 02
+- Module: Leads | As a Sales Rep, I want an inline qualification summary on the lead detail that shows overall confidence and the weakest signal so I can see what is uncertain and fix it quickly. (ClickUp: 86dzp8y19, Status: done) Flow: 02
+- Module: Leads | As a Sales Rep, I want an inline qualification summary on the lead detail that shows overall confidence and the weakest signal so I can see what is uncertain and fix it quickly. (ClickUp: 86dzp8xtp, Status: done) Flow: 02
 - Module: Leads | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately. (ClickUp: 86dzp8xe0, Status: done) Flow: 02
 - Module: Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes. (ClickUp: 86dzp8xd2, Status: done) Flow: 02
 - Module: Leads | As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean. (ClickUp: 86dzp8xd5, Status: done) Flow: 02
