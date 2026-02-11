@@ -2,6 +2,19 @@
 
 This document lists **exact story text** from `docs/CRM_BACKLOG.md`, plus UI fields and a sample use case to replicate in the system.
 
+## Sales Rep Day 1 (Empty Data) E2E
+
+Use this order when a new rep logs in with no data (only lookup values).
+
+1. Login → Dashboard (confirm access and empty state).
+2. Create first Lead (Quick Add or Leads → New).
+3. Qualify Lead (set initial CQVS factors; at least 1–2 not Unknown).
+4. Create first Activity (Call/Meeting) with outcome + next step + due date.
+5. Convert Lead → Account + Contact + Opportunity.
+6. Update Opportunity stage (confirm pain/decision maker/next step).
+7. Log activity outcome + next step.
+8. Review Dashboard (lead/opportunity appears, confidence + weakest signal visible).
+
 ## Sales Rep E2E
 
 ### Flow 02B | Leads
