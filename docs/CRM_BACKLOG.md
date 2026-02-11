@@ -735,53 +735,40 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - TBD
 - Module: Dashboard | As a Sales Manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8y0j, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: As a Sales Manager, I can see Truth Coverage and Time-to-Truth per deal
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Manager dashboard lists deals with Truth Coverage % and Time-to-Truth value per deal.
+    - Each deal row shows the weakest signal label and last updated timestamp.
+    - Data is scoped to the manager’s visibility (self + descendants by default).
   - Evidence:
-    - TBD
-- Module: Dashboard | As a Sales Manager, I can see Truth Coverage and Time-to-Truth per deal (ClickUp: 86dzp8xtg, Status: done) Flow: 06
-  - Acceptance criteria:
-    - UI supports: As a Sales Manager, I can see Truth Coverage and Time-to-Truth per deal
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - TBD
+    - Manager rollup + truth metrics: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - Dashboard UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Dashboard logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
 - Module: Dashboard | As a Sales Manager, I see top truth gaps across pipeline (ClickUp: 86dzp8y02, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: As a Sales Manager, I see top truth gaps across pipeline
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Dashboard shows top 3–5 truth gaps with counts across the visible pipeline.
+    - Each gap is labeled by CQVS factor (e.g., “Decision Maker unknown”).
+    - Clicking a gap filters the pipeline list to matching deals (or shows a linked view).
   - Evidence:
-    - TBD
-- Module: Dashboard | As a Sales Manager, I see top truth gaps across pipeline (ClickUp: 86dzp8xt8, Status: done) Flow: 06
-  - Acceptance criteria:
-    - UI supports: As a Sales Manager, I see top truth gaps across pipeline
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - TBD
+    - Risk flags + gap computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - Dashboard UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Dashboard logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
 - Module: Dashboard | As a Sales Manager, I want pipeline and forecast rollups across my role hierarchy by default. (ClickUp: 86dzpgeq0, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: As a Sales Manager, I want pipeline and forecast rollups across my role hierarchy by default.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Manager dashboard totals include deals owned by direct and indirect reports.
+    - A “My deals only” toggle limits rollups to the manager’s own deals.
+    - Totals update immediately when scope is changed.
   - Evidence:
-    - TBD
+    - Rollup scope rules: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - Dashboard scope UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Dashboard scope logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
 - Module: Dashboard | As a Sales Rep, I can view Risk Register flags derived from CQVS (ClickUp: 86dzp8xzq, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I can view Risk Register flags derived from CQVS
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Risk Register card lists CQVS-derived risk flags for the rep’s pipeline.
+    - Each flag shows the factor label and state (Unknown / Needs validation / Stale).
+    - Flags link to the underlying lead or opportunity.
   - Evidence:
-    - TBD
-- Module: Dashboard | As a Sales Rep, I can view Risk Register flags derived from CQVS (ClickUp: 86dzp8xt5, Status: done) Flow: 06
-  - Acceptance criteria:
-    - UI supports: As a Sales Rep, I can view Risk Register flags derived from CQVS
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - TBD
+    - Risk flags computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - Risk Register UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
+    - Risk Register logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
 - Module: Dashboard | As a Sales Rep, I want a structured checklist to flag risks early. (ClickUp: 86dzp8xbh, Status: done) Flow: 06
   - Acceptance criteria:
     - Risk Checklist card lists top risk flags with counts.
@@ -802,11 +789,13 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - User quota field: `client/src/app/crm/features/settings/pages/user-edit.page.html`
 - Module: Dashboard | As a Sales Rep, I want renewal opportunities auto‑created at 90/60/30 days so renewal motions are never missed. (ClickUp: 86dzp8x92, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want renewal opportunities auto‑created at 90/60/30 days so renewal motions are never missed.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - When a contract end date enters 90/60/30 day windows, a renewal opportunity is created if one doesn’t already exist.
+    - Reminder tasks are created at 90/60/30 days for the renewal opportunity owner.
+    - Base opportunity links to the renewal opportunity and shows the renewal status.
   - Evidence:
-    - TBD
+    - Renewal automation + tasks: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - Renewal automation endpoint: `server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs`
+    - Renewal automation worker: `server/src/CRM.Enterprise.Infrastructure/Opportunities/RenewalAutomationWorker.cs`
 - Module: Dashboard | As a Sales Rep, I want the CRM to guide execution, not just store data — enforcing discipline, protecting forecast accuracy, and enabling clean handoffs. (ClickUp: 86dzp8x89, Status: done) Flow: 06
   - Acceptance criteria:
     - Execution Guide card shows counts for missing next steps, at-risk opportunities, overdue activities, and newly assigned leads.
@@ -832,14 +821,13 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - UI guidance copy: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
 - Module: Dashboard | As a Sales Rep, I want to flag expansion signals and create expansion opportunities with linked context. (ClickUp: 86dzp8x8p, Status: done) Flow: 06
   - Acceptance criteria:
-    - Expansion Signals card lists accounts with recent expansion signal activity.
-    - Each signal shows signal count, last signal date, and contract end date (when available).
-    - Rep can create an Expansion opportunity from a signal and the card reflects it.
+    - Opportunity form includes an “Expansion signals” section with signal type, date, and notes.
+    - Rep can create an Expansion opportunity linked to the current account/opportunity.
+    - Expansion opportunity retains a reference back to the originating signal.
   - Evidence:
-    - Expansion signals API: `server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs`
     - Expansion signals logic: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
-    - Dashboard card UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
-    - Dashboard card logic: `client/src/app/crm/features/dashboard/pages/dashboard.page.ts`
+    - Opportunity form UI: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+    - Opportunity form state: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
 - Module: Dashboard | As a Sales Rep, I want to generate a quote/proposal, request discounts if needed, and track legal/security needs. (ClickUp: 86dzp8xat, Status: done) Flow: 06
   - Acceptance criteria:
     - Proposal status, link, notes, and generated/sent dates are captured on the opportunity.
@@ -869,11 +857,13 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Onboarding milestone API client: `client/src/app/crm/features/opportunities/services/opportunity-onboarding.service.ts`
 - Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates. (ClickUp: 86dzp8xan, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want to track security questionnaire and legal redlines with status updates.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Opportunity form includes Security Review Status and Legal Review Status fields.
+    - Status values persist and display on reload.
+    - Commit/Close is blocked if required statuses are not Approved.
   - Evidence:
-    - TBD
+    - Opportunity validation: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - Opportunity form UI: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+    - Opportunity form state: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
 - Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation. (ClickUp: 86dzp8xb3, Status: done) Flow: 06
   - Acceptance criteria:
     - Opportunity form includes a Technical risk checklist with status + notes.
@@ -885,18 +875,11 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Stage gating: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
 - Module: Dashboard | As an Executive, I can view confidence-weighted pipeline totals (ClickUp: 86dzp8y09, Status: done) Flow: 06
   - Acceptance criteria:
-    - UI supports: As an Executive, I can view confidence-weighted pipeline totals
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Dashboard shows confidence-weighted pipeline total and raw pipeline total.
+    - Executive view uses rollup scope across the organization (or selected scope).
   - Evidence:
-    - TBD
-- Module: Dashboard | As an Executive, I can view confidence-weighted pipeline totals (ClickUp: 86dzp8xtc, Status: done) Flow: 06
-  - Acceptance criteria:
-    - UI supports: As an Executive, I can view confidence-weighted pipeline totals
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - TBD
+    - Metrics computation: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - Dashboard UI: `client/src/app/crm/features/dashboard/pages/dashboard.page.html`
 - Module: Dashboard | Confidence-weighted forecast card (ClickUp: 86dzp8xed, Status: done) Flow: 06
   - Acceptance criteria:
     - UI supports: Confidence-weighted forecast card
@@ -927,18 +910,12 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - TBD
 - Module: Leads | As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors. (ClickUp: 86dzp8y10, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - CQVS breakdown lists the four labeled factors (C/Q/V/S) with clear titles.
+    - Each factor shows a score and weight/impact.
+    - Total confidence/score equals the weighted sum of the factors.
   - Evidence:
-    - TBD
-- Module: Leads | As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors. (ClickUp: 86dzp8xtn, Status: done) Flow: 02
-  - Acceptance criteria:
-    - UI supports: As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - TBD
+    - CQVS breakdown UI: `client/src/app/crm/features/leads/pages/lead-form.page.html`
+    - CQVS scoring logic: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
 - Module: Leads | As a Sales Rep, AI suggests next evidence to resolve weakest signal (ClickUp: 86dzp8xz6, Status: done) Flow: 02
   - Acceptance criteria:
     - Qualification status shows a "Suggested next evidence" list tied to the weakest factor.
@@ -950,46 +927,29 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - UI state + fallback logic: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
 - Module: Leads | As a Sales Rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet" (ClickUp: 86dzp8y1d, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet"
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Evidence input is disabled when a factor is set to Unknown.
+    - Evidence text shows “No evidence yet” until the factor moves out of Unknown.
+    - Changing the factor state immediately enables/disables the evidence input.
   - Evidence:
-    - TBD
-- Module: Leads | As a Sales Rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet" (ClickUp: 86dzp8xtu, Status: done) Flow: 02
-  - Acceptance criteria:
-    - UI supports: As a Sales Rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet"
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - TBD
+    - Evidence state rules: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
+    - Evidence UI: `client/src/app/crm/features/leads/pages/lead-form.page.html`
 - Module: Leads | As a Sales Rep, I see "Unknown / not yet discussed" preselected for every qualification factor (ClickUp: 86dzp8y1u, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I see "Unknown / not yet discussed" preselected for every qualification factor
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - New leads show each CQVS factor defaulted to “Unknown / not yet discussed”.
+    - Defaults persist until the rep explicitly changes a factor.
+    - Default values are stored and returned by the API.
   - Evidence:
-    - TBD
-- Module: Leads | As a Sales Rep, I see "Unknown / not yet discussed" preselected for every qualification factor (ClickUp: 86dzp8xtz, Status: done) Flow: 02
-  - Acceptance criteria:
-    - UI supports: As a Sales Rep, I see "Unknown / not yet discussed" preselected for every qualification factor
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - TBD
+    - Default factor state: `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+    - Lead CQVS UI: `client/src/app/crm/features/leads/pages/lead-form.page.html`
 - Module: Leads | As a Sales Rep, I want an inline qualification summary on the lead detail that shows overall confidence and the weakest signal so I can see what is uncertain and fix it quickly. (ClickUp: 86dzp8y19, Status: done) Flow: 02
   - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want an inline qualification summary on the lead detail that shows overall confidence and the weakest signal so I can see what is uncertain and fix it quickly.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Lead detail shows an inline summary with confidence score (numeric + label).
+    - Summary shows the weakest signal factor and its state.
+    - Summary updates immediately when qualification factors change.
+    - If all factors are strong/known, weakest signal displays “No weak signals.”
   - Evidence:
-    - TBD
-- Module: Leads | As a Sales Rep, I want an inline qualification summary on the lead detail that shows overall confidence and the weakest signal so I can see what is uncertain and fix it quickly. (ClickUp: 86dzp8xtp, Status: done) Flow: 02
-  - Acceptance criteria:
-    - UI supports: As a Sales Rep, I want an inline qualification summary on the lead detail that shows overall confidence and the weakest signal so I can see what is uncertain and fix it quickly.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
-  - Evidence:
-    - TBD
+    - Inline summary UI: `client/src/app/crm/features/leads/pages/lead-form.page.html`
+    - Weakest signal + confidence: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
 - Module: Leads | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately. (ClickUp: 86dzp8xe0, Status: done) Flow: 02
   - Acceptance criteria:
     - UI supports: As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately.
