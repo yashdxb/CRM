@@ -13,6 +13,57 @@ Flow 01F: Update Opportunity stage (confirm pain/decision maker/next step)
 Flow 01G: Log activity outcome + next step
 Flow 01H: Review Dashboard (lead/opportunity appears; confidence + weakest signal visible)
 
+### Flow 01 Stories (Login + First Lead)
+- Story: User can log in and access the dashboard
+  - Acceptance criteria:
+    - Login UI accepts email/password and returns JWT.
+    - User is redirected to dashboard on success.
+  - UI fields: login.email, login.password
+  - Use case sample:
+    - Precondition: Valid user exists.
+    - Action: Login with email/password.
+    - Expected: Dashboard loads without errors.
+
+- Story: Create first lead
+  - Acceptance criteria:
+    - Lead can be created with name, company, and source.
+    - Lead appears in Leads list after save.
+  - UI fields: firstName, lastName, company, source
+  - Use case sample:
+    - Precondition: No leads exist.
+    - Action: Leads → New → fill fields → Save.
+    - Expected: Lead appears in list and detail view.
+
+- Story: Qualify lead (CQVS)
+  - Acceptance criteria:
+    - At least one CQVS factor is set to non-Unknown.
+    - Confidence and weakest signal update after change.
+  - UI fields: cqvsFactors, weakestSignal, qualificationConfidence
+  - Use case sample:
+    - Precondition: Lead exists.
+    - Action: Update CQVS factors → Save.
+    - Expected: Confidence/weakest signal reflect changes.
+
+- Story: Create first activity with next step
+  - Acceptance criteria:
+    - Activity requires outcome, nextStepSubject, nextStepDueDateUtc.
+    - Next-step task is created and visible.
+  - UI fields: outcome, nextStepSubject, nextStepDueDateUtc
+  - Use case sample:
+    - Precondition: Lead exists.
+    - Action: Add Call → set outcome + next step + due date.
+    - Expected: Activity saved; next-step task appears.
+
+- Story: Convert lead to Account/Contact/Opportunity
+  - Acceptance criteria:
+    - Convert action creates Account, Contact, Opportunity in one step.
+    - Lead status becomes Closed/Converted.
+  - UI fields: convertAction, accountId, contactId, opportunityId
+  - Use case sample:
+    - Precondition: Lead qualified.
+    - Action: Convert → confirm.
+    - Expected: Account/Contact/Opportunity created; lead closed.
+
 Use this order when a new rep logs in with no data (only lookup values).
 
 1. Login → Dashboard (confirm access and empty state).
