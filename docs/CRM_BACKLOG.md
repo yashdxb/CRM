@@ -878,7 +878,8 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Onboarding milestone API client: `client/src/app/crm/features/opportunities/services/opportunity-onboarding.service.ts`
 - Module: Dashboard | As a Sales Rep, I want to track security questionnaire and legal redlines with status updates. (ClickUp: 86dzp8xan, Status: done) Flow: 06
   - Acceptance criteria:
-    - Opportunity form includes Security Review Status and Legal Review Status fields.
+    - Opportunity form includes `securityReviewStatus` and `legalReviewStatus` fields.
+    - Security checklist (`securityChecklist`) and Legal checklist (`legalChecklist`) allow add/edit/remove items.
     - Status values persist and display on reload.
     - Commit/Close is blocked if required statuses are not Approved.
   - Evidence:
@@ -887,7 +888,7 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Opportunity form state: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
 - Module: Dashboard | As a Sales Rep, I want to track technical risks before demo/validation. (ClickUp: 86dzp8xb3, Status: done) Flow: 06
   - Acceptance criteria:
-    - Opportunity form includes a Technical risk checklist with status + notes.
+    - Opportunity form includes a Technical risk checklist (`technicalChecklist`) with status + notes.
     - At least one technical risk must be logged before moving to Proposal/Validation stages.
     - Technical risks can be created, updated, and removed like other review checklist items.
   - Evidence:
@@ -1191,9 +1192,10 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs
 - Module: Settings | Approval Settings page (ClickUp: 86dzpdf2f, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: Approval Settings page
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Approval Threshold field (`approvalAmountThreshold`) saves and reloads correctly.
+    - Primary Approver Role field (`approvalApproverRole`) is selectable from roles.
+    - Approval Chain toggle (`approvalWorkflowPolicy.enabled`) enables multi-step flow.
+    - Approval Steps allow per-step `approverRole`, `amountThreshold`, and `purpose`.
   - Evidence:
     - client/src/app/crm/features/settings/pages/approval-settings.page.html
     - client/src/app/crm/features/settings/pages/approval-settings.page.ts
@@ -1257,36 +1259,36 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - server/src/CRM.Enterprise.Api/Controllers/RolesController.cs
 - Module: Settings | Role hierarchy (Salesforce-style reporting structure) (ClickUp: 86dzpegw4, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: Role hierarchy (Salesforce-style reporting structure)
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Role form supports selecting `parentRoleId` (Parent Role) and shows hierarchy preview.
+    - Visibility scope (`visibilityScope`) is configurable per role.
+    - Changes persist and are reflected in manager rollups.
   - Evidence:
     - client/src/app/crm/features/settings/pages/roles.page.html
     - client/src/app/crm/features/settings/pages/roles.page.ts
     - server/src/CRM.Enterprise.Api/Controllers/RolesController.cs
 - Module: Settings | Contextual Threshold Rules page (ClickUp: 86dzpdf2h, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: Contextual Threshold Rules page
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Threshold rules list supports add/edit/remove for `thresholdRules`.
+    - Each rule allows `minScore`, `maxScore`, and `action` (e.g., block/require approval).
+    - Saving updates tenant settings and reloads accurately.
   - Evidence:
     - client/src/app/crm/features/settings/pages/workspace-settings.page.html
     - client/src/app/crm/features/settings/pages/workspace-settings.page.ts
     - server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs
 - Module: Settings | Qualification Policy page (ClickUp: 86dzpdf2g, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: Qualification Policy page
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Fields `defaultThreshold`, `managerApprovalBelow`, and `blockBelow` save/reload.
+    - Override controls (`allowOverrides`, `requireOverrideReason`) enforce validation.
+    - Modifiers and exposure weights can be added/edited and persist.
   - Evidence:
     - client/src/app/crm/features/settings/pages/workspace-settings.page.html
     - client/src/app/crm/features/settings/pages/workspace-settings.page.ts
     - server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs
 - Module: Settings | As a user, I want configurable email alert types and thresholds. (ClickUp: 86dzpgja2, Status: done) Flow: 07
   - Acceptance criteria:
-    - UI supports: As a user, I want configurable email alert types and thresholds.
-    - Data persists via API and is visible after reload.
-    - Permissions/validation enforce the rule when applicable.
+    - Alerts master toggle (`alertsEnabled`) enables/disables email delivery.
+    - Email alert toggles (`leadSla`, `idleDeal`, `idleDealNoNextStep`, `idleDealNoActivity`, `coachingEscalation`) persist.
+    - Threshold fields (`idleDealDays`, `idleDealCooldownDays`, `coachingCooldownDays`) save and reload.
   - Evidence:
     - client/src/app/crm/features/settings/pages/notifications.page.html
     - client/src/app/crm/features/settings/pages/notifications.page.ts
