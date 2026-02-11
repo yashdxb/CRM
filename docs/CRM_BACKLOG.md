@@ -10,6 +10,52 @@ Legend:
 
 ---
 
+## E2E Flow Index (Login → End-to-End)
+
+Purpose: Use this to validate the full product flow without changing execution priority. This is a testing and walkthrough order, not a delivery order.
+
+### 1) Login / Access
+- Auth + Users (Admin/User)
+- JWT login/logout
+
+### 2) Leads (Capture → Qualify → Convert)
+- Lead lifecycle (CRUD + workflow + conversion + assignment rules)
+- Lead outcomes enforced (Disqualified / Nurture / Qualified)
+- Lead qualification discipline (CQVS, weakest signal, confidence)
+- Lead conversion (Account + Contact + Opportunity + activity transfer)
+- Lead auto-close after conversion
+
+### 3) Accounts + Contacts
+- Accounts (CRUD, list/search/filter, pagination)
+- Contacts (CRUD, linked to Account)
+- Account / Contact detail enrichment (timeline, attachments, related records, notes)
+- Account team members (pre‑sales, manager)
+
+### 4) Opportunities (Pipeline Discipline)
+- Opportunities (CRUD, Stage/Amount/CloseDate/Win/Loss)
+- Stage progression requires key confirmations (pain/decision maker/next step)
+- Forecast category enforced at stage changes
+- Alerts for no next step / no activity in X days
+- Approval thresholds + pricing/discount approval flow
+
+### 5) Activities (Execution Hygiene)
+- Activities (Task/Call/Meeting; due date, priority, status)
+- Activity outcomes + required next steps
+- Activity templates
+- Quick actions (log activity, create task, schedule meeting)
+
+### 6) Dashboards + Forecasting
+- Dashboard KPIs (pipeline, tasks, upcoming)
+- Epistemic dashboard widgets (Truth Metrics, Risk Register, Confidence Forecast)
+- Conditional Forecasting (Forecast Scenarios)
+- Manager coaching + health summaries
+
+### 7) Settings, Security, Admin
+- Multi-tenancy + workspace settings
+- Roles + permissions + security levels
+- Notification preferences
+- CSV import/export
+
 ## Now Checklist (Draft)
 
 Source: MVP Now requirements shared in chat. This is a working checklist; update as needed.
