@@ -12,17 +12,24 @@ BEGIN TRY
     BEGIN TRANSACTION;
 
     /* CRM transactional */
+    DELETE FROM [crm].[AssistantMessages];
+    DELETE FROM [crm].[AssistantThreads];
+    DELETE FROM [crm].[Attachments];
     DELETE FROM [crm].[LeadStatusHistories];
     DELETE FROM [crm].[OpportunityStageHistories];
+    DELETE FROM [crm].[OpportunityApprovals];
+    DELETE FROM [crm].[OpportunityApprovalChains];
+    DELETE FROM [crm].[OpportunityReviewChecklistItems];
+    DELETE FROM [crm].[OpportunityOnboardingItems];
+    DELETE FROM [crm].[OpportunityTeamMembers];
     DELETE FROM [crm].[Activities];
-    DELETE FROM [crm].[AuditEvents];
-    DELETE FROM [crm].[Attachments];
     DELETE FROM [crm].[CustomFieldValues];
+    DELETE FROM [crm].[ImportJobs];
+    DELETE FROM [crm].[AuditEvents];
     DELETE FROM [crm].[Leads];
     DELETE FROM [crm].[Opportunities];
     DELETE FROM [crm].[Contacts];
     DELETE FROM [crm].[Accounts];
-    DELETE FROM [crm].[ImportJobs];
 
     COMMIT TRANSACTION;
 END TRY
