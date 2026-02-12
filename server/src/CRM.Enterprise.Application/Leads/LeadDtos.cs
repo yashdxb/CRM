@@ -7,6 +7,7 @@ public sealed record LeadListItemDto(
     string Status,
     string? Email,
     string? Phone,
+    Guid? PhoneTypeId,
     Guid OwnerId,
     string OwnerName,
     int Score,

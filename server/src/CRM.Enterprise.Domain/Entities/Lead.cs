@@ -8,6 +8,7 @@ public class Lead : AuditableEntity
     public string LastName { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public Guid? PhoneTypeId { get; set; }
     public string? CompanyName { get; set; }
     public string? JobTitle { get; set; }
     public Guid LeadStatusId { get; set; }
@@ -56,6 +57,7 @@ public class Lead : AuditableEntity
     public Account? Account { get; set; }
     public Contact? Contact { get; set; }
     public Opportunity? ConvertedOpportunity { get; set; }
+    public PhoneTypeDefinition? PhoneType { get; set; }
     public ICollection<LeadStatusHistory> StatusHistory { get; set; } = new List<LeadStatusHistory>();
     public ICollection<Activity> Activities { get; set; } = new List<Activity>();
 }

@@ -88,6 +88,7 @@ public sealed class LeadService : ILeadService
                 Status = l.Status != null ? l.Status.Name : "New",
                 l.Email,
                 l.Phone,
+                l.PhoneTypeId,
                 l.OwnerId,
                 l.Score,
                 l.CreatedAtUtc,
@@ -162,6 +163,7 @@ public sealed class LeadService : ILeadService
                 l.Status,
                 l.Email,
                 l.Phone,
+                l.PhoneTypeId,
                 l.OwnerId,
                 owners.FirstOrDefault(o => o.Id == l.OwnerId)?.FullName ?? "Unassigned",
                 l.Score,
@@ -251,6 +253,7 @@ public sealed class LeadService : ILeadService
             lead.Status?.Name ?? "New",
             lead.Email,
             lead.Phone,
+            lead.PhoneTypeId,
             lead.OwnerId,
             ownerName,
             lead.Score,
@@ -400,6 +403,7 @@ public sealed class LeadService : ILeadService
             LastName = request.LastName,
             Email = request.Email,
             Phone = request.Phone,
+            PhoneTypeId = request.PhoneTypeId,
             CompanyName = request.CompanyName,
             JobTitle = request.JobTitle,
             LeadStatusId = status.Id,
@@ -484,6 +488,7 @@ public sealed class LeadService : ILeadService
             resolvedStatusName ?? "New",
             lead.Email,
             lead.Phone,
+            lead.PhoneTypeId,
             assignment.OwnerId,
             ownerName,
             lead.Score,
@@ -564,6 +569,7 @@ public sealed class LeadService : ILeadService
         lead.LastName = request.LastName;
         lead.Email = request.Email;
         lead.Phone = request.Phone;
+        lead.PhoneTypeId = request.PhoneTypeId;
         lead.CompanyName = request.CompanyName;
         lead.JobTitle = request.JobTitle;
         var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);

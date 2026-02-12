@@ -89,7 +89,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Contacts | As a Sales Rep, I want to tag contacts by buying role (Decision Maker, Champion, Influencer, Procurement, Technical Evaluator) to map the buying group.
 - Module: Dashboard | As a manager, I can see Truth Coverage and Time-to-Truth per deal
 - Module: Dashboard | As a manager, I see top truth gaps across pipeline
-- Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS
+- Module: Dashboard | As a rep, I can view Risk Register flags derived from CQVS (Company fit, Qualification readiness, Value/Problem severity, Stakeholder access)
 - Module: Dashboard | As a Sales Rep, I want a structured checklist to flag risks early.
 - Module: Dashboard | As a Sales Rep, I want personal pipeline and forecast reports to track progress to quota.
 - Module: Dashboard | As a Sales Rep, I want renewal opportunities auto‑created at 90/60/30 days so renewal motions are never missed.
@@ -108,12 +108,13 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Dashboard | Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth)
 - Module: Dashboard | Risk Register summary widget
 - Module: Dashboard | Hierarchy-based H1/H2 dashboard packs + reset
-- Module: Leads | As a manager, score breakdown aligns with CQVS labels
+- Module: Leads | As a manager, score breakdown aligns with CQVS labels (Company fit, Qualification readiness, Value/Problem severity, Stakeholder access)
 - Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal
 - Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet"
 - Module: Leads | As a rep, I see "Unknown / not yet discussed" preselected for every qualification factor
 - Module: Leads | As a rep, I see an inline qualification status summary with confidence + weakest signal
 - Module: Leads | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately.
+- Module: Leads | As a Sales Rep, I want lead creation guardrails (owner default, validation, tab gating, assignment/owner read-only by configurable security level, phone type lookup, intl phone entry) so the record is clean from day one.
 - Module: Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.
 - Module: Leads | As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
 - Module: Leads | As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.

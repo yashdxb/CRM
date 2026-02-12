@@ -1676,6 +1676,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         await SeedPermissionCatalogAsync(cancellationToken);
         await SeedTimeZonesAsync(cancellationToken);
         await SeedCurrenciesAsync(cancellationToken);
+        await SeedPhoneTypesAsync(cancellationToken);
 
         var defaultTenant = await EnsureDefaultTenantAsync(cancellationToken);
         var seedTenants = await EnsureSeedTenantsAsync(defaultTenant.Key, cancellationToken);
@@ -1817,6 +1818,25 @@ public class DatabaseInitializer : IDatabaseInitializer
         };
 
         _dbContext.Currencies.AddRange(currencies);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SeedPhoneTypesAsync(CancellationToken cancellationToken)
+    {
+        if (await _dbContext.PhoneTypes.AnyAsync(cancellationToken))
+        {
+            return;
+        }
+
+        var phoneTypes = new[]
+        {
+            new PhoneTypeDefinition { Name = "Mobile", IsActive = true, SortOrder = 1, IsDefault = true },
+            new PhoneTypeDefinition { Name = "Work", IsActive = true, SortOrder = 2, IsDefault = false },
+            new PhoneTypeDefinition { Name = "Home", IsActive = true, SortOrder = 3, IsDefault = false },
+            new PhoneTypeDefinition { Name = "Other", IsActive = true, SortOrder = 4, IsDefault = false }
+        };
+
+        _dbContext.PhoneTypes.AddRange(phoneTypes);
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 

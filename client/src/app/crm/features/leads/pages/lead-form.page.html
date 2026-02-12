@@ -92,6 +92,8 @@
             class="lead-tab"
             data-tab="overview"
             [class.is-active]="activeTab() === 'overview'"
+            [class.is-disabled]="isTabDisabled('overview')"
+            [disabled]="isTabDisabled('overview')"
             (click)="setActiveTab('overview')"
           >
             Overview
@@ -101,6 +103,8 @@
             class="lead-tab"
             data-tab="qualification"
             [class.is-active]="activeTab() === 'qualification'"
+            [class.is-disabled]="isTabDisabled('qualification')"
+            [disabled]="isTabDisabled('qualification')"
             (click)="setActiveTab('qualification')"
           >
             Qualification
@@ -111,6 +115,8 @@
             class="lead-tab"
             data-tab="activity"
             [class.is-active]="activeTab() === 'activity'"
+            [class.is-disabled]="isTabDisabled('activity')"
+            [disabled]="isTabDisabled('activity')"
             (click)="setActiveTab('activity')"
           >
             Activity &amp; Follow-Up
@@ -121,6 +127,8 @@
             class="lead-tab"
             data-tab="history"
             [class.is-active]="activeTab() === 'history'"
+            [class.is-disabled]="isTabDisabled('history')"
+            [disabled]="isTabDisabled('history')"
             (click)="setActiveTab('history')"
           >
             History
@@ -188,6 +196,7 @@
                   placeholder="Select assignment"
                   appendTo="body"
                   styleClass="w-full"
+                  [disabled]="!canEditAssignment()"
                 >
                   <ng-template pTemplate="item" let-option>
                     <div class="option-row" [attr.data-testid]="'lead-assignment-option-' + option.value">
@@ -207,6 +216,7 @@
                   placeholder="Select owner"
                   appendTo="body"
                   styleClass="w-full"
+                  [disabled]="isOwnerReadOnly()"
                 >
                   <ng-template pTemplate="item" let-option>
                     <div class="option-row" [attr.data-testid]="'lead-owner-option-' + option.value">
@@ -226,11 +236,48 @@
             <div class="form-grid">
               <div class="field">
                 <label>Email</label>
-                <input pInputText name="email" [(ngModel)]="form.email" type="email" placeholder="name@company.com" class="w-full" />
+                <input
+                  pInputText
+                  name="email"
+                  [ngModel]="form.email"
+                  (ngModelChange)="onEmailChange($event)"
+                  type="email"
+                  placeholder="name@company.com"
+                  class="w-full"
+                />
+                <p class="field-error" *ngIf="emailError()">{{ emailError() }}</p>
               </div>
               <div class="field">
                 <label>Phone</label>
-                <input pInputText name="phone" [(ngModel)]="form.phone" placeholder="+1 555-0101" class="w-full" />
+                <ngx-intl-tel-input
+                  name="phone"
+                  [cssClass]="'w-full'"
+                  [preferredCountries]="preferredCountries"
+                  [enableAutoCountrySelect]="true"
+                  [enablePlaceholder]="true"
+                  [searchCountryFlag]="true"
+                  [searchCountryField]="[searchCountryField.All]"
+                  [selectFirstCountry]="false"
+                  [separateDialCode]="true"
+                  [phoneValidation]="true"
+                  [numberFormat]="phoneNumberFormat.International"
+                  [(ngModel)]="phoneInput"
+                  (ngModelChange)="onPhoneInputChange($event)"
+                ></ngx-intl-tel-input>
+                <p class="field-error" *ngIf="phoneError()">{{ phoneError() }}</p>
+              </div>
+              <div class="field">
+                <label>Phone type</label>
+                <p-select
+                  [options]="phoneTypeOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="phoneTypeId"
+                  [(ngModel)]="form.phoneTypeId"
+                  placeholder="Select type"
+                  appendTo="body"
+                  styleClass="w-full"
+                ></p-select>
               </div>
               <div class="field">
                 <label>Job title</label>
@@ -824,6 +871,7 @@
                   hourFormat="12"
                   appendTo="body"
                   styleClass="w-full cadence-input"
+                  [disabled]="cadenceSubmitting()"
                 ></p-datepicker>
               </div>
               <div class="field full-row">

@@ -40,6 +40,7 @@ public class CrmDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<TimeZoneDefinition> TimeZones => Set<TimeZoneDefinition>();
     public DbSet<CurrencyDefinition> Currencies => Set<CurrencyDefinition>();
+    public DbSet<PhoneTypeDefinition> PhoneTypes => Set<PhoneTypeDefinition>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
@@ -169,6 +170,15 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<CurrencyDefinition>()
             .Property(currency => currency.Symbol)
             .HasMaxLength(16)
+            .IsRequired();
+        // System-wide phone type catalog (not tenant-scoped).
+        modelBuilder.Entity<PhoneTypeDefinition>().ToTable("PhoneTypes", CrmSchema);
+        modelBuilder.Entity<PhoneTypeDefinition>()
+            .HasIndex(type => type.Name)
+            .IsUnique();
+        modelBuilder.Entity<PhoneTypeDefinition>()
+            .Property(type => type.Name)
+            .HasMaxLength(80)
             .IsRequired();
         modelBuilder.Entity<CustomFieldDefinition>().ToTable("CustomFieldDefinitions", CrmSchema);
         modelBuilder.Entity<CustomFieldValue>().ToTable("CustomFieldValues", CrmSchema);

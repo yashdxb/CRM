@@ -10,6 +10,7 @@ public record LeadListItem(
     string Status,
     string? Email,
     string? Phone,
+    Guid? PhoneTypeId,
     Guid OwnerId,
     string Owner,
     int Score,

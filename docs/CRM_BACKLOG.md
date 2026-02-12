@@ -21,7 +21,7 @@ Purpose: Use this to validate the full product flow without changing execution p
 ### 2) Leads (Capture → Qualify → Convert)
 - Lead lifecycle (CRUD + workflow + conversion + assignment rules)
 - Lead outcomes enforced (Disqualified / Nurture / Qualified)
-- Lead qualification discipline (CQVS, weakest signal, confidence)
+- Lead qualification discipline (CQVS = Company fit, Qualification readiness, Value/Problem severity, Stakeholder access; weakest signal, confidence)
 - Lead conversion (Account + Contact + Opportunity + activity transfer)
 - Lead auto-close after conversion
 
@@ -67,6 +67,7 @@ Acceptance criteria are written as testable statements (UI + API). Use these to 
 1) Auth + Users (Admin/User)
 MoSCoW: Must
 - Status: DONE
+- Flow: 01A
 - Evidence:
   - Auth endpoints: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`
   - Users + roles: `server/src/CRM.Enterprise.Api/Controllers/UsersController.cs`
@@ -79,6 +80,7 @@ MoSCoW: Must
 2) JWT login/logout
 MoSCoW: Must
 - Status: DONE
+- Flow: 01A
 - Evidence:
   - JWT setup: `server/src/CRM.Enterprise.Api/Program.cs`
   - Login/logout endpoints: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`
@@ -686,6 +688,7 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Activity form requires `outcome`, `nextStepSubject`, and `nextStepDueDateUtc` before save.
     - Submitting creates the activity and auto-creates a next-step task when provided.
     - Validation errors appear when required fields are missing.
+    - In Lead follow-up, channel and outcome remain editable; the first-touch SLA due date is system-owned and read-only until the first touch is logged.
   - Evidence:
     - UI: client/src/app/crm/features/activities/pages/activity-form.page.html
 - Activities | As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction. (ClickUp: 86dzp8xdt, Status: COMPLETED) Flow: 05B
@@ -846,6 +849,80 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Default pack is selected by role hierarchy level.
     - User can customize dashboard and reset to role default.
     - Reset restores pack layout and visibility settings.
+- Epic | Dashboard | Deal Execution Quality & Belief-vs-Truth Guidance (ClickUp: 86dzrwknd, Status: BACKLOG) Flow: 06Y
+  - Role scope and usage:
+    - Sales Rep (primary):
+      - Uses Engagement Score, Execution Quality, and Risk reason on opportunity/dashboard to prioritize daily execution.
+      - Sets `repConfidence`, reviews belief gap, and executes `doNow/thisWeek` guidance actions.
+    - Sales Manager (secondary):
+      - Monitors low-quality/high-risk deals across team scope and triggers coaching actions.
+      - Uses belief-gap and risk reasons to guide rep coaching conversations and follow-up.
+    - Admin (secondary):
+      - Configures thresholds, rollout flags, and scoring behavior policies at tenant level.
+      - Maintains governance for permissions, visibility, and non-regression with existing alerts.
+  - Acceptance criteria:
+    - Parent scope is decomposed into child stories with independent delivery and testing.
+    - Epic outcome is visible as `Engagement Score`, `Execution Quality`, and `Risk` guidance in CRM workflow.
+    - Child stories preserve tenant scope, role visibility, and existing alert compatibility.
+  - Child stories:
+    - Dashboard | Execution Quality v1 scoring model + API contract (ClickUp: 86dzrwq50, Status: BACKLOG) Flow: 06Y1
+      - Role usage:
+        - Sales Rep: consumes score outputs in workflow.
+        - Sales Manager: consumes team-level score outputs.
+        - Admin: configures policy constraints for score behavior.
+      - Acceptance criteria:
+        - Open opportunity API returns `engagementScore` (0-100), `executionQualityLabel`, `riskLevel`, `riskReason`.
+        - Score math is deterministic and versioned with explicit component weights.
+        - API includes per-component subscores for explainability.
+    - Dashboard | Render Engagement Score, Execution Quality, and Risk reason in UI (ClickUp: 86dzrwq58, Status: BACKLOG) Flow: 06Y2
+      - Role usage:
+        - Sales Rep: sees personal deal-level quality/risk context.
+        - Sales Manager: sees team-scope quality/risk context.
+      - Acceptance criteria:
+        - Opportunity header and dashboard list display Engagement Score, Execution Quality, and Risk reason.
+        - Low/medium/high tones are consistent with existing design system.
+        - UI gracefully handles `insufficient signal` state.
+    - Dashboard | Belief-vs-Truth capture and gap indicator (ClickUp: 86dzrwq5d, Status: BACKLOG) Flow: 06Y3
+      - Role usage:
+        - Sales Rep: sets `repConfidence` and responds to belief-gap prompts.
+        - Sales Manager: reviews belief-gap patterns to prioritize coaching.
+      - Acceptance criteria:
+        - Opportunity supports `repConfidence` input (Low/Medium/High).
+        - API computes normalized `beliefGap` against system score.
+        - UI flags belief gap above threshold and shows corrective prompt.
+    - Dashboard | Next-best-action guidance (doNow/thisWeek/optional) (ClickUp: 86dzrwq5h, Status: BACKLOG) Flow: 06Y4
+      - Role usage:
+        - Sales Rep: executes recommended next actions.
+        - Sales Manager: validates action quality and coaching follow-through.
+      - Acceptance criteria:
+        - API returns up to three prioritized actions with rationale.
+        - Guidance maps to concrete CRM actions (next step scheduling, decision-maker engagement, missing evidence).
+        - Guidance ordering is stable and test-covered.
+    - Dashboard | Signal enrichment for response/cadence/meeting depth/buying signals (ClickUp: 86dzrwq5n, Status: BACKLOG) Flow: 06Y5
+      - Role usage:
+        - Sales Rep/Sales Manager: consume improved signal fidelity.
+        - Admin: controls tenant-level data governance constraints.
+      - Acceptance criteria:
+        - Signals include response rate, time between touches, meeting depth, decision-maker involvement, and buying signals.
+        - Signal normalization and missing-signal handling are documented in API behavior.
+        - Enrichment does not break existing opportunity and activity flows.
+    - Dashboard | Email sentiment signal integration (conditional) (ClickUp: 86dzrwq5t, Status: BACKLOG) Flow: 06Y6
+      - Role usage:
+        - Sales Rep/Sales Manager: consume sentiment-driven quality adjustments when available.
+        - Admin: enables integration and governs access/permissions.
+      - Acceptance criteria:
+        - When email integration exists, sentiment is included as a scoring signal.
+        - Without integration, sentiment is marked `signal unavailable` and excluded from normalization.
+        - Feature remains tenant-scoped and permission-aware.
+    - Dashboard | Test coverage, calibration, and rollout controls (ClickUp: 86dzrwq5x, Status: BACKLOG) Flow: 06Y7
+      - Role usage:
+        - Admin/Engineering ops: controls rollout and calibration safety.
+        - Sales Manager/Sales Rep: receive stable, trusted outputs post-rollout.
+      - Acceptance criteria:
+        - Backend tests cover score math, belief gap, and guidance ordering.
+        - UI tests verify score/risk/actions rendering and threshold alerts.
+        - Feature flags/rollout controls and calibration checks are in place.
+  - Evidence:
 - Leads | As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors. (ClickUp: 86dzp8y10, Status: COMPLETED) Flow: 02A
   - Acceptance criteria:
     - CQVS breakdown lists the four labeled factors (C/Q/V/S) with clear titles.
@@ -882,6 +959,24 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Dashboard command center shows sections for Tasks Due/Overdue and New Leads.
     - Pipeline by stage and At‑risk deals are visible in the same view.
     - Forecast snapshot shows raw and confidence‑weighted totals.
+- Leads | As a Sales Rep, I want lead creation guardrails (owner default, validation, tab gating) so the record is clean from day one. (ClickUp: 86dzrvrve, Status: COMPLETED) Flow: 02F1
+  - Acceptance criteria:
+    - Assignment is not auto-derived on the create form; default is Manual unless changed.
+    - Assignment is read-only for lower security levels (driven by configurable Security Level rank, not hard-coded roles).
+    - Owner defaults to the logged-in user and is read-only for lower security levels (driven by configurable Security Level rank, not hard-coded roles).
+    - Email format is validated with inline error on invalid input.
+    - Phone input uses international dial + masked entry for all countries and stores E.164.
+    - Phone type is selectable from system lookup (Mobile/Work/Home/Other).
+    - Non-Overview tabs are disabled until the lead is saved.
+    - After first save, UI navigates to Qualification tab (user can continue now or later).
+    - System score is read-only and recalculates from signals/qualification.
+    - SLA due is displayed separately and does not populate Next step due date.
+    - Next step due date is set only when logging an activity (cadence touch).
+  - Evidence:
+    - UI: client/src/app/crm/features/leads/pages/lead-form.page.html
+    - Logic: client/src/app/crm/features/leads/pages/lead-form.page.ts
+    - Lookup API: server/src/CRM.Enterprise.Api/Controllers/SystemPhoneTypesController.cs
+    - Lookup seed: server/src/CRM.Enterprise.Infrastructure/Persistence/DatabaseInitializer.cs
 - Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes. (ClickUp: 86dzp8xd2, Status: COMPLETED) Flow: 02G
   - Acceptance criteria:
     - Convert action creates Account, Contact, Opportunity in one submission.
@@ -901,6 +996,7 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - New leads assigned to an owner based on assignment rules.
     - SLA deadline (`slaDueAtUtc`) is set on creation.
     - First-touch task is created for the assigned owner.
+    - Logging the first touch marks SLA as met and requires an outcome + next step due date.
   - Evidence:
     - UI: client/src/app/crm/features/leads/pages/lead-form.page.html
 - Leads | As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach. (ClickUp: 86dzp8xdm, Status: COMPLETED) Flow: 02J
@@ -919,6 +1015,7 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
   - Acceptance criteria:
     - Activity form provides outcome options and requires selection.
     - Next-step fields are required and create follow-up activity.
+    - In Activity & Follow-Up, channel and outcome are editable; next-step due date is read-only before first touch and editable after a touch is logged.
   - Evidence:
     - UI: client/src/app/crm/features/leads/pages/lead-form.page.html
 - Leads | As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward. (ClickUp: 86dzp8xd6, Status: COMPLETED) Flow: 02M

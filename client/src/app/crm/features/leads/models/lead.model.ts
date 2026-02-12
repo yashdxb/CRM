@@ -17,6 +17,7 @@ export interface Lead {
   status: LeadStatus;
   email?: string;
   phone?: string;
+  phoneTypeId?: string;
   ownerId?: string;
   owner: string;
   score: number;

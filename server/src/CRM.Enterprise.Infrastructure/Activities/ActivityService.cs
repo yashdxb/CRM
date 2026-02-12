@@ -476,11 +476,12 @@ public sealed class ActivityService : IActivityService
             return;
         }
 
+        var followUpType = completedActivity.Type == ActivityType.Note ? ActivityType.Task : completedActivity.Type;
         var followUp = new Activity
         {
             Subject = request.NextStepSubject.Trim(),
             Description = "Auto-created next step.",
-            Type = ActivityType.Task,
+            Type = followUpType,
             Priority = "Normal",
             DueDateUtc = request.NextStepDueDateUtc,
             RelatedEntityType = completedActivity.RelatedEntityType,

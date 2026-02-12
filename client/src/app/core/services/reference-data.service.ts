@@ -23,6 +23,14 @@ export interface CurrencyReference {
   isActive: boolean;
 }
 
+export interface PhoneTypeReference {
+  id: string;
+  name: string;
+  isActive: boolean;
+  sortOrder: number;
+  isDefault: boolean;
+}
+
 export interface UnitOfMeasureReference {
   id: string;
   code: string;
@@ -159,6 +167,12 @@ export class ReferenceDataService {
   getCurrencies(): Observable<CurrencyReference[]> {
     return this.http.get<CurrencyReference[]>(`${this.baseUrl}/api/system/currencies`).pipe(
       catchError(() => of(this.currencies.slice()))
+    );
+  }
+
+  getPhoneTypes(): Observable<PhoneTypeReference[]> {
+    return this.http.get<PhoneTypeReference[]>(`${this.baseUrl}/api/system/phone-types`).pipe(
+      catchError(() => of([]))
     );
   }
 

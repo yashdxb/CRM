@@ -274,6 +274,7 @@ export class ActivityFormPage implements OnInit {
   protected ownerOptions: Option<string>[] = [];
   protected selectedTemplate = 'none';
   protected activityStatus: 'Open' | 'Completed' = 'Open';
+  protected readonly systemLocked = signal(false);
   private pendingAccountOption: Option<string> | null = null;
   private pendingContactOption: Option<string> | null = null;
   private pendingOpportunityOption: Option<string> | null = null;
@@ -555,6 +556,7 @@ export class ActivityFormPage implements OnInit {
   }
 
   private prefill(activity: Activity) {
+    this.systemLocked.set(this.isSystemActivity(activity));
     const dueDate = activity.dueDateUtc ? this.parseUtcDate(activity.dueDateUtc) : undefined;
     const completedDate = activity.completedDateUtc ? this.parseUtcDate(activity.completedDateUtc) : undefined;
     this.form = {
@@ -624,6 +626,21 @@ export class ActivityFormPage implements OnInit {
       this.pendingOpportunityOption = option;
     }
     queueMicrotask(() => this.cdr.markForCheck());
+  }
+
+  private isSystemActivity(activity: Activity): boolean {
+    const subject = (activity.subject ?? '').trim();
+    const description = (activity.description ?? '').trim();
+    if (!subject && !description) {
+      return false;
+    }
+    if (description.includes('Auto-created next step.')) {
+      return true;
+    }
+    if (/^First touch\b/i.test(subject)) {
+      return true;
+    }
+    return /^Cadence\b/i.test(subject);
   }
 
   private parseUtcDate(value: string): Date {

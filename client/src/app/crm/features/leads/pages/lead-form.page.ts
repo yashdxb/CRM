@@ -12,8 +12,10 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
 import { KnobModule } from 'primeng/knob';
+import { NgxIntlTelInputModule } from 'ngx-intl-tel-input';
+import { CountryISO, PhoneNumberFormat, SearchCountryField } from 'ngx-intl-tel-input';
 
-import { map, Observable } from 'rxjs';
+import { forkJoin, map, Observable } from 'rxjs';
 
 import {
   Lead,
@@ -29,7 +31,10 @@ import { UserAdminDataService } from '../../settings/services/user-admin-data.se
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
+import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { TooltipModule } from 'primeng/tooltip';
+import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 
 interface StatusOption {
   label: string;
@@ -59,6 +64,12 @@ interface CadenceChannelOption {
   value: LeadCadenceChannel;
 }
 
+interface PhoneTypeOption {
+  label: string;
+  value: string;
+  isDefault: boolean;
+}
+
 @Component({
   selector: 'app-lead-form-page',
   standalone: true,
@@ -77,6 +88,7 @@ interface CadenceChannelOption {
     TagModule,
     DatePickerModule,
     TooltipModule,
+    NgxIntlTelInputModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./lead-form.page.html",
@@ -162,6 +174,9 @@ export class LeadFormPage implements OnInit {
   protected aiScoreNote = signal<string | null>(null);
   protected aiScoreSeverity = signal<'success' | 'info' | 'warn' | 'error'>('info');
   protected aiScoreConfidence = signal<number | null>(null);
+  protected emailError = signal<string | null>(null);
+  protected phoneError = signal<string | null>(null);
+  protected assignmentEditable = signal<boolean>(false);
   protected qualificationConfidenceLabel = signal<string | null>(null);
   protected qualificationConfidence = signal<number | null>(null);
   protected truthCoverage = signal<number | null>(null);
@@ -185,6 +200,11 @@ export class LeadFormPage implements OnInit {
   protected cadenceOutcome = '';
   protected cadenceNextStepLocal: Date | null = null;
   protected cadenceSubmitting = signal(false);
+  protected phoneTypeOptions: PhoneTypeOption[] = [];
+  protected phoneInput: unknown = null;
+  protected readonly searchCountryField = SearchCountryField;
+  protected readonly phoneNumberFormat = PhoneNumberFormat;
+  protected readonly preferredCountries: CountryISO[] = [];
   protected linkedAccountId = signal<string | null>(null);
   protected linkedContactId = signal<string | null>(null);
   protected linkedOpportunityId = signal<string | null>(null);
@@ -195,6 +215,7 @@ export class LeadFormPage implements OnInit {
 
   private readonly leadData = inject(LeadDataService);
   private readonly userAdminData = inject(UserAdminDataService);
+  private readonly referenceData = inject(ReferenceDataService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
@@ -208,6 +229,8 @@ export class LeadFormPage implements OnInit {
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
     this.loadCadenceChannels();
+    this.loadPhoneTypes();
+    this.resolveAssignmentAccess();
     if (this.editingId && lead) {
       this.prefillFromLead(lead);
       this.loadStatusHistory(this.editingId);
@@ -229,7 +252,42 @@ export class LeadFormPage implements OnInit {
   }
 
   protected setActiveTab(tab: 'overview' | 'qualification' | 'activity' | 'history') {
+    if (this.isTabDisabled(tab)) {
+      return;
+    }
     this.activeTab.set(tab);
+  }
+
+  protected isTabDisabled(tab: 'overview' | 'qualification' | 'activity' | 'history') {
+    return !this.isEditMode() && tab !== 'overview';
+  }
+
+  protected isOwnerReadOnly(): boolean {
+    return !this.assignmentEditable();
+  }
+
+  protected onEmailChange(value: string) {
+    this.form.email = value;
+    if (!value?.trim()) {
+      this.emailError.set(null);
+      return;
+    }
+    this.emailError.set(this.isValidEmail(value) ? null : 'Enter a valid email address.');
+  }
+
+  protected onPhoneChange(value: string) {
+    const resolved = this.resolveInternationalPhone(value);
+    this.form.phone = resolved ?? '';
+    if (!this.form.phone?.trim()) {
+      this.phoneError.set(null);
+      return;
+    }
+    this.phoneError.set(this.isValidInternationalPhone(this.form.phone) ? null : 'Use international format (e.g., +1 415-555-0134).');
+  }
+
+  protected onPhoneInputChange(value: unknown) {
+    this.phoneInput = value;
+    this.onPhoneChange(this.extractPhoneValue(value));
   }
 
   protected leadDisplayName(): string {
@@ -320,6 +378,10 @@ export class LeadFormPage implements OnInit {
       return;
     }
 
+    if (!this.validateOverviewFields()) {
+      return;
+    }
+
     const outcomeError = this.validateOutcome();
     if (outcomeError) {
       this.raiseToast('error', outcomeError);
@@ -351,9 +413,11 @@ export class LeadFormPage implements OnInit {
         this.saving.set(false);
         if (!isEdit && created) {
           this.editingId = created.id;
-          this.router.navigate(['/app/leads', created.id, 'edit'], { state: { lead: created } });
+          this.router.navigate(['/app/leads', created.id, 'edit'], {
+            state: { lead: created, defaultTab: 'qualification' }
+          });
         }
-        const message = isEdit ? 'Lead updated.' : 'Lead created.';
+        const message = isEdit ? 'Lead updated.' : 'Lead created. Complete qualification now or later.';
         this.raiseToast('success', message);
         this.updateQualificationFeedback();
       },
@@ -376,6 +440,7 @@ export class LeadFormPage implements OnInit {
       companyName: lead.company,
       email: lead.email,
       phone: lead.phone,
+      phoneTypeId: lead.phoneTypeId ?? undefined,
       status: lead.status,
       score: lead.score ?? 0,
       autoScore: true,
@@ -418,6 +483,7 @@ export class LeadFormPage implements OnInit {
     this.serverNextEvidenceSuggestions.set(lead.nextEvidenceSuggestions ?? []);
     this.scoreBreakdown.set(lead.scoreBreakdown ?? []);
     this.riskFlags.set(lead.riskFlags ?? []);
+    this.phoneInput = lead.phone ?? null;
     this.normalizeEvidence();
     this.updateQualificationFeedback(true);
     this.updateEpistemicSummary(true);
@@ -465,6 +531,9 @@ export class LeadFormPage implements OnInit {
         next: () => {
           this.cadenceSubmitting.set(false);
           this.cadenceOutcome = '';
+          if (!this.firstTouchedAtUtc()) {
+            this.firstTouchedAtUtc.set(new Date().toISOString());
+          }
           this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
           this.loadCadenceTouches(this.editingId!);
           this.raiseToast('success', 'Cadence touch logged and next step scheduled.');
@@ -474,6 +543,10 @@ export class LeadFormPage implements OnInit {
           this.raiseToast('error', 'Unable to log cadence touch.');
         }
       });
+  }
+
+  protected isFirstTouchPending(): boolean {
+    return !!this.firstTouchDueAtUtc() && !this.firstTouchedAtUtc();
   }
 
   private defaultCadenceDueLocal(): Date {
@@ -496,13 +569,15 @@ export class LeadFormPage implements OnInit {
       companyName: '',
       email: '',
       phone: '',
+      phoneTypeId: undefined,
       jobTitle: '',
       source: '',
       territory: '',
       status: 'New',
       score: 0,
       autoScore: true,
-      assignmentStrategy: 'RoundRobin',
+      assignmentStrategy: 'Manual',
+      ownerId: readUserId() ?? undefined,
       disqualifiedReason: '',
       lossReason: '',
       lossCompetitor: '',
@@ -526,7 +601,11 @@ export class LeadFormPage implements OnInit {
 
   private loadOwners() {
     this.userAdminData.lookupActive(undefined, 200).subscribe({
-      next: (items) => this.ownerOptions.set(this.mapOwnerOptions(items)),
+      next: (items) => {
+        const options = this.mapOwnerOptions(items);
+        this.ownerOptions.set(options);
+        this.applyOwnerDefault(options);
+      },
       error: () => this.ownerOptions.set([])
     });
   }
@@ -557,6 +636,118 @@ export class LeadFormPage implements OnInit {
         this.cadenceChannelOptions = [];
       }
     });
+  }
+
+  private loadPhoneTypes() {
+    this.referenceData.getPhoneTypes().subscribe({
+      next: (items: PhoneTypeReference[]) => {
+        this.phoneTypeOptions = items
+          .filter((item) => item.isActive)
+          .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+          .map((item) => ({ label: item.name, value: item.id, isDefault: item.isDefault }));
+        if (!this.form.phoneTypeId) {
+          const defaultOption = this.phoneTypeOptions.find((option) => option.isDefault);
+          if (defaultOption) {
+            this.form.phoneTypeId = defaultOption.value;
+          }
+        }
+      },
+      error: () => {
+        this.phoneTypeOptions = [];
+      }
+    });
+  }
+
+  private applyOwnerDefault(options: OwnerOption[]) {
+    if (this.isEditMode() || this.form.ownerId) {
+      return;
+    }
+    const userId = readUserId();
+    if (userId && options.some((opt) => opt.value === userId)) {
+      this.form.ownerId = userId;
+      return;
+    }
+    const fullName = this.authService.currentUser()?.fullName?.trim().toLowerCase();
+    if (!fullName) return;
+    const match = options.find((opt) => opt.label.trim().toLowerCase() === fullName);
+    if (match) {
+      this.form.ownerId = match.value;
+    }
+  }
+
+  protected canEditAssignment(): boolean {
+    return this.assignmentEditable();
+  }
+
+  private resolveAssignmentAccess(): void {
+    const context = readTokenContext();
+    const hasAdmin = tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
+    const userId = readUserId();
+    if (!userId) {
+      this.assignmentEditable.set(hasAdmin);
+      return;
+    }
+
+    forkJoin({
+      user: this.userAdminData.getUser(userId),
+      roles: this.userAdminData.getRoles(),
+      levels: this.userAdminData.getSecurityLevels()
+    }).subscribe({
+      next: ({ user, roles, levels }) => {
+        const defaultRank = levels.find((level) => level.isDefault)?.rank ?? 0;
+        const roleLevels = roles.filter((role) => user.roleIds.includes(role.id));
+        const ranks = roleLevels
+          .map((role) => levels.find((level) => level.id === role.securityLevelId)?.rank)
+          .filter((rank): rank is number => typeof rank === 'number');
+        const maxRank = ranks.length ? Math.max(...ranks) : defaultRank;
+        this.assignmentEditable.set(hasAdmin || maxRank > defaultRank);
+      },
+      error: () => {
+        this.assignmentEditable.set(hasAdmin);
+      }
+    });
+  }
+
+  private validateOverviewFields(): boolean {
+    const email = this.form.email?.trim() ?? '';
+    const phone = this.form.phone?.trim() ?? '';
+    const emailError = email ? (this.isValidEmail(email) ? null : 'Enter a valid email address.') : null;
+    const phoneError = phone ? (this.isValidInternationalPhone(phone) ? null : 'Use international format (e.g., +1 415-555-0134).') : null;
+    this.emailError.set(emailError);
+    this.phoneError.set(phoneError);
+    if (emailError) {
+      this.raiseToast('error', emailError);
+      return false;
+    }
+    if (phoneError) {
+      this.raiseToast('error', phoneError);
+      return false;
+    }
+    return true;
+  }
+
+  private isValidEmail(value: string): boolean {
+    return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim());
+  }
+
+  private isValidInternationalPhone(value: string): boolean {
+    const normalized = value.replace(/[\s-]/g, '');
+    return /^\+\d{7,15}$/.test(normalized);
+  }
+
+  private extractPhoneValue(value: unknown): string {
+    if (!value) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object') {
+      const anyValue = value as { e164Number?: string; internationalNumber?: string; number?: string };
+      return anyValue.e164Number || anyValue.internationalNumber || anyValue.number || '';
+    }
+    return '';
+  }
+
+  private resolveInternationalPhone(value: string): string | null {
+    const normalized = value?.trim();
+    return normalized ? normalized : null;
   }
 
   protected getSlaStatusLabel(): string {
@@ -1077,6 +1268,10 @@ export class LeadFormPage implements OnInit {
   }
 
   private getDefaultTab(): 'overview' | 'qualification' | 'activity' | 'history' {
+    const stateTab = history.state?.defaultTab;
+    if (stateTab === 'qualification' || stateTab === 'overview' || stateTab === 'activity' || stateTab === 'history') {
+      return stateTab;
+    }
     if (!this.isEditMode()) {
       return 'overview';
     }

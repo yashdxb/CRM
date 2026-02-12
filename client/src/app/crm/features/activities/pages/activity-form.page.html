@@ -47,6 +47,7 @@
                   optionValue="value"
                   name="template"
                   [(ngModel)]="selectedTemplate"
+                  [disabled]="systemLocked()"
                   (ngModelChange)="onTemplateChange($event)"
                   placeholder="Choose template"
                   styleClass="w-full"
@@ -70,7 +71,7 @@
               </div>
               <div class="field full">
                 <label>Subject <span class="required">*</span></label>
-                <input pInputText name="subject" [(ngModel)]="form.subject" required placeholder="Enter activity subject" class="w-full" />
+                <input pInputText name="subject" [(ngModel)]="form.subject" required placeholder="Enter activity subject" class="w-full" [readonly]="systemLocked()" />
               </div>
               <div class="field">
                 <label>Type</label>
@@ -81,6 +82,7 @@
                   optionValue="value"
                   name="type"
                   [(ngModel)]="form.type"
+                  [disabled]="systemLocked()"
                   placeholder="Select type"
                   styleClass="w-full"
                 >
@@ -110,6 +112,7 @@
                   optionValue="value"
                   name="priority"
                   [(ngModel)]="form.priority"
+                  [disabled]="systemLocked()"
                   placeholder="Select priority"
                   styleClass="w-full"
                 >
@@ -169,6 +172,7 @@
                   optionValue="value"
                   name="ownerId"
                   [(ngModel)]="form.ownerId"
+                  [disabled]="systemLocked()"
                   placeholder="Select owner"
                   styleClass="w-full"
                 >
@@ -195,6 +199,7 @@
                   name="dueDateUtc"
                   appendTo="body"
                   [(ngModel)]="form.dueDateUtc"
+                  [disabled]="systemLocked()"
                   [showIcon]="true"
                   [showTime]="true"
                   hourFormat="12"
@@ -222,6 +227,7 @@
                   optionValue="value"
                   name="relatedEntityType"
                   [(ngModel)]="form.relatedEntityType"
+                  [disabled]="systemLocked()"
                   (ngModelChange)="onRelationTypeChange($event)"
                   placeholder="Select record type"
                   styleClass="w-full"
@@ -252,6 +258,7 @@
                   optionValue="value"
                   name="relatedEntityId"
                   [(ngModel)]="form.relatedEntityId"
+                  [disabled]="systemLocked()"
                   (ngModelChange)="onRelatedEntityChange($event)"
                   placeholder="Select account"
                   styleClass="w-full"
@@ -282,6 +289,7 @@
                   optionValue="value"
                   name="relatedEntityId"
                   [(ngModel)]="form.relatedEntityId"
+                  [disabled]="systemLocked()"
                   (ngModelChange)="onRelatedEntityChange($event)"
                   placeholder="Select contact"
                   styleClass="w-full"
@@ -312,6 +320,7 @@
                   optionValue="value"
                   name="relatedEntityId"
                   [(ngModel)]="form.relatedEntityId"
+                  [disabled]="systemLocked()"
                   (ngModelChange)="onRelatedEntityChange($event)"
                   placeholder="Select opportunity"
                   styleClass="w-full"
@@ -342,6 +351,7 @@
                   optionValue="value"
                   name="relatedEntityId"
                   [(ngModel)]="form.relatedEntityId"
+                  [disabled]="systemLocked()"
                   (ngModelChange)="onRelatedEntityChange($event)"
                   placeholder="Select lead"
                   styleClass="w-full"

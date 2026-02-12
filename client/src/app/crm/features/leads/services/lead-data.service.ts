@@ -22,6 +22,7 @@ export interface SaveLeadRequest {
   companyName?: string;
   email?: string;
   phone?: string;
+  phoneTypeId?: string;
   jobTitle?: string;
   status?: LeadStatus;
   ownerId?: string;

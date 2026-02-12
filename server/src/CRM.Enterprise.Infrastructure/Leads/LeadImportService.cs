@@ -69,6 +69,7 @@ public sealed class LeadImportService : ILeadImportService
                 lastName ?? string.Empty,
                 LeadCsvImportHelper.ReadValue(row, "email"),
                 LeadCsvImportHelper.ReadValue(row, "phone"),
+                null,
                 LeadCsvImportHelper.ReadValue(row, "company", "companyname"),
                 LeadCsvImportHelper.ReadValue(row, "jobtitle", "title"),
                 statusName,
