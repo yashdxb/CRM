@@ -20,7 +20,7 @@ import { BulkAction, BulkActionsBarComponent } from '../../../../shared/componen
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { CsvImportJob, CsvImportJobStatusResponse } from '../../../../shared/models/csv-import.model';
 import { ImportJobService } from '../../../../shared/services/import-job.service';
-import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 
@@ -115,8 +115,9 @@ export class LeadsPage {
   protected readonly selectedIds = signal<string[]>([]);
   protected readonly bulkActions = computed<BulkAction[]>(() => {
     const disabled = !this.canManage();
+    const assignDisabled = !this.canEditOwnerAssignment();
     return [
-      { id: 'assign-owner', label: 'Assign owner', icon: 'pi pi-user', disabled },
+      { id: 'assign-owner', label: 'Assign owner', icon: 'pi pi-user', disabled: assignDisabled },
       { id: 'change-status', label: 'Change status', icon: 'pi pi-tag', disabled },
       { id: 'delete', label: 'Delete', icon: 'pi pi-trash', severity: 'danger', disabled }
     ];
@@ -142,6 +143,7 @@ export class LeadsPage {
     return lead.convertedOpportunityId ? ['/app/opportunities', lead.convertedOpportunityId, 'edit'] : null;
   }
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
+  protected readonly ownerAssignmentEditable = signal(false);
   protected assignDialogVisible = false;
   protected assignOwnerId: string | null = null;
   protected statusDialogVisible = false;
@@ -160,6 +162,7 @@ export class LeadsPage {
     private readonly userAdminData: UserAdminDataService,
     private readonly importJobs: ImportJobService
   ) {
+    this.resolveOwnerAssignmentAccess();
     this.loadOwners();
     if (this.router.url.includes('/leads/pipeline')) {
       this.viewMode = 'kanban';
@@ -436,6 +439,9 @@ export class LeadsPage {
   }
 
   protected confirmBulkAssign() {
+    if (!this.canEditOwnerAssignment()) {
+      return;
+    }
     const ids = this.selectedIds();
     if (!ids.length || !this.assignOwnerId) {
       return;
@@ -489,6 +495,9 @@ export class LeadsPage {
   }
 
   protected onInlineOwnerChange(row: Lead, ownerId: string) {
+    if (!this.canEditOwnerAssignment()) {
+      return;
+    }
     if (!ownerId || row.ownerId === ownerId) {
       return;
     }
@@ -499,6 +508,39 @@ export class LeadsPage {
       },
       error: () => {
         this.raiseToast('error', 'Owner update failed.');
+      }
+    });
+  }
+
+  protected canEditOwnerAssignment(): boolean {
+    return this.ownerAssignmentEditable();
+  }
+
+  private resolveOwnerAssignmentAccess(): void {
+    const context = readTokenContext();
+    const hasAdmin = tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
+    const userId = readUserId();
+    if (!userId) {
+      this.ownerAssignmentEditable.set(false);
+      return;
+    }
+
+    forkJoin({
+      user: this.userAdminData.getUser(userId),
+      roles: this.userAdminData.getRoles(),
+      levels: this.userAdminData.getSecurityLevels()
+    }).subscribe({
+      next: ({ user, roles, levels }) => {
+        const defaultRank = levels.find((level) => level.isDefault)?.rank ?? 0;
+        const roleLevels = roles.filter((role) => user.roleIds.includes(role.id));
+        const ranks = roleLevels
+          .map((role) => levels.find((level) => level.id === role.securityLevelId)?.rank)
+          .filter((rank): rank is number => typeof rank === 'number');
+        const maxRank = ranks.length ? Math.max(...ranks) : defaultRank;
+        this.ownerAssignmentEditable.set(hasAdmin && maxRank > defaultRank);
+      },
+      error: () => {
+        this.ownerAssignmentEditable.set(false);
       }
     });
   }

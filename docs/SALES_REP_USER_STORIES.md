@@ -285,11 +285,17 @@ Acceptance criteria: Lead can be created with name + company + source; lead appe
 Acceptance criteria (Overview behavior):
 - Assignment is not auto‑derived from settings on the create form.
 - Owner defaults to the logged‑in user; if the user’s security level is lower, Owner is read‑only.
+- Owner editability is governed by permission + security level (not hard-coded role names):
+  - requires `Permissions.Administration.Manage`
+  - user security level rank must be above tenant default level
 - Email requires valid format and shows inline validation on error.
 - Phone requires international format (E.164 or `+<country> <number>`).
 - All non‑Overview tabs are disabled until the lead is saved.
 - After first save, UI navigates to `Qualification` and prompts to fill now or later.
 - System score is read‑only and recalculates based on scoring logic.
+Acceptance criteria (List behavior):
+- Leads list inline Owner dropdown is disabled for users failing the same governance rule.
+- Leads bulk “Assign owner” dialog dropdown/button is disabled for users failing the same governance rule.
 UI note: Tabs use a flat style (no heavy shadow/3D).
 UI steps:
 - Side menu → `Leads`.
@@ -297,7 +303,27 @@ UI steps:
 - Fill Lead basics fields.
 - Click `Save`.
 - Verify the new lead appears in the list and opens.
-Evidence: `client/src/app/crm/features/leads/pages/leads.page.html`, `client/src/app/crm/features/leads/pages/lead-form.page.html`, `server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs`.
+Evidence: `client/src/app/crm/features/leads/pages/leads.page.html`, `client/src/app/crm/features/leads/pages/leads.page.ts`, `client/src/app/crm/features/leads/pages/lead-form.page.html`, `client/src/app/crm/features/leads/pages/lead-form.page.ts`, `server/src/CRM.Enterprise.Api/Controllers/LeadsController.cs`.
+Validation evidence: `client/e2e/lead-owner-click-guard.spec.ts`, `client/e2e/leads-owner-list-readonly.spec.ts`.
+Issue fix notes (Owner dropdown remained enabled for lower security users):
+- Issue observed:
+  - Owner dropdown was still interactable in local dev for users who should be read-only.
+- Root cause:
+  - UI disable state alone was not sufficient; interaction handlers still accepted owner-change attempts in some flows.
+  - Early implementations also relied on role-name assumptions in parts of the UI path.
+- Fix implemented:
+  - Centralized owner editability to governance checks (no role-name hardcoding):
+    - require `Permissions.Administration.Manage`
+    - require user security-level rank above tenant default level
+  - Applied the same gate consistently in:
+    - Edit Lead owner field
+    - Leads list inline Owner editor
+    - Leads bulk Assign Owner dialog
+  - Added click-guard in handlers so blocked users cannot update owner even if UI events fire.
+- Lessons learned:
+  - Treat control-level disable as UX only; enforce the same rule in write handlers and API paths.
+  - Keep one reusable governance predicate for all owner-assignment surfaces to avoid drift.
+  - Validate in local e2e against local API to avoid false positives from environment mismatch.
 Sample data: Scenario A (Qualified) lead overview values above.
 
 ### 3) Qualify Lead (CQVS) and See Confidence + Weakest Signal

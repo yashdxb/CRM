@@ -420,6 +420,25 @@ test('lead lifecycle UI smoke', async ({ page, request }) => {
   await page.waitForURL('**/app/leads/**');
   await page.locator('form.lead-form').waitFor({ state: 'visible' });
   const manualLeadEditId = getLeadIdFromUrl(page);
+  await openTab(page, 'Overview');
+  await selectByLabel(page, 'p-select[name="phoneCountry"]', 'United States');
+  await page.locator('input[name="phoneNumber"]').fill('4155550134');
+  await saveLeadUpdate(page);
+  if (manualLeadEditId) {
+    const leadPhoneResponse = await request.get(`${API_BASE_URL}/api/leads/${manualLeadEditId}`, {
+      headers: {
+        'X-Tenant-Key': 'default',
+        Authorization: `Bearer ${token}`
+      }
+    });
+    expect(leadPhoneResponse.ok()).toBeTruthy();
+    const phoneLead = await leadPhoneResponse.json();
+    expect(phoneLead.phone).toBe('+14155550134');
+  }
+  await page.reload();
+  await page.locator('form.lead-form').waitFor({ state: 'visible' });
+  await expect(page.locator('p-select[name="phoneCountry"] .p-select-label')).toContainText('United States');
+  await expect(page.locator('input[name="phoneNumber"]')).toHaveValue(/415.*555.*0134/);
   if (manualLeadEditId) {
     await createDiscoveryMeeting(request, token, manualLeadEditId);
   }

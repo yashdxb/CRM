@@ -119,6 +119,13 @@ public class LeadsController : ControllerBase
         return Ok(items);
     }
 
+    [HttpGet("evidence-sources")]
+    public async Task<ActionResult<IEnumerable<string>>> GetEvidenceSources(CancellationToken cancellationToken)
+    {
+        var items = await _leadService.GetEvidenceSourcesAsync(cancellationToken);
+        return Ok(items);
+    }
+
     [HttpPost("{id:guid}/cadence-touch")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<ActionResult<LeadCadenceTouchItem>> LogCadenceTouch(Guid id, [FromBody] ApiLeadCadenceTouchRequest request, CancellationToken cancellationToken)

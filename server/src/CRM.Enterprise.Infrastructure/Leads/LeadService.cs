@@ -323,6 +323,23 @@ public sealed class LeadService : ILeadService
         return history;
     }
 
+    public async Task<IReadOnlyList<string>> GetEvidenceSourcesAsync(CancellationToken cancellationToken = default)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+
+        var policy = ResolveQualificationPolicy(tenant);
+        var configured = policy.EvidenceSources ?? Array.Empty<string>();
+        if (configured.Count == 0)
+        {
+            return QualificationPolicyDefaults.DefaultEvidenceSources;
+        }
+
+        return configured;
+    }
+
     public async Task<IReadOnlyList<LeadAuditEventDto>?> GetAuditAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var exists = await _dbContext.Leads
@@ -1003,7 +1020,7 @@ public sealed class LeadService : ILeadService
         try
         {
             var parsed = JsonSerializer.Deserialize<QualificationPolicy>(tenant.QualificationPolicyJson, JsonOptions);
-            return parsed ?? QualificationPolicyDefaults.CreateDefault();
+            return QualificationPolicyDefaults.Normalize(parsed);
         }
         catch (JsonException)
         {

@@ -89,6 +89,10 @@ export class LeadDataService {
     return this.http.get<LeadCadenceChannelOption[]>(`${this.baseUrl}/api/leads/cadence-channels`);
   }
 
+  getEvidenceSources() {
+    return this.http.get<string[]>(`${this.baseUrl}/api/leads/evidence-sources`);
+  }
+
   create(payload: SaveLeadRequest) {
     return this.http.post<Lead>(`${this.baseUrl}/api/leads`, payload);
   }

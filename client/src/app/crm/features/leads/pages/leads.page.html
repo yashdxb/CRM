@@ -361,6 +361,7 @@
                       (ngModelChange)="onInlineOwnerChange(lead, $event)"
                       placeholder="Owner"
                       styleClass="inline-select"
+                      [disabled]="!canEditOwnerAssignment()"
                     ></p-select>
                   </td>
                   <td class="td-actions">
@@ -448,11 +449,12 @@
       [(ngModel)]="assignOwnerId"
       placeholder="Select owner"
       styleClass="w-full"
+      [disabled]="!canEditOwnerAssignment()"
     ></p-select>
   </div>
   <ng-template pTemplate="footer">
     <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="assignDialogVisible = false"></button>
-    <button pButton type="button" class="crm-button crm-button--primary" label="Assign" [disabled]="!assignOwnerId || !canManage()" (click)="confirmBulkAssign()"></button>
+    <button pButton type="button" class="crm-button crm-button--primary" label="Assign" [disabled]="!assignOwnerId || !canEditOwnerAssignment()" (click)="confirmBulkAssign()"></button>
   </ng-template>
 </p-dialog>
 

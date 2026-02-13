@@ -151,7 +151,8 @@ export class QualificationPolicyPage {
       ...policy,
       exposureWeights: (policy.exposureWeights && policy.exposureWeights.length > 0)
         ? policy.exposureWeights
-        : QualificationPolicyPage.defaultPolicy().exposureWeights
+        : QualificationPolicyPage.defaultPolicy().exposureWeights,
+      evidenceSources: this.normalizeEvidenceSources(policy.evidenceSources)
     };
     this.qualificationPolicy.set(normalized);
   }
@@ -208,6 +209,42 @@ export class QualificationPolicyPage {
     this.qualificationPolicy.set({ ...current, [field]: value });
   }
 
+  protected addEvidenceSource() {
+    const nextName = this.nextEvidenceSourceName();
+    const current = this.qualificationPolicy();
+    this.qualificationPolicy.set({
+      ...current,
+      evidenceSources: [...current.evidenceSources, nextName]
+    });
+  }
+
+  protected updateEvidenceSource(index: number, value: string) {
+    const current = this.qualificationPolicy();
+    const trimmed = (value ?? '').trim();
+    const next = [...current.evidenceSources];
+    next[index] = trimmed;
+    this.qualificationPolicy.set({
+      ...current,
+      evidenceSources: this.normalizeEvidenceSources(next)
+    });
+  }
+
+  protected removeEvidenceSource(index: number) {
+    const current = this.qualificationPolicy();
+    const target = current.evidenceSources[index];
+    if (!target) {
+      return;
+    }
+    if (target.toLowerCase() === 'no evidence yet') {
+      return;
+    }
+    const next = current.evidenceSources.filter((_, idx) => idx !== index);
+    this.qualificationPolicy.set({
+      ...current,
+      evidenceSources: this.normalizeEvidenceSources(next)
+    });
+  }
+
   protected clearToast() {
     this.toastService.clear();
   }
@@ -228,6 +265,40 @@ export class QualificationPolicyPage {
 
   private resolveCurrency(value: string | null) {
     return value || this.currencyFallback || '';
+  }
+
+  private normalizeEvidenceSources(items: string[] | null | undefined): string[] {
+    const normalized = (items ?? [])
+      .map((item) => (item ?? '').trim())
+      .filter((item) => item.length > 0)
+      .filter((item, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+
+    if (!normalized.length) {
+      return [...QualificationPolicyPage.defaultPolicy().evidenceSources];
+    }
+
+    const sentinelIndex = normalized.findIndex((item) => item.toLowerCase() === 'no evidence yet');
+    if (sentinelIndex === -1) {
+      return ['No evidence yet', ...normalized];
+    }
+
+    if (sentinelIndex > 0) {
+      const [sentinel] = normalized.splice(sentinelIndex, 1);
+      normalized.unshift(sentinel);
+    }
+
+    return normalized;
+  }
+
+  private nextEvidenceSourceName(): string {
+    const existing = new Set(this.qualificationPolicy().evidenceSources.map((item) => item.toLowerCase()));
+    for (let i = 1; i <= 999; i += 1) {
+      const candidate = `Evidence source ${i}`;
+      if (!existing.has(candidate.toLowerCase())) {
+        return candidate;
+      }
+    }
+    return 'Evidence source';
   }
 
   private static defaultPolicy(): QualificationPolicy {
@@ -252,6 +323,29 @@ export class QualificationPolicyPage {
         { key: 'problem', weight: 15 },
         { key: 'readiness', weight: 10 },
         { key: 'icpFit', weight: 10 }
+      ],
+      evidenceSources: [
+        'No evidence yet',
+        'Customer call',
+        'Call notes',
+        'Call recap',
+        'Follow-up call notes',
+        'Discovery call notes',
+        'Discovery meeting notes',
+        'Meeting notes',
+        'Email confirmation',
+        'Email from buyer',
+        'Buyer email',
+        'Written confirmation',
+        'Chat transcript',
+        'Proposal feedback',
+        'Internal plan mention',
+        'Ops review notes',
+        'Org chart reference',
+        'Account research',
+        'Third-party confirmation',
+        'Historical / prior deal',
+        'Inferred from context'
       ]
     };
   }

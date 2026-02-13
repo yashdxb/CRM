@@ -15,6 +15,7 @@ public interface ILeadService
     Task<LeadOperationResult<bool>> UpdateStatusAsync(Guid id, string status, LeadActor actor, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<int>> BulkAssignOwnerAsync(IReadOnlyCollection<Guid> ids, Guid ownerId, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<int>> BulkUpdateStatusAsync(IReadOnlyCollection<Guid> ids, string status, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetEvidenceSourcesAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeadCadenceTouchDto>?> GetCadenceTouchesAsync(Guid id, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<LeadCadenceTouchDto>> LogCadenceTouchAsync(Guid id, LeadCadenceTouchRequest request, LeadActor actor, CancellationToken cancellationToken = default);
 }

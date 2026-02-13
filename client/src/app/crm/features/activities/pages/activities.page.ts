@@ -261,6 +261,9 @@ export class ActivitiesPage {
   }
 
   protected onOwnerFilterChange(value: string) {
+    if (!this.canManage()) {
+      return;
+    }
     this.activeOwnerFilter = value ?? 'all';
     this.pageIndex = 0;
     this.load();

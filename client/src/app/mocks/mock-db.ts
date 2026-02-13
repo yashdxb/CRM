@@ -199,6 +199,29 @@ let mockWorkspaceSettings: WorkspaceSettings = {
       { key: 'problem', weight: 15 },
       { key: 'readiness', weight: 10 },
       { key: 'icpFit', weight: 10 }
+    ],
+    evidenceSources: [
+      'No evidence yet',
+      'Customer call',
+      'Call notes',
+      'Call recap',
+      'Follow-up call notes',
+      'Discovery call notes',
+      'Discovery meeting notes',
+      'Meeting notes',
+      'Email confirmation',
+      'Email from buyer',
+      'Buyer email',
+      'Written confirmation',
+      'Chat transcript',
+      'Proposal feedback',
+      'Internal plan mention',
+      'Ops review notes',
+      'Org chart reference',
+      'Account research',
+      'Third-party confirmation',
+      'Historical / prior deal',
+      'Inferred from context'
     ]
   }
 };

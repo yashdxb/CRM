@@ -964,6 +964,10 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Assignment is not auto-derived on the create form; default is Manual unless changed.
     - Assignment is read-only for lower security levels (driven by configurable Security Level rank, not hard-coded roles).
     - Owner defaults to the logged-in user and is read-only for lower security levels (driven by configurable Security Level rank, not hard-coded roles).
+    - Owner editability is governed by permission + security level for both Edit Lead and Leads list:
+      - `Permissions.Administration.Manage` must be present.
+      - User security level rank must be above tenant default rank.
+    - Leads list inline Owner and bulk Assign Owner controls use the same governance rule as Edit Lead.
     - Email format is validated with inline error on invalid input.
     - Phone input uses international dial + masked entry for all countries and stores E.164.
     - Phone type is selectable from system lookup (Mobile/Work/Home/Other).
@@ -973,10 +977,29 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - SLA due is displayed separately and does not populate Next step due date.
     - Next step due date is set only when logging an activity (cadence touch).
   - Evidence:
+    - Edit Lead owner governance: `client/src/app/crm/features/leads/pages/lead-form.page.ts`
+    - Leads list owner governance: `client/src/app/crm/features/leads/pages/leads.page.ts`
+    - Leads list owner UI gating: `client/src/app/crm/features/leads/pages/leads.page.html`
+    - Local e2e validation: `client/e2e/lead-owner-click-guard.spec.ts`, `client/e2e/leads-owner-list-readonly.spec.ts`
     - UI: client/src/app/crm/features/leads/pages/lead-form.page.html
     - Logic: client/src/app/crm/features/leads/pages/lead-form.page.ts
     - Lookup API: server/src/CRM.Enterprise.Api/Controllers/SystemPhoneTypesController.cs
     - Lookup seed: server/src/CRM.Enterprise.Infrastructure/Persistence/DatabaseInitializer.cs
+  - Issue fix log (Owner dropdown governance):
+    - Symptom: Owner dropdown remained enabled or could still be changed in local Edit/List flows for lower-security users.
+    - Root cause:
+      - Governance logic was not enforced uniformly across all entry points.
+      - UI disable state did not fully block update handlers in every path.
+    - Fix:
+      - Enforced one governance rule everywhere (no hard-coded role names):
+        - `Permissions.Administration.Manage` is required.
+        - User security-level rank must be above tenant default rank.
+      - Applied same rule to Edit Lead, Leads list inline owner, and bulk Assign Owner.
+      - Added interaction guards in handlers to reject owner updates when governance fails.
+    - Learned lessons / prevention:
+      - Mirror UI disabled states with handler/API enforcement for all permissioned actions.
+      - Reuse a shared governance function to prevent behavior drift between pages.
+      - Keep local e2e pointed to local API when validating permission behavior.
 - Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes. (ClickUp: 86dzp8xd2, Status: COMPLETED) Flow: 02G
   - Acceptance criteria:
     - Convert action creates Account, Contact, Opportunity in one submission.

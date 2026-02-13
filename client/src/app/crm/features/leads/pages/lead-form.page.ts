@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -161,15 +162,9 @@ export class LeadFormPage implements OnInit {
     { label: 'Out-of-profile but exploratory', value: 'Out-of-profile but exploratory', icon: 'pi pi-info-circle', tone: 'assumed' },
     { label: 'Clearly out of ICP', value: 'Clearly out of ICP', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
-  protected readonly evidenceOptions: OptionItem[] = [
-    { label: 'No evidence yet', value: 'No evidence yet', icon: 'pi pi-minus-circle', tone: 'unknown' },
-    { label: 'Direct buyer statement', value: 'Direct buyer statement', icon: 'pi pi-comment', tone: 'verified' },
-    { label: 'Written confirmation', value: 'Written confirmation', icon: 'pi pi-file', tone: 'verified' },
-    { label: 'Observed behaviour', value: 'Observed behaviour', icon: 'pi pi-eye', tone: 'assumed' },
-    { label: 'Third-party confirmation', value: 'Third-party confirmation', icon: 'pi pi-users', tone: 'assumed' },
-    { label: 'Inferred from context', value: 'Inferred from context', icon: 'pi pi-compass', tone: 'invalid' },
-    { label: 'Historical / prior deal', value: 'Historical / prior deal', icon: 'pi pi-history', tone: 'neutral' }
-  ];
+  protected evidenceOptions: OptionItem[] = LeadFormPage.defaultEvidenceSources().map((source) =>
+    LeadFormPage.toEvidenceOption(source)
+  );
   protected readonly ownerOptions = signal<OwnerOption[]>([]);
 
   protected form: SaveLeadRequest & { autoScore: boolean } = this.createEmptyForm();
@@ -238,6 +233,7 @@ export class LeadFormPage implements OnInit {
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
     this.loadCadenceChannels();
+    this.loadEvidenceSources();
     this.loadPhoneTypes();
     this.loadPhoneCountries();
     this.resolveAssignmentAccess();
@@ -346,6 +342,11 @@ export class LeadFormPage implements OnInit {
     return this.isEditMode() && this.form.status === 'Qualified';
   }
 
+  protected canRefreshScore(): boolean {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
+  }
+
   protected statusOptionsForView(): StatusOption[] {
     const isConverted = this.form.status === 'Converted';
     return this.statusOptions.map((option) => ({
@@ -424,19 +425,50 @@ export class LeadFormPage implements OnInit {
             state: { lead: created, defaultTab: 'qualification' }
           });
         }
+        if (isEdit && this.editingId) {
+          this.reloadLeadDetails(this.editingId);
+        }
         const message = isEdit ? 'Lead updated.' : 'Lead created. Complete qualification now or later.';
         this.raiseToast('success', message);
         this.updateQualificationFeedback();
       },
-      error: () => {
+      error: (err) => {
         this.saving.set(false);
-        this.raiseToast('error', this.editingId ? 'Unable to update lead.' : 'Unable to create lead.');
+        const fallback = this.editingId ? 'Unable to update lead.' : 'Unable to create lead.';
+        this.raiseToast('error', this.extractApiErrorMessage(err, fallback));
       }
     });
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
+  }
+
+  private extractApiErrorMessage(error: unknown, fallback: string): string {
+    const httpError = error as HttpErrorResponse | null;
+    const payload = httpError?.error;
+    if (typeof payload === 'string' && payload.trim().length > 0) {
+      return payload.trim();
+    }
+
+    const errors = (payload as { errors?: Record<string, string[] | string> } | null | undefined)?.errors;
+    if (errors && typeof errors === 'object') {
+      const firstKey = Object.keys(errors)[0];
+      const value = firstKey ? errors[firstKey] : null;
+      if (Array.isArray(value) && value[0]) {
+        return value[0];
+      }
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+
+    const title = (payload as { title?: string } | null | undefined)?.title;
+    if (typeof title === 'string' && title.trim().length > 0 && title !== 'One or more validation errors occurred.') {
+      return title.trim();
+    }
+
+    return fallback;
   }
 
   private prefillFromLead(lead: Lead) {
@@ -475,6 +507,7 @@ export class LeadFormPage implements OnInit {
       icpFit: lead.icpFit || 'Unknown / not assessed',
       icpFitEvidence: lead.icpFitEvidence || 'No evidence yet'
     };
+    this.ensureEvidenceOptionsContainSelections();
     this.linkedAccountId.set(lead.accountId ?? null);
     this.linkedContactId.set(lead.contactId ?? null);
     this.linkedOpportunityId.set(lead.convertedOpportunityId ?? null);
@@ -488,7 +521,7 @@ export class LeadFormPage implements OnInit {
     this.serverWeakestSignal.set(lead.weakestSignal ?? null);
     this.serverWeakestState.set(lead.weakestState ?? null);
     this.serverNextEvidenceSuggestions.set(lead.nextEvidenceSuggestions ?? []);
-    this.scoreBreakdown.set(lead.scoreBreakdown ?? []);
+    this.scoreBreakdown.set(lead.scoreBreakdown ?? this.buildScoreBreakdown());
     this.riskFlags.set(lead.riskFlags ?? []);
     this.syncPhoneInputsFromE164(lead.phone ?? null);
     this.normalizeEvidence();
@@ -507,6 +540,16 @@ export class LeadFormPage implements OnInit {
     this.leadData.getCadenceTouches(leadId).subscribe({
       next: (touches) => this.cadenceTouches.set(touches),
       error: () => this.cadenceTouches.set([])
+    });
+  }
+
+  private reloadLeadDetails(leadId: string): void {
+    this.leadData.get(leadId).subscribe({
+      next: (lead) => {
+        this.prefillFromLead(lead);
+        this.loadStatusHistory(leadId);
+        this.loadCadenceTouches(leadId);
+      }
     });
   }
 
@@ -609,11 +652,15 @@ export class LeadFormPage implements OnInit {
   private loadOwners() {
     this.userAdminData.lookupActive(undefined, 200).subscribe({
       next: (items) => {
-        const options = this.mapOwnerOptions(items);
+        const options = this.ensureOwnerOptions(this.mapOwnerOptions(items));
         this.ownerOptions.set(options);
         this.applyOwnerDefault(options);
       },
-      error: () => this.ownerOptions.set([])
+      error: () => {
+        const options = this.ensureOwnerOptions([]);
+        this.ownerOptions.set(options);
+        this.applyOwnerDefault(options);
+      }
     });
   }
 
@@ -645,6 +692,28 @@ export class LeadFormPage implements OnInit {
     });
   }
 
+  private loadEvidenceSources() {
+    this.leadData.getEvidenceSources().subscribe({
+      next: (items) => {
+        const normalized = (items ?? [])
+          .map((item) => (item ?? '').trim())
+          .filter((item, index, all) => item.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+
+        const catalog = normalized.length ? normalized : LeadFormPage.defaultEvidenceSources();
+        if (!catalog.some((item) => item.toLowerCase() === 'no evidence yet')) {
+          catalog.unshift('No evidence yet');
+        }
+
+        this.evidenceOptions = catalog.map((source) => LeadFormPage.toEvidenceOption(source));
+        this.ensureEvidenceOptionsContainSelections();
+      },
+      error: () => {
+        this.evidenceOptions = LeadFormPage.defaultEvidenceSources().map((source) => LeadFormPage.toEvidenceOption(source));
+        this.ensureEvidenceOptionsContainSelections();
+      }
+    });
+  }
+
   private loadPhoneTypes() {
     this.referenceData.getPhoneTypes().subscribe({
       next: (items: PhoneTypeReference[]) => {
@@ -660,9 +729,10 @@ export class LeadFormPage implements OnInit {
   }
 
   private applyOwnerDefault(options: OwnerOption[]) {
-    if (this.isEditMode() || this.form.ownerId) {
+    if (this.form.ownerId && options.some((opt) => opt.value === this.form.ownerId)) {
       return;
     }
+
     const userId = readUserId();
     if (userId && options.some((opt) => opt.value === userId)) {
       this.form.ownerId = userId;
@@ -676,6 +746,26 @@ export class LeadFormPage implements OnInit {
     }
   }
 
+  private ensureOwnerOptions(options: OwnerOption[]): OwnerOption[] {
+    const out = [...options];
+    const userId = readUserId();
+    const currentUser = this.authService.currentUser();
+    const currentLabel =
+      currentUser?.fullName?.trim()
+      || currentUser?.email?.trim()
+      || 'Current user';
+
+    if (userId && !out.some((opt) => opt.value === userId)) {
+      out.unshift({ value: userId, label: `${currentLabel} (You)` });
+    }
+
+    if (this.form.ownerId && !out.some((opt) => opt.value === this.form.ownerId)) {
+      out.push({ value: this.form.ownerId, label: 'Assigned owner' });
+    }
+
+    return out;
+  }
+
   protected canEditAssignment(): boolean {
     return this.assignmentEditable();
   }
@@ -685,7 +775,7 @@ export class LeadFormPage implements OnInit {
     const hasAdmin = tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
     const userId = readUserId();
     if (!userId) {
-      this.assignmentEditable.set(hasAdmin);
+      this.assignmentEditable.set(false);
       return;
     }
 
@@ -701,22 +791,31 @@ export class LeadFormPage implements OnInit {
           .map((role) => levels.find((level) => level.id === role.securityLevelId)?.rank)
           .filter((rank): rank is number => typeof rank === 'number');
         const maxRank = ranks.length ? Math.max(...ranks) : defaultRank;
-        this.assignmentEditable.set(hasAdmin || maxRank > defaultRank);
+        this.assignmentEditable.set(hasAdmin && maxRank > defaultRank);
       },
       error: () => {
-        this.assignmentEditable.set(hasAdmin);
+        this.assignmentEditable.set(false);
       }
     });
   }
 
   private validateOverviewFields(): boolean {
+    const hasTypedPhoneInput = this.getDigitsOnly(this.phoneNationalNumber ?? '').length > 0;
     if (this.phoneNationalNumber) {
-      this.updatePhoneFromInputs();
+      if (this.phoneCountryIso) {
+        this.updatePhoneFromInputs();
+      } else if (!this.form.phone?.trim()) {
+        this.phoneError.set('Select a country code.');
+      } else {
+        this.phoneError.set(null);
+      }
     }
     const email = this.form.email?.trim() ?? '';
     const phone = this.form.phone?.trim() ?? '';
     const emailError = email ? (this.isValidEmail(email) ? null : 'Enter a valid email address.') : null;
-    const phoneError = phone ? (this.isValidInternationalPhone(phone) ? null : 'Enter a valid phone number for the selected country.') : null;
+    const phoneError = hasTypedPhoneInput
+      ? (phone ? (this.isValidInternationalPhone(phone) ? null : 'Enter a valid phone number for the selected country.') : (this.phoneError() ?? 'Enter a valid phone number for the selected country.'))
+      : (phone ? (this.isValidInternationalPhone(phone) ? null : 'Enter a valid phone number for the selected country.') : null);
     this.emailError.set(emailError);
     this.phoneError.set(phoneError);
     if (emailError) {
@@ -780,6 +879,9 @@ export class LeadFormPage implements OnInit {
 
   private syncPhoneInputsFromE164(value: string | null): void {
     if (!value) {
+      this.phoneNationalNumber = '';
+      this.phoneCountryIso = '';
+      this.refreshPhoneCountryMeta();
       return;
     }
     try {
@@ -790,8 +892,36 @@ export class LeadFormPage implements OnInit {
       const digits = String(parsed.getNationalNumber());
       this.phoneNationalNumber = this.applyMaskToDigits(digits, this.phoneMask());
     } catch {
-      this.phoneNationalNumber = value;
+      this.syncPhoneInputsFromDialCode(value);
     }
+  }
+
+  private syncPhoneInputsFromDialCode(value: string): void {
+    const raw = value.trim();
+    const rawDigits = this.getDigitsOnly(raw);
+    if (!rawDigits) {
+      this.phoneNationalNumber = raw;
+      this.phoneCountryIso = '';
+      this.refreshPhoneCountryMeta();
+      return;
+    }
+
+    const match = this.phoneCountryOptions
+      .map((option) => ({ option, digits: option.dialCode.replace('+', '') }))
+      .filter((item) => rawDigits.startsWith(item.digits))
+      .sort((a, b) => b.digits.length - a.digits.length)[0];
+
+    if (!match) {
+      this.phoneNationalNumber = raw;
+      this.phoneCountryIso = '';
+      this.refreshPhoneCountryMeta();
+      return;
+    }
+
+    this.phoneCountryIso = match.option.value;
+    this.refreshPhoneCountryMeta();
+    const nationalDigits = rawDigits.slice(match.digits.length);
+    this.phoneNationalNumber = this.applyMaskToDigits(nationalDigits, this.phoneMask());
   }
 
   private loadPhoneCountries(): void {
@@ -1022,7 +1152,7 @@ export class LeadFormPage implements OnInit {
   }
 
   protected onAiScore() {
-    if (!this.editingId || this.aiScoring()) {
+    if (!this.editingId || this.aiScoring() || !this.canRefreshScore()) {
       return;
     }
 
@@ -1038,11 +1168,9 @@ export class LeadFormPage implements OnInit {
         this.aiScoreSeverity.set(this.resolveAiSeverity(result.score));
         this.raiseToast('success', `Score refreshed to ${result.score}.`);
       },
-      error: () => {
-        
-        
+      error: (err) => {
         this.aiScoring.set(false);
-        this.raiseToast('error', 'Unable to refresh score.');
+        this.raiseToast('error', this.extractApiErrorMessage(err, 'Unable to refresh score.'));
       }
     });
   }
@@ -1092,6 +1220,14 @@ export class LeadFormPage implements OnInit {
     const percent = this.qualificationConfidencePercent();
     if (percent >= 80) return null;
     return 'Improve confidence by completing more qualification factors.';
+  }
+
+  protected scoreKnobValueColor(): string {
+    const score = this.form.score ?? 0;
+    if (score >= 75) return '#0ea5a4';
+    if (score >= 50) return '#0284c7';
+    if (score >= 30) return '#d97706';
+    return '#dc2626';
   }
 
   protected scoreItemClass(item: LeadScoreBreakdownItem): string {
@@ -1156,6 +1292,10 @@ export class LeadFormPage implements OnInit {
   protected onQualificationFactorChange(): void {
     this.normalizeEvidence();
     this.applyFollowUpDefaults();
+    this.refreshScoreBreakdown();
+    if (this.form.autoScore) {
+      this.form.score = this.computeAutoScore();
+    }
     this.updateQualificationFeedback();
     this.updateEpistemicSummary();
   }
@@ -1191,6 +1331,103 @@ export class LeadFormPage implements OnInit {
     }
   }
 
+  private ensureEvidenceOptionsContainSelections(): void {
+    const selectedValues = [
+      this.form.budgetEvidence,
+      this.form.readinessEvidence,
+      this.form.timelineEvidence,
+      this.form.problemEvidence,
+      this.form.economicBuyerEvidence,
+      this.form.icpFitEvidence
+    ]
+      .map((value) => (value ?? '').trim())
+      .filter((value) => value.length > 0);
+
+    const existing = new Set(this.evidenceOptions.map((option) => option.value.toLowerCase()));
+    const additions = selectedValues
+      .filter((value) => !existing.has(value.toLowerCase()))
+      .map((value) => LeadFormPage.toEvidenceOption(value));
+
+    if (additions.length) {
+      this.evidenceOptions = [...this.evidenceOptions, ...additions];
+    }
+  }
+
+  private static defaultEvidenceSources(): string[] {
+    return [
+      'No evidence yet',
+      'Customer call',
+      'Call notes',
+      'Call recap',
+      'Follow-up call notes',
+      'Discovery call notes',
+      'Discovery meeting notes',
+      'Meeting notes',
+      'Email confirmation',
+      'Email from buyer',
+      'Buyer email',
+      'Written confirmation',
+      'Chat transcript',
+      'Proposal feedback',
+      'Internal plan mention',
+      'Ops review notes',
+      'Org chart reference',
+      'Account research',
+      'Third-party confirmation',
+      'Historical / prior deal',
+      'Inferred from context'
+    ];
+  }
+
+  private static toEvidenceOption(source: string): OptionItem {
+    const value = source.trim();
+    return {
+      label: value,
+      value,
+      icon: LeadFormPage.resolveEvidenceIcon(value),
+      tone: LeadFormPage.resolveEvidenceTone(value)
+    };
+  }
+
+  private static resolveEvidenceTone(source: string): OptionItem['tone'] {
+    const normalized = source.trim().toLowerCase();
+    if (normalized.includes('no evidence') || normalized.includes('unknown')) {
+      return 'unknown';
+    }
+    if (normalized.includes('inferred') || normalized.includes('assumption')) {
+      return 'invalid';
+    }
+    if (
+      normalized.includes('confirmation')
+      || normalized.includes('email')
+      || normalized.includes('buyer')
+      || normalized.includes('meeting')
+      || normalized.includes('call')
+    ) {
+      return 'verified';
+    }
+    if (normalized.includes('history') || normalized.includes('prior')) {
+      return 'neutral';
+    }
+    return 'assumed';
+  }
+
+  private static resolveEvidenceIcon(source: string): string {
+    const normalized = source.trim().toLowerCase();
+    if (normalized.includes('no evidence')) return 'pi pi-minus-circle';
+    if (normalized.includes('email')) return 'pi pi-envelope';
+    if (normalized.includes('meeting')) return 'pi pi-calendar';
+    if (normalized.includes('call')) return 'pi pi-phone';
+    if (normalized.includes('chat')) return 'pi pi-comments';
+    if (normalized.includes('org chart')) return 'pi pi-sitemap';
+    if (normalized.includes('research')) return 'pi pi-search';
+    if (normalized.includes('history') || normalized.includes('prior')) return 'pi pi-history';
+    if (normalized.includes('third-party')) return 'pi pi-users';
+    if (normalized.includes('proposal')) return 'pi pi-file';
+    if (normalized.includes('inferred')) return 'pi pi-compass';
+    return 'pi pi-file';
+  }
+
   private updateQualificationFeedback(preferServer = false): void {
     const factors = this.getQualificationFactors();
     const weakest = this.getWeakestFactor(factors);
@@ -1207,6 +1444,21 @@ export class LeadFormPage implements OnInit {
       weakestState: preferServer && serverWeakestState ? serverWeakestState : weakest?.state ?? null
     });
     this.nextEvidenceSuggestions.set(suggestions);
+  }
+
+  private refreshScoreBreakdown(): void {
+    this.scoreBreakdown.set(this.buildScoreBreakdown());
+  }
+
+  private buildScoreBreakdown(): LeadScoreBreakdownItem[] {
+    return [
+      { factor: 'Budget', score: this.getBudgetScore(this.form.budgetAvailability), maxScore: 25 },
+      { factor: 'Readiness', score: this.getReadinessScore(this.form.readinessToSpend), maxScore: 20 },
+      { factor: 'Timeline', score: this.getTimelineScore(this.form.buyingTimeline), maxScore: 15 },
+      { factor: 'Problem', score: this.getProblemScore(this.form.problemSeverity), maxScore: 20 },
+      { factor: 'Economic Buyer', score: this.getEconomicBuyerScore(this.form.economicBuyer), maxScore: 10 },
+      { factor: 'ICP Fit', score: this.getIcpFitScore(this.form.icpFit), maxScore: 10 }
+    ];
   }
 
   private updateEpistemicSummary(preferServer = false): void {

@@ -1884,7 +1884,7 @@ public class DashboardReadService : IDashboardReadService
         try
         {
             var parsed = JsonSerializer.Deserialize<QualificationPolicy>(tenant.QualificationPolicyJson, JsonOptions);
-            return parsed ?? QualificationPolicyDefaults.CreateDefault();
+            return QualificationPolicyDefaults.Normalize(parsed);
         }
         catch (JsonException)
         {

@@ -249,6 +249,50 @@
             </div>
           </section>
 
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-list-check"></i>
+              Evidence Sources
+            </h3>
+            <p class="section-description">
+              Configure the evidence source list shown in Lead Qualification. Use clear source names that reps can pick quickly.
+            </p>
+
+            <div class="policy-block">
+              <div class="policy-header">
+                <h4>Evidence Source Catalog</h4>
+                <button type="button" class="btn btn-secondary" (click)="addEvidenceSource()">
+                  <i class="pi pi-plus"></i>
+                  Add source
+                </button>
+              </div>
+              <div class="policy-list" *ngIf="qualificationPolicy().evidenceSources.length; else noEvidenceSources">
+                <div class="policy-row policy-row--modifier" *ngFor="let source of qualificationPolicy().evidenceSources; let i = index">
+                  <input
+                    pInputText
+                    [ngModel]="source"
+                    (ngModelChange)="updateEvidenceSource(i, $event)"
+                    [ngModelOptions]="{ standalone: true }"
+                    class="w-full"
+                    [readonly]="source.toLowerCase() === 'no evidence yet'"
+                  />
+                  <span class="factor-suffix" *ngIf="source.toLowerCase() === 'no evidence yet'">Required</span>
+                  <button
+                    *ngIf="source.toLowerCase() !== 'no evidence yet'"
+                    type="button"
+                    class="btn btn-ghost"
+                    (click)="removeEvidenceSource(i)"
+                  >
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+              <ng-template #noEvidenceSources>
+                <p class="hint">No sources configured. Add at least one evidence source.</p>
+              </ng-template>
+            </div>
+          </section>
+
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">
               <i class="pi pi-refresh"></i>

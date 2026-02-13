@@ -61,5 +61,5 @@ test('core screens smoke', async ({ page, request }) => {
   await expect(page.getByRole('heading', { name: /Activities/i })).toBeVisible();
 
   await page.goto('/app/settings/users');
-  await expect(page.getByRole('heading', { name: /Team & Access Management/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /People & Access|Team & Access Management/i }).first()).toBeVisible();
 });

@@ -205,6 +205,7 @@
                     placeholder="Select owner"
                     appendTo="body"
                     styleClass="w-full"
+                    [readonly]="isOwnerReadOnly()"
                     [disabled]="isOwnerReadOnly()"
                   >
                     <ng-template pTemplate="item" let-option>
@@ -277,7 +278,7 @@
                         </div>
                       </ng-template>
                     </p-select>
-                    <ng-container *ngIf="phoneCountryIso; else disabledPhoneInput">
+                    <ng-container *ngIf="phoneCountryIso; else plainPhoneInput">
                       <p-inputMask
                         name="phoneNumber"
                         [mask]="phoneMask()"
@@ -290,8 +291,15 @@
                         styleClass="w-full"
                       ></p-inputMask>
                     </ng-container>
-                    <ng-template #disabledPhoneInput>
-                      <input pInputText placeholder="Select country first" disabled class="w-full" />
+                    <ng-template #plainPhoneInput>
+                      <input
+                        pInputText
+                        name="phoneNumberPlain"
+                        [ngModel]="phoneNationalNumber"
+                        (ngModelChange)="onPhoneChange($event)"
+                        placeholder="Phone number"
+                        class="w-full"
+                      />
                     </ng-template>
                   </div>
                   <p class="field-error" *ngIf="phoneError()">{{ phoneError() }}</p>
@@ -367,7 +375,7 @@
                     icon="pi pi-sync"
                     class="crm-button crm-button--primary ai-score-button"
                     (click)="onAiScore()"
-                    [disabled]="aiScoring()"
+                    [disabled]="aiScoring() || !canRefreshScore()"
                   ></button>
                   <div class="ai-score-inline" *ngIf="aiScoreNote() && !aiScoring()" [ngClass]="aiScoreClass()">
                     <i class="pi" [ngClass]="aiScoreIcon()"></i>
@@ -390,6 +398,9 @@
             <div class="form-grid">
               <div class="field full-row">
                 <p class="status-rule">{{ qualificationRuleMessage() }}</p>
+                <p class="status-note">
+                  A discovery meeting (completed or due) must be logged before setting status to Qualified.
+                </p>
                 <p class="status-error" *ngIf="qualificationInlineError()">{{ qualificationInlineError() }}</p>
                 <p class="status-note" *ngIf="isEditMode() && form.status !== 'Converted'">
                   Convert via the "Convert lead" button after qualification.
@@ -776,32 +787,43 @@
               <div class="field full-row" *ngIf="scoreBreakdown().length">
                 <div class="score-breakdown">
                   <div class="score-breakdown__header">
-                    <span>Score breakdown</span>
-                    <span class="confidence-pill" *ngIf="qualificationConfidenceLabel()">{{ qualificationConfidenceLabel() }}</span>
+                    <div class="score-breakdown__title">
+                      <span class="eyebrow">Scoring model</span>
+                      <strong>Score Breakdown</strong>
+                    </div>
+                    <span class="confidence-pill" *ngIf="qualificationConfidenceLabel()">{{ qualificationConfidenceLabel() }} confidence</span>
                   </div>
-                  <div class="confidence-gauge">
-                    <div class="confidence-gauge__label">Confidence</div>
-                    <p-knob
-                      [ngModel]="qualificationConfidencePercent()"
-                      [ngModelOptions]="{ standalone: true }"
-                      [readonly]="true"
-                      [size]="86"
-                      [strokeWidth]="10"
-                      valueColor="var(--apple-teal)"
-                      rangeColor="rgba(var(--apple-gray-4), 0.35)"
-                      textColor="rgba(var(--apple-secondary), 0.9)"
-                      styleClass="confidence-gauge__knob"
-                    ></p-knob>
+                  <div class="confidence-gauge-panel">
+                    <div class="confidence-gauge">
+                      <div class="confidence-gauge__label">Confidence</div>
+                      <p-knob
+                        [ngModel]="qualificationConfidencePercent()"
+                        [ngModelOptions]="{ standalone: true }"
+                        [readonly]="true"
+                        [size]="86"
+                        [strokeWidth]="10"
+                        [valueColor]="scoreKnobValueColor()"
+                        rangeColor="rgba(var(--apple-gray-4), 0.35)"
+                        textColor="rgba(var(--apple-secondary), 0.9)"
+                        styleClass="confidence-gauge__knob"
+                      ></p-knob>
+                    </div>
+                    <p class="hint-text compact" *ngIf="qualificationConfidenceHint()">{{ qualificationConfidenceHint() }}</p>
                   </div>
-                  <p class="hint-text compact" *ngIf="qualificationConfidenceHint()">{{ qualificationConfidenceHint() }}</p>
                   <div class="score-breakdown__grid">
                     <div class="score-breakdown__item" [ngClass]="scoreItemClass(item)" *ngFor="let item of scoreBreakdown()">
-                      <span>{{ item.factor }}</span>
-                      <strong>{{ item.score }} / {{ item.maxScore }}</strong>
+                      <div class="score-breakdown__item-head">
+                        <span class="factor-name">{{ item.factor }}</span>
+                        <strong class="factor-score">{{ item.score }} / {{ item.maxScore }}</strong>
+                      </div>
+                      <div class="factor-rail">
+                        <span class="factor-rail__fill" [style.width.%]="item.maxScore ? (item.score / item.maxScore) * 100 : 0"></span>
+                      </div>
                     </div>
                   </div>
                   <div class="risk-flags" *ngIf="riskFlags().length">
-                    <span class="risk-flag" *ngFor="let flag of riskFlags()">⚠️ {{ flag }}</span>
+                    <span class="risk-label">Top risks</span>
+                    <span class="risk-flag" *ngFor="let flag of riskFlags()">{{ flag }}</span>
                   </div>
                 </div>
               </div>
