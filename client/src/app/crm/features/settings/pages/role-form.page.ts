@@ -8,6 +8,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CheckboxModule } from 'primeng/checkbox';
+import { TabsModule } from 'primeng/tabs';
 import { TooltipModule } from 'primeng/tooltip';
 
 import { PermissionDefinition, PermissionPackPreset, RoleIntentPack, RoleSummary, UpsertRoleRequest } from '../models/user-admin.model';
@@ -30,6 +31,9 @@ interface ScreenPermission {
   };
 }
 
+type PermissionWorkspaceTab = 'all-permissions' | 'presets' | 'drift' | 'effective-access';
+type PermissionActionTab = 'create-manage' | 'view-analyze' | 'governance';
+
 @Component({
   selector: 'app-role-form-page',
   standalone: true,
@@ -39,6 +43,7 @@ interface ScreenPermission {
     TextareaModule,
     SelectModule,
     CheckboxModule,
+    TabsModule,
     TooltipModule,
     NgClass,
     NgFor,
@@ -72,7 +77,8 @@ export class RoleFormPage {
   protected readonly loadingIntentPacks = signal(false);
   protected readonly permissionPackPresets = signal<PermissionPackPreset[]>([]);
   protected readonly loadingPackPresets = signal(false);
-  protected readonly permissionView = signal<'capability' | 'intent'>('capability');
+  protected readonly activePermissionTab = signal<PermissionWorkspaceTab>('all-permissions');
+  protected readonly activePermissionActionTab = signal<PermissionActionTab>('create-manage');
   protected readonly basePermissions = signal<string[]>([]);
   protected readonly inheritedPermissions = signal<string[]>([]);
   protected driftNotes = '';
@@ -112,6 +118,26 @@ export class RoleFormPage {
       permissions: permissions.slice().sort((a, b) => a.label.localeCompare(b.label))
     }));
   });
+  protected readonly allPermissionActionTabs = computed(() => {
+    const all = this.permissionCatalog();
+    const createManage = all.filter((permission) => this.permissionBucket(permission) === 'create-manage').length;
+    const viewAnalyze = all.filter((permission) => this.permissionBucket(permission) === 'view-analyze').length;
+    const governance = all.filter((permission) => this.permissionBucket(permission) === 'governance').length;
+    return {
+      createManage,
+      viewAnalyze,
+      governance
+    };
+  });
+  protected readonly filteredCapabilityGroups = computed(() => {
+    const bucket = this.activePermissionActionTab();
+    return this.capabilityGroups()
+      .map((group) => ({
+        capability: group.capability,
+        permissions: group.permissions.filter((permission) => this.permissionBucket(permission) === bucket)
+      }))
+      .filter((group) => group.permissions.length > 0);
+  });
 
   protected readonly driftSummary = computed(() => {
     const current = this.selectedPermissions();
@@ -120,6 +146,11 @@ export class RoleFormPage {
     const removed = Array.from(base).filter((permission) => !current.has(permission));
     return { added, removed };
   });
+  protected readonly effectivePermissionLabels = computed(() =>
+    Array.from(this.selectedPermissions())
+      .map((permission) => this.permissionLabel(permission))
+      .sort((a, b) => a.localeCompare(b))
+  );
 
   protected readonly roleForm = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(80)]],
@@ -565,8 +596,25 @@ export class RoleFormPage {
     this.toastService.clear();
   }
 
-  protected setPermissionView(view: 'capability' | 'intent') {
-    this.permissionView.set(view);
+  protected onPermissionTabChange(next: string | number | undefined) {
+    if (
+      next === 'all-permissions' ||
+      next === 'presets' ||
+      next === 'drift' ||
+      next === 'effective-access'
+    ) {
+      this.activePermissionTab.set(next);
+      return;
+    }
+    this.activePermissionTab.set('all-permissions');
+  }
+
+  protected onPermissionActionTabChange(next: string | number | undefined) {
+    if (next === 'create-manage' || next === 'view-analyze' || next === 'governance') {
+      this.activePermissionActionTab.set(next);
+      return;
+    }
+    this.activePermissionActionTab.set('create-manage');
   }
 
   protected permissionLabel(key: string) {
@@ -575,5 +623,28 @@ export class RoleFormPage {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
+  }
+
+  private permissionBucket(permission: PermissionDefinition): PermissionActionTab {
+    const key = `${permission.key ?? ''} ${permission.label ?? ''}`.toLowerCase();
+    if (
+      key.includes('.view') ||
+      key.includes(' view') ||
+      key.includes('report') ||
+      key.includes('analy') ||
+      key.includes('export')
+    ) {
+      return 'view-analyze';
+    }
+    if (
+      key.includes('approve') ||
+      key.includes('override') ||
+      key.includes('audit') ||
+      key.includes('administration') ||
+      key.includes('tenant')
+    ) {
+      return 'governance';
+    }
+    return 'create-manage';
   }
 }

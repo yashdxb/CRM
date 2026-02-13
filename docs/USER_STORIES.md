@@ -117,7 +117,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Leads | As a Sales Rep, I want lead creation guardrails (owner default, validation, tab gating, assignment/owner read-only by configurable security level, phone type lookup, intl phone entry) so the record is clean from day one.
 - Module: Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.
 - Module: Leads | As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow‑up date, Qualified notes) to keep data clean.
-- Module: Leads | As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach.
+- Module: Leads | As a Sales Rep, I want new leads automatically assigned with an SLA timer and first‑touch task so I never miss initial outreach (cadence touch auto‑completes the open first‑touch task).
 - Module: Leads | As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach.
 - Module: Leads | As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.
 - Module: Leads | As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.
@@ -154,6 +154,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Settings | As an Admin, I want reporting visibility scope per role (Self/Team/All) so manager rollups are correct and configurable.
 - Module: Settings | As an Admin, I want named dashboard templates so default Command Center layouts are not hard-coded and can be reused.
 - Module: Settings | As a Super Admin, I want to manage configurable security levels (create/edit/delete, set default) so high-risk actions are gated independently of hierarchy with no hard-coded tiers.
+- Module: Settings | As an Admin, I want People & Access tabs to preserve tab/filter context and provide inline Security Level actions (set default, duplicate) so admin work is faster and stable after navigation/refresh. (Done) (ClickUp: 86dztkycq)
 - Next
 - Risk & Cost of Not Knowing
   - Module: Dashboard | As a manager, I want a deal-level Cost of Not Knowing breakdown so I can see which missing factors drive exposure. (Done)

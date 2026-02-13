@@ -25,18 +25,6 @@
             </h1>
             <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
           </div>
-          <div class="sla-strip" *ngIf="isEditMode()">
-            <div class="sla-pill" [ngClass]="getSlaTone()">
-              <i class="pi pi-stopwatch"></i>
-              <span class="sla-label">{{ getSlaStatusLabel() }}</span>
-              <span class="sla-time">
-                {{ firstTouchDueAtUtc() ? (firstTouchDueAtUtc() | date:'medium') : '—' }}
-              </span>
-            </div>
-            <div class="sla-meta" *ngIf="firstTouchedAtUtc()">
-              First touched {{ firstTouchedAtUtc() | date:'medium' }}
-            </div>
-          </div>
         </div>
       </header>
 
@@ -136,175 +124,217 @@
         </div>
 
         <form class="lead-form" (ngSubmit)="onSave()">
-          <section class="form-section" *ngIf="activeTab() === 'overview'">
-            <h2 class="section-title">
-              <i class="pi pi-user"></i>
-              Lead basics
-            </h2>
-            <div class="form-grid qualification-grid">
-              <div class="field">
-                <label>First name <span class="required">*</span></label>
-                <input pInputText name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" class="w-full" />
+          <section class="form-section form-section--overview" *ngIf="activeTab() === 'overview'">
+            <div class="section-block">
+              <h2 class="section-title">
+                <i class="pi pi-user"></i>
+                Lead basics
+              </h2>
+              <div class="form-grid qualification-grid">
+                <div class="field">
+                  <label>First name <span class="required">*</span></label>
+                  <input pInputText name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" class="w-full" />
+                </div>
+                <div class="field">
+                  <label>Last name <span class="required">*</span></label>
+                  <input pInputText name="lastName" [(ngModel)]="form.lastName" required placeholder="Last name" class="w-full" />
+                </div>
+                <div class="field">
+                  <label>Company</label>
+                  <input pInputText name="companyName" [(ngModel)]="form.companyName" placeholder="Company" class="w-full" />
+                </div>
+                <div class="field">
+                  <label>Status</label>
+                  <p-select
+                    [options]="statusOptionsForView()"
+                    optionLabel="label"
+                    optionValue="value"
+                    optionDisabled="disabled"
+                    name="status"
+                    [(ngModel)]="form.status"
+                    placeholder="Select status"
+                    appendTo="body"
+                    styleClass="w-full"
+                  >
+                    <ng-template pTemplate="item" let-option>
+                      <div class="status-option" [attr.data-status]="option.value">
+                        <i class="pi" [ngClass]="option.icon"></i>
+                        <span>{{ option.label }}</span>
+                      </div>
+                    </ng-template>
+                    <ng-template pTemplate="value" let-option>
+                      <div class="status-option" *ngIf="option" [attr.data-status]="option.value">
+                        <i class="pi" [ngClass]="option.icon"></i>
+                        <span>{{ option.label }}</span>
+                      </div>
+                      <span *ngIf="!option" class="status-placeholder">Select status</span>
+                    </ng-template>
+                  </p-select>
+                  <p class="status-note" *ngIf="isEditMode() && form.status === 'Converted'">
+                    This lead is already converted. Update the opportunity instead.
+                  </p>
+                </div>
+                <div class="field">
+                  <label>Assignment</label>
+                  <p-select
+                    [options]="assignmentOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    name="assignmentStrategy"
+                    [(ngModel)]="form.assignmentStrategy"
+                    placeholder="Select assignment"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [disabled]="!canEditAssignment()"
+                  >
+                    <ng-template pTemplate="item" let-option>
+                      <div class="option-row" [attr.data-testid]="'lead-assignment-option-' + option.value">
+                        {{ option.label }}
+                      </div>
+                    </ng-template>
+                  </p-select>
+                </div>
+                <div class="field" *ngIf="form.assignmentStrategy === 'Manual'">
+                  <label>Owner</label>
+                  <p-select
+                    [options]="ownerOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    name="ownerId"
+                    [(ngModel)]="form.ownerId"
+                    placeholder="Select owner"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [disabled]="isOwnerReadOnly()"
+                  >
+                    <ng-template pTemplate="item" let-option>
+                      <div class="option-row" [attr.data-testid]="'lead-owner-option-' + option.value">
+                        {{ option.label }}
+                      </div>
+                    </ng-template>
+                  </p-select>
+                </div>
               </div>
-              <div class="field">
-                <label>Last name <span class="required">*</span></label>
-                <input pInputText name="lastName" [(ngModel)]="form.lastName" required placeholder="Last name" class="w-full" />
-              </div>
-              <div class="field">
-                <label>Company</label>
-                <input pInputText name="companyName" [(ngModel)]="form.companyName" placeholder="Company" class="w-full" />
-              </div>
-              <div class="field">
-                <label>Status</label>
-                <p-select
-                  [options]="statusOptionsForView()"
-                  optionLabel="label"
-                  optionValue="value"
-                  optionDisabled="disabled"
-                  name="status"
-                  [(ngModel)]="form.status"
-                  placeholder="Select status"
-                  appendTo="body"
-                  styleClass="w-full"
-                >
-                  <ng-template pTemplate="item" let-option>
-                    <div class="status-option" [attr.data-status]="option.value">
-                      <i class="pi" [ngClass]="option.icon"></i>
-                      <span>{{ option.label }}</span>
-                    </div>
-                  </ng-template>
-                  <ng-template pTemplate="value" let-option>
-                    <div class="status-option" *ngIf="option" [attr.data-status]="option.value">
-                      <i class="pi" [ngClass]="option.icon"></i>
-                      <span>{{ option.label }}</span>
-                    </div>
-                    <span *ngIf="!option" class="status-placeholder">Select status</span>
-                  </ng-template>
-                </p-select>
-                <p class="status-note" *ngIf="isEditMode() && form.status === 'Converted'">
-                  This lead is already converted. Update the opportunity instead.
-                </p>
-              </div>
-              <div class="field">
-                <label>Assignment</label>
-                <p-select
-                  [options]="assignmentOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  name="assignmentStrategy"
-                  [(ngModel)]="form.assignmentStrategy"
-                  placeholder="Select assignment"
-                  appendTo="body"
-                  styleClass="w-full"
-                  [disabled]="!canEditAssignment()"
-                >
-                  <ng-template pTemplate="item" let-option>
-                    <div class="option-row" [attr.data-testid]="'lead-assignment-option-' + option.value">
-                      {{ option.label }}
-                    </div>
-                  </ng-template>
-                </p-select>
-              </div>
-              <div class="field" *ngIf="form.assignmentStrategy === 'Manual'">
-                <label>Owner</label>
-                <p-select
-                  [options]="ownerOptions()"
-                  optionLabel="label"
-                  optionValue="value"
-                  name="ownerId"
-                  [(ngModel)]="form.ownerId"
-                  placeholder="Select owner"
-                  appendTo="body"
-                  styleClass="w-full"
-                  [disabled]="isOwnerReadOnly()"
-                >
-                  <ng-template pTemplate="item" let-option>
-                    <div class="option-row" [attr.data-testid]="'lead-owner-option-' + option.value">
-                      {{ option.label }}
-                    </div>
-                  </ng-template>
-                </p-select>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="section-block">
+              <h2 class="section-title">
+                <i class="pi pi-phone"></i>
+                Contact details
+              </h2>
+              <div class="form-grid">
+                <div class="field">
+                  <label>Email</label>
+                  <input
+                    pInputText
+                    name="email"
+                    [ngModel]="form.email"
+                    (ngModelChange)="onEmailChange($event)"
+                    type="email"
+                    placeholder="name@company.com"
+                    class="w-full"
+                  />
+                  <p class="field-error" *ngIf="emailError()">{{ emailError() }}</p>
+                </div>
+                <div class="field full">
+                  <label>Phone</label>
+                  <div class="phone-grid">
+                    <p-select
+                      [options]="phoneTypeOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      name="phoneTypeId"
+                      [(ngModel)]="form.phoneTypeId"
+                      placeholder="Select type"
+                      appendTo="body"
+                      styleClass="phone-type-select w-full"
+                    ></p-select>
+                    <p-select
+                      [options]="phoneCountryOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      name="phoneCountry"
+                      [(ngModel)]="phoneCountryIso"
+                      (ngModelChange)="onPhoneCountryChange($event)"
+                      placeholder="Select country"
+                      [filter]="true"
+                      filterBy="label"
+                      appendTo="body"
+                      styleClass="phone-country-select w-full"
+                    >
+                      <ng-template pTemplate="selectedItem" let-option>
+                        <div class="phone-country-option" *ngIf="option">
+                          <span>{{ option.flag }} {{ option.name }}</span>
+                          <strong>{{ option.dialCode }}</strong>
+                        </div>
+                      </ng-template>
+                      <ng-template pTemplate="item" let-option>
+                        <div class="phone-country-option">
+                          <span>{{ option.flag }} {{ option.name }}</span>
+                          <strong>{{ option.dialCode }}</strong>
+                        </div>
+                      </ng-template>
+                    </p-select>
+                    <ng-container *ngIf="phoneCountryIso; else disabledPhoneInput">
+                      <p-inputMask
+                        name="phoneNumber"
+                        [mask]="phoneMask()"
+                        [slotChar]="'_'"
+                        [autoClear]="false"
+                        [unmask]="false"
+                        [ngModel]="phoneNationalNumber"
+                        (ngModelChange)="onPhoneChange($event)"
+                        [placeholder]="phonePlaceholder()"
+                        styleClass="w-full"
+                      ></p-inputMask>
+                    </ng-container>
+                    <ng-template #disabledPhoneInput>
+                      <input pInputText placeholder="Select country first" disabled class="w-full" />
+                    </ng-template>
+                  </div>
+                  <p class="field-error" *ngIf="phoneError()">{{ phoneError() }}</p>
+                </div>
+                <div class="field">
+                  <label>Job title</label>
+                  <input pInputText name="jobTitle" [(ngModel)]="form.jobTitle" placeholder="Role or title" class="w-full" />
+                </div>
+                <div class="field">
+                  <label>Source</label>
+                  <input pInputText name="source" [(ngModel)]="form.source" placeholder="Web, Referral, Event" class="w-full" />
+                </div>
+                <div class="field" *ngIf="routingReason()">
+                  <label>Routing reason</label>
+                  <input
+                    pInputText
+                    [ngModel]="routingReason()"
+                    [ngModelOptions]="{ standalone: true }"
+                    class="w-full"
+                    [disabled]="true"
+                  />
+                </div>
               </div>
             </div>
           </section>
 
-          <section class="form-section" *ngIf="activeTab() === 'overview'">
-            <h2 class="section-title">
-              <i class="pi pi-phone"></i>
-              Contact details
-            </h2>
-            <div class="form-grid">
-              <div class="field">
-                <label>Email</label>
-                <input
-                  pInputText
-                  name="email"
-                  [ngModel]="form.email"
-                  (ngModelChange)="onEmailChange($event)"
-                  type="email"
-                  placeholder="name@company.com"
-                  class="w-full"
-                />
-                <p class="field-error" *ngIf="emailError()">{{ emailError() }}</p>
-              </div>
-              <div class="field">
-                <label>Phone</label>
-                <ngx-intl-tel-input
-                  name="phone"
-                  [cssClass]="'w-full'"
-                  [preferredCountries]="preferredCountries"
-                  [enableAutoCountrySelect]="true"
-                  [enablePlaceholder]="true"
-                  [searchCountryFlag]="true"
-                  [searchCountryField]="[searchCountryField.All]"
-                  [selectFirstCountry]="false"
-                  [separateDialCode]="true"
-                  [phoneValidation]="true"
-                  [numberFormat]="phoneNumberFormat.International"
-                  [(ngModel)]="phoneInput"
-                  (ngModelChange)="onPhoneInputChange($event)"
-                ></ngx-intl-tel-input>
-                <p class="field-error" *ngIf="phoneError()">{{ phoneError() }}</p>
-              </div>
-              <div class="field">
-                <label>Phone type</label>
-                <p-select
-                  [options]="phoneTypeOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  name="phoneTypeId"
-                  [(ngModel)]="form.phoneTypeId"
-                  placeholder="Select type"
-                  appendTo="body"
-                  styleClass="w-full"
-                ></p-select>
-              </div>
-              <div class="field">
-                <label>Job title</label>
-                <input pInputText name="jobTitle" [(ngModel)]="form.jobTitle" placeholder="Role or title" class="w-full" />
-              </div>
-              <div class="field">
-                <label>Source</label>
-                <input pInputText name="source" [(ngModel)]="form.source" placeholder="Web, Referral, Event" class="w-full" />
-              </div>
-              <div class="field" *ngIf="routingReason()">
-                <label>Routing reason</label>
-                <input
-                  pInputText
-                  [ngModel]="routingReason()"
-                  [ngModelOptions]="{ standalone: true }"
-                  class="w-full"
-                  [disabled]="true"
-                />
-              </div>
-            </div>
-          </section>
-
-          <section class="form-section" *ngIf="activeTab() === 'overview'">
+          <section class="form-section form-section--score" *ngIf="activeTab() === 'overview'">
             <h2 class="section-title">
               <i class="pi pi-chart-line"></i>
               System score
             </h2>
+            <div class="sla-strip sla-strip--inline" *ngIf="isEditMode()">
+              <div class="sla-pill" [ngClass]="getSlaTone()">
+                <i class="pi pi-stopwatch"></i>
+                <span class="sla-label">{{ getSlaStatusLabel() }}</span>
+                <span class="sla-time">
+                  {{ firstTouchDueAtUtc() ? (firstTouchDueAtUtc() | date:'medium') : '—' }}
+                </span>
+              </div>
+              <div class="sla-meta" *ngIf="firstTouchedAtUtc()">
+                First touched {{ firstTouchedAtUtc() | date:'medium' }}
+              </div>
+            </div>
             <p-progressBar
               *ngIf="aiScoring()"
               styleClass="ai-score-progress ai-score-progress--top"

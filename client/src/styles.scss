@@ -654,15 +654,72 @@ p {
 
 /* PrimeNG button overrides to match login CTA styling */
 .p-button {
+  --crm-btn-fg: #ffffff;
   border-radius: 999px;
   font-weight: 700;
   letter-spacing: 0.01em;
   padding: 0.75rem 1.35rem;
   border: 1px solid rgba(15, 23, 42, 0.12);
   background: var(--crm-brand-gradient);
-  color: #ffffff;
+  color: var(--crm-btn-fg);
   box-shadow: 0 18px 32px rgba(10, 132, 255, 0.18);
   transition: background 0.2s ease, color 0.2s ease, border 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Button text visibility standard: label/icon always inherit button foreground. */
+.p-button .p-button-label,
+.p-button .p-button-icon,
+.p-button .p-button-icon-left,
+.p-button .p-button-icon-right {
+  color: inherit !important;
+  opacity: 1;
+}
+
+/* Preserve readable foreground through hover/focus across all button families. */
+.p-button:enabled:hover,
+.p-button:focus-visible {
+  color: var(--crm-btn-fg) !important;
+}
+
+/* Standardized foreground for light/glass buttons app-wide. */
+.p-button.btn-secondary,
+.p-button.btn-ghost,
+.p-button.btn-glass,
+.p-button.crm-button--ghost,
+.p-button.crm-button--text,
+.p-button.view-chip,
+.p-button.topbar__command-palette,
+.p-button.user-menu__trigger,
+.p-button.user-menu__item,
+.p-button.notification-center__button,
+.p-button.notification-center__action,
+.p-button.notification-center__item,
+.p-button.notification__action,
+.p-button.notification__dismiss,
+.p-button.sidebar__theme-toggle,
+.p-button.sidebar__shortcuts,
+.p-button.bulk-actions-bar__close,
+.p-button.bulk-actions-bar__link,
+.p-button.shortcuts-modal__close,
+.p-button.command-palette__item {
+  --crm-btn-fg: rgba(30, 41, 59, 0.9);
+  color: var(--crm-btn-fg) !important;
+}
+
+/* Guardrail: People & Access tab chips keep visible labels in all states. */
+.p-button.view-chip,
+.p-button.view-chip:enabled:hover,
+.p-button.view-chip:focus-visible,
+.p-button.view-chip.is-active,
+.p-button.view-chip[aria-selected='true'] {
+  color: #1c3e7a !important;
+}
+
+.p-button.view-chip .p-button-label,
+.p-button.view-chip .tab-label,
+.p-button.view-chip .tab-icon {
+  color: inherit !important;
+  opacity: 1 !important;
 }
 
 .p-button:enabled:hover {
@@ -1435,4 +1492,26 @@ input,
 .p-button {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
-@import "intl-tel-input/build/css/intlTelInput.css";
+
+/* PrimeNG tabs: keep labels/icons visible on hover/focus across app */
+:root .p-tab {
+  opacity: 1;
+}
+
+:root .p-tab:hover,
+:root .p-tab:focus-visible {
+  color: rgba(30, 41, 59, 0.92) !important;
+}
+
+:root .p-tab:hover span,
+:root .p-tab:hover i,
+:root .p-tab:focus-visible span,
+:root .p-tab:focus-visible i {
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+:root .p-tab.p-tab-active,
+:root .p-tab[aria-selected='true'] {
+  color: #1d4ed8 !important;
+}

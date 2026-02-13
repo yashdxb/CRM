@@ -90,6 +90,7 @@ Expected result:
 - Next‑step task is created and appears in the Priority Stream.
 - SLA due is displayed separately and is marked met once the first touch is logged.
 - Next step due date is captured during the log activity action (not auto-filled from SLA).
+- If a first-touch task is still open, it is auto-completed when the cadence touch is logged.
 
 Opportunity (Opportunity Details + Deal Settings) — after conversion:
 - name: Blue Harbor CRM Rollout
@@ -312,7 +313,7 @@ Sample data: Scenario A (Qualified) CQVS values above.
 
 ### 4) Log First Activity With Outcome + Next Step
 Story: As a Sales Rep, I want every activity to require an outcome and next step so my pipeline stays current.
-Acceptance criteria: Activity requires subject, type, outcome, next step subject, and next step due date; saved activity appears under the related record; next‑step task is created; in Activity & Follow‑Up, next‑step due date is read‑only before first touch and editable after a touch is logged.
+Acceptance criteria: Activity requires subject, type, outcome, next step subject, and next step due date; saved activity appears under the related record; next‑step task is created; in Activity & Follow‑Up, next‑step due date is read‑only before first touch and editable after a touch is logged; logging a cadence touch auto‑completes any open first‑touch task for the lead.
 UI steps:
 - From the lead page, click `Log activity`.
 - Choose `Call` and fill subject, outcome, next step, and due date.

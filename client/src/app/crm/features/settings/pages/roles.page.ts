@@ -1,34 +1,50 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
+import { DialogModule } from 'primeng/dialog';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { OrganizationChartModule } from 'primeng/organizationchart';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { TabsModule } from 'primeng/tabs';
+import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 import { TreeNode } from 'primeng/api';
 
-import { PermissionDefinition, RoleSummary } from '../models/user-admin.model';
+import { PermissionDefinition, PermissionPackPreset, RoleIntentPack, RoleSummary, SecurityLevelDefinition, UpsertSecurityLevelRequest } from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 
+type RolesWorkspaceTab = 'directory' | 'security-levels' | 'presets' | 'drift';
+
 @Component({
   selector: 'app-roles-page',
   standalone: true,
   imports: [
     ButtonModule,
+    CheckboxModule,
+    DialogModule,
+    InputNumberModule,
+    InputTextModule,
     OrganizationChartModule,
     NgClass,
     NgFor,
     NgIf,
+    ReactiveFormsModule,
     RouterLink,
     SkeletonModule,
     TableModule,
+    TabsModule,
     TagModule,
+    TextareaModule,
     TooltipModule,
     BreadcrumbsComponent
   ],
@@ -38,21 +54,69 @@ import { AppToastService } from '../../../../core/app-toast.service';
 export class RolesPage {
   private readonly dataService = inject(UserAdminDataService);
   private readonly toastService = inject(AppToastService);
+  private readonly formBuilder = inject(FormBuilder);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly permissionCatalog = signal<PermissionDefinition[]>([]);
+  protected readonly intentPacks = signal<RoleIntentPack[]>([]);
+  protected readonly permissionPackPresets = signal<PermissionPackPreset[]>([]);
+  protected readonly securityLevels = signal<SecurityLevelDefinition[]>([]);
   protected readonly loadingRoles = signal(true);
   protected readonly loadingPermissions = signal(true);
+  protected readonly loadingIntentPacks = signal(true);
+  protected readonly loadingPermissionPackPresets = signal(true);
+  protected readonly loadingSecurityLevels = signal(true);
   protected readonly roleSaving = signal(false);
+  protected readonly securityLevelSaving = signal(false);
   protected readonly canManageAdmin = signal(false);
   protected readonly showHierarchy = signal(false);
+  protected readonly activeWorkspaceTab = signal<RolesWorkspaceTab>('directory');
+  protected readonly securityEditorOpen = signal(false);
+  protected readonly editingSecurityLevel = signal<SecurityLevelDefinition | null>(null);
   protected readonly orgChartNodes = computed(() => this.buildOrgChartNodes());
+  protected readonly defaultSecurityLevelName = computed(() => {
+    const defaultLevel = this.securityLevels().find((level) => level.isDefault);
+    return defaultLevel?.name ?? 'Not set';
+  });
 
   /** Count of system roles */
   protected readonly systemRolesCount = computed(() => this.roles().filter(r => r.isSystem).length);
   
   /** Count of custom roles */
   protected readonly customRolesCount = computed(() => this.roles().filter(r => !r.isSystem).length);
+  protected readonly rolesWithSecurityLevelCount = computed(() =>
+    this.roles().filter((role) => !!role.securityLevelId).length
+  );
+  protected readonly driftRows = computed(() =>
+    this.roles().map((role) => {
+      const base = new Set(role.basePermissions ?? []);
+      const current = new Set(role.permissions ?? []);
+      const addedCount = Array.from(current).filter((permission) => !base.has(permission)).length;
+      const removedCount = Array.from(base).filter((permission) => !current.has(permission)).length;
+      return {
+        role,
+        addedCount,
+        removedCount,
+        hasDrift: addedCount > 0 || removedCount > 0
+      };
+    })
+  );
+  protected readonly driftedRolesCount = computed(() => this.driftRows().filter((row) => row.hasDrift).length);
+  protected readonly securityLevelsById = computed(() => {
+    const map = new Map<string, SecurityLevelDefinition>();
+    for (const level of this.securityLevels()) {
+      map.set(level.id, level);
+    }
+    return map;
+  });
+  protected readonly securityForm = this.formBuilder.group({
+    name: ['', [Validators.required, Validators.maxLength(80)]],
+    description: ['', [Validators.maxLength(240)]],
+    rank: [0, [Validators.min(0)]],
+    isDefault: [false]
+  });
 
   constructor() {
     this.canManageAdmin.set(
@@ -60,6 +124,23 @@ export class RolesPage {
     );
     this.loadPermissions();
     this.loadRoles();
+    this.loadSecurityLevels();
+    this.loadIntentPacks();
+    this.loadPermissionPackPresets();
+    this.route.queryParamMap.subscribe((params) => {
+      this.activeWorkspaceTab.set(this.coerceWorkspaceTab(params.get('tab')));
+    });
+  }
+
+  protected onWorkspaceTabChange(next: string | number | undefined) {
+    const tab = this.coerceWorkspaceTab(typeof next === 'string' ? next : null);
+    this.activeWorkspaceTab.set(tab);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab === 'directory' ? null : tab },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 
   protected loadRoles() {
@@ -90,6 +171,48 @@ export class RolesPage {
     });
   }
 
+  protected loadSecurityLevels() {
+    this.loadingSecurityLevels.set(true);
+    this.dataService.getSecurityLevels().subscribe({
+      next: (levels) => {
+        this.securityLevels.set(levels ?? []);
+        this.loadingSecurityLevels.set(false);
+      },
+      error: () => {
+        this.loadingSecurityLevels.set(false);
+        this.raiseToast('error', 'Unable to load security levels');
+      }
+    });
+  }
+
+  protected loadIntentPacks() {
+    this.loadingIntentPacks.set(true);
+    this.dataService.getRoleIntentPacks().subscribe({
+      next: (packs) => {
+        this.intentPacks.set(packs ?? []);
+        this.loadingIntentPacks.set(false);
+      },
+      error: () => {
+        this.loadingIntentPacks.set(false);
+        this.raiseToast('error', 'Unable to load role intent packs');
+      }
+    });
+  }
+
+  protected loadPermissionPackPresets() {
+    this.loadingPermissionPackPresets.set(true);
+    this.dataService.getPermissionPackPresets().subscribe({
+      next: (presets) => {
+        this.permissionPackPresets.set(presets ?? []);
+        this.loadingPermissionPackPresets.set(false);
+      },
+      error: () => {
+        this.loadingPermissionPackPresets.set(false);
+        this.raiseToast('error', 'Unable to load permission presets');
+      }
+    });
+  }
+
   protected deleteRole(role: RoleSummary) {
     if (role.isSystem || this.roleSaving()) {
       return;
@@ -115,6 +238,179 @@ export class RolesPage {
 
   protected toggleView(mode: 'list' | 'hierarchy') {
     this.showHierarchy.set(mode === 'hierarchy');
+  }
+
+  protected securityLevelForRole(role: RoleSummary): SecurityLevelDefinition | null {
+    const levelId = role.securityLevelId;
+    if (!levelId) {
+      return null;
+    }
+    return this.securityLevelsById().get(levelId) ?? null;
+  }
+
+  protected openCreateSecurityLevel() {
+    this.editingSecurityLevel.set(null);
+    this.securityForm.reset({
+      name: '',
+      description: '',
+      rank: this.nextSecurityLevelRank(),
+      isDefault: this.securityLevels().length === 0
+    });
+    this.securityEditorOpen.set(true);
+  }
+
+  protected openEditSecurityLevel(level: SecurityLevelDefinition) {
+    this.editingSecurityLevel.set(level);
+    this.securityForm.reset({
+      name: level.name,
+      description: level.description ?? '',
+      rank: level.rank,
+      isDefault: level.isDefault
+    });
+    this.securityEditorOpen.set(true);
+  }
+
+  protected closeSecurityEditor() {
+    this.securityEditorOpen.set(false);
+    this.securityForm.markAsPristine();
+    this.securityForm.markAsUntouched();
+  }
+
+  protected saveSecurityLevel() {
+    if (this.securityLevelSaving()) {
+      return;
+    }
+
+    if (this.securityForm.invalid) {
+      this.securityForm.markAllAsTouched();
+      return;
+    }
+
+    const payload = this.buildSecurityPayload();
+    const current = this.editingSecurityLevel();
+    this.securityLevelSaving.set(true);
+
+    const request = current
+      ? this.dataService.updateSecurityLevel(current.id, payload)
+      : this.dataService.createSecurityLevel(payload);
+
+    request.subscribe({
+      next: () => {
+        this.securityLevelSaving.set(false);
+        this.raiseToast('success', current ? 'Security level updated' : 'Security level created');
+        this.closeSecurityEditor();
+        this.loadSecurityLevels();
+        this.loadRoles();
+      },
+      error: (err) => {
+        this.securityLevelSaving.set(false);
+        const message = err?.error ?? 'Unable to save security level';
+        this.raiseToast('error', message);
+      }
+    });
+  }
+
+  protected deleteSecurityLevel(level: SecurityLevelDefinition) {
+    if (!this.canManageAdmin() || this.securityLevelSaving()) {
+      return;
+    }
+
+    if (level.isDefault) {
+      this.raiseToast('error', 'Default security level cannot be deleted');
+      return;
+    }
+
+    if (!confirm(`Delete ${level.name}? Reassign any roles currently using this level first.`)) {
+      return;
+    }
+
+    this.securityLevelSaving.set(true);
+    this.dataService.deleteSecurityLevel(level.id).subscribe({
+      next: () => {
+        this.securityLevelSaving.set(false);
+        this.raiseToast('success', 'Security level deleted');
+        this.loadSecurityLevels();
+        this.loadRoles();
+      },
+      error: (err) => {
+        this.securityLevelSaving.set(false);
+        const message = err?.error ?? 'Unable to delete security level';
+        this.raiseToast('error', message);
+      }
+    });
+  }
+
+  protected setDefaultSecurityLevel(level: SecurityLevelDefinition) {
+    if (!this.canManageAdmin() || this.securityLevelSaving() || level.isDefault) {
+      return;
+    }
+
+    this.securityLevelSaving.set(true);
+    const payload: UpsertSecurityLevelRequest = {
+      name: level.name,
+      description: level.description ?? null,
+      rank: level.rank,
+      isDefault: true
+    };
+
+    this.dataService.updateSecurityLevel(level.id, payload).subscribe({
+      next: () => {
+        this.securityLevelSaving.set(false);
+        this.raiseToast('success', `${level.name} is now the default security level`);
+        this.loadSecurityLevels();
+        this.loadRoles();
+      },
+      error: (err) => {
+        this.securityLevelSaving.set(false);
+        const message = err?.error ?? 'Unable to set default security level';
+        this.raiseToast('error', message);
+      }
+    });
+  }
+
+  protected duplicateSecurityLevel(level: SecurityLevelDefinition) {
+    if (!this.canManageAdmin() || this.securityLevelSaving()) {
+      return;
+    }
+
+    this.securityLevelSaving.set(true);
+    const payload: UpsertSecurityLevelRequest = {
+      name: this.uniqueSecurityLevelName(level.name),
+      description: level.description ?? null,
+      rank: this.nextSecurityLevelRank(),
+      isDefault: false
+    };
+
+    this.dataService.createSecurityLevel(payload).subscribe({
+      next: () => {
+        this.securityLevelSaving.set(false);
+        this.raiseToast('success', `${payload.name} created`);
+        this.loadSecurityLevels();
+      },
+      error: (err) => {
+        this.securityLevelSaving.set(false);
+        const message = err?.error ?? 'Unable to duplicate security level';
+        this.raiseToast('error', message);
+      }
+    });
+  }
+
+  protected securityLevelTag(level: SecurityLevelDefinition): 'success' | 'info' {
+    return level.isDefault ? 'success' : 'info';
+  }
+
+  protected securityLevelType(level: SecurityLevelDefinition): string {
+    return level.isDefault ? 'Default' : 'Custom';
+  }
+
+  protected driftTone(addedCount: number, removedCount: number): 'success' | 'warn' | 'info' {
+    if (removedCount > 0) {
+      return 'warn';
+    }
+    if (addedCount > 0) {
+      return 'success';
+    }
+    return 'info';
   }
 
   protected permissionLabel(key: string) {
@@ -236,6 +532,45 @@ export class RolesPage {
 
   protected clearToast() {
     this.toastService.clear();
+  }
+
+  private buildSecurityPayload(): UpsertSecurityLevelRequest {
+    const value = this.securityForm.value;
+    return {
+      name: value.name?.trim() ?? '',
+      description: value.description?.trim() ? value.description.trim() : null,
+      rank: typeof value.rank === 'number' ? value.rank : 0,
+      isDefault: value.isDefault ?? false
+    };
+  }
+
+  private nextSecurityLevelRank(): number {
+    const levels = this.securityLevels();
+    if (!levels.length) {
+      return 0;
+    }
+    return Math.max(...levels.map((level) => level.rank)) + 1;
+  }
+
+  private uniqueSecurityLevelName(baseName: string): string {
+    const trimmed = (baseName || 'Security Level').trim();
+    const names = new Set(this.securityLevels().map((level) => level.name.trim().toLowerCase()));
+    let candidate = `${trimmed} Copy`;
+    if (!names.has(candidate.toLowerCase())) {
+      return candidate;
+    }
+    let i = 2;
+    while (names.has(`${candidate} ${i}`.toLowerCase())) {
+      i += 1;
+    }
+    return `${candidate} ${i}`;
+  }
+
+  private coerceWorkspaceTab(value: string | null): RolesWorkspaceTab {
+    if (value === 'security-levels' || value === 'presets' || value === 'drift' || value === 'directory') {
+      return value;
+    }
+    return 'directory';
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {

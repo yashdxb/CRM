@@ -1377,6 +1377,8 @@ public sealed class LeadService : ILeadService
             activityResult.Value.CompletedDateUtc ?? DateTime.UtcNow,
             request.NextStepDueAtUtc,
             activityResult.Value.OwnerName ?? "Unassigned");
+
+        await CompleteFirstTouchTaskIfOpenAsync(lead, actor, dto.CompletedAtUtc, cancellationToken);
         return LeadOperationResult<LeadCadenceTouchDto>.Ok(dto);
     }
 
@@ -2704,5 +2706,43 @@ public sealed class LeadService : ILeadService
             newValue,
             userId,
             actor.UserName);
+    }
+
+    private async Task CompleteFirstTouchTaskIfOpenAsync(Lead lead, LeadActor actor, DateTime completedAtUtc, CancellationToken cancellationToken)
+    {
+        var firstTouch = await _dbContext.Activities
+            .FirstOrDefaultAsync(a => !a.IsDeleted
+                                      && a.RelatedEntityType == ActivityRelationType.Lead
+                                      && a.RelatedEntityId == lead.Id
+                                      && !a.CompletedDateUtc.HasValue
+                                      && a.Subject != null
+                                      && EF.Functions.Like(a.Subject, "First touch%"), cancellationToken);
+
+        if (firstTouch is null)
+        {
+            return;
+        }
+
+        firstTouch.CompletedDateUtc = completedAtUtc;
+        firstTouch.UpdatedAtUtc = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(firstTouch.Outcome))
+        {
+            firstTouch.Outcome = "Auto-completed by cadence touch";
+        }
+
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(lead.Id, "FirstTouchAutoCompleted", "FirstTouchTask", null, firstTouch.Id.ToString(), actor),
+            cancellationToken);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await _mediator.Publish(new ActivityCompletedEvent(
+            firstTouch.Id,
+            firstTouch.RelatedEntityType,
+            firstTouch.RelatedEntityId,
+            firstTouch.OwnerId,
+            completedAtUtc,
+            actor.UserId == Guid.Empty ? null : actor.UserId,
+            DateTime.UtcNow), cancellationToken);
     }
 }

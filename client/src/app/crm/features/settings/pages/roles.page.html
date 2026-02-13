@@ -60,6 +60,10 @@
           <i class="pi pi-plus"></i>
           <span>New Role</span>
         </button>
+        <button pButton type="button" class="btn btn-secondary" [disabled]="!canManageAdmin()" (click)="openCreateSecurityLevel()">
+          <i class="pi pi-lock"></i>
+          <span>Manage Security Levels</span>
+        </button>
         <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/users">
           <i class="pi pi-users"></i>
           <span>Manage Users</span>
@@ -87,13 +91,13 @@
 
       <div class="visual-card visual-card--secondary">
         <div class="card-icon">
-          <i class="pi pi-key"></i>
+          <i class="pi pi-lock"></i>
         </div>
         <div class="card-content">
-          <span class="card-label">Permission Types</span>
-          <strong class="card-value">{{ permissionCatalog().length }}</strong>
+          <span class="card-label">Default Security Level</span>
+          <strong class="card-value">{{ defaultSecurityLevelName() }}</strong>
           <span class="card-trend">
-            <i class="pi pi-check-circle"></i> Fine-grained control
+            <i class="pi pi-check-circle"></i> Tenant-defined access tier
           </span>
         </div>
       </div>
@@ -104,156 +108,443 @@
        DATA SECTION
        ═══════════════════════════════════════════════════════════════════════════ -->
   <section class="data-section">
-      <div class="data-card">
-        <div class="data-header">
-          <div class="header-title">
-            <h2>Role Directory</h2>
-            <span class="record-count">{{ roles().length }} roles configured</span>
-          </div>
-          <div class="view-toggle">
-            <button
-              type="button"
-              class="toggle-btn"
-              [class.active]="!showHierarchy()"
-              (click)="toggleView('list')"
-            >
-              List
-            </button>
-            <button
-              type="button"
-              class="toggle-btn"
-              [class.active]="showHierarchy()"
-              (click)="toggleView('hierarchy')"
-            >
-              Hierarchy
-            </button>
-          </div>
-          <div class="header-actions">
-            <button class="action-btn action-btn--primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
-              <i class="pi pi-plus"></i>
-              <span>Add Role</span>
-            </button>
-        </div>
-      </div>
-
-      <!-- Loading State -->
-      <div class="loading-state" *ngIf="loadingRoles()">
-        <div class="skeleton-row" *ngFor="let _ of [0, 1, 2, 3, 4]">
-          <div class="skeleton skeleton-avatar"></div>
-          <div class="skeleton skeleton-text"></div>
-          <div class="skeleton skeleton-text skeleton-short"></div>
-          <div class="skeleton skeleton-badge"></div>
-          <div class="skeleton skeleton-actions"></div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div class="empty-state" *ngIf="!loadingRoles() && roles().length === 0">
-        <div class="empty-icon">
-          <i class="pi pi-shield"></i>
-        </div>
-        <h3>No roles configured</h3>
-        <p>Create your first role to start managing access control</p>
-        <button class="btn btn-primary" routerLink="/app/settings/roles/new">
-          <i class="pi pi-plus"></i>
-          Create Role
-        </button>
-      </div>
-
-      <!-- Table -->
-      <div class="table-wrapper" *ngIf="!loadingRoles() && roles().length > 0 && !showHierarchy()">
-        <p-table
-          class="data-table"
-          [value]="roles()"
-          [tableStyle]="{ 'min-width': '100%' }"
-          responsiveLayout="scroll"
-        >
-          <ng-template pTemplate="header">
-            <tr>
-              <th class="th-role">Role</th>
-              <th>Hierarchy</th>
-              <th>Permissions</th>
-              <th>Type</th>
-              <th class="th-actions">Actions</th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-role>
-            <tr class="table-row" [class.row-system]="role.isSystem">
-              <td>
-                <div class="td-role">
-                  <div class="role-icon" [ngClass]="getRoleIconStyle(role)">
-                    <i [class]="getRoleIcon(role)"></i>
-                  </div>
-                  <div class="role-info">
-                    <span class="role-name">{{ role.name }}</span>
-                    <span class="role-description">{{ role.description || 'No description provided' }}</span>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <span class="status-badge status-badge--info">
-                  {{ role.hierarchyLevel ? ('H' + role.hierarchyLevel) : 'H1' }}
-                </span>
-              </td>
-              <td>
-                <div class="permission-pills">
-                  <span class="permission-pill" *ngFor="let permission of role.permissions.slice(0, 3)">
-                    {{ permissionLabel(permission) }}
-                  </span>
-                  <span class="permission-pill permission-pill--more" *ngIf="role.permissions.length > 3">
-                    +{{ role.permissions.length - 3 }} more
-                  </span>
-                </div>
-              </td>
-              <td>
-                <span class="status-badge" [class.status-badge--warning]="role.isSystem" [class.status-badge--success]="!role.isSystem">
-                  {{ role.isSystem ? 'System' : 'Custom' }}
-                </span>
-              </td>
-              <td class="td-actions">
-                <div class="action-buttons">
-                  <button
-                    class="action-icon"
-                    pTooltip="Edit role"
-                    tooltipPosition="top"
-                    [disabled]="!canManageAdmin()"
-                    [routerLink]="['/app/settings/roles', role.id, 'edit']"
-                  >
-                    <i class="pi pi-pencil"></i>
-                  </button>
-                  <button
-                    class="action-icon action-icon--danger"
-                    pTooltip="Delete role"
-                    tooltipPosition="top"
-                    [disabled]="role.isSystem || roleSaving() || !canManageAdmin()"
-                    (click)="deleteRole(role)"
-                  >
-                    <i class="pi pi-trash"></i>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </ng-template>
-        </p-table>
-      </div>
-
-      <div class="orgchart-wrapper" *ngIf="!loadingRoles() && roles().length > 0 && showHierarchy()">
-        <p-organizationChart [value]="orgChartNodes()" selectionMode="single">
-          <ng-template pTemplate="person" let-node>
-            <div class="org-node">
-              <div class="org-title">
-                <span class="org-name">{{ node.data?.name }}</span>
-                <span class="org-badges">
-                  <span class="org-badge">H{{ node.data?.hierarchyLevel || '—' }}</span>
-                </span>
+    <div class="data-card workspace-card">
+      <p-tabs [value]="activeWorkspaceTab()" (valueChange)="onWorkspaceTabChange($event)">
+        <p-tablist>
+          <p-tab value="directory">
+            <i class="pi pi-sitemap"></i>
+            <span>Directory</span>
+          </p-tab>
+          <p-tab value="security-levels">
+            <i class="pi pi-lock"></i>
+            <span>Security Levels</span>
+          </p-tab>
+          <p-tab value="presets">
+            <i class="pi pi-th-large"></i>
+            <span>Presets</span>
+          </p-tab>
+          <p-tab value="drift">
+            <i class="pi pi-sliders-h"></i>
+            <span>Drift</span>
+          </p-tab>
+        </p-tablist>
+        <p-tabpanels>
+          <p-tabpanel value="directory">
+            <div class="data-header">
+              <div class="header-title">
+                <h2>Role Directory</h2>
+                <span class="record-count">{{ roles().length }} roles configured</span>
               </div>
-              <div class="org-meta">
-                <span class="org-desc">{{ node.data?.description || 'No description' }}</span>
+              <div class="view-toggle view-toggle--segmented" data-testid="roles-directory-view-toggle">
+                <button
+                  pButton
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="!showHierarchy()"
+                  [attr.aria-pressed]="!showHierarchy()"
+                  data-testid="roles-view-list"
+                  (click)="toggleView('list')"
+                >
+                  List
+                </button>
+                <button
+                  pButton
+                  type="button"
+                  class="toggle-btn"
+                  [class.active]="showHierarchy()"
+                  [attr.aria-pressed]="showHierarchy()"
+                  data-testid="roles-view-hierarchy"
+                  (click)="toggleView('hierarchy')"
+                >
+                  Hierarchy
+                </button>
+              </div>
+              <div class="header-actions">
+                <button pButton type="button" class="action-btn action-btn--primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
+                  <i class="pi pi-plus"></i>
+                  <span>Add Role</span>
+                </button>
+                <button pButton type="button" class="action-btn" (click)="loadRoles()" [disabled]="loadingRoles()">
+                  <i class="pi pi-refresh"></i>
+                  <span>Reload</span>
+                </button>
               </div>
             </div>
-          </ng-template>
-        </p-organizationChart>
-      </div>
+
+            <div class="loading-state" *ngIf="loadingRoles()">
+              <div class="skeleton-row" *ngFor="let _ of [0, 1, 2, 3, 4]">
+                <div class="skeleton skeleton-avatar"></div>
+                <div class="skeleton skeleton-text"></div>
+                <div class="skeleton skeleton-text skeleton-short"></div>
+                <div class="skeleton skeleton-badge"></div>
+                <div class="skeleton skeleton-actions"></div>
+              </div>
+            </div>
+
+            <div class="empty-state" *ngIf="!loadingRoles() && roles().length === 0">
+              <div class="empty-icon">
+                <i class="pi pi-shield"></i>
+              </div>
+              <h3>No roles configured</h3>
+              <p>Create your first role to start managing access control</p>
+              <button pButton type="button" class="btn btn-primary" routerLink="/app/settings/roles/new">
+                <i class="pi pi-plus"></i>
+                Create Role
+              </button>
+            </div>
+
+            <div class="table-wrapper" *ngIf="!loadingRoles() && roles().length > 0 && !showHierarchy()">
+              <p-table class="data-table" [value]="roles()" [tableStyle]="{ 'min-width': '100%' }" responsiveLayout="scroll">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th class="th-role">Role</th>
+                    <th>Hierarchy</th>
+                    <th>Security Level</th>
+                    <th>Permissions</th>
+                    <th>Type</th>
+                    <th class="th-actions">Actions</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-role>
+                  <tr class="table-row" [class.row-system]="role.isSystem">
+                    <td>
+                      <div class="td-role">
+                        <div class="role-icon" [ngClass]="getRoleIconStyle(role)">
+                          <i [class]="getRoleIcon(role)"></i>
+                        </div>
+                        <div class="role-info">
+                          <span class="role-name">{{ role.name }}</span>
+                          <span class="role-description">{{ role.description || 'No description provided' }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="status-badge status-badge--info">
+                        {{ role.hierarchyLevel ? ('H' + role.hierarchyLevel) : 'H1' }}
+                      </span>
+                    </td>
+                    <td>
+                      <ng-container *ngIf="securityLevelForRole(role) as level; else unassignedSecurityLevel">
+                        <span class="status-badge status-badge--security">
+                          {{ level.name }}
+                          <span class="status-badge__sub">R{{ level.rank }}</span>
+                        </span>
+                      </ng-container>
+                      <ng-template #unassignedSecurityLevel>
+                        <span class="status-badge">Unassigned</span>
+                      </ng-template>
+                    </td>
+                    <td>
+                      <div class="permission-pills">
+                        <span class="permission-pill" *ngFor="let permission of role.permissions.slice(0, 3)">
+                          {{ permissionLabel(permission) }}
+                        </span>
+                        <span class="permission-pill permission-pill--more" *ngIf="role.permissions.length > 3">
+                          +{{ role.permissions.length - 3 }} more
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <span class="status-badge" [class.status-badge--warning]="role.isSystem" [class.status-badge--success]="!role.isSystem">
+                        {{ role.isSystem ? 'System' : 'Custom' }}
+                      </span>
+                    </td>
+                    <td class="td-actions">
+                      <div class="action-buttons">
+                        <button
+                          pButton
+                          type="button"
+                          class="action-icon"
+                          pTooltip="Edit role"
+                          tooltipPosition="top"
+                          [disabled]="!canManageAdmin()"
+                          [routerLink]="['/app/settings/roles', role.id, 'edit']"
+                        >
+                          <i class="pi pi-pencil"></i>
+                        </button>
+                        <button
+                          pButton
+                          type="button"
+                          class="action-icon action-icon--danger"
+                          pTooltip="Delete role"
+                          tooltipPosition="top"
+                          [disabled]="role.isSystem || roleSaving() || !canManageAdmin()"
+                          (click)="deleteRole(role)"
+                        >
+                          <i class="pi pi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+
+            <div class="orgchart-wrapper" *ngIf="!loadingRoles() && roles().length > 0 && showHierarchy()">
+              <p-organizationChart [value]="orgChartNodes()" selectionMode="single">
+                <ng-template pTemplate="person" let-node>
+                  <div class="org-node">
+                    <div class="org-title">
+                      <span class="org-name">{{ node.data?.name }}</span>
+                      <span class="org-badges">
+                        <span class="org-badge">H{{ node.data?.hierarchyLevel || '—' }}</span>
+                      </span>
+                    </div>
+                    <div class="org-meta">
+                      <span class="org-desc">{{ node.data?.description || 'No description' }}</span>
+                    </div>
+                  </div>
+                </ng-template>
+              </p-organizationChart>
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel value="security-levels">
+            <div class="security-levels-section">
+              <div class="security-levels-header">
+                <div class="security-levels-title">
+                  <h3>Security Level Definitions</h3>
+                  <span class="record-count">{{ securityLevels().length }} levels configured by tenant admins</span>
+                </div>
+                <div class="security-levels-actions">
+                  <button pButton type="button" class="btn btn-ghost" [disabled]="loadingSecurityLevels()" (click)="loadSecurityLevels()">
+                    <i class="pi pi-refresh"></i>
+                    <span>Reload</span>
+                  </button>
+                  <button pButton type="button" class="btn btn-primary" [disabled]="!canManageAdmin()" (click)="openCreateSecurityLevel()">
+                    <i class="pi pi-plus"></i>
+                    <span>New Level</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="loading-state" *ngIf="loadingSecurityLevels()">
+                <div class="skeleton-row" *ngFor="let _ of [0, 1, 2]">
+                  <div class="skeleton skeleton-text"></div>
+                  <div class="skeleton skeleton-short"></div>
+                </div>
+              </div>
+
+              <div class="table-wrapper" *ngIf="!loadingSecurityLevels()">
+                <p-table [value]="securityLevels()" styleClass="data-table security-level-table" responsiveLayout="scroll">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Name</th>
+                      <th>Description</th>
+                      <th>Rank</th>
+                      <th>Type</th>
+                      <th class="th-actions">Actions</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-level>
+                    <tr>
+                      <td>{{ level.name }}</td>
+                      <td>{{ level.description || '—' }}</td>
+                      <td>
+                        <span class="status-badge status-badge--info">R{{ level.rank }}</span>
+                      </td>
+                      <td>
+                        <p-tag [severity]="securityLevelTag(level)" [value]="securityLevelType(level)"></p-tag>
+                      </td>
+                      <td class="td-actions">
+                        <div class="action-buttons">
+                          <button
+                            pButton
+                            type="button"
+                            class="action-icon action-icon--success"
+                            pTooltip="Set as default"
+                            tooltipPosition="top"
+                            [disabled]="!canManageAdmin() || level.isDefault || securityLevelSaving()"
+                            (click)="setDefaultSecurityLevel(level)"
+                          >
+                            <i class="pi pi-star"></i>
+                          </button>
+                          <button
+                            pButton
+                            type="button"
+                            class="action-icon"
+                            pTooltip="Duplicate security level"
+                            tooltipPosition="top"
+                            [disabled]="!canManageAdmin() || securityLevelSaving()"
+                            (click)="duplicateSecurityLevel(level)"
+                          >
+                            <i class="pi pi-copy"></i>
+                          </button>
+                          <button
+                            pButton
+                            type="button"
+                            class="action-icon"
+                            pTooltip="Edit security level"
+                            tooltipPosition="top"
+                            [disabled]="!canManageAdmin()"
+                            (click)="openEditSecurityLevel(level)"
+                          >
+                            <i class="pi pi-pencil"></i>
+                          </button>
+                          <button
+                            pButton
+                            type="button"
+                            class="action-icon action-icon--danger"
+                            pTooltip="Delete security level"
+                            tooltipPosition="top"
+                            [disabled]="!canManageAdmin() || level.isDefault"
+                            (click)="deleteSecurityLevel(level)"
+                          >
+                            <i class="pi pi-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel value="presets">
+            <div class="security-levels-section">
+              <div class="security-levels-header">
+                <div class="security-levels-title">
+                  <h3>Role Presets</h3>
+                  <span class="record-count">Intent packs and hierarchy presets for fast role creation</span>
+                </div>
+                <div class="security-levels-actions">
+                  <button pButton type="button" class="btn btn-ghost" [disabled]="loadingIntentPacks()" (click)="loadIntentPacks()">
+                    <i class="pi pi-refresh"></i>
+                    <span>Reload intents</span>
+                  </button>
+                  <button pButton type="button" class="btn btn-ghost" [disabled]="loadingPermissionPackPresets()" (click)="loadPermissionPackPresets()">
+                    <i class="pi pi-refresh"></i>
+                    <span>Reload presets</span>
+                  </button>
+                  <button pButton type="button" class="btn btn-primary" routerLink="/app/settings/roles/new" [disabled]="!canManageAdmin()">
+                    <i class="pi pi-plus"></i>
+                    <span>New Role</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-wrapper">
+                <p-table [value]="intentPacks()" styleClass="data-table security-level-table" responsiveLayout="scroll">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Intent Pack</th>
+                      <th>Description</th>
+                      <th>Permissions</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-pack>
+                    <tr>
+                      <td>{{ pack.label }}</td>
+                      <td>{{ pack.description }}</td>
+                      <td><span class="status-badge status-badge--info">{{ pack.permissions.length }} permissions</span></td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+
+              <div class="table-wrapper">
+                <p-table [value]="permissionPackPresets()" styleClass="data-table security-level-table" responsiveLayout="scroll">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Preset</th>
+                      <th>Description</th>
+                      <th>Hierarchy</th>
+                      <th>Permissions</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-preset>
+                    <tr>
+                      <td>{{ preset.label }}</td>
+                      <td>{{ preset.description }}</td>
+                      <td><span class="status-badge status-badge--security">H{{ preset.hierarchyLevel }}</span></td>
+                      <td><span class="status-badge status-badge--info">{{ preset.permissions.length }} permissions</span></td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+            </div>
+          </p-tabpanel>
+
+          <p-tabpanel value="drift">
+            <div class="security-levels-section">
+              <div class="security-levels-header">
+                <div class="security-levels-title">
+                  <h3>Role Drift Monitor</h3>
+                  <span class="record-count">{{ driftedRolesCount() }} roles differ from their base permissions</span>
+                </div>
+                <div class="security-levels-actions">
+                  <button pButton type="button" class="btn btn-ghost" (click)="loadRoles()" [disabled]="loadingRoles()">
+                    <i class="pi pi-refresh"></i>
+                    <span>Refresh drift</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-wrapper">
+                <p-table [value]="driftRows()" styleClass="data-table security-level-table" responsiveLayout="scroll">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>Role</th>
+                      <th>Added</th>
+                      <th>Removed</th>
+                      <th>Status</th>
+                      <th>Notes</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-row>
+                    <tr>
+                      <td>{{ row.role.name }}</td>
+                      <td><span class="status-badge status-badge--success">{{ row.addedCount }}</span></td>
+                      <td><span class="status-badge status-badge--warning">{{ row.removedCount }}</span></td>
+                      <td>
+                        <p-tag [severity]="driftTone(row.addedCount, row.removedCount)" [value]="row.hasDrift ? 'Drifted' : 'Aligned'"></p-tag>
+                      </td>
+                      <td>{{ row.role.driftNotes || '—' }}</td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              </div>
+            </div>
+          </p-tabpanel>
+        </p-tabpanels>
+      </p-tabs>
     </div>
   </section>
+
+  <p-dialog
+    header="{{ editingSecurityLevel() ? 'Edit Security Level' : 'Create Security Level' }}"
+    [visible]="securityEditorOpen()"
+    (visibleChange)="securityEditorOpen.set($event)"
+    [modal]="true"
+    styleClass="security-level-dialog"
+    [style]="{ width: '32rem' }"
+    [draggable]="false"
+    [resizable]="false"
+    (onHide)="closeSecurityEditor()"
+  >
+    <form class="security-form" [formGroup]="securityForm" (ngSubmit)="saveSecurityLevel()">
+      <div class="security-form__body">
+        <label>Name <span class="required">*</span></label>
+        <input pInputText type="text" formControlName="name" placeholder="e.g. L1, L2, Regional Manager" />
+
+        <label>Description</label>
+        <textarea pInputTextarea class="security-form__textarea" formControlName="description" rows="3" placeholder="Optional description"></textarea>
+
+        <label>Rank</label>
+        <p-inputNumber formControlName="rank" [min]="0" [showButtons]="true" inputStyleClass="w-full"></p-inputNumber>
+
+        <label class="checkbox-row">
+          <p-checkbox formControlName="isDefault" [binary]="true"></p-checkbox>
+          <span>Set as default level for new roles</span>
+        </label>
+      </div>
+      <div class="security-form__footer">
+        <button pButton type="button" class="btn btn-ghost" (click)="closeSecurityEditor()">Cancel</button>
+        <button pButton type="submit" class="btn btn-primary" [disabled]="securityLevelSaving()">
+          {{ securityLevelSaving() ? 'Saving...' : 'Save Level' }}
+        </button>
+      </div>
+    </form>
+  </p-dialog>
 </div>

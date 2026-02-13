@@ -231,7 +231,12 @@ export const routes: Routes = [
           {
             path: 'roles',
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Roles' },
-            loadComponent: () => import('./crm/features/settings/pages/roles.page').then((m) => m.RolesPage)
+            loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
+          },
+          {
+            path: 'teams',
+            data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Teams' },
+            loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
           },
           {
             path: 'roles/new',
@@ -298,10 +303,8 @@ export const routes: Routes = [
           },
           {
             path: 'security-levels',
-            canActivate: [roleGuard],
-            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Security Levels' },
-            loadComponent: () =>
-              import('./crm/features/settings/pages/security-levels.page').then((m) => m.SecurityLevelsPage)
+            pathMatch: 'full',
+            redirectTo: 'roles'
           },
           {
             path: 'lead-assignment/:id/edit',
@@ -313,7 +316,7 @@ export const routes: Routes = [
             path: 'audit-log',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.auditView, breadcrumb: 'Audit Log' },
-            loadComponent: () => import('./crm/features/settings/pages/audit-log.page').then((m) => m.AuditLogPage)
+            loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
           },
           {
             path: 'tenants/new',

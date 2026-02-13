@@ -13,108 +13,14 @@
     <div class="hero-content">
       <span class="hero-eyebrow">
         <i class="pi pi-cog"></i>
-        Workspace controls
+        Settings
       </span>
-      <h1 class="hero-title">Team & Access Management</h1>
+      <h1 class="hero-title">People & Access</h1>
       <p class="hero-subtitle">
-        Manage teammates, control permissions, and keep sensitive data scoped to the right sellers
+        Manage users, roles, and audit visibility with clean, controlled access.
       </p>
     </div>
-    <div class="hero-actions">
-      <label class="toggle-wrapper">
-        <span>Show inactive</span>
-        <p-toggleSwitch [ngModel]="includeInactive()" (ngModelChange)="toggleIncludeInactive($event)"></p-toggleSwitch>
-      </label>
-      <button pButton type="button" class="btn-gradient" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/invite'] : null">
-        <i class="pi pi-user-plus"></i>
-        <span>Invite user</span>
-      </button>
-      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/workspace'] : null">
-        <i class="pi pi-sliders-h"></i>
-        <span>Workspace settings</span>
-      </button>
-      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/approvals'] : null">
-        <i class="pi pi-check-square"></i>
-        <span>Approval settings</span>
-      </button>
-      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/security-levels'] : null">
-        <i class="pi pi-lock"></i>
-        <span>Security levels</span>
-      </button>
-      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/qualification-policy'] : null">
-        <i class="pi pi-shield"></i>
-        <span>Qualification policy</span>
-      </button>
-      <button pButton type="button" class="btn-glass" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/qualification-thresholds'] : null">
-        <i class="pi pi-filter"></i>
-        <span>Threshold rules</span>
-      </button>
-      <button pButton type="button" class="btn-glass" routerLink="/app/settings/roles">
-        <i class="pi pi-shield"></i>
-        <span>Manage roles</span>
-      </button>
-      <button pButton type="button" class="btn-glass" [disabled]="!canViewAdmin()" [routerLink]="canViewAdmin() ? ['/app/settings/dashboard-packs'] : null">
-        <i class="pi pi-th-large"></i>
-        <span>Dashboard packs</span>
-      </button>
-      <button pButton type="button" class="btn-glass" [disabled]="!canManageLeads()" [routerLink]="canManageLeads() ? ['/app/settings/lead-assignment'] : null">
-        <i class="pi pi-sitemap"></i>
-        <span>Lead assignment</span>
-      </button>
-      <button pButton type="button" class="btn-glass" [disabled]="!canManageOpportunities()" [routerLink]="canManageOpportunities() ? ['/app/settings/opportunity-automation'] : null">
-        <i class="pi pi-sliders-h"></i>
-        <span>Opportunity automation</span>
-      </button>
-      <button pButton type="button" class="btn-glass" routerLink="/app/settings/notifications">
-        <i class="pi pi-bell"></i>
-        <span>Notifications</span>
-      </button>
-      <button pButton type="button" class="btn-glass" *ngIf="canManageTenants()" (click)="goToTenants()">
-        <i class="pi pi-building"></i>
-        <span>Tenant configuration</span>
-      </button>
-    </div>
   </header>
-
-  <!-- Metrics Dashboard -->
-  <div class="metrics-grid">
-    <div class="metric-card">
-      <div class="metric-icon cyan">
-        <i class="pi pi-users"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-value">{{ totalUsers() }}</span>
-        <span class="metric-label">Total Users</span>
-      </div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-icon purple">
-        <i class="pi pi-check-circle"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-value">{{ activeUsersCount() }}</span>
-        <span class="metric-label">Active</span>
-      </div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-icon orange">
-        <i class="pi pi-ban"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-value">{{ inactiveUsersCount() }}</span>
-        <span class="metric-label">Inactive</span>
-      </div>
-    </div>
-    <div class="metric-card">
-      <div class="metric-icon primary">
-        <i class="pi pi-id-card"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-value">{{ roles().length }}</span>
-        <span class="metric-label">Roles</span>
-      </div>
-    </div>
-  </div>
 
   <!-- Main Content Grid -->
   <div class="settings-layout">
@@ -123,143 +29,247 @@
       <div class="card-header">
         <div class="header-left">
           <span class="card-eyebrow">Team directory</span>
-          <h2 class="card-title">{{ filteredUsers().length }} teammates</h2>
+          <h2 class="card-title">People &amp; Access</h2>
         </div>
-        <p class="card-subtitle">Manage permissions and access for your CRM team</p>
+        <div class="header-actions">
+          <button pButton type="button" class="btn-gradient" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/invite'] : null">
+            <i class="pi pi-user-plus"></i>
+            <span>Invite user</span>
+          </button>
+        </div>
       </div>
 
-      <ng-container *ngIf="!loadingUsers(); else usersLoading">
-        <div class="table-toolbar">
-          <div class="toolbar-search">
-            <i class="pi pi-search"></i>
-            <input
-              pInputText
-              type="search"
-              [ngModel]="searchTerm()"
-              (ngModelChange)="onSearchChange($event)"
-              placeholder="Search by name or email"
-            />
-          </div>
-          <div class="toolbar-filters">
-            <p-select appendTo="body"
-              [options]="roleFilterOptions()"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="roleFilter()"
-              (ngModelChange)="onRoleFilterChange($event)"
-              placeholder="All roles"
-              styleClass="filter-select"
-            ></p-select>
-            <p-select appendTo="body"
-              [options]="statusFilterOptions"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="statusFilter()"
-              (ngModelChange)="onStatusFilterChange($event)"
-              placeholder="All statuses"
-              styleClass="filter-select"
-            ></p-select>
-            <button pButton type="button" class="btn-glass small" (click)="resetFilters()">Reset</button>
-          </div>
+      <div class="people-command-bar">
+        <div class="command-metrics">
+          <span class="metric-pill">
+            <i class="pi pi-users"></i>
+            {{ totalUsers() }} Users
+          </span>
+          <span class="metric-pill">
+            <i class="pi pi-shield"></i>
+            {{ roles().length }} Roles
+          </span>
+          <span class="metric-pill metric-pill--success">
+            <i class="pi pi-check-circle"></i>
+            {{ activeUsersCount() }} Active
+          </span>
         </div>
+        <div class="command-actions">
+          <button pButton type="button" class="btn-glass small" (click)="loadUsers()">
+            <i class="pi pi-refresh"></i>
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
 
-        <div class="table-wrapper">
-          <p-table
-            class="data-table"
-            [value]="filteredUsers()"
-            [paginator]="true"
-            [rows]="pageSize()"
-            [rowsPerPageOptions]="pageSizeOptions"
-            [totalRecords]="totalUsers()"
-            [first]="(page() - 1) * pageSize()"
-            (onPage)="handlePage($event)"
-          >
-            <ng-template pTemplate="header">
-              <tr>
-                <th>User</th>
-                <th>Roles</th>
-                <th>Last Login</th>
-                <th>Status</th>
-                <th class="text-right">Actions</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-user>
-              <tr class="user-row" (click)="startEdit(user)">
-                <td>
-                  <div class="user-cell">
-                    <div
-                      class="user-avatar"
-                      [ngClass]="getAvatarClasses(user)"
-                    >
-                      {{ user.fullName.slice(0, 1) }}
-                      <span class="presence-dot" [ngClass]="isOnline(user) ? 'online' : 'offline'"></span>
-                    </div>
-                    <div class="user-info">
-                      <span class="user-name">{{ user.fullName }}</span>
+      <div class="people-tabs" role="tablist" aria-label="People and access views">
+        <button
+          pButton
+          type="button"
+          class="view-chip"
+          [ngClass]="{ 'is-active': activeTab() === 'users' }"
+          [attr.aria-selected]="activeTab() === 'users'"
+          (click)="selectTab('users')"
+        >
+          <i class="pi pi-users tab-icon" aria-hidden="true"></i>
+          <span class="tab-label">Users</span>
+        </button>
+        <button
+          pButton
+          type="button"
+          class="view-chip"
+          [ngClass]="{ 'is-active': activeTab() === 'roles' }"
+          [attr.aria-selected]="activeTab() === 'roles'"
+          (click)="selectTab('roles')"
+        >
+          <i class="pi pi-shield tab-icon" aria-hidden="true"></i>
+          <span class="tab-label">Roles</span>
+        </button>
+        <button
+          pButton
+          type="button"
+          class="view-chip"
+          [ngClass]="{ 'is-active': activeTab() === 'teams' }"
+          [attr.aria-selected]="activeTab() === 'teams'"
+          (click)="selectTab('teams')"
+        >
+          <i class="pi pi-sitemap tab-icon" aria-hidden="true"></i>
+          <span class="tab-label">Teams</span>
+        </button>
+        <button
+          pButton
+          type="button"
+          class="view-chip"
+          [disabled]="!canViewAudit()"
+          [ngClass]="{ 'is-active': activeTab() === 'audit-log' }"
+          [attr.aria-selected]="activeTab() === 'audit-log'"
+          (click)="selectTab('audit-log')"
+        >
+          <i class="pi pi-clipboard tab-icon" aria-hidden="true"></i>
+          <span class="tab-label">Audit Log</span>
+        </button>
+      </div>
+
+      <div class="view-stage">
+        <ng-container *ngIf="activeTab() === 'users'">
+          <ng-container *ngIf="!loadingUsers(); else usersLoading">
+            <div class="table-toolbar">
+              <div class="toolbar-search">
+                <i class="pi pi-search"></i>
+                <input
+                  pInputText
+                  type="search"
+                  [ngModel]="searchTerm()"
+                  (ngModelChange)="onSearchChange($event)"
+                  placeholder="Search by name or email"
+                />
+              </div>
+              <div class="toolbar-filters">
+                <p-select appendTo="body"
+                  [options]="roleFilterOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="roleFilter()"
+                  (ngModelChange)="onRoleFilterChange($event)"
+                  placeholder="All roles"
+                  styleClass="filter-select"
+                ></p-select>
+                <p-select appendTo="body"
+                  [options]="statusFilterOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  [ngModel]="statusFilter()"
+                  (ngModelChange)="onStatusFilterChange($event)"
+                  placeholder="All statuses"
+                  styleClass="filter-select"
+                ></p-select>
+                <label class="toggle-wrapper compact">
+                  <span>Show inactive</span>
+                  <p-toggleSwitch [ngModel]="includeInactive()" (ngModelChange)="toggleIncludeInactive($event)"></p-toggleSwitch>
+                </label>
+                <button pButton type="button" class="btn-glass small" (click)="resetFilters()">Reset</button>
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <p-table
+                class="data-table"
+                [value]="filteredUsers()"
+                [paginator]="true"
+                [rows]="pageSize()"
+                [rowsPerPageOptions]="pageSizeOptions"
+                [totalRecords]="totalUsers()"
+                [first]="(page() - 1) * pageSize()"
+                (onPage)="handlePage($event)"
+              >
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Last login</th>
+                    <th class="text-right">Actions</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-user>
+                  <tr class="user-row" (click)="startEdit(user)">
+                    <td>
+                      <div class="user-cell">
+                        <div
+                          class="user-avatar"
+                          [ngClass]="getAvatarClasses(user)"
+                        >
+                          {{ user.fullName.slice(0, 1) }}
+                          <span class="presence-dot" [ngClass]="isOnline(user) ? 'online' : 'offline'"></span>
+                        </div>
+                        <div class="user-info">
+                          <span class="user-name">{{ user.fullName }}</span>
+                          <span class="user-presence" [ngClass]="isOnline(user) ? 'is-online' : 'is-offline'">
+                            <span class="presence-icon"></span>
+                            {{ isOnline(user) ? 'Online now' : 'Offline' }}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
                       <span class="user-email">{{ user.email }}</span>
-                      <span class="user-presence" [ngClass]="isOnline(user) ? 'is-online' : 'is-offline'">
-                        <span class="presence-icon"></span>
-                        {{ isOnline(user) ? 'Online now' : 'Offline' }}
+                    </td>
+                    <td>
+                      <span class="role-pill" *ngIf="user.roles?.length; else unassignedRole">
+                        {{ user.roles[0] }}
                       </span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div class="role-badges">
-                    <span class="role-badge" *ngFor="let role of user.roles">{{ role }}</span>
-                  </div>
-                </td>
-                <td>
-                  <ng-container *ngIf="user.lastLoginAtUtc; else neverLogged">
-                    <span class="login-date">
-                      {{ formatLoginTime(user) }}
-                    </span>
-                    <span class="login-duration">
-                      {{ formatLoginDuration(user, isOnline(user)) }}
-                    </span>
-                  </ng-container>
-                  <ng-template #neverLogged>
-                    <span class="login-never">Never logged in</span>
-                  </ng-template>
-                  <span class="login-location" [ngClass]="user.lastLoginLocation ? '' : 'location-muted'">
-                    <i class="pi pi-map-marker"></i>
-                    {{ user.lastLoginLocation || (user.lastLoginIp ? ('IP ' + user.lastLoginIp) : 'Location unavailable') }}
-                  </span>
-                </td>
-                <td>
-                  <span class="status-badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-warning'">
-                    {{ user.isActive ? 'Active' : 'Inactive' }}
-                  </span>
-                </td>
-                <td class="text-right">
-                  <div class="action-buttons">
-                    <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-pencil" title="Edit user" aria-label="Edit user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); startEdit(user)"></button>
-                    <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" [icon]="user.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'" [title]="user.isActive ? 'Deactivate' : 'Activate'" [attr.aria-label]="user.isActive ? 'Deactivate user' : 'Activate user'" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); toggleUserStatus(user)"></button>
-                    <button
-                      pButton
-                      type="button"
-                      class="crm-button crm-button--ghost crm-button--sm"
-                      icon="pi pi-send"
-                      title="Resend invite"
-                      aria-label="Resend invite"
-                      [disabled]="!canManageAdmin() || !canResendInvite(user)"
-                      (click)="$event.stopPropagation(); resendInvite(user)"
-                    ></button>
-                    <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-key" title="Reset password" aria-label="Reset password" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); resetPassword(user)"></button>
-                    <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-trash" title="Remove user" aria-label="Remove user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); deleteUser(user)"></button>
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
-          </p-table>
-        </div>
-      </ng-container>
+                      <ng-template #unassignedRole>
+                        <span class="role-pill muted">Unassigned</span>
+                      </ng-template>
+                    </td>
+                    <td>
+                      <span class="status-badge" [ngClass]="user.isActive ? 'badge-success' : 'badge-warning'">
+                        {{ user.isActive ? 'Active' : 'Inactive' }}
+                      </span>
+                    </td>
+                    <td>
+                      <ng-container *ngIf="user.lastLoginAtUtc; else neverLogged">
+                        <span class="login-date">
+                          {{ formatLoginTime(user) }}
+                        </span>
+                        <span class="login-duration">
+                          {{ formatLoginDuration(user, isOnline(user)) }}
+                        </span>
+                      </ng-container>
+                      <ng-template #neverLogged>
+                        <span class="login-never">Never logged in</span>
+                      </ng-template>
+                    </td>
+                    <td class="text-right">
+                      <div class="action-buttons">
+                        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-pencil" title="Edit user" aria-label="Edit user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); startEdit(user)"></button>
+                        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" [icon]="user.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'" [title]="user.isActive ? 'Deactivate' : 'Activate'" [attr.aria-label]="user.isActive ? 'Deactivate user' : 'Activate user'" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); toggleUserStatus(user)"></button>
+                        <button
+                          pButton
+                          type="button"
+                          class="crm-button crm-button--ghost crm-button--sm"
+                          icon="pi pi-send"
+                          title="Resend invite"
+                          aria-label="Resend invite"
+                          [disabled]="!canManageAdmin() || !canResendInvite(user)"
+                          (click)="$event.stopPropagation(); resendInvite(user)"
+                        ></button>
+                        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-key" title="Reset password" aria-label="Reset password" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); resetPassword(user)"></button>
+                        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-trash" title="Remove user" aria-label="Remove user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); deleteUser(user)"></button>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </div>
+          </ng-container>
 
-      <ng-template #usersLoading>
-        <div class="loading-skeleton">
-          <div class="skeleton-row" *ngFor="let _ of [0, 1, 2, 3, 4]"></div>
+          <ng-template #usersLoading>
+            <div class="loading-skeleton">
+              <div class="skeleton-row" *ngFor="let _ of [0, 1, 2, 3, 4]"></div>
+            </div>
+          </ng-template>
+        </ng-container>
+
+        <div class="people-access-embed" *ngIf="activeTab() === 'roles'">
+          <app-roles-page></app-roles-page>
         </div>
-      </ng-template>
+
+        <div class="teams-panel" *ngIf="activeTab() === 'teams'">
+          <div class="teams-empty">
+            <div class="teams-icon">
+              <i class="pi pi-sitemap"></i>
+            </div>
+            <h3>Teams view</h3>
+            <p>Team structure will surface here once teams are enabled for your workspace.</p>
+          </div>
+        </div>
+
+        <div class="people-access-embed" *ngIf="activeTab() === 'audit-log'">
+          <app-audit-log-page></app-audit-log-page>
+        </div>
+      </div>
     </div>
 
   </div>

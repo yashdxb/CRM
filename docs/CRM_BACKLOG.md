@@ -996,9 +996,11 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - New leads assigned to an owner based on assignment rules.
     - SLA deadline (`slaDueAtUtc`) is set on creation.
     - First-touch task is created for the assigned owner.
-    - Logging the first touch marks SLA as met and requires an outcome + next step due date.
+    - Logging a cadence touch auto-completes the open first-touch task and marks SLA as met.
+    - Cadence touch requires outcome + next step due date.
   - Evidence:
     - UI: client/src/app/crm/features/leads/pages/lead-form.page.html
+    - Logic: server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Leads | As a Sales Rep, I want the lead record to show source, score, and routing reason so I can tailor outreach. (ClickUp: 86dzp8xdm, Status: COMPLETED) Flow: 02J
   - Acceptance criteria:
     - Lead detail displays `source`, `aiScore`, and `routingReason`.
@@ -1016,8 +1018,10 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Activity form provides outcome options and requires selection.
     - Next-step fields are required and create follow-up activity.
     - In Activity & Follow-Up, channel and outcome are editable; next-step due date is read-only before first touch and editable after a touch is logged.
+    - Logging a cadence touch auto-completes any open first-touch task for the lead to prevent duplicate work.
   - Evidence:
     - UI: client/src/app/crm/features/leads/pages/lead-form.page.html
+    - Logic: server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs
 - Leads | As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward. (ClickUp: 86dzp8xd6, Status: COMPLETED) Flow: 02M
   - Acceptance criteria:
     - Lead CQVS factors include Company Fit, Authority, Need, Timing.
@@ -1182,3 +1186,21 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
       - Weights are validated (numeric, non-negative) and persisted per tenant.
       - Changes affect Cost of Not Knowing calculations after refresh.
     - Evidence:
+  - Settings | People & Access tabs preserve context and reduce admin friction (ClickUp: 86dztkycq, Status: COMPLETED) Flow: 07M
+    - Acceptance criteria:
+      - Top People & Access tabs navigate by route (`/users`, `/roles`, `/teams`, `/audit-log`) and stay stable.
+      - Users view preserves search/filter/paging state when switching tabs and after refresh.
+      - Role Management → Security Levels supports inline actions to set default and duplicate a level.
+      - Security Levels sub-tab remains active when selected (no fallback/reset to Users).
+      - Edit Role uses a tabbed permission workspace (All Permissions, Presets, Drift, Effective Access), and All Permissions includes action tabs (Create & Manage, View & Analyze, Governance) with non-green selected checkbox styling.
+    - Evidence:
+      - `client/src/app/crm/features/settings/pages/settings.page.ts`
+      - `client/src/app/crm/features/settings/pages/roles.page.ts`
+      - `client/src/app/crm/features/settings/pages/roles.page.html`
+      - `client/src/app/crm/features/settings/pages/roles.page.scss`
+      - `client/src/app/crm/features/settings/pages/role-form.page.ts`
+      - `client/src/app/crm/features/settings/pages/role-form.page.html`
+      - `client/src/app/crm/features/settings/pages/role-form.page.scss`
+      - `client/e2e/roles-workspace-tabs.spec.ts`
+      - `client/e2e/people-access-state.spec.ts`
+      - `client/e2e/role-form-permissions-tabs.spec.ts`

@@ -167,14 +167,8 @@ export const NAV_LINKS: NavLink[] = [
       {
         label: 'People & Access',
         icon: 'pi-users',
-        path: '/app/settings/users',
-        permission: PERMISSION_KEYS.administrationView,
-        children: [
-          { label: 'Users', icon: 'pi-users', path: '/app/settings/users', permission: PERMISSION_KEYS.administrationView },
-          { label: 'Invite', icon: 'pi-user-plus', path: '/app/settings/invite', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Roles & Permissions', icon: 'pi-shield', path: '/app/settings/roles', permission: PERMISSION_KEYS.administrationView },
-          { label: 'Security Levels', icon: 'pi-lock', path: '/app/settings/security-levels', permission: PERMISSION_KEYS.administrationManage }
-        ]
+        path: '/app/settings',
+        permission: PERMISSION_KEYS.administrationView
       },
       {
         label: 'Workspace & Org',

@@ -1,12 +1,13 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TableModule } from 'primeng/table';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { SelectModule } from 'primeng/select';
+import { filter } from 'rxjs';
 
 import { ResetPasswordRequest, RoleSummary, UserListItem } from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
@@ -15,6 +16,17 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { PresenceService } from '../../../../core/realtime/presence.service';
+import { RolesPage } from './roles.page';
+import { AuditLogPage } from './audit-log.page';
+
+type UsersViewState = {
+  searchTerm: string;
+  roleFilter: string;
+  statusFilter: 'all' | 'active' | 'inactive';
+  includeInactive: boolean;
+  page: number;
+  pageSize: number;
+};
 
 @Component({
   selector: 'app-settings-page',
@@ -26,6 +38,8 @@ import { PresenceService } from '../../../../core/realtime/presence.service';
     InputTextModule,
     TableModule,
     ToggleSwitchModule,
+    RolesPage,
+    AuditLogPage,
     NgClass,
     NgFor,
     NgIf,
@@ -36,6 +50,8 @@ import { PresenceService } from '../../../../core/realtime/presence.service';
   styleUrl: './settings.page.scss'
 })
 export class SettingsPage {
+  private static readonly usersViewStateKey = 'crm.settings.users.view-state.v1';
+
   private readonly dataService = inject(UserAdminDataService);
   private readonly router = inject(Router);
   private readonly toastService = inject(AppToastService);
@@ -99,6 +115,10 @@ export class SettingsPage {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationView);
   });
+  protected readonly canViewAudit = computed(() => {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.auditView);
+  });
   protected readonly canManageLeads = computed(() => {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
@@ -129,18 +149,35 @@ export class SettingsPage {
   ];
 
   private searchDebounceId: number | null = null;
+  protected readonly activeTab = signal<'users' | 'roles' | 'teams' | 'audit-log'>('users');
 
   constructor() {
     const toast = history.state?.toast as { tone: 'success' | 'error'; message: string } | undefined;
     if (toast) {
       this.toastService.show(toast.tone, toast.message, 3000);
     }
+    this.restoreUsersViewState();
     this.loadRoles();
     this.loadUsers();
     this.presenceService.connect();
     this.presenceService.onlineUsers$.subscribe((users) => {
       this.onlineUsers.set(users);
     });
+    this.syncTabFromUrl();
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(() => this.syncTabFromUrl());
+  }
+
+  protected selectTab(tab: 'users' | 'roles' | 'teams' | 'audit-log') {
+    if (tab === 'audit-log' && !this.canViewAudit()) {
+      return;
+    }
+    const target = this.tabRoute(tab);
+    this.activeTab.set(tab);
+    if (!this.router.url.startsWith(target)) {
+      this.router.navigate([target]);
+    }
   }
 
   protected loadUsers(options: { page?: number; pageSize?: number } = {}) {
@@ -157,6 +194,7 @@ export class SettingsPage {
           this.totalUsers.set(response.total);
           this.page.set(requestedPage);
           this.pageSize.set(requestedPageSize);
+          this.persistUsersViewState();
           this.resolveCurrentUserTimeZone(response.items);
           const merged = new Set(this.onlineUsers());
           response.items
@@ -191,18 +229,22 @@ export class SettingsPage {
   protected handlePage(event: { rows?: number; page?: number }) {
     const nextPage = (event.page ?? 0) + 1;
     const nextPageSize = event.rows ?? this.pageSize();
+    this.pageSize.set(nextPageSize);
+    this.persistUsersViewState();
     this.loadUsers({ page: nextPage, pageSize: nextPageSize });
   }
 
   protected toggleIncludeInactive(nextValue: boolean) {
     this.includeInactive.set(nextValue);
     this.page.set(1);
+    this.persistUsersViewState();
     this.loadUsers({ page: 1 });
   }
 
   protected onSearchChange(term: string) {
     this.searchTerm.set(term);
     this.page.set(1);
+    this.persistUsersViewState();
     if (this.searchDebounceId) {
       window.clearTimeout(this.searchDebounceId);
     }
@@ -211,11 +253,13 @@ export class SettingsPage {
 
   protected onRoleFilterChange(value: string | null) {
     this.roleFilter.set(value ?? 'all');
+    this.persistUsersViewState();
   }
 
   protected onStatusFilterChange(value: 'all' | 'active' | 'inactive' | null) {
     this.statusFilter.set(value ?? 'all');
     this.page.set(1);
+    this.persistUsersViewState();
     this.loadUsers({ page: 1 });
   }
 
@@ -223,7 +267,9 @@ export class SettingsPage {
     this.searchTerm.set('');
     this.roleFilter.set('all');
     this.statusFilter.set('all');
+    this.includeInactive.set(false);
     this.page.set(1);
+    this.persistUsersViewState();
     this.loadUsers({ page: 1 });
   }
 
@@ -302,6 +348,85 @@ export class SettingsPage {
 
   protected isOnline(user: UserListItem): boolean {
     return this.onlineUsers().has(user.id);
+  }
+
+  private syncTabFromUrl() {
+    const url = this.router.url;
+    if (url.includes('/settings/roles')) {
+      this.activeTab.set('roles');
+      return;
+    }
+    if (url.includes('/settings/audit-log')) {
+      this.activeTab.set('audit-log');
+      return;
+    }
+    if (url.includes('/settings/teams')) {
+      this.activeTab.set('teams');
+      return;
+    }
+    this.activeTab.set('users');
+  }
+
+  private restoreUsersViewState() {
+    const raw = this.readFromSessionStorage(SettingsPage.usersViewStateKey);
+    if (!raw) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as Partial<UsersViewState>;
+      this.searchTerm.set(typeof parsed.searchTerm === 'string' ? parsed.searchTerm : '');
+      this.roleFilter.set(typeof parsed.roleFilter === 'string' && parsed.roleFilter ? parsed.roleFilter : 'all');
+      this.statusFilter.set(
+        parsed.statusFilter === 'active' || parsed.statusFilter === 'inactive' || parsed.statusFilter === 'all'
+          ? parsed.statusFilter
+          : 'all'
+      );
+      this.includeInactive.set(typeof parsed.includeInactive === 'boolean' ? parsed.includeInactive : false);
+      this.page.set(typeof parsed.page === 'number' && parsed.page > 0 ? parsed.page : 1);
+      const restoredPageSize = typeof parsed.pageSize === 'number' ? parsed.pageSize : 50;
+      this.pageSize.set(this.pageSizeOptions.includes(restoredPageSize) ? restoredPageSize : 50);
+    } catch {
+      // ignore malformed persisted state
+    }
+  }
+
+  private persistUsersViewState() {
+    const state: UsersViewState = {
+      searchTerm: this.searchTerm(),
+      roleFilter: this.roleFilter(),
+      statusFilter: this.statusFilter(),
+      includeInactive: this.includeInactive(),
+      page: this.page(),
+      pageSize: this.pageSize()
+    };
+    this.writeToSessionStorage(SettingsPage.usersViewStateKey, JSON.stringify(state));
+  }
+
+  private readFromSessionStorage(key: string): string | null {
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+      return null;
+    }
+    return window.sessionStorage.getItem(key);
+  }
+
+  private writeToSessionStorage(key: string, value: string) {
+    if (typeof window === 'undefined' || !window.sessionStorage) {
+      return;
+    }
+    window.sessionStorage.setItem(key, value);
+  }
+
+  private tabRoute(tab: 'users' | 'roles' | 'teams' | 'audit-log'): string {
+    if (tab === 'roles') {
+      return '/app/settings/roles';
+    }
+    if (tab === 'teams') {
+      return '/app/settings/teams';
+    }
+    if (tab === 'audit-log') {
+      return '/app/settings/audit-log';
+    }
+    return '/app/settings/users';
   }
 
   protected getAvatarTone(user: UserListItem): string {

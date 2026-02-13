@@ -12,8 +12,10 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
 import { KnobModule } from 'primeng/knob';
-import { NgxIntlTelInputModule } from 'ngx-intl-tel-input';
-import { CountryISO, PhoneNumberFormat, SearchCountryField } from 'ngx-intl-tel-input';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { InputMaskModule } from 'primeng/inputmask';
+import { PhoneNumberFormat, PhoneNumberUtil } from 'google-libphonenumber';
 
 import { forkJoin, map, Observable } from 'rxjs';
 
@@ -88,7 +90,9 @@ interface PhoneTypeOption {
     TagModule,
     DatePickerModule,
     TooltipModule,
-    NgxIntlTelInputModule,
+    InputGroupModule,
+    InputGroupAddonModule,
+    InputMaskModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./lead-form.page.html",
@@ -201,10 +205,11 @@ export class LeadFormPage implements OnInit {
   protected cadenceNextStepLocal: Date | null = null;
   protected cadenceSubmitting = signal(false);
   protected phoneTypeOptions: PhoneTypeOption[] = [];
-  protected phoneInput: unknown = null;
-  protected readonly searchCountryField = SearchCountryField;
-  protected readonly phoneNumberFormat = PhoneNumberFormat;
-  protected readonly preferredCountries: CountryISO[] = [];
+  protected phoneCountryOptions: Array<{ label: string; value: string; dialCode: string; flag: string; name: string }> = [];
+  protected phoneCountryIso = '';
+  protected phoneNationalNumber = '';
+  protected readonly phoneMask = signal<string>('');
+  protected readonly phonePlaceholder = signal<string>('Phone number');
   protected linkedAccountId = signal<string | null>(null);
   protected linkedContactId = signal<string | null>(null);
   protected linkedOpportunityId = signal<string | null>(null);
@@ -212,6 +217,10 @@ export class LeadFormPage implements OnInit {
   protected firstTouchedAtUtc = signal<string | null>(null);
   protected followUpHint = signal<string | null>(null);
   private readonly toastService = inject(AppToastService);
+  private readonly phoneUtil = PhoneNumberUtil.getInstance();
+  private readonly regionDisplay = typeof Intl !== 'undefined' && 'DisplayNames' in Intl
+    ? new Intl.DisplayNames(['en'], { type: 'region' })
+    : null;
 
   private readonly leadData = inject(LeadDataService);
   private readonly userAdminData = inject(UserAdminDataService);
@@ -230,6 +239,7 @@ export class LeadFormPage implements OnInit {
     this.loadOwners();
     this.loadCadenceChannels();
     this.loadPhoneTypes();
+    this.loadPhoneCountries();
     this.resolveAssignmentAccess();
     if (this.editingId && lead) {
       this.prefillFromLead(lead);
@@ -276,18 +286,15 @@ export class LeadFormPage implements OnInit {
   }
 
   protected onPhoneChange(value: string) {
-    const resolved = this.resolveInternationalPhone(value);
-    this.form.phone = resolved ?? '';
-    if (!this.form.phone?.trim()) {
-      this.phoneError.set(null);
-      return;
-    }
-    this.phoneError.set(this.isValidInternationalPhone(this.form.phone) ? null : 'Use international format (e.g., +1 415-555-0134).');
+    this.phoneNationalNumber = value;
+    this.updatePhoneFromInputs();
   }
 
-  protected onPhoneInputChange(value: unknown) {
-    this.phoneInput = value;
-    this.onPhoneChange(this.extractPhoneValue(value));
+  protected onPhoneCountryChange(value: string) {
+    this.phoneCountryIso = value;
+    this.refreshPhoneCountryMeta();
+    this.phoneNationalNumber = this.applyMaskToDigits(this.getDigitsOnly(this.phoneNationalNumber), this.phoneMask());
+    this.updatePhoneFromInputs();
   }
 
   protected leadDisplayName(): string {
@@ -483,7 +490,7 @@ export class LeadFormPage implements OnInit {
     this.serverNextEvidenceSuggestions.set(lead.nextEvidenceSuggestions ?? []);
     this.scoreBreakdown.set(lead.scoreBreakdown ?? []);
     this.riskFlags.set(lead.riskFlags ?? []);
-    this.phoneInput = lead.phone ?? null;
+    this.syncPhoneInputsFromE164(lead.phone ?? null);
     this.normalizeEvidence();
     this.updateQualificationFeedback(true);
     this.updateEpistemicSummary(true);
@@ -645,12 +652,6 @@ export class LeadFormPage implements OnInit {
           .filter((item) => item.isActive)
           .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
           .map((item) => ({ label: item.name, value: item.id, isDefault: item.isDefault }));
-        if (!this.form.phoneTypeId) {
-          const defaultOption = this.phoneTypeOptions.find((option) => option.isDefault);
-          if (defaultOption) {
-            this.form.phoneTypeId = defaultOption.value;
-          }
-        }
       },
       error: () => {
         this.phoneTypeOptions = [];
@@ -709,10 +710,13 @@ export class LeadFormPage implements OnInit {
   }
 
   private validateOverviewFields(): boolean {
+    if (this.phoneNationalNumber) {
+      this.updatePhoneFromInputs();
+    }
     const email = this.form.email?.trim() ?? '';
     const phone = this.form.phone?.trim() ?? '';
     const emailError = email ? (this.isValidEmail(email) ? null : 'Enter a valid email address.') : null;
-    const phoneError = phone ? (this.isValidInternationalPhone(phone) ? null : 'Use international format (e.g., +1 415-555-0134).') : null;
+    const phoneError = phone ? (this.isValidInternationalPhone(phone) ? null : 'Enter a valid phone number for the selected country.') : null;
     this.emailError.set(emailError);
     this.phoneError.set(phoneError);
     if (emailError) {
@@ -731,23 +735,138 @@ export class LeadFormPage implements OnInit {
   }
 
   private isValidInternationalPhone(value: string): boolean {
-    const normalized = value.replace(/[\s-]/g, '');
-    return /^\+\d{7,15}$/.test(normalized);
-  }
-
-  private extractPhoneValue(value: unknown): string {
-    if (!value) return '';
-    if (typeof value === 'string') return value;
-    if (typeof value === 'object') {
-      const anyValue = value as { e164Number?: string; internationalNumber?: string; number?: string };
-      return anyValue.e164Number || anyValue.internationalNumber || anyValue.number || '';
+    try {
+      const parsed = this.phoneUtil.parse(value);
+      return this.phoneUtil.isValidNumber(parsed);
+    } catch {
+      return false;
     }
-    return '';
   }
 
-  private resolveInternationalPhone(value: string): string | null {
-    const normalized = value?.trim();
-    return normalized ? normalized : null;
+  private updatePhoneFromInputs(): void {
+    const country = this.phoneCountryIso;
+    const rawNumber = this.phoneNationalNumber?.trim() ?? '';
+    const digitsOnly = this.getDigitsOnly(rawNumber);
+    if (!rawNumber) {
+      this.form.phone = '';
+      this.phoneError.set(null);
+      return;
+    }
+    if (!digitsOnly) {
+      this.form.phone = '';
+      this.phoneError.set(null);
+      return;
+    }
+    if (!country) {
+      this.form.phone = '';
+      this.phoneError.set('Select a country code.');
+      return;
+    }
+    try {
+      const parsed = this.phoneUtil.parse(rawNumber.replace(/_/g, ''), country);
+      const valid = this.phoneUtil.isValidNumberForRegion(parsed, country);
+      if (!valid) {
+        this.form.phone = '';
+        this.phoneError.set('Enter a valid phone number for the selected country.');
+        return;
+      }
+      this.form.phone = this.phoneUtil.format(parsed, PhoneNumberFormat.E164);
+      this.phoneError.set(null);
+    } catch {
+      this.form.phone = '';
+      this.phoneError.set('Enter a valid phone number for the selected country.');
+    }
+  }
+
+  private syncPhoneInputsFromE164(value: string | null): void {
+    if (!value) {
+      return;
+    }
+    try {
+      const parsed = this.phoneUtil.parse(value);
+      const region = this.phoneUtil.getRegionCodeForNumber(parsed) ?? '';
+      this.phoneCountryIso = region;
+      this.refreshPhoneCountryMeta();
+      const digits = String(parsed.getNationalNumber());
+      this.phoneNationalNumber = this.applyMaskToDigits(digits, this.phoneMask());
+    } catch {
+      this.phoneNationalNumber = value;
+    }
+  }
+
+  private loadPhoneCountries(): void {
+    const regions = Array.from(this.phoneUtil.getSupportedRegions() as Set<string>) as string[];
+    const display = this.regionDisplay;
+    this.phoneCountryOptions = regions
+      .map((region) => {
+        const dialCode = this.phoneUtil.getCountryCodeForRegion(region);
+        const name = display?.of(region) ?? region;
+        return {
+          label: `${name} (+${dialCode})`,
+          value: region,
+          dialCode: `+${dialCode}`,
+          flag: this.toFlagEmoji(region),
+          name
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+    this.refreshPhoneCountryMeta();
+  }
+
+  private refreshPhoneCountryMeta(): void {
+    const selected = this.phoneCountryOptions.find((option) => option.value === this.phoneCountryIso) ?? null;
+    const maskParts = this.getPhoneMaskForRegion(this.phoneCountryIso);
+    this.phoneMask.set(maskParts.mask);
+    this.phonePlaceholder.set(selected ? `${selected.flag} ${maskParts.placeholder}` : 'Phone number');
+  }
+
+  private getPhoneMaskForRegion(region: string): { mask: string; placeholder: string } {
+    if (!region) {
+      return { mask: '', placeholder: 'Phone number' };
+    }
+    try {
+      const example = this.phoneUtil.getExampleNumber(region);
+      if (!example) {
+        return { mask: '999999999999999', placeholder: 'Phone number' };
+      }
+      const national = this.phoneUtil.format(example, PhoneNumberFormat.NATIONAL);
+      const mask = national.replace(/\d/g, '9');
+      const placeholder = national;
+      return { mask, placeholder };
+    } catch {
+      return { mask: '999999999999999', placeholder: 'Phone number' };
+    }
+  }
+
+  private getDigitsOnly(value: string): string {
+    return (value ?? '').replace(/\D/g, '');
+  }
+
+  private applyMaskToDigits(digits: string, mask: string): string {
+    if (!digits || !mask) {
+      return digits ?? '';
+    }
+    let cursor = 0;
+    let out = '';
+    for (const ch of mask) {
+      if (ch === '9') {
+        if (cursor >= digits.length) {
+          break;
+        }
+        out += digits[cursor++];
+      } else {
+        out += ch;
+      }
+    }
+    return out.trim();
+  }
+
+  private toFlagEmoji(region: string): string {
+    const iso = region.toUpperCase();
+    if (!/^[A-Z]{2}$/.test(iso)) {
+      return '';
+    }
+    return String.fromCodePoint(...iso.split('').map((char) => 127397 + char.charCodeAt(0)));
   }
 
   protected getSlaStatusLabel(): string {
