@@ -12,6 +12,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
+import { DialogModule } from 'primeng/dialog';
 import { KnobModule } from 'primeng/knob';
 import { TableModule } from 'primeng/table';
 import { InputGroupModule } from 'primeng/inputgroup';
@@ -27,6 +28,8 @@ import {
   LeadAssignmentStrategy,
   LeadCadenceChannel,
   LeadCadenceTouch,
+  LeadDuplicateCheckCandidate,
+  LeadDuplicateCheckResponse,
   LeadScoreBreakdownItem,
   LeadStatus,
   LeadStatusHistoryItem
@@ -41,7 +44,7 @@ import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from 
 import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
-import { computeLeadScore, computeQualificationRawScore, LeadDataWeight } from './lead-scoring.util';
+import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreResult } from './lead-scoring.util';
 
 interface StatusOption {
   label: string;
@@ -79,6 +82,7 @@ interface PhoneTypeOption {
 }
 
 interface ScoreBreakdownRow {
+  cqvs: 'C' | 'Q' | 'V' | 'S';
   factor: string;
   weight: number;
   selectedValue: string;
@@ -87,6 +91,52 @@ interface ScoreBreakdownRow {
   score: number;
   maxScore: number;
 }
+
+interface CqvsGroupRow {
+  code: 'C' | 'Q' | 'V' | 'S';
+  title: string;
+  description: string;
+  weight: number;
+  score: number;
+  maxScore: number;
+}
+
+const CQVS_GROUP_DEFINITIONS: Array<{
+  code: 'C' | 'Q' | 'V' | 'S';
+  title: string;
+  description: string;
+  weight: number;
+  factors: string[];
+}> = [
+  {
+    code: 'C',
+    title: 'Company Fit',
+    description: 'ICP alignment and account fit.',
+    weight: 10,
+    factors: ['ICP Fit']
+  },
+  {
+    code: 'Q',
+    title: 'Qualification Readiness',
+    description: 'Budget, readiness, and buying timeline.',
+    weight: 60,
+    factors: ['Budget', 'Readiness', 'Timeline']
+  },
+  {
+    code: 'V',
+    title: 'Value / Problem Severity',
+    description: 'Business pain and urgency.',
+    weight: 20,
+    factors: ['Problem']
+  },
+  {
+    code: 'S',
+    title: 'Stakeholder Access',
+    description: 'Economic buyer engagement.',
+    weight: 10,
+    factors: ['Economic Buyer']
+  }
+];
 
 @Component({
   selector: 'app-lead-form-page',
@@ -105,6 +155,7 @@ interface ScoreBreakdownRow {
     KnobModule,
     TableModule,
     TagModule,
+    DialogModule,
     DatePickerModule,
     TooltipModule,
     InputGroupModule,
@@ -229,6 +280,9 @@ export class LeadFormPage implements OnInit {
   protected firstTouchDueAtUtc = signal<string | null>(null);
   protected firstTouchedAtUtc = signal<string | null>(null);
   protected followUpHint = signal<string | null>(null);
+  protected duplicateDialogVisible = signal(false);
+  protected duplicateCheckResult = signal<LeadDuplicateCheckResponse | null>(null);
+  protected duplicateMatches = signal<LeadDuplicateCheckCandidate[]>([]);
   private readonly toastService = inject(AppToastService);
   private readonly phoneUtil = PhoneNumberUtil.getInstance();
   private readonly regionDisplay = typeof Intl !== 'undefined' && 'DisplayNames' in Intl
@@ -245,6 +299,8 @@ export class LeadFormPage implements OnInit {
 
   private editingId: string | null = null;
   private leadDataWeights: LeadDataWeight[] = [];
+  private pendingSavePayload: SaveLeadRequest | null = null;
+  private pendingSaveIsEdit = false;
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
@@ -466,6 +522,88 @@ export class LeadFormPage implements OnInit {
 
     this.saving.set(true);
     const isEdit = !!this.editingId;
+    this.submitWithDuplicateGuard(payload, isEdit);
+  }
+
+  protected dismissDuplicateDialog(): void {
+    this.duplicateDialogVisible.set(false);
+    this.duplicateCheckResult.set(null);
+    this.duplicateMatches.set([]);
+    this.pendingSavePayload = null;
+  }
+
+  protected reviewDuplicate(candidate: LeadDuplicateCheckCandidate): void {
+    this.dismissDuplicateDialog();
+    this.router.navigate(['/app/leads', candidate.leadId, 'edit']);
+  }
+
+  protected saveDespiteWarning(): void {
+    if (!this.pendingSavePayload) {
+      this.dismissDuplicateDialog();
+      return;
+    }
+
+    const payload = this.pendingSavePayload;
+    const isEdit = this.pendingSaveIsEdit;
+    this.dismissDuplicateDialog();
+    this.performSave(payload, isEdit);
+  }
+
+  protected duplicateIsBlocked(): boolean {
+    return this.duplicateCheckResult()?.isBlocked ?? false;
+  }
+
+  protected duplicateDialogTitle(): string {
+    return this.duplicateIsBlocked() ? 'Duplicate Lead Blocked' : 'Possible Duplicate Leads';
+  }
+
+  protected duplicateDialogMessage(): string {
+    if (this.duplicateIsBlocked()) {
+      return 'An exact duplicate exists. Open the existing lead and continue there.';
+    }
+    return 'Similar leads were found. Review and decide whether to save anyway.';
+  }
+
+  private submitWithDuplicateGuard(payload: SaveLeadRequest, isEdit: boolean): void {
+    this.leadData.checkDuplicates({
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      email: payload.email,
+      phone: payload.phone,
+      companyName: payload.companyName,
+      excludeLeadId: isEdit ? this.editingId ?? undefined : undefined
+    }).subscribe({
+      next: (result) => {
+        if (result.isBlocked) {
+          this.pendingSavePayload = payload;
+          this.pendingSaveIsEdit = isEdit;
+          this.duplicateCheckResult.set(result);
+          this.duplicateMatches.set(result.matches ?? []);
+          this.duplicateDialogVisible.set(true);
+          this.raiseToast('error', 'Exact duplicate detected. Open the existing lead instead of creating another.');
+          return;
+        }
+
+        if (result.hasWarnings) {
+          this.pendingSavePayload = payload;
+          this.pendingSaveIsEdit = isEdit;
+          this.duplicateCheckResult.set(result);
+          this.duplicateMatches.set(result.matches ?? []);
+          this.duplicateDialogVisible.set(true);
+          return;
+        }
+
+        this.performSave(payload, isEdit);
+      },
+      error: () => {
+        // Duplicate-check should not block saves if the helper endpoint is temporarily unavailable.
+        this.performSave(payload, isEdit);
+      }
+    });
+  }
+
+  private performSave(payload: SaveLeadRequest, isEdit: boolean): void {
+    this.saving.set(true);
     const request$: Observable<Lead | null> = isEdit
       ? this.leadData.update(this.editingId!, payload).pipe(map(() => null))
       : this.leadData.create(payload);
@@ -577,7 +715,8 @@ export class LeadFormPage implements OnInit {
     this.serverWeakestSignal.set(lead.weakestSignal ?? null);
     this.serverWeakestState.set(lead.weakestState ?? null);
     this.serverNextEvidenceSuggestions.set(lead.nextEvidenceSuggestions ?? []);
-    this.scoreBreakdown.set(lead.scoreBreakdown ?? this.buildScoreBreakdown());
+    const breakdown = lead.scoreBreakdown && lead.scoreBreakdown.length ? lead.scoreBreakdown : this.buildScoreBreakdown();
+    this.scoreBreakdown.set(breakdown);
     this.riskFlags.set(lead.riskFlags ?? []);
     this.syncPhoneInputsFromE164(lead.phone ?? null);
     this.normalizeEvidence();
@@ -1084,6 +1223,10 @@ export class LeadFormPage implements OnInit {
     return computeQualificationRawScore(this.form);
   }
 
+  private scoreSnapshot(): LeadScoreResult {
+    return computeLeadScore(this.form, this.leadDataWeights);
+  }
+
   private getBudgetScore(value?: string | null): number {
     switch (value?.toLowerCase()) {
       case 'budget allocated and approved':
@@ -1270,16 +1413,16 @@ export class LeadFormPage implements OnInit {
   protected qualificationStatusLabel(): string {
     const factorCount = this.countQualificationFactors();
     if (factorCount === 0) return 'Not started';
-    const qualificationScore = computeLeadScore(this.form, this.leadDataWeights).qualificationScore100;
+    const qualificationScore = this.scoreSnapshot().qualificationScore100;
     return `${qualificationScore} / 100`;
   }
 
   protected leadDataQualityScore(): number {
-    return computeLeadScore(this.form, this.leadDataWeights).buyerDataQualityScore100;
+    return this.scoreSnapshot().buyerDataQualityScore100;
   }
 
   protected overallScorePrimaryLabel(): string {
-    const score = computeLeadScore(this.form, this.leadDataWeights);
+    const score = this.scoreSnapshot();
     return `Overall score ${score.finalLeadScore} / 100`;
   }
 
@@ -1288,22 +1431,22 @@ export class LeadFormPage implements OnInit {
     if (factorCount === 0) {
       return 'Qualification Not started';
     }
-    return `Qualification ${computeLeadScore(this.form, this.leadDataWeights).qualificationScore100} / 100`;
+    return `Qualification ${this.scoreSnapshot().qualificationScore100} / 100`;
   }
 
   protected qualificationStatusHint(): string {
     const factorCount = this.countQualificationFactors();
     if (factorCount === 0) return 'No qualification factors selected yet.';
-    const qualificationScore = computeLeadScore(this.form, this.leadDataWeights).qualificationScore100;
+    const qualificationScore = this.scoreSnapshot().qualificationScore100;
     const coverage = this.truthCoveragePercent();
     return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/6 factors and ${coverage}% evidence coverage.`;
   }
 
   protected scoreKnobValueColor(): string {
-    const score = this.form.score ?? 0;
-    if (score >= 75) return '#0ea5a4';
-    if (score >= 50) return '#0284c7';
-    if (score >= 30) return '#d97706';
+    const confidence = this.qualificationConfidencePercent();
+    if (confidence >= 75) return '#0ea5a4';
+    if (confidence >= 50) return '#0284c7';
+    if (confidence >= 30) return '#d97706';
     return '#dc2626';
   }
 
@@ -1317,6 +1460,7 @@ export class LeadFormPage implements OnInit {
     const scoreByFactor = new Map(this.scoreBreakdown().map((item) => [item.factor, item] as const));
     return [
       {
+        cqvs: 'Q',
         factor: 'Budget',
         weight: 25,
         selectedValue: this.form.budgetAvailability ?? 'Unknown / not yet discussed',
@@ -1326,6 +1470,7 @@ export class LeadFormPage implements OnInit {
         maxScore: scoreByFactor.get('Budget')?.maxScore ?? 25
       },
       {
+        cqvs: 'Q',
         factor: 'Readiness',
         weight: 20,
         selectedValue: this.form.readinessToSpend ?? 'Unknown / unclear',
@@ -1335,6 +1480,7 @@ export class LeadFormPage implements OnInit {
         maxScore: scoreByFactor.get('Readiness')?.maxScore ?? 20
       },
       {
+        cqvs: 'Q',
         factor: 'Timeline',
         weight: 15,
         selectedValue: this.form.buyingTimeline ?? 'Unknown / not discussed',
@@ -1344,6 +1490,7 @@ export class LeadFormPage implements OnInit {
         maxScore: scoreByFactor.get('Timeline')?.maxScore ?? 15
       },
       {
+        cqvs: 'V',
         factor: 'Problem',
         weight: 20,
         selectedValue: this.form.problemSeverity ?? 'Unknown / not validated',
@@ -1353,6 +1500,7 @@ export class LeadFormPage implements OnInit {
         maxScore: scoreByFactor.get('Problem')?.maxScore ?? 20
       },
       {
+        cqvs: 'S',
         factor: 'Economic Buyer',
         weight: 10,
         selectedValue: this.form.economicBuyer ?? 'Unknown / not identified',
@@ -1362,6 +1510,7 @@ export class LeadFormPage implements OnInit {
         maxScore: scoreByFactor.get('Economic Buyer')?.maxScore ?? 10
       },
       {
+        cqvs: 'C',
         factor: 'ICP Fit',
         weight: 10,
         selectedValue: this.form.icpFit ?? 'Unknown / not assessed',
@@ -1373,12 +1522,50 @@ export class LeadFormPage implements OnInit {
     ];
   }
 
+  protected cqvsGroupRows(): CqvsGroupRow[] {
+    const factorRows = this.scoreBreakdownRows();
+    const byFactor = new Map(factorRows.map((row) => [row.factor, row] as const));
+    return CQVS_GROUP_DEFINITIONS.map((group) => {
+      const groupRows = group.factors
+        .map((factor) => byFactor.get(factor))
+        .filter((row): row is ScoreBreakdownRow => !!row);
+      const score = groupRows.reduce((sum, row) => sum + row.score, 0);
+      const maxScore = groupRows.reduce((sum, row) => sum + row.maxScore, 0);
+      return {
+        code: group.code,
+        title: group.title,
+        description: group.description,
+        weight: group.weight,
+        score,
+        maxScore
+      };
+    });
+  }
+
+  protected cqvsGroupPercent(group: CqvsGroupRow): number {
+    if (!group.maxScore) return 0;
+    return Math.max(0, Math.min(100, Math.round((group.score / group.maxScore) * 100)));
+  }
+
+  protected scoreFormulaHint(): string {
+    const snapshot = this.scoreSnapshot();
+    return `Overall ${snapshot.finalLeadScore}/100 = Lead data quality ${snapshot.buyerDataQualityScore100}/100 x 30% (${snapshot.leadContributionScore100}) + Qualification ${snapshot.qualificationScore100}/100 x 70% (${snapshot.qualificationContributionScore100}).`;
+  }
+
   protected qualificationContributionTotal(): number {
-    return computeLeadScore(this.form, this.leadDataWeights).qualificationScore100;
+    return this.scoreSnapshot().qualificationScore100;
   }
 
   protected leadDataQualityTotal(): number {
-    return computeLeadScore(this.form, this.leadDataWeights).buyerDataQualityScore100;
+    return this.scoreSnapshot().buyerDataQualityScore100;
+  }
+
+  protected leadDataQualityWeightedContribution(): number {
+    return this.scoreSnapshot().leadContributionScore100;
+  }
+
+  protected qualificationWeightedContribution(): number {
+    return this.scoreSnapshot().qualificationContributionScore100;
   }
 
   protected scoreContributionPercent(row: ScoreBreakdownRow): number {

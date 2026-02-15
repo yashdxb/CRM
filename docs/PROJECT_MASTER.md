@@ -570,6 +570,11 @@ These workflows define how non‑rep roles operate in the same CRM, with clear o
 - API checks: endpoint behavior, payloads, validation
 - UI checks: page rendering, filters, navigation
 
+### Mandatory Execution Rule
+- After every code modification or implementation, Playwright UI execution is required before task closure.
+- Minimum required run: `client/e2e/smoke.spec.ts`.
+- Targeted Playwright spec(s) for the modified module must also run when present.
+
 ### Current Coverage
 - E2E:
   - `client/e2e/lead-lifecycle.spec.ts`

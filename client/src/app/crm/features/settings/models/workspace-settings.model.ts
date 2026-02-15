@@ -44,6 +44,7 @@ export interface QualificationPolicy {
   blockBelow: number;
   allowOverrides: boolean;
   requireOverrideReason: boolean;
+  showCqvsInLeadList: boolean;
   thresholdRules: QualificationThresholdRule[];
   modifiers: QualificationModifierRule[];
   exposureWeights: QualificationExposureWeight[];

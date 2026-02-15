@@ -219,6 +219,7 @@ export class QualificationThresholdsPage {
       blockBelow: 25,
       allowOverrides: true,
       requireOverrideReason: true,
+      showCqvsInLeadList: false,
       thresholdRules: [],
       modifiers: [
         { key: 'competitive', delta: 10 },

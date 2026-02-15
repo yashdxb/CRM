@@ -236,7 +236,11 @@
       <ng-container *ngIf="!loading(); else loadingState">
         <ng-container *ngIf="leads().length; else emptyState">
           <div class="table-container">
-            <p-table class="leads-table" [value]="leads()">
+            <p-table
+              class="leads-table"
+              [ngClass]="{ 'leads-table--compact': showCqvsInLeadList() }"
+              [value]="leads()"
+            >
               <ng-template pTemplate="header">
                 <tr>
                   <th class="th-checkbox">
@@ -369,6 +373,18 @@
                   <td class="td-actions">
                     <div class="row-actions">
                       <button pButton type="button" class="action-btn" icon="pi pi-pencil" [disabled]="!canManage()" (click)="onEdit(lead)" title="Edit"></button>
+                      <button
+                        *ngIf="showCqvsInLeadList()"
+                        pButton
+                        type="button"
+                        class="action-btn coach"
+                        icon="pi pi-compass"
+                        [disabled]="!canManage()"
+                        (click)="$event.stopPropagation(); openCoach(lead)"
+                        title="Coach"
+                        data-testid="lead-coach-open"
+                        [attr.data-lead-id]="lead.id"
+                      ></button>
                       <button pButton type="button" class="action-btn info" icon="pi pi-calendar-plus" [disabled]="!canManage()" (click)="onLogActivity(lead)" title="Log activity"></button>
                       <button pButton type="button" class="action-btn success" icon="pi pi-bolt" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="onConvert(lead)" title="Convert"></button>
                       <button pButton type="button" class="action-btn danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="onDelete(lead)" title="Delete"></button>
@@ -549,3 +565,115 @@
     </div>
   </div>
 </p-dialog>
+
+<p-drawer
+  [visible]="coachVisible()"
+  (visibleChange)="coachVisible.set($event)"
+  position="right"
+  [modal]="true"
+  [dismissible]="true"
+  styleClass="lead-coach-drawer"
+  (onHide)="onCoachHide()"
+>
+  <ng-template pTemplate="header">
+    <div class="coach-title" data-testid="lead-coach-title">
+      <div class="coach-title__top">
+        <div class="coach-title__badge">
+          <i class="pi pi-compass"></i>
+        </div>
+        <div class="coach-title__meta">
+          <span class="coach-title__label">Lead Coach</span>
+          <span class="coach-title__name" *ngIf="coachLead() as lead">{{ lead.name }}</span>
+        </div>
+      </div>
+      <div class="coach-title__chips" *ngIf="coachLead() as lead">
+        <span class="coach-chip" [attr.data-status]="lead.status">{{ lead.status }}</span>
+        <span class="coach-chip coach-chip--muted" *ngIf="lead.company">{{ lead.company }}</span>
+      </div>
+    </div>
+  </ng-template>
+
+  <div class="coach-body" data-testid="lead-coach-drawer" *ngIf="coachLead() as lead">
+    <section class="coach-kpis">
+      <div class="coach-kpi">
+        <span class="kpi-label">Overall</span>
+        <strong class="kpi-value">{{ displayScore(lead) }}</strong>
+        <span class="kpi-sub">/ 100</span>
+      </div>
+      <div class="coach-kpi" pTooltip="{{ qualificationScoreHint(lead) }}" tooltipPosition="top">
+        <span class="kpi-label">Qualification</span>
+        <strong class="kpi-value">{{ qualificationScore100(lead) }}</strong>
+        <span class="kpi-sub">/ 100</span>
+      </div>
+      <div class="coach-kpi" *ngIf="evidenceCoveragePercent(lead) !== null">
+        <span class="kpi-label">Evidence</span>
+        <strong class="kpi-value">{{ evidenceCoveragePercent(lead) }}</strong>
+        <span class="kpi-sub">%</span>
+      </div>
+    </section>
+
+    <section class="coach-block">
+      <h3 class="coach-block__title">CQVS Summary</h3>
+      <div class="cqvs-grid">
+        <article
+          class="cqvs-card"
+          *ngFor="let g of cqvsGroupMetrics(lead)"
+          [attr.data-testid]="'cqvs-group-' + g.code"
+          [attr.data-cqvs]="g.code"
+        >
+          <div class="cqvs-card__head">
+            <span class="cqvs-code">{{ g.code }}</span>
+            <span class="cqvs-title">{{ g.title }}</span>
+            <span class="cqvs-score">{{ g.score }}/{{ g.maxScore }}</span>
+          </div>
+          <div class="cqvs-bar" aria-hidden="true">
+            <span class="cqvs-bar__fill" [style.width.%]="g.percent"></span>
+          </div>
+        </article>
+      </div>
+      <p class="coach-hint" *ngIf="!lead.scoreBreakdown?.length">
+        No score breakdown available yet for this lead.
+      </p>
+    </section>
+
+    <section class="coach-block">
+      <h3 class="coach-block__title">Weakest Factor</h3>
+      <div class="weakest-row" pTooltip="{{ cqvsWeakestTooltip(lead) }}" tooltipPosition="top">
+        <span class="cqvs-pill" *ngIf="cqvsWeakestCode(lead) as code">{{ code }}</span>
+        <div class="weakest-row__text">
+          <div class="weakest-row__top">
+            <strong>{{ lead.weakestSignal || 'Unknown' }}</strong>
+            <span class="state-pill" *ngIf="lead.weakestState">{{ lead.weakestState }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="coach-block" *ngIf="lead.nextEvidenceSuggestions?.length">
+      <h3 class="coach-block__title">Next Evidence</h3>
+      <ul class="coach-list">
+        <li *ngFor="let item of lead.nextEvidenceSuggestions">{{ item }}</li>
+      </ul>
+    </section>
+
+    <section class="coach-block" *ngIf="lead.riskFlags?.length">
+      <h3 class="coach-block__title">Risk Flags</h3>
+      <ul class="coach-list coach-list--flags">
+        <li *ngFor="let item of lead.riskFlags">{{ item }}</li>
+      </ul>
+    </section>
+
+    <footer class="coach-footer" data-testid="lead-coach-footer">
+      <div class="coach-actions">
+        <button pButton type="button" class="btn btn-secondary" (click)="onEdit(lead)">
+          <i class="pi pi-pencil"></i>
+          <span>Edit lead</span>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" (click)="onLogActivity(lead)">
+          <i class="pi pi-calendar-plus"></i>
+          <span>Log activity</span>
+        </button>
+      </div>
+    </footer>
+  </div>
+</p-drawer>

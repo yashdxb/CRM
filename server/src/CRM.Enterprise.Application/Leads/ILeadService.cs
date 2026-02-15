@@ -1,5 +1,7 @@
 namespace CRM.Enterprise.Application.Leads;
 
+using CRM.Enterprise.Application.Qualifications;
+
 public interface ILeadService
 {
     Task<LeadSearchResultDto> SearchAsync(LeadSearchRequest request, CancellationToken cancellationToken = default);
@@ -16,6 +18,8 @@ public interface ILeadService
     Task<LeadOperationResult<int>> BulkAssignOwnerAsync(IReadOnlyCollection<Guid> ids, Guid ownerId, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<int>> BulkUpdateStatusAsync(IReadOnlyCollection<Guid> ids, string status, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<string>> GetEvidenceSourcesAsync(CancellationToken cancellationToken = default);
+    Task<QualificationPolicy> GetQualificationPolicyAsync(CancellationToken cancellationToken = default);
+    Task<LeadDuplicateCheckResultDto> CheckDuplicatesAsync(LeadDuplicateCheckRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeadCadenceTouchDto>?> GetCadenceTouchesAsync(Guid id, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<LeadCadenceTouchDto>> LogCadenceTouchAsync(Guid id, LeadCadenceTouchRequest request, LeadActor actor, CancellationToken cancellationToken = default);
 }

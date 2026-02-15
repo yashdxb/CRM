@@ -30,15 +30,29 @@ public class EmailQueueWorker : BackgroundService
     {
         if (_processor is null)
         {
+            _logger.LogInformation("EmailQueueWorker disabled: Service Bus client is not configured.");
             return;
         }
 
         _processor.ProcessMessageAsync += HandleMessageAsync;
         _processor.ProcessErrorAsync += HandleErrorAsync;
 
-        await _processor.StartProcessingAsync(stoppingToken);
+        try
+        {
+            await _processor.StartProcessingAsync(stoppingToken);
 
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+            // Keep the worker alive until shutdown. Task.Delay throws on cancellation; swallow that on stop.
+            await Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            // Expected during shutdown.
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "EmailQueueWorker crashed.");
+            throw;
+        }
     }
 
     private async Task HandleMessageAsync(ProcessMessageEventArgs args)

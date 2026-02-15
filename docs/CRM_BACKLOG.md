@@ -938,12 +938,15 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
         - UI tests verify score/risk/actions rendering and threshold alerts.
         - Feature flags/rollout controls and calibration checks are in place.
   - Evidence:
-- Leads | As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors. (ClickUp: 86dzp8y10, Status: COMPLETED) Flow: 02A
+- Leads | As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors. (ClickUp: 86dzp8y10, Status: IN PROGRESS) Flow: 02A
   - Acceptance criteria:
     - CQVS breakdown lists the four labeled factors (C/Q/V/S) with clear titles.
     - Each factor shows a score and weight/impact.
     - Total confidence/score equals the weighted sum of the factors.
   - Evidence:
+    - Current implementation shows qualification factor rows with per-factor score and weight in Lead Detail > Qualification.
+    - Current implementation shows weakest signal and coaching suggestions.
+    - Gap: explicit C/Q/V/S labeled groups are not implemented yet; current labels are Budget, Readiness, Timeline, Problem, Economic Buyer, ICP Fit.
 - Leads | As a Sales Rep, AI suggests next evidence to resolve weakest signal (ClickUp: 86dzp8xz6, Status: COMPLETED) Flow: 02B
   - Acceptance criteria:
     - Qualification status shows a "Suggested next evidence" list tied to the weakest factor.

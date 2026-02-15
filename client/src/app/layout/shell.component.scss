@@ -122,8 +122,8 @@
 }
 
 :host ::ng-deep .global-loading-spinner.p-progressspinner {
-  color: #22d3ee;
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.55));
+  color: rgb(255, 0, 0);
+  filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.55));
   animation: spinner-rainbow 2.4s linear infinite;
 }
 
@@ -142,18 +142,19 @@
 
 @keyframes spinner-rainbow {
   0% {
-    color: #22d3ee;
+    color: rgb(255, 0, 0);
+    filter: drop-shadow(0 0 9px rgba(255, 0, 0, 0.6));
   }
-  25% {
-    color: #3b82f6;
+  33% {
+    color: rgb(0, 255, 0);
+    filter: drop-shadow(0 0 9px rgba(0, 255, 0, 0.6));
   }
-  50% {
-    color: #8b5cf6;
-  }
-  75% {
-    color: #f97316;
+  66% {
+    color: rgb(0, 102, 255);
+    filter: drop-shadow(0 0 9px rgba(0, 102, 255, 0.6));
   }
   100% {
-    color: #22d3ee;
+    color: rgb(255, 0, 0);
+    filter: drop-shadow(0 0 9px rgba(255, 0, 0, 0.6));
   }
 }

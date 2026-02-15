@@ -11,6 +11,7 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { Router, RouterLink } from '@angular/router';
 import { DialogModule } from 'primeng/dialog';
 import { TooltipModule } from 'primeng/tooltip';
+import { DrawerModule } from 'primeng/drawer';
 import { forkJoin, of, Subscription, timer } from 'rxjs';
 import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 
@@ -25,7 +26,6 @@ import { readTokenContext, tokenHasPermission } from '../../../../core/auth/toke
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { computeLeadScore, LeadDataWeight, LeadScoreInputs, LeadScoreResult } from './lead-scoring.util';
-import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 
 interface StatusOption {
   label: string;
@@ -33,6 +33,21 @@ interface StatusOption {
   icon: string;
 }
 
+type CqvsCode = 'C' | 'Q' | 'V' | 'S';
+
+const CQVS_TITLES: Record<CqvsCode, string> = {
+  C: 'Company Fit',
+  Q: 'Qualification Readiness',
+  V: 'Value / Problem Severity',
+  S: 'Stakeholder Access'
+};
+
+const CQVS_FACTOR_GROUPS: Array<{ code: CqvsCode; title: string; factorMatchers: string[] }> = [
+  { code: 'C', title: CQVS_TITLES.C, factorMatchers: ['icp'] },
+  { code: 'Q', title: CQVS_TITLES.Q, factorMatchers: ['budget', 'readiness', 'timeline'] },
+  { code: 'V', title: CQVS_TITLES.V, factorMatchers: ['problem'] },
+  { code: 'S', title: CQVS_TITLES.S, factorMatchers: ['economic buyer'] }
+];
 
 @Component({
   selector: 'app-leads-page',
@@ -52,6 +67,7 @@ interface StatusOption {
     DecimalPipe,
     DialogModule,
     TooltipModule,
+    DrawerModule,
     BreadcrumbsComponent,
     BulkActionsBarComponent,
     RouterLink
@@ -80,6 +96,9 @@ export class LeadsPage {
   protected readonly total = signal(0);
   protected readonly loading = signal(true);
   private readonly leadDataWeights = signal<LeadDataWeight[]>([]);
+  protected readonly showCqvsInLeadList = signal(false);
+  protected readonly coachVisible = signal(false);
+  protected readonly coachLead = signal<Lead | null>(null);
   protected readonly metrics = computed(() => {
     const rows = this.leads();
     const newLeads = rows.filter((l) => l.status === 'New').length;
@@ -165,8 +184,7 @@ export class LeadsPage {
     private readonly leadData: LeadDataService,
     private readonly router: Router,
     private readonly userAdminData: UserAdminDataService,
-    private readonly importJobs: ImportJobService,
-    private readonly workspaceSettings: WorkspaceSettingsService
+    private readonly importJobs: ImportJobService
   ) {
     this.resolveOwnerAssignmentAccess();
     this.loadOwners();
@@ -625,6 +643,111 @@ export class LeadsPage {
     return `Overall ${score.finalLeadScore}/100 = Lead data quality ${score.buyerDataQualityScore100}/100 + Qualification ${score.qualificationScore100}/100 (weighted 30/70).`;
   }
 
+  protected qualificationScoreHint(lead: Lead): string {
+    const score = this.computeOverallScore(lead);
+    const coverage = typeof lead.truthCoverage === 'number' ? Math.round(lead.truthCoverage * 100) : null;
+    const confidencePct = typeof lead.qualificationConfidence === 'number' ? Math.round(lead.qualificationConfidence * 100) : null;
+    const pieces: string[] = [`Qualification ${score.qualificationScore100}/100`];
+    if (confidencePct !== null) {
+      pieces.push(`confidence ${confidencePct}%`);
+    }
+    if (lead.qualificationConfidenceLabel) {
+      pieces.push(lead.qualificationConfidenceLabel);
+    }
+    if (coverage !== null) {
+      pieces.push(`evidence ${coverage}%`);
+    }
+    if (typeof lead.assumptionsOutstanding === 'number') {
+      pieces.push(`${lead.assumptionsOutstanding} assumptions`);
+    }
+    return pieces.join(' • ');
+  }
+
+  protected qualificationScore100(lead: Lead): number {
+    return this.computeOverallScore(lead).qualificationScore100;
+  }
+
+  protected evidenceCoveragePercent(lead: Lead): number | null {
+    if (typeof lead.truthCoverage !== 'number' || !Number.isFinite(lead.truthCoverage)) return null;
+    return Math.round(lead.truthCoverage * 100);
+  }
+
+  protected cqvsWeakestCode(lead: Lead): CqvsCode | null {
+    const label = (lead.weakestSignal ?? '').trim().toLowerCase();
+    if (!label) return null;
+
+    if (label.includes('budget')) return 'Q';
+    if (label.includes('readiness')) return 'Q';
+    if (label.includes('timeline')) return 'Q';
+    if (label.includes('problem')) return 'V';
+    if (label.includes('economic buyer')) return 'S';
+    if (label.includes('icp')) return 'C';
+
+    return null;
+  }
+
+  protected cqvsWeakestTooltip(lead: Lead): string {
+    const signal = lead.weakestSignal?.trim();
+    const state = lead.weakestState?.trim();
+    const code = this.cqvsWeakestCode(lead);
+    const group = code ? `${code} (${CQVS_TITLES[code]})` : 'Unknown';
+
+    if (!signal && !state) return `Weakest factor: Unknown. CQVS group: ${group}.`;
+    if (signal && state) return `Weakest factor: ${signal} (${state}). CQVS group: ${group}.`;
+    return `Weakest factor: ${signal ?? 'Unknown'}${state ? ` (${state})` : ''}. CQVS group: ${group}.`;
+  }
+
+  protected openCoach(lead: Lead): void {
+    this.coachLead.set(lead);
+    this.coachVisible.set(true);
+  }
+
+  protected onCoachHide(): void {
+    this.coachVisible.set(false);
+    this.coachLead.set(null);
+  }
+
+  protected cqvsGroupMetrics(lead: Lead): Array<{ code: CqvsCode; title: string; score: number; maxScore: number; percent: number }> {
+    const breakdown = lead.scoreBreakdown ?? [];
+    const grouped = new Map<CqvsCode, { score: number; maxScore: number }>();
+    for (const group of CQVS_FACTOR_GROUPS) {
+      grouped.set(group.code, { score: 0, maxScore: 0 });
+    }
+
+    for (const item of breakdown) {
+      const code = this.cqvsCodeForFactor(item.factor);
+      if (!code) continue;
+      const bucket = grouped.get(code);
+      if (!bucket) continue;
+      bucket.score += item.score ?? 0;
+      bucket.maxScore += item.maxScore ?? 0;
+    }
+
+    return CQVS_FACTOR_GROUPS.map((group) => {
+      const bucket = grouped.get(group.code) ?? { score: 0, maxScore: 0 };
+      const percent = bucket.maxScore > 0 ? Math.round((bucket.score / bucket.maxScore) * 100) : 0;
+      return {
+        code: group.code,
+        title: group.title,
+        score: bucket.score,
+        maxScore: bucket.maxScore,
+        percent
+      };
+    });
+  }
+
+  protected cqvsCodeForFactor(factor: string): CqvsCode | null {
+    const normalized = (factor ?? '').trim().toLowerCase();
+    if (!normalized) return null;
+
+    for (const group of CQVS_FACTOR_GROUPS) {
+      if (group.factorMatchers.some((m) => normalized.includes(m))) {
+        return group.code;
+      }
+    }
+    return null;
+  }
+
   protected qualificationStatusHint(lead: Lead): string {
     const factorCount = this.countQualificationFactors(lead);
     if (factorCount === 0) return 'No qualification factors selected yet.';
@@ -654,12 +777,15 @@ export class LeadsPage {
   }
 
   private loadLeadDataWeights(): void {
-    this.workspaceSettings.getSettings().subscribe({
-      next: (settings) => {
-        this.leadDataWeights.set(settings.qualificationPolicy?.leadDataWeights ?? []);
+    this.leadData.getQualificationPolicy().subscribe({
+      next: (policy) => {
+        this.leadDataWeights.set(policy?.leadDataWeights ?? []);
+        this.showCqvsInLeadList.set(!!policy?.showCqvsInLeadList);
       },
       error: () => {
+        // Default weights live in `computeLeadScore` fallback; this endpoint is for configurability.
         this.leadDataWeights.set([]);
+        this.showCqvsInLeadList.set(false);
       }
     });
   }

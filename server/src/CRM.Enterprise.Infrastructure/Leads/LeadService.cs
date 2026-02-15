@@ -340,6 +340,141 @@ public sealed class LeadService : ILeadService
         return configured;
     }
 
+    public async Task<QualificationPolicy> GetQualificationPolicyAsync(CancellationToken cancellationToken = default)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+
+        return ResolveQualificationPolicy(tenant);
+    }
+
+    public async Task<LeadDuplicateCheckResultDto> CheckDuplicatesAsync(LeadDuplicateCheckRequest request, CancellationToken cancellationToken = default)
+    {
+        var normalizedFirst = Normalize(request.FirstName)?.ToLowerInvariant();
+        var normalizedLast = Normalize(request.LastName)?.ToLowerInvariant();
+        var normalizedCompany = Normalize(request.CompanyName)?.ToLowerInvariant();
+        var normalizedEmail = NormalizeEmailForMatch(request.Email);
+        var normalizedPhone = NormalizePhoneForMatch(request.Phone);
+
+        if (string.IsNullOrWhiteSpace(normalizedFirst)
+            && string.IsNullOrWhiteSpace(normalizedLast)
+            && string.IsNullOrWhiteSpace(normalizedCompany)
+            && string.IsNullOrWhiteSpace(normalizedEmail)
+            && string.IsNullOrWhiteSpace(normalizedPhone))
+        {
+            return new LeadDuplicateCheckResultDto("allow", false, false, []);
+        }
+
+        var query = _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted);
+
+        if (request.ExcludeLeadId.HasValue)
+        {
+            query = query.Where(l => l.Id != request.ExcludeLeadId.Value);
+        }
+
+        var candidates = await query
+            .OrderByDescending(l => l.CreatedAtUtc)
+            .Select(l => new
+            {
+                l.Id,
+                l.FirstName,
+                l.LastName,
+                l.CompanyName,
+                l.Email,
+                l.Phone,
+                l.Score
+            })
+            .Take(350)
+            .ToListAsync(cancellationToken);
+
+        var matches = new List<LeadDuplicateCandidateDto>();
+        foreach (var lead in candidates)
+        {
+            var leadFirst = Normalize(lead.FirstName)?.ToLowerInvariant();
+            var leadLast = Normalize(lead.LastName)?.ToLowerInvariant();
+            var leadCompany = Normalize(lead.CompanyName)?.ToLowerInvariant();
+            var leadEmail = NormalizeEmailForMatch(lead.Email);
+            var leadPhone = NormalizePhoneForMatch(lead.Phone);
+
+            var matchedSignals = new List<string>();
+            var score = 0;
+
+            if (!string.IsNullOrWhiteSpace(normalizedEmail) && normalizedEmail == leadEmail)
+            {
+                matchedSignals.Add("email exact");
+                score += 100;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedPhone) && normalizedPhone == leadPhone)
+            {
+                matchedSignals.Add("phone exact");
+                score += 85;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedFirst) && !string.IsNullOrWhiteSpace(normalizedLast)
+                && normalizedFirst == leadFirst && normalizedLast == leadLast)
+            {
+                matchedSignals.Add("name exact");
+                score += 45;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedCompany) && normalizedCompany == leadCompany)
+            {
+                matchedSignals.Add("company exact");
+                score += 35;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedEmail) && !string.IsNullOrWhiteSpace(leadEmail)
+                && TryGetEmailDomain(normalizedEmail) is { } inputDomain
+                && TryGetEmailDomain(leadEmail) is { } leadDomain
+                && inputDomain == leadDomain)
+            {
+                matchedSignals.Add("email domain");
+                score += 20;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedLast) && normalizedLast == leadLast)
+            {
+                matchedSignals.Add("last name");
+                score += 10;
+            }
+
+            if (score < 60)
+            {
+                continue;
+            }
+
+            var level = score >= 85 ? "block" : "warning";
+            var fullName = $"{lead.FirstName} {lead.LastName}".Trim();
+            matches.Add(new LeadDuplicateCandidateDto(
+                lead.Id,
+                string.IsNullOrWhiteSpace(fullName) ? "(No name)" : fullName,
+                lead.CompanyName ?? string.Empty,
+                lead.Email,
+                lead.Phone,
+                lead.Score,
+                score,
+                level,
+                matchedSignals));
+        }
+
+        var ordered = matches
+            .OrderByDescending(m => m.MatchScore)
+            .ThenByDescending(m => m.LeadScore)
+            .Take(8)
+            .ToList();
+
+        var hasBlock = ordered.Any(m => string.Equals(m.MatchLevel, "block", StringComparison.OrdinalIgnoreCase));
+        var hasWarnings = !hasBlock && ordered.Any();
+        var decision = hasBlock ? "block" : hasWarnings ? "warning" : "allow";
+
+        return new LeadDuplicateCheckResultDto(decision, hasBlock, hasWarnings, ordered);
+    }
+
     public async Task<IReadOnlyList<LeadAuditEventDto>?> GetAuditAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var exists = await _dbContext.Leads
@@ -2795,8 +2930,8 @@ public sealed class LeadService : ILeadService
     {
         var firstName = Normalize(request.FirstName)?.ToLowerInvariant();
         var lastName = Normalize(request.LastName)?.ToLowerInvariant();
-        var email = Normalize(request.Email)?.ToLowerInvariant();
-        var phone = Normalize(request.Phone)?.ToLowerInvariant();
+        var email = NormalizeEmailForMatch(request.Email);
+        var phone = NormalizePhoneForMatch(request.Phone);
         var company = Normalize(request.CompanyName)?.ToLowerInvariant();
 
         var leads = _dbContext.Leads
@@ -2811,7 +2946,7 @@ public sealed class LeadService : ILeadService
         if (!string.IsNullOrWhiteSpace(email))
         {
             var byEmail = await leads.FirstOrDefaultAsync(
-                l => l.Email != null && l.Email.ToLower() == email,
+                l => l.Email != null && l.Email.Trim().ToLower() == email,
                 cancellationToken);
             if (byEmail is not null)
             {
@@ -2821,12 +2956,11 @@ public sealed class LeadService : ILeadService
 
         if (!string.IsNullOrWhiteSpace(phone) && !string.IsNullOrWhiteSpace(company))
         {
-            var byPhoneCompany = await leads.FirstOrDefaultAsync(
-                l => l.Phone != null
-                    && l.CompanyName != null
-                    && l.Phone.ToLower() == phone
-                    && l.CompanyName.ToLower() == company,
-                cancellationToken);
+            var byPhoneCompanyCandidates = await leads
+                .Where(l => l.Phone != null && l.CompanyName != null && l.CompanyName.ToLower() == company)
+                .ToListAsync(cancellationToken);
+
+            var byPhoneCompany = byPhoneCompanyCandidates.FirstOrDefault(l => NormalizePhoneForMatch(l.Phone) == phone);
             if (byPhoneCompany is not null)
             {
                 return byPhoneCompany;
@@ -2844,6 +2978,35 @@ public sealed class LeadService : ILeadService
         }
 
         return null;
+    }
+
+    private static string? NormalizeEmailForMatch(string? email)
+    {
+        return Normalize(email)?.ToLowerInvariant();
+    }
+
+    private static string? NormalizePhoneForMatch(string? phone)
+    {
+        var normalized = Normalize(phone);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return null;
+        }
+
+        var digits = new string(normalized.Where(char.IsDigit).ToArray());
+        return string.IsNullOrWhiteSpace(digits) ? null : digits;
+    }
+
+    private static string? TryGetEmailDomain(string email)
+    {
+        var at = email.IndexOf('@');
+        if (at < 0 || at == email.Length - 1)
+        {
+            return null;
+        }
+
+        var domain = email[(at + 1)..].Trim();
+        return domain.Length == 0 ? null : domain;
     }
 
     private static AuditEventEntry CreateAuditEntry(

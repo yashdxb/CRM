@@ -108,7 +108,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Dashboard | Epistemic summary widgets (Truth Coverage, Confidence, Time-to-Truth)
 - Module: Dashboard | Risk Register summary widget
 - Module: Dashboard | Hierarchy-based H1/H2 dashboard packs + reset
-- Module: Leads | As a manager, score breakdown aligns with CQVS labels (Company fit, Qualification readiness, Value/Problem severity, Stakeholder access)
+- Module: Leads | As a manager, score breakdown aligns with CQVS labels (Company fit, Qualification readiness, Value/Problem severity, Stakeholder access) (In progress: explicit C/Q/V/S labeling pending)
 - Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal
 - Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet"
 - Module: Leads | As a rep, I see "Unknown / not yet discussed" preselected for every qualification factor

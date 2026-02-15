@@ -6,6 +6,7 @@ public sealed record QualificationPolicy(
     int BlockBelow,
     bool AllowOverrides,
     bool RequireOverrideReason,
+    bool ShowCqvsInLeadList,
     IReadOnlyList<QualificationThresholdRule> ThresholdRules,
     IReadOnlyList<QualificationModifierRule> Modifiers,
     IReadOnlyList<QualificationExposureWeight> ExposureWeights,
@@ -77,6 +78,7 @@ public static class QualificationPolicyDefaults
             BlockBelow: 25,
             AllowOverrides: true,
             RequireOverrideReason: true,
+            ShowCqvsInLeadList: false,
             ThresholdRules: Array.Empty<QualificationThresholdRule>(),
             Modifiers: new[]
             {

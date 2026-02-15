@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../../../environments/environment';
 import { CsvImportJob } from '../../../../shared/models/csv-import.model';
+import { QualificationPolicy } from '../../settings/models/workspace-settings.model';
 import {
   Lead,
   LeadAssignmentStrategy,
@@ -10,6 +11,8 @@ import {
   LeadCadenceChannel,
   LeadCadenceChannelOption,
   LeadCadenceTouch,
+  LeadDuplicateCheckRequest,
+  LeadDuplicateCheckResponse,
   LeadSearchRequest,
   LeadSearchResponse,
   LeadStatus,
@@ -91,6 +94,14 @@ export class LeadDataService {
 
   getEvidenceSources() {
     return this.http.get<string[]>(`${this.baseUrl}/api/leads/evidence-sources`);
+  }
+
+  getQualificationPolicy() {
+    return this.http.get<QualificationPolicy>(`${this.baseUrl}/api/leads/qualification-policy`);
+  }
+
+  checkDuplicates(payload: LeadDuplicateCheckRequest) {
+    return this.http.post<LeadDuplicateCheckResponse>(`${this.baseUrl}/api/leads/duplicate-check`, payload);
   }
 
   create(payload: SaveLeadRequest) {

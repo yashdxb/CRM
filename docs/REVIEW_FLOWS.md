@@ -456,11 +456,14 @@ Acceptance criteria are sourced from `docs/CRM_BACKLOG.md` for the matching Flow
 ### Flow 02A | Leads
 - Story: As a Sales Manager, I want the CQVS score breakdown to show labeled factors (C/Q/V/S) with per‑factor scores and weights so I can see why a lead is rated and coach reps on weak factors.
 - ClickUp: 86dzp8y10
+- Status: IN PROGRESS
 - UI fields: scoreBreakdown (lead-form.page.html → Qualification tab)
 - Use case:
   - Precondition: Lead exists (or create a new lead).
   - Action: Open lead detail and update qualification factors.
   - Expected: Lead detail reflects updated status/summary and persists on reload.
+  - Current behavior: factor-level score + weight + weakest-signal coaching are visible.
+  - Gap to close: explicit CQVS C/Q/V/S labels are not yet shown in the breakdown.
 
 ### Flow 06A | Dashboard
 - Story: As a Sales Manager, I can see Truth Coverage and Time-to-Truth per deal

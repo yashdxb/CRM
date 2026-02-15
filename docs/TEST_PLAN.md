@@ -8,6 +8,12 @@ Scope: validate acceptance criteria in `docs/PHASE1.md` and `docs/PHASE2.md`.
 - API checks: endpoint behavior, payloads, validation
 - UI checks: page rendering, filters, navigation
 
+## Mandatory Execution Rule
+
+- After every code modification or implementation, run Playwright UI before considering the task done.
+- Minimum required run: `client/e2e/smoke.spec.ts`.
+- Also run the most relevant targeted spec(s) for the changed feature area whenever available.
+
 ## Now Test Matrix
 
 1) Auth + Users

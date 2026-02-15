@@ -2,14 +2,17 @@ using CRM.Enterprise.Security;
 using CRM.Enterprise.Api.Contracts.Leads;
 using ApiLeadConversionRequest = CRM.Enterprise.Api.Contracts.Leads.LeadConversionRequest;
 using ApiLeadCadenceTouchRequest = CRM.Enterprise.Api.Contracts.Leads.LeadCadenceTouchRequest;
+using ApiLeadDuplicateCheckRequest = CRM.Enterprise.Api.Contracts.Leads.LeadDuplicateCheckRequest;
 using AppLeadConversionRequest = CRM.Enterprise.Application.Leads.LeadConversionRequest;
 using AppLeadCadenceTouchRequest = CRM.Enterprise.Application.Leads.LeadCadenceTouchRequest;
+using AppLeadDuplicateCheckRequest = CRM.Enterprise.Application.Leads.LeadDuplicateCheckRequest;
 using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Api.Contracts.Imports;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
+using CRM.Enterprise.Application.Qualifications;
 // using CRM.Enterprise.Api.Jobs; // Removed Hangfire
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -124,6 +127,37 @@ public class LeadsController : ControllerBase
     {
         var items = await _leadService.GetEvidenceSourcesAsync(cancellationToken);
         return Ok(items);
+    }
+
+    [HttpGet("qualification-policy")]
+    public async Task<ActionResult<QualificationPolicy>> GetQualificationPolicy(CancellationToken cancellationToken)
+    {
+        var policy = await _leadService.GetQualificationPolicyAsync(cancellationToken);
+        return Ok(policy);
+    }
+
+    [HttpPost("duplicate-check")]
+    [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    public async Task<ActionResult<LeadDuplicateCheckResponse>> CheckDuplicates(
+        [FromBody] ApiLeadDuplicateCheckRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName))
+        {
+            return BadRequest("First name and last name are required.");
+        }
+
+        var result = await _leadService.CheckDuplicatesAsync(
+            new AppLeadDuplicateCheckRequest(
+                request.FirstName,
+                request.LastName,
+                request.Email,
+                request.Phone,
+                request.CompanyName,
+                request.ExcludeLeadId),
+            cancellationToken);
+
+        return Ok(ToApiDuplicateCheck(result));
     }
 
     [HttpPost("{id:guid}/cadence-touch")]
@@ -410,6 +444,24 @@ public class LeadsController : ControllerBase
             request.EconomicBuyerEvidence,
             request.IcpFit,
             request.IcpFitEvidence);
+    }
+
+    private static LeadDuplicateCheckResponse ToApiDuplicateCheck(LeadDuplicateCheckResultDto result)
+    {
+        return new LeadDuplicateCheckResponse(
+            result.Decision,
+            result.IsBlocked,
+            result.HasWarnings,
+            result.Matches.Select(match => new LeadDuplicateCheckCandidate(
+                match.LeadId,
+                match.Name,
+                match.CompanyName,
+                match.Email,
+                match.Phone,
+                match.LeadScore,
+                match.MatchScore,
+                match.MatchLevel,
+                match.MatchedSignals)));
     }
 
     private static AppLeadConversionRequest MapConversionRequest(ApiLeadConversionRequest request)

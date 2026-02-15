@@ -95,6 +95,23 @@ public sealed record LeadScoreBreakdownItem(
     int Score,
     int MaxScore);
 
+public sealed record LeadDuplicateCandidateDto(
+    Guid LeadId,
+    string Name,
+    string CompanyName,
+    string? Email,
+    string? Phone,
+    int LeadScore,
+    int MatchScore,
+    string MatchLevel,
+    IReadOnlyList<string> MatchedSignals);
+
+public sealed record LeadDuplicateCheckResultDto(
+    string Decision,
+    bool IsBlocked,
+    bool HasWarnings,
+    IReadOnlyList<LeadDuplicateCandidateDto> Matches);
+
 public sealed record LeadOperationResult<T>(bool Success, T? Value, string? Error, bool NotFound = false)
 {
     public static LeadOperationResult<T> Ok(T value) => new(true, value, null, false);

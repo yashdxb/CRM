@@ -1,6 +1,56 @@
 
     <div class="lead-form-page">
       <app-breadcrumbs></app-breadcrumbs>
+      <p-dialog
+        [header]="duplicateDialogTitle()"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [closable]="true"
+        [dismissableMask]="true"
+        [visible]="duplicateDialogVisible()"
+        [style]="{ width: '42rem', maxWidth: '95vw' }"
+        (visibleChange)="duplicateDialogVisible.set($event)"
+        (onHide)="dismissDuplicateDialog()"
+      >
+        <div class="duplicate-dialog">
+          <p class="duplicate-dialog__message">{{ duplicateDialogMessage() }}</p>
+          <div class="duplicate-dialog__list" *ngIf="duplicateMatches().length; else noDuplicateMatches">
+            <div class="duplicate-row" *ngFor="let match of duplicateMatches()">
+              <div class="duplicate-row__meta">
+                <div class="duplicate-row__name">{{ match.name }}</div>
+                <div class="duplicate-row__company">{{ match.companyName || 'No company' }}</div>
+                <div class="duplicate-row__signals">{{ match.matchedSignals.join(', ') }}</div>
+              </div>
+              <div class="duplicate-row__score">
+                <span class="duplicate-row__badge" [attr.data-level]="match.matchLevel">{{ match.matchLevel | titlecase }}</span>
+                <span>Match {{ match.matchScore }}%</span>
+              </div>
+              <button
+                pButton
+                type="button"
+                class="p-button-text p-button-sm"
+                label="Open"
+                (click)="reviewDuplicate(match)"
+              ></button>
+            </div>
+          </div>
+          <ng-template #noDuplicateMatches>
+            <p class="duplicate-dialog__message">No duplicate details found.</p>
+          </ng-template>
+          <div class="duplicate-dialog__actions">
+            <button pButton type="button" class="p-button-outlined" label="Cancel" (click)="dismissDuplicateDialog()"></button>
+            <button
+              pButton
+              type="button"
+              class="crm-button crm-button--primary"
+              label="Save Anyway"
+              *ngIf="!duplicateIsBlocked()"
+              (click)="saveDespiteWarning()"
+            ></button>
+          </div>
+        </div>
+      </p-dialog>
       <header class="page-header">
         <div class="header-content">
           <div class="header-top">
@@ -762,17 +812,18 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field full-row" *ngIf="scoreBreakdown().length">
+              <div class="field full-row" *ngIf="isEditMode()">
                 <div class="score-breakdown">
                   <div class="score-breakdown__header">
                     <div class="score-breakdown__title">
                       <span class="eyebrow">Scoring breakdown</span>
-                      <strong>Qualification model</strong>
-                      <span class="score-formula">Lead score and qualification score are tracked separately, each out of 100.</span>
+                      <strong>Overall + CQVS qualification model</strong>
+                      <span class="score-formula">{{ scoreFormulaHint() }}</span>
                     </div>
                     <div class="score-breakdown__summary">
                       <span class="total-pill">Lead data quality: {{ leadDataQualityTotal() }} / 100</span>
                       <span class="total-pill">Qualification score: {{ qualificationContributionTotal() }} / 100</span>
+                      <span class="total-pill">Weighted: {{ leadDataQualityWeightedContribution() }} + {{ qualificationWeightedContribution() }}</span>
                       <span class="confidence-pill">Confidence: {{ qualificationConfidenceDisplayLabel() }}</span>
                     </div>
                   </div>
@@ -793,9 +844,28 @@
                     </div>
                     <p class="hint-text compact" *ngIf="qualificationConfidenceHint()">{{ qualificationConfidenceHint() }}</p>
                   </div>
+                  <div class="cqvs-group-grid">
+                    <article class="cqvs-group-card" *ngFor="let group of cqvsGroupRows()">
+                      <div class="cqvs-group-card__head">
+                        <span class="cqvs-code">{{ group.code }}</span>
+                        <div class="cqvs-group-card__title">
+                          <strong>{{ group.title }}</strong>
+                          <span>{{ group.description }}</span>
+                        </div>
+                      </div>
+                      <div class="cqvs-group-card__metrics">
+                        <span class="total-pill">Score {{ group.score }} / {{ group.maxScore }}</span>
+                        <span class="total-pill">Weight {{ group.weight }}%</span>
+                      </div>
+                      <div class="factor-rail compact">
+                        <span class="factor-rail__fill" [style.width.%]="cqvsGroupPercent(group)"></span>
+                      </div>
+                    </article>
+                  </div>
                   <p-table [value]="scoreBreakdownRows()" styleClass="score-breakdown-table">
                     <ng-template pTemplate="header">
                       <tr>
+                        <th>CQVS</th>
                         <th>Factor</th>
                         <th>Weight</th>
                         <th>Selected value</th>
@@ -807,6 +877,9 @@
                     </ng-template>
                     <ng-template pTemplate="body" let-row>
                       <tr>
+                        <td class="col-cqvs">
+                          <span class="cqvs-badge">{{ row.cqvs }}</span>
+                        </td>
                         <td class="col-factor">{{ row.factor }}</td>
                         <td class="col-weight">{{ row.weight }}</td>
                         <td class="col-selected">{{ row.selectedValue }}</td>

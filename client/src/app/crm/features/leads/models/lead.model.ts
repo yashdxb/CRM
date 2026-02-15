@@ -120,3 +120,31 @@ export interface LeadScoreBreakdownItem {
   score: number;
   maxScore: number;
 }
+
+export interface LeadDuplicateCheckRequest {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  companyName?: string;
+  excludeLeadId?: string;
+}
+
+export interface LeadDuplicateCheckCandidate {
+  leadId: string;
+  name: string;
+  companyName: string;
+  email?: string;
+  phone?: string;
+  leadScore: number;
+  matchScore: number;
+  matchLevel: 'block' | 'warning' | 'allow';
+  matchedSignals: string[];
+}
+
+export interface LeadDuplicateCheckResponse {
+  decision: 'allow' | 'warning' | 'block';
+  isBlocked: boolean;
+  hasWarnings: boolean;
+  matches: LeadDuplicateCheckCandidate[];
+}
