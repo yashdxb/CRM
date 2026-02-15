@@ -209,7 +209,7 @@
                       </span>
                     </td>
                     <td>
-                      <ng-container *ngIf="user.lastLoginAtUtc; else neverLogged">
+                      <ng-container *ngIf="user.lastLoginAtUtc; else inviteOrNever">
                         <span class="login-date">
                           {{ formatLoginTime(user) }}
                         </span>
@@ -217,6 +217,16 @@
                           {{ formatLoginDuration(user, isOnline(user)) }}
                         </span>
                       </ng-container>
+                      <ng-template #inviteOrNever>
+                        <ng-container *ngIf="user.lastInviteSentAtUtc; else neverLogged">
+                          <span class="login-date">
+                            Invite sent {{ formatInviteSentTime(user) }}
+                          </span>
+                          <span class="login-duration">
+                            {{ formatInviteSentDuration(user) }}
+                          </span>
+                        </ng-container>
+                      </ng-template>
                       <ng-template #neverLogged>
                         <span class="login-never">Never logged in</span>
                       </ng-template>

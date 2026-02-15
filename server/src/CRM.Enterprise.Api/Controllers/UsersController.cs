@@ -96,6 +96,7 @@ public class UsersController : ControllerBase
                 u.IsActive,
                 u.CreatedAtUtc,
                 u.LastLoginAtUtc,
+                u.LastInviteSentAtUtc,
                 u.LastLoginLocation,
                 u.LastLoginIp,
                 u.TimeZone,
@@ -112,6 +113,7 @@ public class UsersController : ControllerBase
             u.IsActive,
             u.CreatedAtUtc,
             u.LastLoginAtUtc,
+            u.LastInviteSentAtUtc,
             u.TimeZone,
             u.LastLoginLocation,
             u.LastLoginIp,
@@ -175,6 +177,7 @@ public class UsersController : ControllerBase
         var inviteToken = InviteTokenHelper.GenerateToken();
         user.InviteTokenHash = InviteTokenHelper.HashToken(inviteToken);
         user.InviteTokenExpiresAtUtc = DateTime.UtcNow.AddHours(24);
+        user.LastInviteSentAtUtc = DateTime.UtcNow;
 
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -277,6 +280,7 @@ public class UsersController : ControllerBase
         var inviteToken = InviteTokenHelper.GenerateToken();
         user.InviteTokenHash = InviteTokenHelper.HashToken(inviteToken);
         user.InviteTokenExpiresAtUtc = DateTime.UtcNow.AddHours(24);
+        user.LastInviteSentAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         await SendInviteEmailAsync(user, password, inviteToken, cancellationToken);
@@ -389,6 +393,7 @@ public class UsersController : ControllerBase
                 u.IsActive,
                 u.CreatedAtUtc,
                 u.LastLoginAtUtc,
+                u.LastInviteSentAtUtc,
                 u.Roles.Where(ur => ur.Role != null).Select(ur => ur.RoleId).ToList(),
                 u.Roles.Where(ur => ur.Role != null).Select(ur => ur.Role!.Name).ToList()))
             .FirstOrDefaultAsync(cancellationToken);

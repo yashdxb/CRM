@@ -11,6 +11,7 @@ public record UserListItem(
     bool IsActive,
     DateTime CreatedAtUtc,
     DateTime? LastLoginAtUtc,
+    DateTime? LastInviteSentAtUtc,
     string? TimeZone,
     string? LastLoginLocation,
     string? LastLoginIp,

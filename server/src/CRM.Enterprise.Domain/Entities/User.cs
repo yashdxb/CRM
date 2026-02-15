@@ -16,6 +16,7 @@ public class User : AuditableEntity
     public decimal? MonthlyQuota { get; set; }
     public string? InviteTokenHash { get; set; }
     public DateTime? InviteTokenExpiresAtUtc { get; set; }
+    public DateTime? LastInviteSentAtUtc { get; set; }
     // Forces a password update after invitation or admin reset.
     public bool MustChangePassword { get; set; }
     public bool IsActive { get; set; } = true;

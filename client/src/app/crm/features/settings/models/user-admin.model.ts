@@ -48,6 +48,7 @@ export interface UserListItem {
   isActive: boolean;
   createdAtUtc: string;
   lastLoginAtUtc?: string | null;
+  lastInviteSentAtUtc?: string | null;
   lastLoginLocation?: string | null;
   lastLoginIp?: string | null;
   timeZone?: string | null;
@@ -75,6 +76,7 @@ export interface UserDetailResponse {
   isActive: boolean;
   createdAtUtc: string;
   lastLoginAtUtc?: string | null;
+  lastInviteSentAtUtc?: string | null;
   roleIds: string[];
   roles: string[];
 }

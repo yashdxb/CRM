@@ -13,5 +13,6 @@ public record UserDetailResponse(
     bool IsActive,
     DateTime CreatedAtUtc,
     DateTime? LastLoginAtUtc,
+    DateTime? LastInviteSentAtUtc,
     IReadOnlyList<Guid> RoleIds,
     IReadOnlyList<string> Roles);

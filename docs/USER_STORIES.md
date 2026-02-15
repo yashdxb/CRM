@@ -146,6 +146,7 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Settings | As an Admin, I want currencies sourced from the system reference data so selectors stay consistent. (Done)
 - Module: Settings | As an Admin, I want settings navigation grouped into People & Access, Workspace & Org, Workflow & Rules, and Trust & Audit so I can find policies quickly and scale as new settings are added.
 - Module: Settings | As an Admin, I want the Security Level edit dialog to use the default UI layout with a liquid-glass feel so editing feels consistent and easy to scan.
+- Module: Settings | As an Admin, I want invited users who have never logged in to show the invitation sent date/time (and latest resend date/time) so I can track onboarding progress and follow up accurately.
 - Module: Settings | As an Admin, I want permissions grouped by capability with role intent views so roles are consistent and easy to audit. (Done)
 - Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (Done)
 - Module: Settings | As an Admin, I want separate permissions for request/approve/override so edit rights do not grant approvals. (Must)

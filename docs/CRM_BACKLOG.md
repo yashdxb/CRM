@@ -715,6 +715,19 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Existing open tasks for the same lead + risk label are not duplicated.
   - Evidence:
     - UI: client/src/app/crm/features/activities/pages/activity-form.page.html
+- Settings | As an Admin, I want invited users who never logged in to show invitation sent date/time (including latest resend) so onboarding follow-up is trackable. (ClickUp: PENDING-ID, Status: BACKLOG) Flow: 07Z
+  - Acceptance criteria:
+    - Users list shows `Invite sent <date/time>` when `LastLoginAtUtc` is null and invite timestamp exists.
+    - If invite is resent, displayed invite timestamp updates to latest resend time.
+    - If both invite and login timestamps are missing, fallback remains `Never logged in`.
+    - Timestamp is tenant-aware and uses workspace/user timezone formatting.
+  - Evidence (current gap):
+    - Users API currently returns `CreatedAtUtc` and `LastLoginAtUtc` but no explicit invite-sent timestamp:
+      `server/src/CRM.Enterprise.Api/Controllers/UsersController.cs`
+    - User entity currently has `InviteTokenExpiresAtUtc` but no `LastInviteSentAtUtc`:
+      `server/src/CRM.Enterprise.Domain/Entities/User.cs`
+    - Users list UI currently shows `Never logged in` only:
+      `client/src/app/crm/features/settings/pages/settings.page.html`
 - Contacts | As a Sales Rep, I want to add account team members (pre‑sales, manager) for shared ownership. (ClickUp: 86dzp8xcg, Status: COMPLETED) Flow: 03A
   - Acceptance criteria:
     - Account team section supports adding members with role (Pre-sales/Manager).

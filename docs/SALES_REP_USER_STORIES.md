@@ -18,6 +18,9 @@ Purpose: Single, end-to-end flow for a Sales Rep from first login through lead c
 11. Capture delivery handoff and trigger kickoff.
 12. Review dashboard (priority stream + forecast + risk).
 
+Admin dependency (People & Access):
+- For invited users who have never logged in, Users list should show `Invite sent <date/time>` (latest resend time when applicable) instead of only `Never logged in`.
+
 ---
 
 ## Sample Data (Realistic, Testable With Expected Results)

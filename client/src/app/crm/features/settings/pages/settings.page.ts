@@ -460,7 +460,26 @@ export class SettingsPage {
     if (!user.lastLoginAtUtc) {
       return '';
     }
-    const deltaMs = Date.now() - this.parseUtcDate(user.lastLoginAtUtc).getTime();
+    return this.formatRelativeFromDate(this.parseUtcDate(user.lastLoginAtUtc), isOnline ? 'Online for' : 'Last seen');
+  }
+
+  protected formatInviteSentTime(user: UserListItem): string {
+    if (!user.lastInviteSentAtUtc) {
+      return '';
+    }
+    const formatter = this.getFormatter(this.currentUserTimeZone());
+    return formatter.format(this.parseUtcDate(user.lastInviteSentAtUtc));
+  }
+
+  protected formatInviteSentDuration(user: UserListItem): string {
+    if (!user.lastInviteSentAtUtc) {
+      return '';
+    }
+    return this.formatRelativeFromDate(this.parseUtcDate(user.lastInviteSentAtUtc), 'Sent');
+  }
+
+  private formatRelativeFromDate(date: Date, prefix: string): string {
+    const deltaMs = Date.now() - date.getTime();
     if (!Number.isFinite(deltaMs) || deltaMs < 0) {
       return '';
     }
@@ -477,7 +496,7 @@ export class SettingsPage {
       value = `${Math.max(minutes, 1)}m`;
     }
 
-    return isOnline ? `Online for ${value}` : `Last seen ${value} ago`;
+    return prefix === 'Online for' ? `${prefix} ${value}` : `${prefix} ${value} ago`;
   }
 
   private generatePasswordValue() {
