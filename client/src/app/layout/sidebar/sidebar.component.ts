@@ -149,8 +149,8 @@ export class SidebarComponent {
   private focusChild(parentLabel: string, childIndex: number) {
     const parentIndex = this.nav.visibleNavLinks().findIndex(l => l.label === parentLabel);
     const groups = document.querySelectorAll('.nav__group');
-    const submenu = groups[parentIndex]?.querySelector('.nav__children');
-    const children = submenu?.querySelectorAll('.nav__child');
+    const submenu = groups[parentIndex]?.querySelector('.nav__submenu');
+    const children = submenu?.querySelectorAll('.nav__item--child');
     (children?.[childIndex] as HTMLElement)?.focus();
   }
 }
