@@ -275,12 +275,14 @@ export class ActivityFormPage implements OnInit {
   protected selectedTemplate = 'none';
   protected activityStatus: 'Open' | 'Completed' = 'Open';
   protected readonly systemLocked = signal(false);
+  protected readonly dueDateDefaultedFromLeadSla = signal(false);
   private pendingAccountOption: Option<string> | null = null;
   private pendingContactOption: Option<string> | null = null;
   private pendingOpportunityOption: Option<string> | null = null;
   private pendingLeadOption: Option<string> | null = null;
   private pendingOwnerOption: Option<string> | null = null;
   private opportunityStage: string | null = null;
+  private leadFirstTouchDueAtUtc: Date | null = null;
 
   private readonly activityData = inject(ActivityDataService);
   private readonly customerData = inject(CustomerDataService);
@@ -443,6 +445,10 @@ export class ActivityFormPage implements OnInit {
         this.raiseToast('error', 'Due date is required to complete an activity.');
         return;
       }
+    }
+    if (this.form.relatedEntityType === 'Lead' && !this.form.dueDateUtc) {
+      this.raiseToast('error', 'Due date is required for lead-related activities.');
+      return;
     }
 
     this.saving.set(true);
@@ -700,6 +706,7 @@ export class ActivityFormPage implements OnInit {
     const relatedType = this.route.snapshot.queryParamMap.get('relatedType') as UpsertActivityRequest['relatedEntityType'];
     const relatedId = this.route.snapshot.queryParamMap.get('relatedId') ?? undefined;
     const subject = this.route.snapshot.queryParamMap.get('subject') ?? undefined;
+    const leadFirstTouchDueAtUtc = this.route.snapshot.queryParamMap.get('leadFirstTouchDueAtUtc');
 
     if (relatedType) {
       this.form.relatedEntityType = relatedType;
@@ -715,6 +722,56 @@ export class ActivityFormPage implements OnInit {
     if (subject && !this.form.subject) {
       this.form.subject = subject;
     }
+
+    this.leadFirstTouchDueAtUtc = this.parseOptionalDate(leadFirstTouchDueAtUtc);
+    if (this.form.relatedEntityType === 'Lead' && !this.form.dueDateUtc && this.leadFirstTouchDueAtUtc) {
+      this.form.dueDateUtc = new Date(this.leadFirstTouchDueAtUtc);
+      this.dueDateDefaultedFromLeadSla.set(true);
+    }
+  }
+
+  protected onDueDateChange(value: Date | null | undefined): void {
+    this.form.dueDateUtc = value ?? undefined;
+    if (!this.hasLeadSlaDueDate()) {
+      this.dueDateDefaultedFromLeadSla.set(false);
+      return;
+    }
+    this.dueDateDefaultedFromLeadSla.set(this.isSameMoment(value, this.leadFirstTouchDueAtUtc));
+  }
+
+  protected hasLeadSlaDueDate(): boolean {
+    return this.form.relatedEntityType === 'Lead' && !!this.leadFirstTouchDueAtUtc;
+  }
+
+  protected leadSlaDueLabel(): string {
+    return this.leadFirstTouchDueAtUtc
+      ? this.leadFirstTouchDueAtUtc.toLocaleString()
+      : '';
+  }
+
+  protected canSyncDueDateToLeadSla(): boolean {
+    if (!this.hasLeadSlaDueDate()) return false;
+    return !this.isSameMoment(this.form.dueDateUtc, this.leadFirstTouchDueAtUtc);
+  }
+
+  protected syncDueDateToLeadSla(): void {
+    if (!this.leadFirstTouchDueAtUtc) return;
+    this.form.dueDateUtc = new Date(this.leadFirstTouchDueAtUtc);
+    this.dueDateDefaultedFromLeadSla.set(true);
+  }
+
+  private parseOptionalDate(value: string | null): Date | null {
+    if (!value) return null;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private isSameMoment(left: string | Date | null | undefined, right: string | Date | null | undefined): boolean {
+    if (!left || !right) return false;
+    const leftDate = left instanceof Date ? left : new Date(left);
+    const rightDate = right instanceof Date ? right : new Date(right);
+    if (Number.isNaN(leftDate.getTime()) || Number.isNaN(rightDate.getTime())) return false;
+    return leftDate.getTime() === rightDate.getTime();
   }
 
   private updateOpportunityStage(opportunityId: string) {

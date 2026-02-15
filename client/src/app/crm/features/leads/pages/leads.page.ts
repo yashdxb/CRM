@@ -10,6 +10,7 @@ import { TableModule } from 'primeng/table';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { Router, RouterLink } from '@angular/router';
 import { DialogModule } from 'primeng/dialog';
+import { TooltipModule } from 'primeng/tooltip';
 import { forkJoin, of, Subscription, timer } from 'rxjs';
 import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 
@@ -23,6 +24,7 @@ import { ImportJobService } from '../../../../shared/services/import-job.service
 import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
+import { computeLeadScore } from './lead-scoring.util';
 
 interface StatusOption {
   label: string;
@@ -48,6 +50,7 @@ interface StatusOption {
     PaginatorModule,
     DecimalPipe,
     DialogModule,
+    TooltipModule,
     BreadcrumbsComponent,
     BulkActionsBarComponent,
     RouterLink
@@ -282,7 +285,8 @@ export class LeadsPage {
       queryParams: {
         relatedType: 'Lead',
         relatedId: row.id,
-        subject
+        subject,
+        leadFirstTouchDueAtUtc: row.firstTouchDueAtUtc ?? undefined
       }
     });
   }
@@ -628,6 +632,24 @@ export class LeadsPage {
     return due.getTime() < Date.now() ? 'overdue' : 'due';
   }
 
+  protected qualificationStatusLabel(lead: Lead): string {
+    const factorCount = this.countQualificationFactors(lead);
+    if (factorCount === 0) return 'Not started';
+    const qualificationScore = computeLeadScore(lead).qualificationScore100;
+    return `${qualificationScore} / 100`;
+  }
+
+  protected qualificationStatusHint(lead: Lead): string {
+    const factorCount = this.countQualificationFactors(lead);
+    if (factorCount === 0) return 'No qualification factors selected yet.';
+    const qualificationScore = computeLeadScore(lead).qualificationScore100;
+    const truthCoverage = typeof lead.truthCoverage === 'number' ? Math.round(lead.truthCoverage * 100) : null;
+    if (truthCoverage !== null) {
+      return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/6 factors and ${truthCoverage}% evidence coverage.`;
+    }
+    return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/6 factors.`;
+  }
+
   // Lead create/edit handled by separate page.
 
   protected clearToast() {
@@ -643,5 +665,23 @@ export class LeadsPage {
       const options = items.map((user) => ({ label: user.fullName, value: user.id }));
       this.ownerOptionsForAssign.set(options);
     });
+  }
+
+  private countQualificationFactors(lead: Lead): number {
+    const factors = [
+      lead.budgetAvailability,
+      lead.readinessToSpend,
+      lead.buyingTimeline,
+      lead.problemSeverity,
+      lead.economicBuyer,
+      lead.icpFit
+    ];
+    return factors.filter((value) => this.isMeaningfulFactor(value)).length;
+  }
+
+  private isMeaningfulFactor(value?: string): boolean {
+    if (!value) return false;
+    const normalized = value.trim().toLowerCase();
+    return normalized.length > 0 && !normalized.includes('unknown');
   }
 }

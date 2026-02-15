@@ -9,6 +9,7 @@ public sealed record QualificationPolicy(
     IReadOnlyList<QualificationThresholdRule> ThresholdRules,
     IReadOnlyList<QualificationModifierRule> Modifiers,
     IReadOnlyList<QualificationExposureWeight> ExposureWeights,
+    IReadOnlyList<QualificationLeadDataWeight> LeadDataWeights,
     IReadOnlyList<string> EvidenceSources);
 
 public sealed record QualificationThresholdRule(
@@ -25,8 +26,22 @@ public sealed record QualificationExposureWeight(
     string Key,
     decimal Weight);
 
+public sealed record QualificationLeadDataWeight(
+    string Key,
+    decimal Weight);
+
 public static class QualificationPolicyDefaults
 {
+    private static readonly string[] LeadDataWeightKeys =
+    [
+        "firstNameLastName",
+        "email",
+        "phone",
+        "companyName",
+        "jobTitle",
+        "source"
+    ];
+
     private static readonly string[] DefaultEvidenceSourcesCatalog =
     [
         "No evidence yet",
@@ -80,6 +95,15 @@ public static class QualificationPolicyDefaults
                 new QualificationExposureWeight("readiness", 10),
                 new QualificationExposureWeight("icpFit", 10)
             },
+            LeadDataWeights: new[]
+            {
+                new QualificationLeadDataWeight("firstNameLastName", 16),
+                new QualificationLeadDataWeight("email", 24),
+                new QualificationLeadDataWeight("phone", 24),
+                new QualificationLeadDataWeight("companyName", 16),
+                new QualificationLeadDataWeight("jobTitle", 12),
+                new QualificationLeadDataWeight("source", 8)
+            },
             EvidenceSources: DefaultEvidenceSourcesCatalog);
     }
 
@@ -94,6 +118,7 @@ public static class QualificationPolicyDefaults
         var thresholdRules = policy.ThresholdRules ?? Array.Empty<QualificationThresholdRule>();
         var modifiers = policy.Modifiers ?? baseline.Modifiers;
         var exposureWeights = policy.ExposureWeights ?? baseline.ExposureWeights;
+        var leadDataWeights = NormalizeLeadDataWeights(policy.LeadDataWeights, baseline.LeadDataWeights);
 
         var evidenceSources = (policy.EvidenceSources ?? Array.Empty<string>())
             .Where(static value => !string.IsNullOrWhiteSpace(value))
@@ -126,7 +151,38 @@ public static class QualificationPolicyDefaults
             ThresholdRules = thresholdRules,
             Modifiers = modifiers,
             ExposureWeights = exposureWeights,
+            LeadDataWeights = leadDataWeights,
             EvidenceSources = evidenceSources
         };
+    }
+
+    private static IReadOnlyList<QualificationLeadDataWeight> NormalizeLeadDataWeights(
+        IReadOnlyList<QualificationLeadDataWeight>? input,
+        IReadOnlyList<QualificationLeadDataWeight> baseline)
+    {
+        var source = input ?? baseline;
+        var byKey = source
+            .Where(static item => !string.IsNullOrWhiteSpace(item.Key))
+            .GroupBy(static item => item.Key.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                static group => group.Key,
+                static group => Math.Max(0m, group.Last().Weight),
+                StringComparer.OrdinalIgnoreCase);
+
+        var normalized = new List<QualificationLeadDataWeight>(LeadDataWeightKeys.Length);
+        foreach (var key in LeadDataWeightKeys)
+        {
+            var defaultWeight = baseline.First(item => string.Equals(item.Key, key, StringComparison.OrdinalIgnoreCase)).Weight;
+            var weight = byKey.TryGetValue(key, out var configured) ? configured : defaultWeight;
+            normalized.Add(new QualificationLeadDataWeight(key, weight));
+        }
+
+        var total = normalized.Sum(static item => item.Weight);
+        if (total <= 0)
+        {
+            return baseline;
+        }
+
+        return normalized;
     }
 }

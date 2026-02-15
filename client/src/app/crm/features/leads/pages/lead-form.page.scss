@@ -1325,17 +1325,15 @@
 
     .score-breakdown {
       margin-top: 0.5rem;
-      padding: 0.9rem 1rem 0.95rem;
-      border-radius: 16px;
+      padding: 0.7rem 0.8rem 0.8rem;
+      border-radius: 12px;
       border: 1px solid rgba(148, 163, 184, 0.26);
       background:
         linear-gradient(160deg, rgba(255, 255, 255, 0.86) 0%, rgba(239, 246, 255, 0.62) 45%, rgba(236, 254, 255, 0.66) 100%);
       backdrop-filter: blur(14px) saturate(1.12);
       position: relative;
       overflow: hidden;
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.8),
-        0 10px 24px rgba(15, 23, 42, 0.1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 8px 20px rgba(15, 23, 42, 0.08);
     }
 
     .score-breakdown::before {
@@ -1354,7 +1352,7 @@
       align-items: flex-start;
       justify-content: space-between;
       gap: 0.75rem;
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.45rem;
     }
 
     .score-breakdown__title {
@@ -1370,12 +1368,26 @@
       color: rgba(var(--apple-secondary), 0.92);
     }
 
+    .score-formula {
+      font-size: 0.72rem;
+      color: rgba(71, 85, 105, 0.86);
+      font-style: italic;
+    }
+
     .score-breakdown__title .eyebrow {
       font-size: 0.66rem;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       font-weight: 600;
       color: rgba(14, 116, 144, 0.82);
+    }
+
+    .score-breakdown__summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .confidence-gauge {
@@ -1390,11 +1402,15 @@
       align-items: center;
       justify-content: space-between;
       gap: 0.75rem;
-      margin-bottom: 0.65rem;
+      margin-bottom: 0.45rem;
       border-radius: 12px;
-      padding: 0.45rem 0.6rem;
+      padding: 0.35rem 0.5rem;
       background: rgba(255, 255, 255, 0.58);
       border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .confidence-gauge-panel.compact {
+      border-radius: 10px;
     }
 
     .confidence-gauge__label {
@@ -1404,7 +1420,7 @@
     }
 
     :host ::ng-deep .confidence-gauge__knob {
-      width: 86px;
+      width: 70px;
     }
 
     :host ::ng-deep .confidence-gauge__knob .p-knob-text {
@@ -1423,48 +1439,113 @@
       border: 1px solid rgba(14, 165, 233, 0.25);
     }
 
-    .score-breakdown__grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 0.55rem 0.65rem;
+    .total-pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      line-height: 1;
+      padding: 0.28rem 0.58rem;
+      border-radius: 999px;
+      background: rgba(15, 118, 110, 0.12);
+      color: rgba(15, 118, 110, 0.95);
+      border: 1px solid rgba(13, 148, 136, 0.26);
     }
 
-    .score-breakdown__item {
-      display: grid;
-      gap: 0.34rem;
-      padding: 0.48rem 0.58rem;
-      border-radius: 11px;
-      background: rgba(255, 255, 255, 0.64);
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    :host ::ng-deep .score-breakdown-table {
+      margin-top: 0.25rem;
     }
 
-    .score-breakdown__item-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.55rem;
+    :host ::ng-deep .score-breakdown-table .p-datatable-thead > tr > th {
+      background: rgba(248, 250, 252, 0.86);
+      border-color: rgba(148, 163, 184, 0.22);
+      color: rgba(71, 85, 105, 0.92);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 0.46rem 0.52rem;
     }
 
-    .factor-name {
-      font-size: 0.75rem;
-      color: rgba(71, 85, 105, 0.9);
+    :host ::ng-deep .score-breakdown-table .p-datatable-tbody > tr > td {
+      border-color: rgba(148, 163, 184, 0.2);
+      padding: 0.44rem 0.52rem;
+      font-size: 0.78rem;
+      color: rgba(30, 41, 59, 0.92);
+      vertical-align: middle;
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    .col-factor {
+      font-weight: 700;
+    }
+
+    .col-weight,
+    .col-score {
+      white-space: nowrap;
       font-weight: 600;
     }
 
-    .factor-score {
-      font-size: 0.73rem;
-      color: rgba(15, 23, 42, 0.86);
-      font-weight: 700;
+    .col-selected,
+    .col-evidence {
+      color: rgba(51, 65, 85, 0.92);
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .factor-rail {
-      height: 6px;
+    .col-contribution {
+      min-width: 130px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      white-space: nowrap;
+    }
+
+    .confidence-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.14rem 0.44rem;
       border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: rgba(148, 163, 184, 0.14);
+      color: rgba(51, 65, 85, 0.92);
+    }
+
+    .confidence-badge[data-confidence='verified'] {
+      background: rgba(56, 189, 248, 0.12);
+      color: rgba(2, 132, 199, 0.96);
+      border-color: rgba(14, 165, 233, 0.3);
+    }
+
+    .confidence-badge[data-confidence='assumed'] {
+      background: rgba(251, 146, 60, 0.14);
+      color: rgba(194, 65, 12, 0.96);
+      border-color: rgba(249, 115, 22, 0.32);
+    }
+
+    .confidence-badge[data-confidence='invalid'] {
+      background: rgba(248, 113, 113, 0.12);
+      color: rgba(185, 28, 28, 0.95);
+      border-color: rgba(248, 113, 113, 0.3);
+    }
+
+    .confidence-badge[data-confidence='unknown'] {
+      background: rgba(148, 163, 184, 0.14);
+      color: rgba(71, 85, 105, 0.92);
+      border-color: rgba(148, 163, 184, 0.32);
+    }
+
+    .factor-rail {
+      width: 72px;
+      height: 5px;
       background: rgba(148, 163, 184, 0.24);
       overflow: hidden;
       position: relative;
+    }
+
+    .factor-rail.compact {
+      width: 64px;
     }
 
     .factor-rail__fill {
@@ -1477,33 +1558,11 @@
     }
 
     .risk-flags {
-      margin-top: 0.6rem;
+      margin-top: 0.45rem;
       display: flex;
       flex-wrap: wrap;
       gap: 0.4rem;
       align-items: center;
-    }
-
-    .score-breakdown__item.is-zero {
-      background: rgba(254, 242, 242, 0.82);
-      border-color: rgba(248, 113, 113, 0.3);
-    }
-
-    .score-breakdown__item.is-zero .factor-score {
-      color: rgba(185, 28, 28, 0.95);
-    }
-
-    .score-breakdown__item.is-zero .factor-rail__fill {
-      background: linear-gradient(90deg, rgba(248, 113, 113, 0.9), rgba(220, 38, 38, 0.75));
-    }
-
-    .score-breakdown__item.is-full {
-      border-color: rgba(45, 212, 191, 0.34);
-      background: rgba(240, 253, 250, 0.82);
-    }
-
-    .score-breakdown__item.is-full .factor-rail__fill {
-      background: linear-gradient(90deg, rgba(45, 212, 191, 0.92), rgba(20, 184, 166, 0.8));
     }
 
     .risk-label {

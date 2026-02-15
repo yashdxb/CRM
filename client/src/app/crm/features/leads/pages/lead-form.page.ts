@@ -13,6 +13,7 @@ import { ProgressBarModule } from 'primeng/progressbar';
 import { TagModule } from 'primeng/tag';
 import { DatePickerModule } from 'primeng/datepicker';
 import { KnobModule } from 'primeng/knob';
+import { TableModule } from 'primeng/table';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputMaskModule } from 'primeng/inputmask';
@@ -38,6 +39,8 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
+import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
+import { computeLeadScore, computeQualificationRawScore, LeadDataWeight } from './lead-scoring.util';
 
 interface StatusOption {
   label: string;
@@ -74,6 +77,16 @@ interface PhoneTypeOption {
   isDefault: boolean;
 }
 
+interface ScoreBreakdownRow {
+  factor: string;
+  weight: number;
+  selectedValue: string;
+  confidence: string;
+  evidence: string;
+  score: number;
+  maxScore: number;
+}
+
 @Component({
   selector: 'app-lead-form-page',
   standalone: true,
@@ -89,6 +102,7 @@ interface PhoneTypeOption {
     TextareaModule,
     ProgressBarModule,
     KnobModule,
+    TableModule,
     TagModule,
     DatePickerModule,
     TooltipModule,
@@ -221,11 +235,13 @@ export class LeadFormPage implements OnInit {
   private readonly leadData = inject(LeadDataService);
   private readonly userAdminData = inject(UserAdminDataService);
   private readonly referenceData = inject(ReferenceDataService);
+  private readonly workspaceSettings = inject(WorkspaceSettingsService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
 
   private editingId: string | null = null;
+  private leadDataWeights: LeadDataWeight[] = [];
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
@@ -237,6 +253,7 @@ export class LeadFormPage implements OnInit {
     this.loadEvidenceSources();
     this.loadPhoneTypes();
     this.loadPhoneCountries();
+    this.loadLeadDataWeights();
     this.resolveAssignmentAccess();
     if (this.editingId && lead) {
       this.prefillFromLead(lead);
@@ -334,7 +351,8 @@ export class LeadFormPage implements OnInit {
       queryParams: {
         relatedType: 'Lead',
         relatedId: this.editingId,
-        subject
+        subject,
+        leadFirstTouchDueAtUtc: this.firstTouchDueAtUtc() ?? undefined
       }
     });
   }
@@ -508,6 +526,8 @@ export class LeadFormPage implements OnInit {
       icpFit: lead.icpFit || 'Unknown / not assessed',
       icpFitEvidence: lead.icpFitEvidence || 'No evidence yet'
     };
+    // Always derive score from current lead inputs to avoid stale persisted values.
+    this.form.score = this.computeAutoScore();
     this.ensureEvidenceOptionsContainSelections();
     this.linkedAccountId.set(lead.accountId ?? null);
     this.linkedContactId.set(lead.contactId ?? null);
@@ -726,6 +746,20 @@ export class LeadFormPage implements OnInit {
       },
       error: () => {
         this.phoneTypeOptions = [];
+      }
+    });
+  }
+
+  private loadLeadDataWeights() {
+    this.workspaceSettings.getSettings().subscribe({
+      next: (settings) => {
+        this.leadDataWeights = settings.qualificationPolicy?.leadDataWeights ?? [];
+        if (this.form.autoScore) {
+          this.form.score = this.computeAutoScore();
+        }
+      },
+      error: () => {
+        this.leadDataWeights = [];
       }
     });
   }
@@ -1034,54 +1068,11 @@ export class LeadFormPage implements OnInit {
   }
 
   protected computeAutoScore(): number {
-    const qualificationScore = this.computeQualificationScore();
-    if (qualificationScore !== null) {
-      return qualificationScore;
-    }
-
-    const email = this.form.email?.trim();
-    const phone = this.form.phone?.trim();
-    const company = this.form.companyName?.trim();
-    const jobTitle = this.form.jobTitle?.trim();
-    const source = this.form.source?.trim();
-    const territory = this.form.territory?.trim();
-    const hasSignal = !!(email || phone || company || jobTitle || source || territory);
-
-    if (!hasSignal) {
-      return this.form.score ?? 0;
-    }
-
-    let score = 20;
-    if (email) score += 20;
-    if (phone) score += 15;
-    if (company) score += 10;
-    if (jobTitle) score += 10;
-    if (source) score += 10;
-    if (territory) score += 5;
-
-    return Math.min(100, Math.max(0, score));
+    return computeLeadScore(this.form, this.leadDataWeights).finalLeadScore;
   }
 
   private computeQualificationScore(): number | null {
-    const factors = [
-      this.form.budgetAvailability,
-      this.form.readinessToSpend,
-      this.form.buyingTimeline,
-      this.form.problemSeverity,
-      this.form.economicBuyer,
-      this.form.icpFit
-    ];
-    const filled = factors.filter((value) => this.isMeaningfulFactor(value)).length;
-    if (filled === 0) return null;
-
-    return (
-      this.getBudgetScore(this.form.budgetAvailability)
-      + this.getReadinessScore(this.form.readinessToSpend)
-      + this.getTimelineScore(this.form.buyingTimeline)
-      + this.getProblemScore(this.form.problemSeverity)
-      + this.getEconomicBuyerScore(this.form.economicBuyer)
-      + this.getIcpFitScore(this.form.icpFit)
-    );
+    return computeQualificationRawScore(this.form);
   }
 
   private getBudgetScore(value?: string | null): number {
@@ -1243,9 +1234,7 @@ export class LeadFormPage implements OnInit {
   }
 
   protected qualificationConfidenceDisplayLabel(): string {
-    if (!this.hasQualificationFactors()) {
-      return 'Not scored';
-    }
+    if (!this.hasQualificationFactors()) return 'Not available';
 
     const serverLabel = this.qualificationConfidenceLabel();
     if (serverLabel) {
@@ -1267,6 +1256,21 @@ export class LeadFormPage implements OnInit {
     return 'Improve confidence by completing more qualification factors.';
   }
 
+  protected qualificationStatusLabel(): string {
+    const factorCount = this.countQualificationFactors();
+    if (factorCount === 0) return 'Not started';
+    const qualificationScore = computeLeadScore(this.form, this.leadDataWeights).qualificationScore100;
+    return `${qualificationScore} / 100`;
+  }
+
+  protected qualificationStatusHint(): string {
+    const factorCount = this.countQualificationFactors();
+    if (factorCount === 0) return 'No qualification factors selected yet.';
+    const qualificationScore = computeLeadScore(this.form, this.leadDataWeights).qualificationScore100;
+    const coverage = this.truthCoveragePercent();
+    return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/6 factors and ${coverage}% evidence coverage.`;
+  }
+
   protected scoreKnobValueColor(): string {
     const score = this.form.score ?? 0;
     if (score >= 75) return '#0ea5a4';
@@ -1279,6 +1283,79 @@ export class LeadFormPage implements OnInit {
     if (item.score === 0) return 'is-zero';
     if (item.score >= item.maxScore) return 'is-full';
     return '';
+  }
+
+  protected scoreBreakdownRows(): ScoreBreakdownRow[] {
+    const scoreByFactor = new Map(this.scoreBreakdown().map((item) => [item.factor, item] as const));
+    return [
+      {
+        factor: 'Budget',
+        weight: 25,
+        selectedValue: this.form.budgetAvailability ?? 'Unknown / not yet discussed',
+        confidence: this.getConfidenceForValue(this.form.budgetAvailability, this.budgetOptions),
+        evidence: this.form.budgetEvidence ?? 'No evidence yet',
+        score: scoreByFactor.get('Budget')?.score ?? 0,
+        maxScore: scoreByFactor.get('Budget')?.maxScore ?? 25
+      },
+      {
+        factor: 'Readiness',
+        weight: 20,
+        selectedValue: this.form.readinessToSpend ?? 'Unknown / unclear',
+        confidence: this.getConfidenceForValue(this.form.readinessToSpend, this.readinessOptions),
+        evidence: this.form.readinessEvidence ?? 'No evidence yet',
+        score: scoreByFactor.get('Readiness')?.score ?? 0,
+        maxScore: scoreByFactor.get('Readiness')?.maxScore ?? 20
+      },
+      {
+        factor: 'Timeline',
+        weight: 15,
+        selectedValue: this.form.buyingTimeline ?? 'Unknown / not discussed',
+        confidence: this.getConfidenceForValue(this.form.buyingTimeline, this.timelineOptions),
+        evidence: this.form.timelineEvidence ?? 'No evidence yet',
+        score: scoreByFactor.get('Timeline')?.score ?? 0,
+        maxScore: scoreByFactor.get('Timeline')?.maxScore ?? 15
+      },
+      {
+        factor: 'Problem',
+        weight: 20,
+        selectedValue: this.form.problemSeverity ?? 'Unknown / not validated',
+        confidence: this.getConfidenceForValue(this.form.problemSeverity, this.problemOptions),
+        evidence: this.form.problemEvidence ?? 'No evidence yet',
+        score: scoreByFactor.get('Problem')?.score ?? 0,
+        maxScore: scoreByFactor.get('Problem')?.maxScore ?? 20
+      },
+      {
+        factor: 'Economic Buyer',
+        weight: 10,
+        selectedValue: this.form.economicBuyer ?? 'Unknown / not identified',
+        confidence: this.getConfidenceForValue(this.form.economicBuyer, this.economicBuyerOptions),
+        evidence: this.form.economicBuyerEvidence ?? 'No evidence yet',
+        score: scoreByFactor.get('Economic Buyer')?.score ?? 0,
+        maxScore: scoreByFactor.get('Economic Buyer')?.maxScore ?? 10
+      },
+      {
+        factor: 'ICP Fit',
+        weight: 10,
+        selectedValue: this.form.icpFit ?? 'Unknown / not assessed',
+        confidence: this.getConfidenceForValue(this.form.icpFit, this.icpFitOptions),
+        evidence: this.form.icpFitEvidence ?? 'No evidence yet',
+        score: scoreByFactor.get('ICP Fit')?.score ?? 0,
+        maxScore: scoreByFactor.get('ICP Fit')?.maxScore ?? 10
+      }
+    ];
+  }
+
+  protected qualificationContributionTotal(): number {
+    return computeLeadScore(this.form, this.leadDataWeights).qualificationScore100;
+  }
+
+  protected leadDataQualityTotal(): number {
+    return computeLeadScore(this.form, this.leadDataWeights).buyerDataQualityScore100;
+  }
+
+  protected scoreContributionPercent(row: ScoreBreakdownRow): number {
+    if (!row.maxScore) return 0;
+    return Math.max(0, Math.min(100, Math.round((row.score / row.maxScore) * 100)));
   }
 
   protected statusSeverity(status: LeadStatus | string) {
@@ -1640,6 +1717,11 @@ export class LeadFormPage implements OnInit {
       default:
         return 'Unknown';
     }
+  }
+
+  private getConfidenceForValue(value: string | null | undefined, options: OptionItem[]): string {
+    const tone = this.resolveTone(value, options);
+    return this.toneLabel(tone);
   }
 
   private getWeakestFactor(factors: Array<{ label: string; state: string; weight: number }>) {

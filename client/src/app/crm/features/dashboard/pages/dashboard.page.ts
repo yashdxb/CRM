@@ -3,6 +3,7 @@ import { Component, computed, DestroyRef, effect, inject, OnInit, PLATFORM_ID, s
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { CdkDragDrop, CdkDragEnd, CdkDragStart, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ChartModule } from 'primeng/chart';
 import { ButtonModule } from 'primeng/button';
@@ -40,6 +41,7 @@ interface PriorityStreamItem {
   action: string;
   meta: string[];
   priorityScore: number;
+  leadFirstTouchDueAtUtc?: string;
 }
 
 @Component({
@@ -82,6 +84,7 @@ export class DashboardPage implements OnInit {
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly referenceData = inject(ReferenceDataService);
   private readonly opportunityData = inject(OpportunityDataService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly emptySummary: DashboardSummary = {
     totalCustomers: 0,
@@ -355,7 +358,8 @@ export class DashboardPage implements OnInit {
           lead.email ? lead.email : 'No email',
           `Assigned ${this.formatShortDate(lead.createdAtUtc)}`
         ],
-        priorityScore: 70
+        priorityScore: 70,
+        leadFirstTouchDueAtUtc: lead.firstTouchDueAtUtc
       });
     }
 
@@ -1262,6 +1266,35 @@ export class DashboardPage implements OnInit {
     filter: 'all' | 'overdue' | 'today' | 'new-leads' | 'at-risk' | 'no-next-step'
   ): void {
     this.priorityFilter.set(this.priorityFilter() === filter ? 'all' : filter);
+  }
+
+  protected onPriorityComplete(item: PriorityStreamItem): void {
+    if (item.type === 'task') {
+      this.router.navigate(['/app/activities', item.id, 'edit']);
+      return;
+    }
+
+    if (item.type === 'lead') {
+      const subject = item.title ? `Follow up: ${item.title}` : 'Lead follow-up';
+      this.router.navigate(['/app/activities/new'], {
+        queryParams: {
+          relatedType: 'Lead',
+          relatedId: item.id,
+          subject,
+          leadFirstTouchDueAtUtc: item.leadFirstTouchDueAtUtc ?? undefined
+        }
+      });
+      return;
+    }
+
+    const subject = item.title ? `Follow up: ${item.title}` : 'Opportunity follow-up';
+    this.router.navigate(['/app/activities/new'], {
+      queryParams: {
+        relatedType: 'Opportunity',
+        relatedId: item.id,
+        subject
+      }
+    });
   }
 
   protected openCostBreakdownDialog(): void {

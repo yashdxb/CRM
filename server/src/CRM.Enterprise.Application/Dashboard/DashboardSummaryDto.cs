@@ -94,7 +94,8 @@ public record DashboardLeadDto(
     string Company,
     string Status,
     string? Email,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    DateTime? FirstTouchDueAtUtc);
 
 public record DashboardOpportunityDto(
     Guid Id,

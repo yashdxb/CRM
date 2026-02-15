@@ -199,12 +199,30 @@
                   name="dueDateUtc"
                   appendTo="body"
                   [(ngModel)]="form.dueDateUtc"
+                  (ngModelChange)="onDueDateChange($event)"
                   [disabled]="systemLocked()"
                   [showIcon]="true"
                   [showTime]="true"
                   hourFormat="12"
                   styleClass="w-full"
                 ></p-datePicker>
+                <div class="due-date-meta" *ngIf="hasLeadSlaDueDate()">
+                  <span class="due-date-hint" *ngIf="dueDateDefaultedFromLeadSla()">
+                    Defaulted from Lead SLA ({{ leadSlaDueLabel() }})
+                  </span>
+                  <span class="due-date-hint" *ngIf="!dueDateDefaultedFromLeadSla()">
+                    Lead SLA due: {{ leadSlaDueLabel() }}
+                  </span>
+                  <button
+                    *ngIf="canSyncDueDateToLeadSla()"
+                    pButton
+                    type="button"
+                    label="Sync to SLA"
+                    icon="pi pi-refresh"
+                    class="crm-button crm-button--ghost due-date-sync"
+                    (click)="syncDueDateToLeadSla()"
+                  ></button>
+                </div>
               </div>
               <div class="field" *ngIf="activityStatus === 'Completed'">
                 <label>Completed at</label>

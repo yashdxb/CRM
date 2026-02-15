@@ -74,7 +74,8 @@ public record DashboardLeadItem(
     string Company,
     string Status,
     string? Email,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    DateTime? FirstTouchDueAtUtc);
 
 public record DashboardOpportunityItem(
     Guid Id,

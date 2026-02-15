@@ -255,6 +255,12 @@ public sealed class ActivityService : IActivityService
 
     public async Task<ActivityOperationResult<ActivityListItemDto>> CreateAsync(ActivityUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
+        var leadDueDateError = ValidateLeadDueDateRequirement(request);
+        if (leadDueDateError is not null)
+        {
+            return ActivityOperationResult<ActivityListItemDto>.Fail(leadDueDateError);
+        }
+
         var validationError = ValidateOutcomeAndNextStep(request);
         if (validationError is not null)
         {
@@ -343,6 +349,12 @@ public sealed class ActivityService : IActivityService
         }
 
         var completedNow = previousCompletedAt != activity.CompletedDateUtc && activity.CompletedDateUtc.HasValue;
+        var leadDueDateError = ValidateLeadDueDateRequirement(request);
+        if (leadDueDateError is not null)
+        {
+            return ActivityOperationResult<bool>.Fail(leadDueDateError);
+        }
+
         var validationError = ValidateOutcomeAndNextStep(request);
         if (validationError is not null)
         {
@@ -455,6 +467,21 @@ public sealed class ActivityService : IActivityService
         if (!request.DueDateUtc.HasValue)
         {
             return "Due date is required to complete an activity.";
+        }
+
+        return null;
+    }
+
+    private static string? ValidateLeadDueDateRequirement(ActivityUpsertRequest request)
+    {
+        if (request.RelatedEntityType != ActivityRelationType.Lead)
+        {
+            return null;
+        }
+
+        if (!request.DueDateUtc.HasValue)
+        {
+            return "Due date is required for lead-related activities.";
         }
 
         return null;

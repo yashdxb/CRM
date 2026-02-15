@@ -84,6 +84,15 @@ export class QualificationPolicyPage {
     { key: 'icpFit', label: 'ICP fit' }
   ];
 
+  protected readonly leadDataWeightOptions: Array<{ key: string; label: string }> = [
+    { key: 'firstNameLastName', label: 'First and last name' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'companyName', label: 'Company name' },
+    { key: 'jobTitle', label: 'Job title' },
+    { key: 'source', label: 'Source' }
+  ];
+
   private loadedSettings: WorkspaceSettings | null = null;
   private currencyFallback = '';
 
@@ -152,6 +161,9 @@ export class QualificationPolicyPage {
       exposureWeights: (policy.exposureWeights && policy.exposureWeights.length > 0)
         ? policy.exposureWeights
         : QualificationPolicyPage.defaultPolicy().exposureWeights,
+      leadDataWeights: (policy.leadDataWeights && policy.leadDataWeights.length > 0)
+        ? policy.leadDataWeights
+        : QualificationPolicyPage.defaultPolicy().leadDataWeights,
       evidenceSources: this.normalizeEvidenceSources(policy.evidenceSources)
     };
     this.qualificationPolicy.set(normalized);
@@ -189,6 +201,26 @@ export class QualificationPolicyPage {
   protected exposureWeightsMissing() {
     return this.exposureWeightOptions.filter(
       (option) => !(this.qualificationPolicy().exposureWeights ?? []).some((w) => w.key === option.key)
+    );
+  }
+
+  protected updateLeadDataWeight(key: string, weight: number | null) {
+    const safeWeight = Number.isFinite(weight) ? Math.max(0, Math.min(100, weight ?? 0)) : 0;
+    const current = this.qualificationPolicy();
+    const next = (current.leadDataWeights ?? []).map((item) =>
+      item.key === key ? { ...item, weight: safeWeight } : item
+    );
+    this.qualificationPolicy.set({ ...current, leadDataWeights: next });
+  }
+
+  protected leadDataWeightFor(key: string) {
+    return (this.qualificationPolicy().leadDataWeights ?? []).find((item) => item.key === key)?.weight ?? 0;
+  }
+
+  protected leadDataWeightTotal() {
+    return (this.qualificationPolicy().leadDataWeights ?? []).reduce(
+      (sum, item) => sum + (item.weight ?? 0),
+      0
     );
   }
 
@@ -323,6 +355,14 @@ export class QualificationPolicyPage {
         { key: 'problem', weight: 15 },
         { key: 'readiness', weight: 10 },
         { key: 'icpFit', weight: 10 }
+      ],
+      leadDataWeights: [
+        { key: 'firstNameLastName', weight: 16 },
+        { key: 'email', weight: 24 },
+        { key: 'phone', weight: 24 },
+        { key: 'companyName', weight: 16 },
+        { key: 'jobTitle', weight: 12 },
+        { key: 'source', weight: 8 }
       ],
       evidenceSources: [
         'No evidence yet',

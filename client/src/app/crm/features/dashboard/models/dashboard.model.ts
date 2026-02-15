@@ -85,6 +85,7 @@ export interface DashboardLead {
   status: string;
   email?: string;
   createdAtUtc: string;
+  firstTouchDueAtUtc?: string;
 }
 
 export interface DashboardOpportunity {

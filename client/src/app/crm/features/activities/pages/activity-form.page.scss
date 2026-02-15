@@ -64,6 +64,26 @@
   }
 }
 
+.due-date-meta {
+  margin-top: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.due-date-hint {
+  font-size: 0.78rem;
+  color: rgba(71, 85, 105, 0.9);
+  font-style: italic;
+}
+
+.due-date-sync {
+  padding: 0.2rem 0.6rem;
+  min-height: 1.8rem;
+  font-size: 0.75rem;
+}
+
 .related-summary {
   max-width: 1400px;
   width: min(1400px, calc(100% - 3rem));

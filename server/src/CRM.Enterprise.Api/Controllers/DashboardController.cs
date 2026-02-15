@@ -128,7 +128,8 @@ public class DashboardController : ControllerBase
                 l.Company,
                 l.Status,
                 l.Email,
-                l.CreatedAtUtc)).ToList(),
+                l.CreatedAtUtc,
+                l.FirstTouchDueAtUtc)).ToList(),
             summary.AtRiskDeals.Select(d => new DashboardOpportunityItem(
                 d.Id,
                 d.Name,

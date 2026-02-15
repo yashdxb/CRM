@@ -47,6 +47,7 @@ export interface QualificationPolicy {
   thresholdRules: QualificationThresholdRule[];
   modifiers: QualificationModifierRule[];
   exposureWeights: QualificationExposureWeight[];
+  leadDataWeights: QualificationLeadDataWeight[];
   evidenceSources: string[];
 }
 
@@ -63,6 +64,11 @@ export interface QualificationModifierRule {
 }
 
 export interface QualificationExposureWeight {
+  key: string;
+  weight: number;
+}
+
+export interface QualificationLeadDataWeight {
   key: string;
   weight: number;
 }

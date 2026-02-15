@@ -443,7 +443,8 @@ public class DashboardReadService : IDashboardReadService
                     l.CompanyName ?? string.Empty,
                     l.Status != null ? l.Status.Name : "New",
                     l.Email,
-                    l.CreatedAtUtc))
+                    l.CreatedAtUtc,
+                    l.FirstTouchDueAtUtc))
                 .ToListAsync(cancellationToken)
             : new List<DashboardLeadDto>();
 

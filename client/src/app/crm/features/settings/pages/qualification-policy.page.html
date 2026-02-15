@@ -251,6 +251,40 @@
 
           <section class="form-card">
             <h3 class="section-title section-title--info">
+              <i class="pi pi-chart-line"></i>
+              Lead Data Quality Weights
+            </h3>
+            <p class="section-description">
+              Configure how lead basic fields contribute to Lead Data Quality Score (0-100).
+            </p>
+
+            <div class="policy-block">
+              <div class="policy-header">
+                <h4>Lead Data Fields</h4>
+                <span class="hint">Total: {{ leadDataWeightTotal() }}%</span>
+              </div>
+              <div class="policy-list">
+                <div class="policy-row policy-row--modifier" *ngFor="let field of leadDataWeightOptions">
+                  <div class="factor-label">{{ field.label }}</div>
+                  <p-inputNumber
+                    [ngModel]="leadDataWeightFor(field.key)"
+                    (ngModelChange)="updateLeadDataWeight(field.key, $event)"
+                    [min]="0"
+                    [max]="100"
+                    [ngModelOptions]="{ standalone: true }"
+                    styleClass="w-full"
+                  ></p-inputNumber>
+                  <span class="factor-suffix">%</span>
+                </div>
+              </div>
+              <p class="hint" *ngIf="leadDataWeightTotal() !== 100">
+                We recommend weights totaling 100% for consistent Lead Data Quality scoring.
+              </p>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
               <i class="pi pi-list-check"></i>
               Evidence Sources
             </h3>

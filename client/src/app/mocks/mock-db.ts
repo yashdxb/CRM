@@ -200,6 +200,14 @@ let mockWorkspaceSettings: WorkspaceSettings = {
       { key: 'readiness', weight: 10 },
       { key: 'icpFit', weight: 10 }
     ],
+    leadDataWeights: [
+      { key: 'firstNameLastName', weight: 16 },
+      { key: 'email', weight: 24 },
+      { key: 'phone', weight: 24 },
+      { key: 'companyName', weight: 16 },
+      { key: 'jobTitle', weight: 12 },
+      { key: 'source', weight: 8 }
+    ],
     evidenceSources: [
       'No evidence yet',
       'Customer call',

@@ -55,8 +55,14 @@
             <h3>{{ leadDisplayName() }}</h3>
             <div class="lead-sticky-meta">
               <span class="status-chip" [attr.data-status]="form.status">{{ form.status }}</span>
-              <span class="score-chip">Score {{ form.score ?? 0 }} / 100</span>
-              <span class="confidence-chip">{{ qualificationConfidenceDisplayLabel() }}</span>
+              <span class="score-chip">Lead score {{ form.score ?? 0 }} / 100</span>
+              <span
+                class="confidence-chip"
+                pTooltip="{{ qualificationStatusHint() }}"
+                tooltipPosition="top"
+              >
+                Qualification: {{ qualificationStatusLabel() }}
+              </span>
               <span class="score-source-chip" *ngIf="scoreSourceBadge()">{{ scoreSourceBadge() }}</span>
             </div>
           </div>
@@ -789,20 +795,25 @@
                 <div class="score-breakdown">
                   <div class="score-breakdown__header">
                     <div class="score-breakdown__title">
-                      <span class="eyebrow">Scoring model</span>
-                      <strong>Scoring Details</strong>
+                      <span class="eyebrow">Scoring breakdown</span>
+                      <strong>Qualification model</strong>
+                      <span class="score-formula">Lead score and qualification score are tracked separately, each out of 100.</span>
                     </div>
-                    <span class="confidence-pill">{{ qualificationConfidenceDisplayLabel() }}</span>
+                    <div class="score-breakdown__summary">
+                      <span class="total-pill">Lead data quality: {{ leadDataQualityTotal() }} / 100</span>
+                      <span class="total-pill">Qualification score: {{ qualificationContributionTotal() }} / 100</span>
+                      <span class="confidence-pill">Confidence: {{ qualificationConfidenceDisplayLabel() }}</span>
+                    </div>
                   </div>
-                  <div class="confidence-gauge-panel">
+                  <div class="confidence-gauge-panel compact">
                     <div class="confidence-gauge">
-                      <div class="confidence-gauge__label">Qualification confidence</div>
+                      <div class="confidence-gauge__label">Confidence</div>
                       <p-knob
                         [ngModel]="qualificationConfidencePercent()"
                         [ngModelOptions]="{ standalone: true }"
                         [readonly]="true"
-                        [size]="86"
-                        [strokeWidth]="10"
+                        [size]="70"
+                        [strokeWidth]="9"
                         [valueColor]="scoreKnobValueColor()"
                         rangeColor="rgba(var(--apple-gray-4), 0.35)"
                         textColor="rgba(var(--apple-secondary), 0.9)"
@@ -811,17 +822,37 @@
                     </div>
                     <p class="hint-text compact" *ngIf="qualificationConfidenceHint()">{{ qualificationConfidenceHint() }}</p>
                   </div>
-                  <div class="score-breakdown__grid">
-                    <div class="score-breakdown__item" [ngClass]="scoreItemClass(item)" *ngFor="let item of scoreBreakdown()">
-                      <div class="score-breakdown__item-head">
-                        <span class="factor-name">{{ item.factor }}</span>
-                        <strong class="factor-score">{{ item.score }} / {{ item.maxScore }}</strong>
-                      </div>
-                      <div class="factor-rail">
-                        <span class="factor-rail__fill" [style.width.%]="item.maxScore ? (item.score / item.maxScore) * 100 : 0"></span>
-                      </div>
-                    </div>
-                  </div>
+                  <p-table [value]="scoreBreakdownRows()" styleClass="score-breakdown-table">
+                    <ng-template pTemplate="header">
+                      <tr>
+                        <th>Factor</th>
+                        <th>Weight</th>
+                        <th>Selected value</th>
+                        <th>Confidence</th>
+                        <th>Evidence</th>
+                        <th>Contribution</th>
+                        <th>Score</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                      <tr>
+                        <td class="col-factor">{{ row.factor }}</td>
+                        <td class="col-weight">{{ row.weight }}</td>
+                        <td class="col-selected">{{ row.selectedValue }}</td>
+                        <td class="col-confidence">
+                          <span class="confidence-badge" [attr.data-confidence]="row.confidence.toLowerCase()">{{ row.confidence }}</span>
+                        </td>
+                        <td class="col-evidence">{{ row.evidence }}</td>
+                        <td class="col-contribution">
+                          <div class="factor-rail compact">
+                            <span class="factor-rail__fill" [style.width.%]="scoreContributionPercent(row)"></span>
+                          </div>
+                          <span>{{ scoreContributionPercent(row) }}%</span>
+                        </td>
+                        <td class="col-score">{{ row.score }} / {{ row.maxScore }}</td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
                   <div class="risk-flags" *ngIf="riskFlags().length">
                     <span class="risk-label">Top risks</span>
                     <span class="risk-flag" *ngFor="let flag of riskFlags()">{{ flag }}</span>

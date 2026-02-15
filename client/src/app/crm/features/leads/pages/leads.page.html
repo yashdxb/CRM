@@ -172,9 +172,13 @@
                 <i class="pi pi-phone"></i>
                 <span>{{ lead.phone }}</span>
               </div>
-              <div class="lead-epistemic" *ngIf="lead.qualificationConfidenceLabel">
-                <span class="epistemic-chip confidence">
-                  {{ lead.qualificationConfidenceLabel }} confidence
+              <div class="lead-epistemic">
+                <span
+                  class="epistemic-chip confidence"
+                  pTooltip="{{ qualificationStatusHint(lead) }}"
+                  tooltipPosition="top"
+                >
+                  Qualification: {{ qualificationStatusLabel(lead) }}
                 </span>
               </div>
             </div>
@@ -267,9 +271,13 @@
                       <div class="lead-info">
                         <span class="name">{{ lead.name }}</span>
                         <span class="company">{{ lead.company }}</span>
-                        <div class="lead-epistemic" *ngIf="lead.qualificationConfidenceLabel">
-                          <span class="epistemic-chip confidence">
-                            {{ lead.qualificationConfidenceLabel }} confidence
+                        <div class="lead-epistemic">
+                          <span
+                            class="epistemic-chip confidence"
+                            pTooltip="{{ qualificationStatusHint(lead) }}"
+                            tooltipPosition="top"
+                          >
+                            Qualification: {{ qualificationStatusLabel(lead) }}
                           </span>
                         </div>
                         <div class="lead-sla" *ngIf="lead.firstTouchDueAtUtc || lead.firstTouchedAtUtc">
