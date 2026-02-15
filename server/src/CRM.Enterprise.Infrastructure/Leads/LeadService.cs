@@ -382,7 +382,15 @@ public sealed class LeadService : ILeadService
             return null;
         }
 
-        var score = await _leadScoringService.ScoreAsync(lead, cancellationToken);
+        LeadAiScore score;
+        try
+        {
+            score = await _leadScoringService.ScoreAsync(lead, cancellationToken);
+        }
+        catch
+        {
+            score = BuildFallbackAiScore(lead);
+        }
         lead.AiScore = score.Score;
         lead.AiConfidence = score.Confidence;
         lead.AiRationale = score.Rationale;
@@ -394,9 +402,35 @@ public sealed class LeadService : ILeadService
         return new LeadAiScoreResultDto(score.Score, score.Confidence, score.Rationale, lead.AiScoredAtUtc.Value);
     }
 
+    private static LeadAiScore BuildFallbackAiScore(Lead lead)
+    {
+        var score = 0;
+        if (!string.IsNullOrWhiteSpace(lead.Email)) score += 20;
+        if (!string.IsNullOrWhiteSpace(lead.Phone)) score += 15;
+        if (!string.IsNullOrWhiteSpace(lead.CompanyName)) score += 10;
+        if (!string.IsNullOrWhiteSpace(lead.JobTitle)) score += 10;
+        if (!string.IsNullOrWhiteSpace(lead.Source)) score += 10;
+        if (!string.IsNullOrWhiteSpace(lead.Territory)) score += 5;
+        if (lead.ContactId.HasValue) score += 10;
+        if (lead.AccountId.HasValue) score += 10;
+        if (string.Equals(lead.Status?.Name, "Qualified", StringComparison.OrdinalIgnoreCase)) score += 10;
+        score = Math.Clamp(score, 0, 100);
+
+        return new LeadAiScore(
+            score,
+            0.35m,
+            "Fallback score applied because AI service is currently unavailable.");
+    }
+
     public async Task<LeadOperationResult<LeadListItemDto>> CreateAsync(LeadUpsertRequest request, LeadActor actor, CancellationToken cancellationToken = default)
     {
         request = NormalizeEvidence(request);
+        var duplicate = await FindExactDuplicateLeadAsync(request, null, cancellationToken);
+        if (duplicate is not null)
+        {
+            return LeadOperationResult<LeadListItemDto>.Fail(
+                $"Duplicate lead detected. Existing lead: {duplicate.FirstName} {duplicate.LastName} ({duplicate.CompanyName ?? "No company"}) [{duplicate.Id}].");
+        }
         var assignment = await ResolveOwnerAssignmentAsync(request.OwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
         var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
         var ownerExists = await _dbContext.Users.AnyAsync(u => u.Id == assignment.OwnerId && u.IsActive && !u.IsDeleted, cancellationToken);
@@ -553,6 +587,12 @@ public sealed class LeadService : ILeadService
     public async Task<LeadOperationResult<bool>> UpdateAsync(Guid id, LeadUpsertRequest request, LeadActor actor, CancellationToken cancellationToken = default)
     {
         request = NormalizeEvidence(request);
+        var duplicate = await FindExactDuplicateLeadAsync(request, id, cancellationToken);
+        if (duplicate is not null)
+        {
+            return LeadOperationResult<bool>.Fail(
+                $"Duplicate lead detected. Existing lead: {duplicate.FirstName} {duplicate.LastName} ({duplicate.CompanyName ?? "No company"}) [{duplicate.Id}].");
+        }
         var lead = await _dbContext.Leads.FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
         if (lead is null)
         {
@@ -2703,6 +2743,61 @@ public sealed class LeadService : ILeadService
     private static string? Normalize(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private async Task<Lead?> FindExactDuplicateLeadAsync(LeadUpsertRequest request, Guid? excludeLeadId, CancellationToken cancellationToken)
+    {
+        var firstName = Normalize(request.FirstName)?.ToLowerInvariant();
+        var lastName = Normalize(request.LastName)?.ToLowerInvariant();
+        var email = Normalize(request.Email)?.ToLowerInvariant();
+        var phone = Normalize(request.Phone)?.ToLowerInvariant();
+        var company = Normalize(request.CompanyName)?.ToLowerInvariant();
+
+        var leads = _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted);
+
+        if (excludeLeadId.HasValue)
+        {
+            leads = leads.Where(l => l.Id != excludeLeadId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var byEmail = await leads.FirstOrDefaultAsync(
+                l => l.Email != null && l.Email.ToLower() == email,
+                cancellationToken);
+            if (byEmail is not null)
+            {
+                return byEmail;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(phone) && !string.IsNullOrWhiteSpace(company))
+        {
+            var byPhoneCompany = await leads.FirstOrDefaultAsync(
+                l => l.Phone != null
+                    && l.CompanyName != null
+                    && l.Phone.ToLower() == phone
+                    && l.CompanyName.ToLower() == company,
+                cancellationToken);
+            if (byPhoneCompany is not null)
+            {
+                return byPhoneCompany;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName) && !string.IsNullOrWhiteSpace(company))
+        {
+            return await leads.FirstOrDefaultAsync(
+                l => l.FirstName.ToLower() == firstName
+                    && l.LastName.ToLower() == lastName
+                    && l.CompanyName != null
+                    && l.CompanyName.ToLower() == company,
+                cancellationToken);
+        }
+
+        return null;
     }
 
     private static AuditEventEntry CreateAuditEntry(

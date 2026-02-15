@@ -2,6 +2,8 @@
 
 Purpose: Consolidated CRM backlog across Now/Next/Later. SCM items live in `docs/SCM_BACKLOG.md`. Keep ClickUp in sync with this document.
 
+External customer-facing roadmap: `docs/PRODUCT_ROADMAP_PUBLIC.md`
+
 Legend:
 - DONE: implemented and wired in UI + API
 - PARTIAL: implemented but missing key pieces or not fully integrated

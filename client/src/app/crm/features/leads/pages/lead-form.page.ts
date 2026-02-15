@@ -35,7 +35,7 @@ import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
-import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 
@@ -54,6 +54,7 @@ interface AssignmentOption {
 interface OwnerOption {
   label: string;
   value: string;
+  email?: string;
 }
 
 interface OptionItem {
@@ -664,10 +665,11 @@ export class LeadFormPage implements OnInit {
     });
   }
 
-  private mapOwnerOptions(users: Array<{ id: string; fullName: string }>): OwnerOption[] {
+  private mapOwnerOptions(users: Array<{ id: string; fullName: string; email?: string }>): OwnerOption[] {
     return users.map((user) => ({
       label: user.fullName,
-      value: user.id
+      value: user.id,
+      email: user.email?.trim().toLowerCase()
     }));
   }
 
@@ -738,6 +740,14 @@ export class LeadFormPage implements OnInit {
       this.form.ownerId = userId;
       return;
     }
+    const userEmail = readUserEmail();
+    if (userEmail) {
+      const emailMatch = options.find((opt) => (opt.email ?? '').toLowerCase() === userEmail);
+      if (emailMatch) {
+        this.form.ownerId = emailMatch.value;
+        return;
+      }
+    }
     const fullName = this.authService.currentUser()?.fullName?.trim().toLowerCase();
     if (!fullName) return;
     const match = options.find((opt) => opt.label.trim().toLowerCase() === fullName);
@@ -773,6 +783,10 @@ export class LeadFormPage implements OnInit {
   private resolveAssignmentAccess(): void {
     const context = readTokenContext();
     const hasAdmin = tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
+    if (!hasAdmin) {
+      this.assignmentEditable.set(false);
+      return;
+    }
     const userId = readUserId();
     if (!userId) {
       this.assignmentEditable.set(false);
@@ -1207,7 +1221,19 @@ export class LeadFormPage implements OnInit {
     return 'Low confidence';
   }
 
+  protected scoreSourceBadge(): string | null {
+    const note = this.aiScoreNote()?.toLowerCase();
+    if (!note) {
+      return null;
+    }
+    return note.includes('fallback') ? 'Rules fallback' : 'AI';
+  }
+
   protected qualificationConfidencePercent(): number {
+    if (!this.hasQualificationFactors()) {
+      return 0;
+    }
+
     const serverConfidence = this.qualificationConfidence();
     if (serverConfidence !== null) {
       return Math.round(serverConfidence * 100);
@@ -1216,7 +1242,26 @@ export class LeadFormPage implements OnInit {
     return Math.round((count / 6) * 100);
   }
 
+  protected qualificationConfidenceDisplayLabel(): string {
+    if (!this.hasQualificationFactors()) {
+      return 'Not scored';
+    }
+
+    const serverLabel = this.qualificationConfidenceLabel();
+    if (serverLabel) {
+      return serverLabel;
+    }
+
+    const percent = this.qualificationConfidencePercent();
+    if (percent >= 75) return 'High';
+    if (percent >= 45) return 'Medium';
+    return 'Low';
+  }
+
   protected qualificationConfidenceHint(): string | null {
+    if (!this.hasQualificationFactors()) {
+      return null;
+    }
     const percent = this.qualificationConfidencePercent();
     if (percent >= 80) return null;
     return 'Improve confidence by completing more qualification factors.';
@@ -1282,6 +1327,10 @@ export class LeadFormPage implements OnInit {
       this.form.icpFit
     ];
     return factors.filter((value) => this.isMeaningfulFactor(value)).length;
+  }
+
+  private hasQualificationFactors(): boolean {
+    return this.countQualificationFactors() > 0;
   }
 
   private isMeaningfulFactor(value?: string | null): boolean {

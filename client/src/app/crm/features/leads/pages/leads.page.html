@@ -100,7 +100,7 @@
         </div>
         <div class="kpi-data">
           <span class="kpi-value">{{ metrics().avgScore }}<small>%</small></span>
-          <span class="kpi-label">Avg Score</span>
+          <span class="kpi-label">Avg Lead Score</span>
         </div>
       </div>
     </section>
@@ -172,12 +172,9 @@
                 <i class="pi pi-phone"></i>
                 <span>{{ lead.phone }}</span>
               </div>
-              <div class="lead-epistemic" *ngIf="lead.truthCoverage !== undefined || lead.weakestSignal">
-                <span class="epistemic-chip truth" *ngIf="lead.truthCoverage !== undefined">
-                  Truth {{ (lead.truthCoverage * 100) | number:'1.0-0' }}%
-                </span>
-                <span class="epistemic-chip weakest" *ngIf="lead.weakestSignal">
-                  Weakest: {{ lead.weakestSignal }}
+              <div class="lead-epistemic" *ngIf="lead.qualificationConfidenceLabel">
+                <span class="epistemic-chip confidence">
+                  {{ lead.qualificationConfidenceLabel }} confidence
                 </span>
               </div>
             </div>
@@ -248,7 +245,7 @@
                   <th class="th-lead">Lead</th>
                   <th class="th-status">Status</th>
                   <th class="th-contact">Contact</th>
-                  <th class="th-score">Score</th>
+                  <th class="th-score">Lead Score</th>
                   <th class="th-owner">Owner</th>
                   <th class="th-actions"></th>
                 </tr>
@@ -270,12 +267,9 @@
                       <div class="lead-info">
                         <span class="name">{{ lead.name }}</span>
                         <span class="company">{{ lead.company }}</span>
-                        <div class="lead-epistemic" *ngIf="lead.truthCoverage !== undefined || lead.weakestSignal">
-                          <span class="epistemic-chip truth" *ngIf="lead.truthCoverage !== undefined">
-                            Truth {{ (lead.truthCoverage * 100) | number:'1.0-0' }}%
-                          </span>
-                          <span class="epistemic-chip weakest" *ngIf="lead.weakestSignal">
-                            Weakest: {{ lead.weakestSignal }}
+                        <div class="lead-epistemic" *ngIf="lead.qualificationConfidenceLabel">
+                          <span class="epistemic-chip confidence">
+                            {{ lead.qualificationConfidenceLabel }} confidence
                           </span>
                         </div>
                         <div class="lead-sla" *ngIf="lead.firstTouchDueAtUtc || lead.firstTouchedAtUtc">

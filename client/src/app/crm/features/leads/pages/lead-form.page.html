@@ -56,12 +56,23 @@
             <div class="lead-sticky-meta">
               <span class="status-chip" [attr.data-status]="form.status">{{ form.status }}</span>
               <span class="score-chip">Score {{ form.score ?? 0 }} / 100</span>
-              <span class="confidence-chip" *ngIf="qualificationConfidenceLabel()">{{ qualificationConfidenceLabel() }}</span>
-              <span class="truth-chip" *ngIf="truthCoverage() !== null">Truth {{ truthCoveragePercent() }}%</span>
-              <span class="assumption-chip" *ngIf="assumptionsOutstanding() !== null">{{ assumptionsOutstandingLabel() }}</span>
+              <span class="confidence-chip">{{ qualificationConfidenceDisplayLabel() }}</span>
+              <span class="score-source-chip" *ngIf="scoreSourceBadge()">{{ scoreSourceBadge() }}</span>
             </div>
           </div>
           <div class="lead-sticky-right">
+            <div class="sla-strip sla-strip--sticky">
+              <div class="sla-pill" [ngClass]="getSlaTone()">
+                <i class="pi pi-stopwatch"></i>
+                <span class="sla-label">{{ getSlaStatusLabel() }}</span>
+                <span class="sla-time">
+                  {{ firstTouchDueAtUtc() ? (firstTouchDueAtUtc() | date:'medium') : '—' }}
+                </span>
+              </div>
+              <div class="sla-meta" *ngIf="firstTouchedAtUtc()">
+                First touched {{ firstTouchedAtUtc() | date:'medium' }}
+              </div>
+            </div>
             <button
               pButton
               type="button"
@@ -329,20 +340,8 @@
           <section class="form-section form-section--score" *ngIf="activeTab() === 'overview'">
             <h2 class="section-title">
               <i class="pi pi-chart-line"></i>
-              System score
+              Score
             </h2>
-            <div class="sla-strip sla-strip--inline" *ngIf="isEditMode()">
-              <div class="sla-pill" [ngClass]="getSlaTone()">
-                <i class="pi pi-stopwatch"></i>
-                <span class="sla-label">{{ getSlaStatusLabel() }}</span>
-                <span class="sla-time">
-                  {{ firstTouchDueAtUtc() ? (firstTouchDueAtUtc() | date:'medium') : '—' }}
-                </span>
-              </div>
-              <div class="sla-meta" *ngIf="firstTouchedAtUtc()">
-                First touched {{ firstTouchedAtUtc() | date:'medium' }}
-              </div>
-            </div>
             <p-progressBar
               *ngIf="aiScoring()"
               styleClass="ai-score-progress ai-score-progress--top"
@@ -350,7 +349,7 @@
             ></p-progressBar>
             <div class="form-grid">
               <div class="field score-field">
-                <label>Lead score (System)</label>
+                <label>Score</label>
                 <p-inputNumber
                   name="score"
                   [(ngModel)]="form.score"
@@ -362,10 +361,12 @@
                 ></p-inputNumber>
                 <div class="score-meta">
                   <p class="hint-text">
-                    Calculated from lead signals and qualification factors. Manual entry is disabled.
+                    Primary prioritization score, calculated from lead signals and qualification factors.
+                    Manual entry is disabled.
                     <span *ngIf="form.autoScore"> Preview: {{ computeAutoScore() }}.</span>
                   </p>
                   <p-tag *ngIf="aiScoreConfidenceLabel()" [value]="aiScoreConfidenceLabel()!" severity="info"></p-tag>
+                  <p-tag *ngIf="scoreSourceBadge()" [value]="scoreSourceBadge()!" severity="secondary"></p-tag>
                 </div>
                 <div class="ai-score-row" *ngIf="isEditMode()">
                   <button
@@ -383,7 +384,7 @@
                   </div>
                 </div>
               </div>
-              <div class="field" *ngIf="form.assignmentStrategy === 'Territory'">
+              <div class="field">
                 <label>Territory</label>
                 <input pInputText name="territory" [(ngModel)]="form.territory" placeholder="West, EMEA, APAC" class="w-full" />
               </div>
@@ -442,7 +443,7 @@
                     </span>
                     <span class="feedback-item feedback-item--truth" *ngIf="truthCoverage() !== null">
                       <i class="pi pi-check-circle feedback-icon" aria-hidden="true"></i>
-                      Truth coverage:
+                      Evidence coverage:
                       <strong>{{ truthCoveragePercent() }}%</strong>
                     </span>
                     <span class="feedback-item feedback-item--assumptions" *ngIf="assumptionsOutstanding() !== null">
@@ -789,13 +790,13 @@
                   <div class="score-breakdown__header">
                     <div class="score-breakdown__title">
                       <span class="eyebrow">Scoring model</span>
-                      <strong>Score Breakdown</strong>
+                      <strong>Scoring Details</strong>
                     </div>
-                    <span class="confidence-pill" *ngIf="qualificationConfidenceLabel()">{{ qualificationConfidenceLabel() }} confidence</span>
+                    <span class="confidence-pill">{{ qualificationConfidenceDisplayLabel() }}</span>
                   </div>
                   <div class="confidence-gauge-panel">
                     <div class="confidence-gauge">
-                      <div class="confidence-gauge__label">Confidence</div>
+                      <div class="confidence-gauge__label">Qualification confidence</div>
                       <p-knob
                         [ngModel]="qualificationConfidencePercent()"
                         [ngModelOptions]="{ standalone: true }"
@@ -829,7 +830,7 @@
               </div>
               <div class="field full-row">
                 <label>Context &amp; supporting notes <span class="required" *ngIf="form.status === 'Qualified'">*</span></label>
-                <p class="hint-text compact">Context only. Does not affect score.</p>
+                <p class="hint-text compact">Context only. Does not change Score.</p>
                 <textarea
                   pTextarea
                   name="qualifiedNotes"

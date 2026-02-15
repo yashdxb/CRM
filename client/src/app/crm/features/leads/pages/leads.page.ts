@@ -519,6 +519,10 @@ export class LeadsPage {
   private resolveOwnerAssignmentAccess(): void {
     const context = readTokenContext();
     const hasAdmin = tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
+    if (!hasAdmin) {
+      this.ownerAssignmentEditable.set(false);
+      return;
+    }
     const userId = readUserId();
     if (!userId) {
       this.ownerAssignmentEditable.set(false);

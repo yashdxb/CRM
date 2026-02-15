@@ -822,6 +822,12 @@ $status-lost: #ef4444;
   color: #b45309;
 }
 
+.epistemic-chip.confidence {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.2);
+  color: #1d4ed8;
+}
+
 .lead-card-footer {
   display: flex;
   align-items: center;
@@ -1669,6 +1675,12 @@ $status-lost: #ef4444;
     background: rgba(245, 158, 11, 0.2);
     border-color: rgba(245, 158, 11, 0.25);
     color: #fcd34d;
+  }
+
+  .epistemic-chip.confidence {
+    background: rgba(96, 165, 250, 0.25);
+    border-color: rgba(96, 165, 250, 0.32);
+    color: #bfdbfe;
   }
 
   .leads-table {

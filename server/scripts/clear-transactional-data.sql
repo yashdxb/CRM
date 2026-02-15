@@ -6,6 +6,9 @@
   - Safe to run repeatedly.
 */
 
+USE [CRMEnterprise];
+GO
+
 SET NOCOUNT ON;
 
 BEGIN TRY
