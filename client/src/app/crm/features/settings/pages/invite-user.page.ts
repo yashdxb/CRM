@@ -52,6 +52,7 @@ export class InviteUserPage {
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
   protected readonly status = signal<{ tone: 'success' | 'error'; message: string } | null>(null);
+  private readonly formStateTick = signal(0);
   // Re-evaluate permissions from storage so freshly issued tokens unlock the button without reloads.
   protected readonly canManageAdmin = computed(() => {
     const payload = readTokenContext()?.payload ?? null;
@@ -61,6 +62,8 @@ export class InviteUserPage {
     );
   });
   protected readonly inviteDisabledReason = computed(() => {
+    // Bridge ReactiveForms changes into the signal graph so this computed re-evaluates.
+    this.formStateTick();
     if (!readTokenContext()) {
       return 'Your session has expired. Please sign in again.';
     }
@@ -110,6 +113,8 @@ export class InviteUserPage {
         this.form.get('roleIds')?.setErrors(null);
       }
     });
+    this.form.statusChanges.subscribe(() => this.formStateTick.update((value) => value + 1));
+    this.form.valueChanges.subscribe(() => this.formStateTick.update((value) => value + 1));
     this.loadRoles();
   }
 
