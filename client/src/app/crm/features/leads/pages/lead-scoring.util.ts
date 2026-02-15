@@ -30,6 +30,8 @@ export interface LeadScoreResult {
 }
 
 const clampScore = (value: number): number => Math.max(0, Math.min(100, value));
+const LEAD_DATA_QUALITY_WEIGHT = 0.3;
+const QUALIFICATION_WEIGHT = 0.7;
 
 const toKey = (value?: string | null): string => (value ?? '').trim().toLowerCase();
 
@@ -72,6 +74,7 @@ const timelineScores: Record<string, number> = {
 const problemScores: Record<string, number> = {
   'executive-level priority': 20,
   'critical business impact': 20,
+  'high business impact': 15,
   'recognized operational problem': 8,
   'mild inconvenience': 2,
   'problem acknowledged but deprioritized': 0,
@@ -124,6 +127,7 @@ export const qualificationFactorOptions = {
     'Unknown / not validated',
     'Mild inconvenience',
     'Recognized operational problem',
+    'High business impact',
     'Critical business impact',
     'Executive-level priority',
     'Problem acknowledged but deprioritized'
@@ -224,14 +228,16 @@ export function computeLeadScore(
   const buyerDataQualityScore100 = computeLeadDataQualityScore(input, configuredLeadDataWeights);
   const qualificationRawScore100 = computeQualificationRawScore(input);
   const qualificationScore100 = qualificationRawScore100 === null ? 0 : qualificationRawScore100;
-  const finalLeadScore = buyerDataQualityScore100;
+  const leadContributionScore100 = Math.round(buyerDataQualityScore100 * LEAD_DATA_QUALITY_WEIGHT);
+  const qualificationContributionScore100 = Math.round(qualificationScore100 * QUALIFICATION_WEIGHT);
+  const finalLeadScore = clampScore(leadContributionScore100 + qualificationContributionScore100);
 
   return {
     buyerDataQualityScore100,
     qualificationRawScore100,
     qualificationScore100,
-    leadContributionScore100: buyerDataQualityScore100,
-    qualificationContributionScore100: qualificationScore100,
+    leadContributionScore100,
+    qualificationContributionScore100,
     finalLeadScore
   };
 }

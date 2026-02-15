@@ -439,6 +439,11 @@ public sealed class ActivityService : IActivityService
             return "Outcome is required for an activity.";
         }
 
+        if (request.CompletedDateUtc.HasValue)
+        {
+            return null;
+        }
+
         if (string.IsNullOrWhiteSpace(request.NextStepSubject))
         {
             return "Next step subject is required for an activity.";

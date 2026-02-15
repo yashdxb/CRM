@@ -399,7 +399,7 @@
                 <label>Outcome <span class="required">*</span></label>
                 <textarea pTextarea name="outcome" [(ngModel)]="form.outcome" rows="3" placeholder="Capture outcome and key takeaways"></textarea>
               </div>
-              <div class="field full">
+              <div class="field full" *ngIf="activityStatus !== 'Completed'">
                 <label>Next step subject <span class="required">*</span></label>
                 <input
                   pInputText
@@ -409,7 +409,7 @@
                   class="w-full"
                 />
               </div>
-              <div class="field">
+              <div class="field" *ngIf="activityStatus !== 'Completed'">
                 <label>Next step due date <span class="required">*</span></label>
                 <p-datePicker
                   name="nextStepDueDateUtc"

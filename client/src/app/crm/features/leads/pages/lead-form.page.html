@@ -55,14 +55,15 @@
             <h3>{{ leadDisplayName() }}</h3>
             <div class="lead-sticky-meta">
               <span class="status-chip" [attr.data-status]="form.status">{{ form.status }}</span>
-              <span class="score-chip">Lead score {{ form.score ?? 0 }} / 100</span>
-              <span
-                class="confidence-chip"
-                pTooltip="{{ qualificationStatusHint() }}"
-                tooltipPosition="top"
-              >
-                Qualification: {{ qualificationStatusLabel() }}
-              </span>
+              <div class="score-stack">
+                <span class="score-primary">{{ overallScorePrimaryLabel() }}</span>
+                <div class="score-subtitles">
+                  <span class="score-subtitle">Lead data quality {{ leadDataQualityScore() }} / 100</span>
+                  <span class="score-subtitle" pTooltip="{{ qualificationStatusHint() }}" tooltipPosition="top">
+                    {{ qualificationSubtitleLabel() }}
+                  </span>
+                </div>
+              </div>
               <span class="score-source-chip" *ngIf="scoreSourceBadge()">{{ scoreSourceBadge() }}</span>
             </div>
           </div>
@@ -187,9 +188,7 @@
                       <span *ngIf="!option" class="status-placeholder">Select status</span>
                     </ng-template>
                   </p-select>
-                  <p class="status-note" *ngIf="isEditMode() && form.status === 'Converted'">
-                    This lead is already converted. Update the opportunity instead.
-                  </p>
+                  <p class="status-note" *ngIf="statusPolicyHint() as hint">{{ hint }}</p>
                 </div>
                 <div class="field">
                   <label>Assignment</label>

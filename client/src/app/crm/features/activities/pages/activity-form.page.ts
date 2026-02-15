@@ -431,13 +431,15 @@ export class ActivityFormPage implements OnInit {
       this.raiseToast('error', 'Outcome is required for an activity.');
       return;
     }
-    if (!this.form.nextStepSubject || !this.form.nextStepSubject.trim()) {
-      this.raiseToast('error', 'Next step subject is required for an activity.');
-      return;
-    }
-    if (!this.form.nextStepDueDateUtc) {
-      this.raiseToast('error', 'Next step due date is required for an activity.');
-      return;
+    if (this.activityStatus !== 'Completed') {
+      if (!this.form.nextStepSubject || !this.form.nextStepSubject.trim()) {
+        this.raiseToast('error', 'Next step subject is required for an activity.');
+        return;
+      }
+      if (!this.form.nextStepDueDateUtc) {
+        this.raiseToast('error', 'Next step due date is required for an activity.');
+        return;
+      }
     }
 
     if (this.activityStatus === 'Completed') {
@@ -455,8 +457,8 @@ export class ActivityFormPage implements OnInit {
     const payload: UpsertActivityRequest = {
       ...this.form,
       completedDateUtc: this.activityStatus === 'Completed' ? (this.form.completedDateUtc ?? new Date()) : undefined,
-      nextStepSubject: this.form.nextStepSubject,
-      nextStepDueDateUtc: this.form.nextStepDueDateUtc
+      nextStepSubject: this.activityStatus === 'Completed' ? undefined : this.form.nextStepSubject,
+      nextStepDueDateUtc: this.activityStatus === 'Completed' ? undefined : this.form.nextStepDueDateUtc
     };
     const request$ = this.editingId
       ? this.activityData.update(this.editingId, payload).pipe(map(() => null))

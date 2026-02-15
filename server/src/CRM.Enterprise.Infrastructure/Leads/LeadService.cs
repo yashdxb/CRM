@@ -440,6 +440,11 @@ public sealed class LeadService : ILeadService
         }
 
         var statusNameForValidation = await ResolveLeadStatusNameAsync(status.Id, cancellationToken) ?? "New";
+        var activityDrivenCreateError = ValidateActivityDrivenStatusTransition("New", statusNameForValidation, null);
+        if (activityDrivenCreateError is not null)
+        {
+            return LeadOperationResult<LeadListItemDto>.Fail(activityDrivenCreateError);
+        }
         var validationError = ValidateOutcome(statusNameForValidation, request);
         if (validationError is not null)
         {
@@ -632,6 +637,7 @@ public sealed class LeadService : ILeadService
         var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
         lead.LeadStatusId = status.Id;
         lead.Status = status;
+        var previousStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
         var statusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
         var resolvedStatusName = statusName ?? request.Status ?? "New";
         var requestedOwnerId = request.OwnerId ?? lead.OwnerId;
@@ -672,6 +678,14 @@ public sealed class LeadService : ILeadService
         }
 
         var statusChanged = lead.LeadStatusId != previousStatusId;
+        if (statusChanged)
+        {
+            var activityDrivenError = ValidateActivityDrivenStatusTransition(previousStatusName, resolvedStatusName, lead.FirstTouchedAtUtc);
+            if (activityDrivenError is not null)
+            {
+                return LeadOperationResult<bool>.Fail(activityDrivenError);
+            }
+        }
         if (statusChanged
             && actor.UserId != Guid.Empty
             && string.Equals(resolvedStatusName, "Qualified", StringComparison.OrdinalIgnoreCase))
@@ -1212,6 +1226,7 @@ public sealed class LeadService : ILeadService
         }
 
         var previousStatusId = lead.LeadStatusId;
+        var previousStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
         var status = await ResolveLeadStatusAsync(statusName, cancellationToken);
         lead.LeadStatusId = status.Id;
         lead.Status = status;
@@ -1219,6 +1234,14 @@ public sealed class LeadService : ILeadService
         lead.UpdatedAtUtc = DateTime.UtcNow;
 
         var statusChanged = lead.LeadStatusId != previousStatusId;
+        if (statusChanged)
+        {
+            var activityDrivenError = ValidateActivityDrivenStatusTransition(previousStatusName, resolvedStatusName, lead.FirstTouchedAtUtc);
+            if (activityDrivenError is not null)
+            {
+                return LeadOperationResult<bool>.Fail(activityDrivenError);
+            }
+        }
         if (statusChanged)
         {
             ApplyStatusSideEffects(lead, resolvedStatusName);
@@ -1285,6 +1308,10 @@ public sealed class LeadService : ILeadService
         if (RequiresOutcome(statusName))
         {
             return LeadOperationResult<int>.Fail("Bulk status updates are not allowed for statuses that require outcome details. Update leads individually.");
+        }
+        if (string.Equals(statusName, "Contacted", StringComparison.OrdinalIgnoreCase))
+        {
+            return LeadOperationResult<int>.Fail("Bulk status updates to Contacted are activity-driven. Log a completed activity instead.");
         }
 
         var leads = await _dbContext.Leads
@@ -1746,6 +1773,25 @@ public sealed class LeadService : ILeadService
             return string.IsNullOrWhiteSpace(request.QualifiedNotes)
                 ? "Qualification notes are required when qualifying a lead."
                 : null;
+        }
+
+        return null;
+    }
+
+    private static string? ValidateActivityDrivenStatusTransition(
+        string? previousStatusName,
+        string? targetStatusName,
+        DateTime? firstTouchedAtUtc)
+    {
+        if (string.Equals(targetStatusName, "Contacted", StringComparison.OrdinalIgnoreCase) && !firstTouchedAtUtc.HasValue)
+        {
+            return "Contacted status is activity-driven. Log a completed call, email, or meeting first.";
+        }
+
+        if (string.Equals(previousStatusName, "Contacted", StringComparison.OrdinalIgnoreCase)
+            && string.Equals(targetStatusName, "New", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Reverting Contacted to New is not allowed. Use activity-driven progression.";
         }
 
         return null;

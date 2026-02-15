@@ -158,6 +158,7 @@ export class LeadFormPage implements OnInit {
     { label: 'Unknown / not validated', value: 'Unknown / not validated', icon: 'pi pi-question-circle', tone: 'unknown' },
     { label: 'Mild inconvenience', value: 'Mild inconvenience', icon: 'pi pi-info-circle', tone: 'assumed' },
     { label: 'Recognized operational problem', value: 'Recognized operational problem', icon: 'pi pi-info-circle', tone: 'assumed' },
+    { label: 'High business impact', value: 'High business impact', icon: 'pi pi-info-circle', tone: 'assumed' },
     { label: 'Critical business impact', value: 'Critical business impact', icon: 'pi pi-check-circle', tone: 'verified' },
     { label: 'Executive-level priority', value: 'Executive-level priority', icon: 'pi pi-check-circle', tone: 'verified' },
     { label: 'Problem acknowledged but deprioritized', value: 'Problem acknowledged but deprioritized', icon: 'pi pi-times-circle', tone: 'invalid' }
@@ -368,10 +369,30 @@ export class LeadFormPage implements OnInit {
 
   protected statusOptionsForView(): StatusOption[] {
     const isConverted = this.form.status === 'Converted';
+    const hasFirstTouch = !!this.firstTouchedAtUtc();
     return this.statusOptions.map((option) => ({
       ...option,
-      disabled: option.value === 'Converted' && !isConverted
+      disabled:
+        (option.value === 'Converted' && !isConverted) ||
+        (option.value === 'Contacted' && !hasFirstTouch && this.form.status !== 'Contacted') ||
+        (option.value === 'New' && this.form.status === 'Contacted')
     }));
+  }
+
+  protected statusPolicyHint(): string | null {
+    if (!this.isEditMode()) {
+      return null;
+    }
+    if (this.form.status === 'Converted') {
+      return 'This lead is already converted. Update the opportunity instead.';
+    }
+    if (this.form.status === 'New' && !this.firstTouchedAtUtc()) {
+      return 'Contacted is activity-driven. Log a completed call, email, or meeting to unlock it.';
+    }
+    if (this.form.status === 'Contacted' && this.firstTouchedAtUtc()) {
+      return 'Contacted was set by completed activity.';
+    }
+    return null;
   }
 
   protected hasLinkedRecords(): boolean {
@@ -1122,6 +1143,8 @@ export class LeadFormPage implements OnInit {
         return 20;
       case 'critical business impact':
         return 20;
+      case 'high business impact':
+        return 15;
       case 'recognized operational problem':
         return 8;
       case 'mild inconvenience':
@@ -1261,6 +1284,23 @@ export class LeadFormPage implements OnInit {
     if (factorCount === 0) return 'Not started';
     const qualificationScore = computeLeadScore(this.form, this.leadDataWeights).qualificationScore100;
     return `${qualificationScore} / 100`;
+  }
+
+  protected leadDataQualityScore(): number {
+    return computeLeadScore(this.form, this.leadDataWeights).buyerDataQualityScore100;
+  }
+
+  protected overallScorePrimaryLabel(): string {
+    const score = computeLeadScore(this.form, this.leadDataWeights);
+    return `Overall score ${score.finalLeadScore} / 100`;
+  }
+
+  protected qualificationSubtitleLabel(): string {
+    const factorCount = this.countQualificationFactors();
+    if (factorCount === 0) {
+      return 'Qualification Not started';
+    }
+    return `Qualification ${computeLeadScore(this.form, this.leadDataWeights).qualificationScore100} / 100`;
   }
 
   protected qualificationStatusHint(): string {

@@ -106,11 +106,13 @@ function run() {
         'Qualification score out of bounds'
       );
       assert(result.qualificationScore100 >= 0 && result.qualificationScore100 <= 100, 'Qualification normalized score out of bounds');
+      assert(
+        result.finalLeadScore === result.leadContributionScore100 + result.qualificationContributionScore100,
+        'Final score must equal weighted contribution sum'
+      );
 
       if (result.qualificationRawScore100 === null) {
         assert(result.qualificationScore100 === 0, 'Null qualification must have 0 normalized score');
-      } else {
-        assert(result.finalLeadScore === result.leadContributionScore100, 'Lead score must map directly to lead data quality score');
       }
     }
 
