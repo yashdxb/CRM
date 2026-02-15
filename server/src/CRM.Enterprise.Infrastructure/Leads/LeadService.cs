@@ -539,22 +539,50 @@ public sealed class LeadService : ILeadService
 
     private static LeadAiScore BuildFallbackAiScore(Lead lead)
     {
-        var score = 0;
-        if (!string.IsNullOrWhiteSpace(lead.Email)) score += 20;
-        if (!string.IsNullOrWhiteSpace(lead.Phone)) score += 15;
-        if (!string.IsNullOrWhiteSpace(lead.CompanyName)) score += 10;
-        if (!string.IsNullOrWhiteSpace(lead.JobTitle)) score += 10;
-        if (!string.IsNullOrWhiteSpace(lead.Source)) score += 10;
-        if (!string.IsNullOrWhiteSpace(lead.Territory)) score += 5;
-        if (lead.ContactId.HasValue) score += 10;
-        if (lead.AccountId.HasValue) score += 10;
-        if (string.Equals(lead.Status?.Name, "Qualified", StringComparison.OrdinalIgnoreCase)) score += 10;
-        score = Math.Clamp(score, 0, 100);
+        // When AI scoring isn't available, fall back to the same scoring rules used for create/update.
+        // This prevents "Refresh score" from unexpectedly lowering the score (e.g. to 40) in a way
+        // that contradicts the qualification-based breakdown shown in the UI.
+        var request = new LeadUpsertRequest(
+            lead.FirstName ?? string.Empty,
+            lead.LastName ?? string.Empty,
+            lead.Email,
+            lead.Phone,
+            lead.PhoneTypeId,
+            lead.CompanyName,
+            lead.JobTitle,
+            lead.Status?.Name,
+            lead.OwnerId,
+            null,
+            lead.Source,
+            lead.Territory,
+            true,
+            lead.Score,
+            lead.AccountId,
+            lead.ContactId,
+            lead.DisqualifiedReason,
+            lead.LossReason,
+            lead.LossCompetitor,
+            lead.LossNotes,
+            lead.NurtureFollowUpAtUtc,
+            lead.QualifiedNotes,
+            lead.BudgetAvailability,
+            lead.BudgetEvidence,
+            lead.ReadinessToSpend,
+            lead.ReadinessEvidence,
+            lead.BuyingTimeline,
+            lead.TimelineEvidence,
+            lead.ProblemSeverity,
+            lead.ProblemEvidence,
+            lead.EconomicBuyer,
+            lead.EconomicBuyerEvidence,
+            lead.IcpFit,
+            lead.IcpFitEvidence);
 
+        var score = ResolveLeadScore(request, lead.Score);
         return new LeadAiScore(
             score,
             0.35m,
-            "Fallback score applied because AI service is currently unavailable.");
+            "AI score unavailable; qualification policy score applied instead.");
     }
 
     public async Task<LeadOperationResult<LeadListItemDto>> CreateAsync(LeadUpsertRequest request, LeadActor actor, CancellationToken cancellationToken = default)
