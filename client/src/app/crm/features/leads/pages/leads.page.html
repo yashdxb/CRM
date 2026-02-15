@@ -577,18 +577,21 @@
 >
   <ng-template pTemplate="header">
     <div class="coach-title" data-testid="lead-coach-title">
-      <div class="coach-title__top">
-        <div class="coach-title__badge">
+      <div class="coach-title__top" *ngIf="coachLead() as lead">
+        <div class="coach-title__badge" aria-hidden="true">
           <i class="pi pi-compass"></i>
         </div>
+
         <div class="coach-title__meta">
-          <span class="coach-title__label">Lead Coach</span>
-          <span class="coach-title__name" *ngIf="coachLead() as lead">{{ lead.name }}</span>
+          <div class="coach-title__row">
+            <span class="coach-title__label">Lead Coach</span>
+            <span class="coach-chip" [attr.data-status]="lead.status">{{ lead.status }}</span>
+          </div>
+          <span class="coach-title__name">{{ lead.name }}</span>
+          <div class="coach-title__chips">
+            <span class="coach-chip coach-chip--muted" *ngIf="lead.company">{{ lead.company }}</span>
+          </div>
         </div>
-      </div>
-      <div class="coach-title__chips" *ngIf="coachLead() as lead">
-        <span class="coach-chip" [attr.data-status]="lead.status">{{ lead.status }}</span>
-        <span class="coach-chip coach-chip--muted" *ngIf="lead.company">{{ lead.company }}</span>
       </div>
     </div>
   </ng-template>
@@ -665,11 +668,11 @@
 
     <footer class="coach-footer" data-testid="lead-coach-footer">
       <div class="coach-actions">
-        <button pButton type="button" class="btn btn-secondary" (click)="onEdit(lead)">
+        <button pButton type="button" class="coach-action-btn" (click)="onEdit(lead)">
           <i class="pi pi-pencil"></i>
           <span>Edit lead</span>
         </button>
-        <button pButton type="button" class="btn btn-secondary" (click)="onLogActivity(lead)">
+        <button pButton type="button" class="coach-action-btn" (click)="onLogActivity(lead)">
           <i class="pi pi-calendar-plus"></i>
           <span>Log activity</span>
         </button>
