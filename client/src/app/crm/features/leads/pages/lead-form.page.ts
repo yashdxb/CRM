@@ -17,9 +17,10 @@ import { TableModule } from 'primeng/table';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputMaskModule } from 'primeng/inputmask';
+import { TabsModule } from 'primeng/tabs';
 import { PhoneNumberFormat, PhoneNumberUtil } from 'google-libphonenumber';
 
-import { forkJoin, map, Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 import {
   Lead,
@@ -109,6 +110,7 @@ interface ScoreBreakdownRow {
     InputGroupModule,
     InputGroupAddonModule,
     InputMaskModule,
+    TabsModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./lead-form.page.html",
@@ -283,6 +285,15 @@ export class LeadFormPage implements OnInit {
     this.activeTab.set(tab);
   }
 
+  protected onActiveTabChange(tab: string | number | null | undefined): void {
+    if (typeof tab !== 'string') {
+      return;
+    }
+    if (tab === 'overview' || tab === 'qualification' || tab === 'activity' || tab === 'history') {
+      this.setActiveTab(tab);
+    }
+  }
+
   protected isTabDisabled(tab: 'overview' | 'qualification' | 'activity' | 'history') {
     return !this.isEditMode() && tab !== 'overview';
   }
@@ -368,6 +379,9 @@ export class LeadFormPage implements OnInit {
   }
 
   protected statusOptionsForView(): StatusOption[] {
+    if (this.hasAdministrationManagePermission()) {
+      return this.statusOptions.map((option) => ({ ...option, disabled: false }));
+    }
     const isConverted = this.form.status === 'Converted';
     const hasFirstTouch = !!this.firstTouchedAtUtc();
     return this.statusOptions.map((option) => ({
@@ -786,8 +800,13 @@ export class LeadFormPage implements OnInit {
   }
 
   private applyOwnerDefault(options: OwnerOption[]) {
-    if (this.form.ownerId && options.some((opt) => opt.value === this.form.ownerId)) {
-      return;
+    if (this.form.ownerId) {
+      const isCurrentOwnerSelectable = options.some((opt) => opt.value === this.form.ownerId);
+      if (isCurrentOwnerSelectable) {
+        return;
+      }
+      // Do not keep inactive/deleted owners selected in the edit form.
+      this.form.ownerId = undefined;
     }
 
     const userId = readUserId();
@@ -812,23 +831,16 @@ export class LeadFormPage implements OnInit {
   }
 
   private ensureOwnerOptions(options: OwnerOption[]): OwnerOption[] {
-    const out = [...options];
-    const userId = readUserId();
-    const currentUser = this.authService.currentUser();
-    const currentLabel =
-      currentUser?.fullName?.trim()
-      || currentUser?.email?.trim()
-      || 'Current user';
-
-    if (userId && !out.some((opt) => opt.value === userId)) {
-      out.unshift({ value: userId, label: `${currentLabel} (You)` });
+    const unique = new Map<string, OwnerOption>();
+    for (const option of options) {
+      if (!option.value || !option.label?.trim()) {
+        continue;
+      }
+      if (!unique.has(option.value)) {
+        unique.set(option.value, option);
+      }
     }
-
-    if (this.form.ownerId && !out.some((opt) => opt.value === this.form.ownerId)) {
-      out.push({ value: this.form.ownerId, label: 'Assigned owner' });
-    }
-
-    return out;
+    return Array.from(unique.values());
   }
 
   protected canEditAssignment(): boolean {
@@ -836,36 +848,12 @@ export class LeadFormPage implements OnInit {
   }
 
   private resolveAssignmentAccess(): void {
-    const context = readTokenContext();
-    const hasAdmin = tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
-    if (!hasAdmin) {
-      this.assignmentEditable.set(false);
-      return;
-    }
-    const userId = readUserId();
-    if (!userId) {
-      this.assignmentEditable.set(false);
-      return;
-    }
+    this.assignmentEditable.set(this.hasAdministrationManagePermission());
+  }
 
-    forkJoin({
-      user: this.userAdminData.getUser(userId),
-      roles: this.userAdminData.getRoles(),
-      levels: this.userAdminData.getSecurityLevels()
-    }).subscribe({
-      next: ({ user, roles, levels }) => {
-        const defaultRank = levels.find((level) => level.isDefault)?.rank ?? 0;
-        const roleLevels = roles.filter((role) => user.roleIds.includes(role.id));
-        const ranks = roleLevels
-          .map((role) => levels.find((level) => level.id === role.securityLevelId)?.rank)
-          .filter((rank): rank is number => typeof rank === 'number');
-        const maxRank = ranks.length ? Math.max(...ranks) : defaultRank;
-        this.assignmentEditable.set(hasAdmin && maxRank > defaultRank);
-      },
-      error: () => {
-        this.assignmentEditable.set(false);
-      }
-    });
+  private hasAdministrationManagePermission(): boolean {
+    const context = readTokenContext();
+    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
   }
 
   private validateOverviewFields(): boolean {

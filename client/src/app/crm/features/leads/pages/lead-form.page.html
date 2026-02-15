@@ -92,57 +92,27 @@
           </div>
         </div>
 
-        <div class="lead-tabs">
-          <button
-            type="button"
-            class="lead-tab"
-            data-tab="overview"
-            [class.is-active]="activeTab() === 'overview'"
-            [class.is-disabled]="isTabDisabled('overview')"
-            [disabled]="isTabDisabled('overview')"
-            (click)="setActiveTab('overview')"
-          >
-            Overview
-          </button>
-          <button
-            type="button"
-            class="lead-tab"
-            data-tab="qualification"
-            [class.is-active]="activeTab() === 'qualification'"
-            [class.is-disabled]="isTabDisabled('qualification')"
-            [disabled]="isTabDisabled('qualification')"
-            (click)="setActiveTab('qualification')"
-          >
-            Qualification
-            <span class="tab-badge" *ngIf="qualificationTabBadge()">{{ qualificationTabBadge() }}</span>
-          </button>
-          <button
-            type="button"
-            class="lead-tab"
-            data-tab="activity"
-            [class.is-active]="activeTab() === 'activity'"
-            [class.is-disabled]="isTabDisabled('activity')"
-            [disabled]="isTabDisabled('activity')"
-            (click)="setActiveTab('activity')"
-          >
-            Activity &amp; Follow-Up
-            <span class="tab-badge warn" *ngIf="activityTabBadge()">{{ activityTabBadge() }}</span>
-          </button>
-          <button
-            type="button"
-            class="lead-tab"
-            data-tab="history"
-            [class.is-active]="activeTab() === 'history'"
-            [class.is-disabled]="isTabDisabled('history')"
-            [disabled]="isTabDisabled('history')"
-            (click)="setActiveTab('history')"
-          >
-            History
-          </button>
-        </div>
-
         <form class="lead-form" (ngSubmit)="onSave()">
-          <section class="form-section form-section--overview" *ngIf="activeTab() === 'overview'">
+          <p-tabs class="lead-tabs-shell" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
+            <p-tablist class="lead-tabs">
+              <p-tab value="overview" [disabled]="isTabDisabled('overview')" [pt]="{ root: { class: 'lead-tab' } }">
+                Overview
+              </p-tab>
+              <p-tab value="qualification" [disabled]="isTabDisabled('qualification')" [pt]="{ root: { class: 'lead-tab' } }">
+                Qualification
+                <span class="tab-badge" *ngIf="qualificationTabBadge()">{{ qualificationTabBadge() }}</span>
+              </p-tab>
+              <p-tab value="activity" [disabled]="isTabDisabled('activity')" [pt]="{ root: { class: 'lead-tab' } }">
+                Activity &amp; Follow-Up
+                <span class="tab-badge warn" *ngIf="activityTabBadge()">{{ activityTabBadge() }}</span>
+              </p-tab>
+              <p-tab value="history" [disabled]="isTabDisabled('history')" [pt]="{ root: { class: 'lead-tab' } }">
+                History
+              </p-tab>
+            </p-tablist>
+            <p-tabpanels>
+              <p-tabpanel value="overview">
+          <section class="form-section form-section--overview">
             <div class="section-block">
               <h2 class="section-title">
                 <i class="pi pi-user"></i>
@@ -342,7 +312,7 @@
             </div>
           </section>
 
-          <section class="form-section form-section--score" *ngIf="activeTab() === 'overview'">
+          <section class="form-section form-section--score">
             <h2 class="section-title">
               <i class="pi pi-chart-line"></i>
               Score
@@ -396,7 +366,9 @@
             </div>
           </section>
 
-          <section class="form-section form-section--qualification" *ngIf="activeTab() === 'qualification'">
+              </p-tabpanel>
+              <p-tabpanel value="qualification">
+          <section class="form-section form-section--qualification">
             <h2 class="section-title">
               <i class="pi pi-chart-line"></i>
               Qualification
@@ -925,7 +897,9 @@
             </div>
           </section>
 
-          <section class="form-section cadence-section" *ngIf="isEditMode() && activeTab() === 'activity'">
+              </p-tabpanel>
+              <p-tabpanel value="activity">
+          <section class="form-section cadence-section" *ngIf="isEditMode()">
             <h2 class="section-title">
               <i class="pi pi-bullseye"></i>
               Follow-Up Plan
@@ -996,7 +970,9 @@
             </ng-template>
           </section>
 
-          <section class="form-section" *ngIf="isEditMode() && activeTab() === 'history'">
+              </p-tabpanel>
+              <p-tabpanel value="history">
+          <section class="form-section" *ngIf="isEditMode()">
             <h2 class="section-title">
               <i class="pi pi-history"></i>
               Status history
@@ -1017,6 +993,10 @@
               <div class="history-empty">No status changes recorded yet.</div>
             </ng-template>
           </section>
+
+              </p-tabpanel>
+            </p-tabpanels>
+          </p-tabs>
 
           <footer class="form-actions">
             <button type="button" pButton label="Cancel" class="crm-button crm-button--ghost" (click)="router.navigate(['/app/leads'])"></button>

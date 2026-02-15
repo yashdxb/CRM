@@ -21,10 +21,11 @@ import { BulkAction, BulkActionsBarComponent } from '../../../../shared/componen
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { CsvImportJob, CsvImportJobStatusResponse } from '../../../../shared/models/csv-import.model';
 import { ImportJobService } from '../../../../shared/services/import-job.service';
-import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
-import { computeLeadScore } from './lead-scoring.util';
+import { computeLeadScore, LeadDataWeight, LeadScoreInputs, LeadScoreResult } from './lead-scoring.util';
+import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 
 interface StatusOption {
   label: string;
@@ -78,6 +79,7 @@ export class LeadsPage {
   protected readonly leads = signal<Lead[]>([]);
   protected readonly total = signal(0);
   protected readonly loading = signal(true);
+  private readonly leadDataWeights = signal<LeadDataWeight[]>([]);
   protected readonly metrics = computed(() => {
     const rows = this.leads();
     const newLeads = rows.filter((l) => l.status === 'New').length;
@@ -88,7 +90,7 @@ export class LeadsPage {
     const lost = rows.filter((l) => l.status === 'Lost').length;
     const disqualified = rows.filter((l) => l.status === 'Disqualified').length;
     const avgScore = rows.length
-      ? Math.round(rows.reduce((sum, lead) => sum + (lead.score ?? 0), 0) / rows.length)
+      ? Math.round(rows.reduce((sum, lead) => sum + this.displayScore(lead), 0) / rows.length)
       : 0;
 
     return {
@@ -163,10 +165,12 @@ export class LeadsPage {
     private readonly leadData: LeadDataService,
     private readonly router: Router,
     private readonly userAdminData: UserAdminDataService,
-    private readonly importJobs: ImportJobService
+    private readonly importJobs: ImportJobService,
+    private readonly workspaceSettings: WorkspaceSettingsService
   ) {
     this.resolveOwnerAssignmentAccess();
     this.loadOwners();
+    this.loadLeadDataWeights();
     if (this.router.url.includes('/leads/pipeline')) {
       this.viewMode = 'kanban';
     }
@@ -523,34 +527,7 @@ export class LeadsPage {
   private resolveOwnerAssignmentAccess(): void {
     const context = readTokenContext();
     const hasAdmin = tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationManage);
-    if (!hasAdmin) {
-      this.ownerAssignmentEditable.set(false);
-      return;
-    }
-    const userId = readUserId();
-    if (!userId) {
-      this.ownerAssignmentEditable.set(false);
-      return;
-    }
-
-    forkJoin({
-      user: this.userAdminData.getUser(userId),
-      roles: this.userAdminData.getRoles(),
-      levels: this.userAdminData.getSecurityLevels()
-    }).subscribe({
-      next: ({ user, roles, levels }) => {
-        const defaultRank = levels.find((level) => level.isDefault)?.rank ?? 0;
-        const roleLevels = roles.filter((role) => user.roleIds.includes(role.id));
-        const ranks = roleLevels
-          .map((role) => levels.find((level) => level.id === role.securityLevelId)?.rank)
-          .filter((rank): rank is number => typeof rank === 'number');
-        const maxRank = ranks.length ? Math.max(...ranks) : defaultRank;
-        this.ownerAssignmentEditable.set(hasAdmin && maxRank > defaultRank);
-      },
-      error: () => {
-        this.ownerAssignmentEditable.set(false);
-      }
-    });
+    this.ownerAssignmentEditable.set(hasAdmin);
   }
 
   protected statusSeverity(status: LeadStatus) {
@@ -635,14 +612,23 @@ export class LeadsPage {
   protected qualificationStatusLabel(lead: Lead): string {
     const factorCount = this.countQualificationFactors(lead);
     if (factorCount === 0) return 'Not started';
-    const qualificationScore = computeLeadScore(lead).qualificationScore100;
+    const qualificationScore = this.computeOverallScore(lead).qualificationScore100;
     return `${qualificationScore} / 100`;
+  }
+
+  protected displayScore(lead: Lead): number {
+    return this.computeOverallScore(lead).finalLeadScore;
+  }
+
+  protected overallScoreHint(lead: Lead): string {
+    const score = this.computeOverallScore(lead);
+    return `Overall ${score.finalLeadScore}/100 = Lead data quality ${score.buyerDataQualityScore100}/100 + Qualification ${score.qualificationScore100}/100 (weighted 30/70).`;
   }
 
   protected qualificationStatusHint(lead: Lead): string {
     const factorCount = this.countQualificationFactors(lead);
     if (factorCount === 0) return 'No qualification factors selected yet.';
-    const qualificationScore = computeLeadScore(lead).qualificationScore100;
+    const qualificationScore = this.computeOverallScore(lead).qualificationScore100;
     const truthCoverage = typeof lead.truthCoverage === 'number' ? Math.round(lead.truthCoverage * 100) : null;
     if (truthCoverage !== null) {
       return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/6 factors and ${truthCoverage}% evidence coverage.`;
@@ -667,6 +653,17 @@ export class LeadsPage {
     });
   }
 
+  private loadLeadDataWeights(): void {
+    this.workspaceSettings.getSettings().subscribe({
+      next: (settings) => {
+        this.leadDataWeights.set(settings.qualificationPolicy?.leadDataWeights ?? []);
+      },
+      error: () => {
+        this.leadDataWeights.set([]);
+      }
+    });
+  }
+
   private countQualificationFactors(lead: Lead): number {
     const factors = [
       lead.budgetAvailability,
@@ -683,5 +680,32 @@ export class LeadsPage {
     if (!value) return false;
     const normalized = value.trim().toLowerCase();
     return normalized.length > 0 && !normalized.includes('unknown');
+  }
+
+  private computeOverallScore(lead: Lead): LeadScoreResult {
+    return computeLeadScore(this.toScoreInputs(lead), this.leadDataWeights());
+  }
+
+  private toScoreInputs(lead: Lead): LeadScoreInputs {
+    const nameParts = (lead.name ?? '').trim().split(/\s+/).filter((part) => part.length > 0);
+    const firstName = nameParts[0] ?? '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+    return {
+      firstName,
+      lastName,
+      email: lead.email ?? null,
+      phone: lead.phone ?? null,
+      companyName: lead.company ?? null,
+      jobTitle: lead.jobTitle ?? null,
+      source: lead.source ?? null,
+      territory: lead.territory ?? null,
+      budgetAvailability: lead.budgetAvailability ?? null,
+      readinessToSpend: lead.readinessToSpend ?? null,
+      buyingTimeline: lead.buyingTimeline ?? null,
+      problemSeverity: lead.problemSeverity ?? null,
+      economicBuyer: lead.economicBuyer ?? null,
+      icpFit: lead.icpFit ?? null
+    };
   }
 }

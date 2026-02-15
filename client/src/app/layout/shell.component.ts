@@ -1,6 +1,6 @@
 import { Component, inject, signal, HostListener, effect, ViewChild } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { NgClass } from '@angular/common';
+import { NgClass, NgIf } from '@angular/common';
 import { NotificationContainerComponent } from '../core/notifications';
 import { CommandPaletteComponent, CommandPaletteService, QuickAddType } from '../core/command-palette';
 import { KeyboardShortcutsModalComponent } from '../core/keyboard-shortcuts';
@@ -10,6 +10,8 @@ import { NavigationService } from './navigation';
 import { SidebarComponent } from './sidebar/sidebar.component';
 import { TopbarComponent } from './topbar/topbar.component';
 import { QuickAddModalComponent } from './quick-add/quick-add-modal.component';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { LoadingOverlayService } from '../core/loading/loading-overlay.service';
 
 @Component({
   selector: 'app-shell',
@@ -17,6 +19,7 @@ import { QuickAddModalComponent } from './quick-add/quick-add-modal.component';
   imports: [
     RouterOutlet,
     NgClass,
+    NgIf,
     NotificationContainerComponent,
     CommandPaletteComponent,
     KeyboardShortcutsModalComponent,
@@ -24,13 +27,15 @@ import { QuickAddModalComponent } from './quick-add/quick-add-modal.component';
     AssistantPanelComponent,
     SidebarComponent,
     TopbarComponent,
-    QuickAddModalComponent
+    QuickAddModalComponent,
+    ProgressSpinnerModule
   ],
   templateUrl: "./shell.component.html",
   styleUrl: './shell.component.scss'
 })
 export class ShellComponent {
   protected readonly nav = inject(NavigationService);
+  protected readonly loadingOverlay = inject(LoadingOverlayService);
   private readonly commandPaletteService = inject(CommandPaletteService);
 
   @ViewChild('quickAddModal') quickAddModal!: QuickAddModalComponent;

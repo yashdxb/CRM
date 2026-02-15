@@ -10,11 +10,12 @@ import { routes } from './app.routes';
 import { mockApiInterceptor } from './mocks/mock-api.interceptor';
 import { ThemeService } from './core/theme/theme.service';
 import { authTokenInterceptor } from './core/auth/auth-token.interceptor';
+import { loadingOverlayInterceptor } from './core/loading/loading-overlay.interceptor';
 import { initTenantFromHost } from './core/tenant/tenant.utils';
 
 const httpInterceptors = environment.useMockApi
-  ? [mockApiInterceptor, authTokenInterceptor]
-  : [authTokenInterceptor];
+  ? [loadingOverlayInterceptor, mockApiInterceptor, authTokenInterceptor]
+  : [loadingOverlayInterceptor, authTokenInterceptor];
 
 const httpProvider = provideHttpClient(withInterceptors(httpInterceptors));
 

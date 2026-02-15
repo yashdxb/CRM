@@ -415,7 +415,11 @@
       color: #64748b;
     }
 
-    .lead-tabs {
+    .lead-tabs-shell {
+      margin-bottom: 0.75rem;
+    }
+
+    :host ::ng-deep .lead-tabs .p-tablist {
       display: flex;
       gap: 0.5rem;
       flex-wrap: wrap;
@@ -424,19 +428,16 @@
       background: #f8fafc;
       border: 1px solid rgba(148, 163, 184, 0.25);
       box-shadow: none;
-      margin-bottom: 0.75rem;
-      position: relative;
-      overflow: visible;
     }
 
-    .lead-tab {
+    :host ::ng-deep .lead-tabs .p-tab {
       border: 1px solid rgba(148, 163, 184, 0.35);
       background: #ffffff;
       padding: 0.5rem 1.1rem 0.55rem;
       border-radius: 10px;
       font-size: 0.9rem;
       font-weight: 600;
-      color: var(--tab-text-strong, #475569);
+      color: #475569;
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
@@ -447,59 +448,29 @@
       z-index: 1;
     }
 
-    .lead-tab.is-active {
-      background: var(--tab-bg, rgba(var(--apple-blue), 0.12));
-      color: var(--tab-text-strong, #0f172a);
-      border-color: var(--tab-border, rgba(59, 130, 246, 0.45));
+    :host ::ng-deep .lead-tabs .p-tab.p-tab-active {
+      background: rgba(59, 130, 246, 0.12);
+      color: #0f172a;
+      border-color: rgba(59, 130, 246, 0.45);
       z-index: 3;
     }
 
-    .lead-tab:hover {
-      color: var(--tab-text-strong, #0f172a);
+    :host ::ng-deep .lead-tabs .p-tab:hover:not(.p-disabled) {
+      color: #0f172a;
+      border-color: rgba(59, 130, 246, 0.35);
     }
 
-    .lead-tab:focus-visible {
+    :host ::ng-deep .lead-tabs .p-tab:focus-visible {
       outline: none;
       box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.12);
     }
 
-    .lead-tab.is-disabled {
+    :host ::ng-deep .lead-tabs .p-tab.p-disabled {
       cursor: not-allowed;
       color: #94a3b8;
       background: #f1f5f9;
       border-color: rgba(148, 163, 184, 0.2);
-    }
-
-    .lead-tab[data-tab='overview'] {
-      --tab-text-strong: #1e3a8a;
-      --tab-bg: rgba(59, 130, 246, 0.18);
-      --tab-bg-strong: rgba(59, 130, 246, 0.88);
-      --tab-border: rgba(59, 130, 246, 0.45);
-      --tab-active-text: #ffffff;
-    }
-
-    .lead-tab[data-tab='qualification'] {
-      --tab-text-strong: #166534;
-      --tab-bg: rgba(16, 185, 129, 0.18);
-      --tab-bg-strong: rgba(16, 185, 129, 0.86);
-      --tab-border: rgba(16, 185, 129, 0.42);
-      --tab-active-text: #ffffff;
-    }
-
-    .lead-tab[data-tab='activity'] {
-      --tab-text-strong: #9a3412;
-      --tab-bg: rgba(249, 115, 22, 0.2);
-      --tab-bg-strong: rgba(249, 115, 22, 0.88);
-      --tab-border: rgba(249, 115, 22, 0.48);
-      --tab-active-text: #ffffff;
-    }
-
-    .lead-tab[data-tab='history'] {
-      --tab-text-strong: #5b21b6;
-      --tab-bg: rgba(124, 58, 237, 0.18);
-      --tab-bg-strong: rgba(124, 58, 237, 0.86);
-      --tab-border: rgba(124, 58, 237, 0.42);
-      --tab-active-text: #ffffff;
+      opacity: 1;
     }
 
     .tab-badge {

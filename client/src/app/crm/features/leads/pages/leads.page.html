@@ -159,8 +159,8 @@
                 <span class="lead-name">{{ lead.name }}</span>
                 <span class="lead-company">{{ lead.company }}</span>
               </div>
-              <div class="lead-score" [class.high]="lead.score >= 70" [class.medium]="lead.score >= 40 && lead.score < 70" [class.low]="lead.score < 40">
-                {{ lead.score }}
+              <div class="lead-score" [class.high]="displayScore(lead) >= 70" [class.medium]="displayScore(lead) >= 40 && displayScore(lead) < 70" [class.low]="displayScore(lead) < 40">
+                {{ displayScore(lead) }}
               </div>
             </div>
             <div class="lead-card-body">
@@ -175,10 +175,10 @@
               <div class="lead-epistemic">
                 <span
                   class="epistemic-chip confidence"
-                  pTooltip="{{ qualificationStatusHint(lead) }}"
+                  pTooltip="{{ overallScoreHint(lead) }}"
                   tooltipPosition="top"
                 >
-                  Qualification: {{ qualificationStatusLabel(lead) }}
+                  Overall: {{ displayScore(lead) }} / 100
                 </span>
               </div>
             </div>
@@ -274,10 +274,10 @@
                         <div class="lead-epistemic">
                           <span
                             class="epistemic-chip confidence"
-                            pTooltip="{{ qualificationStatusHint(lead) }}"
+                            pTooltip="{{ overallScoreHint(lead) }}"
                             tooltipPosition="top"
                           >
-                            Qualification: {{ qualificationStatusLabel(lead) }}
+                            Overall: {{ displayScore(lead) }} / 100
                           </span>
                         </div>
                         <div class="lead-sla" *ngIf="lead.firstTouchDueAtUtc || lead.firstTouchedAtUtc">
@@ -346,12 +346,12 @@
                     <div class="score-indicator">
                       <div class="score-bar">
                         <div class="score-fill" 
-                             [class.high]="lead.score >= 70" 
-                             [class.medium]="lead.score >= 40 && lead.score < 70" 
-                             [class.low]="lead.score < 40"
-                             [style.width.%]="lead.score"></div>
+                             [class.high]="displayScore(lead) >= 70" 
+                             [class.medium]="displayScore(lead) >= 40 && displayScore(lead) < 70" 
+                             [class.low]="displayScore(lead) < 40"
+                             [style.width.%]="displayScore(lead)"></div>
                       </div>
-                      <span class="score-value">{{ lead.score }}</span>
+                      <span class="score-value">{{ displayScore(lead) }}</span>
                     </div>
                   </td>
                   <td class="td-owner">

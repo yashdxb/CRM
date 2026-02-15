@@ -44,4 +44,16 @@
       (close)="quickAddVisible.set(false)"
       (created)="onQuickAddCreated()"
     />
+
+    <div class="global-loading-overlay" *ngIf="loadingOverlay.visible()">
+      <div class="global-loading-overlay__card">
+        <p-progressSpinner
+          styleClass="global-loading-spinner"
+          strokeWidth="6"
+          animationDuration=".8s"
+          [style]="{ width: '86px', height: '86px' }"
+        ></p-progressSpinner>
+        <div class="global-loading-overlay__label">Loading data...</div>
+      </div>
+    </div>
   
