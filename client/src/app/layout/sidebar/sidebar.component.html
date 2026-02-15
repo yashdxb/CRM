@@ -1,8 +1,9 @@
-
-    <aside class="sidebar">
+    <aside class="sidebar" [ngClass]="{ 'sidebar--collapsed': nav.collapsed() }">
       <div class="sidebar__header">
         <div class="brand">
-          <div class="brand__mark">CRM</div>
+          <div class="brand__logo" aria-hidden="true">
+            <span class="brand__logo-inner">CRM</span>
+          </div>
           <div class="brand__env" [ngClass]="{ 'brand__env--prod': environment.production }">{{ environment.envLabel }}</div>
         </div>
         <button pButton type="button" icon="pi pi-bars" class="brand__toggle p-button-text p-button-sm" (click)="toggleSidebar.emit()"></button>
@@ -34,7 +35,9 @@
             role="menuitem"
           >
             <span class="nav__pill" aria-hidden="true"></span>
-            <i class="pi" [ngClass]="link.icon"></i>
+            <span class="nav__icon-wrap" aria-hidden="true">
+              <i class="pi" [ngClass]="link.icon"></i>
+            </span>
             <div class="nav__text">
               <span class="nav__label">{{ link.label }}</span>
             </div>
@@ -65,7 +68,9 @@
                 role="menuitem"
               >
                 <span class="dot" aria-hidden="true"></span>
-                <i class="pi nav__icon" [ngClass]="child.icon"></i>
+                <span class="nav__icon-wrap nav__icon-wrap--sub" aria-hidden="true">
+                  <i class="pi nav__icon" [ngClass]="child.icon"></i>
+                </span>
                 <div class="nav__text">
                   <span class="nav__label">{{ child.label }}</span>
                 </div>
@@ -96,7 +101,9 @@
                   role="menuitem"
                 >
                   <span class="dot" aria-hidden="true"></span>
-                  <i class="pi nav__icon" [ngClass]="grandChild.icon"></i>
+                  <span class="nav__icon-wrap nav__icon-wrap--sub" aria-hidden="true">
+                    <i class="pi nav__icon" [ngClass]="grandChild.icon"></i>
+                  </span>
                   <div class="nav__text">
                     <span class="nav__label">{{ grandChild.label }}</span>
                   </div>
