@@ -171,7 +171,7 @@ test.describe.serial('manager: leads list CQVS coach panel (settings toggle)', (
       const firstRowActions = page.locator('.row-actions').first();
       await expect(firstRowActions).toBeVisible();
       await firstRowActions.screenshot({ path: path.join(outDir, 'lead-list-row-actions.png') });
-      const coachBtn = firstRowActions.locator('button.action-btn.coach').first();
+      const coachBtn = page.locator('[data-testid="lead-coach-open"]').first();
       if (await coachBtn.count()) {
         await coachBtn.hover();
         await firstRowActions.screenshot({ path: path.join(outDir, 'lead-list-row-actions-hover.png') });

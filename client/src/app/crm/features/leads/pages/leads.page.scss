@@ -1508,28 +1508,6 @@ $status-lost: #ef4444;
   }
 }
 
-.row-actions .action-btn.coach {
-  // Keep the button surface consistent; color only the icon.
-  background: rgba(255, 255, 255, 0.72);
-  border-color: rgba(99, 102, 241, 0.28);
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
-}
-
-.row-actions .action-btn.coach:hover {
-  // Slightly brighter surface on hover; no filled square.
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(99, 102, 241, 0.35);
-}
-
-.row-actions .action-btn.coach .p-button-icon {
-  // PrimeIcons are font glyphs; gradients work via background-clip.
-  background: linear-gradient(135deg, #22d3ee 0%, #6366f1 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-}
-
 @media (max-width: 520px) {
   :host ::ng-deep .lead-coach-drawer {
     width: 96vw;
@@ -1741,116 +1719,36 @@ $status-lost: #ef4444;
   justify-content: flex-end;
 }
 
-.action-btn {
+.row-actions .action-btn.p-button {
   width: 34px;
   height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(15, 23, 42, 0.10);
-  background: rgba(255, 255, 255, 0.72);
   border-radius: 10px;
-  color: #0f172a;
-  cursor: pointer;
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
-  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease, border-color 150ms ease, color 150ms ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(99, 102, 241, 0.22);
-    box-shadow: 0 16px 26px rgba(15, 23, 42, 0.10);
-  }
-
-  &:disabled,
-  &[disabled] {
-    opacity: 0.55;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-    filter: saturate(0.6);
-  }
-
-  &.edit {
-    // Icon-only color (no filled square)
-    background: rgba(255, 255, 255, 0.72);
-    border-color: rgba(34, 211, 238, 0.28);
-    color: #0f172a;
-  }
-
-  &.edit:hover {
-    background: rgba(255, 255, 255, 0.92);
-    border-color: rgba(34, 211, 238, 0.42);
-  }
-
-  &.info {
-    // Icon-only color (no filled square)
-    background: rgba(255, 255, 255, 0.72);
-    border-color: rgba(102, 126, 234, 0.26);
-    color: #0f172a;
-  }
-
-  &.info:hover {
-    background: rgba(255, 255, 255, 0.92);
-    border-color: rgba(102, 126, 234, 0.40);
-  }
-
-  &.success {
-    // Icon-only color (no filled square)
-    background: rgba(255, 255, 255, 0.72);
-    border-color: rgba(34, 197, 94, 0.26);
-    color: #0f172a;
-  }
-
-  &.success:hover {
-    background: rgba(255, 255, 255, 0.92);
-    border-color: rgba(34, 197, 94, 0.40);
-  }
-
-  &.danger {
-    // Icon-only color (no filled square)
-    background: rgba(255, 255, 255, 0.72);
-    border-color: rgba(239, 68, 68, 0.26);
-    color: #0f172a;
-  }
-
-  &.danger:hover {
-    background: rgba(255, 255, 255, 0.92);
-    border-color: rgba(239, 68, 68, 0.40);
-  }
+  padding: 0;
 }
 
-// Color the action icons only (not the button surface).
-.row-actions .action-btn.edit .p-button-icon {
-  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+.row-actions .action-btn.p-button.p-button-text {
+  /* Icon-only: keep PrimeNG severity color, no colored square background. */
+  border: 1px solid transparent;
+  background: transparent;
+  box-shadow: none;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 
-.row-actions .action-btn.info .p-button-icon {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+.row-actions .action-btn.p-button.p-button-text:hover {
+  transform: translateY(-1px);
+  background: rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.10);
 }
 
-.row-actions .action-btn.success .p-button-icon {
-  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+.row-actions .action-btn.p-button.p-button-text:focus-visible {
+  outline: none;
+  background: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 10px 18px rgba(15, 23, 42, 0.10);
 }
 
-.row-actions .action-btn.danger .p-button-icon {
-  background: linear-gradient(135deg, #fb7185 0%, #ef4444 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+.row-actions .action-btn.p-button:disabled {
+  opacity: 0.55;
+  filter: saturate(0.6);
 }
 
 .toast-notification {
