@@ -162,6 +162,7 @@
               <div class="pipeline-stat" *ngFor="let stage of pipelineValue()">
                 <span class="stat-label">{{ stage.stage }}</span>
                 <span class="stat-value">{{ stage.count }} deals</span>
+                <span class="stat-subvalue">{{ stage.value | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</span>
               </div>
             </div>
           </div>
@@ -221,34 +222,6 @@
                 <span class="risk-label">{{ flag.label }}</span>
                 <span class="risk-count">{{ flag.count }}</span>
               </div>
-            </div>
-          </div>
-        </ng-container>
-
-        <!-- Risk Checklist -->
-        <ng-container *ngSwitchCase="'risk-checklist'">
-          <div class="card-header">
-            <h3 class="card-title">
-              <i class="pi pi-list-check"></i>
-              Risk Checklist
-            </h3>
-            <div class="card-actions">
-              <span class="card-badge warn">{{ riskChecklistItems().length }}</span>
-              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="risk-checklist" *ngIf="riskChecklistItems().length; else emptyRiskChecklist">
-              <label class="risk-checklist-item" *ngFor="let item of riskChecklistItems()">
-                <input
-                  type="checkbox"
-                  [ngModel]="isRiskChecklistChecked(item.key)"
-                  (ngModelChange)="toggleRiskChecklist(item.key, $event)"
-                  [ngModelOptions]="{ standalone: true }"
-                />
-                <span class="risk-checklist-label">{{ item.label }}</span>
-                <span class="risk-checklist-count">{{ item.count }}</span>
-              </label>
             </div>
           </div>
         </ng-container>
@@ -1070,16 +1043,6 @@
     </div>
     <h4>No risk flags</h4>
     <p>Pipeline risk signals will appear here</p>
-  </div>
-</ng-template>
-
-<ng-template #emptyRiskChecklist>
-  <div class="empty-state">
-    <div class="empty-icon">
-      <i class="pi pi-list-check"></i>
-    </div>
-    <h4>No checklist items</h4>
-    <p>Risk checklist items will appear here</p>
   </div>
 </ng-template>
 

@@ -1195,30 +1195,55 @@ public sealed class OpportunityService : IOpportunityService
 
     public async Task<IReadOnlyList<ExpansionSignalDto>> GetExpansionSignalsAsync(CancellationToken cancellationToken = default)
     {
-        const string expansionOutcome = "Expansion signal";
-        var cutoff = DateTime.UtcNow.AddDays(-180);
+        const int lookbackDays = 180;
+        const int contractLookaheadDays = 180;
+        const int recentContractGraceDays = 30;
+        var now = DateTime.UtcNow;
+        var cutoff = now.AddDays(-lookbackDays);
+        var contractDueStart = now.AddDays(-recentContractGraceDays);
+        var contractDueEnd = now.AddDays(contractLookaheadDays);
 
-        var signalActivities = await _dbContext.Activities
+        var candidateActivities = await _dbContext.Activities
             .AsNoTracking()
             .Where(a => !a.IsDeleted
                         && a.RelatedEntityType == ActivityRelationType.Opportunity
                         && a.Outcome != null
-                        && a.Outcome == expansionOutcome
                         && a.CreatedAtUtc >= cutoff)
             .Select(a => new
             {
                 a.RelatedEntityId,
+                a.Outcome,
                 a.CreatedAtUtc,
                 a.CompletedDateUtc
             })
             .ToListAsync(cancellationToken);
 
-        if (signalActivities.Count == 0)
+        var signalActivities = candidateActivities
+            .Where(a => IsExpansionSignalOutcome(a.Outcome))
+            .ToList();
+
+        var contractDueOpportunityIds = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted
+                        && o.IsClosed
+                        && o.IsWon
+                        && o.ContractEndDateUtc.HasValue
+                        && o.ContractEndDateUtc.Value >= contractDueStart
+                        && o.ContractEndDateUtc.Value <= contractDueEnd)
+            .Select(o => o.Id)
+            .ToListAsync(cancellationToken);
+
+        var opportunityIds = signalActivities
+            .Select(a => a.RelatedEntityId)
+            .Concat(contractDueOpportunityIds)
+            .Distinct()
+            .ToList();
+
+        if (opportunityIds.Count == 0)
         {
             return Array.Empty<ExpansionSignalDto>();
         }
 
-        var opportunityIds = signalActivities.Select(a => a.RelatedEntityId).Distinct().ToList();
         var opportunities = await _dbContext.Opportunities
             .AsNoTracking()
             .Where(o => opportunityIds.Contains(o.Id) && !o.IsDeleted && o.IsClosed && o.IsWon)
@@ -1227,7 +1252,8 @@ public sealed class OpportunityService : IOpportunityService
                 o.Id,
                 o.AccountId,
                 o.Name,
-                o.ContractEndDateUtc
+                o.ContractEndDateUtc,
+                o.CreatedAtUtc
             })
             .ToListAsync(cancellationToken);
 
@@ -1262,12 +1288,12 @@ public sealed class OpportunityService : IOpportunityService
 
         foreach (var opportunity in opportunities)
         {
-            if (!signalLookup.TryGetValue(opportunity.Id, out var entries))
-            {
-                continue;
-            }
+            signalLookup.TryGetValue(opportunity.Id, out var entries);
+            entries ??= [];
 
-            var lastSignalAtUtc = entries.Max(e => e.CompletedDateUtc ?? e.CreatedAtUtc);
+            var lastSignalAtUtc = entries.Count > 0
+                ? entries.Max(e => e.CompletedDateUtc ?? e.CreatedAtUtc)
+                : opportunity.ContractEndDateUtc ?? opportunity.CreatedAtUtc;
             var accountName = accountNameById.TryGetValue(opportunity.AccountId, out var name) ? name : "Account";
             signals.Add(new ExpansionSignalDto(
                 opportunity.Id,
@@ -1281,8 +1307,23 @@ public sealed class OpportunityService : IOpportunityService
         }
 
         return signals
-            .OrderByDescending(s => s.LastSignalAtUtc)
+            .OrderByDescending(s => s.SignalCount)
+            .ThenByDescending(s => s.LastSignalAtUtc)
             .ToList();
+    }
+
+    private static bool IsExpansionSignalOutcome(string? outcome)
+    {
+        if (string.IsNullOrWhiteSpace(outcome))
+        {
+            return false;
+        }
+
+        var normalized = outcome.Trim();
+        return normalized.Contains("expansion", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains("upsell", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains("cross-sell", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains("cross sell", StringComparison.OrdinalIgnoreCase);
     }
 
     public async Task<OpportunityOperationResult<OpportunityListItemDto>> CreateExpansionAsync(Guid sourceOpportunityId, ActorContext actor, CancellationToken cancellationToken = default)

@@ -158,10 +158,21 @@ public class DashboardReadService : IDashboardReadService
                 group => group.Key,
                 group => group.OrderByDescending(row => row.CreatedAtUtc).First());
 
+        var opportunityStages = await _dbContext.OpportunityStages
+            .AsNoTracking()
+            .Where(s => !s.IsDeleted)
+            .Select(s => new { s.Name, s.Order })
+            .ToListAsync(cancellationToken);
+        var stageOrderLookup = opportunityStages
+            .Where(s => !string.IsNullOrWhiteSpace(s.Name))
+            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Min(x => x.Order), StringComparer.OrdinalIgnoreCase);
+
         var pipelineValueStages = pipelineRows
             .GroupBy(row => row.Stage)
             .Select(group => new PipelineStageDto(group.Key, group.Count(), group.Sum(row => row.Amount)))
-            .OrderBy(stage => stage.Stage)
+            .OrderBy(stage => stageOrderLookup.TryGetValue(stage.Stage ?? string.Empty, out var order) ? order : int.MaxValue)
+            .ThenBy(stage => stage.Stage)
             .ToList();
 
         var pipelineValueTotal = pipelineValueStages.Sum(stage => stage.Value);
@@ -594,18 +605,23 @@ public class DashboardReadService : IDashboardReadService
         var activityWindowStart = now.AddDays(-30);
         var activityRowsQuery = _dbContext.Activities
             .AsNoTracking()
-            .Where(a => !a.IsDeleted && a.CreatedAtUtc >= activityWindowStart);
+            .Where(a => !a.IsDeleted
+                        && (a.CompletedDateUtc ?? a.DueDateUtc ?? a.CreatedAtUtc) >= activityWindowStart);
         if (visibility.UserIds is not null)
         {
             activityRowsQuery = activityRowsQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
         }
         var activityRows = await activityRowsQuery
-            .Select(a => a.Type)
+            .Select(a => new
+            {
+                a.Type,
+                ActivityAt = a.CompletedDateUtc ?? a.DueDateUtc ?? a.CreatedAtUtc
+            })
             .ToListAsync(cancellationToken);
 
         var activityTotal = activityRows.Count;
         var activityBreakdown = activityRows
-            .GroupBy(type => type)
+            .GroupBy(row => row.Type)
             .Select(group =>
             {
                 var count = group.Count();
@@ -660,6 +676,29 @@ public class DashboardReadService : IDashboardReadService
             })
             .Where(o => o.ClosedAt >= topWindowStart)
             .ToListAsync(cancellationToken);
+
+        // Keep Top Performers relevant even when there are no recent wins by falling back to
+        // live open-pipeline ownership/value in the same recency window.
+        if (performerRows.Count == 0)
+        {
+            var performerFallbackQuery = _dbContext.Opportunities
+                .AsNoTracking()
+                .Where(o => !o.IsDeleted && !o.IsClosed);
+            if (visibility.UserIds is not null)
+            {
+                performerFallbackQuery = performerFallbackQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+            }
+
+            performerRows = await performerFallbackQuery
+                .Select(o => new
+                {
+                    o.OwnerId,
+                    o.Amount,
+                    ClosedAt = o.UpdatedAtUtc ?? o.CreatedAtUtc
+                })
+                .Where(o => o.ClosedAt >= topWindowStart)
+                .ToListAsync(cancellationToken);
+        }
 
         var performerGroups = performerRows
             .GroupBy(row => row.OwnerId)
@@ -791,6 +830,99 @@ public class DashboardReadService : IDashboardReadService
             ? 0
             : (int)Math.Round(closedStatsRows.Average(row => (row.ClosedAt - row.CreatedAtUtc).TotalDays));
 
+        var tenantDefaultContractTermMonths = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == _tenantProvider.TenantId)
+            .Select(t => t.DefaultContractTermMonths)
+            .FirstOrDefaultAsync(cancellationToken);
+        var defaultContractTermMonths = Math.Max(tenantDefaultContractTermMonths ?? 12, 1);
+
+        var activeContractsQuery = _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted
+                        && o.IsClosed
+                        && o.IsWon
+                        && (o.ContractStartDateUtc ?? o.CreatedAtUtc) <= now
+                        && (!o.ContractEndDateUtc.HasValue || o.ContractEndDateUtc.Value >= now));
+        if (visibility.UserIds is not null)
+        {
+            activeContractsQuery = activeContractsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+        var activeContracts = await activeContractsQuery
+            .Select(o => new
+            {
+                o.Amount,
+                StartAt = o.ContractStartDateUtc ?? o.CreatedAtUtc,
+                o.ContractEndDateUtc
+            })
+            .ToListAsync(cancellationToken);
+
+        decimal ResolveContractMonths(DateTime startAt, DateTime? endAt)
+        {
+            if (!endAt.HasValue || endAt.Value <= startAt)
+            {
+                return defaultContractTermMonths;
+            }
+
+            var months = (decimal)((endAt.Value - startAt).TotalDays / 30.4375d);
+            return Math.Max(1m, Math.Round(months, 2));
+        }
+
+        var monthlyRecurringRevenue = activeContracts.Sum(contract =>
+        {
+            var termMonths = ResolveContractMonths(contract.StartAt, contract.ContractEndDateUtc);
+            return termMonths <= 0 ? 0 : contract.Amount / termMonths;
+        });
+
+        var wonTwelveMonthStart = now.AddMonths(-12);
+        var wonTwelveMonthRowsQuery = _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon);
+        if (visibility.UserIds is not null)
+        {
+            wonTwelveMonthRowsQuery = wonTwelveMonthRowsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+        }
+        var wonTwelveMonthRows = await wonTwelveMonthRowsQuery
+            .Select(o => new
+            {
+                o.AccountId,
+                o.Amount,
+                ClosedAt = o.UpdatedAtUtc ?? o.CreatedAtUtc
+            })
+            .Where(o => o.ClosedAt >= wonTwelveMonthStart)
+            .ToListAsync(cancellationToken);
+
+        var wonTwelveMonthRevenue = wonTwelveMonthRows.Sum(row => row.Amount);
+        var wonTwelveMonthAccounts = wonTwelveMonthRows
+            .Select(row => row.AccountId)
+            .Distinct()
+            .Count();
+        var customerLifetimeValue = wonTwelveMonthAccounts == 0
+            ? 0
+            : wonTwelveMonthRevenue / wonTwelveMonthAccounts;
+
+        var accountLifecycleRowsQuery = _dbContext.Accounts
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted);
+        if (visibility.UserIds is not null)
+        {
+            accountLifecycleRowsQuery = accountLifecycleRowsQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
+        }
+        var accountLifecycleRows = await accountLifecycleRowsQuery
+            .Select(a => a.LifecycleStage)
+            .ToListAsync(cancellationToken);
+
+        var totalCustomerPopulation = accountLifecycleRows.Count(stage =>
+            string.IsNullOrWhiteSpace(stage)
+            || string.Equals(stage, "Customer", StringComparison.OrdinalIgnoreCase)
+            || stage.Contains("churn", StringComparison.OrdinalIgnoreCase));
+        var churnedCustomers = accountLifecycleRows.Count(stage =>
+            !string.IsNullOrWhiteSpace(stage)
+            && stage.Contains("churn", StringComparison.OrdinalIgnoreCase));
+        var churnRate = totalCustomerPopulation == 0
+            ? 0m
+            : Math.Round((decimal)churnedCustomers * 100m / totalCustomerPopulation, 2);
+
         var leadTruthMetricsQuery = _dbContext.Leads
             .AsNoTracking()
             .Where(l => !l.IsDeleted);
@@ -846,10 +978,54 @@ public class DashboardReadService : IDashboardReadService
 
         var avgQualificationConfidence = leadInsights.Count == 0 ? 0m : leadInsights.Average(i => i.Confidence);
         var avgTruthCoverage = leadInsights.Count == 0 ? 0m : leadInsights.Average(i => i.TruthCoverage);
-        var riskRegisterCount = leadInsights.Sum(i => i.RiskFlags.Count);
-        var topRiskFlags = leadInsights
+
+        var checklistRiskActivitiesQuery = _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                        && a.RelatedEntityType == ActivityRelationType.Opportunity
+                        && a.ExternalReference != null
+                        && a.ExternalReference.StartsWith("opportunity-checklist-risk:")
+                        && !a.CompletedDateUtc.HasValue);
+        if (visibility.UserIds is not null)
+        {
+            checklistRiskActivitiesQuery = checklistRiskActivitiesQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
+        }
+        var checklistRiskSubjects = await checklistRiskActivitiesQuery
+            .Select(a => a.Subject)
+            .ToListAsync(cancellationToken);
+        var checklistRiskFlags = checklistRiskSubjects
+            .Select(subject =>
+            {
+                if (string.IsNullOrWhiteSpace(subject))
+                {
+                    return "Checklist risk";
+                }
+
+                var normalized = subject.Trim();
+                if (normalized.StartsWith("Risk: ", StringComparison.OrdinalIgnoreCase))
+                {
+                    normalized = normalized["Risk: ".Length..];
+                }
+
+                var checklistMarker = " checklist";
+                var markerIndex = normalized.IndexOf(checklistMarker, StringComparison.OrdinalIgnoreCase);
+                if (markerIndex > 0)
+                {
+                    normalized = normalized[..markerIndex];
+                }
+
+                return $"{normalized} checklist blocked";
+            })
+            .ToList();
+
+        var allRiskFlags = leadInsights
             .SelectMany(i => i.RiskFlags)
+            .Concat(checklistRiskFlags)
             .Where(flag => !string.IsNullOrWhiteSpace(flag))
+            .ToList();
+
+        var riskRegisterCount = allRiskFlags.Count;
+        var topRiskFlags = allRiskFlags
             .GroupBy(flag => flag, StringComparer.OrdinalIgnoreCase)
             .Select(group => new RiskFlagSummaryDto(group.Key, group.Count()))
             .OrderByDescending(item => item.Count)
@@ -926,9 +1102,9 @@ public class DashboardReadService : IDashboardReadService
             avgDealSize,
             winRate,
             avgSalesCycle,
-            0,
-            0,
-            0,
+            Math.Round(monthlyRecurringRevenue, 2),
+            Math.Round(customerLifetimeValue, 2),
+            churnRate,
             Math.Round(avgQualificationConfidence, 2),
             Math.Round(avgTruthCoverage, 2),
             avgTimeToTruthDays,
@@ -1110,10 +1286,21 @@ public class DashboardReadService : IDashboardReadService
             .Take(5)
             .ToList();
 
+        var opportunityStages = await _dbContext.OpportunityStages
+            .AsNoTracking()
+            .Where(s => !s.IsDeleted)
+            .Select(s => new { s.Name, s.Order })
+            .ToListAsync(cancellationToken);
+        var stageOrderLookup = opportunityStages
+            .Where(s => !string.IsNullOrWhiteSpace(s.Name))
+            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Min(x => x.Order), StringComparer.OrdinalIgnoreCase);
+
         var pipelineByStage = openOpportunities
             .GroupBy(o => o.Stage)
             .Select(group => new PipelineStageDto(group.Key, group.Count(), group.Sum(o => o.Amount)))
-            .OrderBy(stage => stage.Stage)
+            .OrderBy(stage => stageOrderLookup.TryGetValue(stage.Stage ?? string.Empty, out var order) ? order : int.MaxValue)
+            .ThenBy(stage => stage.Stage)
             .ToList();
 
         var pipelineValueTotal = pipelineByStage.Sum(stage => stage.Value);

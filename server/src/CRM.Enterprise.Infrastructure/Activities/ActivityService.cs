@@ -12,6 +12,7 @@ namespace CRM.Enterprise.Infrastructure.Activities;
 public sealed class ActivityService : IActivityService
 {
     private const string ActivityEntityType = "Activity";
+    private const string ChecklistRiskExternalReferencePrefix = "opportunity-checklist-risk:";
     private readonly CrmDbContext _dbContext;
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
@@ -323,6 +324,12 @@ public sealed class ActivityService : IActivityService
             return ActivityOperationResult<bool>.NotFoundResult();
         }
 
+        var checklistRiskClosureError = await ValidateChecklistRiskClosureAsync(activity, request, cancellationToken);
+        if (checklistRiskClosureError is not null)
+        {
+            return ActivityOperationResult<bool>.Fail(checklistRiskClosureError);
+        }
+
         var previousOwnerId = activity.OwnerId;
         var previousCompletedAt = activity.CompletedDateUtc;
         var previousOutcome = activity.Outcome;
@@ -406,6 +413,48 @@ public sealed class ActivityService : IActivityService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ActivityOperationResult<bool>.Ok(true);
+    }
+
+    private async Task<string?> ValidateChecklistRiskClosureAsync(
+        Activity activity,
+        ActivityUpsertRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (activity.CompletedDateUtc.HasValue || !request.CompletedDateUtc.HasValue)
+        {
+            return null;
+        }
+
+        var externalReference = activity.ExternalReference;
+        if (string.IsNullOrWhiteSpace(externalReference)
+            || !externalReference.StartsWith(ChecklistRiskExternalReferencePrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var rawChecklistId = externalReference[ChecklistRiskExternalReferencePrefix.Length..];
+        if (!Guid.TryParse(rawChecklistId, out var checklistItemId))
+        {
+            return "Checklist evidence is required before closing this risk.";
+        }
+
+        var checklistItem = await _dbContext.OpportunityReviewChecklistItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(i => i.Id == checklistItemId && !i.IsDeleted, cancellationToken);
+        if (checklistItem is null)
+        {
+            return "Checklist evidence is required before closing this risk.";
+        }
+
+        var status = checklistItem.Status?.Trim() ?? string.Empty;
+        var statusResolved = string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase)
+                             || string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase);
+        if (!statusResolved || string.IsNullOrWhiteSpace(checklistItem.Notes))
+        {
+            return "Checklist evidence is required before closing this risk.";
+        }
+
+        return null;
     }
 
     public async Task<ActivityOperationResult<bool>> DeleteAsync(Guid id, ActorContext actor, CancellationToken cancellationToken = default)

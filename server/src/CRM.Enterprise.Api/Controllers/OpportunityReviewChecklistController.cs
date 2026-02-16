@@ -38,15 +38,23 @@ public sealed class OpportunityReviewChecklistController : ControllerBase
         [FromBody] UpsertOpportunityReviewChecklistItemRequest request,
         CancellationToken cancellationToken)
     {
-        var created = await _service.CreateAsync(
-            id,
-            new OpportunityReviewChecklistCreateRequest(
-                request.Type ?? "Security",
-                request.Title,
-                request.Status,
-                request.Notes),
-            GetActor(),
-            cancellationToken);
+        OpportunityReviewChecklistItemDto? created;
+        try
+        {
+            created = await _service.CreateAsync(
+                id,
+                new OpportunityReviewChecklistCreateRequest(
+                    request.Type ?? "Security",
+                    request.Title,
+                    request.Status,
+                    request.Notes),
+                GetActor(),
+                cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         if (created is null)
         {
@@ -63,14 +71,22 @@ public sealed class OpportunityReviewChecklistController : ControllerBase
         [FromBody] UpsertOpportunityReviewChecklistItemRequest request,
         CancellationToken cancellationToken)
     {
-        var updated = await _service.UpdateAsync(
-            itemId,
-            new OpportunityReviewChecklistUpdateRequest(
-                request.Title,
-                request.Status,
-                request.Notes),
-            GetActor(),
-            cancellationToken);
+        OpportunityReviewChecklistItemDto? updated;
+        try
+        {
+            updated = await _service.UpdateAsync(
+                itemId,
+                new OpportunityReviewChecklistUpdateRequest(
+                    request.Title,
+                    request.Status,
+                    request.Notes),
+                GetActor(),
+                cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         if (updated is null)
         {

@@ -2,6 +2,7 @@ using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,9 @@ namespace CRM.Enterprise.Infrastructure.Opportunities;
 public sealed class OpportunityReviewChecklistService : IOpportunityReviewChecklistService
 {
     private const string EntityType = "OpportunityReviewChecklist";
+    private const string RiskRegisterEntityType = "OpportunityRiskRegister";
+    private const string RiskRegisterOutcomeOpen = "Risk Register Open";
+    private const string RiskRegisterOutcomeClosed = "Risk Register Closed";
     private readonly CrmDbContext _dbContext;
     private readonly IAuditEventService _auditEvents;
 
@@ -75,6 +79,7 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
         }
 
         var status = string.IsNullOrWhiteSpace(request.Status) ? "Pending" : request.Status.Trim();
+        var now = DateTime.UtcNow;
         var item = new OpportunityReviewChecklistItem
         {
             OpportunityId = opportunityId,
@@ -82,11 +87,12 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
             Title = title,
             Status = status,
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
-            CompletedAtUtc = string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase) ? DateTime.UtcNow : null,
-            CreatedAtUtc = DateTime.UtcNow
+            CompletedAtUtc = IsChecklistResolved(status) ? DateTime.UtcNow : null,
+            CreatedAtUtc = now
         };
 
         _dbContext.OpportunityReviewChecklistItems.Add(item);
+        await SyncRiskRegisterAsync(item, opportunity.OwnerId, actor, now, cancellationToken);
         await _auditEvents.TrackAsync(
             new AuditEventEntry(
                 EntityType,
@@ -131,7 +137,7 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
         if (request.Status is not null)
         {
             item.Status = request.Status.Trim();
-            item.CompletedAtUtc = string.Equals(item.Status, "Completed", StringComparison.OrdinalIgnoreCase)
+            item.CompletedAtUtc = IsChecklistResolved(item.Status)
                 ? DateTime.UtcNow
                 : null;
         }
@@ -142,6 +148,15 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
         }
 
         item.UpdatedAtUtc = DateTime.UtcNow;
+        var opportunityOwnerId = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => o.Id == item.OpportunityId && !o.IsDeleted)
+            .Select(o => o.OwnerId)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (opportunityOwnerId != Guid.Empty)
+        {
+            await SyncRiskRegisterAsync(item, opportunityOwnerId, actor, item.UpdatedAtUtc.Value, cancellationToken);
+        }
 
         await _auditEvents.TrackAsync(
             new AuditEventEntry(
@@ -205,5 +220,134 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
             return "Technical";
         }
         return "Security";
+    }
+
+    private async Task SyncRiskRegisterAsync(
+        OpportunityReviewChecklistItem item,
+        Guid ownerId,
+        ActorContext actor,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var externalReference = BuildRiskExternalReference(item.Id);
+        var linkedRisk = await _dbContext.Activities
+            .FirstOrDefaultAsync(a =>
+                    !a.IsDeleted
+                    && a.RelatedEntityType == ActivityRelationType.Opportunity
+                    && a.RelatedEntityId == item.OpportunityId
+                    && a.ExternalReference == externalReference,
+                cancellationToken);
+
+        if (IsChecklistFailure(item.Status))
+        {
+            if (linkedRisk is null)
+            {
+                linkedRisk = new Activity
+                {
+                    Subject = BuildRiskSubject(item.Type, item.Title),
+                    Description = BuildRiskDescription(item, isClosed: false),
+                    Outcome = RiskRegisterOutcomeOpen,
+                    Type = ActivityType.Task,
+                    RelatedEntityType = ActivityRelationType.Opportunity,
+                    RelatedEntityId = item.OpportunityId,
+                    OwnerId = ownerId,
+                    Priority = "High",
+                    DueDateUtc = now.AddDays(7),
+                    ExternalReference = externalReference,
+                    CreatedAtUtc = now
+                };
+                _dbContext.Activities.Add(linkedRisk);
+            }
+            else
+            {
+                linkedRisk.Subject = BuildRiskSubject(item.Type, item.Title);
+                linkedRisk.Description = BuildRiskDescription(item, isClosed: false);
+                linkedRisk.Outcome = RiskRegisterOutcomeOpen;
+                linkedRisk.CompletedDateUtc = null;
+                linkedRisk.OwnerId = ownerId;
+                linkedRisk.UpdatedAtUtc = now;
+            }
+
+            await _auditEvents.TrackAsync(
+                new AuditEventEntry(
+                    RiskRegisterEntityType,
+                    linkedRisk.Id,
+                    "Upserted",
+                    null,
+                    null,
+                    null,
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
+            return;
+        }
+
+        if (linkedRisk is null)
+        {
+            return;
+        }
+
+        if (IsChecklistResolved(item.Status))
+        {
+            if (string.IsNullOrWhiteSpace(item.Notes))
+            {
+                throw new InvalidOperationException("Checklist evidence is required before closing a linked risk.");
+            }
+
+            linkedRisk.Description = BuildRiskDescription(item, isClosed: true);
+            linkedRisk.Outcome = RiskRegisterOutcomeClosed;
+            linkedRisk.CompletedDateUtc = now;
+            linkedRisk.UpdatedAtUtc = now;
+            await _auditEvents.TrackAsync(
+                new AuditEventEntry(
+                    RiskRegisterEntityType,
+                    linkedRisk.Id,
+                    "Closed",
+                    null,
+                    null,
+                    null,
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
+            return;
+        }
+
+        linkedRisk.Description = BuildRiskDescription(item, isClosed: false);
+        linkedRisk.Outcome = RiskRegisterOutcomeOpen;
+        linkedRisk.CompletedDateUtc = null;
+        linkedRisk.UpdatedAtUtc = now;
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                RiskRegisterEntityType,
+                linkedRisk.Id,
+                "Updated",
+                null,
+                null,
+                null,
+                actor.UserId,
+                actor.UserName),
+            cancellationToken);
+    }
+
+    private static bool IsChecklistFailure(string? status)
+        => string.Equals(status?.Trim(), "Blocked", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsChecklistResolved(string? status)
+        => string.Equals(status?.Trim(), "Approved", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(status?.Trim(), "Completed", StringComparison.OrdinalIgnoreCase);
+
+    private static string BuildRiskExternalReference(Guid checklistItemId)
+        => $"opportunity-checklist-risk:{checklistItemId}";
+
+    private static string BuildRiskSubject(string type, string title)
+        => $"Risk: {type} checklist - {title}";
+
+    private static string BuildRiskDescription(OpportunityReviewChecklistItem item, bool isClosed)
+    {
+        var status = item.Status?.Trim() ?? "Pending";
+        var evidence = string.IsNullOrWhiteSpace(item.Notes) ? "Not provided" : item.Notes.Trim();
+        return isClosed
+            ? $"Closed from checklist. Type={item.Type}; Status={status}; Evidence={evidence}"
+            : $"Linked from checklist failure. Type={item.Type}; Status={status}; Evidence={evidence}";
     }
 }

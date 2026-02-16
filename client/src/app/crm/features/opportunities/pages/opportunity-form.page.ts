@@ -784,16 +784,24 @@ export class OpportunityFormPage implements OnInit {
 
     this.checklistService
       .create(this.editingId, { title, type, status: 'Pending' })
-      .subscribe((item) => {
-        if (type === 'Security') {
-          this.securityChecklist = [...this.securityChecklist, item];
-          this.newSecurityItem = '';
-        } else if (type === 'Legal') {
-          this.legalChecklist = [...this.legalChecklist, item];
-          this.newLegalItem = '';
-        } else {
-          this.technicalChecklist = [...this.technicalChecklist, item];
-          this.newTechnicalItem = '';
+      .subscribe({
+        next: (item) => {
+          if (type === 'Security') {
+            this.securityChecklist = [...this.securityChecklist, item];
+            this.newSecurityItem = '';
+          } else if (type === 'Legal') {
+            this.legalChecklist = [...this.legalChecklist, item];
+            this.newLegalItem = '';
+          } else {
+            this.technicalChecklist = [...this.technicalChecklist, item];
+            this.newTechnicalItem = '';
+          }
+        },
+        error: (error) => {
+          const message = typeof error?.error === 'string'
+            ? error.error
+            : 'Unable to add checklist item.';
+          this.toastService.show('error', message, 3500);
         }
       });
   }
@@ -815,8 +823,12 @@ export class OpportunityFormPage implements OnInit {
           this.checklistSavedIds.add(item.id);
           window.setTimeout(() => this.checklistSavedIds.delete(item.id), 1200);
         },
-        error: () => {
+        error: (error) => {
           this.checklistSavingIds.delete(item.id);
+          const message = typeof error?.error === 'string'
+            ? error.error
+            : 'Unable to update checklist item.';
+          this.toastService.show('error', message, 3500);
         }
       });
   }
@@ -1083,8 +1095,8 @@ export class OpportunityFormPage implements OnInit {
 
   private applyCurrencyDefaults(currencyCode: string) {
     if (!currencyCode) return;
-    if (!this.form.currency) {
-      this.form.currency = currencyCode;
+    if (!this.form?.currency) {
+      this.form = { ...(this.form ?? this.createEmptyForm()), currency: currencyCode };
     }
     if (!this.approvalRequest.currency) {
       this.approvalRequest.currency = currencyCode;
@@ -1096,7 +1108,9 @@ export class OpportunityFormPage implements OnInit {
   }
 
   protected resolveCurrencyCode() {
-    return this.form.currency || this.currencyFallback || this.currencyOptions[0]?.value || '';
+    // `this.form` can be undefined during field initialization (createEmptyForm -> resolveCurrencyCode).
+    // Guard for that startup window.
+    return this.form?.currency || this.currencyFallback || this.currencyOptions[0]?.value || 'USD';
   }
 
   protected isPainConfirmationRequired(): boolean {

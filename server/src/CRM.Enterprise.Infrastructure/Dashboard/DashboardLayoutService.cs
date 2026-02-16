@@ -13,11 +13,11 @@ public class DashboardLayoutService : IDashboardLayoutService
         "pipeline",
         "truth-metrics",
         "risk-register",
-        "risk-checklist",
         "execution-guide",
         "confidence-forecast",
         "forecast-scenarios",
         "my-forecast",
+        "expansion-signals",
         "accounts",
         "manager-health",
         "activity-mix",
@@ -436,7 +436,14 @@ public class DashboardLayoutService : IDashboardLayoutService
         try
         {
             var defaults = JsonSerializer.Deserialize<List<RoleDefaultLayout>>(tenant.DashboardLayoutDefaultsJson);
-            return defaults ?? new List<RoleDefaultLayout>();
+            if (defaults is null)
+            {
+                return new List<RoleDefaultLayout>();
+            }
+
+            return defaults
+                .Select(EnsureLegacyDefaultHiddenCards)
+                .ToList();
         }
         catch (JsonException)
         {
@@ -457,6 +464,32 @@ public class DashboardLayoutService : IDashboardLayoutService
 
         var selected = ordered.LastOrDefault(item => item.RoleLevel <= roleLevel) ?? ordered.First();
         return new LayoutPayload(selected.CardOrder, selected.Sizes, selected.Dimensions, selected.HiddenCards);
+    }
+
+    private static RoleDefaultLayout EnsureLegacyDefaultHiddenCards(RoleDefaultLayout layout)
+    {
+        if (layout.CardOrder is null || layout.CardOrder.Count == 0)
+        {
+            return layout;
+        }
+
+        if (layout.HiddenCards is { Count: > 0 })
+        {
+            return layout;
+        }
+
+        // Legacy defaults could store cardOrder without hiddenCards; infer hidden so
+        // role-level packs stay strict and do not auto-expand to full catalog.
+        var visible = new HashSet<string>(
+            layout.CardOrder.Where(AllowedIds.Contains),
+            StringComparer.OrdinalIgnoreCase);
+        var inferredHidden = AllowedIds
+            .Where(id => !visible.Contains(id))
+            .ToList();
+
+        return inferredHidden.Count == 0
+            ? layout
+            : layout with { HiddenCards = inferredHidden };
     }
 
     private static bool IsLegacyFullDefault(DashboardLayoutState state)
