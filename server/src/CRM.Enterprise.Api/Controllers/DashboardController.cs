@@ -322,9 +322,9 @@ public class DashboardController : ControllerBase
             return Unauthorized();
         }
 
-        var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
-        var packName = await ResolveDashboardPackNameAsync(userId.Value, roleLevel, cancellationToken);
         var layout = await _layoutService.ResetLayoutAsync(userId.Value, cancellationToken);
+        var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
+        var packName = $"H{Math.Max(1, roleLevel)} Pack";
         var dimensions = layout.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));

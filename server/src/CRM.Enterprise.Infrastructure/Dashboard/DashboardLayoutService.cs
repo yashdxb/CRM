@@ -192,10 +192,10 @@ public class DashboardLayoutService : IDashboardLayoutService
         var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
         if (user is null)
         {
-            return await GetDefaultLayoutAsync(userId, cancellationToken);
+            return await GetRoleDefaultLayoutAsync(userId, cancellationToken);
         }
 
-        var defaultLayout = await GetDefaultLayoutAsync(userId, cancellationToken);
+        var defaultLayout = await GetRoleDefaultLayoutAsync(userId, cancellationToken);
         user.CommandCenterLayoutJson = JsonSerializer.Serialize(new LayoutPayload(
             defaultLayout.CardOrder,
             defaultLayout.Sizes,
@@ -204,6 +204,21 @@ public class DashboardLayoutService : IDashboardLayoutService
         user.UpdatedAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
         return defaultLayout;
+    }
+
+    private async Task<DashboardLayoutState> GetRoleDefaultLayoutAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var roleLevel = await GetUserRoleLevelAsync(userId, cancellationToken);
+        var tenantDefaults = await LoadTenantDefaultsAsync(cancellationToken);
+
+        var resolved = ResolveDefaultLayout(tenantDefaults, roleLevel);
+        if (resolved is null)
+        {
+            var template = await GetDefaultTemplatePayloadAsync(cancellationToken);
+            resolved = template ?? new LayoutPayload(DefaultOrder, null, null, null);
+        }
+
+        return NormalizePayload(resolved);
     }
 
     public async Task<IReadOnlyList<DashboardTemplateState>> GetTemplatesAsync(CancellationToken cancellationToken)

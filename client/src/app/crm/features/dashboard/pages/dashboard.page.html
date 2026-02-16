@@ -1231,10 +1231,10 @@
       </label>
     </div>
   </div>
-  <div class="layout-chart-section">
+  <div class="layout-chart-section" *ngIf="selectableCharts().length > 0">
     <h4>Chart cards</h4>
     <div class="layout-chart-list">
-      <label class="layout-chart-item" *ngFor="let chart of chartCatalog">
+      <label class="layout-chart-item" *ngFor="let chart of selectableCharts()">
         <input
           type="checkbox"
           [ngModel]="isChartVisible(chart.id)"
@@ -1248,15 +1248,6 @@
   <ng-template pTemplate="footer">
     <div class="layout-actions">
       <button pButton type="button" class="btn-glass" (click)="resetLayout()">Reset to role default</button>
-      <button
-        *ngIf="canManageLayoutDefaults()"
-        pButton
-        type="button"
-        class="btn-glass"
-        (click)="saveRoleDefaultLayout()"
-      >
-        Save as L{{ roleDefaultLevel ?? '?' }} default
-      </button>
       <button pButton type="button" class="btn-gradient" (click)="saveLayout()">Save layout</button>
     </div>
   </ng-template>

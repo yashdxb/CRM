@@ -1,11 +1,11 @@
-import { NgClass, NgFor, NgIf } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { NgClass, NgFor, NgIf, isPlatformBrowser } from '@angular/common';
+import { Component, HostListener, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { OrganizationChartModule } from 'primeng/organizationchart';
 import { SkeletonModule } from 'primeng/skeleton';
-import { TableModule } from 'primeng/table';
+import { TableModule, TablePageEvent } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TabsModule } from 'primeng/tabs';
 import { TooltipModule } from 'primeng/tooltip';
@@ -46,8 +46,23 @@ export class RolesPage {
   private readonly formBuilder = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
 
   protected readonly roles = signal<RoleSummary[]>([]);
+  protected readonly rolesFirst = signal(0);
+  protected readonly rolesPageSize = signal(10);
+  protected readonly viewportHeight = signal(900);
+  protected readonly rolesPageSizeOptions = [10, 20, 30, 50];
+  protected readonly rolesTableScrollHeight = computed(() => {
+    const height = this.viewportHeight();
+    const reservedHeight = height < 760 ? 620 : height < 960 ? 700 : 740;
+    const minHeight = height < 760 ? 140 : 180;
+    const maxHeight = 520;
+    const available = height - reservedHeight;
+    const clamped = Math.max(minHeight, Math.min(maxHeight, available));
+    return `${clamped}px`;
+  });
   protected readonly permissionCatalog = signal<PermissionDefinition[]>([]);
   protected readonly intentPacks = signal<RoleIntentPack[]>([]);
   protected readonly permissionPackPresets = signal<PermissionPackPreset[]>([]);
@@ -108,6 +123,10 @@ export class RolesPage {
   });
 
   constructor() {
+    if (this.isBrowser) {
+      this.viewportHeight.set(window.innerHeight);
+    }
+
     this.canManageAdmin.set(
       tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
     );
@@ -137,6 +156,9 @@ export class RolesPage {
     this.dataService.getRoles().subscribe({
       next: (roles) => {
         this.roles.set(roles);
+        if (this.rolesFirst() >= roles.length) {
+          this.rolesFirst.set(0);
+        }
         this.loadingRoles.set(false);
       },
       error: () => {
@@ -225,8 +247,22 @@ export class RolesPage {
     });
   }
 
+  protected handleRolesPage(event: TablePageEvent) {
+    const nextRows = event.rows ?? this.rolesPageSize();
+    const nextFirst = event.first ?? 0;
+    this.rolesPageSize.set(nextRows);
+    this.rolesFirst.set(nextFirst);
+  }
+
   protected toggleView(mode: 'list' | 'hierarchy') {
     this.showHierarchy.set(mode === 'hierarchy');
+  }
+
+  @HostListener('window:resize')
+  protected onViewportResize() {
+    if (this.isBrowser) {
+      this.viewportHeight.set(window.innerHeight);
+    }
   }
 
   protected securityLevelForRole(role: RoleSummary): SecurityLevelDefinition | null {

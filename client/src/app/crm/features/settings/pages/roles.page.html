@@ -189,8 +189,22 @@
               </button>
             </div>
 
-            <div class="table-wrapper" *ngIf="!loadingRoles() && roles().length > 0 && !showHierarchy()">
-              <p-table class="data-table" [value]="roles()" [tableStyle]="{ 'min-width': '100%' }" responsiveLayout="scroll">
+            <div class="table-wrapper table-wrapper--roles" *ngIf="!loadingRoles() && roles().length > 0 && !showHierarchy()">
+              <p-table
+                class="data-table roles-directory-table"
+                [value]="roles()"
+                [tableStyle]="{ 'min-width': '72rem' }"
+                responsiveLayout="scroll"
+                [scrollable]="true"
+                [scrollHeight]="rolesTableScrollHeight()"
+                [paginator]="true"
+                [rows]="rolesPageSize()"
+                [first]="rolesFirst()"
+                [rowsPerPageOptions]="rolesPageSizeOptions"
+                [showCurrentPageReport]="true"
+                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} roles"
+                (onPage)="handleRolesPage($event)"
+              >
                 <ng-template pTemplate="header">
                   <tr>
                     <th class="th-role">Role</th>

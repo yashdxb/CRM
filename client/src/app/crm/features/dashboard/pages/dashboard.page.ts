@@ -601,6 +601,7 @@ export class DashboardPage implements OnInit {
   protected readonly cardCatalog = DASHBOARD_CARD_CATALOG;
   protected readonly chartCatalog: Array<{ id: ChartId; label: string; icon: string }> = DASHBOARD_CHART_CATALOG;
   protected readonly selectableCards = signal<Array<{ id: string; label: string; icon: string }>>([]);
+  protected readonly selectableCharts = signal<Array<{ id: ChartId; label: string; icon: string }>>([]);
 
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
@@ -657,6 +658,7 @@ export class DashboardPage implements OnInit {
           hidden.filter((id): id is ChartId => this.chartIdTypeGuard(id))
         );
         this.applyRoleDefaultCharts();
+        this.refreshSelectableCharts();
 
         // If the user has a persisted layout that contains cards not in the role's default pack,
         // strip them out immediately so Customize Layout and the dashboard itself stay aligned.
@@ -671,6 +673,7 @@ export class DashboardPage implements OnInit {
         this.roleDefaultLevel = null;
         this.activePackName.set(this.resolvePackName(null, this.roleDefaultLevel));
         this.roleDefaultHiddenCharts = new Set();
+        this.refreshSelectableCharts();
         this.refreshSelectableCards();
         this.loadServerLayout();
       }
@@ -929,7 +932,13 @@ export class DashboardPage implements OnInit {
     this.dashboardData.resetLayout().subscribe({
       next: response => {
         const defaultOrder = this.getLayoutDefaultOrder();
-        this.layoutOrder = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
+        const normalized = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
+        this.roleDefaultLayout = [...normalized];
+        const hidden = response.hiddenCards ?? [];
+        this.roleDefaultHiddenCharts = new Set(
+          hidden.filter((id): id is ChartId => this.chartIdTypeGuard(id))
+        );
+        this.layoutOrder = normalized;
         this.layoutSizes = this.buildDefaultSizeMap();
         this.layoutDimensions = response.dimensions ?? {};
         this.activePackName.set(this.resolvePackName(response.packName, response.roleLevel ?? this.roleDefaultLevel));
@@ -937,6 +946,7 @@ export class DashboardPage implements OnInit {
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
         this.resetChartPreference();
         this.applyRoleDefaultCharts();
+        this.refreshSelectableCharts();
       },
       error: () => {
         const fallbackOrder = this.getLayoutDefaultOrder();
@@ -1001,6 +1011,9 @@ export class DashboardPage implements OnInit {
   }
 
   protected hideChart(chartKey: ChartId): void {
+    if (this.roleDefaultHiddenCharts.has(chartKey)) {
+      return;
+    }
     if (chartKey === 'revenue') {
       this.showRevenueChart = false;
       this.persistChartVisibility();
@@ -1251,6 +1264,9 @@ export class DashboardPage implements OnInit {
   }
 
   protected onChartVisibilityChange(chartId: ChartId, visible: boolean): void {
+    if (visible && this.roleDefaultHiddenCharts.has(chartId)) {
+      return;
+    }
     if (chartId === 'revenue') {
       this.showRevenueChart = visible;
     } else {
@@ -2016,17 +2032,22 @@ export class DashboardPage implements OnInit {
   }
 
   private applyRoleDefaultCharts(): void {
-    if (this.hasLocalChartPreference) {
-      return;
-    }
+    const revenueAllowed = !this.roleDefaultHiddenCharts.has('revenue');
+    const growthAllowed = !this.roleDefaultHiddenCharts.has('growth');
 
-    this.showRevenueChart = !this.roleDefaultHiddenCharts.has('revenue');
-    this.showCustomerGrowthChart = !this.roleDefaultHiddenCharts.has('growth');
+    // Role default is the hard limit. Local preference only applies within allowed charts.
+    this.showRevenueChart = revenueAllowed && (!this.hasLocalChartPreference || this.showRevenueChart);
+    this.showCustomerGrowthChart = growthAllowed && (!this.hasLocalChartPreference || this.showCustomerGrowthChart);
   }
 
   private refreshSelectableCards(): void {
     const next = this.getSelectableCards();
     this.selectableCards.set(next);
+  }
+
+  private refreshSelectableCharts(): void {
+    const next = this.chartCatalog.filter((chart) => !this.roleDefaultHiddenCharts.has(chart.id));
+    this.selectableCharts.set(next);
   }
 
   private resolvePackName(packName?: string | null, roleLevel?: number | null): string {
