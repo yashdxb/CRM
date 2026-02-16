@@ -1082,7 +1082,8 @@ $status-lost: #ef4444;
 }
 
 ::ng-deep .p-drawer-mask {
-  background: rgba(2, 6, 23, 0.34);
+  // Keep focus on the drawer without making the surface feel "dark mode".
+  background: rgba(2, 6, 23, 0.14);
 }
 
 ::ng-deep .lead-coach-drawer .p-drawer-header {
@@ -1097,9 +1098,12 @@ $status-lost: #ef4444;
 ::ng-deep .lead-coach-drawer .p-drawer-content {
   padding: 14px 16px 14px;
   background:
-    radial-gradient(900px 380px at 20% 0%, rgba(34, 211, 238, 0.10) 0%, transparent 55%),
-    radial-gradient(900px 420px at 90% 45%, rgba(99, 102, 241, 0.10) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.55) 0%, rgba(241, 245, 249, 0.25) 100%);
+    radial-gradient(900px 380px at 20% 0%, rgba(34, 211, 238, 0.08) 0%, transparent 55%),
+    radial-gradient(900px 420px at 90% 45%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.86) 100%);
+
+  // Ensure the sticky footer doesn't cover the last section.
+  padding-bottom: 82px;
 }
 
 ::ng-deep .lead-coach-drawer .p-drawer-close-button {
