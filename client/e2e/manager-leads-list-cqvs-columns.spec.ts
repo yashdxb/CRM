@@ -164,6 +164,14 @@ test.describe.serial('manager: leads list CQVS coach panel (settings toggle)', (
 
       const coachButtons = page.locator('[data-testid="lead-coach-open"]');
       await expect(coachButtons.first()).toBeVisible();
+
+      // Snapshot row action buttons to confirm unified colorful styling in the lead list.
+      const outDir = path.resolve(process.cwd(), 'output', 'playwright');
+      fs.mkdirSync(outDir, { recursive: true });
+      const firstRowActions = page.locator('.row-actions').first();
+      await expect(firstRowActions).toBeVisible();
+      await firstRowActions.screenshot({ path: path.join(outDir, 'lead-list-row-actions.png') });
+
       await coachButtons.first().click();
       await expect(page.locator('[data-testid="lead-coach-drawer"]')).toBeVisible();
       await expect(page.locator('[data-testid="lead-coach-title"]')).toContainText('Lead Coach');
@@ -173,8 +181,6 @@ test.describe.serial('manager: leads list CQVS coach panel (settings toggle)', (
       await expect(page.locator('.coach-title__row')).toHaveCount(1);
       await expect(page.locator('.coach-action-btn')).toHaveCount(2);
 
-      const outDir = path.resolve(process.cwd(), 'output', 'playwright');
-      fs.mkdirSync(outDir, { recursive: true });
       const drawer = page.locator('[data-testid="lead-coach-drawer"]');
       await drawer.screenshot({ path: path.join(outDir, 'lead-coach-drawer-manager.png') });
 
