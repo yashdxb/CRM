@@ -136,8 +136,10 @@
   box-shadow: $glass-shadow-lg;
 }
 
+// Brighter scrim so the app remains readable behind the drawer.
+// Keep some dimming for focus, but avoid "dark mode" feel.
 .p-drawer-mask {
-  background: rgba(2, 6, 23, 0.34);
+  background: rgba(2, 6, 23, 0.14);
 }
 
 .lead-coach-drawer .p-drawer-header {
@@ -151,10 +153,11 @@
 
 .lead-coach-drawer .p-drawer-content {
   padding: 14px 16px 14px;
+  // More opaque surface for contrast and readability.
   background:
-    radial-gradient(900px 380px at 20% 0%, rgba(34, 211, 238, 0.10) 0%, transparent 55%),
-    radial-gradient(900px 420px at 90% 45%, rgba(99, 102, 241, 0.10) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(248, 250, 252, 0.55) 0%, rgba(241, 245, 249, 0.25) 100%);
+    radial-gradient(900px 380px at 20% 0%, rgba(34, 211, 238, 0.08) 0%, transparent 55%),
+    radial-gradient(900px 420px at 90% 45%, rgba(99, 102, 241, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.86) 100%);
 
   // Ensure the sticky footer doesn't cover the last section.
   padding-bottom: 82px;
