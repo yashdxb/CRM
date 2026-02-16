@@ -16,7 +16,8 @@ import { DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal } from '../m
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
-import { ExpansionSignal } from '../../opportunities/models/opportunity.model';
+import { OpportunityApprovalInboxItem, ExpansionSignal } from '../../opportunities/models/opportunity.model';
+import { OpportunityApprovalService } from '../../opportunities/services/opportunity-approval.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CommandPaletteService } from '../../../../core/command-palette/command-palette.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -28,7 +29,7 @@ import { ReferenceDataService } from '../../../../core/services/reference-data.s
 import { DASHBOARD_CARD_CATALOG, DASHBOARD_CHART_CATALOG, type DashboardChartId } from '../dashboard-catalog';
 
 type ChartId = DashboardChartId;
-type PriorityStreamType = 'task' | 'lead' | 'deal';
+type PriorityStreamType = 'task' | 'lead' | 'deal' | 'decision';
 
 interface PriorityStreamItem {
   id: string;
@@ -43,6 +44,7 @@ interface PriorityStreamItem {
   meta: string[];
   priorityScore: number;
   leadFirstTouchDueAtUtc?: string;
+  opportunityId?: string;
 }
 
 @Component({
@@ -85,6 +87,7 @@ export class DashboardPage implements OnInit {
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly referenceData = inject(ReferenceDataService);
   private readonly opportunityData = inject(OpportunityDataService);
+  private readonly approvalService = inject(OpportunityApprovalService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly emptySummary: DashboardSummary = {
@@ -158,6 +161,7 @@ export class DashboardPage implements OnInit {
   private readonly managerHealthRefresh$ = new Subject<void>();
   private readonly managerHealthSignal = signal<ManagerPipelineHealth>(this.emptyManagerHealth);
   protected readonly expansionSignals = signal<ExpansionSignal[]>([]);
+  protected readonly pendingDecisionInbox = signal<OpportunityApprovalInboxItem[]>([]);
   protected readonly expansionLoading = signal(false);
   protected readonly expansionSubmitting = signal<Record<string, boolean>>({});
 
@@ -304,6 +308,7 @@ export class DashboardPage implements OnInit {
     const tasks = this.myTasks();
     const leads = this.newlyAssignedLeads();
     const deals = this.atRiskDeals();
+    const decisions = this.pendingDecisionInbox();
 
     for (const task of tasks) {
       const dueLabel = this.getTaskDueLabel(task);
@@ -369,25 +374,54 @@ export class DashboardPage implements OnInit {
       });
     }
 
+    for (const decision of decisions) {
+      const requestedOn = new Date(decision.requestedOn);
+      const ageInHours = Number.isNaN(requestedOn.getTime())
+        ? 0
+        : Math.max(0, Math.round((Date.now() - requestedOn.getTime()) / 36e5));
+      const overdue = ageInHours >= 48;
+      items.push({
+        id: decision.id,
+        type: 'decision',
+        title: decision.opportunityName,
+        subtitle: decision.accountName,
+        status: `${decision.purpose} approval`,
+        dueLabel: overdue ? 'Pending >48h' : 'Pending',
+        dueClass: overdue ? 'due-overdue' : 'due-today',
+        dueColumn: overdue ? 'Escalate' : 'Review now',
+        action: 'Open decision inbox',
+        meta: [
+          `Requested by ${decision.requestedByName || 'Unknown'}`,
+          `Amount: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: decision.currency || this.resolveCurrencyCode(), maximumFractionDigits: 0 }).format(decision.amount ?? 0)}`
+        ],
+        priorityScore: overdue ? 95 : 85,
+        opportunityId: decision.opportunityId
+      });
+    }
+
     return items.sort((a, b) => b.priorityScore - a.priorityScore);
   });
   protected readonly prioritySummary = computed(() => ({
     overdue: this.getTaskSummaryCounts().overdue,
     today: this.getTaskSummaryCounts().today,
+    decisions: this.pendingDecisionInbox().length,
     newLeads: this.newlyAssignedLeads().length,
     atRisk: this.atRiskDeals().length,
     noNextStep: this.summary()?.opportunitiesWithoutNextStep ?? 0
   }));
-  protected priorityFilter = signal<'all' | 'overdue' | 'today' | 'new-leads' | 'at-risk' | 'no-next-step'>('all');
+  protected priorityFilter = signal<'all' | 'overdue' | 'today' | 'decisions' | 'new-leads' | 'at-risk' | 'no-next-step'>('all');
   protected readonly filteredPriorityStreamItems = computed(() => {
     const items = this.priorityStreamItems();
     const filter = this.priorityFilter();
     if (filter === 'all') return items;
     if (filter === 'overdue') {
-      return items.filter(item => item.type === 'task' && item.dueClass === 'due-overdue');
+      return items.filter(item => item.dueClass === 'due-overdue');
     }
     if (filter === 'today') {
-      return items.filter(item => item.type === 'task' && item.dueClass === 'due-today');
+      return items.filter(item => item.dueClass === 'due-today');
+    }
+    if (filter === 'decisions') {
+      return items.filter(item => item.type === 'decision');
     }
     if (filter === 'new-leads') {
       return items.filter(item => item.type === 'lead');
@@ -508,6 +542,7 @@ export class DashboardPage implements OnInit {
   private roleDefaultLayout: string[] = [];
   private roleDefaultHiddenCharts = new Set<ChartId>();
   protected roleDefaultLevel: number | null = null;
+  protected readonly activePackName = signal<string>('H1 Pack');
   protected readonly canManageLayoutDefaults = computed(() => {
     const payload = readTokenContext()?.payload ?? null;
     return tokenHasPermission(payload, PERMISSION_KEYS.administrationManage);
@@ -588,6 +623,7 @@ export class DashboardPage implements OnInit {
       });
 
     this.loadExpansionSignals();
+    this.loadPendingDecisionInbox();
 
     this.managerHealthRefresh$
       .pipe(
@@ -615,6 +651,7 @@ export class DashboardPage implements OnInit {
         const knownCardIds = new Set(this.cardCatalog.map((card) => card.id));
         this.roleDefaultLayout = (response.cardOrder ?? []).filter((id) => knownCardIds.has(id));
         this.roleDefaultLevel = response.roleLevel ?? null;
+        this.activePackName.set(this.resolvePackName(response.packName, response.roleLevel));
         const hidden = response.hiddenCards ?? [];
         this.roleDefaultHiddenCharts = new Set(
           hidden.filter((id): id is ChartId => this.chartIdTypeGuard(id))
@@ -632,6 +669,7 @@ export class DashboardPage implements OnInit {
       error: () => {
         this.roleDefaultLayout = [];
         this.roleDefaultLevel = null;
+        this.activePackName.set(this.resolvePackName(null, this.roleDefaultLevel));
         this.roleDefaultHiddenCharts = new Set();
         this.refreshSelectableCards();
         this.loadServerLayout();
@@ -741,6 +779,20 @@ export class DashboardPage implements OnInit {
         error: () => {
           this.expansionLoading.set(false);
           this.toastService.show('error', 'Unable to load expansion signals.', 3000);
+        }
+      });
+  }
+
+  private loadPendingDecisionInbox(): void {
+    this.approvalService
+      .getInbox('Pending')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (items) => {
+          this.pendingDecisionInbox.set(items ?? []);
+        },
+        error: () => {
+          this.pendingDecisionInbox.set([]);
         }
       });
   }
@@ -880,6 +932,7 @@ export class DashboardPage implements OnInit {
         this.layoutOrder = this.normalizeLayoutWithHidden(response.cardOrder, response.hiddenCards, defaultOrder);
         this.layoutSizes = this.buildDefaultSizeMap();
         this.layoutDimensions = response.dimensions ?? {};
+        this.activePackName.set(this.resolvePackName(response.packName, response.roleLevel ?? this.roleDefaultLevel));
         this.persistLayoutPreferences();
         this.layoutDraft = this.getOrderedCards(this.layoutOrder);
         this.resetChartPreference();
@@ -1207,7 +1260,7 @@ export class DashboardPage implements OnInit {
   }
 
   protected setPriorityFilter(
-    filter: 'all' | 'overdue' | 'today' | 'new-leads' | 'at-risk' | 'no-next-step'
+    filter: 'all' | 'overdue' | 'today' | 'decisions' | 'new-leads' | 'at-risk' | 'no-next-step'
   ): void {
     this.priorityFilter.set(this.priorityFilter() === filter ? 'all' : filter);
   }
@@ -1226,6 +1279,16 @@ export class DashboardPage implements OnInit {
           relatedId: item.id,
           subject,
           leadFirstTouchDueAtUtc: item.leadFirstTouchDueAtUtc ?? undefined
+        }
+      });
+      return;
+    }
+
+    if (item.type === 'decision') {
+      this.router.navigate(['/app/decisions'], {
+        queryParams: {
+          status: 'Pending',
+          focus: item.id
         }
       });
       return;
@@ -1964,6 +2027,23 @@ export class DashboardPage implements OnInit {
   private refreshSelectableCards(): void {
     const next = this.getSelectableCards();
     this.selectableCards.set(next);
+  }
+
+  private resolvePackName(packName?: string | null, roleLevel?: number | null): string {
+    const trimmed = packName?.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+
+    if (roleLevel && roleLevel > 0) {
+      return `H${roleLevel} Pack`;
+    }
+
+    if (this.roleDefaultLevel && this.roleDefaultLevel > 0) {
+      return `H${this.roleDefaultLevel} Pack`;
+    }
+
+      return 'H1 Pack';
   }
 
   private resetChartPreference(): void {

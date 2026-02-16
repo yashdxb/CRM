@@ -1,40 +1,75 @@
 <section class="page-background">
-  <!-- Animated Background Orbs -->
   <div class="animated-orb orb-1"></div>
   <div class="animated-orb orb-2"></div>
   <div class="animated-orb orb-3"></div>
 
-  <!-- PrimeNG Breadcrumb -->
   <app-breadcrumbs></app-breadcrumbs>
 
-
-  <!-- Hero Section -->
   <header class="page-hero">
     <div class="hero-content">
       <span class="hero-eyebrow">
         <i class="pi pi-cog"></i>
         Settings
       </span>
-      <h1 class="hero-title">People & Access</h1>
+      <h1 class="hero-title">
+        <span class="title-gradient">People</span>
+        <span class="title-light">& Access</span>
+      </h1>
       <p class="hero-subtitle">
-        Manage users, roles, and audit visibility with clean, controlled access.
+        Manage users and roles with clean, controlled access governance.
       </p>
     </div>
   </header>
 
-  <!-- Main Content Grid -->
   <div class="settings-layout">
-    <!-- Users Table Panel -->
     <div class="glass-card users-panel">
       <div class="card-header">
         <div class="header-left">
-          <span class="card-eyebrow">Team directory</span>
-          <h2 class="card-title">People &amp; Access</h2>
+          <span class="card-eyebrow">Access governance</span>
+          <h1 class="non-hero-title" *ngIf="activeView() === 'permissions'">
+            <span class="title-gradient">Permission</span>
+            <span class="title-light">Management</span>
+          </h1>
+          <h1 class="non-hero-title" *ngIf="activeView() === 'roles'">
+            <span class="title-gradient">Role</span>
+            <span class="title-light">Management</span>
+          </h1>
+          <h1 class="non-hero-title" *ngIf="activeView() === 'users'">
+            <span class="title-gradient">User</span>
+            <span class="title-light">Management</span>
+          </h1>
+          <h1 class="non-hero-title" *ngIf="activeView() === 'security-level'">
+            <span class="title-gradient">Security Level</span>
+            <span class="title-light">Management</span>
+          </h1>
+          <h1 class="non-hero-title" *ngIf="activeView() === 'dashboard-packs'">
+            <span class="title-gradient">Dashboard Pack</span>
+            <span class="title-light">Management</span>
+          </h1>
+          <p class="card-subtitle">People &amp; Access</p>
         </div>
         <div class="header-actions">
-          <button pButton type="button" class="btn-gradient" [disabled]="!canManageAdmin()" [routerLink]="canManageAdmin() ? ['/app/settings/invite'] : null">
-            <i class="pi pi-user-plus"></i>
-            <span>Invite user</span>
+          <button
+            pButton
+            type="button"
+            class="btn-gradient"
+            [disabled]="!canManageAdmin()"
+            [routerLink]="
+              canManageAdmin()
+                ? (activeView() === 'users'
+                    ? ['/app/settings/invite']
+                    : activeView() === 'roles'
+                      ? ['/app/settings/roles/new']
+                    : activeView() === 'permissions'
+                      ? ['/app/settings/permissions']
+                    : activeView() === 'security-level'
+                      ? ['/app/settings/security-levels']
+                      : ['/app/settings/dashboard-packs'])
+                : null
+            "
+          >
+            <i [class]="activeView() === 'users' ? 'pi pi-user-plus' : activeView() === 'roles' ? 'pi pi-plus-circle' : activeView() === 'permissions' ? 'pi pi-lock' : activeView() === 'security-level' ? 'pi pi-shield' : 'pi pi-th-large'"></i>
+            <span>{{ activeView() === 'users' ? 'Invite user' : activeView() === 'roles' ? 'New role' : activeView() === 'permissions' ? 'Manage sets' : activeView() === 'security-level' ? 'Manage levels' : 'Manage packs' }}</span>
           </button>
         </div>
       </div>
@@ -55,63 +90,30 @@
           </span>
         </div>
         <div class="command-actions">
-          <button pButton type="button" class="btn-glass small" (click)="loadUsers()">
+          <button pButton type="button" class="btn-glass small" (click)="activeView() === 'users' ? loadUsers() : activeView() === 'roles' ? loadRoles() : null">
             <i class="pi pi-refresh"></i>
             <span>Refresh</span>
           </button>
         </div>
       </div>
 
-      <div class="people-tabs" role="tablist" aria-label="People and access views">
+      <div class="people-subtabs" role="tablist" aria-label="People and access sub views">
         <button
           pButton
           type="button"
-          class="view-chip"
-          [ngClass]="{ 'is-active': activeTab() === 'users' }"
-          [attr.aria-selected]="activeTab() === 'users'"
-          (click)="selectTab('users')"
+          class="subview-chip"
+          *ngFor="let item of activeSubmenuItems()"
+          [ngClass]="{ 'is-active': isSubmenuActive(item) }"
+          [attr.aria-selected]="isSubmenuActive(item)"
+          (click)="selectSubmenu(item)"
         >
-          <i class="pi pi-users tab-icon" aria-hidden="true"></i>
-          <span class="tab-label">Users</span>
-        </button>
-        <button
-          pButton
-          type="button"
-          class="view-chip"
-          [ngClass]="{ 'is-active': activeTab() === 'roles' }"
-          [attr.aria-selected]="activeTab() === 'roles'"
-          (click)="selectTab('roles')"
-        >
-          <i class="pi pi-shield tab-icon" aria-hidden="true"></i>
-          <span class="tab-label">Roles</span>
-        </button>
-        <button
-          pButton
-          type="button"
-          class="view-chip"
-          [ngClass]="{ 'is-active': activeTab() === 'teams' }"
-          [attr.aria-selected]="activeTab() === 'teams'"
-          (click)="selectTab('teams')"
-        >
-          <i class="pi pi-sitemap tab-icon" aria-hidden="true"></i>
-          <span class="tab-label">Teams</span>
-        </button>
-        <button
-          pButton
-          type="button"
-          class="view-chip"
-          [disabled]="!canViewAudit()"
-          [ngClass]="{ 'is-active': activeTab() === 'audit-log' }"
-          [attr.aria-selected]="activeTab() === 'audit-log'"
-          (click)="selectTab('audit-log')"
-        >
-          <i class="pi pi-clipboard tab-icon" aria-hidden="true"></i>
-          <span class="tab-label">Audit Log</span>
+          <i [class]="item.icon"></i>
+          <span>{{ item.label }}</span>
         </button>
       </div>
 
       <div class="view-stage">
-        <ng-container *ngIf="activeTab() === 'users'">
+        <ng-container *ngIf="activeView() === 'users'; else nonUsersView">
           <ng-container *ngIf="!loadingUsers(); else usersLoading">
             <div class="table-toolbar">
               <div class="toolbar-search">
@@ -169,6 +171,7 @@
                     <th>Role</th>
                     <th>Status</th>
                     <th>Last login</th>
+                    <th>Online time</th>
                     <th class="text-right">Actions</th>
                   </tr>
                 </ng-template>
@@ -231,6 +234,11 @@
                         <span class="login-never">Never logged in</span>
                       </ng-template>
                     </td>
+                    <td>
+                      <span class="login-duration">
+                        {{ formatOnlineHours(user, isOnline(user)) }}
+                      </span>
+                    </td>
                     <td class="text-right">
                       <div class="action-buttons">
                         <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-pencil" title="Edit user" aria-label="Edit user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); startEdit(user)"></button>
@@ -262,23 +270,20 @@
           </ng-template>
         </ng-container>
 
-        <div class="people-access-embed" *ngIf="activeTab() === 'roles'">
-          <app-roles-page></app-roles-page>
-        </div>
-
-        <div class="teams-panel" *ngIf="activeTab() === 'teams'">
-          <div class="teams-empty">
-            <div class="teams-icon">
-              <i class="pi pi-sitemap"></i>
-            </div>
-            <h3>Teams view</h3>
-            <p>Team structure will surface here once teams are enabled for your workspace.</p>
+        <ng-template #nonUsersView>
+          <div class="people-access-embed" *ngIf="activeView() === 'roles'">
+            <app-roles-page></app-roles-page>
           </div>
-        </div>
-
-        <div class="people-access-embed" *ngIf="activeTab() === 'audit-log'">
-          <app-audit-log-page></app-audit-log-page>
-        </div>
+          <div class="people-access-embed" *ngIf="activeView() === 'permissions'">
+            <app-permissions-page></app-permissions-page>
+          </div>
+          <div class="people-access-embed" *ngIf="activeView() === 'security-level'">
+            <app-security-levels-page></app-security-levels-page>
+          </div>
+          <div class="people-access-embed" *ngIf="activeView() === 'dashboard-packs'">
+            <app-dashboard-packs-page></app-dashboard-packs-page>
+          </div>
+        </ng-template>
       </div>
     </div>
 

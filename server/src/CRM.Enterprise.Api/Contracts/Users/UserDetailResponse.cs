@@ -14,5 +14,8 @@ public record UserDetailResponse(
     DateTime CreatedAtUtc,
     DateTime? LastLoginAtUtc,
     DateTime? LastInviteSentAtUtc,
+    string DashboardPackKey,
+    string DashboardPackName,
+    string DashboardPackType,
     IReadOnlyList<Guid> RoleIds,
     IReadOnlyList<string> Roles);

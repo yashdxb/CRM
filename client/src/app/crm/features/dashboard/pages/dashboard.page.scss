@@ -2955,6 +2955,12 @@
     font-weight: 600;
     color: $text-primary;
   }
+
+  .stat-subvalue {
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $text-muted;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -3353,10 +3359,6 @@
         margin-bottom: $space-4;
       }
     }
-  }
-  
-  .page-title {
-    font-size: $font-size-3xl;
   }
   
   .health-metrics {

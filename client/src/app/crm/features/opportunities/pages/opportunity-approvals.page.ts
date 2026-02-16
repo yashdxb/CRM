@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -6,7 +7,7 @@ import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
@@ -43,6 +44,8 @@ export class OpportunityApprovalsPage {
   private readonly approvalService = inject(OpportunityApprovalService);
   private readonly toastService = inject(AppToastService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly approvals = signal<OpportunityApprovalInboxItem[]>([]);
   protected readonly loading = signal(true);
@@ -74,7 +77,19 @@ export class OpportunityApprovalsPage {
   });
 
   constructor() {
-    this.load();
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        const status = params.get('status');
+        const purpose = params.get('purpose');
+        this.statusFilter = status && this.statusOptions.some((option) => option.value === status)
+          ? status
+          : this.statusFilter;
+        this.purposeFilter = purpose && this.purposeOptions.some((option) => option.value === purpose)
+          ? purpose
+          : this.purposeFilter;
+        this.load();
+      });
   }
 
   protected load() {

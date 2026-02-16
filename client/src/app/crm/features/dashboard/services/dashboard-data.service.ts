@@ -110,8 +110,9 @@ export class DashboardDataService {
         dimensions?: Record<string, { width: number; height: number }>;
         hiddenCards?: string[];
         roleLevel?: number | null;
+        packName?: string | null;
       }>(url)
-      .pipe(catchError(() => of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], roleLevel: null })));
+      .pipe(catchError(() => of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], roleLevel: null, packName: null })));
   }
 
   saveLayout(payload: {
@@ -127,6 +128,7 @@ export class DashboardDataService {
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
       roleLevel?: number | null;
+      packName?: string | null;
     }>(url, payload);
   }
 
@@ -138,6 +140,7 @@ export class DashboardDataService {
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
       roleLevel?: number | null;
+      packName?: string | null;
     }>(url);
   }
 
@@ -149,6 +152,7 @@ export class DashboardDataService {
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
       roleLevel?: number | null;
+      packName?: string | null;
     }>(url, { params: { level } });
   }
 
@@ -160,6 +164,7 @@ export class DashboardDataService {
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
       roleLevel?: number | null;
+      packName?: string | null;
     }>(url, {});
   }
 
@@ -177,6 +182,7 @@ export class DashboardDataService {
       dimensions?: Record<string, { width: number; height: number }>;
       hiddenCards?: string[];
       roleLevel?: number | null;
+      packName?: string | null;
     }>(url, payload);
   }
 

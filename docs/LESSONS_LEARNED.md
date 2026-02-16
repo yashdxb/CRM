@@ -13,3 +13,17 @@
 ## UI Consistency
 - Document visual styles once and reuse (liquid glass, gradient titles, input groups).
 - Prefer lightweight, inline loading indicators for long-running actions.
+
+## Delivery and Validation Workflow
+- Verify UI implementations with Playwright on local dev after meaningful UI changes.
+- Keep automation target explicit: local dev by default; avoid Azure dev automation unless explicitly requested.
+- If service startup fails, check occupied ports and release/restart cleanly before debugging functional issues.
+- Confirm API contract behavior first, then validate rendered UI behavior.
+
+## Data Integrity and Source of Truth
+- Dropdowns and selectable configuration lists should come from API sources, not client-side fallback data.
+- For dashboard customization, assigned user pack context (name + display order) must be API-driven and preserved in untouched states.
+- Keep demo/sample records realistic; avoid artificial suffixing patterns in names.
+
+## Collaboration Behavior
+- When user prompts end with a direct question, provide the direct answer first, then implementation/execution steps.

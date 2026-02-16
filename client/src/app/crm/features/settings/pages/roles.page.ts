@@ -1,18 +1,13 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
-import { DialogModule } from 'primeng/dialog';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { InputTextModule } from 'primeng/inputtext';
 import { OrganizationChartModule } from 'primeng/organizationchart';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { TabsModule } from 'primeng/tabs';
-import { TextareaModule } from 'primeng/textarea';
 import { TooltipModule } from 'primeng/tooltip';
 import { TreeNode } from 'primeng/api';
 
@@ -23,28 +18,22 @@ import { readTokenContext, tokenHasPermission } from '../../../../core/auth/toke
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 
-type RolesWorkspaceTab = 'directory' | 'security-levels' | 'presets' | 'drift';
+type RolesWorkspaceTab = 'directory' | 'presets' | 'drift';
 
 @Component({
   selector: 'app-roles-page',
   standalone: true,
   imports: [
     ButtonModule,
-    CheckboxModule,
-    DialogModule,
-    InputNumberModule,
-    InputTextModule,
     OrganizationChartModule,
     NgClass,
     NgFor,
     NgIf,
-    ReactiveFormsModule,
     RouterLink,
     SkeletonModule,
     TableModule,
     TabsModule,
     TagModule,
-    TextareaModule,
     TooltipModule,
     BreadcrumbsComponent
   ],
@@ -567,7 +556,7 @@ export class RolesPage {
   }
 
   private coerceWorkspaceTab(value: string | null): RolesWorkspaceTab {
-    if (value === 'security-levels' || value === 'presets' || value === 'drift' || value === 'directory') {
+    if (value === 'presets' || value === 'drift' || value === 'directory') {
       return value;
     }
     return 'directory';

@@ -797,6 +797,11 @@
     }
   }
 
+  .th-actions,
+  .td-actions {
+    text-align: right;
+  }
+
   .empty-state {
     text-align: center;
     padding: $space-5 $space-3;

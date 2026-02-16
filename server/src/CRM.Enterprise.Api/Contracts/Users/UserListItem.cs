@@ -8,6 +8,7 @@ public record UserListItem(
     string FullName,
     string Email,
     IReadOnlyList<string> Roles,
+    int? HighestRoleLevel,
     bool IsActive,
     DateTime CreatedAtUtc,
     DateTime? LastLoginAtUtc,
@@ -15,4 +16,7 @@ public record UserListItem(
     string? TimeZone,
     string? LastLoginLocation,
     string? LastLoginIp,
+    string DashboardPackKey,
+    string DashboardPackName,
+    string DashboardPackType,
     bool IsOnline);

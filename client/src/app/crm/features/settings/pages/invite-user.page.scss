@@ -75,17 +75,7 @@
 
 .header-title {
   h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1.2;
     margin: 0 0 0.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-
-    @media (max-width: 768px) {
-      font-size: 1.5rem;
-    }
   }
 
   p {
@@ -94,17 +84,6 @@
     margin: 0;
     max-width: 480px;
   }
-}
-
-.title-gradient {
-  background: linear-gradient(135deg, #8b5cf6 0%, #0ea5e9 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.title-light {
-  color: rgba(15, 23, 42, 0.9);
 }
 
 .header-meta {
@@ -494,10 +473,6 @@
 @media (max-width: 640px) {
   .form-header {
     padding: 1rem 1.25rem;
-  }
-
-  .header-title h1 {
-    font-size: 1.35rem;
   }
 
   .header-meta {

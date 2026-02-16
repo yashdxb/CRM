@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading;
 using CRM.Enterprise.Api.Contracts.Users;
+using CRM.Enterprise.Application.Dashboard;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Application.Auth;
@@ -31,6 +33,7 @@ public class UsersController : ControllerBase
     private readonly ILogger<UsersController> _logger;
     private readonly CRM.Enterprise.Infrastructure.Presence.IPresenceTracker _presenceTracker;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IDashboardLayoutService _dashboardLayoutService;
     private readonly string? _brandLogoUrl;
     private readonly string? _brandWebsiteUrl;
 
@@ -38,6 +41,7 @@ public class UsersController : ControllerBase
         CrmDbContext dbContext,
         IPasswordHasher<User> passwordHasher,
         IEmailSender emailSender,
+        IDashboardLayoutService dashboardLayoutService,
         IConfiguration configuration,
         ITenantProvider tenantProvider,
         ILogger<UsersController> logger,
@@ -46,6 +50,7 @@ public class UsersController : ControllerBase
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _emailSender = emailSender;
+        _dashboardLayoutService = dashboardLayoutService;
         _brandLogoUrl = configuration["Branding:LogoUrl"];
         _brandWebsiteUrl = configuration["Branding:WebsiteUrl"];
         _tenantProvider = tenantProvider;
@@ -67,6 +72,16 @@ public class UsersController : ControllerBase
         var query = _dbContext.Users
             .AsNoTracking()
             .Where(u => !u.IsDeleted);
+
+        var templates = await _dbContext.DashboardTemplates
+            .AsNoTracking()
+            .Where(t => !t.IsDeleted)
+            .Select(t => new DashboardTemplateOptionProjection(t.Id, t.Name, t.Description))
+            .ToListAsync(cancellationToken);
+        var roleDefaultNameByLevel = BuildRoleDefaultNameByLevel(templates);
+        var customNameByTemplateId = templates
+            .Where(t => !IsRoleLevelTemplate(t.Description))
+            .ToDictionary(t => t.Id, t => t.Name);
 
         if (!includeInactive)
         {
@@ -99,27 +114,190 @@ public class UsersController : ControllerBase
                 u.LastInviteSentAtUtc,
                 u.LastLoginLocation,
                 u.LastLoginIp,
-                u.TimeZone,
-                Roles = u.Roles.Where(ur => ur.Role != null).Select(ur => ur.Role!.Name)
+                u.CommandCenterLayoutJson,
+                u.TimeZone
             })
             .ToListAsync(cancellationToken);
 
+        var userIds = data.Select(u => u.Id).ToList();
+        var roleRows = await _dbContext.UserRoles
+            .AsNoTracking()
+            .Where(ur => userIds.Contains(ur.UserId) && !ur.IsDeleted && ur.Role != null && !ur.Role.IsDeleted)
+            .Select(ur => new
+            {
+                ur.UserId,
+                RoleName = ur.Role!.Name,
+                ur.Role.HierarchyLevel
+            })
+            .ToListAsync(cancellationToken);
+
+        var rolesByUserId = roleRows
+            .GroupBy(r => r.UserId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(item => item.RoleName)
+                    .Where(name => !string.IsNullOrWhiteSpace(name))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .OrderBy(name => name)
+                    .ToList());
+
+        var highestLevelByUserId = roleRows
+            .GroupBy(r => r.UserId)
+            .ToDictionary(
+                group => group.Key,
+                group => Math.Max(1, group
+                    .Select(item => item.HierarchyLevel ?? 1)
+                    .DefaultIfEmpty(1)
+                    .Max()));
+
         var onlineUsers = new HashSet<string>(_presenceTracker.GetOnlineUsers(), StringComparer.OrdinalIgnoreCase);
-        var items = data.Select(u => new UserListItem(
-            u.Id,
-            u.FullName,
-            u.Email,
-            u.Roles.Where(r => !string.IsNullOrWhiteSpace(r)).ToList(),
-            u.IsActive,
-            u.CreatedAtUtc,
-            u.LastLoginAtUtc,
-            u.LastInviteSentAtUtc,
-            u.TimeZone,
-            u.LastLoginLocation,
-            u.LastLoginIp,
-            onlineUsers.Contains(u.Id.ToString()))).ToList();
+        var items = data.Select(u =>
+        {
+            var highestRoleLevel = highestLevelByUserId.TryGetValue(u.Id, out var resolvedLevel)
+                ? resolvedLevel
+                : 1;
+            var pack = ResolveDashboardPackSummary(
+                u.CommandCenterLayoutJson,
+                highestRoleLevel,
+                roleDefaultNameByLevel,
+                customNameByTemplateId);
+
+            return new UserListItem(
+                u.Id,
+                u.FullName,
+                u.Email,
+                rolesByUserId.TryGetValue(u.Id, out var roleNames) ? roleNames : new List<string>(),
+                highestRoleLevel,
+                u.IsActive,
+                u.CreatedAtUtc,
+                u.LastLoginAtUtc,
+                u.LastInviteSentAtUtc,
+                u.TimeZone,
+                u.LastLoginLocation,
+                u.LastLoginIp,
+                pack.Key,
+                pack.Name,
+                pack.Type,
+                onlineUsers.Contains(u.Id.ToString()));
+        }).ToList();
 
         return Ok(new UserSearchResponse(items, total));
+    }
+
+    [HttpGet("dashboard-packs/options")]
+    public async Task<ActionResult<DashboardPackOptionsResponse>> GetDashboardPackOptions(CancellationToken cancellationToken = default)
+    {
+        var templates = await _dbContext.DashboardTemplates
+            .AsNoTracking()
+            .Where(t => !t.IsDeleted)
+            .OrderBy(t => t.Name)
+            .Select(t => new DashboardTemplateOptionProjection(t.Id, t.Name, t.Description))
+            .ToListAsync(cancellationToken);
+
+        var roleLevels = await _dbContext.Roles
+            .AsNoTracking()
+            .Where(r => !r.IsDeleted && r.HierarchyLevel.HasValue && r.HierarchyLevel.Value > 0)
+            .Select(r => r.HierarchyLevel!.Value)
+            .Distinct()
+            .OrderBy(level => level)
+            .ToListAsync(cancellationToken);
+
+        if (roleLevels.Count == 0)
+        {
+            roleLevels.Add(1);
+        }
+
+        var roleDefaultNameByLevel = BuildRoleDefaultNameByLevel(templates);
+
+        var roleDefaults = roleLevels
+            .Select(level => new DashboardPackOptionItem(
+                $"role-default:{level}",
+                roleDefaultNameByLevel.TryGetValue(level, out var roleDefaultName)
+                    ? roleDefaultName
+                    : $"H{level} Pack",
+                "role-default",
+                level,
+                null))
+            .ToList();
+
+        var customPacks = templates
+            .Where(t => !IsRoleLevelTemplate(t.Description))
+            .Select(t => new DashboardPackOptionItem(
+                $"custom:{t.Id}",
+                t.Name,
+                "custom",
+                null,
+                t.Id))
+            .ToList();
+
+        return Ok(new DashboardPackOptionsResponse(roleDefaults, customPacks));
+    }
+
+    [HttpPut("{id:guid}/dashboard-pack")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<IActionResult> UpdateUserDashboardPack(
+        Guid id,
+        [FromBody] UpdateUserDashboardPackRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var userExists = await _dbContext.Users.AnyAsync(u => u.Id == id && !u.IsDeleted, cancellationToken);
+        if (!userExists)
+        {
+            return NotFound();
+        }
+
+        var sourceType = (request.SourceType ?? string.Empty).Trim().ToLowerInvariant();
+        if (sourceType == "role-default")
+        {
+            var roleLevel = request.RoleLevel ?? await GetUserHighestRoleLevelAsync(id, cancellationToken);
+            roleLevel = Math.Max(1, roleLevel);
+
+            var roleDefaultName = await ResolveRoleDefaultNameAsync(roleLevel, cancellationToken);
+            var layout = await _dashboardLayoutService.GetDefaultLayoutForLevelAsync(roleLevel, cancellationToken);
+            await _dashboardLayoutService.UpdateLayoutAsync(id, layout, cancellationToken);
+            await SaveUserDashboardPackSourceAsync(
+                id,
+                layout,
+                $"role-default:{roleLevel}",
+                roleDefaultName,
+                "role-default",
+                null,
+                roleLevel,
+                cancellationToken);
+
+            return NoContent();
+        }
+
+        if (sourceType != "custom")
+        {
+            return BadRequest("Unsupported dashboard pack source type.");
+        }
+
+        if (!request.TemplateId.HasValue || request.TemplateId.Value == Guid.Empty)
+        {
+            return BadRequest("TemplateId is required for custom dashboard packs.");
+        }
+
+        var template = await _dashboardLayoutService.GetTemplatesAsync(cancellationToken);
+        var selectedTemplate = template.FirstOrDefault(t => t.Id == request.TemplateId.Value);
+        if (selectedTemplate is null)
+        {
+            return BadRequest("Dashboard pack template not found.");
+        }
+
+        await _dashboardLayoutService.UpdateLayoutAsync(id, selectedTemplate.Layout, cancellationToken);
+        await SaveUserDashboardPackSourceAsync(
+            id,
+            selectedTemplate.Layout,
+            $"custom:{selectedTemplate.Id}",
+            selectedTemplate.Name,
+            "custom",
+            selectedTemplate.Id,
+            null,
+            cancellationToken);
+
+        return NoContent();
     }
 
     [HttpGet("{id:guid}")]
@@ -379,11 +557,186 @@ public class UsersController : ControllerBase
     private static bool IsRoleSelectionValid(IReadOnlyCollection<Guid>? roleIds)
         => roleIds is { Count: > 0 };
 
+    private async Task<int> GetUserHighestRoleLevelAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var levels = await _dbContext.UserRoles
+            .AsNoTracking()
+            .Where(ur => ur.UserId == userId && ur.Role != null && ur.Role.HierarchyLevel.HasValue)
+            .Select(ur => ur.Role!.HierarchyLevel!.Value)
+            .ToListAsync(cancellationToken);
+
+        return levels.Count == 0 ? 1 : Math.Max(1, levels.Max());
+    }
+
+    private static Dictionary<int, string> BuildRoleDefaultNameByLevel(IEnumerable<DashboardTemplateOptionProjection> templates)
+    {
+        var map = new Dictionary<int, string>();
+        foreach (var template in templates)
+        {
+            var level = TryParseRoleLevelMarker(template.Description);
+            if (!level.HasValue)
+            {
+                continue;
+            }
+
+            map[level.Value] = string.IsNullOrWhiteSpace(template.Name)
+                ? $"H{level.Value} Pack"
+                : template.Name;
+        }
+
+        return map;
+    }
+
+    private async Task<string> ResolveRoleDefaultNameAsync(int roleLevel, CancellationToken cancellationToken)
+    {
+        var marker = $"role-level-default:{roleLevel}";
+        var templateName = await _dbContext.DashboardTemplates
+            .AsNoTracking()
+            .Where(t => !t.IsDeleted && t.Description != null && t.Description.ToLower() == marker)
+            .Select(t => t.Name)
+            .FirstOrDefaultAsync(cancellationToken);
+        return string.IsNullOrWhiteSpace(templateName) ? $"H{roleLevel} Pack" : templateName;
+    }
+
+    private static bool IsRoleLevelTemplate(string? description)
+        => !string.IsNullOrWhiteSpace(description) &&
+           description.StartsWith("role-level-default:", StringComparison.OrdinalIgnoreCase);
+
+    private static int? TryParseRoleLevelMarker(string? description)
+    {
+        if (!IsRoleLevelTemplate(description))
+        {
+            return null;
+        }
+
+        var tail = description!["role-level-default:".Length..];
+        return int.TryParse(tail, out var level) ? level : null;
+    }
+
+    private static DashboardPackSummary ResolveDashboardPackSummary(
+        string? commandCenterLayoutJson,
+        int highestRoleLevel,
+        IReadOnlyDictionary<int, string> roleDefaultNameByLevel,
+        IReadOnlyDictionary<Guid, string> customNameByTemplateId)
+    {
+        var fallbackName = roleDefaultNameByLevel.TryGetValue(highestRoleLevel, out var roleDefaultName)
+            ? roleDefaultName
+            : $"H{highestRoleLevel} Pack";
+
+        if (string.IsNullOrWhiteSpace(commandCenterLayoutJson))
+        {
+            return new DashboardPackSummary(
+                $"role-default:{highestRoleLevel}",
+                fallbackName,
+                "role-default");
+        }
+
+        try
+        {
+            var payload = JsonSerializer.Deserialize<UserDashboardLayoutPayload>(commandCenterLayoutJson);
+            if (payload is null || string.IsNullOrWhiteSpace(payload.SourceType))
+            {
+                return new DashboardPackSummary("custom-layout", "Custom Layout", "custom-layout");
+            }
+
+            if (string.Equals(payload.SourceType, "role-default", StringComparison.OrdinalIgnoreCase))
+            {
+                var level = payload.SourceRoleLevel ?? highestRoleLevel;
+                var name = !string.IsNullOrWhiteSpace(payload.SourceName)
+                    ? payload.SourceName
+                    : (roleDefaultNameByLevel.TryGetValue(level, out var levelName) ? levelName : $"H{level} Pack");
+                return new DashboardPackSummary(
+                    $"role-default:{level}",
+                    name,
+                    "role-default");
+            }
+
+            if (string.Equals(payload.SourceType, "custom", StringComparison.OrdinalIgnoreCase))
+            {
+                var templateId = payload.SourceTemplateId;
+                var customName = templateId.HasValue && customNameByTemplateId.TryGetValue(templateId.Value, out var name)
+                    ? name
+                    : (!string.IsNullOrWhiteSpace(payload.SourceName) ? payload.SourceName : "Custom Layout");
+                var key = templateId.HasValue ? $"custom:{templateId.Value}" : "custom-layout";
+                return new DashboardPackSummary(key, customName, "custom");
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall through to generic custom label.
+        }
+
+        return new DashboardPackSummary("custom-layout", "Custom Layout", "custom-layout");
+    }
+
+    private async Task SaveUserDashboardPackSourceAsync(
+        Guid userId,
+        DashboardLayoutState layout,
+        string sourceKey,
+        string sourceName,
+        string sourceType,
+        Guid? sourceTemplateId,
+        int? sourceRoleLevel,
+        CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
+        if (user is null)
+        {
+            return;
+        }
+
+        user.CommandCenterLayoutJson = JsonSerializer.Serialize(new UserDashboardLayoutPayload(
+            layout.CardOrder,
+            layout.Sizes,
+            layout.Dimensions,
+            layout.HiddenCards,
+            sourceKey,
+            sourceName,
+            sourceType,
+            sourceTemplateId,
+            sourceRoleLevel));
+        user.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private sealed record DashboardPackSummary(
+        string Key,
+        string Name,
+        string Type);
+
+    private sealed record UserDashboardLayoutPayload(
+        IReadOnlyList<string>? CardOrder,
+        IReadOnlyDictionary<string, string>? Sizes,
+        IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
+        IReadOnlyList<string>? HiddenCards,
+        string? SourceKey,
+        string? SourceName,
+        string? SourceType,
+        Guid? SourceTemplateId,
+        int? SourceRoleLevel);
+
+    private sealed record DashboardTemplateOptionProjection(
+        Guid Id,
+        string Name,
+        string? Description);
+
     private async Task<UserDetailResponse?> BuildDetailResponseAsync(Guid id, CancellationToken cancellationToken)
     {
-        return await _dbContext.Users
+        var templates = await _dbContext.DashboardTemplates
+            .AsNoTracking()
+            .Where(t => !t.IsDeleted)
+            .Select(t => new DashboardTemplateOptionProjection(t.Id, t.Name, t.Description))
+            .ToListAsync(cancellationToken);
+        var roleDefaultNameByLevel = BuildRoleDefaultNameByLevel(templates);
+        var customNameByTemplateId = templates
+            .Where(t => !IsRoleLevelTemplate(t.Description))
+            .ToDictionary(t => t.Id, t => t.Name);
+
+        var row = await _dbContext.Users
+            .AsNoTracking()
             .Where(u => u.Id == id && !u.IsDeleted)
-            .Select(u => new UserDetailResponse(
+            .Select(u => new
+            {
                 u.Id,
                 u.FullName,
                 u.Email,
@@ -394,9 +747,63 @@ public class UsersController : ControllerBase
                 u.CreatedAtUtc,
                 u.LastLoginAtUtc,
                 u.LastInviteSentAtUtc,
-                u.Roles.Where(ur => ur.Role != null).Select(ur => ur.RoleId).ToList(),
-                u.Roles.Where(ur => ur.Role != null).Select(ur => ur.Role!.Name).ToList()))
+                u.CommandCenterLayoutJson
+            })
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (row is null)
+        {
+            return null;
+        }
+
+        var roleRows = await _dbContext.UserRoles
+            .AsNoTracking()
+            .Where(ur => ur.UserId == id && !ur.IsDeleted && ur.Role != null && !ur.Role.IsDeleted)
+            .Select(ur => new
+            {
+                ur.RoleId,
+                RoleName = ur.Role!.Name,
+                ur.Role.HierarchyLevel
+            })
+            .ToListAsync(cancellationToken);
+
+        var roleIds = roleRows
+            .Select(item => item.RoleId)
+            .Distinct()
+            .ToList();
+        var roleNames = roleRows
+            .Select(item => item.RoleName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name)
+            .ToList();
+        var highestRoleLevel = Math.Max(1, roleRows
+            .Select(item => item.HierarchyLevel ?? 1)
+            .DefaultIfEmpty(1)
+            .Max());
+
+        var pack = ResolveDashboardPackSummary(
+            row.CommandCenterLayoutJson,
+            highestRoleLevel,
+            roleDefaultNameByLevel,
+            customNameByTemplateId);
+
+        return new UserDetailResponse(
+            row.Id,
+            row.FullName,
+            row.Email,
+            row.TimeZone,
+            row.Locale,
+            row.MonthlyQuota,
+            row.IsActive,
+            row.CreatedAtUtc,
+            row.LastLoginAtUtc,
+            row.LastInviteSentAtUtc,
+            pack.Key,
+            pack.Name,
+            pack.Type,
+            roleIds,
+            roleNames);
     }
 
     private static class PasswordGenerator

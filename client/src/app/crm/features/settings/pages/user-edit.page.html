@@ -10,7 +10,7 @@
 
       <div class="header-row">
         <div class="header-title">
-          <h1>
+          <h1 class="hero-title">
             <span class="title-gradient">Edit</span>
             <span class="title-light">User</span>
           </h1>
@@ -128,6 +128,22 @@
               defaultLabel="Select roles"
               styleClass="w-full"
             ></p-multiSelect>
+          </div>
+          <div class="field full">
+            <label for="userDashboardPack">Dashboard pack</label>
+            <p-select
+              inputId="userDashboardPack"
+              [options]="dashboardPackOptions()"
+              [ngModel]="selectedDashboardPackKey()"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="selectedDashboardPackKey.set($any($event))"
+              optionLabel="label"
+              optionValue="value"
+              [disabled]="!canManageAdmin() || loadingDashboardPackOptions() || updatingDashboardPack()"
+              appendTo="body"
+              styleClass="w-full"
+            ></p-select>
+            <small>Role default is preselected unless a custom pack is set.</small>
           </div>
           <div class="field full">
             <label for="userTempPassword">Temporary password</label>

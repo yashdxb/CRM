@@ -44,11 +44,11 @@ test('people & access tabs screenshot', async ({ page, request }) => {
 
   await page.goto('/app/settings/users');
   await page.waitForLoadState('networkidle');
-  await page.locator('.people-tabs').waitFor({ state: 'attached' });
+  await page.locator('.people-subtabs').waitFor({ state: 'attached' });
   await page.screenshot({ path: 'test-results/people-access-users.png', fullPage: true });
 
   await page.goto('/app/settings/roles');
   await page.waitForLoadState('networkidle');
-  await page.locator('.people-tabs').waitFor({ state: 'attached' });
+  await page.locator('.people-subtabs').waitFor({ state: 'attached' });
   await page.screenshot({ path: 'test-results/people-access-roles.png', fullPage: true });
 });

@@ -45,6 +45,7 @@ export interface UserListItem {
   fullName: string;
   email: string;
   roles: string[];
+  highestRoleLevel?: number | null;
   isActive: boolean;
   createdAtUtc: string;
   lastLoginAtUtc?: string | null;
@@ -52,7 +53,29 @@ export interface UserListItem {
   lastLoginLocation?: string | null;
   lastLoginIp?: string | null;
   timeZone?: string | null;
+  dashboardPackKey: string;
+  dashboardPackName: string;
+  dashboardPackType: string;
   isOnline?: boolean | null;
+}
+
+export interface DashboardPackOption {
+  key: string;
+  name: string;
+  type: string;
+  roleLevel?: number | null;
+  templateId?: string | null;
+}
+
+export interface DashboardPackOptionsResponse {
+  roleDefaults: DashboardPackOption[];
+  customPacks: DashboardPackOption[];
+}
+
+export interface UpdateUserDashboardPackRequest {
+  sourceType: 'role-default' | 'custom';
+  roleLevel?: number | null;
+  templateId?: string | null;
 }
 
 export interface UserSearchResponse {
@@ -77,6 +100,9 @@ export interface UserDetailResponse {
   createdAtUtc: string;
   lastLoginAtUtc?: string | null;
   lastInviteSentAtUtc?: string | null;
+  dashboardPackKey: string;
+  dashboardPackName: string;
+  dashboardPackType: string;
   roleIds: string[];
   roles: string[];
 }

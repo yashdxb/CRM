@@ -60,7 +60,7 @@
           <i class="pi pi-plus"></i>
           <span>New Role</span>
         </button>
-        <button pButton type="button" class="btn btn-secondary" [disabled]="!canManageAdmin()" (click)="openCreateSecurityLevel()">
+        <button pButton type="button" class="btn btn-secondary" [disabled]="!canManageAdmin()" routerLink="/app/settings/security-levels">
           <i class="pi pi-lock"></i>
           <span>Manage Security Levels</span>
         </button>
@@ -114,10 +114,6 @@
           <p-tab value="directory">
             <i class="pi pi-sitemap"></i>
             <span>Directory</span>
-          </p-tab>
-          <p-tab value="security-levels">
-            <i class="pi pi-lock"></i>
-            <span>Security Levels</span>
           </p-tab>
           <p-tab value="presets">
             <i class="pi pi-th-large"></i>
@@ -299,108 +295,6 @@
             </div>
           </p-tabpanel>
 
-          <p-tabpanel value="security-levels">
-            <div class="security-levels-section">
-              <div class="security-levels-header">
-                <div class="security-levels-title">
-                  <h3>Security Level Definitions</h3>
-                  <span class="record-count">{{ securityLevels().length }} levels configured by tenant admins</span>
-                </div>
-                <div class="security-levels-actions">
-                  <button pButton type="button" class="btn btn-ghost" [disabled]="loadingSecurityLevels()" (click)="loadSecurityLevels()">
-                    <i class="pi pi-refresh"></i>
-                    <span>Reload</span>
-                  </button>
-                  <button pButton type="button" class="btn btn-primary" [disabled]="!canManageAdmin()" (click)="openCreateSecurityLevel()">
-                    <i class="pi pi-plus"></i>
-                    <span>New Level</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="loading-state" *ngIf="loadingSecurityLevels()">
-                <div class="skeleton-row" *ngFor="let _ of [0, 1, 2]">
-                  <div class="skeleton skeleton-text"></div>
-                  <div class="skeleton skeleton-short"></div>
-                </div>
-              </div>
-
-              <div class="table-wrapper" *ngIf="!loadingSecurityLevels()">
-                <p-table [value]="securityLevels()" styleClass="data-table security-level-table" responsiveLayout="scroll">
-                  <ng-template pTemplate="header">
-                    <tr>
-                      <th>Name</th>
-                      <th>Description</th>
-                      <th>Rank</th>
-                      <th>Type</th>
-                      <th class="th-actions">Actions</th>
-                    </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-level>
-                    <tr>
-                      <td>{{ level.name }}</td>
-                      <td>{{ level.description || '—' }}</td>
-                      <td>
-                        <span class="status-badge status-badge--info">R{{ level.rank }}</span>
-                      </td>
-                      <td>
-                        <p-tag [severity]="securityLevelTag(level)" [value]="securityLevelType(level)"></p-tag>
-                      </td>
-                      <td class="td-actions">
-                        <div class="action-buttons">
-                          <button
-                            pButton
-                            type="button"
-                            class="action-icon action-icon--success"
-                            pTooltip="Set as default"
-                            tooltipPosition="top"
-                            [disabled]="!canManageAdmin() || level.isDefault || securityLevelSaving()"
-                            (click)="setDefaultSecurityLevel(level)"
-                          >
-                            <i class="pi pi-star"></i>
-                          </button>
-                          <button
-                            pButton
-                            type="button"
-                            class="action-icon"
-                            pTooltip="Duplicate security level"
-                            tooltipPosition="top"
-                            [disabled]="!canManageAdmin() || securityLevelSaving()"
-                            (click)="duplicateSecurityLevel(level)"
-                          >
-                            <i class="pi pi-copy"></i>
-                          </button>
-                          <button
-                            pButton
-                            type="button"
-                            class="action-icon"
-                            pTooltip="Edit security level"
-                            tooltipPosition="top"
-                            [disabled]="!canManageAdmin()"
-                            (click)="openEditSecurityLevel(level)"
-                          >
-                            <i class="pi pi-pencil"></i>
-                          </button>
-                          <button
-                            pButton
-                            type="button"
-                            class="action-icon action-icon--danger"
-                            pTooltip="Delete security level"
-                            tooltipPosition="top"
-                            [disabled]="!canManageAdmin() || level.isDefault"
-                            (click)="deleteSecurityLevel(level)"
-                          >
-                            <i class="pi pi-trash"></i>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </ng-template>
-                </p-table>
-              </div>
-            </div>
-          </p-tabpanel>
-
           <p-tabpanel value="presets">
             <div class="security-levels-section">
               <div class="security-levels-header">
@@ -512,39 +406,4 @@
     </div>
   </section>
 
-  <p-dialog
-    header="{{ editingSecurityLevel() ? 'Edit Security Level' : 'Create Security Level' }}"
-    [visible]="securityEditorOpen()"
-    (visibleChange)="securityEditorOpen.set($event)"
-    [modal]="true"
-    styleClass="security-level-dialog"
-    [style]="{ width: '32rem' }"
-    [draggable]="false"
-    [resizable]="false"
-    (onHide)="closeSecurityEditor()"
-  >
-    <form class="security-form" [formGroup]="securityForm" (ngSubmit)="saveSecurityLevel()">
-      <div class="security-form__body">
-        <label>Name <span class="required">*</span></label>
-        <input pInputText type="text" formControlName="name" placeholder="e.g. L1, L2, Regional Manager" />
-
-        <label>Description</label>
-        <textarea pInputTextarea class="security-form__textarea" formControlName="description" rows="3" placeholder="Optional description"></textarea>
-
-        <label>Rank</label>
-        <p-inputNumber formControlName="rank" [min]="0" [showButtons]="true" inputStyleClass="w-full"></p-inputNumber>
-
-        <label class="checkbox-row">
-          <p-checkbox formControlName="isDefault" [binary]="true"></p-checkbox>
-          <span>Set as default level for new roles</span>
-        </label>
-      </div>
-      <div class="security-form__footer">
-        <button pButton type="button" class="btn btn-ghost" (click)="closeSecurityEditor()">Cancel</button>
-        <button pButton type="submit" class="btn btn-primary" [disabled]="securityLevelSaving()">
-          {{ securityLevelSaving() ? 'Saving...' : 'Save Level' }}
-        </button>
-      </div>
-    </form>
-  </p-dialog>
 </div>

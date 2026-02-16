@@ -84,10 +84,20 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 
 ## 6) UI/UX Standards (Current)
 - Global styles are authoritative: `client/src/styles` and `client/src/app/shared`.
+- **Style change control (mandatory):** Do not change, alter, or refactor visual styles unless the user explicitly requests a style/UI change in that task.
 - Pages must use the animated orb background and shared layout containers.
 - Premium glass/gradient styling is required; do not create one-off themes.
 - Button styles must use the global CRM button classes.
 - List pages and form pages follow the Component Style Guide templates.
+- Dashboard Customize Layout rules:
+  - Pack context label must be API-sourced (for example `Command Center cards (Pack Name)`).
+  - If a user layout is untouched, card visibility and display order must load from that user's assigned dashboard pack.
+- UI/API binding rule: dropdown and selection data must come from API contracts (no local fallback datasets for production behavior).
+- Heading hierarchy is standardized across CRM:
+  - exactly one `h1.hero-title` per page
+  - `h2.section-title` for section headers
+  - `h3.card-title`/`h3.section-title` for card and subsection headers
+  - `page-subtitle`/`hero-subtitle`/`hero-description` for subtitle copy
 - Login page uses the branded logo, glass card, orb + grid background, and noise overlay to match the prototype look.
 - **Login UI lock:** The current login screen visual design is approved/locked. Do not change its styles without explicit approval.
 - **Auth screens parity:** All public auth pages (login, accept-invite, change-password, password reset) must match the login screen’s visual system: same background (orbs + grid + noise), glass card treatment, typography, spacing, and button styling.
@@ -574,6 +584,7 @@ These workflows define how non‑rep roles operate in the same CRM, with clear o
 - After every code modification or implementation, Playwright UI execution is required before task closure.
 - Minimum required run: `client/e2e/smoke.spec.ts`.
 - Targeted Playwright spec(s) for the modified module must also run when present.
+- Default execution target is local development. Do not run Playwright against Azure dev unless explicitly requested.
 
 ### Current Coverage
 - E2E:
@@ -792,12 +803,41 @@ Legend:
   - Application layer orchestrates use cases.
 
 3) Light CQRS + MediatR
-- Status: UNKNOWN
+- Status: PARTIAL
 - Evidence:
-  - No clear MediatR usage located
+  - Architecture decision (February 16, 2026): hybrid adoption, service-first default
 - Acceptance criteria:
-  - Commands/queries are MediatR requests with handlers.
-  - Controllers depend on MediatR for business actions.
+  - Controllers remain thin and delegate to Application services by default.
+  - MediatR is required for complex orchestrations that cross modules/boundaries.
+  - Domain events and integration events are used for side effects (audit/notifications/async jobs).
+
+### MediatR/CQRS Decision (Applied on February 16, 2026)
+
+**Decision:** Hybrid CQRS with service-first default (no full MediatR mandate).
+
+**Default path (required):**
+- Keep CRUD and straightforward module operations in Application services.
+- Controllers call Application services directly.
+
+**Use MediatR when any of these are true:**
+- A workflow spans multiple modules/aggregates in one use case.
+- A command has branching orchestration and policy decisions (for example approval and override flows).
+- A flow publishes in-process or integration events with non-trivial handler chains.
+- The operation requires idempotency/retry-safe command handling.
+
+**Eventing path (Azure-aligned):**
+- In-process domain events for local side effects inside the modular monolith.
+- Azure Service Bus integration events for async/decoupled processing.
+
+**Current module guidance:**
+- Leads: keep service-first; allow MediatR for qualification/conversion orchestration growth.
+- Opportunities: prefer MediatR for stage transitions/approval workflows as complexity grows.
+- Activities: keep service-first unless orchestration spans coaching/alerts/automation handlers.
+- Dashboard/Read models: query/read-service first; introduce query handlers only if composition complexity increases.
+
+**Non-goals right now:**
+- No repo-wide MediatR refactor.
+- No microservice extraction tied to this decision.
 
 4) EF Core migrations
 - Status: DONE

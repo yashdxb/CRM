@@ -94,31 +94,6 @@
   border-radius: 50%;
 }
 
-.hero-title {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.2;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  color: rgba(15, 23, 42, 0.9);
-
-  @media (max-width: 768px) {
-    font-size: 1.5rem;
-  }
-}
-
-.title-gradient {
-  background: linear-gradient(135deg, #8b5cf6 0%, #0ea5e9 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.title-light {
-  color: rgba(15, 23, 42, 0.9);
-}
 
 .hero-description {
   font-size: 1rem;
@@ -1114,10 +1089,6 @@
   .hero-section {
     padding: 1.35rem;
     gap: 1.25rem;
-  }
-
-  .hero-title {
-    font-size: 1.5rem;
   }
 
   .hero-stats {

@@ -123,37 +123,6 @@
   50% { opacity: 0.7; box-shadow: 0 0 24px rgba($success, 0.8); }
 }
 
-.hero-title {
-  font-size: $font-size-4xl;
-  font-weight: 800;
-  margin: 0;
-  letter-spacing: -0.5px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-
-  @media (max-width: 768px) {
-    font-size: 1.75rem;
-  }
-}
-
-.title-gradient {
-  background: $primary-gradient;
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradient-shift 4s ease-in-out infinite;
-}
-
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-.title-light {
-  color: $gray-600;
-}
 
 .hero-description {
   font-size: $font-size-base;

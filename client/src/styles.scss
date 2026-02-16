@@ -237,6 +237,59 @@ body .app-inline-toast {
   color: rgba(0, 0, 0, 0.9) !important;
 }
 
+/* ---------------------------------------------------------------------------
+   CRM Settings UI normalization
+   - Replace green checkbox accent with system blue
+   - Normalize table typography to system font stack
+--------------------------------------------------------------------------- */
+app-settings-page,
+app-roles-page,
+app-role-form-page,
+app-security-levels-page,
+app-permissions-page,
+app-dashboard-packs-page,
+app-audit-log-page,
+app-lead-assignment-page,
+app-approval-settings-page,
+app-qualification-policy-page,
+app-qualification-thresholds-page,
+app-opportunity-automation-page,
+app-workspace-settings-page,
+app-tenant-create-page,
+app-tenants-page,
+app-notifications-page,
+app-invite-user-page,
+app-user-edit-page {
+  .p-checkbox .p-checkbox-box {
+    border-color: rgba(125, 141, 163, 0.6) !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+  }
+
+  .p-checkbox.p-checkbox-checked .p-checkbox-box,
+  .p-checkbox.p-checkbox-checked:not(.p-disabled):hover .p-checkbox-box,
+  .p-checkbox.p-checkbox-checked:not(.p-disabled).p-focus .p-checkbox-box {
+    background: #1d9bf0 !important;
+    border-color: #1d9bf0 !important;
+  }
+
+  .p-checkbox:not(.p-disabled):hover .p-checkbox-box,
+  .p-checkbox:not(.p-disabled).p-focus .p-checkbox-box {
+    border-color: #1d9bf0 !important;
+  }
+
+  .p-checkbox.p-checkbox-checked .p-checkbox-icon {
+    color: #ffffff !important;
+  }
+
+  .p-datatable .p-datatable-thead > tr > th,
+  .p-datatable .p-datatable-tbody > tr > td,
+  table th,
+  table td {
+    font-family: 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif !important;
+    line-height: 1.4 !important;
+  }
+}
+
 /* Dropdown items - SELECTED/HIGHLIGHTED state */
 .p-select-option.p-select-option-selected,
 .p-select-option-selected,

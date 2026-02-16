@@ -8,6 +8,8 @@ import {
   RoleIntentPack,
   SecurityLevelDefinition,
   UpsertSecurityLevelRequest,
+  DashboardPackOptionsResponse,
+  UpdateUserDashboardPackRequest,
   ResetPasswordRequest,
   RoleSummary,
   UpsertRoleRequest,
@@ -144,6 +146,14 @@ export class UserAdminDataService {
 
   deactivate(id: string) {
     return this.http.post<void>(`${this.baseUrl}/api/users/${id}/deactivate`, {});
+  }
+
+  getDashboardPackOptions() {
+    return this.http.get<DashboardPackOptionsResponse>(`${this.baseUrl}/api/users/dashboard-packs/options`);
+  }
+
+  updateDashboardPack(id: string, payload: UpdateUserDashboardPackRequest) {
+    return this.http.put<void>(`${this.baseUrl}/api/users/${id}/dashboard-pack`, payload);
   }
 
   delete(id: string) {

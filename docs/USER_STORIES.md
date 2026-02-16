@@ -13,6 +13,16 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
 - **Tags**: `module:*`, `done/partial/not-started/candidate`, `moscow:*` (Must/Should/Could/Won’t), `tier:*` (Core/Accelerator/Parked), `type:*` (User/System/Platform).
 - **Workspace map**: See `docs/PROJECT_MASTER.md` → “ClickUp Workspace Map (Current)” for IDs (workspace/space/folder/list).
 
+### Architecture Classification Sync (ClickUp -> Docs)
+- Sync date: **February 16, 2026**
+- ClickUp source list: `CRM Backlog` (`901710720381`)
+- Stories analyzed and updated in ClickUp: **86**
+- Classification totals:
+  - `Simple Flow`: **39**
+  - `Complex Orchestration`: **47**
+- Full per-story snapshot: `docs/CLICKUP_ARCH_CLASSIFICATION_SYNC.md`
+- Classification rule source: `docs/PROJECT_BACKLOG.md` -> `Hybrid CQRS Implementation Checklist (Execution)`
+
 ---
 
 ## Strategic Benchmark & Differentiation (Current Plan)

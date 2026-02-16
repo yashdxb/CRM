@@ -10,7 +10,7 @@
 
       <div class="header-row">
         <div class="header-title">
-          <h1>
+          <h1 class="hero-title">
             <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create' }}</span>
             <span class="title-light">Role</span>
           </h1>
@@ -31,11 +31,27 @@
 
   <div class="form-body">
       <form class="role-form role-form--compact" [formGroup]="roleForm" (ngSubmit)="saveRole()">
+        <div class="form-layout">
+          <div class="form-main">
         <section class="form-section">
           <h3 class="section-title">
             <i class="pi pi-id-card"></i>
             Role Details
           </h3>
+          <div class="details-kpis">
+            <div class="kpi-item">
+              <span class="kpi-label">Selected Permissions</span>
+              <strong class="kpi-value">{{ selectedPermissionCount() }}</strong>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-label">Inherited Permissions</span>
+              <strong class="kpi-value">{{ inheritedPermissions().length }}</strong>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-label">Hierarchy Preview</span>
+              <strong class="kpi-value">{{ hierarchyPreviewLabel() }}</strong>
+            </div>
+          </div>
           <div class="form-grid">
             <div class="field">
               <label for="roleName">Role Name <span class="required">*</span></label>
@@ -111,7 +127,7 @@
               <small class="field-hint field-hint--guidance">Controls high-risk actions (approvals, overrides, admin changes).</small>
               <small class="field-hint field-hint--guidance">
                 Manage levels in
-                <a routerLink="/app/settings/roles">Roles › Security Level Definitions</a>.
+                <a routerLink="/app/settings/security-levels">People &amp; Access › Security Level</a>.
               </small>
             </div>
             <div class="field">
@@ -143,7 +159,7 @@
           </div>
         </section>
 
-        <section class="form-section permissions-section">
+        <section class="form-section permissions-section" *ngIf="!isEditMode(); else editPermissionsMoved">
           <div class="permissions-header">
             <h3 class="section-title">
               <i class="pi pi-shield"></i>
@@ -270,7 +286,7 @@
                             <strong>{{ pack.label }}</strong>
                             <p>{{ pack.description }}</p>
                           </div>
-                          <button pButton type="button" class="btn btn-secondary" (click)="applyIntentPack(pack)" [disabled]="roleSaving()">
+                          <button pButton type="button" class="btn-secondary btn-sm" (click)="applyIntentPack(pack)" [disabled]="roleSaving()">
                             Apply
                           </button>
                         </div>
@@ -289,7 +305,7 @@
                             <strong>{{ pack.label }}</strong>
                             <p>{{ pack.description }}</p>
                           </div>
-                          <button pButton type="button" class="btn btn-secondary" (click)="applyPermissionPack(pack)" [disabled]="roleSaving()">
+                          <button pButton type="button" class="btn-secondary btn-sm" (click)="applyPermissionPack(pack)" [disabled]="roleSaving()">
                             Apply
                           </button>
                         </div>
@@ -321,10 +337,10 @@
                       </div>
                     </div>
                     <div class="drift-actions">
-                      <button pButton type="button" class="btn btn-ghost" (click)="resetToDefault()" [disabled]="roleSaving()">
+                      <button pButton type="button" class="btn-ghost" (click)="resetToDefault()" [disabled]="roleSaving()">
                         Reset to Default
                       </button>
-                      <button pButton type="button" class="btn btn-primary" (click)="acceptDrift()" [disabled]="roleSaving()">
+                      <button pButton type="button" class="btn-primary" (click)="acceptDrift()" [disabled]="roleSaving()">
                         Accept Drift
                       </button>
                     </div>
@@ -378,7 +394,32 @@
           </ng-template>
         </section>
 
-        <section class="form-section inherited-section" *ngIf="inheritedPermissions().length">
+        <ng-template #editPermissionsMoved>
+          <section class="form-section permissions-section">
+            <div class="permissions-header">
+              <h3 class="section-title">
+                <i class="pi pi-lock"></i>
+                Permissions
+              </h3>
+            </div>
+            <p class="section-description">
+              Permission sets for existing roles are managed in the People &amp; Access &rsaquo; Permision page.
+            </p>
+            <div class="drift-actions">
+              <button
+                pButton
+                type="button"
+                class="btn-primary"
+                [routerLink]="['/app/settings/permissions']"
+                [queryParams]="{ roleId: currentRoleId() }"
+              >
+                Open Permision Page
+              </button>
+            </div>
+          </section>
+        </ng-template>
+
+        <section class="form-section inherited-section" *ngIf="!isEditMode() && inheritedPermissions().length">
           <div class="permissions-header">
             <h3 class="section-title">
               <i class="pi pi-sitemap"></i>
@@ -397,6 +438,58 @@
             </span>
           </div>
         </section>
+          </div>
+
+          <aside class="form-rail">
+            <section class="rail-card">
+              <h4>Role Snapshot</h4>
+              <div class="rail-list">
+                <div class="rail-row">
+                  <span>Mode</span>
+                  <strong>{{ isEditMode() ? 'Edit existing role' : 'Create new role' }}</strong>
+                </div>
+                <div class="rail-row">
+                  <span>Role Type</span>
+                  <strong>{{ isSystemRole() ? 'System role' : 'Custom role' }}</strong>
+                </div>
+                <div class="rail-row">
+                  <span>Permissions</span>
+                  <strong>{{ selectedPermissionCount() }}</strong>
+                </div>
+                <div class="rail-row">
+                  <span>Inherited</span>
+                  <strong>{{ inheritedPermissions().length }}</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="rail-card">
+              <h4>Related Settings</h4>
+              <div class="rail-links">
+                <a routerLink="/app/settings/permissions">
+                  <i class="pi pi-lock"></i>
+                  Open Permission Sets
+                </a>
+                <a routerLink="/app/settings/security-levels">
+                  <i class="pi pi-shield"></i>
+                  Open Security Levels
+                </a>
+                <a routerLink="/app/settings/dashboard-packs">
+                  <i class="pi pi-th-large"></i>
+                  Open Dashboard Packs
+                </a>
+              </div>
+            </section>
+
+            <section class="rail-card rail-card--notice" *ngIf="isEditMode()">
+              <h4>Editing Note</h4>
+              <p>
+                Permission sets are managed from the dedicated
+                <strong>Permision</strong> page for existing roles.
+              </p>
+            </section>
+          </aside>
+        </div>
 
         <div class="form-actions">
           <button
@@ -405,7 +498,7 @@
             label="Cancel"
             [disabled]="roleSaving()"
             routerLink="/app/settings/roles"
-            class="crm-button--ghost"
+            class="btn-ghost"
           ></button>
           <button
             type="submit"
@@ -413,7 +506,7 @@
             [label]="isEditMode() ? 'Update Role' : 'Create Role'"
             [loading]="roleSaving()"
             [disabled]="!canManageAdmin() || roleForm.invalid"
-            class="crm-button--primary"
+            class="btn-primary"
           ></button>
         </div>
       </form>

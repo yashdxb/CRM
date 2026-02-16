@@ -11,215 +11,195 @@
         <i class="pi pi-th-large"></i>
         Dashboard packs
       </span>
-      <h1 class="hero-title">Hierarchy-based default dashboards</h1>
+      <h1 class="hero-title">
+        <span class="title-gradient">Role</span>
+        <span class="title-light">+ Custom Dashboard Packs</span>
+      </h1>
       <p class="hero-subtitle">
-        Choose the default Command Center cards per hierarchy level (H1/H2/H3...).
+        Manage role-level defaults and custom packs with one liquid-glass table for KPI cards and chart widgets.
       </p>
     </div>
   </header>
 
+  <div class="summary-strip">
+    <div class="summary-pill">
+      <span class="pill-label">Mode</span>
+      <strong>{{ mode() === 'role-level' ? 'Role Level' : 'Custom Pack' }}</strong>
+    </div>
+    <div class="summary-pill">
+      <span class="pill-label">KPI Cards</span>
+      <strong>{{ selectedKpiCount() }}</strong>
+    </div>
+    <div class="summary-pill">
+      <span class="pill-label">Chart Widgets</span>
+      <strong>{{ selectedChartCount() }}</strong>
+    </div>
+  </div>
+
   <div class="glass-card pack-card">
     <div class="pack-header">
       <div class="pack-title">
-        <h2>Default pack by hierarchy level</h2>
-        <p>Select a hierarchy level, then choose the cards that should appear by default.</p>
+        <h2>Dashboard pack designer</h2>
+        <p>Define pack name, include/exclude cards, and control display order.</p>
       </div>
       <div class="pack-actions">
-        <p-select
-          appendTo="body"
-          [options]="availableLevels()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="selectedLevel()"
-          (ngModelChange)="onLevelChange($event)"
-          [disabled]="loadingRoles()"
-          placeholder="Select H1/H2/H3"
-          styleClass="level-select"
-        ></p-select>
         <button
           pButton
           type="button"
-          class="btn-gradient"
-          [disabled]="savingDefaults() || !selectedLevel()"
-          (click)="saveDefaults()"
+          class="mode-btn"
+          [class.is-active]="mode() === 'role-level'"
+          (click)="setMode('role-level')"
         >
-          Save default pack
+          Role Level
+        </button>
+        <button
+          pButton
+          type="button"
+          class="mode-btn"
+          [class.is-active]="mode() === 'custom'"
+          (click)="setMode('custom')"
+        >
+          Custom Pack
         </button>
       </div>
     </div>
 
-    <div class="pack-body" *ngIf="!loadingDefaults(); else loadingState">
-      <div class="card-grid">
-        <div
-          class="card-option"
-          role="button"
-          tabindex="0"
-          *ngFor="let card of cardOptions()"
-          (click)="onCardClick(card.id, card.checked, $event)"
-          (keydown.enter)="toggleCard(card.id, !card.checked)"
-          (keydown.space)="toggleCard(card.id, !card.checked); $event.preventDefault()"
-        >
-          <p-checkbox
-            [binary]="true"
-            [ngModel]="card.checked"
-            (ngModelChange)="toggleCard(card.id, $event)"
-            (click)="$event.stopPropagation()"
-          ></p-checkbox>
-          <div class="card-meta">
-            <div class="card-icon">
-              <i class="pi" [class]="card.icon"></i>
-            </div>
-            <div>
-              <div class="card-title">{{ card.label }}</div>
-              <div class="card-id">{{ card.id }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="pack-meta-row" *ngIf="mode() === 'role-level'; else customPackMeta">
+      <p-select
+        appendTo="body"
+        [options]="availableLevels()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="selectedLevel()"
+        (ngModelChange)="onLevelChange($event)"
+        [disabled]="loadingRoles()"
+        placeholder="Select H1/H2/H3"
+        styleClass="level-select"
+      ></p-select>
 
-      <div class="pack-subtitle">Chart widgets</div>
-      <div class="card-grid chart-grid">
-        <div
-          class="card-option"
-          role="button"
-          tabindex="0"
-          *ngFor="let chart of chartOptions()"
-          (click)="onChartClick(chart.id, chart.checked, $event)"
-          (keydown.enter)="toggleChart(chart.id, !chart.checked)"
-          (keydown.space)="toggleChart(chart.id, !chart.checked); $event.preventDefault()"
-        >
-          <p-checkbox
-            [binary]="true"
-            [ngModel]="chart.checked"
-            (ngModelChange)="toggleChart(chart.id, $event)"
-            (click)="$event.stopPropagation()"
-          ></p-checkbox>
-          <div class="card-meta">
-            <div class="card-icon">
-              <i class="pi" [class]="chart.icon"></i>
-            </div>
-            <div>
-              <div class="card-title">{{ chart.label }}</div>
-              <div class="card-id">{{ chart.id }}</div>
-            </div>
-          </div>
-        </div>
+      <input
+        type="text"
+        pInputText
+        class="pack-name-input"
+        [ngModel]="levelPackName()"
+        (ngModelChange)="levelPackName.set($event)"
+        [disabled]="!selectedLevel()"
+        placeholder="Role-level pack name"
+      />
+
+      <button
+        pButton
+        type="button"
+        class="btn-gradient"
+        [disabled]="savingPack() || !selectedLevel()"
+        (click)="savePack()"
+      >
+        Save Role-Level Pack
+      </button>
+    </div>
+
+    <ng-template #customPackMeta>
+      <div class="pack-meta-row">
+        <p-select
+          appendTo="body"
+          [options]="customPackOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedCustomPackId()"
+          (ngModelChange)="onCustomPackChange($event)"
+          [disabled]="loadingTemplates()"
+          placeholder="Select custom pack"
+          styleClass="level-select"
+        ></p-select>
+
+        <input
+          type="text"
+          pInputText
+          class="pack-name-input"
+          [ngModel]="customPackName()"
+          (ngModelChange)="customPackName.set($event)"
+          placeholder="Custom pack name"
+        />
+
+        <button pButton type="button" class="btn-outline" (click)="createNewCustomPack()">
+          New
+        </button>
+
+        <button pButton type="button" class="btn-gradient" [disabled]="savingPack()" (click)="savePack()">
+          Save Custom Pack
+        </button>
+      </div>
+    </ng-template>
+
+    <div class="pack-body" *ngIf="!loadingPack(); else loadingState">
+      <div class="pack-subtitle">Cards and widgets table (display order)</div>
+      <div class="kpi-table-wrap">
+        <table class="kpi-table" aria-label="Dashboard cards and widgets order table">
+          <thead>
+            <tr>
+              <th class="col-toggle">Include</th>
+              <th class="col-order">Order</th>
+              <th class="col-type">Type</th>
+              <th>Name</th>
+              <th class="col-id">Id</th>
+              <th class="col-move">Move</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of tableRows()" [class.row-disabled]="!row.checked">
+              <td class="col-toggle">
+                <p-checkbox
+                  [binary]="true"
+                  [ngModel]="row.checked"
+                  (ngModelChange)="toggleItem(row.id, $event)"
+                ></p-checkbox>
+              </td>
+              <td class="col-order">
+                <span class="order-badge" *ngIf="row.order; else noOrder">{{ row.order }}</span>
+                <ng-template #noOrder>
+                  <span class="order-empty">-</span>
+                </ng-template>
+              </td>
+              <td class="col-type">
+                <span class="type-pill" [class.type-pill--chart]="row.type === 'chart'">
+                  {{ row.type === 'kpi' ? 'KPI' : 'Chart' }}
+                </span>
+              </td>
+              <td>
+                <div class="row-meta">
+                  <div class="card-icon"><i class="pi" [class]="row.icon"></i></div>
+                  <span class="card-title">{{ row.label }}</span>
+                </div>
+              </td>
+              <td class="col-id">{{ row.id }}</td>
+              <td class="col-move">
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-angle-up"
+                  class="action-btn p-button-text p-button-rounded p-button-sm p-button-secondary"
+                  [disabled]="!row.checked || !row.canMoveUp"
+                  (click)="moveItem(row.id, -1)"
+                  title="Move up"
+                ></button>
+                <button
+                  pButton
+                  type="button"
+                  icon="pi pi-angle-down"
+                  class="action-btn p-button-text p-button-rounded p-button-sm p-button-secondary"
+                  [disabled]="!row.checked || !row.canMoveDown"
+                  (click)="moveItem(row.id, 1)"
+                  title="Move down"
+                ></button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
     <ng-template #loadingState>
-      <div class="loading-state">Loading default pack...</div>
-    </ng-template>
-  </div>
-
-  <div class="glass-card pack-card template-card">
-    <div class="pack-header">
-      <div class="pack-title">
-        <h2>Default dashboard templates</h2>
-        <p>Create named templates for default Command Center layouts (no hard-coded names).</p>
-      </div>
-      <div class="pack-actions">
-        <p-select
-          appendTo="body"
-          [options]="templateOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="selectedTemplateId()"
-          (ngModelChange)="onTemplateChange($event)"
-          [disabled]="loadingTemplates()"
-          placeholder="Select template"
-          styleClass="level-select"
-        ></p-select>
-        <input
-          type="text"
-          pInputText
-          class="template-input"
-          [ngModel]="templateName()"
-          (ngModelChange)="templateName.set($event)"
-          placeholder="Template name"
-        />
-        <button
-          pButton
-          type="button"
-          class="btn-outline"
-          [disabled]="savingTemplate()"
-          (click)="saveTemplate()"
-        >
-          Save template
-        </button>
-        <button
-          pButton
-          type="button"
-          class="btn-gradient"
-          [disabled]="settingDefault() || !selectedTemplateId()"
-          (click)="setDefaultTemplate()"
-        >
-          Set as default
-        </button>
-      </div>
-    </div>
-
-    <div class="pack-body" *ngIf="!loadingTemplates(); else templateLoading">
-      <div class="card-grid">
-        <div
-          class="card-option"
-          role="button"
-          tabindex="0"
-          *ngFor="let card of templateCardOptions()"
-          (click)="onTemplateCardClick(card.id, card.checked, $event)"
-          (keydown.enter)="toggleTemplateCard(card.id, !card.checked)"
-          (keydown.space)="toggleTemplateCard(card.id, !card.checked); $event.preventDefault()"
-        >
-          <p-checkbox
-            [binary]="true"
-            [ngModel]="card.checked"
-            (ngModelChange)="toggleTemplateCard(card.id, $event)"
-            (click)="$event.stopPropagation()"
-          ></p-checkbox>
-          <div class="card-meta">
-            <div class="card-icon">
-              <i class="pi" [class]="card.icon"></i>
-            </div>
-            <div>
-              <div class="card-title">{{ card.label }}</div>
-              <div class="card-id">{{ card.id }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="pack-subtitle">Chart widgets</div>
-      <div class="card-grid chart-grid">
-        <div
-          class="card-option"
-          role="button"
-          tabindex="0"
-          *ngFor="let chart of templateChartOptions()"
-          (click)="onTemplateChartClick(chart.id, chart.checked, $event)"
-          (keydown.enter)="toggleTemplateChart(chart.id, !chart.checked)"
-          (keydown.space)="toggleTemplateChart(chart.id, !chart.checked); $event.preventDefault()"
-        >
-          <p-checkbox
-            [binary]="true"
-            [ngModel]="chart.checked"
-            (ngModelChange)="toggleTemplateChart(chart.id, $event)"
-            (click)="$event.stopPropagation()"
-          ></p-checkbox>
-          <div class="card-meta">
-            <div class="card-icon">
-              <i class="pi" [class]="chart.icon"></i>
-            </div>
-            <div>
-              <div class="card-title">{{ chart.label }}</div>
-              <div class="card-id">{{ chart.id }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <ng-template #templateLoading>
-      <div class="loading-state">Loading templates...</div>
+      <div class="loading-state">Loading pack...</div>
     </ng-template>
   </div>
 </section>

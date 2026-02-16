@@ -15,7 +15,8 @@
       <div class="header-left">
         <h1 class="page-title">
           <i class="pi pi-calendar gradient-icon"></i>
-          Activities
+          <span class="title-gradient">Activities</span>
+          <span class="title-light">Workspace</span>
           <span class="title-count">{{ total() }}</span>
         </h1>
       </div>
@@ -213,14 +214,30 @@
                         <button
                           pButton
                           type="button"
-                          class="btn-icon-sm success"
+                          class="action-btn p-button-text p-button-rounded p-button-sm p-button-success"
                           icon="pi pi-check"
                           [disabled]="!canMarkComplete(row)"
                           (click)="$event.stopPropagation(); markCompleted(row)"
                           title="Mark completed"
                         ></button>
-                        <button pButton type="button" class="btn-icon-sm" icon="pi pi-pencil" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(row)" title="Edit"></button>
-                        <button pButton type="button" class="btn-icon-sm danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(row)" title="Delete"></button>
+                        <button
+                          pButton
+                          type="button"
+                          class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
+                          icon="pi pi-pencil"
+                          [disabled]="!canManage()"
+                          (click)="$event.stopPropagation(); onEdit(row)"
+                          title="Edit"
+                        ></button>
+                        <button
+                          pButton
+                          type="button"
+                          class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
+                          icon="pi pi-trash"
+                          [disabled]="!canManage()"
+                          (click)="$event.stopPropagation(); onDelete(row)"
+                          title="Delete"
+                        ></button>
                       </div>
                     </td>
                   </tr>

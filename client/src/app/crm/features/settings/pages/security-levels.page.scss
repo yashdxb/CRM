@@ -120,24 +120,6 @@
   box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
 }
 
-.hero-title {
-  font-size: clamp(2rem, 2.2vw + 1.2rem, 3rem);
-  font-weight: 700;
-  margin: 0;
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.title-gradient {
-  background: linear-gradient(120deg, #4f46e5 0%, #0ea5e9 60%, #22c55e 100%);
-  -webkit-background-clip: text;
-  color: transparent;
-}
-
-.title-light {
-  color: #0f172a;
-}
 
 .hero-description {
   font-size: 1rem;

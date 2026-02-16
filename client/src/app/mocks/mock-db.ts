@@ -1146,6 +1146,13 @@ let mockUsers: MockUserRecord[] = [
 
 const toUserDetail = (record: MockUserRecord): UserDetailResponse => ({
   ...record,
+  dashboardPackKey: `role-default:${record.roleIds
+    .map((roleId) => mockRoles.find((role) => role.id === roleId)?.hierarchyLevel ?? 1)
+    .reduce((max, level) => Math.max(max, level ?? 1), 1)}`,
+  dashboardPackName: `H${record.roleIds
+    .map((roleId) => mockRoles.find((role) => role.id === roleId)?.hierarchyLevel ?? 1)
+    .reduce((max, level) => Math.max(max, level ?? 1), 1)} Pack`,
+  dashboardPackType: 'role-default',
   roles: record.roleIds
     .map((roleId) => mockRoles.find((role) => role.id === roleId)?.name)
     .filter((name): name is string => Boolean(name))
@@ -1153,14 +1160,21 @@ const toUserDetail = (record: MockUserRecord): UserDetailResponse => ({
 
 const toUserListItem = (record: MockUserRecord): UserListItem => {
   const detail = toUserDetail(record);
+  const highestRoleLevel = detail.roleIds
+    .map((roleId) => mockRoles.find((role) => role.id === roleId)?.hierarchyLevel ?? 1)
+    .reduce((max, level) => Math.max(max, level ?? 1), 1);
   return {
     id: detail.id,
     fullName: detail.fullName,
     email: detail.email,
     roles: detail.roles,
+    highestRoleLevel,
     isActive: detail.isActive,
     createdAtUtc: detail.createdAtUtc,
-    lastLoginAtUtc: detail.lastLoginAtUtc
+    lastLoginAtUtc: detail.lastLoginAtUtc,
+    dashboardPackKey: `role-default:${highestRoleLevel}`,
+    dashboardPackName: `H${highestRoleLevel} Pack`,
+    dashboardPackType: 'role-default'
   };
 };
 

@@ -2,12 +2,19 @@
   display: grid;
   grid-template-columns: 256px 1fr;
   min-height: 100vh;
+  align-items: stretch;
   background: radial-gradient(circle at 18% 20%, rgba(91, 224, 200, 0.24), transparent 32%),
     radial-gradient(circle at 82% 12%, rgba(124, 210, 255, 0.24), transparent 28%),
     radial-gradient(circle at 50% 80%, rgba(155, 139, 255, 0.14), transparent 36%),
     var(--surface-base);
   color: var(--text-strong);
   transition: grid-template-columns 0.2s ease;
+}
+
+.shell > app-sidebar {
+  display: block;
+  height: 100%;
+  min-height: 100%;
 }
 
 .shell--collapsed {

@@ -232,11 +232,12 @@ public class DashboardController : ControllerBase
         }
 
         var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
+        var packName = await ResolveDashboardPackNameAsync(userId.Value, roleLevel, cancellationToken);
         var layout = await _layoutService.GetLayoutAsync(userId.Value, cancellationToken);
         var dimensions = layout.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel, packName));
     }
 
     [HttpPut("layout")]
@@ -261,7 +262,8 @@ public class DashboardController : ControllerBase
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
         var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
-        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, roleLevel));
+        var packName = await ResolveDashboardPackNameAsync(userId.Value, roleLevel, cancellationToken);
+        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, roleLevel, packName));
     }
 
     [HttpGet("layout/default")]
@@ -278,10 +280,13 @@ public class DashboardController : ControllerBase
         var layout = level.HasValue && level.Value > 0
             ? await _layoutService.GetDefaultLayoutForLevelAsync(targetLevel, cancellationToken)
             : await _layoutService.GetDefaultLayoutAsync(userId.Value, cancellationToken);
+        var packName = level.HasValue && level.Value > 0
+            ? $"H{targetLevel} Pack"
+            : await ResolveDashboardPackNameAsync(userId.Value, targetLevel, cancellationToken);
         var dimensions = layout.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, targetLevel));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, targetLevel, packName));
     }
 
     [HttpPut("layout/default")]
@@ -305,7 +310,7 @@ public class DashboardController : ControllerBase
         var responseDimensions = updated.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, request.RoleLevel));
+        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, request.RoleLevel, $"H{request.RoleLevel} Pack"));
     }
 
     [HttpPost("layout/reset")]
@@ -318,11 +323,12 @@ public class DashboardController : ControllerBase
         }
 
         var roleLevel = await GetCurrentUserRoleLevelAsync(userId.Value, cancellationToken);
+        var packName = await ResolveDashboardPackNameAsync(userId.Value, roleLevel, cancellationToken);
         var layout = await _layoutService.ResetLayoutAsync(userId.Value, cancellationToken);
         var dimensions = layout.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel));
+        return Ok(new DashboardLayoutResponse(layout.CardOrder, layout.Sizes, dimensions, layout.HiddenCards, roleLevel, packName));
     }
 
     [HttpGet("templates")]
@@ -416,6 +422,77 @@ public class DashboardController : ControllerBase
 
         return levels.Where(level => level.HasValue).Select(level => level!.Value).DefaultIfEmpty(1).Max();
     }
+
+    private async Task<string> ResolveDashboardPackNameAsync(Guid userId, int fallbackRoleLevel, CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId && !u.IsDeleted)
+            .Select(u => u.CommandCenterLayoutJson)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(user))
+        {
+            return $"H{fallbackRoleLevel} Pack";
+        }
+
+        try
+        {
+            var payload = System.Text.Json.JsonSerializer.Deserialize<UserLayoutSourcePayload>(user);
+            if (payload is null)
+            {
+                return $"H{fallbackRoleLevel} Pack";
+            }
+
+            if (string.Equals(payload.SourceType, "role-default", StringComparison.OrdinalIgnoreCase))
+            {
+                var level = payload.SourceRoleLevel.GetValueOrDefault(fallbackRoleLevel);
+                level = Math.Max(1, level);
+                return string.IsNullOrWhiteSpace(payload.SourceName) ? $"H{level} Pack" : payload.SourceName!;
+            }
+
+            if (string.Equals(payload.SourceType, "custom", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.IsNullOrWhiteSpace(payload.SourceName))
+                {
+                    return payload.SourceName!;
+                }
+
+                if (payload.SourceTemplateId.HasValue && payload.SourceTemplateId.Value != Guid.Empty)
+                {
+                    var templateName = await _dbContext.DashboardTemplates
+                        .AsNoTracking()
+                        .Where(t => !t.IsDeleted && t.Id == payload.SourceTemplateId.Value)
+                        .Select(t => t.Name)
+                        .FirstOrDefaultAsync(cancellationToken);
+
+                    if (!string.IsNullOrWhiteSpace(templateName))
+                    {
+                        return templateName;
+                    }
+                }
+
+                return "Custom Pack";
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // Ignore payload parse issues and fallback to role default label.
+        }
+
+        return $"H{fallbackRoleLevel} Pack";
+    }
+
+    private sealed record UserLayoutSourcePayload(
+        IReadOnlyList<string>? CardOrder,
+        IReadOnlyDictionary<string, string>? Sizes,
+        IReadOnlyDictionary<string, Application.Dashboard.DashboardCardDimensions>? Dimensions,
+        IReadOnlyList<string>? HiddenCards,
+        string? SourceKey,
+        string? SourceName,
+        string? SourceType,
+        Guid? SourceTemplateId,
+        int? SourceRoleLevel);
 
     private static DashboardTemplateResponse ToTemplateResponse(Application.Dashboard.DashboardTemplateState template)
     {

@@ -18,7 +18,10 @@
       <div class="hero-content">
         <div class="hero-text">
           <span class="hero-greeting">{{ greeting }}</span>
-          <h1 class="page-title">Command Center</h1>
+          <h1 class="page-title">
+            <span class="title-gradient">Command</span>
+            <span class="title-light">Center</span>
+          </h1>
           <p class="page-subtitle">Your CRM at a glance — track pipeline, monitor activities, and stay ahead of every deal.</p>
         </div>
         <div class="hero-stats">
@@ -710,6 +713,16 @@
               <button
                 type="button"
                 class="priority-summary-card warn"
+                [class.active]="priorityFilter() === 'decisions'"
+                (click)="setPriorityFilter('decisions')"
+              >
+                <i class="pi pi-inbox"></i>
+                <span>Decisions</span>
+                <strong>{{ prioritySummary().decisions }}</strong>
+              </button>
+              <button
+                type="button"
+                class="priority-summary-card warn"
                 [class.active]="priorityFilter() === 'at-risk'"
                 (click)="setPriorityFilter('at-risk')"
               >
@@ -744,6 +757,14 @@
                 (click)="setPriorityFilter('today')"
               >
                 Due Today ({{ prioritySummary().today }})
+              </button>
+              <button
+                type="button"
+                class="priority-tab"
+                [class.active]="priorityFilter() === 'decisions'"
+                (click)="setPriorityFilter('decisions')"
+              >
+                Decisions ({{ prioritySummary().decisions }})
               </button>
               <button
                 type="button"
@@ -785,7 +806,8 @@
                     <i class="pi" [ngClass]="{
                       'pi-exclamation-circle': item.type === 'deal' || item.dueClass === 'due-overdue',
                       'pi-check-square': item.type === 'task' && item.dueClass !== 'due-overdue',
-                      'pi-user-plus': item.type === 'lead'
+                      'pi-user-plus': item.type === 'lead',
+                      'pi-inbox': item.type === 'decision'
                     }"></i>
                   </div>
                   <div class="priority-details">
@@ -801,13 +823,18 @@
                   </div>
                 </div>
                 <div class="priority-actions">
-                  <button type="button" class="priority-icon-btn" aria-label="Call">
-                    <i class="pi pi-phone"></i>
-                  </button>
-                  <button type="button" class="priority-icon-btn" aria-label="Email">
-                    <i class="pi pi-envelope"></i>
-                  </button>
-                  <button type="button" class="priority-complete-btn" (click)="onPriorityComplete(item)">Complete</button>
+                  <ng-container *ngIf="item.type !== 'decision'; else decisionAction">
+                    <button type="button" class="priority-icon-btn" aria-label="Call">
+                      <i class="pi pi-phone"></i>
+                    </button>
+                    <button type="button" class="priority-icon-btn" aria-label="Email">
+                      <i class="pi pi-envelope"></i>
+                    </button>
+                    <button type="button" class="priority-complete-btn" (click)="onPriorityComplete(item)">Complete</button>
+                  </ng-container>
+                  <ng-template #decisionAction>
+                    <button type="button" class="priority-complete-btn" (click)="onPriorityComplete(item)">Review</button>
+                  </ng-template>
                 </div>
               </div>
             </div>
@@ -1191,7 +1218,7 @@
     </ng-template>
   </p-orderList>
   <div class="layout-chart-section">
-    <h4>Command Center cards</h4>
+    <h4>Command Center cards ({{ activePackName() }})</h4>
     <div class="layout-chart-list">
       <label class="layout-chart-item" *ngFor="let card of selectableCards()">
         <input

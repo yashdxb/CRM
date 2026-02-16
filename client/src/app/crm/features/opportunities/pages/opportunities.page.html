@@ -425,13 +425,25 @@
                 ></p-select>
               </td>
               <td class="td-actions">
-                <div class="action-buttons">
-                  <button pButton type="button" class="action-icon" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(row)" pTooltip="Edit">
-                    <i class="pi pi-pencil"></i>
-                  </button>
-                  <button pButton type="button" class="action-icon action-icon--danger" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(row)" pTooltip="Delete">
-                    <i class="pi pi-trash"></i>
-                  </button>
+                <div class="row-actions">
+                  <button
+                    pButton
+                    type="button"
+                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
+                    icon="pi pi-pencil"
+                    [disabled]="!canManage()"
+                    (click)="$event.stopPropagation(); onEdit(row)"
+                    pTooltip="Edit"
+                  ></button>
+                  <button
+                    pButton
+                    type="button"
+                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
+                    icon="pi pi-trash"
+                    [disabled]="!canManage()"
+                    (click)="$event.stopPropagation(); onDelete(row)"
+                    pTooltip="Delete"
+                  ></button>
                 </div>
               </td>
             </tr>

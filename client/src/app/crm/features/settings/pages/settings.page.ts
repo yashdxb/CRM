@@ -9,7 +9,11 @@ import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { SelectModule } from 'primeng/select';
 import { filter } from 'rxjs';
 
-import { ResetPasswordRequest, RoleSummary, UserListItem } from '../models/user-admin.model';
+import {
+  ResetPasswordRequest,
+  RoleSummary,
+  UserListItem
+} from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
@@ -17,7 +21,9 @@ import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from 
 import { AppToastService } from '../../../../core/app-toast.service';
 import { PresenceService } from '../../../../core/realtime/presence.service';
 import { RolesPage } from './roles.page';
-import { AuditLogPage } from './audit-log.page';
+import { PermissionsPage } from './permissions.page';
+import { SecurityLevelsPage } from './security-levels.page';
+import { DashboardPacksPage } from './dashboard-packs.page';
 
 type UsersViewState = {
   searchTerm: string;
@@ -27,6 +33,14 @@ type UsersViewState = {
   page: number;
   pageSize: number;
 };
+
+type PeopleSubmenuItem = {
+  id: string;
+  label: string;
+  icon: string;
+};
+
+type PeopleView = 'users' | 'roles' | 'permissions' | 'security-level' | 'dashboard-packs';
 
 @Component({
   selector: 'app-settings-page',
@@ -39,7 +53,9 @@ type UsersViewState = {
     TableModule,
     ToggleSwitchModule,
     RolesPage,
-    AuditLogPage,
+    PermissionsPage,
+    SecurityLevelsPage,
+    DashboardPacksPage,
     NgClass,
     NgFor,
     NgIf,
@@ -115,10 +131,6 @@ export class SettingsPage {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationView);
   });
-  protected readonly canViewAudit = computed(() => {
-    const context = readTokenContext();
-    return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.auditView);
-  });
   protected readonly canManageLeads = computed(() => {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
@@ -149,7 +161,14 @@ export class SettingsPage {
   ];
 
   private searchDebounceId: number | null = null;
-  protected readonly activeTab = signal<'users' | 'roles' | 'teams' | 'audit-log'>('users');
+  protected readonly activeView = signal<PeopleView>('users');
+  protected readonly activeSubmenuItems = computed<PeopleSubmenuItem[]>(() => [
+    { id: 'users-directory', label: 'Users', icon: 'pi pi-users' },
+    { id: 'roles-directory', label: 'Roles', icon: 'pi pi-shield' },
+    { id: 'permissions-directory', label: 'Permision', icon: 'pi pi-lock' },
+    { id: 'security-level-directory', label: 'Security Level', icon: 'pi pi-shield' },
+    { id: 'dashboard-packs-directory', label: 'Dashboard Packs', icon: 'pi pi-th-large' }
+  ]);
 
   constructor() {
     const toast = history.state?.toast as { tone: 'success' | 'error'; message: string } | undefined;
@@ -163,20 +182,67 @@ export class SettingsPage {
     this.presenceService.onlineUsers$.subscribe((users) => {
       this.onlineUsers.set(users);
     });
-    this.syncTabFromUrl();
+    this.redirectLegacyPeopleAccessRoutes();
+    this.syncViewFromUrl();
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
-      .subscribe(() => this.syncTabFromUrl());
+      .subscribe(() => {
+        this.redirectLegacyPeopleAccessRoutes();
+        this.syncViewFromUrl();
+      });
   }
 
-  protected selectTab(tab: 'users' | 'roles' | 'teams' | 'audit-log') {
-    if (tab === 'audit-log' && !this.canViewAudit()) {
-      return;
+  protected selectSubmenu(item: PeopleSubmenuItem) {
+    switch (item.id) {
+      case 'users-directory':
+        this.activeView.set('users');
+        if (!this.router.url.startsWith('/app/settings/users')) {
+          this.router.navigate(['/app/settings/users']);
+        }
+        return;
+      case 'roles-directory':
+        this.activeView.set('roles');
+        if (!this.router.url.startsWith('/app/settings/roles')) {
+          this.router.navigate(['/app/settings/roles']);
+        }
+        return;
+      case 'permissions-directory':
+        this.activeView.set('permissions');
+        if (!this.router.url.startsWith('/app/settings/permissions')) {
+          this.router.navigate(['/app/settings/permissions']);
+        }
+        return;
+      case 'security-level-directory':
+        this.activeView.set('security-level');
+        if (!this.router.url.startsWith('/app/settings/security-levels')) {
+          this.router.navigate(['/app/settings/security-levels']);
+        }
+        return;
+      case 'dashboard-packs-directory':
+        this.activeView.set('dashboard-packs');
+        if (!this.router.url.startsWith('/app/settings/dashboard-packs')) {
+          this.router.navigate(['/app/settings/dashboard-packs']);
+        }
+        return;
+      default:
+        return;
     }
-    const target = this.tabRoute(tab);
-    this.activeTab.set(tab);
-    if (!this.router.url.startsWith(target)) {
-      this.router.navigate([target]);
+  }
+
+  protected isSubmenuActive(item: PeopleSubmenuItem): boolean {
+    switch (item.id) {
+      case 'users-directory':
+        return this.activeView() === 'users';
+      case 'roles-directory':
+        return this.activeView() === 'roles';
+      case 'permissions-directory':
+        return this.activeView() === 'permissions';
+      case 'security-level-directory':
+        return this.activeView() === 'security-level';
+      case 'dashboard-packs-directory':
+        return this.activeView() === 'dashboard-packs';
+      default:
+        return false;
     }
   }
 
@@ -350,21 +416,36 @@ export class SettingsPage {
     return this.onlineUsers().has(user.id);
   }
 
-  private syncTabFromUrl() {
-    const url = this.router.url;
-    if (url.includes('/settings/roles')) {
-      this.activeTab.set('roles');
+  private redirectLegacyPeopleAccessRoutes() {
+    const path = this.router.url.split('?')[0];
+    if (
+      path === '/app/settings'
+      || path === '/app/settings/teams'
+      || path === '/app/settings/audit-log'
+    ) {
+      this.router.navigate(['/app/settings/users'], { replaceUrl: true });
+    }
+  }
+
+  private syncViewFromUrl() {
+    const path = this.router.url.split('?')[0];
+    if (path.startsWith('/app/settings/roles')) {
+      this.activeView.set('roles');
       return;
     }
-    if (url.includes('/settings/audit-log')) {
-      this.activeTab.set('audit-log');
+    if (path.startsWith('/app/settings/permissions')) {
+      this.activeView.set('permissions');
       return;
     }
-    if (url.includes('/settings/teams')) {
-      this.activeTab.set('teams');
+    if (path.startsWith('/app/settings/security-levels')) {
+      this.activeView.set('security-level');
       return;
     }
-    this.activeTab.set('users');
+    if (path.startsWith('/app/settings/dashboard-packs')) {
+      this.activeView.set('dashboard-packs');
+      return;
+    }
+    this.activeView.set('users');
   }
 
   private restoreUsersViewState() {
@@ -416,19 +497,6 @@ export class SettingsPage {
     window.sessionStorage.setItem(key, value);
   }
 
-  private tabRoute(tab: 'users' | 'roles' | 'teams' | 'audit-log'): string {
-    if (tab === 'roles') {
-      return '/app/settings/roles';
-    }
-    if (tab === 'teams') {
-      return '/app/settings/teams';
-    }
-    if (tab === 'audit-log') {
-      return '/app/settings/audit-log';
-    }
-    return '/app/settings/users';
-  }
-
   protected getAvatarTone(user: UserListItem): string {
     const seed = (user.email || user.fullName || '').trim().toLowerCase();
     let hash = 0;
@@ -463,6 +531,14 @@ export class SettingsPage {
     return this.formatRelativeFromDate(this.parseUtcDate(user.lastLoginAtUtc), isOnline ? 'Online for' : 'Last seen');
   }
 
+  protected formatOnlineHours(user: UserListItem, isOnline: boolean): string {
+    if (!isOnline || !user.lastLoginAtUtc) {
+      return '-';
+    }
+    const duration = this.formatElapsedDuration(this.parseUtcDate(user.lastLoginAtUtc));
+    return duration ? duration : '-';
+  }
+
   protected formatInviteSentTime(user: UserListItem): string {
     if (!user.lastInviteSentAtUtc) {
       return '';
@@ -483,20 +559,27 @@ export class SettingsPage {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) {
       return '';
     }
-    const minutes = Math.floor(deltaMs / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    let value = '';
-    if (days > 0) {
-      value = `${days}d ${hours % 24}h`;
-    } else if (hours > 0) {
-      value = `${hours}h ${minutes % 60}m`;
-    } else {
-      value = `${Math.max(minutes, 1)}m`;
+    const value = this.formatElapsedDuration(date);
+    if (!value) {
+      return '';
     }
 
     return prefix === 'Online for' ? `${prefix} ${value}` : `${prefix} ${value} ago`;
+  }
+
+  private formatElapsedDuration(date: Date): string {
+    const deltaMs = Date.now() - date.getTime();
+    if (!Number.isFinite(deltaMs) || deltaMs < 0) {
+      return '';
+    }
+
+    const minutes = Math.floor(deltaMs / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    if (days > 0) {
+      return `${days}d ${hours % 24}h ${minutes % 60}m`;
+    }
+    return `${hours}h ${minutes % 60}m`;
   }
 
   private generatePasswordValue() {

@@ -101,31 +101,6 @@
   border-radius: 50%;
 }
 
-.hero-title {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1.2;
-  margin: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  color: rgba(15, 23, 42, 0.9);
-
-  @media (max-width: 768px) {
-    font-size: 1.5rem;
-  }
-}
-
-.title-gradient {
-  background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.title-light {
-  color: rgba(15, 23, 42, 0.9);
-}
 
 .hero-description {
   font-size: 1rem;
@@ -1095,55 +1070,11 @@
 
 .th-actions {
   width: 90px;
-  text-align: center;
+  text-align: right;
 }
 
 .td-actions {
-  text-align: center;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 0.4rem;
-}
-
-.action-icon {
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 0;
-
-  i {
-    font-size: 0.72rem;
-    color: rgba(60, 60, 67, 0.7);
-  }
-
-  &:hover:not(:disabled) {
-    background: #fff;
-    border-color: rgba(148, 163, 184, 0.35);
-  }
-
-  &--danger:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.08);
-    border-color: rgba(239, 68, 68, 0.25);
-
-    i {
-      color: #dc2626;
-    }
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
+  text-align: right;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -1444,10 +1375,6 @@
   .hero-section {
     padding: 1.35rem;
     gap: 1.25rem;
-  }
-
-  .hero-title {
-    font-size: 1.5rem;
   }
 
   .hero-stats {

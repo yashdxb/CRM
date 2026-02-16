@@ -38,12 +38,20 @@
 
 This is the required structure for all CRM pages.
 
+Mandatory change-control rule:
+- Do not modify existing styles (colors, gradients, spacing, typography, states, backgrounds) unless the user explicitly requests style/UI changes for the current task.
+
 **Must follow:**
 - No inline templates or inline styles. Always use `templateUrl` and `styleUrl`.
 - Always include breadcrumbs at the top of the content area.
 - Use `page-background` for animated orbs and `page-container`/`page-content` for interactive UI.
 - Use PrimeNG components for inputs, buttons, tables, dialogs.
 - Use global style files; avoid page-specific one-off patterns.
+- Heading hierarchy is mandatory:
+  - one `h1.hero-title` per page
+  - section headers use `h2.section-title`
+  - card/subsection headers use `h3.card-title` or `h3.section-title`
+  - subtitles use `page-subtitle` / `hero-subtitle` / `hero-description`
 
 **Recommended structure:**
 ```html
@@ -93,6 +101,8 @@ Use this list before committing UI work:
   - `@use '../../../../shared/page-design-system' as *;`
   - `@use '../../../../../styles/design-tokens' as *;`
 - Form pages follow the **Edit/Create Form Standard** (card titles, focus, and primary action).
+- Only one `h1.hero-title` exists on the page.
+- `H2`/`H3` are not used as page-level title replacements.
 
 ---
 
@@ -178,6 +188,30 @@ Use this template to create a new page quickly.
 ---
 
 ## Quick Patterns
+
+### QUICK PATTERN: List Row Actions
+
+Lead list is the source-of-truth style for row-level icon actions in tables.
+
+Use this exact markup pattern:
+
+```html
+<td class="td-actions">
+  <div class="row-actions">
+    <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-info" icon="pi pi-pencil" title="Edit"></button>
+    <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger" icon="pi pi-trash" title="Delete"></button>
+  </div>
+</td>
+```
+
+Severity mapping:
+- `p-button-info`: edit
+- `p-button-help`: coach
+- `p-button-secondary`: log activity
+- `p-button-success`: convert/complete
+- `p-button-danger`: delete
+
+Do not create page-specific row action button skins. Shared styles are centralized in `client/src/styles/_components.scss`.
 
 ### QUICK PATTERN: List Pages
 

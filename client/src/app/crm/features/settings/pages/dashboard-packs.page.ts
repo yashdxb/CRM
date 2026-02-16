@@ -12,12 +12,27 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { RoleSummary } from '../models/user-admin.model';
 import { DashboardDataService } from '../../dashboard/services/dashboard-data.service';
+import { DASHBOARD_CARD_CATALOG, DASHBOARD_CHART_CATALOG } from '../../dashboard/dashboard-catalog';
 
-interface DashboardCardOption {
+type PackMode = 'role-level' | 'custom';
+
+interface DashboardItemOption {
   id: string;
   label: string;
   icon: string;
+  type: 'kpi' | 'chart';
 }
+
+interface PackTemplateOption {
+  id: string;
+  name: string;
+  description?: string | null;
+  isDefault: boolean;
+  cardOrder: string[];
+  hiddenCards?: string[];
+}
+
+const LEVEL_TEMPLATE_PREFIX = 'role-level-default:';
 
 @Component({
   selector: 'app-dashboard-packs-page',
@@ -45,8 +60,33 @@ export class DashboardPacksPage {
     return tokenHasPermission(payload, PERMISSION_KEYS.administrationManage);
   });
 
+  protected readonly mode = signal<PackMode>('role-level');
   protected readonly loadingRoles = signal(true);
+  protected readonly loadingPack = signal(false);
+  protected readonly savingPack = signal(false);
+  protected readonly loadingTemplates = signal(false);
+
   protected readonly roles = signal<RoleSummary[]>([]);
+  private readonly templates = signal<PackTemplateOption[]>([]);
+
+  protected readonly selectedLevel = signal<number | null>(null);
+  protected readonly levelPackName = signal('');
+
+  protected readonly selectedCustomPackId = signal<string | null>(null);
+  protected readonly customPackName = signal('');
+
+  protected readonly selectedItems = signal<Set<string>>(new Set());
+  protected readonly itemOrder = signal<string[]>([]);
+
+  protected readonly cardCatalog = DASHBOARD_CARD_CATALOG;
+  protected readonly chartCatalog = DASHBOARD_CHART_CATALOG;
+  protected readonly allItems: DashboardItemOption[] = [
+    ...DASHBOARD_CARD_CATALOG.map(item => ({ ...item, type: 'kpi' as const })),
+    ...DASHBOARD_CHART_CATALOG.map(item => ({ ...item, type: 'chart' as const }))
+  ];
+
+  private readonly cardIdSet = new Set(this.cardCatalog.map(item => item.id));
+
   protected readonly availableLevels = computed(() => {
     const levels = this.roles()
       .map(role => role.hierarchyLevel ?? null)
@@ -55,334 +95,258 @@ export class DashboardPacksPage {
     return unique.map(level => ({ label: `H${level}`, value: level }));
   });
 
-  protected readonly selectedLevel = signal<number | null>(null);
-  protected readonly selectedCards = signal<Set<string>>(new Set());
-  protected readonly selectedCharts = signal<Set<string>>(new Set());
-  protected readonly defaultOrder = signal<string[]>([]);
-  protected readonly loadingDefaults = signal(false);
-  protected readonly savingDefaults = signal(false);
-  protected readonly templates = signal<{ id: string; name: string; isDefault: boolean; cardOrder: string[]; hiddenCards?: string[] }[]>([]);
-  protected readonly loadingTemplates = signal(false);
-  protected readonly savingTemplate = signal(false);
-  protected readonly settingDefault = signal(false);
-  protected readonly selectedTemplateId = signal<string | null>(null);
-  protected readonly templateName = signal('');
-  protected readonly templateSelectedCards = signal<Set<string>>(new Set());
-  protected readonly templateSelectedCharts = signal<Set<string>>(new Set());
-  protected readonly templateOrder = signal<string[]>([]);
+  protected readonly customPackOptions = computed(() =>
+    this.templates()
+      .filter(template => !this.isRoleLevelTemplate(template))
+      .map(template => ({
+        label: template.isDefault ? `${template.name} (Default)` : template.name,
+        value: template.id
+      }))
+  );
 
-  protected readonly cardCatalog: DashboardCardOption[] = [
-    { id: 'pipeline', label: 'Pipeline by Stage', icon: 'pi pi-filter' },
-    { id: 'truth-metrics', label: 'Truth Metrics', icon: 'pi pi-verified' },
-    { id: 'risk-register', label: 'Risk Register', icon: 'pi pi-exclamation-triangle' },
-    { id: 'confidence-forecast', label: 'Confidence Forecast', icon: 'pi pi-chart-line' },
-    { id: 'accounts', label: 'Recent Accounts', icon: 'pi pi-building' },
-    { id: 'manager-health', label: 'Pipeline Health', icon: 'pi pi-shield' },
-    { id: 'activity-mix', label: 'Activity Mix', icon: 'pi pi-chart-pie' },
-    { id: 'conversion', label: 'Conversion Trend', icon: 'pi pi-percentage' },
-    { id: 'top-performers', label: 'Top Performers', icon: 'pi pi-trophy' },
-    { id: 'my-tasks', label: 'My Task', icon: 'pi pi-check-square' },
-    { id: 'timeline', label: 'Activity Timeline', icon: 'pi pi-clock' },
-    { id: 'health', label: 'Business Health', icon: 'pi pi-heart' }
-  ];
-  protected readonly chartCatalog: DashboardCardOption[] = [
-    { id: 'revenue', label: 'Revenue Trend', icon: 'pi pi-chart-line' },
-    { id: 'growth', label: 'Customer Growth', icon: 'pi pi-users' }
-  ];
+  protected readonly activePackName = computed(() =>
+    this.mode() === 'role-level' ? this.levelPackName() : this.customPackName()
+  );
 
-  protected readonly cardOptions = computed(() =>
-    this.cardCatalog.map(card => ({
-      ...card,
-      checked: this.selectedCards().has(card.id)
-    }))
+  protected readonly levelLabel = computed(() =>
+    this.mode() === 'role-level'
+      ? (this.selectedLevel() ? `H${this.selectedLevel()}` : 'No level selected')
+      : (this.selectedCustomPackId() ? 'Custom Pack' : 'New Custom Pack')
   );
-  protected readonly chartOptions = computed(() =>
-    this.chartCatalog.map(chart => ({
-      ...chart,
-      checked: this.selectedCharts().has(chart.id)
-    }))
+
+  protected readonly selectedKpiCount = computed(() =>
+    this.cardCatalog.filter(card => this.selectedItems().has(card.id)).length
   );
-  protected readonly templateCardOptions = computed(() =>
-    this.cardCatalog.map(card => ({
-      ...card,
-      checked: this.templateSelectedCards().has(card.id)
-    }))
+
+  protected readonly selectedChartCount = computed(() =>
+    this.chartCatalog.filter(chart => this.selectedItems().has(chart.id)).length
   );
-  protected readonly templateChartOptions = computed(() =>
-    this.chartCatalog.map(chart => ({
-      ...chart,
-      checked: this.templateSelectedCharts().has(chart.id)
-    }))
-  );
-  protected readonly templateOptions = computed(() =>
-    this.templates().map(template => ({
-      label: template.isDefault ? `${template.name} (Default)` : template.name,
-      value: template.id
-    }))
-  );
+
+  protected readonly tableRows = computed(() => {
+    const selected = this.selectedItems();
+    const order = this.buildOrder();
+    const catalogIndexById = new Map(this.allItems.map((item, index) => [item.id, index]));
+
+    const rows = this.allItems.map(item => {
+      const orderIndex = order.indexOf(item.id);
+      return {
+        ...item,
+        checked: selected.has(item.id),
+        order: orderIndex >= 0 ? orderIndex + 1 : null,
+        canMoveUp: orderIndex > 0,
+        canMoveDown: orderIndex >= 0 && orderIndex < order.length - 1,
+        orderIndex
+      };
+    });
+
+    // Always render table by active display order.
+    // Included rows are shown first in 1..N order, followed by excluded rows in stable catalog order.
+    return rows.sort((a, b) => {
+      const aIncluded = a.orderIndex >= 0;
+      const bIncluded = b.orderIndex >= 0;
+
+      if (aIncluded && bIncluded) {
+        return a.orderIndex - b.orderIndex;
+      }
+      if (aIncluded) return -1;
+      if (bIncluded) return 1;
+
+      const aCatalog = catalogIndexById.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+      const bCatalog = catalogIndexById.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      return aCatalog - bCatalog;
+    });
+  });
 
   constructor() {
     this.loadRoles();
     this.loadTemplates();
   }
 
+  protected setMode(mode: PackMode) {
+    this.mode.set(mode);
+    if (mode === 'role-level') {
+      const level = this.selectedLevel() ?? this.availableLevels()[0]?.value ?? null;
+      this.onLevelChange(level);
+      return;
+    }
+
+    const selectedId = this.selectedCustomPackId() ?? this.customPackOptions()[0]?.value ?? null;
+    this.onCustomPackChange(selectedId);
+  }
+
   protected onLevelChange(level: number | null) {
     this.selectedLevel.set(level);
     if (!level) {
-      this.selectedCards.set(new Set());
-      this.defaultOrder.set([]);
+      this.levelPackName.set('');
+      this.clearSelection();
       return;
     }
+
+    this.levelPackName.set(this.resolveRoleLevelPackName(level));
     this.loadDefaultLayout(level);
   }
 
-  protected toggleCard(cardId: string, checked: boolean) {
-    const next = new Set(this.selectedCards());
-    if (checked) {
-      next.add(cardId);
-    } else {
-      next.delete(cardId);
-    }
-    this.selectedCards.set(next);
-  }
+  protected onCustomPackChange(templateId: string | null) {
+    this.selectedCustomPackId.set(templateId);
 
-  protected toggleChart(chartId: string, checked: boolean) {
-    const next = new Set(this.selectedCharts());
-    if (checked) {
-      next.add(chartId);
-    } else {
-      next.delete(chartId);
-    }
-    this.selectedCharts.set(next);
-  }
-
-  protected toggleTemplateCard(cardId: string, checked: boolean) {
-    const next = new Set(this.templateSelectedCards());
-    if (checked) {
-      next.add(cardId);
-    } else {
-      next.delete(cardId);
-    }
-    this.templateSelectedCards.set(next);
-  }
-
-  protected toggleTemplateChart(chartId: string, checked: boolean) {
-    const next = new Set(this.templateSelectedCharts());
-    if (checked) {
-      next.add(chartId);
-    } else {
-      next.delete(chartId);
-    }
-    this.templateSelectedCharts.set(next);
-  }
-
-  protected onCardClick(cardId: string, checked: boolean, event: Event) {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('.p-checkbox')) {
+    if (!templateId) {
+      this.customPackName.set('');
+      this.clearSelection();
       return;
     }
-    this.toggleCard(cardId, !checked);
-  }
 
-  protected onChartClick(chartId: string, checked: boolean, event: Event) {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('.p-checkbox')) {
+    const selectedTemplate = this.templates().find(item => item.id === templateId);
+    if (!selectedTemplate) {
+      this.customPackName.set('');
+      this.clearSelection();
       return;
     }
-    this.toggleChart(chartId, !checked);
+
+    this.customPackName.set(selectedTemplate.name);
+    this.applyPackState(selectedTemplate.cardOrder ?? [], selectedTemplate.hiddenCards ?? []);
   }
 
-  protected onTemplateCardClick(cardId: string, checked: boolean, event: Event) {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('.p-checkbox')) {
+  protected createNewCustomPack() {
+    this.selectedCustomPackId.set(null);
+    this.customPackName.set('');
+    this.clearSelection();
+  }
+
+  protected toggleItem(itemId: string, checked: boolean) {
+    const next = new Set(this.selectedItems());
+    let order = this.buildOrder();
+
+    if (checked) {
+      next.add(itemId);
+      if (!order.includes(itemId)) {
+        order = [...order, itemId];
+      }
+    } else {
+      next.delete(itemId);
+      order = order.filter(id => id !== itemId);
+    }
+
+    this.selectedItems.set(next);
+    this.itemOrder.set(order);
+  }
+
+  protected moveItem(itemId: string, direction: -1 | 1) {
+    const order = this.buildOrder();
+    const currentIndex = order.indexOf(itemId);
+    if (currentIndex < 0) {
       return;
     }
-    this.toggleTemplateCard(cardId, !checked);
-  }
 
-  protected onTemplateChartClick(chartId: string, checked: boolean, event: Event) {
-    const target = event.target as HTMLElement | null;
-    if (target?.closest('.p-checkbox')) {
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0 || targetIndex >= order.length) {
       return;
     }
-    this.toggleTemplateChart(chartId, !checked);
+
+    const next = [...order];
+    const swap = next[currentIndex];
+    next[currentIndex] = next[targetIndex];
+    next[targetIndex] = swap;
+    this.itemOrder.set(next);
   }
 
-  protected saveDefaults() {
+  protected savePack() {
     if (!this.canManageDefaults()) {
-      this.toastService.show('error', 'You do not have permission to update defaults.', 3000);
+      this.toastService.show('error', 'You do not have permission to update dashboard packs.', 3000);
       return;
     }
-    const level = this.selectedLevel();
-    if (!level) {
-      this.toastService.show('error', 'Select a hierarchy level to save.', 3000);
-      return;
-    }
+
     const order = this.buildOrder();
     if (order.length === 0) {
-      this.toastService.show('error', 'Select at least one card.', 3000);
+      this.toastService.show('error', 'Select at least one KPI card or chart widget.', 3000);
       return;
     }
-    this.savingDefaults.set(true);
-    const selectedCharts = this.selectedCharts();
-    const hiddenCharts = this.chartCatalog.map(chart => chart.id).filter(id => !selectedCharts.has(id));
-    this.dashboardData
-      .saveDefaultLayout({
-        roleLevel: level,
-        cardOrder: order,
-        sizes: {},
-        dimensions: {},
-        hiddenCards: [
-          ...this.cardCatalog.map(card => card.id).filter(id => !order.includes(id)),
-          ...hiddenCharts
-        ]
-      })
-      .subscribe({
-        next: () => {
-          this.savingDefaults.set(false);
-          this.defaultOrder.set(order);
-          this.toastService.show('success', `Default H${level} pack saved.`, 3000);
-        },
-        error: (error) => {
-          this.savingDefaults.set(false);
-          const message = typeof error?.error === 'string' && error.error.trim().length > 0
-            ? error.error
-            : 'Unable to save default pack.';
-          this.toastService.show('error', message, 3500);
-        }
-      });
+
+    const selected = this.selectedItems();
+    const hiddenCards = this.allItems
+      .map(item => item.id)
+      .filter(id => !selected.has(id));
+    const cardOrder = this.buildCardOrder(order, selected);
+
+    if (this.mode() === 'role-level') {
+      this.saveRoleLevelPack(cardOrder, hiddenCards);
+      return;
+    }
+
+    this.saveCustomPack(cardOrder, hiddenCards);
   }
 
-  protected onTemplateChange(templateId: string | null) {
-    this.selectedTemplateId.set(templateId);
-    if (!templateId) {
-      this.templateName.set('');
-      this.templateSelectedCards.set(new Set());
-      this.templateSelectedCharts.set(new Set());
-      this.templateOrder.set([]);
+  private saveRoleLevelPack(cardOrder: string[], hiddenCards: string[]) {
+    const level = this.selectedLevel();
+    if (!level) {
+      this.toastService.show('error', 'Select a hierarchy level.', 3000);
       return;
     }
 
-    const selected = this.templates().find(template => template.id === templateId);
-    if (!selected) {
-      return;
-    }
+    const packName = this.levelPackName().trim() || `H${level} Pack`;
+    this.levelPackName.set(packName);
+    this.savingPack.set(true);
 
-    this.templateName.set(selected.name);
-    const order = selected.cardOrder ?? [];
-    const hidden = selected.hiddenCards ?? [];
-    this.templateOrder.set(order);
-    this.templateSelectedCards.set(new Set(order));
-    const selectedCharts = this.chartCatalog
-      .map(chart => chart.id)
-      .filter(id => !hidden.includes(id));
-    this.templateSelectedCharts.set(new Set(selectedCharts));
-  }
-
-  protected saveTemplate() {
-    if (!this.canManageDefaults()) {
-      this.toastService.show('error', 'You do not have permission to update templates.', 3000);
-      return;
-    }
-
-    const name = this.templateName().trim();
-    if (!name) {
-      this.toastService.show('error', 'Template name is required.', 3000);
-      return;
-    }
-
-    const order = this.buildTemplateOrder();
-    if (order.length === 0) {
-      this.toastService.show('error', 'Select at least one card.', 3000);
-      return;
-    }
-
-    this.savingTemplate.set(true);
-    const selectedCharts = this.templateSelectedCharts();
-    const hiddenCharts = this.chartCatalog.map(chart => chart.id).filter(id => !selectedCharts.has(id));
-    const payload = {
-      name,
-      description: null,
-      cardOrder: order,
+    this.dashboardData.saveDefaultLayout({
+      roleLevel: level,
+      cardOrder,
       sizes: {},
       dimensions: {},
-      hiddenCards: [
-        ...this.cardCatalog.map(card => card.id).filter(id => !order.includes(id)),
-        ...hiddenCharts
-      ],
-      isDefault: null
+      hiddenCards
+    }).subscribe({
+      next: () => {
+        this.persistRoleLevelPackName(level, packName, cardOrder, hiddenCards);
+        this.savingPack.set(false);
+        this.toastService.show('success', `Default H${level} pack saved as "${packName}".`, 3000);
+      },
+      error: (error) => {
+        this.savingPack.set(false);
+        const message = typeof error?.error === 'string' && error.error.trim().length > 0
+          ? error.error
+          : 'Unable to save role-level default pack.';
+        this.toastService.show('error', message, 3500);
+      }
+    });
+  }
+
+  private saveCustomPack(cardOrder: string[], hiddenCards: string[]) {
+    const name = this.customPackName().trim();
+    if (!name) {
+      this.toastService.show('error', 'Enter a custom pack name.', 3000);
+      return;
+    }
+
+    this.savingPack.set(true);
+    const payload = {
+      name,
+      description: 'custom-pack',
+      cardOrder,
+      sizes: {},
+      dimensions: {},
+      hiddenCards,
+      isDefault: null as boolean | null
     };
 
-    const existingId = this.selectedTemplateId();
+    const existingId = this.selectedCustomPackId();
     const request = existingId
       ? this.dashboardData.updateTemplate(existingId, payload)
       : this.dashboardData.createTemplate(payload);
 
     request.subscribe({
       next: (template) => {
-        this.savingTemplate.set(false);
-        this.templateOrder.set(order);
-        this.templateSelectedCards.set(new Set(order));
-        this.templateSelectedCharts.set(new Set(this.chartCatalog.map(chart => chart.id).filter(id => !payload.hiddenCards.includes(id))));
-        this.selectedTemplateId.set(template.id);
+        this.savingPack.set(false);
+        this.customPackName.set(template.name);
+        this.selectedCustomPackId.set(template.id);
         this.refreshTemplates(template.id);
-        this.toastService.show('success', 'Dashboard template saved.', 3000);
+        this.toastService.show('success', `Custom pack "${template.name}" saved.`, 3000);
       },
       error: (error) => {
-        this.savingTemplate.set(false);
+        this.savingPack.set(false);
         const message = typeof error?.error === 'string' && error.error.trim().length > 0
           ? error.error
-          : 'Unable to save template.';
+          : 'Unable to save custom pack.';
         this.toastService.show('error', message, 3500);
       }
     });
-  }
-
-  protected setDefaultTemplate() {
-    const templateId = this.selectedTemplateId();
-    if (!templateId) {
-      this.toastService.show('error', 'Select a template first.', 3000);
-      return;
-    }
-
-    this.settingDefault.set(true);
-    this.dashboardData.setDefaultTemplate(templateId).subscribe({
-      next: (template) => {
-        this.settingDefault.set(false);
-        this.refreshTemplates(template.id);
-        this.toastService.show('success', 'Default dashboard template updated.', 3000);
-      },
-      error: () => {
-        this.settingDefault.set(false);
-        this.toastService.show('error', 'Unable to set default template.', 3500);
-      }
-    });
-  }
-
-  private buildOrder(): string[] {
-    const selected = this.selectedCards();
-    const current = this.defaultOrder();
-    if (current.length === 0) {
-      return this.cardCatalog.map(card => card.id).filter(id => selected.has(id));
-    }
-    const inOrder = current.filter(id => selected.has(id));
-    const missing = this.cardCatalog
-      .map(card => card.id)
-      .filter(id => selected.has(id) && !inOrder.includes(id));
-    return [...inOrder, ...missing];
-  }
-
-  private buildTemplateOrder(): string[] {
-    const selected = this.templateSelectedCards();
-    const current = this.templateOrder();
-    if (current.length === 0) {
-      return this.cardCatalog.map(card => card.id).filter(id => selected.has(id));
-    }
-    const inOrder = current.filter(id => selected.has(id));
-    const missing = this.cardCatalog
-      .map(card => card.id)
-      .filter(id => selected.has(id) && !inOrder.includes(id));
-    return [...inOrder, ...missing];
   }
 
   private loadRoles() {
@@ -391,9 +355,10 @@ export class DashboardPacksPage {
       next: (roles) => {
         this.roles.set(roles ?? []);
         this.loadingRoles.set(false);
-        const levels = this.availableLevels();
-        if (levels.length > 0 && !this.selectedLevel()) {
-          this.onLevelChange(levels[0].value);
+
+        if (this.mode() === 'role-level') {
+          const level = this.selectedLevel() ?? this.availableLevels()[0]?.value ?? null;
+          this.onLevelChange(level);
         }
       },
       error: () => {
@@ -407,17 +372,24 @@ export class DashboardPacksPage {
     this.loadingTemplates.set(true);
     this.dashboardData.getTemplates().subscribe({
       next: (templates) => {
-        const normalized = (templates ?? []).map(template => ({
+        this.templates.set((templates ?? []).map(template => ({
           id: template.id,
           name: template.name,
+          description: template.description ?? null,
           isDefault: template.isDefault,
           cardOrder: template.cardOrder ?? [],
           hiddenCards: template.hiddenCards ?? []
-        }));
-        this.templates.set(normalized);
+        })));
         this.loadingTemplates.set(false);
-        if (!this.selectedTemplateId() && normalized.length > 0) {
-          this.onTemplateChange(normalized[0].id);
+
+        if (this.mode() === 'role-level') {
+          const level = this.selectedLevel();
+          if (level) {
+            this.levelPackName.set(this.resolveRoleLevelPackName(level));
+          }
+        } else {
+          const selected = this.selectedCustomPackId() ?? this.customPackOptions()[0]?.value ?? null;
+          this.onCustomPackChange(selected);
         }
       },
       error: () => {
@@ -430,42 +402,123 @@ export class DashboardPacksPage {
   private refreshTemplates(selectId?: string | null) {
     this.dashboardData.getTemplates().subscribe({
       next: (templates) => {
-        const normalized = (templates ?? []).map(template => ({
+        this.templates.set((templates ?? []).map(template => ({
           id: template.id,
           name: template.name,
+          description: template.description ?? null,
           isDefault: template.isDefault,
           cardOrder: template.cardOrder ?? [],
           hiddenCards: template.hiddenCards ?? []
-        }));
-        this.templates.set(normalized);
-        const target = selectId ?? this.selectedTemplateId();
-        if (target) {
-          this.onTemplateChange(target);
+        })));
+
+        if (this.mode() === 'custom') {
+          const target = selectId ?? this.selectedCustomPackId();
+          this.onCustomPackChange(target ?? null);
+        }
+
+        if (this.mode() === 'role-level') {
+          const level = this.selectedLevel();
+          if (level) {
+            this.levelPackName.set(this.resolveRoleLevelPackName(level));
+          }
         }
       }
     });
   }
 
-  private loadDefaultLayout(level: number) {
-    this.loadingDefaults.set(true);
-    this.dashboardData.getDefaultLayoutForLevel(level).subscribe({
-      next: (response) => {
-        const order = response.cardOrder ?? [];
-        const hidden = response.hiddenCards ?? [];
-        this.defaultOrder.set(order);
-        this.selectedCards.set(new Set(order));
-        const selectedCharts = this.chartCatalog
-          .map(chart => chart.id)
-          .filter(id => !hidden.includes(id));
-        this.selectedCharts.set(new Set(selectedCharts));
-        this.loadingDefaults.set(false);
+  private resolveRoleLevelPackName(level: number): string {
+    const marker = `${LEVEL_TEMPLATE_PREFIX}${level}`;
+    const matched = this.templates().find(template => (template.description ?? '').toLowerCase() === marker);
+    return matched?.name?.trim() || `H${level} Pack`;
+  }
+
+  private isRoleLevelTemplate(template: Pick<PackTemplateOption, 'description'>): boolean {
+    return (template.description ?? '').toLowerCase().startsWith(LEVEL_TEMPLATE_PREFIX);
+  }
+
+  private persistRoleLevelPackName(level: number, name: string, cardOrder: string[], hiddenCards: string[]) {
+    const marker = `${LEVEL_TEMPLATE_PREFIX}${level}`;
+    const existing = this.templates().find(template => (template.description ?? '').toLowerCase() === marker);
+
+    const payload = {
+      name,
+      description: marker,
+      cardOrder,
+      sizes: {},
+      dimensions: {},
+      hiddenCards,
+      isDefault: null as boolean | null
+    };
+
+    const request = existing
+      ? this.dashboardData.updateTemplate(existing.id, payload)
+      : this.dashboardData.createTemplate(payload);
+
+    request.subscribe({
+      next: () => {
+        this.refreshTemplates();
       },
       error: () => {
-        this.defaultOrder.set([]);
-        this.selectedCards.set(new Set());
-        this.selectedCharts.set(new Set());
-        this.loadingDefaults.set(false);
+        this.toastService.show('error', 'Role-level pack saved, but name metadata could not be updated.', 3500);
       }
     });
+  }
+
+  private loadDefaultLayout(level: number) {
+    this.loadingPack.set(true);
+    this.dashboardData.getDefaultLayoutForLevel(level).subscribe({
+      next: (response) => {
+        this.applyPackState(response.cardOrder ?? [], response.hiddenCards ?? []);
+        this.loadingPack.set(false);
+      },
+      error: () => {
+        this.clearSelection();
+        this.loadingPack.set(false);
+      }
+    });
+  }
+
+  private applyPackState(cardOrder: string[], hiddenCards: string[]) {
+    const hidden = new Set(hiddenCards ?? []);
+    const selectedIds = this.allItems
+      .map(item => item.id)
+      .filter(id => !hidden.has(id));
+    const selected = new Set(selectedIds);
+
+    const ordered = [
+      ...cardOrder.filter(id => selected.has(id)),
+      ...selectedIds.filter(id => !cardOrder.includes(id))
+    ];
+
+    this.selectedItems.set(selected);
+    this.itemOrder.set(ordered);
+  }
+
+  private buildCardOrder(order: string[], selected: Set<string>): string[] {
+    const orderedCards = order.filter(id => selected.has(id) && this.cardIdSet.has(id));
+    const missingCards = this.cardCatalog
+      .map(card => card.id)
+      .filter(id => selected.has(id) && !orderedCards.includes(id));
+    return [...orderedCards, ...missingCards];
+  }
+
+  private buildOrder(): string[] {
+    const selected = this.selectedItems();
+    const current = this.itemOrder();
+    if (current.length === 0) {
+      return this.allItems.map(item => item.id).filter(id => selected.has(id));
+    }
+
+    const inOrder = current.filter(id => selected.has(id));
+    const missing = this.allItems
+      .map(item => item.id)
+      .filter(id => selected.has(id) && !inOrder.includes(id));
+
+    return [...inOrder, ...missing];
+  }
+
+  private clearSelection() {
+    this.selectedItems.set(new Set());
+    this.itemOrder.set([]);
   }
 }

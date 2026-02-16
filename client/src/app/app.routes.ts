@@ -52,6 +52,13 @@ export const routes: Routes = [
           import('./crm/features/dashboard/pages/dashboard.page').then((m) => m.DashboardPage)
       },
       {
+        path: 'decisions',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Decision Inbox', icon: 'pi-inbox' },
+        loadComponent: () =>
+          import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+      },
+      {
         path: 'customers',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.customersView, breadcrumb: 'Customers', icon: 'pi-building' },
@@ -142,13 +149,6 @@ export const routes: Routes = [
         loadComponent: () => import('./crm/features/leads/pages/lead-convert.page').then((m) => m.LeadConvertPage)
       },
       {
-        path: 'opportunities',
-        canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Opportunities', icon: 'pi-chart-line' },
-        loadComponent: () =>
-          import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
-      },
-      {
         path: 'opportunities/new',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'New Opportunity', icon: 'pi-plus' },
@@ -168,6 +168,13 @@ export const routes: Routes = [
         data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Edit Opportunity', icon: 'pi-pencil' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
+      },
+      {
+        path: 'opportunities',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Opportunities', icon: 'pi-chart-line' },
+        loadComponent: () =>
+          import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
       },
       {
         path: 'activities',
@@ -231,6 +238,11 @@ export const routes: Routes = [
           {
             path: 'roles',
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Roles' },
+            loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
+          },
+          {
+            path: 'permissions',
+            data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Permision' },
             loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
           },
           {
@@ -299,12 +311,13 @@ export const routes: Routes = [
             path: 'dashboard-packs',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Dashboard Packs' },
-            loadComponent: () => import('./crm/features/settings/pages/dashboard-packs.page').then((m) => m.DashboardPacksPage)
+            loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
           },
           {
             path: 'security-levels',
-            pathMatch: 'full',
-            redirectTo: 'roles'
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Security Level' },
+            loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
           },
           {
             path: 'lead-assignment/:id/edit',

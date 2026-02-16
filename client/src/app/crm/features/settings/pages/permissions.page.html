@@ -1,0 +1,137 @@
+<section class="permissions-page">
+  <div class="permissions-toolbar">
+    <div class="toolbar-left">
+      <p>Manage role permission sets separately from role profile fields.</p>
+    </div>
+    <div class="toolbar-actions">
+      <p-select
+        appendTo="body"
+        [options]="roleOptions()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="selectedRoleId()"
+        (ngModelChange)="onRoleChange($event)"
+        placeholder="Select role"
+        styleClass="role-select"
+        [disabled]="loadingRoles()"
+      ></p-select>
+      <button
+        pButton
+        type="button"
+        class="btn-glass small"
+        [disabled]="!selectedRoleId() || saving()"
+        [routerLink]="selectedRoleId() ? ['/app/settings/roles', selectedRoleId(), 'edit'] : ['/app/settings/roles']"
+      >
+        <i class="pi pi-pencil"></i>
+        <span>Edit role</span>
+      </button>
+      <button pButton type="button" class="btn-gradient" (click)="savePermissions()" [disabled]="!selectedRoleId() || saving()">
+        <i class="pi pi-save"></i>
+        <span>{{ saving() ? 'Saving...' : 'Save Permissions' }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="permissions-summary" *ngIf="selectedRole() as role">
+    <span class="summary-pill"><i class="pi pi-shield"></i>{{ role.name }}</span>
+    <span class="summary-pill"><i class="pi pi-check-circle"></i>{{ selectedPermissionCount() }} selected</span>
+    <span class="summary-pill"><i class="pi pi-sitemap"></i>{{ inheritedPermissions().length }} inherited</span>
+    <span class="summary-pill summary-pill--warning"><i class="pi pi-exclamation-circle"></i>{{ driftSummary().added.length + driftSummary().removed.length }} drift</span>
+  </div>
+
+  <div class="permissions-empty" *ngIf="!selectedRoleId()">
+    Select a role to manage permissions.
+  </div>
+
+  <div class="permissions-grid" *ngIf="selectedRoleId()">
+    <div class="permissions-main">
+      <ng-container *ngIf="!loadingPermissions() && !loadingRole(); else loadingState">
+        <p-tabs [value]="activeActionTab()" (valueChange)="onActionTabChange($event)" class="permission-action-tabs">
+          <p-tablist>
+            <p-tab value="create-manage">Create &amp; Manage ({{ actionTabCounts().createManage }})</p-tab>
+            <p-tab value="view-analyze">View &amp; Analyze ({{ actionTabCounts().viewAnalyze }})</p-tab>
+            <p-tab value="governance">Governance ({{ actionTabCounts().governance }})</p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <p-tabpanel value="create-manage">
+              <ng-container *ngTemplateOutlet="permissionGroups"></ng-container>
+            </p-tabpanel>
+            <p-tabpanel value="view-analyze">
+              <ng-container *ngTemplateOutlet="permissionGroups"></ng-container>
+            </p-tabpanel>
+            <p-tabpanel value="governance">
+              <ng-container *ngTemplateOutlet="permissionGroups"></ng-container>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
+      </ng-container>
+    </div>
+
+    <aside class="permissions-side" *ngIf="selectedRole()">
+      <div class="side-card">
+        <h4>Presets</h4>
+        <p>Apply a baseline permission set.</p>
+        <div class="side-list" *ngIf="intentPacks().length; else noIntentPacks">
+          <button pButton type="button" class="btn-glass tiny" *ngFor="let pack of intentPacks()" (click)="applyIntentPack(pack)">
+            {{ pack.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="side-card">
+        <h4>Hierarchy Packs</h4>
+        <div class="side-list" *ngIf="permissionPackPresets().length; else noHierarchyPacks">
+          <button pButton type="button" class="btn-glass tiny" *ngFor="let pack of permissionPackPresets()" (click)="applyPermissionPack(pack)">
+            {{ pack.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="side-card">
+        <h4>Drift</h4>
+        <p class="drift-line">Added: {{ driftSummary().added.length }}</p>
+        <p class="drift-line">Removed: {{ driftSummary().removed.length }}</p>
+        <button pButton type="button" class="btn-glass tiny" (click)="resetToBase()">Reset to Base</button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<ng-template #permissionGroups>
+  <div class="capability-grid">
+    <div class="capability-card" *ngFor="let group of filteredCapabilityGroups()">
+      <div class="capability-header">
+        <h4>{{ group.capability }}</h4>
+        <span class="capability-count">{{ group.permissions.length }}</span>
+      </div>
+      <div class="capability-list">
+        <div class="capability-row" *ngFor="let permission of group.permissions">
+          <div class="capability-meta">
+            <span class="capability-label">{{ permission.label }}</span>
+            <span class="capability-desc">{{ permission.description }}</span>
+          </div>
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="isPermissionSelected(permission.key)"
+            [ngModelOptions]="{ standalone: true }"
+            (onChange)="togglePermission(permission.key)"
+            [disabled]="saving()"
+          ></p-checkbox>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="permissions-empty" *ngIf="filteredCapabilityGroups().length === 0">No permissions in this category.</p>
+</ng-template>
+
+<ng-template #loadingState>
+  <div class="permissions-empty">Loading permission workspace...</div>
+</ng-template>
+
+<ng-template #noIntentPacks>
+  <p class="muted-text">No intent packs available.</p>
+</ng-template>
+
+<ng-template #noHierarchyPacks>
+  <p class="muted-text">No hierarchy packs available.</p>
+</ng-template>

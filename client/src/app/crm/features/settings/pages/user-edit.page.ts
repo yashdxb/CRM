@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -9,7 +9,12 @@ import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { RoleSummary, UpsertUserRequest, UserDetailResponse } from '../models/user-admin.model';
+import {
+  DashboardPackOption,
+  UpsertUserRequest,
+  RoleSummary,
+  UserDetailResponse
+} from '../models/user-admin.model';
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
@@ -24,6 +29,7 @@ import { ReferenceDataService } from '../../../../core/services/reference-data.s
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     RouterLink,
     ButtonModule,
@@ -47,6 +53,11 @@ export class UserEditPage implements OnInit {
   private readonly referenceData = inject(ReferenceDataService);
   protected readonly user = signal<UserDetailResponse | null>(null);
   protected readonly roles = signal<RoleSummary[]>([]);
+  protected readonly roleDefaultDashboardPacks = signal<DashboardPackOption[]>([]);
+  protected readonly customDashboardPacks = signal<DashboardPackOption[]>([]);
+  protected readonly selectedDashboardPackKey = signal<string | null>(null);
+  protected readonly loadingDashboardPackOptions = signal(true);
+  protected readonly updatingDashboardPack = signal(false);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
@@ -89,11 +100,15 @@ export class UserEditPage implements OnInit {
     this.timeZoneService.getTimeZones().subscribe((options) => {
       this.timezoneOptions = options;
     });
+    this.loadDashboardPackOptions();
     this.loadCurrencyContext();
 
     this.loading.set(true);
     this.dataService.getRoles().subscribe({
-      next: (roles) => this.roles.set(roles),
+      next: (roles) => {
+        this.roles.set(roles);
+        this.initializeDashboardPackSelection();
+      },
       error: () => this.roles.set([])
     });
 
@@ -110,6 +125,7 @@ export class UserEditPage implements OnInit {
           isActive: detail.isActive,
           temporaryPassword: ''
         });
+        this.initializeDashboardPackSelection();
         this.loading.set(false);
       },
       error: () => {
@@ -121,6 +137,24 @@ export class UserEditPage implements OnInit {
 
   protected rolesAsOptions() {
     return this.roles().map((role) => ({ label: role.name, value: role.id, description: role.description }));
+  }
+
+  protected dashboardPackOptions() {
+    const roleLevel = this.resolveCurrentRoleLevel();
+    const roleDefault = this.roleDefaultDashboardPacks().find((option) => option.roleLevel === roleLevel)
+      ?? {
+        key: `role-default:${roleLevel}`,
+        name: `H${roleLevel} Pack`,
+        type: 'role-default',
+        roleLevel,
+        templateId: null
+      };
+
+    const options = [roleDefault, ...this.customDashboardPacks()];
+    return options.map((option) => ({
+      label: option.name,
+      value: option.key
+    }));
   }
 
   protected generatePassword() {
@@ -159,8 +193,26 @@ export class UserEditPage implements OnInit {
     this.saving.set(true);
     this.dataService.update(selected.id, payload).subscribe({
       next: () => {
-        this.saving.set(false);
-        this.raiseToast('success', 'User updated');
+        const packRequest = this.resolveDashboardPackRequest(this.selectedDashboardPackKey(), payload.roleIds ?? []);
+        if (!packRequest) {
+          this.saving.set(false);
+          this.raiseToast('success', 'User updated');
+          return;
+        }
+
+        this.updatingDashboardPack.set(true);
+        this.dataService.updateDashboardPack(selected.id, packRequest).subscribe({
+          next: () => {
+            this.saving.set(false);
+            this.updatingDashboardPack.set(false);
+            this.raiseToast('success', 'User and dashboard pack updated');
+          },
+          error: () => {
+            this.saving.set(false);
+            this.updatingDashboardPack.set(false);
+            this.raiseToast('error', 'User updated, but dashboard pack update failed');
+          }
+        });
       },
       error: () => {
         this.saving.set(false);
@@ -190,6 +242,78 @@ export class UserEditPage implements OnInit {
         }
       }
     });
+  }
+
+  private loadDashboardPackOptions() {
+    this.loadingDashboardPackOptions.set(true);
+    this.dataService.getDashboardPackOptions().subscribe({
+      next: (response) => {
+        this.roleDefaultDashboardPacks.set(response.roleDefaults ?? []);
+        this.customDashboardPacks.set(response.customPacks ?? []);
+        this.loadingDashboardPackOptions.set(false);
+        this.initializeDashboardPackSelection();
+      },
+      error: () => {
+        this.roleDefaultDashboardPacks.set([]);
+        this.customDashboardPacks.set([]);
+        this.loadingDashboardPackOptions.set(false);
+      }
+    });
+  }
+
+  private initializeDashboardPackSelection() {
+    const detail = this.user();
+    if (!detail) {
+      return;
+    }
+
+    const roleLevel = this.resolveCurrentRoleLevel(detail.roleIds);
+    const roleDefaultKey = `role-default:${roleLevel}`;
+    const storedKey = detail.dashboardPackKey ?? null;
+    const options = this.dashboardPackOptions().map((option) => option.value);
+    const selected = storedKey && options.includes(storedKey) ? storedKey : roleDefaultKey;
+    this.selectedDashboardPackKey.set(selected);
+  }
+
+  private resolveCurrentRoleLevel(roleIds?: string[]): number {
+    const selectedRoleIds = roleIds ?? ((this.form.value.roleIds ?? []) as string[]);
+    const levelByRoleId = new Map(
+      this.roles().map((role) => [role.id, Math.max(1, role.hierarchyLevel ?? 1)])
+    );
+    const levels = selectedRoleIds
+      .map((roleId) => levelByRoleId.get(roleId))
+      .filter((level): level is number => typeof level === 'number');
+
+    return levels.length ? Math.max(...levels) : 1;
+  }
+
+  private resolveDashboardPackRequest(selectedKey: string | null, roleIds: string[]) {
+    const fallbackRoleLevel = this.resolveCurrentRoleLevel(roleIds);
+
+    if (!selectedKey || selectedKey.startsWith('role-default:')) {
+      const levelPart = selectedKey?.replace('role-default:', '').trim() ?? '';
+      const parsed = Number(levelPart);
+      const roleLevel = Number.isFinite(parsed) && parsed > 0 ? parsed : fallbackRoleLevel;
+      return {
+        sourceType: 'role-default' as const,
+        roleLevel,
+        templateId: null
+      };
+    }
+
+    if (selectedKey.startsWith('custom:')) {
+      const templateId = selectedKey.replace('custom:', '').trim();
+      if (!templateId) {
+        return null;
+      }
+      return {
+        sourceType: 'custom' as const,
+        roleLevel: null,
+        templateId
+      };
+    }
+
+    return null;
   }
 
   private generatePasswordValue() {

@@ -311,9 +311,27 @@
                     styleClass="inline-select"
                   ></p-select>
                 </td>
-                <td class="actions">
-                  <button pButton icon="pi pi-pencil" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(row)"></button>
-                  <button pButton icon="pi pi-trash" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(row)"></button>
+                <td class="td-actions">
+                  <div class="row-actions">
+                    <button
+                      pButton
+                      type="button"
+                      class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
+                      icon="pi pi-pencil"
+                      [disabled]="!canManage()"
+                      (click)="$event.stopPropagation(); onEdit(row)"
+                      title="Edit"
+                    ></button>
+                    <button
+                      pButton
+                      type="button"
+                      class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
+                      icon="pi pi-trash"
+                      [disabled]="!canManage()"
+                      (click)="$event.stopPropagation(); onDelete(row)"
+                      title="Delete"
+                    ></button>
+                  </div>
                 </td>
               </tr>
             </ng-template>

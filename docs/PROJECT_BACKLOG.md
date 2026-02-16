@@ -21,10 +21,71 @@ MoSCoW: TBD
 
 2) Light CQRS + MediatR (decision + adoption)
 MoSCoW: TBD
-- Status: UNKNOWN
+- Status: PARTIAL
+- Evidence:
+  - Decision recorded in `docs/PROJECT_MASTER.md` (February 16, 2026): hybrid CQRS, service-first default.
 - Acceptance criteria:
-  - Commands/queries are MediatR requests with handlers.
-  - Controllers depend on MediatR for business actions.
+  - Default implementation path is Application services for CRUD/simple flows.
+  - MediatR is used only for complex orchestrations, policy-heavy commands, or multi-handler event-driven workflows.
+  - Controller surface remains thin regardless of path.
+  - Azure Service Bus is the async integration boundary for decoupled side effects.
+
+### Hybrid CQRS Implementation Checklist (Execution)
+
+Use this checklist for every backend story touching business workflows.
+
+#### A) Pre-implementation gate (required)
+- Classify the story as `Simple Flow` or `Complex Orchestration`.
+- `Simple Flow` criteria: single module, CRUD-like behavior, no multi-step policy branching, no multi-handler side effects.
+- `Complex Orchestration` criteria: cross-module transaction, approval/override policy branches, or non-trivial event-driven side effects.
+- Choose implementation path and record it in PR notes:
+  - `Simple Flow` -> Application service.
+  - `Complex Orchestration` -> MediatR command/query + handlers.
+
+#### B) Controller seam checklist (required)
+- Controller action contains no direct `DbContext` access.
+- Controller delegates to Application service or MediatR only.
+- Authorization and tenant guards remain enforced at API boundary.
+- Response contracts remain backward compatible unless story explicitly changes them.
+
+#### C) Module-by-module checklist
+
+Leads
+- Keep CRUD, assignment updates, and simple scoring refresh in service path.
+- Use MediatR for qualification/conversion flows only when branching/policy orchestration grows.
+- Emit domain/integration events for side effects (audit, notifications, async follow-up).
+
+Opportunities
+- Keep basic CRUD and read/list endpoints in service path.
+- Prefer MediatR for stage transitions, approval requests/decisions, and policy-gated close flows.
+- Ensure stage/approval workflows are idempotent (safe on retries).
+
+Activities
+- Keep create/edit/delete/list in service path.
+- Use MediatR when activity completion triggers multi-handler consequences (coaching, alerts, task automation).
+- Keep next-step enforcement in domain/application rules regardless of path.
+
+Dashboard / Read Models
+- Keep read services as default query path.
+- Add MediatR query handlers only when composition becomes complex across multiple read models.
+- Avoid business side effects in dashboard/read queries.
+
+Settings / Admin Policies
+- Keep straightforward settings CRUD in service path.
+- Use MediatR for settings changes that trigger recalculation/reseeding/rebuild flows across modules.
+- Never hard-code security levels or role tiers; always resolve from tenant configuration.
+
+#### D) Eventing and Azure integration checklist
+- In-process domain events for local side effects inside monolith boundaries.
+- Azure Service Bus for async integration events and decoupled background processing.
+- Event payloads include tenant context and stable identifiers.
+- Handlers are retry-safe and idempotent where re-delivery is possible.
+
+#### E) Definition of done (architecture)
+- Selected path (Service vs MediatR) matches classification and is documented.
+- Controller seam and tenant/permission rules are preserved.
+- Side effects are event-driven where appropriate (not hard-wired in controllers).
+- Existing tests updated; new tests added for complex orchestration and policy branches.
 
 1) Service seams (controllers delegate to Application services; no direct DbContext)
 MoSCoW: TBD

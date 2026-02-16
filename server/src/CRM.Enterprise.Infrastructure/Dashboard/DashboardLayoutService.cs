@@ -123,12 +123,27 @@ public class DashboardLayoutService : IDashboardLayoutService
     {
         var roleLevel = await GetUserRoleLevelAsync(userId, cancellationToken);
         var tenantDefaults = await LoadTenantDefaultsAsync(cancellationToken);
-        var resolved = ResolveDefaultLayout(tenantDefaults, roleLevel);
+        var user = await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        LayoutPayload? resolved = null;
+        if (!string.IsNullOrWhiteSpace(user?.CommandCenterLayoutJson))
+        {
+            resolved = await ResolveUserPackLayoutAsync(
+                user.CommandCenterLayoutJson,
+                roleLevel,
+                tenantDefaults,
+                cancellationToken);
+        }
+
+        resolved ??= ResolveDefaultLayout(tenantDefaults, roleLevel);
         if (resolved is null)
         {
             var template = await GetDefaultTemplatePayloadAsync(cancellationToken);
             resolved = template ?? new LayoutPayload(DefaultOrder, null, null, null);
         }
+
         return NormalizePayload(resolved);
     }
 
@@ -518,10 +533,111 @@ public class DashboardLayoutService : IDashboardLayoutService
         IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
         IReadOnlyList<string>? HiddenCards);
 
+    private sealed record UserLayoutSourcePayload(
+        IReadOnlyList<string>? CardOrder,
+        IReadOnlyDictionary<string, string>? Sizes,
+        IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
+        IReadOnlyList<string>? HiddenCards,
+        string? SourceKey,
+        string? SourceName,
+        string? SourceType,
+        Guid? SourceTemplateId,
+        int? SourceRoleLevel);
+
     private sealed record RoleDefaultLayout(
         int RoleLevel,
         IReadOnlyList<string> CardOrder,
         IReadOnlyDictionary<string, string>? Sizes,
         IReadOnlyDictionary<string, DashboardCardDimensions>? Dimensions,
         IReadOnlyList<string>? HiddenCards);
+
+    private async Task<LayoutPayload?> ResolveUserPackLayoutAsync(
+        string commandCenterLayoutJson,
+        int fallbackRoleLevel,
+        IReadOnlyList<RoleDefaultLayout> tenantDefaults,
+        CancellationToken cancellationToken)
+    {
+        UserLayoutSourcePayload? payload;
+        try
+        {
+            payload = JsonSerializer.Deserialize<UserLayoutSourcePayload>(commandCenterLayoutJson);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+
+        if (payload is null)
+        {
+            return null;
+        }
+
+        // If a custom pack is assigned, use its current template order as the baseline.
+        if (string.Equals(payload.SourceType, "custom", StringComparison.OrdinalIgnoreCase))
+        {
+            if (payload.SourceTemplateId.HasValue && payload.SourceTemplateId.Value != Guid.Empty)
+            {
+                var template = await _dbContext.DashboardTemplates
+                    .AsNoTracking()
+                    .Where(t => !t.IsDeleted && t.TenantId == _tenantProvider.TenantId && t.Id == payload.SourceTemplateId.Value)
+                    .Select(t => t.LayoutJson)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(template))
+                {
+                    try
+                    {
+                        var templatePayload = JsonSerializer.Deserialize<LayoutPayload>(template);
+                        if (templatePayload is not null)
+                        {
+                            return EnsureStrictPackPayload(templatePayload);
+                        }
+                    }
+                    catch (JsonException)
+                    {
+                        // fall through to embedded payload snapshot
+                    }
+                }
+            }
+
+            // Template might be deleted; use the embedded snapshot saved on the user as fallback.
+            if ((payload.CardOrder?.Count ?? 0) > 0)
+            {
+                return EnsureStrictPackPayload(new LayoutPayload(payload.CardOrder, payload.Sizes, payload.Dimensions, payload.HiddenCards));
+            }
+        }
+
+        if (string.Equals(payload.SourceType, "role-default", StringComparison.OrdinalIgnoreCase))
+        {
+            var level = payload.SourceRoleLevel.GetValueOrDefault(fallbackRoleLevel);
+            level = Math.Max(1, level);
+            return ResolveDefaultLayout(tenantDefaults, level);
+        }
+
+        return null;
+    }
+
+    private static LayoutPayload EnsureStrictPackPayload(LayoutPayload payload)
+    {
+        if (payload.CardOrder is null || payload.CardOrder.Count == 0)
+        {
+            return payload;
+        }
+
+        if (payload.HiddenCards is { Count: > 0 })
+        {
+            return payload;
+        }
+
+        var visible = new HashSet<string>(
+            payload.CardOrder.Where(AllowedIds.Contains),
+            StringComparer.OrdinalIgnoreCase);
+        var inferredHidden = AllowedIds
+            .Where(id => !visible.Contains(id))
+            .ToList();
+
+        return inferredHidden.Count == 0
+            ? payload
+            : payload with { HiddenCards = inferredHidden };
+    }
 }

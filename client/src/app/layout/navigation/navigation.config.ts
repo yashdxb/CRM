@@ -3,6 +3,7 @@ import { NavLink } from './navigation.model';
 
 export const NAV_LINKS: NavLink[] = [
   { label: 'Dashboard', icon: 'pi-chart-bar', path: '/app/dashboard', permission: PERMISSION_KEYS.dashboardView },
+  { label: 'Decision Inbox', icon: 'pi-inbox', path: '/app/decisions', permission: PERMISSION_KEYS.opportunitiesView },
   { 
     label: 'Customers', 
     icon: 'pi-building', 
@@ -32,8 +33,7 @@ export const NAV_LINKS: NavLink[] = [
     permission: PERMISSION_KEYS.opportunitiesView,
     children: [
       { label: 'All Opportunities', icon: 'pi-list', path: '/app/opportunities', permission: PERMISSION_KEYS.opportunitiesView },
-      { label: 'Add Opportunity', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage },
-      { label: 'Approvals', icon: 'pi-check-circle', path: '/app/opportunities/approvals', permission: PERMISSION_KEYS.opportunitiesApprovalsApprove }
+      { label: 'Add Opportunity', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage }
     ]
   },
   { 
@@ -167,8 +167,40 @@ export const NAV_LINKS: NavLink[] = [
       {
         label: 'People & Access',
         icon: 'pi-users',
-        path: '/app/settings',
-        permission: PERMISSION_KEYS.administrationView
+        path: '/app/settings/users',
+        permission: PERMISSION_KEYS.administrationView,
+        children: [
+          {
+            label: 'Users',
+            icon: 'pi-users',
+            path: '/app/settings/users',
+            permission: PERMISSION_KEYS.administrationView
+          },
+          {
+            label: 'Roles',
+            icon: 'pi-shield',
+            path: '/app/settings/roles',
+            permission: PERMISSION_KEYS.administrationView
+          },
+          {
+            label: 'Permision',
+            icon: 'pi-lock',
+            path: '/app/settings/permissions',
+            permission: PERMISSION_KEYS.administrationView
+          },
+          {
+            label: 'Security Level',
+            icon: 'pi-shield',
+            path: '/app/settings/security-levels',
+            permission: PERMISSION_KEYS.administrationManage
+          },
+          {
+            label: 'Dashboard Packs',
+            icon: 'pi-th-large',
+            path: '/app/settings/dashboard-packs',
+            permission: PERMISSION_KEYS.administrationView
+          }
+        ]
       },
       {
         label: 'Workspace & Org',

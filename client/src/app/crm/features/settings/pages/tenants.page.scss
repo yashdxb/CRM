@@ -131,25 +131,6 @@
   }
 }
 
-.hero-title {
-  font-size: $font-size-4xl;
-  font-weight: 800;
-  margin: 0 0 $space-2;
-  letter-spacing: -0.5px;
-  
-  .title-gradient {
-    background: $primary-gradient;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  .title-light {
-    color: $gray-600;
-    margin-left: $space-2;
-  }
-}
-
 .hero-subtitle {
   font-size: $font-size-base;
   color: $gray-500;

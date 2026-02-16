@@ -138,42 +138,6 @@
   50% { opacity: 0.6; transform: scale(0.9); }
 }
 
-.hero-title {
-  @include form.form-header-title;
-  
-  h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1.2;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-
-    @media (max-width: 768px) {
-      font-size: 1.5rem;
-    }
-  }
-}
-
-.title-gradient {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: gradient-shift 4s ease-in-out infinite;
-}
-
-@keyframes gradient-shift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-.title-light {
-  -webkit-text-fill-color: #374151;
-  color: #374151;
-}
 
 .hero-description {
   font-size: 1rem;
@@ -1152,10 +1116,6 @@
   .hero-section {
     padding: 1.35rem;
     gap: 1.25rem;
-  }
-
-  .hero-title h1 {
-    font-size: 1.5rem;
   }
 
   .hero-stats {

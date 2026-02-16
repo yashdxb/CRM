@@ -527,6 +527,10 @@ export class RoleFormPage {
     return permissions.length;
   }
 
+  protected currentRoleId() {
+    return this.roleId;
+  }
+
   protected parentRoleOptions() {
     const currentId = this.roleId;
     return this.roles()

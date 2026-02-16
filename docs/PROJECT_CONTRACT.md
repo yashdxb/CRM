@@ -69,10 +69,17 @@ This document defines the binding technical, UX, and delivery rules for the curr
 
 ## UI/UX Standards (Current)
 - Global styles are authoritative: `client/src/styles` and `client/src/app/shared`.
+- **Style change control (mandatory):** never change visual styles unless explicitly asked by the user in the current request.
 - Pages must use the animated orb background and shared layout containers.
 - Premium glass/gradient styling is required; do not create one-off themes.
 - Button styles must use the global CRM button classes.
 - List pages and form pages follow the Component Style Guide templates.
+
+### Dashboard Pack Behavior (Mandatory)
+- Dashboard Customize Layout must be driven by API source data (no local/fallback pack source logic).
+- The active pack name shown in Customize Command Center must come from API response data.
+- If a user has not customized layout (untouched state), dashboard cards and display order must load from that user's assigned dashboard pack content.
+- Role-level fallback should apply only when no explicit user pack assignment exists.
 
 ### Global Style Files (Source of Truth)
 - `client/src/styles.scss`
@@ -125,6 +132,18 @@ This document defines the binding technical, UX, and delivery rules for the curr
 
 ## Testing Expectations
 - Use `docs/TEST_PLAN.md` for roadmap validation and E2E coverage.
+
+## Delivery Workflow Rules (From Ongoing Execution)
+- Run Playwright UI validation after each substantial UI modification or implementation.
+- Playwright automation must run against local development only unless explicitly approved; do not run UI automation against Azure dev by default.
+- If a required local port is occupied (for example API `5014`), free or coordinate the port before test execution, then verify service health.
+- For UI/data defects, prefer API-level verification first, then confirm behavior in Playwright.
+
+## Data and UX Behavior Rules (From Ongoing Execution)
+- UI selectors/dropdowns must be sourced from API contracts; do not rely on local fallback datasets for production behavior.
+- Sample data must be realistic human-entered names (no synthetic numeric suffix patterns in first/last/company names).
+- Dashboard pack and command center customization context must remain user-pack aware and API-driven.
+- When a user asks a direct question, answer it clearly first before implementation details.
 
 ## Supporting Docs (Merged by Reference)
 - Style Guides:

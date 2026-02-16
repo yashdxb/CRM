@@ -129,6 +129,16 @@ $font-size-5xl: 2.5rem;     // 40px - header
 
 // Card title - consistent across all pages
 $font-size-card-title: $font-size-lg;  // 18px - standard card title
+$font-size-card-title-mobile: $font-size-base; // 16px
+
+// Field labels - consistent across all forms/pages
+$font-size-field-label: $font-size-xs; // 13px
+$font-size-field-label-mobile: 0.75rem; // 12px
+$font-weight-field-label: 600;
+$color-field-label: #475569;
+$color-field-label-muted: #94a3b8;
+$color-field-label-error: #b42318;
+$color-field-label-required: #e11d48;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Z-INDEX

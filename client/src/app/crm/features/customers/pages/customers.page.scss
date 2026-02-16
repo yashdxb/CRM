@@ -203,11 +203,6 @@
 }
 
 // Hero title uses global .hero-title from _components.scss
-// Page-specific: animated gradient shift for title
-.hero-title .title-gradient {
-  background-size: 200% auto;
-  animation: gradient-shift 4s ease-in-out infinite;
-}
 
 .hero-stats {
   display: flex;
@@ -1520,10 +1515,6 @@
     background: rgba(30, 30, 50, 0.8);
     border-color: rgba(255, 255, 255, 0.1);
     color: $primary-light;
-  }
-
-  .hero-title .title-light {
-    color: rgba(255, 255, 255, 0.9);
   }
 
   .hero-description {
