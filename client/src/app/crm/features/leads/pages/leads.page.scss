@@ -1509,14 +1509,25 @@ $status-lost: #ef4444;
 }
 
 .row-actions .action-btn.coach {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.26) 0%, rgba(99, 102, 241, 0.24) 100%);
+  // Keep the button surface consistent; color only the icon.
+  background: rgba(255, 255, 255, 0.72);
   border-color: rgba(99, 102, 241, 0.28);
-  color: #0f172a;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
 }
 
 .row-actions .action-btn.coach:hover {
-  background: linear-gradient(135deg, rgba(34, 211, 238, 0.34) 0%, rgba(99, 102, 241, 0.30) 100%);
+  // Slightly brighter surface on hover; no filled square.
+  background: rgba(255, 255, 255, 0.92);
   border-color: rgba(99, 102, 241, 0.35);
+}
+
+.row-actions .action-btn.coach .p-button-icon {
+  // PrimeIcons are font glyphs; gradients work via background-clip.
+  background: linear-gradient(135deg, #22d3ee 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
 @media (max-width: 520px) {
