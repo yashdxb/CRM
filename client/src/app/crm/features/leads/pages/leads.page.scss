@@ -1067,25 +1067,25 @@ $status-lost: #ef4444;
   border: 1px solid rgba(99, 102, 241, 0.25);
 }
 
-// Drawer (PrimeNG overlay is appended to body, so use ::ng-deep)
-:host ::ng-deep .lead-coach-drawer {
+// Drawer is rendered in an overlay appended to <body>, so selectors must be truly global.
+::ng-deep .lead-coach-drawer {
   width: min(440px, 92vw);
 }
 
 // PrimeNG may apply `styleClass` to the drawer root, not a wrapper.
-:host ::ng-deep .lead-coach-drawer.p-drawer,
-:host ::ng-deep .lead-coach-drawer .p-drawer {
+::ng-deep .lead-coach-drawer.p-drawer,
+::ng-deep .lead-coach-drawer .p-drawer {
   background: $glass-bg;
   backdrop-filter: blur($glass-blur);
   border-left: 1px solid rgba(148, 163, 184, 0.28);
   box-shadow: $glass-shadow-lg;
 }
 
-:host ::ng-deep .p-drawer-mask {
+::ng-deep .p-drawer-mask {
   background: rgba(2, 6, 23, 0.34);
 }
 
-:host ::ng-deep .lead-coach-drawer .p-drawer-header {
+::ng-deep .lead-coach-drawer .p-drawer-header {
   padding: 14px 16px;
   background:
     radial-gradient(800px 220px at 15% 0%, rgba(34, 211, 238, 0.22) 0%, transparent 60%),
@@ -1094,7 +1094,7 @@ $status-lost: #ef4444;
   border-bottom: 1px solid rgba(148, 163, 184, 0.22);
 }
 
-:host ::ng-deep .lead-coach-drawer .p-drawer-content {
+::ng-deep .lead-coach-drawer .p-drawer-content {
   padding: 14px 16px 14px;
   background:
     radial-gradient(900px 380px at 20% 0%, rgba(34, 211, 238, 0.10) 0%, transparent 55%),
@@ -1102,7 +1102,7 @@ $status-lost: #ef4444;
     linear-gradient(180deg, rgba(248, 250, 252, 0.55) 0%, rgba(241, 245, 249, 0.25) 100%);
 }
 
-:host ::ng-deep .lead-coach-drawer .p-drawer-close-button {
+::ng-deep .lead-coach-drawer .p-drawer-close-button {
   width: 38px;
   height: 38px;
   border-radius: 12px;
@@ -1111,13 +1111,13 @@ $status-lost: #ef4444;
   transition: transform $transition-fast, box-shadow $transition-fast, background $transition-fast;
 }
 
-:host ::ng-deep .lead-coach-drawer .p-drawer-close-button:hover {
+::ng-deep .lead-coach-drawer .p-drawer-close-button:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
-:host ::ng-deep .lead-coach-drawer {
+::ng-deep .lead-coach-drawer {
   // NOTE: Angular removes template whitespace by default. When the drawer renders outside
   // the component tree (overlay appended to body), scoped styles can miss. Keep all coach
   // UI styles under the drawer class to ensure they always apply.
