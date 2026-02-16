@@ -5,6 +5,7 @@ using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
+using CRM.Enterprise.Infrastructure.Customers;
 using CRM.Enterprise.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -966,18 +967,34 @@ public sealed class LeadService : ILeadService
                 ? (string.IsNullOrWhiteSpace(lead.CompanyName) ? $"{lead.FirstName} {lead.LastName}".Trim() : lead.CompanyName)
                 : request.AccountName;
 
-            var account = new Account
-            {
-                Name = accountName ?? $"{lead.FirstName} {lead.LastName}".Trim(),
-                Phone = lead.Phone,
-                LifecycleStage = "Customer",
-                OwnerId = ownerId,
-                Territory = lead.Territory,
-                CreatedAtUtc = now
-            };
+            var match = await AccountMatching.FindBestMatchAsync(
+                _dbContext,
+                accountName,
+                accountNumber: null,
+                website: null,
+                lead.Phone,
+                excludeAccountId: null,
+                cancellationToken);
 
-            _dbContext.Accounts.Add(account);
-            accountId = account.Id;
+            if (match is not null)
+            {
+                accountId = match.Id;
+            }
+            else
+            {
+                var account = new Account
+                {
+                    Name = accountName ?? $"{lead.FirstName} {lead.LastName}".Trim(),
+                    Phone = lead.Phone,
+                    LifecycleStage = "Customer",
+                    OwnerId = ownerId,
+                    Territory = lead.Territory,
+                    CreatedAtUtc = now
+                };
+
+                _dbContext.Accounts.Add(account);
+                accountId = account.Id;
+            }
         }
 
         Guid? contactId = lead.ContactId;

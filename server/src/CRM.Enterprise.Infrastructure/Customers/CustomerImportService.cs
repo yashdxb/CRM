@@ -52,14 +52,33 @@ public sealed class CustomerImportService : ICustomerImportService
 
             var ownerEmail = CustomerCsvImportHelper.ReadValue(row, "owner", "owneremail", "owner_email");
             var ownerId = await ResolveOwnerIdFromEmailAsync(ownerEmail, actor, cancellationToken);
+            var accountNumber = CustomerCsvImportHelper.ReadValue(row, "accountnumber", "account_number");
+            var website = CustomerCsvImportHelper.ReadValue(row, "website");
+            var phone = CustomerCsvImportHelper.ReadValue(row, "phone");
+
+            var duplicateMatch = await AccountMatching.FindBestMatchAsync(
+                _dbContext,
+                name,
+                accountNumber,
+                website,
+                phone,
+                excludeAccountId: null,
+                cancellationToken);
+            if (duplicateMatch is not null)
+            {
+                errors.Add(new CustomerImportError(
+                    i + 2,
+                    $"Duplicate customer detected. Existing account: {duplicateMatch.Name} [{duplicateMatch.Id}]."));
+                continue;
+            }
 
             var account = new Account
             {
                 Name = name,
-                AccountNumber = CustomerCsvImportHelper.ReadValue(row, "accountnumber", "account_number"),
+                AccountNumber = accountNumber,
                 Industry = CustomerCsvImportHelper.ReadValue(row, "industry"),
-                Website = CustomerCsvImportHelper.ReadValue(row, "website"),
-                Phone = CustomerCsvImportHelper.ReadValue(row, "phone"),
+                Website = website,
+                Phone = phone,
                 LifecycleStage = CustomerCsvImportHelper.ReadValue(row, "lifecycle", "lifecyclestage", "status"),
                 OwnerId = ownerId,
                 Territory = CustomerCsvImportHelper.ReadValue(row, "territory"),

@@ -128,6 +128,20 @@ public sealed class CustomerService : ICustomerService
             return CustomerOperationResult<CustomerListItemDto>.Fail("Owner is required for accounts.");
         }
 
+        var duplicateMatch = await AccountMatching.FindBestMatchAsync(
+            _dbContext,
+            request.Name,
+            request.AccountNumber,
+            request.Website,
+            request.Phone,
+            excludeAccountId: null,
+            cancellationToken);
+        if (duplicateMatch is not null)
+        {
+            return CustomerOperationResult<CustomerListItemDto>.Fail(
+                $"Duplicate customer detected. Existing account: {duplicateMatch.Name} [{duplicateMatch.Id}].");
+        }
+
         if (request.ParentAccountId.HasValue && request.ParentAccountId.Value != Guid.Empty)
         {
             var parentError = await ValidateParentAccountAsync(null, request.ParentAccountId.Value, cancellationToken);
@@ -190,6 +204,20 @@ public sealed class CustomerService : ICustomerService
         if (!await OwnerExistsAsync(ownerId, cancellationToken))
         {
             return CustomerOperationResult<bool>.Fail("Owner is required for accounts.");
+        }
+
+        var duplicateMatch = await AccountMatching.FindBestMatchAsync(
+            _dbContext,
+            request.Name,
+            request.AccountNumber,
+            request.Website,
+            request.Phone,
+            excludeAccountId: id,
+            cancellationToken);
+        if (duplicateMatch is not null)
+        {
+            return CustomerOperationResult<bool>.Fail(
+                $"Duplicate customer detected. Existing account: {duplicateMatch.Name} [{duplicateMatch.Id}].");
         }
 
         if (request.ParentAccountId.HasValue && request.ParentAccountId.Value != Guid.Empty)
