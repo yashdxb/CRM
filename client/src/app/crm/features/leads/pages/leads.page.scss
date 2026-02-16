@@ -1772,48 +1772,85 @@ $status-lost: #ef4444;
   }
 
   &.edit {
-    background: $cyan-gradient;
-    border-color: rgba(6, 182, 212, 0.35);
-    color: #05242b;
+    // Icon-only color (no filled square)
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(34, 211, 238, 0.28);
+    color: #0f172a;
   }
 
   &.edit:hover {
-    background: linear-gradient(135deg, #19e1f0 0%, #04a3bf 100%);
-    border-color: rgba(6, 182, 212, 0.5);
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(34, 211, 238, 0.42);
   }
 
   &.info {
-    background: $primary-gradient;
-    border-color: rgba(102, 126, 234, 0.35);
-    color: rgba(255, 255, 255, 0.96);
+    // Icon-only color (no filled square)
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(102, 126, 234, 0.26);
+    color: #0f172a;
   }
 
   &.info:hover {
-    background: linear-gradient(135deg, #7486ef 0%, #6a43b0 100%);
-    border-color: rgba(118, 75, 162, 0.5);
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(102, 126, 234, 0.40);
   }
 
   &.success {
-    background: $success-gradient;
-    border-color: rgba(34, 197, 94, 0.35);
-    color: #052413;
+    // Icon-only color (no filled square)
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(34, 197, 94, 0.26);
+    color: #0f172a;
   }
 
   &.success:hover {
-    background: linear-gradient(135deg, #5bf08f 0%, #18a34a 100%);
-    border-color: rgba(34, 197, 94, 0.5);
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(34, 197, 94, 0.40);
   }
 
   &.danger {
-    background: linear-gradient(135deg, #fb7185 0%, #ef4444 100%);
-    border-color: rgba(239, 68, 68, 0.35);
-    color: rgba(255, 255, 255, 0.96);
+    // Icon-only color (no filled square)
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(239, 68, 68, 0.26);
+    color: #0f172a;
   }
 
   &.danger:hover {
-    background: linear-gradient(135deg, #ff8798 0%, #dc2626 100%);
-    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(239, 68, 68, 0.40);
   }
+}
+
+// Color the action icons only (not the button surface).
+.row-actions .action-btn.edit .p-button-icon {
+  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.row-actions .action-btn.info .p-button-icon {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.row-actions .action-btn.success .p-button-icon {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.row-actions .action-btn.danger .p-button-icon {
+  background: linear-gradient(135deg, #fb7185 0%, #ef4444 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
 .toast-notification {
