@@ -849,14 +849,21 @@ export class DashboardPage implements OnInit {
   protected openLayoutDialog(): void {
     const defaultOrder = this.getLayoutDefaultOrder();
     // Ensure the dialog cannot show cards outside the current role pack.
-    this.layoutOrder = this.applyRoleDefault(this.layoutOrder, defaultOrder);
+    this.layoutOrder = this.applyRoleDefault(
+      this.normalizeLayout(this.layoutOrder, defaultOrder),
+      defaultOrder
+    );
     this.layoutDraft = this.getOrderedCards(this.layoutOrder);
     this.layoutDialogOpen = true;
   }
 
   protected getSelectableCards() {
-    const allowed = new Set(this.getLayoutDefaultOrder());
-    return this.cardCatalog.filter(card => allowed.has(card.id));
+    const allowedOrder = this.getLayoutDefaultOrder();
+    const byId = new Map(this.cardCatalog.map(card => [card.id, card]));
+
+    return allowedOrder
+      .map(id => byId.get(id))
+      .filter((card): card is { id: string; label: string; icon: string } => !!card);
   }
 
   protected isCardVisible(cardId: string): boolean {
@@ -867,7 +874,7 @@ export class DashboardPage implements OnInit {
     // Keep the layout list as the single source of truth for which cards are displayed.
     const defaultOrder = this.getLayoutDefaultOrder();
     const nextOrder = visible
-      ? this.normalizeLayout([...this.layoutOrder, cardId], defaultOrder)
+      ? this.insertCardByPrimaryOrder(this.layoutOrder, cardId, defaultOrder)
       : this.layoutOrder.filter(id => id !== cardId);
 
     this.layoutOrder = nextOrder;
@@ -1936,6 +1943,32 @@ export class DashboardPage implements OnInit {
   private parseUtcDate(value: string): Date {
     // Ensure UTC interpretation when the API omits a timezone offset.
     return /Z|[+-]\d{2}:?\d{2}$/.test(value) ? new Date(value) : new Date(`${value}Z`);
+  }
+
+  private insertCardByPrimaryOrder(currentOrder: string[], cardId: string, primaryOrder: string[]): string[] {
+    if (currentOrder.includes(cardId)) {
+      return [...currentOrder];
+    }
+
+    const indexById = new Map(primaryOrder.map((id, index) => [id, index]));
+    const targetIndex = indexById.get(cardId);
+    if (targetIndex === undefined) {
+      return [...currentOrder, cardId];
+    }
+
+    const next = [...currentOrder];
+    const insertAt = next.findIndex((id) => {
+      const idx = indexById.get(id);
+      return idx !== undefined && idx > targetIndex;
+    });
+
+    if (insertAt === -1) {
+      next.push(cardId);
+      return next;
+    }
+
+    next.splice(insertAt, 0, cardId);
+    return next;
   }
 
 

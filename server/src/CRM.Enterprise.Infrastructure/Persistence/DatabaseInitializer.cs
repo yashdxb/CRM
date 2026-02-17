@@ -1886,9 +1886,11 @@ public class DatabaseInitializer : IDatabaseInitializer
         {
             new LeadStatus { Name = "New", Order = 1, IsDefault = true, IsClosed = false, CreatedAtUtc = now },
             new LeadStatus { Name = "Contacted", Order = 2, IsClosed = false, CreatedAtUtc = now },
-            new LeadStatus { Name = "Qualified", Order = 3, IsClosed = false, CreatedAtUtc = now },
-            new LeadStatus { Name = "Converted", Order = 4, IsClosed = true, CreatedAtUtc = now },
-            new LeadStatus { Name = "Lost", Order = 5, IsClosed = true, CreatedAtUtc = now }
+            new LeadStatus { Name = "Nurture", Order = 3, IsClosed = false, CreatedAtUtc = now },
+            new LeadStatus { Name = "Qualified", Order = 4, IsClosed = false, CreatedAtUtc = now },
+            new LeadStatus { Name = "Converted", Order = 5, IsClosed = true, CreatedAtUtc = now },
+            new LeadStatus { Name = "Lost", Order = 6, IsClosed = true, CreatedAtUtc = now },
+            new LeadStatus { Name = "Disqualified", Order = 7, IsClosed = true, CreatedAtUtc = now }
         };
 
         foreach (var status in statuses)

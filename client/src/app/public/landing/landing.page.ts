@@ -1,36 +1,18 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { CardModule } from 'primeng/card';
-import { DividerModule } from 'primeng/divider';
-import { AvatarModule } from 'primeng/avatar';
-import { TagModule } from 'primeng/tag';
-import { ProgressBarModule } from 'primeng/progressbar';
-import { SkeletonModule } from 'primeng/skeleton';
-import { TooltipModule } from 'primeng/tooltip';
 
 import { CrmLandingService } from './services/crm-landing.service';
 import { CrmLandingVm } from './models/crm-landing.models';
-import { BreadcrumbsComponent } from '../../core/breadcrumbs';
 
 @Component({
   selector: 'app-landing-page',
   standalone: true,
   imports: [
     CommonModule,
-    ReactiveFormsModule,
-    ButtonModule,
-    CardModule,
-    DividerModule,
-    AvatarModule,
-    TagModule,
-    ProgressBarModule,
-    SkeletonModule,
-    TooltipModule,
-    BreadcrumbsComponent,
-],
+    ButtonModule
+  ],
   templateUrl: './landing.page.html',
   styleUrls: ['./landing.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

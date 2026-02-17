@@ -15,7 +15,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { forkJoin, of, Subscription, timer } from 'rxjs';
 import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 
-import { Lead, LeadStatus } from '../models/lead.model';
+import { LEAD_STATUSES, Lead, LeadStatus } from '../models/lead.model';
 import { LeadDataService } from '../services/lead-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { BulkAction, BulkActionsBarComponent } from '../../../../shared/components/bulk-actions/bulk-actions-bar.component';
@@ -82,15 +82,14 @@ export class LeadsPage {
   
   protected readonly statusOptions: StatusOption[] = [
     { label: 'All', value: 'all', icon: 'pi-inbox' },
-    { label: 'New', value: 'New', icon: 'pi-star' },
-    { label: 'Contacted', value: 'Contacted', icon: 'pi-comments' },
-    { label: 'Nurture', value: 'Nurture', icon: 'pi-clock' },
-    { label: 'Qualified', value: 'Qualified', icon: 'pi-check' },
-    { label: 'Converted', value: 'Converted', icon: 'pi-verified' },
-    { label: 'Lost', value: 'Lost', icon: 'pi-times' },
-    { label: 'Disqualified', value: 'Disqualified', icon: 'pi-ban' }
+    ...LEAD_STATUSES.map((status) => ({
+      label: status,
+      value: status,
+      icon: this.statusIcon(status)
+    }))
   ];
   protected readonly filteredStatusOptions = this.statusOptions.filter((o) => o.value !== 'all');
+  protected readonly kanbanStatuses = LEAD_STATUSES;
 
   protected readonly leads = signal<Lead[]>([]);
   protected readonly total = signal(0);
@@ -178,6 +177,27 @@ export class LeadsPage {
   protected readonly importStatus = signal<CsvImportJobStatusResponse | null>(null);
   protected readonly importError = signal<string | null>(null);
   protected readonly importing = signal(false);
+
+  private statusIcon(status: LeadStatus): string {
+    switch (status) {
+      case 'New':
+        return 'pi-star';
+      case 'Contacted':
+        return 'pi-comments';
+      case 'Nurture':
+        return 'pi-clock';
+      case 'Qualified':
+        return 'pi-check';
+      case 'Converted':
+        return 'pi-verified';
+      case 'Lost':
+        return 'pi-times';
+      case 'Disqualified':
+        return 'pi-ban';
+      default:
+        return 'pi-circle';
+    }
+  }
   private importPoll?: Subscription;
 
   constructor(

@@ -221,6 +221,18 @@
   font-size: 0.74rem;
 }
 
+.col-suggested {
+  min-width: 300px;
+  color: #334155;
+}
+
+.suggested-usage {
+  display: block;
+  white-space: normal;
+  line-height: 1.35;
+  color: #334155;
+}
+
 .order-badge {
   display: inline-flex;
   align-items: center;
@@ -358,6 +370,6 @@
   }
 
   .kpi-table {
-    min-width: 760px;
+    min-width: 1080px;
   }
 }

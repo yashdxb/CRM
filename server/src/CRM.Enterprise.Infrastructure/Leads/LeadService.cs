@@ -71,7 +71,12 @@ public sealed class LeadService : ILeadService
 
         if (!string.IsNullOrWhiteSpace(request.Status))
         {
-            query = query.Where(l => l.Status != null && l.Status.Name == request.Status);
+            if (!LeadLifecycle.TryNormalize(request.Status, out var normalizedStatus))
+            {
+                return new LeadSearchResultDto([], 0);
+            }
+
+            query = query.Where(l => l.Status != null && l.Status.Name == normalizedStatus);
         }
 
         var total = await query.CountAsync(cancellationToken);
@@ -596,14 +601,25 @@ public sealed class LeadService : ILeadService
                 $"Duplicate lead detected. Existing lead: {duplicate.FirstName} {duplicate.LastName} ({duplicate.CompanyName ?? "No company"}) [{duplicate.Id}].");
         }
         var assignment = await ResolveOwnerAssignmentAsync(request.OwnerId, request.Territory, request.AssignmentStrategy, cancellationToken);
-        var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
+        if (!TryNormalizeStatusOrDefault(request.Status, out var normalizedCreateStatus, out var normalizeCreateError))
+        {
+            return LeadOperationResult<LeadListItemDto>.Fail(normalizeCreateError!);
+        }
+
+        var status = await ResolveLeadStatusAsync(normalizedCreateStatus, cancellationToken);
         var ownerExists = await _dbContext.Users.AnyAsync(u => u.Id == assignment.OwnerId && u.IsActive && !u.IsDeleted, cancellationToken);
         if (!ownerExists)
         {
             return LeadOperationResult<LeadListItemDto>.Fail("Unable to assign an active owner for this lead. Please select a valid owner.");
         }
 
-        var statusNameForValidation = await ResolveLeadStatusNameAsync(status.Id, cancellationToken) ?? "New";
+        var statusNameForValidation = await ResolveLeadStatusNameAsync(status.Id, cancellationToken) ?? LeadLifecycle.New;
+        var transitionError = ValidateLifecycleTransition(LeadLifecycle.New, statusNameForValidation);
+        if (transitionError is not null)
+        {
+            return LeadOperationResult<LeadListItemDto>.Fail(transitionError);
+        }
+
         var activityDrivenCreateError = ValidateActivityDrivenStatusTransition("New", statusNameForValidation, null);
         if (activityDrivenCreateError is not null)
         {
@@ -798,7 +814,12 @@ public sealed class LeadService : ILeadService
         lead.PhoneTypeId = request.PhoneTypeId;
         lead.CompanyName = request.CompanyName;
         lead.JobTitle = request.JobTitle;
-        var status = await ResolveLeadStatusAsync(request.Status, cancellationToken);
+        if (!TryNormalizeStatusOrDefault(request.Status, out var normalizedUpdateStatus, out var normalizeUpdateError))
+        {
+            return LeadOperationResult<bool>.Fail(normalizeUpdateError!);
+        }
+
+        var status = await ResolveLeadStatusAsync(normalizedUpdateStatus, cancellationToken);
         lead.LeadStatusId = status.Id;
         lead.Status = status;
         var previousStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
@@ -844,6 +865,12 @@ public sealed class LeadService : ILeadService
         var statusChanged = lead.LeadStatusId != previousStatusId;
         if (statusChanged)
         {
+            var lifecycleError = ValidateLifecycleTransition(previousStatusName, resolvedStatusName);
+            if (lifecycleError is not null)
+            {
+                return LeadOperationResult<bool>.Fail(lifecycleError);
+            }
+
             var activityDrivenError = ValidateActivityDrivenStatusTransition(previousStatusName, resolvedStatusName, lead.FirstTouchedAtUtc);
             if (activityDrivenError is not null)
             {
@@ -1394,7 +1421,12 @@ public sealed class LeadService : ILeadService
 
     public async Task<LeadOperationResult<bool>> UpdateStatusAsync(Guid id, string statusName, LeadActor actor, CancellationToken cancellationToken = default)
     {
-        if (RequiresOutcome(statusName))
+        if (!TryNormalizeStatusOrDefault(statusName, out var normalizedStatusName, out var normalizedStatusError))
+        {
+            return LeadOperationResult<bool>.Fail(normalizedStatusError!);
+        }
+
+        if (RequiresOutcome(normalizedStatusName))
         {
             return LeadOperationResult<bool>.Fail("Status requires outcome details. Update the lead from the full edit form.");
         }
@@ -1407,7 +1439,7 @@ public sealed class LeadService : ILeadService
 
         var previousStatusId = lead.LeadStatusId;
         var previousStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
-        var status = await ResolveLeadStatusAsync(statusName, cancellationToken);
+        var status = await ResolveLeadStatusAsync(normalizedStatusName, cancellationToken);
         lead.LeadStatusId = status.Id;
         lead.Status = status;
         var resolvedStatusName = await ResolveLeadStatusNameAsync(lead.LeadStatusId, cancellationToken);
@@ -1416,6 +1448,12 @@ public sealed class LeadService : ILeadService
         var statusChanged = lead.LeadStatusId != previousStatusId;
         if (statusChanged)
         {
+            var lifecycleError = ValidateLifecycleTransition(previousStatusName, resolvedStatusName);
+            if (lifecycleError is not null)
+            {
+                return LeadOperationResult<bool>.Fail(lifecycleError);
+            }
+
             var activityDrivenError = ValidateActivityDrivenStatusTransition(previousStatusName, resolvedStatusName, lead.FirstTouchedAtUtc);
             if (activityDrivenError is not null)
             {
@@ -1485,21 +1523,41 @@ public sealed class LeadService : ILeadService
 
     public async Task<LeadOperationResult<int>> BulkUpdateStatusAsync(IReadOnlyCollection<Guid> ids, string statusName, CancellationToken cancellationToken = default)
     {
-        if (RequiresOutcome(statusName))
+        if (!TryNormalizeStatusOrDefault(statusName, out var normalizedBulkStatusName, out var normalizedBulkStatusError))
+        {
+            return LeadOperationResult<int>.Fail(normalizedBulkStatusError!);
+        }
+
+        if (RequiresOutcome(normalizedBulkStatusName))
         {
             return LeadOperationResult<int>.Fail("Bulk status updates are not allowed for statuses that require outcome details. Update leads individually.");
         }
-        if (string.Equals(statusName, "Contacted", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(normalizedBulkStatusName, LeadLifecycle.Contacted, StringComparison.OrdinalIgnoreCase))
         {
             return LeadOperationResult<int>.Fail("Bulk status updates to Contacted are activity-driven. Log a completed activity instead.");
         }
+        if (string.Equals(normalizedBulkStatusName, LeadLifecycle.Converted, StringComparison.OrdinalIgnoreCase))
+        {
+            return LeadOperationResult<int>.Fail("Bulk status updates to Converted are not allowed. Use lead conversion.");
+        }
 
         var leads = await _dbContext.Leads
+            .Include(l => l.Status)
             .Where(l => ids.Contains(l.Id) && !l.IsDeleted)
             .ToListAsync(cancellationToken);
 
-        var status = await ResolveLeadStatusAsync(statusName, cancellationToken);
+        var status = await ResolveLeadStatusAsync(normalizedBulkStatusName, cancellationToken);
         var resolvedStatusName = await ResolveLeadStatusNameAsync(status.Id, cancellationToken);
+
+        foreach (var lead in leads)
+        {
+            var previousName = lead.Status?.Name;
+            var lifecycleError = ValidateLifecycleTransition(previousName, resolvedStatusName);
+            if (lifecycleError is not null)
+            {
+                return LeadOperationResult<int>.Fail($"{lifecycleError} Lead: {lead.Id}");
+            }
+        }
 
         foreach (var lead in leads)
         {
@@ -1700,30 +1758,8 @@ public sealed class LeadService : ILeadService
 
     private async Task<LeadStatus> ResolveLeadStatusAsync(string? statusName, CancellationToken cancellationToken)
     {
-        var name = string.IsNullOrWhiteSpace(statusName) ? "New" : statusName;
-        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == name, cancellationToken);
-        if (status is not null)
-        {
-            return status;
-        }
-
-        if (!string.IsNullOrWhiteSpace(statusName))
-        {
-            var maxOrder = await _dbContext.LeadStatuses.MaxAsync(s => (int?)s.Order, cancellationToken) ?? 0;
-            status = new LeadStatus
-            {
-                Name = name,
-                Order = maxOrder + 1,
-                IsDefault = false,
-                IsClosed = string.Equals(name, "Lost", StringComparison.OrdinalIgnoreCase)
-                           || string.Equals(name, "Disqualified", StringComparison.OrdinalIgnoreCase)
-                           || string.Equals(name, "Converted", StringComparison.OrdinalIgnoreCase)
-            };
-            _dbContext.LeadStatuses.Add(status);
-            return status;
-        }
-
-        status = await _dbContext.LeadStatuses.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
+        var normalized = LeadLifecycle.NormalizeOrDefault(statusName);
+        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == normalized, cancellationToken);
         if (status is not null)
         {
             return status;
@@ -1731,10 +1767,11 @@ public sealed class LeadService : ILeadService
 
         status = new LeadStatus
         {
-            Name = "New",
-            Order = 1,
-            IsDefault = true,
-            IsClosed = false
+            Name = normalized,
+            Order = LeadLifecycle.GetOrder(normalized),
+            IsDefault = string.Equals(normalized, LeadLifecycle.New, StringComparison.OrdinalIgnoreCase),
+            IsClosed = LeadLifecycle.IsClosed(normalized),
+            CreatedAtUtc = DateTime.UtcNow
         };
         _dbContext.LeadStatuses.Add(status);
         return status;
@@ -1975,6 +2012,46 @@ public sealed class LeadService : ILeadService
         }
 
         return null;
+    }
+
+    private static bool TryNormalizeStatusOrDefault(string? statusName, out string normalizedStatus, out string? error)
+    {
+        if (string.IsNullOrWhiteSpace(statusName))
+        {
+            normalizedStatus = LeadLifecycle.New;
+            error = null;
+            return true;
+        }
+
+        if (LeadLifecycle.TryNormalize(statusName, out normalizedStatus))
+        {
+            error = null;
+            return true;
+        }
+
+        error = $"Invalid lead status '{statusName}'. Allowed values: {string.Join(", ", LeadLifecycle.OrderedStatuses)}.";
+        return false;
+    }
+
+    private static string? ValidateLifecycleTransition(string? previousStatusName, string? targetStatusName)
+    {
+        if (string.IsNullOrWhiteSpace(targetStatusName))
+        {
+            return "Lead status is required.";
+        }
+
+        if (!LeadLifecycle.TryNormalize(targetStatusName, out var normalizedTarget))
+        {
+            return $"Invalid lead status '{targetStatusName}'.";
+        }
+
+        if (LeadLifecycle.IsValidTransition(previousStatusName, normalizedTarget))
+        {
+            return null;
+        }
+
+        var previous = LeadLifecycle.NormalizeOrDefault(previousStatusName);
+        return $"Invalid lead status transition from {previous} to {normalizedTarget}.";
     }
 
     private async Task EnsureHighImpactTasksAsync(

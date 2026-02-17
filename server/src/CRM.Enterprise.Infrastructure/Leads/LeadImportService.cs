@@ -62,6 +62,13 @@ public sealed class LeadImportService : ILeadImportService
             var territory = LeadCsvImportHelper.ReadValue(row, "territory");
 
             var statusName = LeadCsvImportHelper.ReadValue(row, "status");
+            if (!string.IsNullOrWhiteSpace(statusName) && !LeadLifecycle.TryNormalize(statusName, out _))
+            {
+                var allowed = string.Join(", ", LeadLifecycle.OrderedStatuses);
+                errors.Add(new LeadImportError(i + 2, $"Invalid lead status '{statusName}'. Allowed values: {allowed}."));
+                continue;
+            }
+
             var status = await ResolveLeadStatusAsync(statusName, cancellationToken);
 
             var request = new LeadUpsertRequest(
@@ -72,7 +79,7 @@ public sealed class LeadImportService : ILeadImportService
                 null,
                 LeadCsvImportHelper.ReadValue(row, "company", "companyname"),
                 LeadCsvImportHelper.ReadValue(row, "jobtitle", "title"),
-                statusName,
+                LeadLifecycle.NormalizeOrDefault(statusName),
                 ownerId,
                 assignmentStrategy,
                 LeadCsvImportHelper.ReadValue(row, "source"),
@@ -179,30 +186,8 @@ public sealed class LeadImportService : ILeadImportService
 
     private async Task<LeadStatus> ResolveLeadStatusAsync(string? statusName, CancellationToken cancellationToken)
     {
-        var name = string.IsNullOrWhiteSpace(statusName) ? "New" : statusName;
-        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == name, cancellationToken);
-        if (status is not null)
-        {
-            return status;
-        }
-
-        if (!string.IsNullOrWhiteSpace(statusName))
-        {
-            var maxOrder = await _dbContext.LeadStatuses.MaxAsync(s => (int?)s.Order, cancellationToken) ?? 0;
-            status = new LeadStatus
-            {
-                Name = name,
-                Order = maxOrder + 1,
-                IsDefault = false,
-                IsClosed = string.Equals(name, "Lost", StringComparison.OrdinalIgnoreCase)
-                           || string.Equals(name, "Disqualified", StringComparison.OrdinalIgnoreCase)
-                           || string.Equals(name, "Converted", StringComparison.OrdinalIgnoreCase)
-            };
-            _dbContext.LeadStatuses.Add(status);
-            return status;
-        }
-
-        status = await _dbContext.LeadStatuses.OrderBy(s => s.Order).FirstOrDefaultAsync(cancellationToken);
+        var normalized = LeadLifecycle.NormalizeOrDefault(statusName);
+        var status = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == normalized, cancellationToken);
         if (status is not null)
         {
             return status;
@@ -210,10 +195,11 @@ public sealed class LeadImportService : ILeadImportService
 
         status = new LeadStatus
         {
-            Name = "New",
-            Order = 1,
-            IsDefault = true,
-            IsClosed = false
+            Name = normalized,
+            Order = LeadLifecycle.GetOrder(normalized),
+            IsDefault = string.Equals(normalized, LeadLifecycle.New, StringComparison.OrdinalIgnoreCase),
+            IsClosed = LeadLifecycle.IsClosed(normalized),
+            CreatedAtUtc = DateTime.UtcNow
         };
         _dbContext.LeadStatuses.Add(status);
         return status;

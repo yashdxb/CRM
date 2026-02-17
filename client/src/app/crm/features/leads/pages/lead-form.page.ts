@@ -30,6 +30,7 @@ import {
   LeadCadenceTouch,
   LeadDuplicateCheckCandidate,
   LeadDuplicateCheckResponse,
+  LEAD_STATUSES,
   LeadScoreBreakdownItem,
   LeadStatus,
   LeadStatusHistoryItem
@@ -169,15 +170,11 @@ const CQVS_GROUP_DEFINITIONS: Array<{
 })
 export class LeadFormPage implements OnInit {
   protected activeTab = signal<'overview' | 'qualification' | 'activity' | 'history'>('overview');
-  protected readonly statusOptions: StatusOption[] = [
-    { label: 'New', value: 'New', icon: 'pi-star' },
-    { label: 'Contacted', value: 'Contacted', icon: 'pi-comments' },
-    { label: 'Nurture', value: 'Nurture', icon: 'pi-clock' },
-    { label: 'Qualified', value: 'Qualified', icon: 'pi-check' },
-    { label: 'Converted', value: 'Converted', icon: 'pi-verified' },
-    { label: 'Lost', value: 'Lost', icon: 'pi-times' },
-    { label: 'Disqualified', value: 'Disqualified', icon: 'pi-ban' }
-  ];
+  protected readonly statusOptions: StatusOption[] = LEAD_STATUSES.map((status) => ({
+    label: status,
+    value: status,
+    icon: this.statusIcon(status)
+  }));
   protected readonly assignmentOptions: AssignmentOption[] = [
     { label: 'Manual', value: 'Manual' },
     { label: 'Round robin', value: 'RoundRobin' },
@@ -432,6 +429,27 @@ export class LeadFormPage implements OnInit {
   protected canRefreshScore(): boolean {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
+  }
+
+  private statusIcon(status: LeadStatus): string {
+    switch (status) {
+      case 'New':
+        return 'pi-star';
+      case 'Contacted':
+        return 'pi-comments';
+      case 'Nurture':
+        return 'pi-clock';
+      case 'Qualified':
+        return 'pi-check';
+      case 'Converted':
+        return 'pi-verified';
+      case 'Lost':
+        return 'pi-times';
+      case 'Disqualified':
+        return 'pi-ban';
+      default:
+        return 'pi-circle';
+    }
   }
 
   protected statusOptionsForView(): StatusOption[] {

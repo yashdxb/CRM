@@ -1,149 +1,60 @@
-<app-breadcrumbs></app-breadcrumbs>
-<section class="hero">
-  <div class="container" *ngIf="vm as viewModel">
+<main class="landing" *ngIf="vm as viewModel">
+  <div class="landing-bg" aria-hidden="true">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <span class="orb orb-3"></span>
+    <span class="grid-pattern"></span>
+    <span class="noise-layer"></span>
+  </div>
+  <section class="shell nav-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-mark">
-          <span class="brand-dot"></span>
-          <span class="brand-text">CRM</span>
-        </div>
-        <div class="brand-copy">
-          <div class="brand-title">NorthEdge CRM</div>
-          <div class="brand-sub">Manage leads, close deals, grow revenue</div>
-        </div>
+        <img
+          class="brand-logo"
+          src="/assets/branding/logo-v2-light.png"
+          alt="North Edge System"
+        />
       </div>
-      <div class="topbar-actions">
-        <button pButton type="button" label="Sign In" class="btn btn-secondary" (click)="onSignIn()"></button>
-        <button pButton type="button" label="Get Started" class="btn btn-primary" (click)="onGetStarted()"></button>
+      <div class="top-actions">
+        <button pButton type="button" label="Sign In" class="ne-btn ne-btn--link" (click)="onSignIn()"></button>
+        <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--ghost" (click)="onWatchDemo()"></button>
       </div>
     </header>
+  </section>
 
-    <div class="hero-text">
-      <h1>Elevate Your Business with Powerful CRM</h1>
-      <p>Track leads, manage opportunities, and boost sales with ease.</p>
-
-      <div class="cta-buttons">
-        <button
-          pButton
-          type="button"
-          label="Get Started"
-          class="btn btn-primary"
-          (click)="onGetStarted()"
-        ></button>
-        <button
-          pButton
-          type="button"
-          label="Watch Demo"
-          class="btn btn-secondary"
-          (click)="onWatchDemo()"
-        ></button>
+  <section class="shell hero">
+    <div class="hero-copy">
+      <h1>Run Your Pipeline<br />on Verified Truth</h1>
+      <p>Confidence is earned through evidence and freshness. Promotions are gated. Forecasts weight themselves.</p>
+      <div class="hero-cta">
+        <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--primary" (click)="onWatchDemo()"></button>
       </div>
     </div>
-
-    <div class="cards-container">
-      <p-card class="glass-card dashboard-card">
-        <ng-template pTemplate="header">
-          <div class="card-title">Sales Dashboard</div>
-        </ng-template>
-
-        <div class="metrics">
-          <div class="metric">
-            <div class="metric-label">New Leads</div>
-            <div class="metric-value">{{ viewModel.dashboard.newLeads }}</div>
-            <div class="metric-progress" [style.width.%]="viewModel.dashboard.newLeadsProgress"></div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">Deals in Pipeline</div>
-            <div class="metric-value">{{ viewModel.dashboard.pipelineValue | currency:'USD':'symbol':'1.0-0' }}</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">Win Rate</div>
-            <div class="metric-value">{{ viewModel.dashboard.winRate }}%</div>
-          </div>
+    <div class="hero-visual">
+      <article class="hero-panel">
+        <div class="hero-panel-row">
+          <span class="key">Pipeline</span>
+          <span class="val">{{ viewModel.dashboard.pipelineValue | currency:'USD':'symbol':'1.0-0' }}</span>
         </div>
-
-        <div class="funnel-section">
-          <h3 class="section-title">Sales Funnel</h3>
-          <div class="funnel">
-            <div class="funnel-item funnel-leads">Leads</div>
-            <div class="funnel-item funnel-qualified">Qualified</div>
-            <div class="funnel-item funnel-proposal">Proposal</div>
-            <div class="funnel-item funnel-won">Closed Won</div>
-          </div>
+        <div class="hero-panel-row emphasis">
+          <span class="key">Defensible</span>
+          <span class="val">{{ (viewModel.dashboard.pipelineValue * 0.54) | currency:'USD':'symbol':'1.0-0' }}</span>
         </div>
-      </p-card>
-
-      <p-card class="glass-card lead-card">
-        <ng-template pTemplate="header">
-          <div class="card-title">Lead Details</div>
-        </ng-template>
-
-        <div class="lead-profile">
-          <div class="avatar">
-            <img [src]="viewModel.lead.avatarUrl" alt="Lead avatar" />
-          </div>
-          <div class="lead-info">
-            <h3>{{ viewModel.lead.name }}</h3>
-            <p>{{ viewModel.lead.role }}</p>
-          </div>
+        <div class="hero-panel-row">
+          <span class="key">Timeline</span>
+          <span class="val status-bad">Invalid</span>
         </div>
-
-        <div class="detail-item">
-          <span class="detail-label">Email:</span>
-          <span class="detail-value">{{ viewModel.lead.email }}</span>
+        <div class="hero-panel-row">
+          <span class="key">Status</span>
+          <span class="val status-bad">Blocked</span>
         </div>
-        <div class="detail-item">
-          <span class="detail-label">Phone:</span>
-          <span class="detail-value">{{ viewModel.lead.phone }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Stage:</span>
-          <span class="detail-value">{{ viewModel.lead.stage }}</span>
-        </div>
-        <div class="detail-item">
-          <span class="detail-label">Value:</span>
-          <span class="detail-value">{{ viewModel.lead.value | currency:'USD':'symbol':'1.0-0' }}</span>
-        </div>
-      </p-card>
+        <p class="hero-panel-note">Only forecast what survives scrutiny.</p>
+      </article>
     </div>
+  </section>
 
-    <div class="features">
-      <div class="feature">
-        <div class="feature-icon">
-          <i class="pi pi-map-marker"></i>
-        </div>
-        <div>
-          <h3>Capture Leads</h3>
-          <p>Get new prospects easily</p>
-        </div>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">
-          <i class="pi pi-briefcase"></i>
-        </div>
-        <div>
-          <h3>Track Opportunities</h3>
-          <p>Manage your sales pipeline</p>
-        </div>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">
-          <i class="pi pi-headphones"></i>
-        </div>
-        <div>
-          <h3>Boost Engagement</h3>
-          <p>Stay connected with clients</p>
-        </div>
-      </div>
-      <div class="feature">
-        <div class="feature-icon">
-          <i class="pi pi-chart-bar"></i>
-        </div>
-        <div>
-          <h3>Get Insights</h3>
-          <p>Analyze performance</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+  <section class="shell final-cta">
+    <h2>If You Cannot Defend the Confidence, It Is Not Forecastable.</h2>
+    <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--primary" (click)="onWatchDemo()"></button>
+  </section>
+</main>

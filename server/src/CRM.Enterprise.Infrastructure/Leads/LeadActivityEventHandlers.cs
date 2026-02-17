@@ -1,5 +1,6 @@
 using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
+using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
@@ -60,8 +61,7 @@ public sealed class LeadActivityCompletedEventHandler : INotificationHandler<Act
         var statusName = lead.Status?.Name ?? string.Empty;
         if (string.Equals(statusName, "New", StringComparison.OrdinalIgnoreCase))
         {
-            var contactedStatus = await _dbContext.LeadStatuses
-                .FirstOrDefaultAsync(s => s.Name == "Contacted", cancellationToken);
+            var contactedStatus = await ResolveLeadStatusAsync(LeadLifecycle.Contacted, cancellationToken);
             if (contactedStatus is not null && lead.LeadStatusId != contactedStatus.Id)
             {
                 lead.LeadStatusId = contactedStatus.Id;
@@ -82,7 +82,7 @@ public sealed class LeadActivityCompletedEventHandler : INotificationHandler<Act
                         "StatusChanged",
                         "Status",
                         statusName,
-                        "Contacted",
+                        LeadLifecycle.Contacted,
                         notification.ChangedByUserId,
                         null),
                     cancellationToken);
@@ -137,12 +137,7 @@ public sealed class LeadActivityCompletedEventHandler : INotificationHandler<Act
         var normalized = outcome.Trim().ToLowerInvariant();
         if (normalized == "connected")
         {
-            return "Contacted";
-        }
-
-        if (normalized == "voicemail" || normalized == "no response" || normalized == "no-response" || normalized == "no_reply")
-        {
-            return "Attempted";
+            return LeadLifecycle.Contacted;
         }
 
         return null;
@@ -150,19 +145,23 @@ public sealed class LeadActivityCompletedEventHandler : INotificationHandler<Act
 
     private async Task<LeadStatus?> ResolveLeadStatusAsync(string statusName, CancellationToken cancellationToken)
     {
-        var existing = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == statusName, cancellationToken);
+        if (!LeadLifecycle.TryNormalize(statusName, out var normalized))
+        {
+            return null;
+        }
+
+        var existing = await _dbContext.LeadStatuses.FirstOrDefaultAsync(s => s.Name == normalized, cancellationToken);
         if (existing is not null)
         {
             return existing;
         }
 
-        var maxOrder = await _dbContext.LeadStatuses.MaxAsync(s => (int?)s.Order, cancellationToken) ?? 0;
         var status = new LeadStatus
         {
-            Name = statusName,
-            Order = maxOrder + 1,
-            IsDefault = false,
-            IsClosed = false,
+            Name = normalized,
+            Order = LeadLifecycle.GetOrder(normalized),
+            IsDefault = string.Equals(normalized, LeadLifecycle.New, StringComparison.OrdinalIgnoreCase),
+            IsClosed = LeadLifecycle.IsClosed(normalized),
             CreatedAtUtc = DateTime.UtcNow
         };
         _dbContext.LeadStatuses.Add(status);

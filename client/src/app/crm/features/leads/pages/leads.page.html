@@ -145,7 +145,7 @@
 
     <!-- Kanban View -->
     <section class="kanban-board" *ngIf="viewMode === 'kanban'">
-      <div class="kanban-column" *ngFor="let status of ['New', 'Contacted', 'Qualified', 'Converted', 'Lost']">
+      <div class="kanban-column" *ngFor="let status of kanbanStatuses">
         <div class="column-header" [attr.data-status]="status">
           <span class="column-title">{{ status }}</span>
           <span class="column-count">{{ getLeadsByStatus(status).length }}</span>

@@ -54,6 +54,38 @@ public class DashboardLayoutService : IDashboardLayoutService
             return await GetDefaultLayoutAsync(userId, cancellationToken);
         }
 
+        // If the user layout stores a pack source descriptor (role-default/custom),
+        // resolve the latest source layout so pack-order changes replicate in Command Center.
+        try
+        {
+            var sourcePayload = JsonSerializer.Deserialize<UserLayoutSourcePayload>(user.CommandCenterLayoutJson);
+            if (sourcePayload is not null && !string.IsNullOrWhiteSpace(sourcePayload.SourceType))
+            {
+                var fallbackRoleLevel = await GetUserRoleLevelAsync(userId, cancellationToken);
+                var tenantDefaults = await LoadTenantDefaultsAsync(cancellationToken);
+                var resolvedSource = await ResolveUserPackLayoutAsync(
+                    user.CommandCenterLayoutJson,
+                    fallbackRoleLevel,
+                    tenantDefaults,
+                    cancellationToken);
+
+                if (resolvedSource is not null)
+                {
+                    var normalizedSource = NormalizePayload(resolvedSource);
+                    if (IsLegacyFullDefault(normalizedSource))
+                    {
+                        return await GetDefaultLayoutAsync(userId, cancellationToken);
+                    }
+
+                    return normalizedSource;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall through to standard layout payload handling.
+        }
+
         try
         {
             var document = JsonSerializer.Deserialize<LayoutPayload>(user.CommandCenterLayoutJson);

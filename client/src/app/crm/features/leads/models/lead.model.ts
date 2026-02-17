@@ -1,4 +1,13 @@
 export type LeadStatus = 'New' | 'Contacted' | 'Nurture' | 'Qualified' | 'Converted' | 'Lost' | 'Disqualified';
+export const LEAD_STATUSES: ReadonlyArray<LeadStatus> = [
+  'New',
+  'Contacted',
+  'Nurture',
+  'Qualified',
+  'Converted',
+  'Lost',
+  'Disqualified'
+];
 export type LeadAssignmentStrategy = 'Manual' | 'RoundRobin' | 'Territory';
 export type LeadCadenceChannel = string;
 

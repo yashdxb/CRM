@@ -142,6 +142,7 @@
               <th class="col-type">Type</th>
               <th>Name</th>
               <th class="col-id">Id</th>
+              <th class="col-suggested">Suggested Usage</th>
               <th class="col-move">Move</th>
             </tr>
           </thead>
@@ -172,6 +173,9 @@
                 </div>
               </td>
               <td class="col-id">{{ row.id }}</td>
+              <td class="col-suggested">
+                <span class="suggested-usage">{{ row.suggestedUsage }}</span>
+              </td>
               <td class="col-move">
                 <button
                   pButton

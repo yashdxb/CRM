@@ -10,7 +10,7 @@ import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { UserAdminDataService } from '../services/user-admin-data.service';
-import { RoleSummary } from '../models/user-admin.model';
+import { RoleSummary, SecurityLevelDefinition } from '../models/user-admin.model';
 import { DashboardDataService } from '../../dashboard/services/dashboard-data.service';
 import { DASHBOARD_CARD_CATALOG, DASHBOARD_CHART_CATALOG } from '../../dashboard/dashboard-catalog';
 
@@ -30,6 +30,23 @@ interface PackTemplateOption {
   isDefault: boolean;
   cardOrder: string[];
   hiddenCards?: string[];
+}
+
+interface DashboardSuggestionRule {
+  usageLabel: string;
+  requiredAll?: string[];
+  requiredAny?: string[];
+  preferredMinLevel?: number;
+  preferredMaxLevel?: number;
+  minSecurityRank?: number;
+}
+
+interface RoleProfile {
+  name: string;
+  hierarchyLevel: number | null;
+  securityLevelName: string | null;
+  securityRank: number;
+  permissions: Set<string>;
 }
 
 const LEVEL_TEMPLATE_PREFIX = 'role-level-default:';
@@ -65,6 +82,7 @@ export class DashboardPacksPage {
   protected readonly loadingPack = signal(false);
   protected readonly savingPack = signal(false);
   protected readonly loadingTemplates = signal(false);
+  protected readonly securityLevels = signal<SecurityLevelDefinition[]>([]);
 
   protected readonly roles = signal<RoleSummary[]>([]);
   private readonly templates = signal<PackTemplateOption[]>([]);
@@ -122,6 +140,21 @@ export class DashboardPacksPage {
     this.chartCatalog.filter(chart => this.selectedItems().has(chart.id)).length
   );
 
+  private readonly roleProfiles = computed<RoleProfile[]>(() => {
+    const rankById = new Map(this.securityLevels().map(level => [level.id, level.rank]));
+    return this.roles().map(role => ({
+      name: role.name,
+      hierarchyLevel: role.hierarchyLevel ?? null,
+      securityLevelName: role.securityLevelName ?? null,
+      securityRank: role.securityLevelId ? (rankById.get(role.securityLevelId) ?? 0) : 0,
+      permissions: new Set([
+        ...(role.permissions ?? []),
+        ...(role.inheritedPermissions ?? []),
+        ...(role.basePermissions ?? [])
+      ])
+    }));
+  });
+
   protected readonly tableRows = computed(() => {
     const selected = this.selectedItems();
     const order = this.buildOrder();
@@ -135,7 +168,8 @@ export class DashboardPacksPage {
         order: orderIndex >= 0 ? orderIndex + 1 : null,
         canMoveUp: orderIndex > 0,
         canMoveDown: orderIndex >= 0 && orderIndex < order.length - 1,
-        orderIndex
+        orderIndex,
+        suggestedUsage: this.resolveSuggestedUsage(item)
       };
     });
 
@@ -159,6 +193,7 @@ export class DashboardPacksPage {
 
   constructor() {
     this.loadRoles();
+    this.loadSecurityLevels();
     this.loadTemplates();
   }
 
@@ -399,6 +434,13 @@ export class DashboardPacksPage {
     });
   }
 
+  private loadSecurityLevels() {
+    this.rolesService.getSecurityLevels().subscribe({
+      next: (levels) => this.securityLevels.set(levels ?? []),
+      error: () => this.securityLevels.set([])
+    });
+  }
+
   private refreshTemplates(selectId?: string | null) {
     this.dashboardData.getTemplates().subscribe({
       next: (templates) => {
@@ -520,5 +562,122 @@ export class DashboardPacksPage {
   private clearSelection() {
     this.selectedItems.set(new Set());
     this.itemOrder.set([]);
+  }
+
+  private resolveSuggestedUsage(item: DashboardItemOption): string {
+    const rule = this.buildSuggestionRule(item);
+
+    const matches = this.roleProfiles()
+      .filter((role) => this.roleMatchesRule(role, rule))
+      .sort((a, b) => this.roleScore(b, rule) - this.roleScore(a, rule));
+
+    if (matches.length === 0) {
+      return `${rule.usageLabel}. Review role permissions for this KPI.`;
+    }
+
+    const topRoles = matches.slice(0, 2).map((role) => this.formatRoleLabel(role)).join(', ');
+    return `${rule.usageLabel}. Suggested role(s): ${topRoles}.`;
+  }
+
+  private buildSuggestionRule(item: DashboardItemOption): DashboardSuggestionRule {
+    const text = `${item.id} ${item.label}`.toLowerCase();
+    const requiredAll = [PERMISSION_KEYS.dashboardView];
+    const requiredAny: string[] = [];
+
+    if (this.hasAnyToken(text, ['pipeline', 'forecast', 'revenue', 'risk', 'deal', 'scenario'])) {
+      requiredAny.push(PERMISSION_KEYS.opportunitiesView);
+    }
+
+    if (this.hasAnyToken(text, ['lead', 'truth', 'conversion'])) {
+      requiredAny.push(PERMISSION_KEYS.leadsView);
+    }
+
+    if (this.hasAnyToken(text, ['account', 'customer', 'growth', 'expansion'])) {
+      requiredAny.push(PERMISSION_KEYS.customersView);
+    }
+
+    if (this.hasAnyToken(text, ['task', 'activity', 'timeline', 'execution'])) {
+      requiredAny.push(PERMISSION_KEYS.activitiesView);
+    }
+
+    const isOversight = this.hasAnyToken(text, ['risk', 'manager', 'health', 'top performers', 'revenue', 'growth']);
+    const usageLabel = item.type === 'chart'
+      ? `${item.label} analytics`
+      : `${item.label} operations`;
+
+    return {
+      usageLabel,
+      requiredAll,
+      requiredAny: requiredAny.length ? Array.from(new Set(requiredAny)) : undefined,
+      preferredMinLevel: this.hasAnyToken(text, ['my ', 'task', 'execution', 'timeline']) ? 2 : undefined,
+      preferredMaxLevel: isOversight ? 2 : undefined,
+      minSecurityRank: isOversight ? this.resolveManagerSecurityRank() : undefined
+    };
+  }
+
+  private hasAnyToken(value: string, tokens: string[]): boolean {
+    return tokens.some(token => value.includes(token));
+  }
+
+  private resolveManagerSecurityRank(): number {
+    const ranks = this.securityLevels()
+      .map(level => level.rank)
+      .filter(rank => Number.isFinite(rank))
+      .sort((a, b) => a - b);
+    if (ranks.length === 0) {
+      return 0;
+    }
+
+    const index = Math.max(0, Math.floor((ranks.length - 1) * 0.5));
+    return ranks[index];
+  }
+
+  private roleMatchesRule(role: RoleProfile, rule: DashboardSuggestionRule): boolean {
+    if (rule.requiredAll && rule.requiredAll.some(permission => !role.permissions.has(permission))) {
+      return false;
+    }
+
+    if (rule.requiredAny && !rule.requiredAny.some(permission => role.permissions.has(permission))) {
+      return false;
+    }
+
+    if (typeof rule.minSecurityRank === 'number' && role.securityRank > 0 && role.securityRank < rule.minSecurityRank) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private roleScore(role: RoleProfile, rule: DashboardSuggestionRule): number {
+    let score = 0;
+
+    const selectedLevel = this.selectedLevel();
+    if (selectedLevel && role.hierarchyLevel === selectedLevel) {
+      score += 4;
+    }
+
+    if (typeof role.hierarchyLevel === 'number') {
+      const minLevel = rule.preferredMinLevel ?? role.hierarchyLevel;
+      const maxLevel = rule.preferredMaxLevel ?? role.hierarchyLevel;
+      if (role.hierarchyLevel >= minLevel && role.hierarchyLevel <= maxLevel) {
+        score += 3;
+      }
+    }
+
+    if (typeof rule.minSecurityRank === 'number') {
+      score += role.securityRank >= rule.minSecurityRank ? 2 : 0;
+    } else {
+      score += role.securityRank > 0 ? 1 : 0;
+    }
+
+    return score;
+  }
+
+  private formatRoleLabel(role: RoleProfile): string {
+    const level = role.hierarchyLevel ? `H${role.hierarchyLevel}` : 'H?';
+    if (role.securityLevelName) {
+      return `${role.name} (${level}, ${role.securityLevelName})`;
+    }
+    return `${role.name} (${level})`;
   }
 }
