@@ -752,6 +752,22 @@
   padding-top: 0.2rem;
 }
 
+.demo-contact-note {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: rgba(201, 217, 242, 0.78);
+  text-align: right;
+}
+
+.demo-contact-note a {
+  color: rgba(147, 197, 253, 0.95);
+  text-decoration: none;
+}
+
+.demo-contact-note a:hover {
+  text-decoration: underline;
+}
+
 :host ::ng-deep .demo-dialog {
   border-radius: 1.1rem;
   border: 1px solid rgba(140, 180, 255, 0.34);

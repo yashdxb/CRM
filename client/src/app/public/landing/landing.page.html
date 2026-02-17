@@ -200,6 +200,11 @@
         <button pButton type="button" label="Cancel" class="ne-btn ne-btn--link" (click)="closeDemoForm()" [disabled]="submittingDemo"></button>
         <button pButton type="submit" [label]="submittingDemo ? 'Submitting...' : 'Schedule Demo'" class="ne-btn ne-btn--primary" [disabled]="submittingDemo"></button>
       </div>
+
+      <p class="demo-contact-note">
+        Prefer email? Contact us at
+        <a href="mailto:contact@northedgesystem.com">contact@northedgesystem.com</a>
+      </p>
     </form>
   </p-dialog>
 
