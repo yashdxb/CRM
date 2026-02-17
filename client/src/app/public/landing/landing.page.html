@@ -17,17 +17,20 @@
       </div>
       <div class="top-actions">
         <button pButton type="button" label="Sign In" class="ne-btn ne-btn--link" (click)="onSignIn()"></button>
-        <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--ghost" (click)="onWatchDemo()"></button>
       </div>
     </header>
   </section>
 
   <section class="shell hero">
     <div class="hero-copy">
+      <div class="hero-brand">
+        <span class="hero-brand-wordmark">North Edge</span>
+        <span class="hero-brand-crm">CRM</span>
+      </div>
       <h1>Run Your Pipeline<br />on Verified Truth</h1>
       <p>Confidence is earned through evidence and freshness. Promotions are gated. Forecasts weight themselves.</p>
       <div class="hero-cta">
-        <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--primary" (click)="onWatchDemo()"></button>
+        <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--ghost" (click)="onWatchDemo()"></button>
       </div>
     </div>
     <div class="hero-visual">
@@ -55,6 +58,136 @@
 
   <section class="shell final-cta">
     <h2>If You Cannot Defend the Confidence, It Is Not Forecastable.</h2>
-    <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--primary" (click)="onWatchDemo()"></button>
+    <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--ghost" (click)="onWatchDemo()"></button>
   </section>
+
+  <p-dialog
+    [(visible)]="showDemoForm"
+    [modal]="true"
+    [dismissableMask]="false"
+    [draggable]="false"
+    [resizable]="false"
+    [closeOnEscape]="true"
+    [style]="{ width: 'min(860px, 96vw)' }"
+    styleClass="demo-dialog"
+    (onHide)="closeDemoForm()"
+  >
+    <ng-template pTemplate="header">
+      <div class="demo-modal-header">
+        <div>
+          <p class="demo-kicker">North Edge CRM</p>
+          <h3>Schedule a Demo</h3>
+          <p>Share your context and preferred time. Our team will confirm your session.</p>
+        </div>
+      </div>
+    </ng-template>
+
+    <form class="demo-form" [formGroup]="demoForm" (ngSubmit)="submitDemoRequest()">
+      <div class="field-grid">
+        <label>
+          Full name
+          <input pInputText type="text" formControlName="fullName" placeholder="Jane Cooper" />
+          <small class="form-error" *ngIf="fieldError('fullName', 'required')">Full name is required.</small>
+        </label>
+
+        <label>
+          Work email
+          <input pInputText type="email" formControlName="workEmail" placeholder="jane@company.com" />
+          <small class="form-error" *ngIf="fieldError('workEmail', 'required')">Work email is required.</small>
+          <small class="form-error" *ngIf="fieldError('workEmail', 'email')">Enter a valid email address.</small>
+        </label>
+
+        <label>
+          Company
+          <input pInputText type="text" formControlName="company" placeholder="North Ridge Foods" />
+          <small class="form-error" *ngIf="fieldError('company', 'required')">Company is required.</small>
+        </label>
+
+        <label>
+          Role / Title
+          <input pInputText type="text" formControlName="roleTitle" placeholder="VP Sales" />
+          <small class="form-error" *ngIf="fieldError('roleTitle', 'required')">Role or title is required.</small>
+        </label>
+
+        <label>
+          Phone
+          <input pInputText type="text" formControlName="phone" placeholder="+1 555 0100" />
+          <small class="form-error" *ngIf="fieldError('phone', 'required')">Phone is required.</small>
+        </label>
+
+        <label>
+          Team size
+          <p-select
+            appendTo="body"
+            [options]="teamSizeOptions"
+            optionLabel="label"
+            optionValue="value"
+            formControlName="teamSize"
+            placeholder="Select team size"
+            styleClass="w-full"
+          ></p-select>
+          <small class="form-error" *ngIf="fieldError('teamSize', 'required')">Select a team size.</small>
+        </label>
+
+        <label>
+          Preferred date and time
+          <p-datepicker
+            appendTo="body"
+            formControlName="preferredDateTime"
+            [minDate]="minDemoDateTime"
+            [showIcon]="true"
+            [showTime]="true"
+            hourFormat="12"
+            [showButtonBar]="true"
+            dateFormat="yy-mm-dd"
+            placeholder="Select preferred date and time"
+            styleClass="w-full"
+          ></p-datepicker>
+          <small class="form-error" *ngIf="fieldError('preferredDateTime', 'required')">Preferred date/time is required.</small>
+          <small class="form-error" *ngIf="fieldError('preferredDateTime', 'min24Hours')">Select a date/time at least 24 hours from now.</small>
+        </label>
+
+        <label>
+          Timezone
+          <input pInputText type="text" formControlName="timezone" placeholder="America/Toronto" />
+          <small class="form-error" *ngIf="fieldError('timezone', 'required')">Timezone is required.</small>
+        </label>
+      </div>
+
+      <label class="field-textarea">
+        Goals / use case
+        <textarea pTextarea rows="4" formControlName="useCase" placeholder="What outcomes do you want from the demo?"></textarea>
+        <small class="form-error" *ngIf="fieldError('useCase', 'required')">Please share your use case.</small>
+      </label>
+
+      <div class="demo-actions">
+        <button pButton type="button" label="Cancel" class="ne-btn ne-btn--link" (click)="closeDemoForm()" [disabled]="submittingDemo"></button>
+        <button pButton type="submit" [label]="submittingDemo ? 'Submitting...' : 'Schedule Demo'" class="ne-btn ne-btn--primary" [disabled]="submittingDemo"></button>
+      </div>
+    </form>
+  </p-dialog>
+
+  <p-dialog
+    [(visible)]="showDemoSuccess"
+    [modal]="true"
+    [dismissableMask]="false"
+    [draggable]="false"
+    [resizable]="false"
+    [closeOnEscape]="true"
+    [style]="{ width: 'min(560px, 92vw)' }"
+    styleClass="demo-success-dialog"
+  >
+    <ng-template pTemplate="header">
+      <div class="demo-success-header">
+        <h3>Thanks for contacting us</h3>
+      </div>
+    </ng-template>
+    <div class="demo-success-body">
+      <p>Your demo request has been submitted successfully.</p>
+      <p>Our team will contact you soon to confirm your session.</p>
+    </div>
+    <ng-template pTemplate="footer">
+      <button pButton type="button" label="Done" class="ne-btn ne-btn--primary" (click)="showDemoSuccess = false"></button>
+    </ng-template>
+  </p-dialog>
 </main>

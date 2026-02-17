@@ -31,3 +31,17 @@ export interface CrmLandingVm {
     avatarUrl: string;
   };
 }
+
+export interface BookDemoRequest {
+  fullName: string;
+  workEmail: string;
+  company: string;
+  roleTitle: string;
+  phone: string;
+  teamSize: string;
+  preferredDate: string;
+  preferredTime: string;
+  timezone: string;
+  useCase: string;
+  landingPageUrl: string | null;
+}

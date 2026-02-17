@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Security.Claims;
+using System.Text;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -12,15 +13,18 @@ namespace CRM.Enterprise.Api.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
+    private const string DemoRequestEmail = "contact@northedgesystem.com";
     private readonly IAuthService _authService;
     private readonly IEmailSender _emailSender;
+    private readonly ILogger<AuthController> _logger;
     private readonly string _brandLogoUrl;
     private readonly string _brandWebsiteUrl;
 
-    public AuthController(IAuthService authService, IEmailSender emailSender, IConfiguration configuration)
+    public AuthController(IAuthService authService, IEmailSender emailSender, IConfiguration configuration, ILogger<AuthController> logger)
     {
         _authService = authService;
         _emailSender = emailSender;
+        _logger = logger;
         _brandLogoUrl = configuration["Branding:LogoUrl"] ?? string.Empty;
         _brandWebsiteUrl = configuration["Branding:WebsiteUrl"] ?? string.Empty;
     }
@@ -211,6 +215,102 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("book-demo")]
+    [AllowAnonymous]
+    public async Task<IActionResult> BookDemo([FromBody] BookDemoRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.FullName) ||
+            string.IsNullOrWhiteSpace(request.WorkEmail) ||
+            string.IsNullOrWhiteSpace(request.Company) ||
+            string.IsNullOrWhiteSpace(request.RoleTitle) ||
+            string.IsNullOrWhiteSpace(request.TeamSize) ||
+            string.IsNullOrWhiteSpace(request.PreferredDate) ||
+            string.IsNullOrWhiteSpace(request.PreferredTime) ||
+            string.IsNullOrWhiteSpace(request.Timezone) ||
+            string.IsNullOrWhiteSpace(request.UseCase))
+        {
+            return BadRequest("Please provide all required fields.");
+        }
+
+        if (!IsValidEmail(request.WorkEmail))
+        {
+            return BadRequest("Please provide a valid work email.");
+        }
+
+        var fullName = request.FullName.Trim();
+        var workEmail = request.WorkEmail.Trim();
+        var company = request.Company.Trim();
+        var roleTitle = request.RoleTitle.Trim();
+        var phone = request.Phone?.Trim();
+        var teamSize = request.TeamSize.Trim();
+        var preferredDate = request.PreferredDate.Trim();
+        var preferredTime = request.PreferredTime.Trim();
+        var timezone = request.Timezone.Trim();
+        var useCase = request.UseCase.Trim();
+        var landingPageUrl = request.LandingPageUrl?.Trim();
+
+        var encodedWebsiteUrl = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(_brandWebsiteUrl)
+            ? "https://www.northedgesystem.com"
+            : _brandWebsiteUrl);
+
+        var subject = $"Book Demo request: {company} - {fullName}";
+        var htmlBody = $@"
+            <div style=""font-family:'Segoe UI',Arial,sans-serif;background:#f3f6ff;padding:24px;"">
+              <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e6ebfb;overflow:hidden;"">
+                <tr>
+                  <td style=""padding:16px 20px;background:linear-gradient(90deg,#0ea5e9,#3b82f6,#6366f1);color:#ffffff;font-weight:700;"">
+                    North Edge CRM - Demo Request
+                  </td>
+                </tr>
+                <tr>
+                  <td style=""padding:20px;"">
+                    <h2 style=""margin:0 0 12px;font-size:20px;color:#0f172a;"">New demo scheduling request</h2>
+                    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;font-size:14px;color:#1e293b;"">
+                      <tr><td style=""padding:8px 0;font-weight:600;width:180px;"">Full name</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(fullName)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Work email</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(workEmail)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Company</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(company)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Role/Title</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(roleTitle)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Phone</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(phone ?? "Not provided")}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Team size</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(teamSize)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Preferred date</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(preferredDate)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Preferred time</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(preferredTime)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Timezone</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(timezone)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;vertical-align:top;"">Use case</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(useCase).Replace("\n", "<br />")}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Landing page</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(landingPageUrl ?? "Not provided")}</td></tr>
+                    </table>
+                    <p style=""margin:16px 0 0;color:#64748b;font-size:12px;"">Website: <a href=""{encodedWebsiteUrl}"" style=""color:#2563eb;"">{encodedWebsiteUrl}</a></p>
+                  </td>
+                </tr>
+              </table>
+            </div>";
+
+        var textBodyBuilder = new StringBuilder();
+        textBodyBuilder.AppendLine("North Edge CRM - Demo Request");
+        textBodyBuilder.AppendLine();
+        textBodyBuilder.AppendLine($"Full name: {fullName}");
+        textBodyBuilder.AppendLine($"Work email: {workEmail}");
+        textBodyBuilder.AppendLine($"Company: {company}");
+        textBodyBuilder.AppendLine($"Role/Title: {roleTitle}");
+        textBodyBuilder.AppendLine($"Phone: {phone ?? "Not provided"}");
+        textBodyBuilder.AppendLine($"Team size: {teamSize}");
+        textBodyBuilder.AppendLine($"Preferred date: {preferredDate}");
+        textBodyBuilder.AppendLine($"Preferred time: {preferredTime}");
+        textBodyBuilder.AppendLine($"Timezone: {timezone}");
+        textBodyBuilder.AppendLine($"Use case: {useCase}");
+        textBodyBuilder.AppendLine($"Landing page: {landingPageUrl ?? "Not provided"}");
+
+        try
+        {
+            await _emailSender.SendAsync(DemoRequestEmail, subject, htmlBody, textBodyBuilder.ToString(), cancellationToken);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to deliver demo request email for {WorkEmail}", workEmail);
+            return StatusCode(500, "Unable to process demo request.");
+        }
+    }
+
     [HttpGet("invite-status")]
     [AllowAnonymous]
     public async Task<ActionResult<InviteStatusResponse>> InviteStatus([FromQuery] string token, CancellationToken cancellationToken)
@@ -229,5 +329,18 @@ public class AuthController : ControllerBase
         };
 
         return Ok(response);
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        try
+        {
+            _ = new System.Net.Mail.MailAddress(email.Trim());
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

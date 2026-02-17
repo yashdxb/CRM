@@ -1,8 +1,12 @@
-import { Injectable } from '@angular/core';
-import { CrmLandingVm } from '../models/crm-landing.models';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+import { BookDemoRequest, CrmLandingVm } from '../models/crm-landing.models';
 
 @Injectable({ providedIn: 'root' })
 export class CrmLandingService {
+  private readonly http = inject(HttpClient);
+
   getVm(): CrmLandingVm {
     return {
       dashboard: {
@@ -33,5 +37,10 @@ export class CrmLandingService {
         avatarUrl: '/assets/avatars/lead1.png'
       }
     };
+  }
+
+  bookDemo(payload: BookDemoRequest) {
+    const url = `${environment.apiUrl}/api/auth/book-demo`;
+    return this.http.post<void>(url, payload);
   }
 }
