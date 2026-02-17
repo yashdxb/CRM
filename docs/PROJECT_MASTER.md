@@ -815,6 +815,8 @@ Legend:
 
 **Decision:** Hybrid CQRS with service-first default (no full MediatR mandate).
 
+**Planning language convention:** Use `Now`, `Next`, `Later` for rollout sequencing in active planning and status updates (avoid new `Phase 1/2/3` terminology).
+
 **Default path (required):**
 - Keep CRUD and straightforward module operations in Application services.
 - Controllers call Application services directly.

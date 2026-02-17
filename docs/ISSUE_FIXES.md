@@ -109,3 +109,42 @@ This file tracks recurring UI/data issues and how to fix them quickly.
 **Why this is safe**
 - Keeps the UI stable during initial change detection.
 - Removes mid-cycle list mutation without changing the layout logic.
+
+## 6) Landing page Book Demo form consistency and scheduling policy
+**Symptoms**
+- Book Demo UI had inconsistent control sizing after introducing Ifta labels.
+- Dialog closed unexpectedly on outside clicks.
+- Scheduling constraints were ambiguous across user timezone vs Toronto policy window.
+
+**Root cause**
+- Mixed native inputs and PrimeNG controls with incomplete width/height rules for `p-iftalabel`.
+- No single canonical timestamp path for scheduling validation.
+
+**Fix pattern**
+1) Standardize the dialog as PrimeNG modal:
+   - Use `p-dialog` with `modal=true` and `dismissableMask=false`.
+2) Standardize controls:
+   - Use PrimeNG controls only (`pInputText`, `p-select`, `p-datepicker`, `pTextarea`) with `p-iftalabel`.
+   - Apply explicit full-width + min-height styles for usable input sizing.
+3) Canonical scheduling payload:
+   - Convert selected date/time + selected timezone to `preferredDateTimeUtc` before submit.
+4) Enforce policy in backend (authoritative):
+   - Validate from UTC against Toronto time rules: next Toronto day onward, 9:00 AM-5:00 PM Toronto.
+5) Confirm user completion:
+   - Show explicit success dialog/thanks note after submission.
+
+**Example implementation**
+- Client:
+  - `client/src/app/public/landing/landing.page.ts`
+  - `client/src/app/public/landing/landing.page.html`
+  - `client/src/app/public/landing/landing.page.scss`
+  - `client/src/app/public/landing/models/crm-landing.models.ts`
+  - `client/src/app/public/landing/services/crm-landing.service.ts`
+- API:
+  - `server/src/CRM.Enterprise.Api/Contracts/Auth/BookDemoRequest.cs`
+  - `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`
+
+**Why this is safe**
+- UX is consistent and accessible with PrimeNG controls.
+- Scheduling rules are tamper-resistant because backend validates on UTC canonical data.
+- Ops receives consistent timestamps (UTC + Toronto display in email).

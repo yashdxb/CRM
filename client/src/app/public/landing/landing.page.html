@@ -75,7 +75,10 @@
     <ng-template pTemplate="header">
       <div class="demo-modal-header">
         <div>
-          <p class="demo-kicker">North Edge CRM</p>
+          <div class="hero-brand">
+            <span class="hero-brand-wordmark">North Edge</span>
+            <span class="hero-brand-crm">CRM</span>
+          </div>
           <h3>Schedule a Demo</h3>
           <p>Share your context and preferred time. Our team will confirm your session.</p>
         </div>
@@ -84,81 +87,114 @@
 
     <form class="demo-form" [formGroup]="demoForm" (ngSubmit)="submitDemoRequest()">
       <div class="field-grid">
-        <label>
-          Full name
-          <input pInputText type="text" formControlName="fullName" placeholder="Jane Cooper" />
+        <div class="form-field">
+          <p-iftalabel>
+            <input pInputText id="demo-full-name" type="text" formControlName="fullName" placeholder="Jane Cooper" class="w-full demo-input" />
+            <label for="demo-full-name">Full name</label>
+          </p-iftalabel>
           <small class="form-error" *ngIf="fieldError('fullName', 'required')">Full name is required.</small>
-        </label>
+        </div>
 
-        <label>
-          Work email
-          <input pInputText type="email" formControlName="workEmail" placeholder="jane@company.com" />
+        <div class="form-field">
+          <p-iftalabel>
+            <input pInputText id="demo-work-email" type="email" formControlName="workEmail" placeholder="jane@company.com" class="w-full demo-input" />
+            <label for="demo-work-email">Work email</label>
+          </p-iftalabel>
           <small class="form-error" *ngIf="fieldError('workEmail', 'required')">Work email is required.</small>
           <small class="form-error" *ngIf="fieldError('workEmail', 'email')">Enter a valid email address.</small>
-        </label>
+        </div>
 
-        <label>
-          Company
-          <input pInputText type="text" formControlName="company" placeholder="North Ridge Foods" />
+        <div class="form-field">
+          <p-iftalabel>
+            <input pInputText id="demo-company" type="text" formControlName="company" placeholder="North Ridge Foods" class="w-full demo-input" />
+            <label for="demo-company">Company</label>
+          </p-iftalabel>
           <small class="form-error" *ngIf="fieldError('company', 'required')">Company is required.</small>
-        </label>
+        </div>
 
-        <label>
-          Role / Title
-          <input pInputText type="text" formControlName="roleTitle" placeholder="VP Sales" />
+        <div class="form-field">
+          <p-iftalabel>
+            <input pInputText id="demo-role-title" type="text" formControlName="roleTitle" placeholder="VP Sales" class="w-full demo-input" />
+            <label for="demo-role-title">Role / Title</label>
+          </p-iftalabel>
           <small class="form-error" *ngIf="fieldError('roleTitle', 'required')">Role or title is required.</small>
-        </label>
+        </div>
 
-        <label>
-          Phone
-          <input pInputText type="text" formControlName="phone" placeholder="+1 555 0100" />
+        <div class="form-field">
+          <p-iftalabel>
+            <input pInputText id="demo-phone" type="text" formControlName="phone" placeholder="+1 555 0100" class="w-full demo-input" />
+            <label for="demo-phone">Phone</label>
+          </p-iftalabel>
           <small class="form-error" *ngIf="fieldError('phone', 'required')">Phone is required.</small>
-        </label>
+        </div>
 
-        <label>
-          Team size
-          <p-select
-            appendTo="body"
-            [options]="teamSizeOptions"
-            optionLabel="label"
-            optionValue="value"
-            formControlName="teamSize"
-            placeholder="Select team size"
-            styleClass="w-full"
-          ></p-select>
+        <div class="form-field">
+          <p-iftalabel>
+            <p-select
+              inputId="demo-team-size"
+              appendTo="body"
+              [options]="teamSizeOptions"
+              optionLabel="label"
+              optionValue="value"
+              formControlName="teamSize"
+              placeholder="Select team size"
+              styleClass="w-full"
+            ></p-select>
+            <label for="demo-team-size">Team size</label>
+          </p-iftalabel>
           <small class="form-error" *ngIf="fieldError('teamSize', 'required')">Select a team size.</small>
-        </label>
+        </div>
 
-        <label>
-          Preferred date and time
-          <p-datepicker
-            appendTo="body"
-            formControlName="preferredDateTime"
-            [minDate]="minDemoDateTime"
-            [showIcon]="true"
-            [showTime]="true"
-            hourFormat="12"
-            [showButtonBar]="true"
-            dateFormat="yy-mm-dd"
-            placeholder="Select preferred date and time"
-            styleClass="w-full"
-          ></p-datepicker>
+        <div class="form-field">
+          <p-iftalabel>
+            <p-datepicker
+              inputId="demo-preferred-datetime"
+              appendTo="body"
+              formControlName="preferredDateTime"
+              [minDate]="minDemoDateTime"
+              [showIcon]="true"
+              [showTime]="true"
+              hourFormat="12"
+              [showButtonBar]="true"
+              dateFormat="yy-mm-dd"
+              placeholder="Select preferred date and time"
+              styleClass="w-full"
+            ></p-datepicker>
+            <label for="demo-preferred-datetime">Preferred date and time</label>
+          </p-iftalabel>
           <small class="form-error" *ngIf="fieldError('preferredDateTime', 'required')">Preferred date/time is required.</small>
-          <small class="form-error" *ngIf="fieldError('preferredDateTime', 'min24Hours')">Select a date/time at least 24 hours from now.</small>
-        </label>
+          <small class="form-error" *ngIf="fieldError('preferredDateTime', 'minTorontoDay')">Select a date from the next Toronto day onward.</small>
+          <small class="form-error" *ngIf="fieldError('preferredDateTime', 'outsideTorontoBusinessHours')">Select a time between 9:00 AM and 5:00 PM Toronto time.</small>
+        </div>
 
-        <label>
-          Timezone
-          <input pInputText type="text" formControlName="timezone" placeholder="America/Toronto" />
+        <div class="form-field">
+          <p-iftalabel>
+            <p-select
+              inputId="demo-timezone"
+              appendTo="body"
+              [options]="timezoneOptions"
+              optionLabel="label"
+              optionValue="value"
+              formControlName="timezone"
+              placeholder="Select timezone"
+              [filter]="true"
+              filterBy="label"
+              styleClass="w-full"
+            ></p-select>
+            <label for="demo-timezone">Timezone (stored)</label>
+          </p-iftalabel>
           <small class="form-error" *ngIf="fieldError('timezone', 'required')">Timezone is required.</small>
-        </label>
+          <small class="form-error" *ngIf="fieldError('preferredDateTime', 'invalidTimezone')">Select a valid timezone.</small>
+        </div>
       </div>
 
-      <label class="field-textarea">
-        Goals / use case
-        <textarea pTextarea rows="4" formControlName="useCase" placeholder="What outcomes do you want from the demo?"></textarea>
+      <div class="field-textarea">
+        <p-iftalabel>
+          <textarea pTextarea id="demo-use-case" rows="4" formControlName="useCase" placeholder="What outcomes do you want from the demo?" class="w-full demo-textarea"></textarea>
+          <label for="demo-use-case">Goals / use case</label>
+        </p-iftalabel>
         <small class="form-error" *ngIf="fieldError('useCase', 'required')">Please share your use case.</small>
-      </label>
+      </div>
 
       <div class="demo-actions">
         <button pButton type="button" label="Cancel" class="ne-btn ne-btn--link" (click)="closeDemoForm()" [disabled]="submittingDemo"></button>

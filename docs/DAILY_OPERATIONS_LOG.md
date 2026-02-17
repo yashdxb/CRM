@@ -84,6 +84,35 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ## Log
 
+**Date:** 2026-02-17  
+**Environment:** Dev (Landing + Public Demo Request Flow)  
+**Owner:** Yasser / Eng
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 09:10 | Landing UX | Book Demo behavior inconsistent (button placement, modal behavior, styling regressions after IftaLabel) | Medium | Product |
+| 10:05 | Demo Scheduling Rules | Need strict scheduling policy by Toronto business hours while keeping UTC canonical handling | High | Product |
+| 10:45 | Lead Capture | Ensure Schedule Demo request reaches `contact@northedgesystem.com` and show thank-you confirmation | High | Product |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Book Demo UI inconsistency | Mixed button styles and modal implementations; partial PrimeNG adoption | Standardized CTA placement/style; moved to PrimeNG `p-dialog` modal with `dismissableMask=false`; controls moved to PrimeNG + IftaLabel; adjusted field height/width for readability | `client/src/app/public/landing/landing.page.html`, `client/src/app/public/landing/landing.page.scss`, `client/src/app/public/landing/landing.page.ts` | Eng | Playwright screenshots captured before/after (`output/playwright/landing-dialog-current.png`, `output/playwright/landing-dialog-fixed.png`) |
+| Scheduling policy ambiguity | Client-side checks were timezone-fragile and not canonical | Added canonical `preferredDateTimeUtc` payload; server validates Toronto rules from UTC (next Toronto day + 09:00-17:00 Toronto); client supports editable timezone and converts to UTC before submit | `client/src/app/public/landing/models/crm-landing.models.ts`, `client/src/app/public/landing/landing.page.ts`, `server/src/CRM.Enterprise.Api/Contracts/Auth/BookDemoRequest.cs`, `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs` | Eng | Client build + server build + Playwright smoke pass |
+| Demo request delivery/confirmation | Destination not explicitly locked and post-submit feedback weak | Delivery target fixed to `contact@northedgesystem.com`; success dialog added with thank-you note | `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`, `client/src/app/public/landing/landing.page.html`, `client/src/app/public/landing/landing.page.ts` | Eng | Successful submission flow shows thank-you confirmation |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Add targeted Playwright spec for landing demo scheduling rules | Eng | 2026-02-18 | Include timezone-switch cases + Toronto boundary checks |
+| Verify production app settings for demo mail transport path | Eng | 2026-02-18 | Confirm ACS/queue route and delivery health |
+
+### Summary for Project Master (If Verified)
+- Public landing Book Demo flow is standardized on PrimeNG modal + controls, with improved IftaLabel layout.
+- Scheduling now uses UTC canonical payload and backend Toronto-window enforcement.
+- Demo requests route to `contact@northedgesystem.com` and show explicit post-submit confirmation.
+
 **Date:** 2026-02-03  
 **Environment:** Dev (Azure App Service + Azure SQL)  
 **Owner:** Yasser / Eng

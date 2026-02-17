@@ -39,6 +39,7 @@ export interface BookDemoRequest {
   roleTitle: string;
   phone: string;
   teamSize: string;
+  preferredDateTimeUtc: string;
   preferredDate: string;
   preferredTime: string;
   timezone: string;

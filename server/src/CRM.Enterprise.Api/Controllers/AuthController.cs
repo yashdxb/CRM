@@ -4,6 +4,7 @@ using CRM.Enterprise.Application.Notifications;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 
@@ -14,6 +15,7 @@ namespace CRM.Enterprise.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private const string DemoRequestEmail = "contact@northedgesystem.com";
+    private static readonly TimeZoneInfo TorontoTimeZone = ResolveTorontoTimeZone();
     private readonly IAuthService _authService;
     private readonly IEmailSender _emailSender;
     private readonly ILogger<AuthController> _logger;
@@ -223,10 +225,9 @@ public class AuthController : ControllerBase
             string.IsNullOrWhiteSpace(request.WorkEmail) ||
             string.IsNullOrWhiteSpace(request.Company) ||
             string.IsNullOrWhiteSpace(request.RoleTitle) ||
+            string.IsNullOrWhiteSpace(request.Phone) ||
             string.IsNullOrWhiteSpace(request.TeamSize) ||
-            string.IsNullOrWhiteSpace(request.PreferredDate) ||
-            string.IsNullOrWhiteSpace(request.PreferredTime) ||
-            string.IsNullOrWhiteSpace(request.Timezone) ||
+            string.IsNullOrWhiteSpace(request.PreferredDateTimeUtc) ||
             string.IsNullOrWhiteSpace(request.UseCase))
         {
             return BadRequest("Please provide all required fields.");
@@ -243,11 +244,20 @@ public class AuthController : ControllerBase
         var roleTitle = request.RoleTitle.Trim();
         var phone = request.Phone?.Trim();
         var teamSize = request.TeamSize.Trim();
-        var preferredDate = request.PreferredDate.Trim();
-        var preferredTime = request.PreferredTime.Trim();
-        var timezone = request.Timezone.Trim();
+        if (!DateTimeOffset.TryParse(request.PreferredDateTimeUtc.Trim(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var preferredUtc))
+        {
+            return BadRequest("Preferred date/time must be a valid UTC timestamp.");
+        }
+        preferredUtc = preferredUtc.ToUniversalTime();
+        if (!IsValidTorontoScheduleWindow(preferredUtc))
+        {
+            return BadRequest("Schedule must be from the next Toronto day onward and between 9:00 AM and 5:00 PM Toronto time.");
+        }
         var useCase = request.UseCase.Trim();
         var landingPageUrl = request.LandingPageUrl?.Trim();
+        var preferredToronto = TimeZoneInfo.ConvertTime(preferredUtc, TorontoTimeZone);
+        var preferredTorontoDisplay = preferredToronto.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+        var preferredUtcDisplay = preferredUtc.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
         var encodedWebsiteUrl = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(_brandWebsiteUrl)
             ? "https://www.northedgesystem.com"
@@ -272,9 +282,8 @@ public class AuthController : ControllerBase
                       <tr><td style=""padding:8px 0;font-weight:600;"">Role/Title</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(roleTitle)}</td></tr>
                       <tr><td style=""padding:8px 0;font-weight:600;"">Phone</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(phone ?? "Not provided")}</td></tr>
                       <tr><td style=""padding:8px 0;font-weight:600;"">Team size</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(teamSize)}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Preferred date</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(preferredDate)}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Preferred time</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(preferredTime)}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Timezone</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(timezone)}</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Preferred UTC</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(preferredUtcDisplay)} UTC</td></tr>
+                      <tr><td style=""padding:8px 0;font-weight:600;"">Preferred Toronto</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(preferredTorontoDisplay)} America/Toronto</td></tr>
                       <tr><td style=""padding:8px 0;font-weight:600;vertical-align:top;"">Use case</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(useCase).Replace("\n", "<br />")}</td></tr>
                       <tr><td style=""padding:8px 0;font-weight:600;"">Landing page</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(landingPageUrl ?? "Not provided")}</td></tr>
                     </table>
@@ -293,9 +302,8 @@ public class AuthController : ControllerBase
         textBodyBuilder.AppendLine($"Role/Title: {roleTitle}");
         textBodyBuilder.AppendLine($"Phone: {phone ?? "Not provided"}");
         textBodyBuilder.AppendLine($"Team size: {teamSize}");
-        textBodyBuilder.AppendLine($"Preferred date: {preferredDate}");
-        textBodyBuilder.AppendLine($"Preferred time: {preferredTime}");
-        textBodyBuilder.AppendLine($"Timezone: {timezone}");
+        textBodyBuilder.AppendLine($"Preferred UTC: {preferredUtcDisplay} UTC");
+        textBodyBuilder.AppendLine($"Preferred Toronto: {preferredTorontoDisplay} America/Toronto");
         textBodyBuilder.AppendLine($"Use case: {useCase}");
         textBodyBuilder.AppendLine($"Landing page: {landingPageUrl ?? "Not provided"}");
 
@@ -341,6 +349,32 @@ public class AuthController : ControllerBase
         catch
         {
             return false;
+        }
+    }
+
+    private static bool IsValidTorontoScheduleWindow(DateTimeOffset preferredUtc)
+    {
+        var nowToronto = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TorontoTimeZone);
+        var preferredToronto = TimeZoneInfo.ConvertTime(preferredUtc, TorontoTimeZone);
+        var minTorontoDate = nowToronto.Date.AddDays(1);
+        if (preferredToronto.Date < minTorontoDate)
+        {
+            return false;
+        }
+
+        var time = preferredToronto.TimeOfDay;
+        return time >= TimeSpan.FromHours(9) && time < TimeSpan.FromHours(17);
+    }
+
+    private static TimeZoneInfo ResolveTorontoTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("America/Toronto");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
         }
     }
 }

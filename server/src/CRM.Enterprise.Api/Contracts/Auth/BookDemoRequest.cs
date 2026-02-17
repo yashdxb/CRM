@@ -7,6 +7,7 @@ public record BookDemoRequest(
     string RoleTitle,
     string? Phone,
     string TeamSize,
+    string PreferredDateTimeUtc,
     string PreferredDate,
     string PreferredTime,
     string Timezone,
