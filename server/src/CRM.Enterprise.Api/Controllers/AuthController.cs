@@ -262,32 +262,86 @@ public class AuthController : ControllerBase
         var encodedWebsiteUrl = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(_brandWebsiteUrl)
             ? "https://www.northedgesystem.com"
             : _brandWebsiteUrl);
+        var encodedFullName = System.Net.WebUtility.HtmlEncode(fullName);
+        var encodedWorkEmail = System.Net.WebUtility.HtmlEncode(workEmail);
+        var encodedCompany = System.Net.WebUtility.HtmlEncode(company);
+        var encodedRoleTitle = System.Net.WebUtility.HtmlEncode(roleTitle);
+        var encodedPhone = System.Net.WebUtility.HtmlEncode(phone ?? "Not provided");
+        var encodedTeamSize = System.Net.WebUtility.HtmlEncode(teamSize);
+        var encodedPreferredUtc = System.Net.WebUtility.HtmlEncode(preferredUtcDisplay);
+        var encodedPreferredToronto = System.Net.WebUtility.HtmlEncode(preferredTorontoDisplay);
+        var encodedUseCase = System.Net.WebUtility.HtmlEncode(useCase).Replace("\n", "<br />");
+        var safeLandingUrl = string.IsNullOrWhiteSpace(landingPageUrl) ? null : landingPageUrl;
+        var encodedLandingText = System.Net.WebUtility.HtmlEncode(safeLandingUrl ?? "Not provided");
+        var landingUrlHref = safeLandingUrl is null ? null : System.Net.WebUtility.HtmlEncode(safeLandingUrl);
+        var landingUrlCell = landingUrlHref is null
+            ? encodedLandingText
+            : $@"<a href=""{landingUrlHref}"" style=""color:#60a5fa; text-decoration:none;"">{encodedLandingText}</a>";
 
         var subject = $"Book Demo request: {company} - {fullName}";
         var htmlBody = $@"
-            <div style=""font-family:'Segoe UI',Arial,sans-serif;background:#f3f6ff;padding:24px;"">
-              <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:680px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e6ebfb;overflow:hidden;"">
+            <div style=""font-family:'Segoe UI',Arial,sans-serif;background:radial-gradient(1200px 680px at 10% -20%, #233d72 0%, #101a39 42%, #0b1229 100%);padding:24px;"">
+              <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""max-width:700px;margin:0 auto;border-radius:18px;border:1px solid rgba(147,197,253,0.26);background:rgba(7,12,28,0.86);overflow:hidden;box-shadow:0 24px 60px rgba(2,6,23,0.6);"">
                 <tr>
-                  <td style=""padding:16px 20px;background:linear-gradient(90deg,#0ea5e9,#3b82f6,#6366f1);color:#ffffff;font-weight:700;"">
-                    North Edge CRM - Demo Request
+                  <td style=""padding:16px 22px;background:linear-gradient(90deg,#1d4ed8 0%,#2563eb 48%,#38bdf8 100%);color:#e0f2fe;"">
+                    <div style=""font-size:12px;letter-spacing:0.22em;text-transform:uppercase;font-weight:700;opacity:0.9;"">North Edge CRM</div>
+                    <div style=""margin-top:6px;font-size:21px;line-height:1.25;font-weight:800;color:#ffffff;"">New Demo Scheduling Request</div>
                   </td>
                 </tr>
                 <tr>
-                  <td style=""padding:20px;"">
-                    <h2 style=""margin:0 0 12px;font-size:20px;color:#0f172a;"">New demo scheduling request</h2>
-                    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:collapse;font-size:14px;color:#1e293b;"">
-                      <tr><td style=""padding:8px 0;font-weight:600;width:180px;"">Full name</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(fullName)}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Work email</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(workEmail)}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Company</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(company)}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Role/Title</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(roleTitle)}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Phone</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(phone ?? "Not provided")}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Team size</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(teamSize)}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Preferred UTC</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(preferredUtcDisplay)} UTC</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Preferred Toronto</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(preferredTorontoDisplay)} America/Toronto</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;vertical-align:top;"">Use case</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(useCase).Replace("\n", "<br />")}</td></tr>
-                      <tr><td style=""padding:8px 0;font-weight:600;"">Landing page</td><td style=""padding:8px 0;"">{System.Net.WebUtility.HtmlEncode(landingPageUrl ?? "Not provided")}</td></tr>
+                  <td style=""padding:20px 22px 8px;color:#dbeafe;"">
+                    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""border-collapse:separate;border-spacing:0 10px;"">
+                      <tr>
+                        <td style=""width:33%;padding:10px 12px;background:rgba(59,130,246,0.14);border:1px solid rgba(96,165,250,0.3);border-radius:12px;"">
+                          <div style=""font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#93c5fd;"">Requester</div>
+                          <div style=""margin-top:4px;font-size:14px;font-weight:700;color:#eff6ff;"">{encodedFullName}</div>
+                        </td>
+                        <td style=""width:33%;padding:10px 12px;background:rgba(59,130,246,0.14);border:1px solid rgba(96,165,250,0.3);border-radius:12px;"">
+                          <div style=""font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#93c5fd;"">Company</div>
+                          <div style=""margin-top:4px;font-size:14px;font-weight:700;color:#eff6ff;"">{encodedCompany}</div>
+                        </td>
+                        <td style=""width:33%;padding:10px 12px;background:rgba(59,130,246,0.14);border:1px solid rgba(96,165,250,0.3);border-radius:12px;"">
+                          <div style=""font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#93c5fd;"">Team size</div>
+                          <div style=""margin-top:4px;font-size:14px;font-weight:700;color:#eff6ff;"">{encodedTeamSize}</div>
+                        </td>
+                      </tr>
                     </table>
-                    <p style=""margin:16px 0 0;color:#64748b;font-size:12px;"">Website: <a href=""{encodedWebsiteUrl}"" style=""color:#2563eb;"">{encodedWebsiteUrl}</a></p>
+
+                    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:8px;border-collapse:collapse;background:rgba(15,23,42,0.64);border:1px solid rgba(148,163,184,0.24);border-radius:14px;overflow:hidden;"">
+                      <tr>
+                        <td style=""padding:12px 14px;color:#93c5fd;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;border-bottom:1px solid rgba(148,163,184,0.2);"">Contact Details</td>
+                        <td style=""padding:12px 14px;color:#93c5fd;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;border-bottom:1px solid rgba(148,163,184,0.2);"">Scheduling</td>
+                      </tr>
+                      <tr>
+                        <td style=""vertical-align:top;padding:12px 14px;border-right:1px solid rgba(148,163,184,0.18);"">
+                          <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""font-size:14px;color:#e2e8f0;line-height:1.6;"">
+                            <tr><td style=""padding:2px 0;font-weight:600;color:#cbd5e1;width:110px;"">Email</td><td style=""padding:2px 0;"">{encodedWorkEmail}</td></tr>
+                            <tr><td style=""padding:2px 0;font-weight:600;color:#cbd5e1;"">Role/Title</td><td style=""padding:2px 0;"">{encodedRoleTitle}</td></tr>
+                            <tr><td style=""padding:2px 0;font-weight:600;color:#cbd5e1;"">Phone</td><td style=""padding:2px 0;"">{encodedPhone}</td></tr>
+                            <tr><td style=""padding:2px 0;font-weight:600;color:#cbd5e1;"">Landing page</td><td style=""padding:2px 0;"">{landingUrlCell}</td></tr>
+                          </table>
+                        </td>
+                        <td style=""vertical-align:top;padding:12px 14px;"">
+                          <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""font-size:14px;color:#e2e8f0;line-height:1.6;"">
+                            <tr><td style=""padding:2px 0;font-weight:600;color:#cbd5e1;width:126px;"">Preferred UTC</td><td style=""padding:2px 0;"">{encodedPreferredUtc} UTC</td></tr>
+                            <tr><td style=""padding:2px 0;font-weight:600;color:#cbd5e1;"">Preferred Toronto</td><td style=""padding:2px 0;"">{encodedPreferredToronto} America/Toronto</td></tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <table role=""presentation"" width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""margin-top:10px;border-collapse:collapse;background:rgba(15,23,42,0.64);border:1px solid rgba(148,163,184,0.24);border-radius:14px;overflow:hidden;"">
+                      <tr>
+                        <td style=""padding:12px 14px;color:#93c5fd;font-size:12px;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;border-bottom:1px solid rgba(148,163,184,0.2);"">Use Case</td>
+                      </tr>
+                      <tr>
+                        <td style=""padding:12px 14px;color:#e2e8f0;font-size:14px;line-height:1.6;"">{encodedUseCase}</td>
+                      </tr>
+                    </table>
+
+                    <p style=""margin:14px 0 6px;color:#94a3b8;font-size:12px;"">
+                      Website: <a href=""{encodedWebsiteUrl}"" style=""color:#60a5fa;text-decoration:none;"">{encodedWebsiteUrl}</a>
+                    </p>
                   </td>
                 </tr>
               </table>
