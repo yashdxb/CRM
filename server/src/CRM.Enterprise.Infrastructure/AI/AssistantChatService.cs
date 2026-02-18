@@ -4,6 +4,7 @@ using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace CRM.Enterprise.Infrastructure.AI;
 
@@ -13,17 +14,20 @@ public sealed class AssistantChatService : IAssistantChatService
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly FoundryAgentClient _client;
+    private readonly AzureSearchKnowledgeClient _knowledgeClient;
     private readonly bool _isDevelopment;
 
     public AssistantChatService(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
         FoundryAgentClient client,
+        AzureSearchKnowledgeClient knowledgeClient,
         IHostEnvironment hostEnvironment)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _client = client;
+        _knowledgeClient = knowledgeClient;
         _isDevelopment = hostEnvironment.IsDevelopment();
     }
 
@@ -127,7 +131,8 @@ public sealed class AssistantChatService : IAssistantChatService
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        await _client.AddMessageAsync(thread.ThreadId, "user", normalized, cancellationToken);
+        var groundedMessage = await BuildGroundedPromptAsync(normalized, cancellationToken);
+        await _client.AddMessageAsync(thread.ThreadId, "user", groundedMessage, cancellationToken);
         string reply;
         try
         {
@@ -165,6 +170,50 @@ public sealed class AssistantChatService : IAssistantChatService
 
         var history = await GetHistoryAsync(userId, cancellationToken, 50);
         return new AssistantChatResult(reply, history);
+    }
+
+    private async Task<string> BuildGroundedPromptAsync(string userQuestion, CancellationToken cancellationToken)
+    {
+        if (!_knowledgeClient.IsConfigured)
+        {
+            return userQuestion;
+        }
+
+        IReadOnlyList<KnowledgeSearchDocument> documents;
+        try
+        {
+            documents = await _knowledgeClient.SearchAsync(userQuestion, cancellationToken);
+        }
+        catch
+        {
+            return userQuestion;
+        }
+
+        if (documents.Count == 0)
+        {
+            return userQuestion;
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("Grounding policy: answer using CURRENT CRM knowledge only.");
+        builder.AppendLine("If answer is not in the sources below, say it is not available in current CRM policy.");
+        builder.AppendLine("Cite used sources like [1], [2] using the provided source list.");
+        builder.AppendLine();
+        builder.AppendLine("User question:");
+        builder.AppendLine(userQuestion);
+        builder.AppendLine();
+        builder.AppendLine("Retrieved knowledge sources:");
+
+        for (var i = 0; i < documents.Count; i++)
+        {
+            var doc = documents[i];
+            var ordinal = i + 1;
+            builder.AppendLine($"[{ordinal}] {doc.Title} | module={doc.Module} | version={doc.Version} | path={doc.Path}");
+            builder.AppendLine(doc.Content);
+            builder.AppendLine();
+        }
+
+        return builder.ToString().Trim();
     }
 
     private static bool TryParseRetryAfter(string? message, out int retryAfterSeconds)

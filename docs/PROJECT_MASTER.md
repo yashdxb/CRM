@@ -949,6 +949,11 @@ Legend:
   - Chat storage: `server/src/CRM.Enterprise.Domain/Entities/AssistantThread.cs`
   - UI: `client/src/app/core/assistant/assistant-panel.component.ts`
   - Guide: `docs/ai/FOUNDARY_FINE_TUNING_GUIDE.md`
+  - Knowledge grounding guide: `docs/ai/KNOWLEDGE_GROUNDING_GUIDE.md`
+  - Knowledge manifest builder: `scripts/build_ai_knowledge_manifest.py`
+  - Search index setup script: `scripts/setup_ai_knowledge_search_index.py`
+  - Search uploader script: `scripts/push_ai_knowledge_to_search.py`
+  - Azure AI Search (dev): `crmenterprisesearchdevca` / index `crm-ai-knowledge`
 
 ---
 

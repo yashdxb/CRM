@@ -1,0 +1,84 @@
+[
+  {
+    "id": "new_user_auth_01",
+    "question": "I am new. How do I login and where do I go after that?",
+    "expected_source_paths": [
+      "docs/ai/knowledge/auth/login-to-logout-journey.md"
+    ],
+    "expected_response_keywords": [
+      "login",
+      "dashboard"
+    ]
+  },
+  {
+    "id": "new_user_auth_02",
+    "question": "What happens when I logout?",
+    "expected_source_paths": [
+      "docs/ai/knowledge/auth/auth-ui-and-api-reference.md"
+    ],
+    "expected_response_keywords": [
+      "logout",
+      "login"
+    ]
+  },
+  {
+    "id": "lead_list_fields_01",
+    "question": "What columns are in the lead list table?",
+    "expected_source_paths": [
+      "docs/ai/knowledge/leads/lead-list-field-reference.md"
+    ],
+    "expected_response_keywords": [
+      "status",
+      "owner",
+      "lead score"
+    ]
+  },
+  {
+    "id": "lead_form_tabs_01",
+    "question": "What tabs are available in lead form and which fields are in overview tab?",
+    "expected_source_paths": [
+      "docs/ai/knowledge/leads/lead-form-tabs-and-fields-reference.md"
+    ],
+    "expected_response_keywords": [
+      "overview",
+      "qualification",
+      "activity",
+      "history"
+    ]
+  },
+  {
+    "id": "lead_rules_01",
+    "question": "What validations are required before lead can be qualified or converted?",
+    "expected_source_paths": [
+      "docs/ai/knowledge/leads/lead-validation-and-status-rules-reference.md"
+    ],
+    "expected_response_keywords": [
+      "qualified",
+      "conversion",
+      "required"
+    ]
+  },
+  {
+    "id": "approval_01",
+    "question": "When does approval trigger and who can approve?",
+    "expected_source_paths": [
+      "docs/ai/knowledge/approval-workflows/approval-execution-and-controls.md"
+    ],
+    "expected_response_keywords": [
+      "approval",
+      "permission",
+      "threshold"
+    ]
+  },
+  {
+    "id": "command_center_01",
+    "question": "What does No Next Step KPI mean in command center?",
+    "expected_source_paths": [
+      "docs/ai/knowledge/command-center/command-center-kpi-definitions.md"
+    ],
+    "expected_response_keywords": [
+      "no next step",
+      "opportunities"
+    ]
+  }
+]

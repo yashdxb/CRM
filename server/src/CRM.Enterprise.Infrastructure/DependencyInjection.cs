@@ -133,11 +133,22 @@ public static class DependencyInjection
             return new RuleBasedLeadScoringService();
         });
         services.Configure<FoundryAgentOptions>(configuration.GetSection(FoundryAgentOptions.SectionName));
+        services.Configure<AzureSearchKnowledgeOptions>(configuration.GetSection(AzureSearchKnowledgeOptions.SectionName));
         services.AddSingleton(sp =>
             sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FoundryAgentOptions>>().Value);
+        services.AddSingleton(sp =>
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AzureSearchKnowledgeOptions>>().Value);
         services.AddHttpClient<FoundryAgentClient>((sp, client) =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<FoundryAgentOptions>>().Value;
+            if (!string.IsNullOrWhiteSpace(options.Endpoint))
+            {
+                client.BaseAddress = new Uri(options.Endpoint.TrimEnd('/') + "/");
+            }
+        });
+        services.AddHttpClient<AzureSearchKnowledgeClient>((sp, client) =>
+        {
+            var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AzureSearchKnowledgeOptions>>().Value;
             if (!string.IsNullOrWhiteSpace(options.Endpoint))
             {
                 client.BaseAddress = new Uri(options.Endpoint.TrimEnd('/') + "/");

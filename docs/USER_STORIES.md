@@ -23,6 +23,18 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
 - Full per-story snapshot: `docs/CLICKUP_ARCH_CLASSIFICATION_SYNC.md`
 - Classification rule source: `docs/PROJECT_BACKLOG.md` -> `Hybrid CQRS Implementation Checklist (Execution)`
 
+### AI Assistant Knowledge Grounding Sync (ClickUp -> Docs)
+- Sync date: **February 18, 2026**
+- Epic: `Epic | AI Assistant | Knowledge Grounding & Retrieval` (ClickUp: `86dzw8unp`)
+- Stories created:
+  - `86dzw8uug` — Module: Assistant | Azure AI Search index setup automation
+  - `86dzw8uuk` — Module: Assistant | Knowledge manifest validation/generation
+  - `86dzw8uuu` — Module: Assistant | Azure Search publishing with safe ids
+  - `86dzw8uuv` — Module: Assistant | Grounded response policy for real workflows
+  - `86dzw8uuw` — Module: Assistant | Login-to-logout + lead field reference coverage
+  - `86dzw8uux` — Module: Assistant | Foundry runtime retrieval hookup + prompt QA
+- Detailed snapshot: `docs/CLICKUP_AI_ASSISTANT_KNOWLEDGE_SYNC.md`
+
 ---
 
 ## Strategic Benchmark & Differentiation (Current Plan)
