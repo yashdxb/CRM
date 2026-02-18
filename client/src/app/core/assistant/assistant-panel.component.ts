@@ -120,33 +120,54 @@ export class AssistantPanelComponent {
     }
 
     let normalized = content.replace(/\r\n/g, '\n');
-    normalized = normalized.replace(/(\s|^)(\d+)\.\s+/g, '\n$2. ');
+    normalized = normalized.replace(/(\s|^)(\d+[.)])\s+/g, '\n$2 ');
     normalized = normalized.trim();
 
-    const lines = normalized.split('\n').map((line) => line.trim()).filter(Boolean);
-    type Block = { type: 'p'; text: string } | { type: 'list'; items: string[] };
+    const lines = normalized.split('\n');
+    type Block = { type: 'p'; text: string } | { type: 'ol' | 'ul'; items: string[] };
     const blocks: Block[] = [];
+    const paragraphLines: string[] = [];
+
+    const flushParagraph = () => {
+      if (!paragraphLines.length) {
+        return;
+      }
+      blocks.push({ type: 'p', text: paragraphLines.join(' ') });
+      paragraphLines.length = 0;
+    };
 
     for (const line of lines) {
-      const listMatch = line.match(/^\d+\.\s+(.*)$/);
-      if (listMatch) {
-        const item = listMatch[1];
+      const trimmed = line.trim();
+      if (!trimmed) {
+        flushParagraph();
+        continue;
+      }
+
+      const orderedMatch = trimmed.match(/^\d+[.)]\s+(.*)$/);
+      const unorderedMatch = trimmed.match(/^[-*•]\s+(.*)$/);
+      const listType = orderedMatch ? 'ol' : unorderedMatch ? 'ul' : null;
+      const listItem = orderedMatch?.[1] ?? unorderedMatch?.[1];
+
+      if (listType && listItem) {
+        flushParagraph();
         const last = blocks[blocks.length - 1];
-        if (last && last.type === 'list') {
-          last.items.push(item);
+        if (last && last.type === listType) {
+          last.items.push(listItem);
         } else {
-          blocks.push({ type: 'list', items: [item] });
+          blocks.push({ type: listType, items: [listItem] });
         }
       } else {
-        blocks.push({ type: 'p', text: line });
+        paragraphLines.push(trimmed);
       }
     }
+    flushParagraph();
 
     return blocks
       .map((block) => {
-        if (block.type === 'list') {
+        if (block.type === 'ol' || block.type === 'ul') {
           const items = block.items.map((item) => `<li>${this.formatInline(item)}</li>`).join('');
-          return `<ol class=\"assistant-list\">${items}</ol>`;
+          const tag = block.type;
+          return `<${tag} class=\"assistant-list\">${items}</${tag}>`;
         }
         return `<p>${this.formatInline(block.text)}</p>`;
       })
