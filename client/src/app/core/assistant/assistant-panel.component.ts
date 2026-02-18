@@ -120,7 +120,14 @@ export class AssistantPanelComponent {
     }
 
     let normalized = content.replace(/\r\n/g, '\n');
-    normalized = normalized.replace(/(\s|^)(\d+[.)])\s+/g, '\n$2 ');
+    normalized = normalized
+      // Split inline numbered bullets into their own lines.
+      .replace(/(\S)\s+(\d+[.)])\s*/g, '$1\n$2 ')
+      // Split inline unordered bullets into their own lines.
+      .replace(/(\S)\s+([-*•])\s*/g, '$1\n$2 ')
+      // Normalize any marker that already starts a line.
+      .replace(/(\n|^)(\d+[.)])\s*/g, '$1$2 ')
+      .replace(/(\n|^)([-*•])\s*/g, '$1$2 ');
     normalized = normalized.trim();
 
     const lines = normalized.split('\n');
@@ -143,8 +150,8 @@ export class AssistantPanelComponent {
         continue;
       }
 
-      const orderedMatch = trimmed.match(/^\d+[.)]\s+(.*)$/);
-      const unorderedMatch = trimmed.match(/^[-*•]\s+(.*)$/);
+      const orderedMatch = trimmed.match(/^\d+[.)]\s*(.+)$/);
+      const unorderedMatch = trimmed.match(/^[-*•]\s*(.+)$/);
       const listType = orderedMatch ? 'ol' : unorderedMatch ? 'ul' : null;
       const listItem = orderedMatch?.[1] ?? unorderedMatch?.[1];
 
