@@ -1,6 +1,7 @@
 using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -131,7 +132,7 @@ public sealed class AssistantChatService : IAssistantChatService
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        var groundedMessage = await BuildGroundedPromptAsync(normalized, cancellationToken);
+        var groundedMessage = await BuildGroundedPromptAsync(userId, normalized, cancellationToken);
         await _client.AddMessageAsync(thread.ThreadId, "user", groundedMessage, cancellationToken);
         string reply;
         try
@@ -172,11 +173,13 @@ public sealed class AssistantChatService : IAssistantChatService
         return new AssistantChatResult(reply, history);
     }
 
-    private async Task<string> BuildGroundedPromptAsync(string userQuestion, CancellationToken cancellationToken)
+    private async Task<string> BuildGroundedPromptAsync(Guid userId, string userQuestion, CancellationToken cancellationToken)
     {
+        var executionSnapshot = await BuildExecutionSnapshotAsync(userId, cancellationToken);
+
         if (!_knowledgeClient.IsConfigured)
         {
-            return userQuestion;
+            return BuildStructuredPrompt(userQuestion, executionSnapshot, Array.Empty<KnowledgeSearchDocument>());
         }
 
         IReadOnlyList<KnowledgeSearchDocument> documents;
@@ -186,23 +189,137 @@ public sealed class AssistantChatService : IAssistantChatService
         }
         catch
         {
-            return userQuestion;
+            return BuildStructuredPrompt(userQuestion, executionSnapshot, Array.Empty<KnowledgeSearchDocument>());
         }
 
-        if (documents.Count == 0)
+        return BuildStructuredPrompt(userQuestion, executionSnapshot, documents);
+    }
+
+    private async Task<AssistantExecutionSnapshot> BuildExecutionSnapshotAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var nowUtc = DateTime.UtcNow;
+        var staleCutoff = nowUtc.AddDays(-7);
+
+        var overdueActivities = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(activity => activity.TenantId == tenantId
+                && !activity.IsDeleted
+                && activity.OwnerId == userId
+                && activity.CompletedDateUtc == null
+                && activity.DueDateUtc != null
+                && activity.DueDateUtc < nowUtc)
+            .CountAsync(cancellationToken);
+
+        var leadSlaBreaches = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(lead => lead.TenantId == tenantId
+                && !lead.IsDeleted
+                && lead.OwnerId == userId
+                && lead.FirstTouchedAtUtc == null
+                && lead.FirstTouchDueAtUtc != null
+                && lead.FirstTouchDueAtUtc < nowUtc)
+            .CountAsync(cancellationToken);
+
+        var lowConfidenceLeads = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(lead => lead.TenantId == tenantId
+                && !lead.IsDeleted
+                && lead.OwnerId == userId
+                && lead.ConvertedAtUtc == null
+                && (lead.AiConfidence == null || lead.AiConfidence < 0.65m))
+            .CountAsync(cancellationToken);
+
+        var openOpportunities = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(opportunity => opportunity.TenantId == tenantId
+                && !opportunity.IsDeleted
+                && opportunity.OwnerId == userId
+                && !opportunity.IsClosed)
+            .Select(opportunity => new { opportunity.Id, opportunity.Name })
+            .ToListAsync(cancellationToken);
+
+        var openOpportunityIds = openOpportunities.Select(opportunity => opportunity.Id).ToList();
+        var opportunitiesWithoutRecentActivity = 0;
+        var topAtRiskOpportunityNames = Array.Empty<string>();
+
+        if (openOpportunityIds.Count > 0)
         {
-            return userQuestion;
+            var recentActivityIds = await _dbContext.Activities
+                .AsNoTracking()
+                .Where(activity => activity.TenantId == tenantId
+                    && !activity.IsDeleted
+                    && activity.RelatedEntityType == ActivityRelationType.Opportunity
+                    && openOpportunityIds.Contains(activity.RelatedEntityId)
+                    && (activity.CompletedDateUtc ?? activity.CreatedAtUtc) >= staleCutoff)
+                .Select(activity => activity.RelatedEntityId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var staleOpportunities = openOpportunities
+                .Where(opportunity => !recentActivityIds.Contains(opportunity.Id))
+                .Select(opportunity => opportunity.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Take(3)
+                .ToArray();
+
+            opportunitiesWithoutRecentActivity = openOpportunities.Count - recentActivityIds.Count;
+            topAtRiskOpportunityNames = staleOpportunities;
         }
 
+        var pendingApprovals = await _dbContext.OpportunityApprovals
+            .AsNoTracking()
+            .Where(approval => approval.TenantId == tenantId
+                && !approval.IsDeleted
+                && approval.Status == "Pending"
+                && (approval.RequestedByUserId == userId || approval.ApproverUserId == userId))
+            .CountAsync(cancellationToken);
+
+        return new AssistantExecutionSnapshot(
+            OverdueActivities: overdueActivities,
+            LeadSlaBreaches: leadSlaBreaches,
+            OpenOpportunitiesWithoutRecentActivity: Math.Max(opportunitiesWithoutRecentActivity, 0),
+            LowConfidenceLeads: lowConfidenceLeads,
+            PendingApprovals: pendingApprovals,
+            TopAtRiskOpportunityNames: topAtRiskOpportunityNames);
+    }
+
+    private static string BuildStructuredPrompt(
+        string userQuestion,
+        AssistantExecutionSnapshot executionSnapshot,
+        IReadOnlyList<KnowledgeSearchDocument> documents)
+    {
         var builder = new StringBuilder();
         builder.AppendLine("Grounding policy: answer using CURRENT CRM knowledge only.");
         builder.AppendLine("If answer is not in the sources below, say it is not available in current CRM policy.");
         builder.AppendLine("Cite used sources like [1], [2] using the provided source list.");
+        builder.AppendLine("Response style policy: provide clear sections, concise details, and actionable bullets.");
+        builder.AppendLine("Output format policy (always follow):");
+        builder.AppendLine("1) Situation Summary (2-4 lines).");
+        builder.AppendLine("2) Priority Actions (numbered list, each action includes owner + due window).");
+        builder.AppendLine("3) Risks / Blockers (bulleted list).");
+        builder.AppendLine("4) Sources Used (list citations like [1], [2]).");
+        builder.AppendLine();
+        builder.AppendLine("Execution snapshot for this user:");
+        builder.AppendLine($"- Overdue activities: {executionSnapshot.OverdueActivities}");
+        builder.AppendLine($"- Lead SLA breaches: {executionSnapshot.LeadSlaBreaches}");
+        builder.AppendLine($"- Open opportunities without recent activity (7d): {executionSnapshot.OpenOpportunitiesWithoutRecentActivity}");
+        builder.AppendLine($"- Low-confidence active leads: {executionSnapshot.LowConfidenceLeads}");
+        builder.AppendLine($"- Pending approvals in queue: {executionSnapshot.PendingApprovals}");
+        if (executionSnapshot.TopAtRiskOpportunityNames.Length > 0)
+        {
+            builder.AppendLine($"- At-risk opportunities (sample): {string.Join(", ", executionSnapshot.TopAtRiskOpportunityNames)}");
+        }
         builder.AppendLine();
         builder.AppendLine("User question:");
         builder.AppendLine(userQuestion);
         builder.AppendLine();
         builder.AppendLine("Retrieved knowledge sources:");
+
+        if (documents.Count == 0)
+        {
+            builder.AppendLine("- No retrieved knowledge snippets for this query.");
+        }
 
         for (var i = 0; i < documents.Count; i++)
         {
@@ -215,6 +332,14 @@ public sealed class AssistantChatService : IAssistantChatService
 
         return builder.ToString().Trim();
     }
+
+    private sealed record AssistantExecutionSnapshot(
+        int OverdueActivities,
+        int LeadSlaBreaches,
+        int OpenOpportunitiesWithoutRecentActivity,
+        int LowConfidenceLeads,
+        int PendingApprovals,
+        string[] TopAtRiskOpportunityNames);
 
     private static bool TryParseRetryAfter(string? message, out int retryAfterSeconds)
     {

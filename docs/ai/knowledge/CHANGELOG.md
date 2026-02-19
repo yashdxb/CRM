@@ -16,3 +16,5 @@ Track updates that affect assistant behavior.
 - Added Azure Search runtime setup verification (`crmenterprisesearchdevca` / `crm-ai-knowledge`) and successful upload of 17 grounded knowledge documents.
 - Added ClickUp tracking epic and stories for AI Assistant knowledge grounding execution.
 - Added grounding prompt test set and runner script for new-user and lead field-level query verification.
+- Added assistant AI orchestration stories in ClickUp for next-best-action, at-risk autopilot, approval copilot, manager coaching, and forecast reliability signals.
+- Updated assistant grounding policy to require structured sections (summary, numbered actions, risks, sources) and prioritize execution snapshot signals.

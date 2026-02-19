@@ -21,6 +21,12 @@ Ensure assistant answers are grounded in current CRM implementation and approved
 4. When policy is unavailable, state that clearly and request clarification.
 5. Cite source title and version when possible.
 6. For field-level questions, prefer module reference docs (list/form/tab/api) over generic guidance.
+7. Use structured response format with details and lists:
+   - Situation Summary
+   - Priority Actions (numbered)
+   - Risks / Blockers (bulleted)
+   - Sources Used (citations)
+8. When execution snapshot signals are available (SLA breaches, stale opportunities, pending approvals, low confidence), prioritize those in recommendations.
 
 ## Safety rules
 

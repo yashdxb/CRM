@@ -33,6 +33,12 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
   - `86dzw8uuv` — Module: Assistant | Grounded response policy for real workflows
   - `86dzw8uuw` — Module: Assistant | Login-to-logout + lead field reference coverage
   - `86dzw8uux` — Module: Assistant | Foundry runtime retrieval hookup + prompt QA
+- AI orchestration stories created:
+  - `86dzwn0c7` — Module: Assistant | Next-best-action orchestration engine from live CRM signals
+  - `86dzwn0cr` — Module: Assistant | At-risk pipeline autopilot recommendations (SLA/stale/no-next-step)
+  - `86dzwn0dk` — Module: Assistant | Approval copilot with policy-aware request guidance
+  - `86dzwn0e4` — Module: Assistant | Manager coaching orchestration with acknowledgment tasks
+  - `86dzwn0eq` — Module: Assistant | Forecast reliability risk signals in assistant responses
 - Detailed snapshot: `docs/CLICKUP_AI_ASSISTANT_KNOWLEDGE_SYNC.md`
 
 ---
@@ -101,6 +107,11 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Epistemic State + Evidence Governance
 - Feedback Loop + Weakest Signal
 - Later - Dedicated Award Screen (SCM)
+- Module: Assistant | Next-best-action orchestration engine from live CRM signals
+- Module: Assistant | At-risk pipeline autopilot recommendations (SLA/stale/no-next-step)
+- Module: Assistant | Approval copilot with policy-aware request guidance
+- Module: Assistant | Manager coaching orchestration with acknowledgment tasks
+- Module: Assistant | Forecast reliability risk signals in assistant responses
 - Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene.
 - Module: Activities | As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction.
 - Module: Activities | As a Sales Rep, I want review outcomes (Needs Work / Escalate) to create acknowledgment tasks with due dates.

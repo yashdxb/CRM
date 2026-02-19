@@ -16,6 +16,14 @@ Source list: `CRM Backlog` (`901710720381`)
 - `86dzw8uuw` — Module: Assistant | Login-to-logout and lead field reference coverage
 - `86dzw8uux` — Module: Assistant | Foundry runtime retrieval hookup + prompt QA
 
+## AI Orchestration Stories (Added February 18, 2026)
+
+- `86dzwn0c7` — Module: Assistant | Next-best-action orchestration engine from live CRM signals
+- `86dzwn0cr` — Module: Assistant | At-risk pipeline autopilot recommendations (SLA/stale/no-next-step)
+- `86dzwn0dk` — Module: Assistant | Approval copilot with policy-aware request guidance
+- `86dzwn0e4` — Module: Assistant | Manager coaching orchestration with acknowledgment tasks
+- `86dzwn0eq` — Module: Assistant | Forecast reliability risk signals in assistant responses
+
 ## Tag Standard Used
 
 - `module:assistant`

@@ -176,7 +176,8 @@ export class AssistantPanelComponent {
           const tag = block.type;
           return `<${tag} class=\"assistant-list\">${items}</${tag}>`;
         }
-        return `<p>${this.formatInline(block.text)}</p>`;
+        const paragraph = block as Extract<Block, { type: 'p' }>;
+        return `<p>${this.formatInline(paragraph.text)}</p>`;
       })
       .join('');
   }
