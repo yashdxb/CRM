@@ -1,6 +1,7 @@
 namespace CRM.Enterprise.Api.Contracts.Workspace;
 
 using CRM.Enterprise.Application.Approvals;
+using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Application.Qualifications;
 
 public record UpdateWorkspaceSettingsRequest(
@@ -13,4 +14,5 @@ public record UpdateWorkspaceSettingsRequest(
     decimal? ApprovalAmountThreshold,
     string? ApprovalApproverRole,
     ApprovalWorkflowPolicy? ApprovalWorkflowPolicy,
-    QualificationPolicy? QualificationPolicy);
+    QualificationPolicy? QualificationPolicy,
+    AssistantActionScoringPolicy? AssistantActionScoringPolicy);

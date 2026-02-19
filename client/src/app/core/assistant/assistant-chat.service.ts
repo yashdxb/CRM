@@ -28,7 +28,9 @@ export interface AssistantInsightsAction {
   id: string;
   title: string;
   description: string;
+  score: number;
   riskTier: 'low' | 'medium' | 'high' | string;
+  urgency: 'planned' | 'soon' | 'immediate' | string;
   ownerScope: string;
   dueWindow: string;
   actionType: string;

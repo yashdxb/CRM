@@ -22,3 +22,4 @@ Track updates that affect assistant behavior.
 - Added ClickUp epic + stories for assistant action execution and review controls (`86dzxrdp5`) and synced local snapshot doc.
 - Added assistant action execution APIs (`/api/assistant/actions/execute`, `/api/assistant/actions/review`) with risk-tier guardrails, audit telemetry, and dashboard execute/review UX wiring.
 - Added assistant undo API (`/api/assistant/actions/undo`) and confidence-threshold review gate for low-confidence lead actions.
+- Added tenant-configurable assistant action scoring policy (weights + thresholds) with workspace settings support and score/risk/urgency-driven dashboard orchestration.

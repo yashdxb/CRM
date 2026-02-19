@@ -739,7 +739,18 @@ export class DashboardPage implements OnInit {
     return 'risk-low';
   }
 
-  protected assistantUrgencyClass(priority: number | null | undefined): string {
+  protected assistantUrgencyClass(priority: number | null | undefined, urgency?: string | null): string {
+    const normalizedUrgency = (urgency ?? '').trim().toLowerCase();
+    if (normalizedUrgency === 'immediate') {
+      return 'urgency-immediate';
+    }
+    if (normalizedUrgency === 'soon') {
+      return 'urgency-soon';
+    }
+    if (normalizedUrgency === 'planned') {
+      return 'urgency-planned';
+    }
+
     const value = Number(priority ?? 0);
     if (value <= 1) {
       return 'urgency-immediate';
@@ -750,12 +761,18 @@ export class DashboardPage implements OnInit {
     return 'urgency-planned';
   }
 
-  protected assistantUrgencyLabel(priority: number | null | undefined): string {
-    const urgency = this.assistantUrgencyClass(priority);
-    if (urgency === 'urgency-immediate') {
+  protected assistantUrgencyLabel(priority: number | null | undefined, urgency?: string | null): string {
+    const urgencyClass = this.assistantUrgencyClass(priority, urgency);
+    const urgencyValue = (urgency ?? '').trim();
+    if (urgencyValue.length > 0) {
+      return urgencyValue.charAt(0).toUpperCase() + urgencyValue.slice(1).toLowerCase();
+    }
+
+    const fallbackUrgency = urgencyClass;
+    if (fallbackUrgency === 'urgency-immediate') {
       return 'Immediate';
     }
-    if (urgency === 'urgency-soon') {
+    if (fallbackUrgency === 'urgency-soon') {
       return 'Soon';
     }
     return 'Planned';

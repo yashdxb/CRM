@@ -4575,6 +4575,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("ApprovalWorkflowJson")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("AssistantActionScoringPolicyJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("datetime2");
 

@@ -209,6 +209,57 @@
 
           <section class="form-card">
             <h3 class="section-title section-title--info">
+              <i class="pi pi-sliders-h"></i>
+              AI Action Scoring
+            </h3>
+            <p class="section-description">Configure orchestration score weights and risk/urgency thresholds</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>SLA breaches weight</label>
+                <p-inputNumber formControlName="scoreWeightSlaBreaches" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              </div>
+              <div class="field">
+                <label>Stale opportunities weight</label>
+                <p-inputNumber formControlName="scoreWeightStaleOpportunities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              </div>
+              <div class="field">
+                <label>Pending approvals weight</label>
+                <p-inputNumber formControlName="scoreWeightPendingApprovals" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              </div>
+              <div class="field">
+                <label>Low-confidence leads weight</label>
+                <p-inputNumber formControlName="scoreWeightLowConfidenceLeads" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              </div>
+              <div class="field">
+                <label>Overdue activities weight</label>
+                <p-inputNumber formControlName="scoreWeightOverdueActivities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>Medium risk from (score)</label>
+                <p-inputNumber formControlName="scoreMediumRiskFrom" [min]="1" [max]="95" styleClass="w-full"></p-inputNumber>
+              </div>
+              <div class="field">
+                <label>High risk from (score)</label>
+                <p-inputNumber formControlName="scoreHighRiskFrom" [min]="5" [max]="99" styleClass="w-full"></p-inputNumber>
+              </div>
+              <div class="field">
+                <label>Soon urgency from (score)</label>
+                <p-inputNumber formControlName="scoreSoonUrgencyFrom" [min]="1" [max]="95" styleClass="w-full"></p-inputNumber>
+              </div>
+              <div class="field">
+                <label>Immediate urgency from (score)</label>
+                <p-inputNumber formControlName="scoreImmediateUrgencyFrom" [min]="5" [max]="99" styleClass="w-full"></p-inputNumber>
+                <small class="field-hint">Example: 80 means scores 80+ are marked Immediate.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
               <i class="pi pi-briefcase"></i>
               Delivery & Renewal Defaults
             </h3>

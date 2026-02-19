@@ -15,6 +15,7 @@ public class Tenant : Entity
     public string? ApprovalWorkflowJson { get; set; }
     public string? DashboardLayoutDefaultsJson { get; set; }
     public string? QualificationPolicyJson { get; set; }
+    public string? AssistantActionScoringPolicyJson { get; set; }
     public int? LeadFirstTouchSlaHours { get; set; }
     public int? DefaultContractTermMonths { get; set; }
     public Guid? DefaultDeliveryOwnerRoleId { get; set; }

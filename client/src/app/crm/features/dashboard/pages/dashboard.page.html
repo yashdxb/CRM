@@ -153,7 +153,7 @@
           *ngFor="let action of assistantActions(); let idx = index"
           [ngClass]="[
             assistantRiskClass(action.riskTier),
-            assistantUrgencyClass(action.priority)
+            assistantUrgencyClass(action.priority, action.urgency)
           ]"
         >
           <div class="ai-action-rank">{{ idx + 1 }}</div>
@@ -166,9 +166,13 @@
             </div>
             <p>{{ action.description }}</p>
             <div class="ai-action-meta">
-              <span class="ai-urgency-pill" [ngClass]="assistantUrgencyClass(action.priority)">
+              <span class="ai-urgency-pill" [ngClass]="assistantUrgencyClass(action.priority, action.urgency)">
                 <i class="pi pi-bolt"></i>
-                {{ assistantUrgencyLabel(action.priority) }}
+                {{ assistantUrgencyLabel(action.priority, action.urgency) }}
+              </span>
+              <span class="ai-score-pill">
+                <i class="pi pi-chart-line"></i>
+                Score {{ action.score }}
               </span>
               <span><i class="pi pi-user"></i> {{ action.ownerScope }}</span>
               <span><i class="pi pi-clock"></i> {{ action.dueWindow }}</span>
@@ -180,7 +184,7 @@
             class="ai-action-btn"
             [ngClass]="[
               (action.riskTier || '').toLowerCase() === 'low' ? 'btn-gradient' : 'btn-glass',
-              assistantUrgencyClass(action.priority)
+              assistantUrgencyClass(action.priority, action.urgency)
             ]"
             (click)="openAssistantAction(action)"
           >

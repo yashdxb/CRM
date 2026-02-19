@@ -595,6 +595,20 @@
   border: 1px solid transparent;
 }
 
+.ai-score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(109, 131, 179, 0.34);
+  background: rgba(115, 142, 199, 0.14);
+  color: rgba(60, 83, 130, 0.92);
+}
+
 .ai-urgency-pill.urgency-immediate {
   color: #8a2135;
   background: rgba(233, 63, 93, 0.2);

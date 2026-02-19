@@ -1,5 +1,6 @@
 using CRM.Enterprise.Api.Contracts.Workspace;
 using CRM.Enterprise.Application.Approvals;
+using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
@@ -52,7 +53,8 @@ public class WorkspaceController : ControllerBase
             tenant.ApprovalAmountThreshold,
             tenant.ApprovalApproverRole,
             ResolveApprovalWorkflowPolicy(tenant),
-            ResolveQualificationPolicy(tenant)));
+            ResolveQualificationPolicy(tenant),
+            ResolveAssistantActionScoringPolicy(tenant)));
     }
 
     [HttpPut]
@@ -86,6 +88,10 @@ public class WorkspaceController : ControllerBase
         {
             tenant.QualificationPolicyJson = JsonSerializer.Serialize(request.QualificationPolicy, JsonOptions);
         }
+        if (request.AssistantActionScoringPolicy is not null)
+        {
+            tenant.AssistantActionScoringPolicyJson = JsonSerializer.Serialize(request.AssistantActionScoringPolicy, JsonOptions);
+        }
         tenant.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -102,7 +108,8 @@ public class WorkspaceController : ControllerBase
             tenant.ApprovalAmountThreshold,
             tenant.ApprovalApproverRole,
             ResolveApprovalWorkflowPolicy(tenant),
-            ResolveQualificationPolicy(tenant)));
+            ResolveQualificationPolicy(tenant),
+            ResolveAssistantActionScoringPolicy(tenant)));
     }
 
     private static QualificationPolicy ResolveQualificationPolicy(Tenant tenant)
@@ -144,6 +151,24 @@ public class WorkspaceController : ControllerBase
             return ApprovalWorkflowPolicyDefaults.FromTenantDefaults(
                 tenant.ApprovalAmountThreshold,
                 tenant.ApprovalApproverRole);
+        }
+    }
+
+    private static AssistantActionScoringPolicy ResolveAssistantActionScoringPolicy(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.AssistantActionScoringPolicyJson))
+        {
+            return AssistantActionScoringPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<AssistantActionScoringPolicy>(tenant.AssistantActionScoringPolicyJson, JsonOptions);
+            return AssistantActionScoringPolicyDefaults.Normalize(parsed);
+        }
+        catch (JsonException)
+        {
+            return AssistantActionScoringPolicyDefaults.CreateDefault();
         }
     }
 }

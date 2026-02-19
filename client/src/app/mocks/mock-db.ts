@@ -178,6 +178,21 @@ let mockWorkspaceSettings: WorkspaceSettings = {
   name: 'CRM Enterprise',
   timeZone: 'UTC',
   currency: 'USD',
+  assistantActionScoringPolicy: {
+    weights: {
+      slaBreaches: 14,
+      staleOpportunities: 12,
+      pendingApprovals: 17,
+      lowConfidenceLeads: 9,
+      overdueActivities: 11
+    },
+    thresholds: {
+      mediumRiskFrom: 45,
+      highRiskFrom: 75,
+      soonUrgencyFrom: 50,
+      immediateUrgencyFrom: 80
+    }
+  },
   qualificationPolicy: {
     defaultThreshold: 75,
     managerApprovalBelow: 50,

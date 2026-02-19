@@ -11,6 +11,7 @@ export interface WorkspaceSettings {
   approvalApproverRole?: string | null;
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy: QualificationPolicy;
+  assistantActionScoringPolicy: AssistantActionScoringPolicy;
 }
 
 export interface UpdateWorkspaceSettingsRequest {
@@ -24,6 +25,27 @@ export interface UpdateWorkspaceSettingsRequest {
   approvalApproverRole?: string | null;
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy?: QualificationPolicy | null;
+  assistantActionScoringPolicy?: AssistantActionScoringPolicy | null;
+}
+
+export interface AssistantActionScoringPolicy {
+  weights: AssistantActionScoringWeights;
+  thresholds: AssistantActionScoringThresholds;
+}
+
+export interface AssistantActionScoringWeights {
+  slaBreaches: number;
+  staleOpportunities: number;
+  pendingApprovals: number;
+  lowConfidenceLeads: number;
+  overdueActivities: number;
+}
+
+export interface AssistantActionScoringThresholds {
+  mediumRiskFrom: number;
+  highRiskFrom: number;
+  soonUrgencyFrom: number;
+  immediateUrgencyFrom: number;
 }
 
 export interface ApprovalWorkflowPolicy {

@@ -71,7 +71,16 @@ export class WorkspaceSettingsPage {
     currency: ['', [Validators.required]],
     leadFirstTouchSlaHours: [24, [Validators.min(1), Validators.max(168)]],
     defaultContractTermMonths: [12, [Validators.min(1), Validators.max(120)]],
-    defaultDeliveryOwnerRoleId: [null as string | null]
+    defaultDeliveryOwnerRoleId: [null as string | null],
+    scoreWeightSlaBreaches: [14, [Validators.min(0), Validators.max(100)]],
+    scoreWeightStaleOpportunities: [12, [Validators.min(0), Validators.max(100)]],
+    scoreWeightPendingApprovals: [17, [Validators.min(0), Validators.max(100)]],
+    scoreWeightLowConfidenceLeads: [9, [Validators.min(0), Validators.max(100)]],
+    scoreWeightOverdueActivities: [11, [Validators.min(0), Validators.max(100)]],
+    scoreMediumRiskFrom: [45, [Validators.min(1), Validators.max(95)]],
+    scoreHighRiskFrom: [75, [Validators.min(5), Validators.max(99)]],
+    scoreSoonUrgencyFrom: [50, [Validators.min(1), Validators.max(95)]],
+    scoreImmediateUrgencyFrom: [80, [Validators.min(5), Validators.max(99)]]
   });
 
   constructor() {
@@ -111,7 +120,22 @@ export class WorkspaceSettingsPage {
       currency: this.resolveCurrency(payload.currency ?? null),
       leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? 24,
       defaultContractTermMonths: payload.defaultContractTermMonths ?? 12,
-      defaultDeliveryOwnerRoleId: payload.defaultDeliveryOwnerRoleId ?? null
+      defaultDeliveryOwnerRoleId: payload.defaultDeliveryOwnerRoleId ?? null,
+      assistantActionScoringPolicy: {
+        weights: {
+          slaBreaches: Number(payload.scoreWeightSlaBreaches ?? 14),
+          staleOpportunities: Number(payload.scoreWeightStaleOpportunities ?? 12),
+          pendingApprovals: Number(payload.scoreWeightPendingApprovals ?? 17),
+          lowConfidenceLeads: Number(payload.scoreWeightLowConfidenceLeads ?? 9),
+          overdueActivities: Number(payload.scoreWeightOverdueActivities ?? 11)
+        },
+        thresholds: {
+          mediumRiskFrom: Number(payload.scoreMediumRiskFrom ?? 45),
+          highRiskFrom: Number(payload.scoreHighRiskFrom ?? 75),
+          soonUrgencyFrom: Number(payload.scoreSoonUrgencyFrom ?? 50),
+          immediateUrgencyFrom: Number(payload.scoreImmediateUrgencyFrom ?? 80)
+        }
+      }
     };
     this.saving.set(true);
     this.settingsService.updateSettings(safePayload).subscribe({
@@ -134,7 +158,16 @@ export class WorkspaceSettingsPage {
       currency: this.resolveCurrency(settings.currency ?? null),
       leadFirstTouchSlaHours: settings.leadFirstTouchSlaHours ?? 24,
       defaultContractTermMonths: settings.defaultContractTermMonths ?? 12,
-      defaultDeliveryOwnerRoleId: settings.defaultDeliveryOwnerRoleId ?? null
+      defaultDeliveryOwnerRoleId: settings.defaultDeliveryOwnerRoleId ?? null,
+      scoreWeightSlaBreaches: settings.assistantActionScoringPolicy?.weights?.slaBreaches ?? 14,
+      scoreWeightStaleOpportunities: settings.assistantActionScoringPolicy?.weights?.staleOpportunities ?? 12,
+      scoreWeightPendingApprovals: settings.assistantActionScoringPolicy?.weights?.pendingApprovals ?? 17,
+      scoreWeightLowConfidenceLeads: settings.assistantActionScoringPolicy?.weights?.lowConfidenceLeads ?? 9,
+      scoreWeightOverdueActivities: settings.assistantActionScoringPolicy?.weights?.overdueActivities ?? 11,
+      scoreMediumRiskFrom: settings.assistantActionScoringPolicy?.thresholds?.mediumRiskFrom ?? 45,
+      scoreHighRiskFrom: settings.assistantActionScoringPolicy?.thresholds?.highRiskFrom ?? 75,
+      scoreSoonUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.soonUrgencyFrom ?? 50,
+      scoreImmediateUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.immediateUrgencyFrom ?? 80
     });
   }
 

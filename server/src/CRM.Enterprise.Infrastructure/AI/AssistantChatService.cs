@@ -9,6 +9,7 @@ using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Infrastructure.AI;
 
@@ -16,6 +17,7 @@ public sealed class AssistantChatService : IAssistantChatService
 {
     private static readonly TimeSpan MinRequestInterval = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan UndoWindow = TimeSpan.FromSeconds(60);
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly FoundryAgentClient _client;
@@ -186,6 +188,7 @@ public sealed class AssistantChatService : IAssistantChatService
     public async Task<AssistantInsightsResult> GetInsightsAsync(Guid userId, CancellationToken cancellationToken)
     {
         var snapshot = await BuildExecutionSnapshotAsync(userId, cancellationToken);
+        var scoringPolicy = await ResolveAssistantScoringPolicyAsync(cancellationToken);
         var kpis = new List<AssistantInsightsKpi>
         {
             new("at-risk-deals", "At-Risk Deals", snapshot.OpenOpportunitiesWithoutRecentActivity, snapshot.OpenOpportunitiesWithoutRecentActivity > 0 ? "danger" : "ok"),
@@ -193,7 +196,7 @@ public sealed class AssistantChatService : IAssistantChatService
             new("pending-approvals", "Pending Approvals", snapshot.PendingApprovals, snapshot.PendingApprovals > 0 ? "warn" : "ok")
         };
 
-        var actions = BuildPriorityActions(snapshot);
+        var actions = BuildPriorityActions(snapshot, scoringPolicy);
         return new AssistantInsightsResult(snapshot.Scope, kpis, actions, DateTime.UtcNow);
     }
 
@@ -453,27 +456,58 @@ public sealed class AssistantChatService : IAssistantChatService
             TopAtRiskOpportunityId: topAtRiskOpportunityId);
     }
 
-    private static IReadOnlyList<AssistantInsightsAction> BuildPriorityActions(AssistantExecutionSnapshot snapshot)
+    private async Task<AssistantActionScoringPolicy> ResolveAssistantScoringPolicyAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var rawPolicy = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(tenant => tenant.Id == tenantId)
+            .Select(tenant => tenant.AssistantActionScoringPolicyJson)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(rawPolicy))
+        {
+            return AssistantActionScoringPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<AssistantActionScoringPolicy>(rawPolicy, JsonOptions);
+            return AssistantActionScoringPolicyDefaults.Normalize(parsed);
+        }
+        catch (JsonException)
+        {
+            return AssistantActionScoringPolicyDefaults.CreateDefault();
+        }
+    }
+
+    private static IReadOnlyList<AssistantInsightsAction> BuildPriorityActions(
+        AssistantExecutionSnapshot snapshot,
+        AssistantActionScoringPolicy policy)
     {
         var actions = new List<AssistantInsightsAction>();
 
         if (snapshot.LeadSlaBreaches > 0)
         {
+            var score = ComputeScore(policy.Weights.SlaBreaches, snapshot.LeadSlaBreaches);
             actions.Add(new AssistantInsightsAction(
                 "sla-first-touch",
                 "Recover breached first-touch SLAs",
                 $"{snapshot.LeadSlaBreaches} lead(s) missed first-touch SLA. Prioritize outreach today.",
-                "low",
+                score,
+                ResolveRiskTier(score, policy),
+                ResolveUrgency(score, policy),
                 "Rep/Owner",
                 "Today",
                 "lead_follow_up",
                 "lead",
                 snapshot.LeadForFollowUpId,
-                100));
+                score));
         }
 
         if (snapshot.OpenOpportunitiesWithoutRecentActivity > 0)
         {
+            var score = ComputeScore(policy.Weights.StaleOpportunities, snapshot.OpenOpportunitiesWithoutRecentActivity);
             var topDeals = snapshot.TopAtRiskOpportunityNames.Length > 0
                 ? $" Top stale deals: {string.Join(", ", snapshot.TopAtRiskOpportunityNames)}."
                 : string.Empty;
@@ -482,63 +516,112 @@ public sealed class AssistantChatService : IAssistantChatService
                 "stale-pipeline",
                 "Reactivate stale opportunities",
                 $"{snapshot.OpenOpportunitiesWithoutRecentActivity} open opportunity(ies) have no recent activity in 7 days.{topDeals}",
-                "medium",
+                score,
+                ResolveRiskTier(score, policy),
+                ResolveUrgency(score, policy),
                 "Rep/Manager",
                 "24 hours",
                 "opportunity_recovery",
                 "opportunity",
                 snapshot.TopAtRiskOpportunityId,
-                95));
+                score));
         }
 
         if (snapshot.PendingApprovals > 0)
         {
+            var score = ComputeScore(policy.Weights.PendingApprovals, snapshot.PendingApprovals);
             actions.Add(new AssistantInsightsAction(
                 "approval-queue",
                 "Clear pending approvals",
                 $"{snapshot.PendingApprovals} approval request(s) are waiting and may block close progression.",
-                "high",
+                score,
+                ResolveRiskTier(score, policy),
+                ResolveUrgency(score, policy),
                 "Approver",
                 "48 hours",
                 "approval_follow_up",
                 "opportunity",
                 null,
-                90));
+                score));
         }
 
         if (snapshot.LowConfidenceLeads > 0)
         {
+            var score = ComputeScore(policy.Weights.LowConfidenceLeads, snapshot.LowConfidenceLeads);
             actions.Add(new AssistantInsightsAction(
                 "confidence-gaps",
                 "Resolve low-confidence lead gaps",
                 $"{snapshot.LowConfidenceLeads} active lead(s) have low confidence. Capture missing evidence before advancing.",
-                "medium",
+                score,
+                ResolveRiskTier(score, policy),
+                ResolveUrgency(score, policy),
                 "Rep",
                 "This week",
                 "lead_qualification",
                 "lead",
                 snapshot.LeadForFollowUpId,
-                80));
+                score));
         }
 
         if (snapshot.OverdueActivities > 0)
         {
+            var score = ComputeScore(policy.Weights.OverdueActivities, snapshot.OverdueActivities);
             actions.Add(new AssistantInsightsAction(
                 "overdue-activities",
                 "Clear overdue activity backlog",
                 $"{snapshot.OverdueActivities} activity item(s) are overdue and require completion or reschedule.",
-                "low",
+                score,
+                ResolveRiskTier(score, policy),
+                ResolveUrgency(score, policy),
                 "Rep/Owner",
                 "Today",
                 "activity_cleanup",
                 "activity",
                 null,
-                85));
+                score));
         }
 
         return actions
             .OrderByDescending(action => action.Priority)
             .ToList();
+    }
+
+    private static int ComputeScore(decimal weight, int count)
+    {
+        var boundedWeight = Math.Max(0m, weight);
+        var boundedCount = Math.Max(0, count);
+        var raw = boundedWeight * boundedCount;
+        return Math.Clamp((int)Math.Round(raw, MidpointRounding.AwayFromZero), 0, 100);
+    }
+
+    private static string ResolveRiskTier(int score, AssistantActionScoringPolicy policy)
+    {
+        if (score >= policy.Thresholds.HighRiskFrom)
+        {
+            return "high";
+        }
+
+        if (score >= policy.Thresholds.MediumRiskFrom)
+        {
+            return "medium";
+        }
+
+        return "low";
+    }
+
+    private static string ResolveUrgency(int score, AssistantActionScoringPolicy policy)
+    {
+        if (score >= policy.Thresholds.ImmediateUrgencyFrom)
+        {
+            return "immediate";
+        }
+
+        if (score >= policy.Thresholds.SoonUrgencyFrom)
+        {
+            return "soon";
+        }
+
+        return "planned";
     }
 
     private static string BuildStructuredPrompt(

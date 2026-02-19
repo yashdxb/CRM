@@ -27,3 +27,20 @@
 
 ## Collaboration Behavior
 - When user prompts end with a direct question, provide the direct answer first, then implementation/execution steps.
+
+## Controller Design & Code Organization
+- Extract authorization logic (action type constants, permission mapping) into dedicated modules, not controller switch statements.
+  - Enables extensibility: new action types don't require controller modifications.
+  - Improves testability: permission mapping can be unit tested independently.
+  - Centralizes definitions: magic strings are eliminated in favor of constants.
+- Implement fail-fast input validation in controllers before delegating to service layer.
+  - Catches missing/invalid data early with descriptive 400 responses.
+  - Prevents cascade failures in service/infrastructure layers.
+  - Improves API observability: clear error messages aid debugging.
+- Log security events (unauthorized attempts, forbidden actions) with full context (UserId, ResourceId, action type).
+  - Enables threat detection and audit trails.
+  - Simplifies debugging of permission-related issues.
+- Extract DTO mapping to dedicated methods when used across multiple endpoints.
+  - Eliminates inline duplication and improves maintainability.
+  - Centralizes transformation logic for easier modification.
+  - Makes mapping logic testable and reusable.
