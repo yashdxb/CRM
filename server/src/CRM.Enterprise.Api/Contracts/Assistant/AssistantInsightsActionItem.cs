@@ -4,6 +4,7 @@ public sealed record AssistantInsightsActionItem(
     string Id,
     string Title,
     string Description,
+    string RiskTier,
     string OwnerScope,
     string DueWindow,
     string ActionType,

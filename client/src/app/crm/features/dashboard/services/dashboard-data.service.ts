@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { AssistantInsights, DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
+import { AssistantActionExecutionResult, AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardDataService {
@@ -101,6 +101,39 @@ export class DashboardDataService {
       generatedAtUtc: new Date().toISOString()
     };
     return this.http.get<AssistantInsights>(url).pipe(catchError(() => of(empty)));
+  }
+
+  executeAssistantAction(action: AssistantInsightsAction, note?: string) {
+    const url = `${environment.apiUrl}/api/assistant/actions/execute`;
+    return this.http.post<AssistantActionExecutionResult>(url, {
+      actionId: action.id,
+      actionType: action.actionType,
+      riskTier: action.riskTier,
+      entityType: action.entityType ?? null,
+      entityId: action.entityId ?? null,
+      note: note ?? null
+    });
+  }
+
+  reviewAssistantAction(action: AssistantInsightsAction, approved: boolean, reviewNote?: string) {
+    const url = `${environment.apiUrl}/api/assistant/actions/review`;
+    return this.http.post<AssistantActionExecutionResult>(url, {
+      actionId: action.id,
+      actionType: action.actionType,
+      riskTier: action.riskTier,
+      entityType: action.entityType ?? null,
+      entityId: action.entityId ?? null,
+      approved,
+      reviewNote: reviewNote ?? null
+    });
+  }
+
+  undoAssistantAction(createdActivityId: string, actionType?: string) {
+    const url = `${environment.apiUrl}/api/assistant/actions/undo`;
+    return this.http.post<AssistantActionExecutionResult>(url, {
+      createdActivityId,
+      actionType: actionType ?? null
+    });
   }
 
   coachOpportunity(opportunityId: string, payload: { comment: string; dueDateUtc?: string | null; priority?: string | null }) {

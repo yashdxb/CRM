@@ -17,6 +17,16 @@ Source list: `CRM Backlog` (`901710720381`)
 - `86dzxrdrk` — Module: Assistant | Role-scope enforcement for action visibility and execution
 - `86dzxrdru` — Module: Assistant | E2E coverage for assistant action execution paths
 
+## Implementation Progress (Updated February 19, 2026)
+
+- `86dzxrdpm` — `partial` (execute endpoint + low-risk execution path delivered; undo pending)
+- `86dzxrdq4` — `partial` (review modal + review API delivered)
+- `86dzxrdqr` — `partial` (risk-tier policy engine delivered)
+- `86dzxrdr4` — `partial` (dashboard execute/review UX delivered)
+- `86dzxrdrk` — `partial` (role-scope enforcement delivered in assistant insights)
+- `86dzxrdqy` — `partial` (assistant action audit telemetry events delivered)
+- `86dzxrdru` — `partial` (new dashboard action-flow Playwright spec added; environment stabilization pending)
+
 ## Tag Standard Used
 
 - `module:assistant`

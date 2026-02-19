@@ -149,14 +149,53 @@
             </div>
           </div>
           <button pButton type="button" class="btn-glass ai-action-btn" (click)="openAssistantAction(action)">
-            Open
+            {{ (action.riskTier || '').toLowerCase() === 'low' ? 'Execute' : 'Review' }}
           </button>
         </article>
       </div>
       <ng-template #noAiActions>
         <div class="empty-state-inline">No urgent AI actions right now.</div>
       </ng-template>
+
+      <div class="assistant-undo-strip" *ngIf="assistantUndoVisible">
+        <span>{{ assistantUndoMessage }}</span>
+        <button pButton type="button" class="btn-glass" [disabled]="assistantUndoBusy" (click)="undoAssistantAction()">
+          Undo
+        </button>
+      </div>
     </section>
+
+    <p-dialog
+      [(visible)]="assistantReviewDialogOpen"
+      [modal]="true"
+      [closable]="!assistantReviewSubmitting"
+      [dismissableMask]="!assistantReviewSubmitting"
+      header="Review Assistant Action"
+      [style]="{ width: '520px', maxWidth: '92vw' }"
+      (onHide)="cancelAssistantReview()"
+    >
+      <div class="assistant-review-content">
+        <p>This action is marked medium/high risk and needs review before execution.</p>
+        <textarea
+          rows="4"
+          [disabled]="assistantReviewSubmitting"
+          placeholder="Add review note (optional)"
+          [ngModel]="assistantReviewNote"
+          (ngModelChange)="assistantReviewNote = $event"
+        ></textarea>
+      </div>
+      <ng-template pTemplate="footer">
+        <button pButton type="button" class="btn-glass" [disabled]="assistantReviewSubmitting" (click)="cancelAssistantReview()">
+          Cancel
+        </button>
+        <button pButton type="button" class="btn-glass" [disabled]="assistantReviewSubmitting" (click)="submitAssistantReview(false)">
+          Reject
+        </button>
+        <button pButton type="button" class="btn-gradient" [disabled]="assistantReviewSubmitting" (click)="submitAssistantReview(true)">
+          Approve & Execute
+        </button>
+      </ng-template>
+    </p-dialog>
 
     <!-- Main Grid: Command Center Cards -->
     <section

@@ -1,9 +1,16 @@
 using System.Security.Claims;
+using ApiAssistantActionExecuteRequest = CRM.Enterprise.Api.Contracts.Assistant.AssistantActionExecuteRequest;
+using ApiAssistantActionReviewRequest = CRM.Enterprise.Api.Contracts.Assistant.AssistantActionReviewRequest;
+using ApiAssistantActionUndoRequest = CRM.Enterprise.Api.Contracts.Assistant.AssistantActionUndoRequest;
 using CRM.Enterprise.Api.Contracts.Assistant;
+using AppAssistantActionExecutionRequest = CRM.Enterprise.Application.Assistant.AssistantActionExecutionRequest;
+using AppAssistantActionReviewRequest = CRM.Enterprise.Application.Assistant.AssistantActionReviewRequest;
+using AppAssistantActionUndoRequest = CRM.Enterprise.Application.Assistant.AssistantActionUndoRequest;
 using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -80,6 +87,7 @@ public class AssistantController : ControllerBase
                 action.Id,
                 action.Title,
                 action.Description,
+                action.RiskTier,
                 action.OwnerScope,
                 action.DueWindow,
                 action.ActionType,
@@ -89,6 +97,101 @@ public class AssistantController : ControllerBase
             insights.GeneratedAtUtc));
     }
 
+    [HttpPost("actions/execute")]
+    public async Task<ActionResult<AssistantActionExecutionResponse>> ExecuteAction(
+        [FromBody] ApiAssistantActionExecuteRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (!CanExecuteAction(request.ActionType))
+        {
+            return Forbid();
+        }
+
+        var result = await _chatService.ExecuteActionAsync(
+            userId.Value,
+            new AppAssistantActionExecutionRequest(
+                request.ActionId ?? string.Empty,
+                request.ActionType ?? string.Empty,
+                request.RiskTier ?? string.Empty,
+                request.EntityType,
+                request.EntityId,
+                request.Note),
+            cancellationToken);
+
+        return Ok(new AssistantActionExecutionResponse(
+            result.Status,
+            result.Message,
+            result.RequiresReview,
+            result.CreatedActivityId,
+            result.CreatedApprovalId));
+    }
+
+    [HttpPost("actions/review")]
+    public async Task<ActionResult<AssistantActionExecutionResponse>> ReviewAction(
+        [FromBody] ApiAssistantActionReviewRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        if (request.Approved && !CanExecuteAction(request.ActionType))
+        {
+            return Forbid();
+        }
+
+        var result = await _chatService.ReviewActionAsync(
+            userId.Value,
+            new AppAssistantActionReviewRequest(
+                request.ActionId ?? string.Empty,
+                request.ActionType ?? string.Empty,
+                request.RiskTier ?? string.Empty,
+                request.EntityType,
+                request.EntityId,
+                request.Approved,
+                request.ReviewNote),
+            cancellationToken);
+
+        return Ok(new AssistantActionExecutionResponse(
+            result.Status,
+            result.Message,
+            result.RequiresReview,
+            result.CreatedActivityId,
+            result.CreatedApprovalId));
+    }
+
+    [HttpPost("actions/undo")]
+    public async Task<ActionResult<AssistantActionExecutionResponse>> UndoAction(
+        [FromBody] ApiAssistantActionUndoRequest request,
+        CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var result = await _chatService.UndoActionAsync(
+            userId.Value,
+            new AppAssistantActionUndoRequest(request.CreatedActivityId, request.ActionType),
+            cancellationToken);
+
+        return Ok(new AssistantActionExecutionResponse(
+            result.Status,
+            result.Message,
+            result.RequiresReview,
+            result.CreatedActivityId,
+            result.CreatedApprovalId));
+    }
+
     private static AssistantChatMessageItem MapMessage(AssistantChatMessage message)
         => new(message.Id, message.Role, message.Content, message.CreatedAtUtc);
 
@@ -96,5 +199,22 @@ public class AssistantController : ControllerBase
     {
         var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(subject, out var userId) ? userId : null;
+    }
+
+    private bool CanExecuteAction(string? actionType)
+    {
+        var normalized = (actionType ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "approval_follow_up" => HasPermission(Permissions.Policies.OpportunitiesApprovalsRequest),
+            _ => HasPermission(Permissions.Policies.ActivitiesManage)
+        };
+    }
+
+    private bool HasPermission(string permission)
+    {
+        return User.Claims.Any(claim =>
+            string.Equals(claim.Type, Permissions.ClaimType, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(claim.Value, permission, StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -186,6 +186,16 @@ export class DashboardPage implements OnInit {
   protected coachingSubmitting = false;
   private coachingDeal: ManagerReviewDeal | null = null;
   protected expansionDialogOpen = false;
+  protected assistantReviewDialogOpen = false;
+  protected assistantReviewNote = '';
+  protected assistantReviewSubmitting = false;
+  private pendingAssistantAction: AssistantInsightsAction | null = null;
+  protected assistantUndoVisible = false;
+  protected assistantUndoBusy = false;
+  protected assistantUndoMessage = '';
+  private assistantUndoTimerId: number | null = null;
+  private assistantUndoActivityId: string | null = null;
+  private assistantUndoActionType: string | null = null;
 
   protected readonly greeting = this.getGreeting();
   
@@ -620,6 +630,12 @@ export class DashboardPage implements OnInit {
         this.initCharts(summary);
       });
     }
+    this.destroyRef.onDestroy(() => {
+      if (this.assistantUndoTimerId !== null) {
+        window.clearTimeout(this.assistantUndoTimerId);
+        this.assistantUndoTimerId = null;
+      }
+    });
     this.kpiOrder.set(this.loadKpiOrder());
     this.loadCurrencyContext();
   }
@@ -713,6 +729,99 @@ export class DashboardPage implements OnInit {
   }
 
   protected openAssistantAction(action: AssistantInsightsAction): void {
+    const risk = (action.riskTier ?? '').toLowerCase();
+    if (risk === 'medium' || risk === 'high') {
+      this.pendingAssistantAction = action;
+      this.assistantReviewNote = '';
+      this.assistantReviewDialogOpen = true;
+      return;
+    }
+
+    this.dashboardData.executeAssistantAction(action)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.toastService.show('success', result.message || 'Action executed.');
+          if (result.createdActivityId && (action.riskTier ?? '').toLowerCase() === 'low') {
+            this.showAssistantUndo(action, result.createdActivityId);
+          }
+          this.dashboardData.getAssistantInsights()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((insights) => this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights));
+          this.navigateAssistantAction(action);
+        },
+        error: () => this.toastService.show('error', 'Unable to execute assistant action.')
+      });
+  }
+
+  protected submitAssistantReview(approved: boolean): void {
+    const action = this.pendingAssistantAction;
+    if (!action || this.assistantReviewSubmitting) {
+      return;
+    }
+
+    this.assistantReviewSubmitting = true;
+    this.dashboardData.reviewAssistantAction(action, approved, this.assistantReviewNote)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.assistantReviewSubmitting = false;
+          this.assistantReviewDialogOpen = false;
+          this.pendingAssistantAction = null;
+          this.assistantReviewNote = '';
+          this.toastService.show('success', result.message || (approved ? 'Action approved.' : 'Action rejected.'));
+          this.dashboardData.getAssistantInsights()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((insights) => this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights));
+          if (approved) {
+            this.navigateAssistantAction(action);
+          }
+        },
+        error: () => {
+          this.assistantReviewSubmitting = false;
+          this.toastService.show('error', 'Unable to submit review decision.');
+        }
+      });
+  }
+
+  protected cancelAssistantReview(): void {
+    this.assistantReviewDialogOpen = false;
+    this.pendingAssistantAction = null;
+    this.assistantReviewNote = '';
+  }
+
+  protected undoAssistantAction(): void {
+    if (!this.assistantUndoActivityId || this.assistantUndoBusy) {
+      return;
+    }
+
+    this.assistantUndoBusy = true;
+    this.dashboardData.undoAssistantAction(this.assistantUndoActivityId, this.assistantUndoActionType ?? undefined)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          this.assistantUndoBusy = false;
+          this.assistantUndoVisible = false;
+          this.assistantUndoMessage = '';
+          this.assistantUndoActivityId = null;
+          this.assistantUndoActionType = null;
+          if (this.assistantUndoTimerId !== null) {
+            window.clearTimeout(this.assistantUndoTimerId);
+            this.assistantUndoTimerId = null;
+          }
+          this.toastService.show('success', result.message || 'Action undone.');
+          this.dashboardData.getAssistantInsights()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe((insights) => this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights));
+        },
+        error: () => {
+          this.assistantUndoBusy = false;
+          this.toastService.show('error', 'Unable to undo action.');
+        }
+      });
+  }
+
+  private navigateAssistantAction(action: AssistantInsightsAction): void {
     const entityType = (action.entityType ?? '').toLowerCase();
     if (entityType === 'lead') {
       this.router.navigate(['/app/leads']);
@@ -732,6 +841,24 @@ export class DashboardPage implements OnInit {
     }
 
     this.router.navigate(['/app/dashboard']);
+  }
+
+  private showAssistantUndo(action: AssistantInsightsAction, createdActivityId: string): void {
+    this.assistantUndoVisible = true;
+    this.assistantUndoBusy = false;
+    this.assistantUndoActivityId = createdActivityId;
+    this.assistantUndoActionType = action.actionType;
+    this.assistantUndoMessage = `${action.title} executed.`;
+    if (this.assistantUndoTimerId !== null) {
+      window.clearTimeout(this.assistantUndoTimerId);
+    }
+    this.assistantUndoTimerId = window.setTimeout(() => {
+      this.assistantUndoVisible = false;
+      this.assistantUndoActivityId = null;
+      this.assistantUndoActionType = null;
+      this.assistantUndoMessage = '';
+      this.assistantUndoTimerId = null;
+    }, 60_000);
   }
 
   private emitRiskAlerts(summary: DashboardSummary): void {

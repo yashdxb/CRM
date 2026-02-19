@@ -1,4 +1,7 @@
 using CRM.Enterprise.Application.Assistant;
+using CRM.Enterprise.Application.Audit;
+using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
@@ -12,10 +15,13 @@ namespace CRM.Enterprise.Infrastructure.AI;
 public sealed class AssistantChatService : IAssistantChatService
 {
     private static readonly TimeSpan MinRequestInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan UndoWindow = TimeSpan.FromSeconds(60);
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly FoundryAgentClient _client;
     private readonly AzureSearchKnowledgeClient _knowledgeClient;
+    private readonly IAuditEventService _auditEvents;
+    private readonly IOpportunityApprovalService _opportunityApprovalService;
     private readonly bool _isDevelopment;
 
     public AssistantChatService(
@@ -23,12 +29,16 @@ public sealed class AssistantChatService : IAssistantChatService
         ITenantProvider tenantProvider,
         FoundryAgentClient client,
         AzureSearchKnowledgeClient knowledgeClient,
+        IAuditEventService auditEvents,
+        IOpportunityApprovalService opportunityApprovalService,
         IHostEnvironment hostEnvironment)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _client = client;
         _knowledgeClient = knowledgeClient;
+        _auditEvents = auditEvents;
+        _opportunityApprovalService = opportunityApprovalService;
         _isDevelopment = hostEnvironment.IsDevelopment();
     }
 
@@ -187,6 +197,119 @@ public sealed class AssistantChatService : IAssistantChatService
         return new AssistantInsightsResult(snapshot.Scope, kpis, actions, DateTime.UtcNow);
     }
 
+    public async Task<AssistantActionExecutionResult> ExecuteActionAsync(
+        Guid userId,
+        AssistantActionExecutionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var riskTier = NormalizeRiskTier(request.RiskTier, request.ActionType);
+        var confidenceGate = await RequiresConfidenceReviewAsync(request.EntityType, request.EntityId, cancellationToken);
+        if (confidenceGate)
+        {
+            await TrackAssistantActionAuditAsync(
+                userId,
+                request.ActionType,
+                "review_required_confidence",
+                request.EntityId,
+                cancellationToken,
+                request.Note);
+            return new AssistantActionExecutionResult(
+                "ReviewRequired",
+                "This action requires review because confidence is below threshold.",
+                true,
+                null,
+                null);
+        }
+
+        if (!string.Equals(riskTier, "low", StringComparison.OrdinalIgnoreCase))
+        {
+            await TrackAssistantActionAuditAsync(userId, request.ActionType, "review_required", request.EntityId, cancellationToken, request.Note);
+            return new AssistantActionExecutionResult(
+                "ReviewRequired",
+                "This action requires review before execution.",
+                true,
+                null,
+                null);
+        }
+
+        return await ExecuteApprovedActionAsync(
+            userId,
+            request.ActionId,
+            request.ActionType,
+            riskTier,
+            request.EntityType,
+            request.EntityId,
+            request.Note,
+            cancellationToken);
+    }
+
+    public async Task<AssistantActionExecutionResult> UndoActionAsync(
+        Guid userId,
+        AssistantActionUndoRequest request,
+        CancellationToken cancellationToken)
+    {
+        var activity = await _dbContext.Activities
+            .FirstOrDefaultAsync(activity =>
+                activity.TenantId == _tenantProvider.TenantId
+                && !activity.IsDeleted
+                && activity.Id == request.CreatedActivityId,
+                cancellationToken);
+
+        if (activity is null)
+        {
+            await TrackAssistantActionAuditAsync(userId, request.ActionType ?? "undo", "undo_not_found", request.CreatedActivityId, cancellationToken, null);
+            return new AssistantActionExecutionResult("UndoFailed", "The action can no longer be undone.", false, null, null);
+        }
+
+        if (activity.OwnerId != userId || !string.Equals(activity.CreatedBy, "assistant", StringComparison.OrdinalIgnoreCase))
+        {
+            await TrackAssistantActionAuditAsync(userId, request.ActionType ?? "undo", "undo_forbidden", request.CreatedActivityId, cancellationToken, null);
+            return new AssistantActionExecutionResult("UndoFailed", "You are not allowed to undo this action.", false, null, null);
+        }
+
+        if (DateTime.UtcNow - activity.CreatedAtUtc > UndoWindow)
+        {
+            await TrackAssistantActionAuditAsync(userId, request.ActionType ?? "undo", "undo_expired", request.CreatedActivityId, cancellationToken, null);
+            return new AssistantActionExecutionResult("UndoFailed", "Undo window has expired.", false, null, null);
+        }
+
+        activity.IsDeleted = true;
+        activity.UpdatedAtUtc = DateTime.UtcNow;
+        activity.UpdatedBy = "assistant";
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await TrackAssistantActionAuditAsync(userId, request.ActionType ?? "undo", "undone", request.CreatedActivityId, cancellationToken, null);
+        return new AssistantActionExecutionResult("Undone", "Assistant action has been undone.", false, request.CreatedActivityId, null);
+    }
+
+    public async Task<AssistantActionExecutionResult> ReviewActionAsync(
+        Guid userId,
+        AssistantActionReviewRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!request.Approved)
+        {
+            await TrackAssistantActionAuditAsync(userId, request.ActionType, "rejected", request.EntityId, cancellationToken, request.ReviewNote);
+            return new AssistantActionExecutionResult(
+                "Rejected",
+                "Action rejected after review.",
+                false,
+                null,
+                null);
+        }
+
+        var riskTier = NormalizeRiskTier(request.RiskTier, request.ActionType);
+        return await ExecuteApprovedActionAsync(
+            userId,
+            request.ActionId,
+            request.ActionType,
+            riskTier,
+            request.EntityType,
+            request.EntityId,
+            request.ReviewNote,
+            cancellationToken);
+    }
+
     private async Task<string> BuildGroundedPromptAsync(Guid userId, string userQuestion, CancellationToken cancellationToken)
     {
         var executionSnapshot = await BuildExecutionSnapshotAsync(userId, cancellationToken);
@@ -242,6 +365,10 @@ public sealed class AssistantChatService : IAssistantChatService
             leadsQuery = leadsQuery.Where(lead => scopedUserIds.Contains(lead.OwnerId));
         }
         var leadSlaBreaches = await leadsQuery.CountAsync(cancellationToken);
+        var leadForFollowUpId = await leadsQuery
+            .OrderBy(lead => lead.FirstTouchDueAtUtc)
+            .Select(lead => (Guid?)lead.Id)
+            .FirstOrDefaultAsync(cancellationToken);
 
         var lowConfidenceLeadsQuery = _dbContext.Leads
             .AsNoTracking()
@@ -271,6 +398,7 @@ public sealed class AssistantChatService : IAssistantChatService
         var openOpportunityIds = openOpportunities.Select(opportunity => opportunity.Id).ToList();
         var opportunitiesWithoutRecentActivity = 0;
         var topAtRiskOpportunityNames = Array.Empty<string>();
+        var topAtRiskOpportunityId = (Guid?)null;
 
         if (openOpportunityIds.Count > 0)
         {
@@ -294,6 +422,10 @@ public sealed class AssistantChatService : IAssistantChatService
 
             opportunitiesWithoutRecentActivity = openOpportunities.Count - recentActivityIds.Count;
             topAtRiskOpportunityNames = staleOpportunities;
+            topAtRiskOpportunityId = openOpportunities
+                .Where(opportunity => !recentActivityIds.Contains(opportunity.Id))
+                .Select(opportunity => (Guid?)opportunity.Id)
+                .FirstOrDefault();
         }
 
         var pendingApprovalsQuery = _dbContext.OpportunityApprovals
@@ -316,7 +448,9 @@ public sealed class AssistantChatService : IAssistantChatService
             OpenOpportunitiesWithoutRecentActivity: Math.Max(opportunitiesWithoutRecentActivity, 0),
             LowConfidenceLeads: lowConfidenceLeads,
             PendingApprovals: pendingApprovals,
-            TopAtRiskOpportunityNames: topAtRiskOpportunityNames);
+            TopAtRiskOpportunityNames: topAtRiskOpportunityNames,
+            LeadForFollowUpId: leadForFollowUpId,
+            TopAtRiskOpportunityId: topAtRiskOpportunityId);
     }
 
     private static IReadOnlyList<AssistantInsightsAction> BuildPriorityActions(AssistantExecutionSnapshot snapshot)
@@ -329,11 +463,12 @@ public sealed class AssistantChatService : IAssistantChatService
                 "sla-first-touch",
                 "Recover breached first-touch SLAs",
                 $"{snapshot.LeadSlaBreaches} lead(s) missed first-touch SLA. Prioritize outreach today.",
+                "low",
                 "Rep/Owner",
                 "Today",
                 "lead_follow_up",
                 "lead",
-                null,
+                snapshot.LeadForFollowUpId,
                 100));
         }
 
@@ -347,11 +482,12 @@ public sealed class AssistantChatService : IAssistantChatService
                 "stale-pipeline",
                 "Reactivate stale opportunities",
                 $"{snapshot.OpenOpportunitiesWithoutRecentActivity} open opportunity(ies) have no recent activity in 7 days.{topDeals}",
+                "medium",
                 "Rep/Manager",
                 "24 hours",
                 "opportunity_recovery",
                 "opportunity",
-                null,
+                snapshot.TopAtRiskOpportunityId,
                 95));
         }
 
@@ -361,10 +497,11 @@ public sealed class AssistantChatService : IAssistantChatService
                 "approval-queue",
                 "Clear pending approvals",
                 $"{snapshot.PendingApprovals} approval request(s) are waiting and may block close progression.",
+                "high",
                 "Approver",
                 "48 hours",
                 "approval_follow_up",
-                "approval",
+                "opportunity",
                 null,
                 90));
         }
@@ -375,11 +512,12 @@ public sealed class AssistantChatService : IAssistantChatService
                 "confidence-gaps",
                 "Resolve low-confidence lead gaps",
                 $"{snapshot.LowConfidenceLeads} active lead(s) have low confidence. Capture missing evidence before advancing.",
+                "medium",
                 "Rep",
                 "This week",
                 "lead_qualification",
                 "lead",
-                null,
+                snapshot.LeadForFollowUpId,
                 80));
         }
 
@@ -389,6 +527,7 @@ public sealed class AssistantChatService : IAssistantChatService
                 "overdue-activities",
                 "Clear overdue activity backlog",
                 $"{snapshot.OverdueActivities} activity item(s) are overdue and require completion or reschedule.",
+                "low",
                 "Rep/Owner",
                 "Today",
                 "activity_cleanup",
@@ -458,7 +597,204 @@ public sealed class AssistantChatService : IAssistantChatService
         int OpenOpportunitiesWithoutRecentActivity,
         int LowConfidenceLeads,
         int PendingApprovals,
-        string[] TopAtRiskOpportunityNames);
+        string[] TopAtRiskOpportunityNames,
+        Guid? LeadForFollowUpId,
+        Guid? TopAtRiskOpportunityId);
+
+    private async Task<AssistantActionExecutionResult> ExecuteApprovedActionAsync(
+        Guid userId,
+        string actionId,
+        string? actionType,
+        string riskTier,
+        string? entityType,
+        Guid? entityId,
+        string? note,
+        CancellationToken cancellationToken)
+    {
+        Guid? createdActivityId = null;
+        Guid? createdApprovalId = null;
+        var safeActionType = actionType ?? string.Empty;
+        var normalizedType = safeActionType.Trim().ToLowerInvariant();
+
+        if (normalizedType == "approval_follow_up" && string.Equals(entityType, "opportunity", StringComparison.OrdinalIgnoreCase) && entityId.HasValue)
+        {
+            var opportunity = await _dbContext.Opportunities
+                .AsNoTracking()
+                .Where(opportunity => opportunity.TenantId == _tenantProvider.TenantId && !opportunity.IsDeleted && opportunity.Id == entityId.Value)
+                .Select(opportunity => new { opportunity.Id, opportunity.Amount, opportunity.Currency })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (opportunity is null)
+            {
+                await TrackAssistantActionAuditAsync(userId, safeActionType, "failed_not_found", entityId, cancellationToken, note);
+                return new AssistantActionExecutionResult("Failed", "Opportunity not found for approval draft.", false, null, null);
+            }
+
+            var actor = await ResolveActorAsync(userId, cancellationToken);
+            var approvalResult = await _opportunityApprovalService.RequestAsync(
+                opportunity.Id,
+                opportunity.Amount,
+                string.IsNullOrWhiteSpace(opportunity.Currency) ? "USD" : opportunity.Currency,
+                "AssistantFollowUp",
+                actor,
+                cancellationToken);
+
+            if (!approvalResult.Success || approvalResult.Value is null)
+            {
+                await TrackAssistantActionAuditAsync(userId, safeActionType, "failed", entityId, cancellationToken, approvalResult.Error ?? note);
+                return new AssistantActionExecutionResult("Failed", approvalResult.Error ?? "Unable to create approval draft.", false, null, null);
+            }
+
+            createdApprovalId = approvalResult.Value.Id;
+        }
+        else if (entityId.HasValue)
+        {
+            createdActivityId = await TryCreateTaskActivityAsync(userId, safeActionType, entityType, entityId.Value, note, cancellationToken);
+        }
+
+        await TrackAssistantActionAuditAsync(
+            userId,
+            safeActionType,
+            "executed",
+            entityId,
+            cancellationToken,
+            $"actionId={actionId}; riskTier={riskTier}; note={note}");
+
+        return new AssistantActionExecutionResult(
+            "Executed",
+            "Action executed successfully.",
+            false,
+            createdActivityId,
+            createdApprovalId);
+    }
+
+    private async Task<Guid?> TryCreateTaskActivityAsync(
+        Guid userId,
+        string actionType,
+        string? entityType,
+        Guid entityId,
+        string? note,
+        CancellationToken cancellationToken)
+    {
+        var relationType = ResolveRelationType(entityType);
+        if (relationType is null)
+        {
+            return null;
+        }
+
+        var activity = new Activity
+        {
+            TenantId = _tenantProvider.TenantId,
+            OwnerId = userId,
+            Subject = BuildTaskSubject(actionType),
+            Description = string.IsNullOrWhiteSpace(note) ? "Assistant-generated action task." : note,
+            Type = ActivityType.Task,
+            RelatedEntityType = relationType.Value,
+            RelatedEntityId = entityId,
+            Priority = "High",
+            DueDateUtc = DateTime.UtcNow.AddDays(1),
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedBy = "assistant"
+        };
+
+        _dbContext.Activities.Add(activity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return activity.Id;
+    }
+
+    private async Task TrackAssistantActionAuditAsync(
+        Guid userId,
+        string actionType,
+        string status,
+        Guid? entityId,
+        CancellationToken cancellationToken,
+        string? detail)
+    {
+        var actor = await ResolveActorAsync(userId, cancellationToken);
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "AssistantAction",
+                entityId ?? Guid.NewGuid(),
+                status,
+                actionType,
+                null,
+                detail,
+                actor.UserId,
+                actor.UserName),
+            cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<ActorContext> ResolveActorAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var displayName = await _dbContext.Users
+            .AsNoTracking()
+            .Where(user => user.TenantId == _tenantProvider.TenantId && !user.IsDeleted && user.Id == userId)
+            .Select(user => user.FullName)
+            .FirstOrDefaultAsync(cancellationToken);
+        return new ActorContext(userId, displayName);
+    }
+
+    private static string BuildTaskSubject(string actionType)
+    {
+        return actionType switch
+        {
+            "lead_follow_up" => "Assistant follow-up: recover lead SLA",
+            "lead_qualification" => "Assistant follow-up: resolve lead qualification gap",
+            "opportunity_recovery" => "Assistant follow-up: reactivate opportunity",
+            "activity_cleanup" => "Assistant follow-up: clear overdue activities",
+            _ => "Assistant follow-up action"
+        };
+    }
+
+    private static ActivityRelationType? ResolveRelationType(string? entityType)
+    {
+        var normalized = (entityType ?? string.Empty).Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "lead" => ActivityRelationType.Lead,
+            "opportunity" => ActivityRelationType.Opportunity,
+            "account" => ActivityRelationType.Account,
+            "contact" => ActivityRelationType.Contact,
+            _ => null
+        };
+    }
+
+    private static string NormalizeRiskTier(string? riskTier, string? actionType)
+    {
+        var normalized = (riskTier ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized is "low" or "medium" or "high")
+        {
+            return normalized;
+        }
+
+        var action = (actionType ?? string.Empty).Trim().ToLowerInvariant();
+        return action switch
+        {
+            "lead_follow_up" => "low",
+            "activity_cleanup" => "low",
+            "opportunity_recovery" => "medium",
+            "lead_qualification" => "medium",
+            "approval_follow_up" => "high",
+            _ => "medium"
+        };
+    }
+
+    private async Task<bool> RequiresConfidenceReviewAsync(string? entityType, Guid? entityId, CancellationToken cancellationToken)
+    {
+        if (!string.Equals(entityType, "lead", StringComparison.OrdinalIgnoreCase) || !entityId.HasValue)
+        {
+            return false;
+        }
+
+        var confidence = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(lead => lead.TenantId == _tenantProvider.TenantId && !lead.IsDeleted && lead.Id == entityId.Value)
+            .Select(lead => lead.AiConfidence)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return !confidence.HasValue || confidence.Value < 0.55m;
+    }
 
     private sealed record VisibilityContext(RoleVisibilityScope Scope, IReadOnlyCollection<Guid>? UserIds);
 

@@ -178,12 +178,21 @@ export interface AssistantInsightsAction {
   id: string;
   title: string;
   description: string;
+  riskTier: 'low' | 'medium' | 'high' | string;
   ownerScope: string;
   dueWindow: string;
   actionType: string;
   entityType?: string | null;
   entityId?: string | null;
   priority: number;
+}
+
+export interface AssistantActionExecutionResult {
+  status: string;
+  message: string;
+  requiresReview: boolean;
+  createdActivityId?: string | null;
+  createdApprovalId?: string | null;
 }
 
 export interface AssistantInsights {
