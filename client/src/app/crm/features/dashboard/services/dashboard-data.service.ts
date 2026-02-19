@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, of } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
-import { DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
+import { AssistantInsights, DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardDataService {
@@ -90,6 +90,17 @@ export class DashboardDataService {
       reviewQueue: []
     };
     return this.http.get<ManagerPipelineHealth>(url).pipe(catchError(() => of(empty)));
+  }
+
+  getAssistantInsights() {
+    const url = `${environment.apiUrl}/api/assistant/insights`;
+    const empty: AssistantInsights = {
+      scope: 'Self',
+      kpis: [],
+      actions: [],
+      generatedAtUtc: new Date().toISOString()
+    };
+    return this.http.get<AssistantInsights>(url).pipe(catchError(() => of(empty)));
   }
 
   coachOpportunity(opportunityId: string, payload: { comment: string; dueDateUtc?: string | null; priority?: string | null }) {

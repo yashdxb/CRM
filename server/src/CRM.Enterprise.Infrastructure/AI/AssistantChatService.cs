@@ -173,6 +173,20 @@ public sealed class AssistantChatService : IAssistantChatService
         return new AssistantChatResult(reply, history);
     }
 
+    public async Task<AssistantInsightsResult> GetInsightsAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var snapshot = await BuildExecutionSnapshotAsync(userId, cancellationToken);
+        var kpis = new List<AssistantInsightsKpi>
+        {
+            new("at-risk-deals", "At-Risk Deals", snapshot.OpenOpportunitiesWithoutRecentActivity, snapshot.OpenOpportunitiesWithoutRecentActivity > 0 ? "danger" : "ok"),
+            new("sla-breaches", "Lead SLA Breaches", snapshot.LeadSlaBreaches, snapshot.LeadSlaBreaches > 0 ? "danger" : "ok"),
+            new("pending-approvals", "Pending Approvals", snapshot.PendingApprovals, snapshot.PendingApprovals > 0 ? "warn" : "ok")
+        };
+
+        var actions = BuildPriorityActions(snapshot);
+        return new AssistantInsightsResult(snapshot.Scope, kpis, actions, DateTime.UtcNow);
+    }
+
     private async Task<string> BuildGroundedPromptAsync(Guid userId, string userQuestion, CancellationToken cancellationToken)
     {
         var executionSnapshot = await BuildExecutionSnapshotAsync(userId, cancellationToken);
@@ -200,42 +214,57 @@ public sealed class AssistantChatService : IAssistantChatService
         var tenantId = _tenantProvider.TenantId;
         var nowUtc = DateTime.UtcNow;
         var staleCutoff = nowUtc.AddDays(-7);
+        var visibility = await ResolveVisibilityAsync(userId, cancellationToken);
+        var scopedUserIds = visibility.UserIds;
 
-        var overdueActivities = await _dbContext.Activities
+        var activitiesQuery = _dbContext.Activities
             .AsNoTracking()
             .Where(activity => activity.TenantId == tenantId
                 && !activity.IsDeleted
-                && activity.OwnerId == userId
                 && activity.CompletedDateUtc == null
                 && activity.DueDateUtc != null
-                && activity.DueDateUtc < nowUtc)
-            .CountAsync(cancellationToken);
+                && activity.DueDateUtc < nowUtc);
+        if (scopedUserIds is not null)
+        {
+            activitiesQuery = activitiesQuery.Where(activity => scopedUserIds.Contains(activity.OwnerId));
+        }
+        var overdueActivities = await activitiesQuery.CountAsync(cancellationToken);
 
-        var leadSlaBreaches = await _dbContext.Leads
+        var leadsQuery = _dbContext.Leads
             .AsNoTracking()
             .Where(lead => lead.TenantId == tenantId
                 && !lead.IsDeleted
-                && lead.OwnerId == userId
                 && lead.FirstTouchedAtUtc == null
                 && lead.FirstTouchDueAtUtc != null
-                && lead.FirstTouchDueAtUtc < nowUtc)
-            .CountAsync(cancellationToken);
+                && lead.FirstTouchDueAtUtc < nowUtc);
+        if (scopedUserIds is not null)
+        {
+            leadsQuery = leadsQuery.Where(lead => scopedUserIds.Contains(lead.OwnerId));
+        }
+        var leadSlaBreaches = await leadsQuery.CountAsync(cancellationToken);
 
-        var lowConfidenceLeads = await _dbContext.Leads
+        var lowConfidenceLeadsQuery = _dbContext.Leads
             .AsNoTracking()
             .Where(lead => lead.TenantId == tenantId
                 && !lead.IsDeleted
-                && lead.OwnerId == userId
                 && lead.ConvertedAtUtc == null
-                && (lead.AiConfidence == null || lead.AiConfidence < 0.65m))
-            .CountAsync(cancellationToken);
+                && (lead.AiConfidence == null || lead.AiConfidence < 0.65m));
+        if (scopedUserIds is not null)
+        {
+            lowConfidenceLeadsQuery = lowConfidenceLeadsQuery.Where(lead => scopedUserIds.Contains(lead.OwnerId));
+        }
+        var lowConfidenceLeads = await lowConfidenceLeadsQuery.CountAsync(cancellationToken);
 
-        var openOpportunities = await _dbContext.Opportunities
+        var openOpportunitiesQuery = _dbContext.Opportunities
             .AsNoTracking()
             .Where(opportunity => opportunity.TenantId == tenantId
                 && !opportunity.IsDeleted
-                && opportunity.OwnerId == userId
-                && !opportunity.IsClosed)
+                && !opportunity.IsClosed);
+        if (scopedUserIds is not null)
+        {
+            openOpportunitiesQuery = openOpportunitiesQuery.Where(opportunity => scopedUserIds.Contains(opportunity.OwnerId));
+        }
+        var openOpportunities = await openOpportunitiesQuery
             .Select(opportunity => new { opportunity.Id, opportunity.Name })
             .ToListAsync(cancellationToken);
 
@@ -267,21 +296,110 @@ public sealed class AssistantChatService : IAssistantChatService
             topAtRiskOpportunityNames = staleOpportunities;
         }
 
-        var pendingApprovals = await _dbContext.OpportunityApprovals
+        var pendingApprovalsQuery = _dbContext.OpportunityApprovals
             .AsNoTracking()
             .Where(approval => approval.TenantId == tenantId
                 && !approval.IsDeleted
-                && approval.Status == "Pending"
-                && (approval.RequestedByUserId == userId || approval.ApproverUserId == userId))
-            .CountAsync(cancellationToken);
+                && approval.Status == "Pending");
+        if (scopedUserIds is not null)
+        {
+            pendingApprovalsQuery = pendingApprovalsQuery.Where(approval =>
+                (approval.RequestedByUserId.HasValue && scopedUserIds.Contains(approval.RequestedByUserId.Value))
+                || (approval.ApproverUserId.HasValue && scopedUserIds.Contains(approval.ApproverUserId.Value)));
+        }
+        var pendingApprovals = await pendingApprovalsQuery.CountAsync(cancellationToken);
 
         return new AssistantExecutionSnapshot(
+            Scope: visibility.Scope,
             OverdueActivities: overdueActivities,
             LeadSlaBreaches: leadSlaBreaches,
             OpenOpportunitiesWithoutRecentActivity: Math.Max(opportunitiesWithoutRecentActivity, 0),
             LowConfidenceLeads: lowConfidenceLeads,
             PendingApprovals: pendingApprovals,
             TopAtRiskOpportunityNames: topAtRiskOpportunityNames);
+    }
+
+    private static IReadOnlyList<AssistantInsightsAction> BuildPriorityActions(AssistantExecutionSnapshot snapshot)
+    {
+        var actions = new List<AssistantInsightsAction>();
+
+        if (snapshot.LeadSlaBreaches > 0)
+        {
+            actions.Add(new AssistantInsightsAction(
+                "sla-first-touch",
+                "Recover breached first-touch SLAs",
+                $"{snapshot.LeadSlaBreaches} lead(s) missed first-touch SLA. Prioritize outreach today.",
+                "Rep/Owner",
+                "Today",
+                "lead_follow_up",
+                "lead",
+                null,
+                100));
+        }
+
+        if (snapshot.OpenOpportunitiesWithoutRecentActivity > 0)
+        {
+            var topDeals = snapshot.TopAtRiskOpportunityNames.Length > 0
+                ? $" Top stale deals: {string.Join(", ", snapshot.TopAtRiskOpportunityNames)}."
+                : string.Empty;
+
+            actions.Add(new AssistantInsightsAction(
+                "stale-pipeline",
+                "Reactivate stale opportunities",
+                $"{snapshot.OpenOpportunitiesWithoutRecentActivity} open opportunity(ies) have no recent activity in 7 days.{topDeals}",
+                "Rep/Manager",
+                "24 hours",
+                "opportunity_recovery",
+                "opportunity",
+                null,
+                95));
+        }
+
+        if (snapshot.PendingApprovals > 0)
+        {
+            actions.Add(new AssistantInsightsAction(
+                "approval-queue",
+                "Clear pending approvals",
+                $"{snapshot.PendingApprovals} approval request(s) are waiting and may block close progression.",
+                "Approver",
+                "48 hours",
+                "approval_follow_up",
+                "approval",
+                null,
+                90));
+        }
+
+        if (snapshot.LowConfidenceLeads > 0)
+        {
+            actions.Add(new AssistantInsightsAction(
+                "confidence-gaps",
+                "Resolve low-confidence lead gaps",
+                $"{snapshot.LowConfidenceLeads} active lead(s) have low confidence. Capture missing evidence before advancing.",
+                "Rep",
+                "This week",
+                "lead_qualification",
+                "lead",
+                null,
+                80));
+        }
+
+        if (snapshot.OverdueActivities > 0)
+        {
+            actions.Add(new AssistantInsightsAction(
+                "overdue-activities",
+                "Clear overdue activity backlog",
+                $"{snapshot.OverdueActivities} activity item(s) are overdue and require completion or reschedule.",
+                "Rep/Owner",
+                "Today",
+                "activity_cleanup",
+                "activity",
+                null,
+                85));
+        }
+
+        return actions
+            .OrderByDescending(action => action.Priority)
+            .ToList();
     }
 
     private static string BuildStructuredPrompt(
@@ -334,12 +452,116 @@ public sealed class AssistantChatService : IAssistantChatService
     }
 
     private sealed record AssistantExecutionSnapshot(
+        RoleVisibilityScope Scope,
         int OverdueActivities,
         int LeadSlaBreaches,
         int OpenOpportunitiesWithoutRecentActivity,
         int LowConfidenceLeads,
         int PendingApprovals,
         string[] TopAtRiskOpportunityNames);
+
+    private sealed record VisibilityContext(RoleVisibilityScope Scope, IReadOnlyCollection<Guid>? UserIds);
+
+    private async Task<VisibilityContext> ResolveVisibilityAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var roleRows = await _dbContext.UserRoles
+            .AsNoTracking()
+            .Where(ur => !ur.IsDeleted && ur.UserId == userId)
+            .Join(_dbContext.Roles.AsNoTracking().Where(r => !r.IsDeleted && r.TenantId == tenantId),
+                ur => ur.RoleId,
+                r => r.Id,
+                (ur, r) => new { r.Id, r.HierarchyPath, r.VisibilityScope })
+            .ToListAsync(cancellationToken);
+
+        if (roleRows.Count == 0)
+        {
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId });
+        }
+
+        var effectiveScope = ResolveVisibilityScope(roleRows.Select(r => r.VisibilityScope));
+        if (effectiveScope == RoleVisibilityScope.All)
+        {
+            return new VisibilityContext(RoleVisibilityScope.All, null);
+        }
+
+        if (effectiveScope == RoleVisibilityScope.Self)
+        {
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId });
+        }
+
+        var rolePaths = roleRows
+            .Select(r => r.HierarchyPath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var descendantRoleIds = new HashSet<Guid>();
+        if (rolePaths.Count > 0)
+        {
+            var tenantRoles = await _dbContext.Roles
+                .AsNoTracking()
+                .Where(r => !r.IsDeleted && r.TenantId == tenantId && r.HierarchyPath != null)
+                .Select(r => new { r.Id, r.HierarchyPath })
+                .ToListAsync(cancellationToken);
+
+            foreach (var role in tenantRoles)
+            {
+                if (role.HierarchyPath is null)
+                {
+                    continue;
+                }
+
+                if (rolePaths.Any(path => role.HierarchyPath.StartsWith(path, StringComparison.OrdinalIgnoreCase)))
+                {
+                    descendantRoleIds.Add(role.Id);
+                }
+            }
+        }
+        else
+        {
+            foreach (var role in roleRows)
+            {
+                descendantRoleIds.Add(role.Id);
+            }
+        }
+
+        if (descendantRoleIds.Count == 0)
+        {
+            return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId });
+        }
+
+        var teamUserIds = await _dbContext.UserRoles
+            .AsNoTracking()
+            .Where(ur => !ur.IsDeleted && descendantRoleIds.Contains(ur.RoleId))
+            .Select(ur => ur.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        if (!teamUserIds.Contains(userId))
+        {
+            teamUserIds.Add(userId);
+        }
+
+        return new VisibilityContext(RoleVisibilityScope.Team, teamUserIds);
+    }
+
+    private static RoleVisibilityScope ResolveVisibilityScope(IEnumerable<RoleVisibilityScope> scopes)
+    {
+        var scopeList = scopes.ToList();
+        if (scopeList.Any(scope => scope == RoleVisibilityScope.All))
+        {
+            return RoleVisibilityScope.All;
+        }
+
+        if (scopeList.Any(scope => scope == RoleVisibilityScope.Team))
+        {
+            return RoleVisibilityScope.Team;
+        }
+
+        return RoleVisibilityScope.Self;
+    }
 
     private static bool TryParseRetryAfter(string? message, out int retryAfterSeconds)
     {

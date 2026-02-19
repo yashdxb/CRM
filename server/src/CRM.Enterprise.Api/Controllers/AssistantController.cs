@@ -63,6 +63,32 @@ public class AssistantController : ControllerBase
         }
     }
 
+    [HttpGet("insights")]
+    public async Task<ActionResult<AssistantInsightsResponse>> GetInsights(CancellationToken cancellationToken)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var insights = await _chatService.GetInsightsAsync(userId.Value, cancellationToken);
+        return Ok(new AssistantInsightsResponse(
+            insights.Scope.ToString(),
+            insights.Kpis.Select(kpi => new AssistantInsightsKpiItem(kpi.Key, kpi.Label, kpi.Value, kpi.Severity)).ToList(),
+            insights.Actions.Select(action => new AssistantInsightsActionItem(
+                action.Id,
+                action.Title,
+                action.Description,
+                action.OwnerScope,
+                action.DueWindow,
+                action.ActionType,
+                action.EntityType,
+                action.EntityId,
+                action.Priority)).ToList(),
+            insights.GeneratedAtUtc));
+    }
+
     private static AssistantChatMessageItem MapMessage(AssistantChatMessage message)
         => new(message.Id, message.Role, message.Content, message.CreatedAtUtc);
 

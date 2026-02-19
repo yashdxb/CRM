@@ -12,7 +12,7 @@ import { OrderListModule } from 'primeng/orderlist';
 import { Subject, startWith, switchMap } from 'rxjs';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
-import { DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal } from '../models/dashboard.model';
+import { AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal } from '../models/dashboard.model';
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
@@ -160,6 +160,13 @@ export class DashboardPage implements OnInit {
   };
   private readonly managerHealthRefresh$ = new Subject<void>();
   private readonly managerHealthSignal = signal<ManagerPipelineHealth>(this.emptyManagerHealth);
+  private readonly emptyAssistantInsights: AssistantInsights = {
+    scope: 'Self',
+    kpis: [],
+    actions: [],
+    generatedAtUtc: new Date().toISOString()
+  };
+  private readonly assistantInsightsSignal = signal<AssistantInsights>(this.emptyAssistantInsights);
   protected readonly expansionSignals = signal<ExpansionSignal[]>([]);
   protected readonly pendingDecisionInbox = signal<OpportunityApprovalInboxItem[]>([]);
   protected readonly expansionLoading = signal(false);
@@ -167,6 +174,9 @@ export class DashboardPage implements OnInit {
 
   protected readonly summary = computed(() => this.summarySignal() ?? this.emptySummary);
   protected readonly managerHealth = computed(() => this.managerHealthSignal() ?? this.emptyManagerHealth);
+  protected readonly assistantInsights = computed(() => this.assistantInsightsSignal() ?? this.emptyAssistantInsights);
+  protected readonly assistantKpis = computed(() => this.assistantInsights().kpis ?? []);
+  protected readonly assistantActions = computed(() => this.assistantInsights().actions ?? []);
   protected readonly currencyCode = signal<string>('');
   private currencyFallback = '';
   protected coachingDialogOpen = false;
@@ -623,6 +633,12 @@ export class DashboardPage implements OnInit {
         this.emitRiskAlerts(resolvedSummary);
       });
 
+    this.dashboardData.getAssistantInsights()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((insights) => {
+        this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
+      });
+
     this.loadExpansionSignals();
     this.loadPendingDecisionInbox();
 
@@ -683,6 +699,39 @@ export class DashboardPage implements OnInit {
 
   protected onQuickAdd(): void {
     this.commandPaletteService.requestQuickAdd('lead');
+  }
+
+  protected assistantSeverityClass(severity: string): string {
+    const normalized = (severity ?? '').toLowerCase();
+    if (normalized === 'danger') {
+      return 'danger';
+    }
+    if (normalized === 'warn' || normalized === 'warning') {
+      return 'warning';
+    }
+    return 'success';
+  }
+
+  protected openAssistantAction(action: AssistantInsightsAction): void {
+    const entityType = (action.entityType ?? '').toLowerCase();
+    if (entityType === 'lead') {
+      this.router.navigate(['/app/leads']);
+      return;
+    }
+    if (entityType === 'opportunity') {
+      this.router.navigate(['/app/opportunities']);
+      return;
+    }
+    if (entityType === 'activity') {
+      this.router.navigate(['/app/activities']);
+      return;
+    }
+    if (entityType === 'approval') {
+      this.router.navigate(['/app/settings/approvals']);
+      return;
+    }
+
+    this.router.navigate(['/app/dashboard']);
   }
 
   private emitRiskAlerts(summary: DashboardSummary): void {

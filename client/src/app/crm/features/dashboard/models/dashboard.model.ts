@@ -166,3 +166,29 @@ export interface ManagerReviewDeal {
   lastActivityAtUtc?: string;
   expectedCloseDate?: string;
 }
+
+export interface AssistantInsightsKpi {
+  key: string;
+  label: string;
+  value: number;
+  severity: 'ok' | 'warn' | 'danger' | string;
+}
+
+export interface AssistantInsightsAction {
+  id: string;
+  title: string;
+  description: string;
+  ownerScope: string;
+  dueWindow: string;
+  actionType: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  priority: number;
+}
+
+export interface AssistantInsights {
+  scope: string;
+  kpis: AssistantInsightsKpi[];
+  actions: AssistantInsightsAction[];
+  generatedAtUtc: string;
+}

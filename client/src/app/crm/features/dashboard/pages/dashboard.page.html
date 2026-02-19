@@ -122,6 +122,42 @@
       </div>
     </section>
 
+    <section class="ai-orchestration-section glass-card">
+      <div class="ai-orchestration-header">
+        <h2 class="section-title">
+          <i class="pi pi-bolt"></i>
+          AI Execution Orchestration
+        </h2>
+        <span class="card-badge">{{ assistantInsights().scope }} scope</span>
+      </div>
+
+      <div class="ai-kpi-grid">
+        <article class="ai-kpi-card" *ngFor="let kpi of assistantKpis()">
+          <div class="ai-kpi-value" [ngClass]="assistantSeverityClass(kpi.severity)">{{ kpi.value | number:'1.0-0' }}</div>
+          <div class="ai-kpi-label">{{ kpi.label }}</div>
+        </article>
+      </div>
+
+      <div class="ai-action-queue" *ngIf="assistantActions().length; else noAiActions">
+        <article class="ai-action-item" *ngFor="let action of assistantActions()">
+          <div class="ai-action-content">
+            <h3 class="card-title">{{ action.title }}</h3>
+            <p>{{ action.description }}</p>
+            <div class="ai-action-meta">
+              <span><i class="pi pi-user"></i> {{ action.ownerScope }}</span>
+              <span><i class="pi pi-clock"></i> {{ action.dueWindow }}</span>
+            </div>
+          </div>
+          <button pButton type="button" class="btn-glass ai-action-btn" (click)="openAssistantAction(action)">
+            Open
+          </button>
+        </article>
+      </div>
+      <ng-template #noAiActions>
+        <div class="empty-state-inline">No urgent AI actions right now.</div>
+      </ng-template>
+    </section>
+
     <!-- Main Grid: Command Center Cards -->
     <section
       class="dashboard-card-grid"
