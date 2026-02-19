@@ -31,3 +31,7 @@ Source list: `CRM Backlog` (`901710720381`)
 - `moscow:must`
 - `tier:Core`
 - `type:Platform`
+
+## Related Execution Sync
+
+- Action execution and review controls sync: `docs/CLICKUP_AI_ASSISTANT_ACTION_EXECUTION_SYNC.md`

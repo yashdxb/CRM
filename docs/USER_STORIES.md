@@ -41,6 +41,19 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
   - `86dzwn0eq` — Module: Assistant | Forecast reliability risk signals in assistant responses
 - Detailed snapshot: `docs/CLICKUP_AI_ASSISTANT_KNOWLEDGE_SYNC.md`
 
+### AI Assistant Action Execution Sync (ClickUp -> Docs)
+- Sync date: **February 19, 2026**
+- Epic: `Epic | AI Assistant | Action Execution & Review Controls` (ClickUp: `86dzxrdp5`)
+- Stories created:
+  - `86dzxrdpm` — Module: Assistant | One-click low-risk actions (task/follow-up) with undo support
+  - `86dzxrdq4` — Module: Assistant | Review-required flow for medium/high-risk assistant actions
+  - `86dzxrdqr` — Module: Assistant | Action policy engine (risk tier + confidence threshold)
+  - `86dzxrdqy` — Module: Assistant | Assistant action audit trail and acceptance telemetry
+  - `86dzxrdr4` — Module: Assistant | Dashboard action queue execute/review UX and state badges
+  - `86dzxrdrk` — Module: Assistant | Role-scope enforcement for action visibility and execution
+  - `86dzxrdru` — Module: Assistant | E2E coverage for assistant action execution paths
+- Detailed snapshot: `docs/CLICKUP_AI_ASSISTANT_ACTION_EXECUTION_SYNC.md`
+
 ---
 
 ## Strategic Benchmark & Differentiation (Current Plan)
@@ -112,6 +125,13 @@ Canonical story list synced from ClickUp CRM Backlog.
 - Module: Assistant | Approval copilot with policy-aware request guidance
 - Module: Assistant | Manager coaching orchestration with acknowledgment tasks
 - Module: Assistant | Forecast reliability risk signals in assistant responses
+- Module: Assistant | One-click low-risk actions (task/follow-up) with undo support
+- Module: Assistant | Review-required flow for medium/high-risk assistant actions
+- Module: Assistant | Action policy engine (risk tier + confidence threshold)
+- Module: Assistant | Assistant action audit trail and acceptance telemetry
+- Module: Assistant | Dashboard action queue execute/review UX and state badges
+- Module: Assistant | Role-scope enforcement for action visibility and execution
+- Module: Assistant | E2E coverage for assistant action execution paths
 - Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene.
 - Module: Activities | As a Sales Rep, I want quick actions (log activity, create task, schedule meeting) from the home view to reduce friction.
 - Module: Activities | As a Sales Rep, I want review outcomes (Needs Work / Escalate) to create acknowledgment tasks with due dates.

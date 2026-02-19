@@ -18,3 +18,5 @@ Track updates that affect assistant behavior.
 - Added grounding prompt test set and runner script for new-user and lead field-level query verification.
 - Added assistant AI orchestration stories in ClickUp for next-best-action, at-risk autopilot, approval copilot, manager coaching, and forecast reliability signals.
 - Updated assistant grounding policy to require structured sections (summary, numbered actions, risks, sources) and prioritize execution snapshot signals.
+- Added assistant action execution policy (risk-based one-click vs review-required controls).
+- Added ClickUp epic + stories for assistant action execution and review controls (`86dzxrdp5`) and synced local snapshot doc.
