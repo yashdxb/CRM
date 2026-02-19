@@ -59,7 +59,7 @@ test('AI Assistant panel opens and responds to messages', async ({ page, request
   await assistantButton.click({ force: true });
 
   // Verify the assistant panel is visible
-  const assistantPanel = page.locator('app-assistant-panel');
+  const assistantPanel = page.locator('aside.assistant-panel');
   await expect(assistantPanel).toBeVisible({ timeout: 10000 });
 
   // Verify the greeting message is displayed
@@ -67,14 +67,14 @@ test('AI Assistant panel opens and responds to messages', async ({ page, request
   await expect(greeting).toBeVisible({ timeout: 5000 });
 
   // Find the message input field
-  const messageInput = assistantPanel.locator('textarea[placeholder="Ask AI Assistant…"]');
+  const messageInput = assistantPanel.locator('input[placeholder="Ask AI Assistant…"]');
   await expect(messageInput).toBeVisible();
 
   // Send a test message
   const testMessage = 'What is this CRM about?';
   await messageInput.fill(testMessage);
   
-  // Click send button or press Enter
+  // Send by pressing Enter in the input field.
   await messageInput.press('Enter');
 
   // Wait for the user message to appear
@@ -82,12 +82,20 @@ test('AI Assistant panel opens and responds to messages', async ({ page, request
   await expect(userMessage).toBeVisible({ timeout: 5000 });
 
   // Wait for assistant response (should appear within 30 seconds)
-  const assistantMessage = assistantPanel.locator('.assistant-list, p:not(:empty)').first();
-  await expect(assistantMessage).toBeVisible({ timeout: 30000 });
+  await expect(
+    assistantPanel.locator('.assistant-message').filter({ hasText: 'You' }).last()
+  ).toBeVisible({ timeout: 10000 });
+  await expect(
+    assistantPanel.locator('.assistant-message').filter({ hasText: 'Assistant' }).nth(1)
+  ).toBeVisible({ timeout: 30000 });
 
-  // Verify response is not empty
-  const responseText = await assistantMessage.textContent();
-  expect(responseText?.trim().length).toBeGreaterThan(0);
+  // Verify response message has content.
+  const responseText = await assistantPanel
+    .locator('.assistant-message')
+    .filter({ hasText: 'Assistant' })
+    .last()
+    .textContent();
+  expect((responseText ?? '').trim().length).toBeGreaterThan(10);
 
   console.log('✅ Assistant response received:', responseText?.substring(0, 100) + '...');
 });
@@ -105,21 +113,21 @@ test('AI Assistant handles errors gracefully', async ({ page, request }) => {
   await page.waitForTimeout(300);
   await assistantButton.click({ force: true });
 
-  const assistantPanel = page.locator('app-assistant-panel');
-  const messageInput = assistantPanel.locator('textarea[placeholder="Ask AI Assistant…"]');
+  const assistantPanel = page.locator('aside.assistant-panel');
+  await expect(assistantPanel).toBeVisible({ timeout: 10000 });
+  const messageInput = assistantPanel.locator('input[placeholder="Ask AI Assistant…"]');
+  await expect(messageInput).toBeVisible({ timeout: 5000 });
 
   // Try sending with just whitespace
   await messageInput.fill('   ');
   await messageInput.press('Enter');
 
   // Should not send or show error gracefully
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  const messages = assistantPanel.locator('.assistant-message');
-  const messageCount = await messages.count();
-  
-  // No message should be sent for whitespace
-  expect(messageCount).toBe(0);
+  await page.waitForTimeout(500);
+
+  // No user message with whitespace should be added.
+  const userMessages = assistantPanel.locator('.assistant-message.user');
+  expect(await userMessages.count()).toBe(0);
 });
 
 test('AI Assistant panel can be collapsed and restored', async ({ page, request }) => {
@@ -135,16 +143,25 @@ test('AI Assistant panel can be collapsed and restored', async ({ page, request 
   await page.waitForTimeout(300);
   await assistantButton.click({ force: true });
 
-  const assistantPanel = page.locator('app-assistant-panel');
+  const assistantPanel = page.locator('aside.assistant-panel');
   await expect(assistantPanel).toBeVisible();
+  const assistantInput = assistantPanel.locator('.assistant-input');
+  await expect(assistantInput).toBeVisible();
 
   // Click the collapse button
-  const collapseButton = assistantPanel.locator('button[title*="ollapse"], button:has-text("−")').first();
-  if (await collapseButton.isVisible()) {
-    await collapseButton.click();
-    
-    // Panel should still exist but be minimized
-    const collapsedState = await page.evaluate(() => localStorage.getItem('crm_assistant_collapsed'));
-    expect(collapsedState).toBe('true');
-  }
+  const collapseButton = assistantPanel.locator('.assistant-controls .assistant-control').first();
+  await expect(collapseButton).toBeVisible();
+  await collapseButton.click();
+  await expect(assistantInput).toBeHidden();
+
+  // Panel should still exist but be minimized
+  const collapsedState = await page.evaluate(() => localStorage.getItem('crm_assistant_collapsed'));
+  expect(collapsedState).toBe('true');
+
+  // Restore by clicking topbar assistant toggle.
+  await assistantButton.click({ force: true });
+  await expect(assistantPanel).toBeVisible();
+  await expect(assistantInput).toBeVisible();
+  const restoredState = await page.evaluate(() => localStorage.getItem('crm_assistant_collapsed'));
+  expect(restoredState).toBe('false');
 });
