@@ -1,11 +1,18 @@
 import { NgFor, NgIf } from '@angular/common';
 import { isPlatformBrowser } from '@angular/common';
-import { Component, computed, inject, PLATFORM_ID, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, PLATFORM_ID, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule } from '@angular/cdk/drag-drop';
+import { Router } from '@angular/router';
 
 import { AssistantService } from './assistant.service';
-import { AssistantChatMessage, AssistantChatService } from './assistant-chat.service';
+import {
+  AssistantChatMessage,
+  AssistantChatService,
+  AssistantInsights,
+  AssistantInsightsAction
+} from './assistant-chat.service';
 import { AuthService } from '../auth/auth.service';
 
 @Component({
@@ -17,9 +24,18 @@ import { AuthService } from '../auth/auth.service';
 })
 export class AssistantPanelComponent {
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly assistantService = inject(AssistantService);
   private readonly assistantChatService = inject(AssistantChatService);
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
+  private readonly emptyAssistantInsights: AssistantInsights = {
+    scope: 'Self',
+    kpis: [],
+    actions: [],
+    generatedAtUtc: new Date().toISOString()
+  };
 
   protected readonly assistantVisible = this.assistantService.isVisible;
   protected readonly assistantCollapsed = this.assistantService.isCollapsed;
@@ -27,8 +43,21 @@ export class AssistantPanelComponent {
   protected readonly assistantInput = signal('');
   protected readonly assistantSending = signal(false);
   protected readonly assistantError = signal<string | null>(null);
+  protected readonly assistantInfo = signal<string | null>(null);
   protected readonly historyLoaded = signal(false);
   protected readonly historyLoading = signal(false);
+  protected readonly assistantInsights = signal<AssistantInsights>(this.emptyAssistantInsights);
+  protected readonly assistantActions = computed(() => this.assistantInsights().actions ?? []);
+  protected assistantReviewDialogOpen = false;
+  protected assistantReviewNote = '';
+  protected assistantReviewSubmitting = false;
+  protected pendingAssistantAction: AssistantInsightsAction | null = null;
+  protected assistantUndoVisible = false;
+  protected assistantUndoBusy = false;
+  protected assistantUndoMessage = '';
+  private assistantUndoTimerId: number | null = null;
+  private assistantUndoActivityId: string | null = null;
+  private assistantUndoActionType: string | null = null;
   protected readonly assistantGreeting = computed(() => this.buildAssistantGreeting());
 
   protected toggleAssistantCollapsed(): void {
@@ -54,6 +83,7 @@ export class AssistantPanelComponent {
     this.assistantMessages.update(messages => [...messages, userMessage]);
     this.assistantSending.set(true);
     this.assistantError.set(null);
+    this.assistantInfo.set(null);
     this.assistantInput.set('');
 
     this.assistantChatService.sendMessage(message).subscribe({
@@ -70,6 +100,7 @@ export class AssistantPanelComponent {
         this.assistantMessages.update(messages => [...messages, assistantMessage]);
         this.assistantSending.set(false);
         this.runTypewriter(assistantMessage.id, reply);
+        this.refreshInsights();
       },
       error: err => {
         const fallback = typeof err?.error?.error === 'string'
@@ -97,6 +128,7 @@ export class AssistantPanelComponent {
         })));
         this.historyLoaded.set(true);
         this.historyLoading.set(false);
+        this.refreshInsights();
       },
       error: () => {
         this.assistantError.set('Unable to load assistant history.');
@@ -112,7 +144,106 @@ export class AssistantPanelComponent {
     }
   }
 
-  constructor() {}
+  constructor() {
+    if (isPlatformBrowser(this.platformId)) {
+      this.refreshInsights();
+    }
+  }
+
+  protected assistantActionLabel(action: AssistantInsightsAction): string {
+    return (action.riskTier ?? '').toLowerCase() === 'low' ? 'Execute' : 'Review';
+  }
+
+  protected openAssistantAction(action: AssistantInsightsAction): void {
+    const risk = (action.riskTier ?? '').toLowerCase();
+    this.assistantError.set(null);
+    this.assistantInfo.set(null);
+    if (risk === 'medium' || risk === 'high') {
+      this.pendingAssistantAction = action;
+      this.assistantReviewNote = '';
+      this.assistantReviewDialogOpen = true;
+      return;
+    }
+
+    this.assistantChatService.executeAction(action)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: result => {
+          this.assistantInfo.set(result.message || 'Action executed.');
+          if (result.createdActivityId && risk === 'low') {
+            this.showAssistantUndo(action, result.createdActivityId);
+          }
+          this.refreshInsights();
+          this.navigateAssistantAction(action);
+        },
+        error: () => {
+          this.assistantError.set('Unable to execute assistant action.');
+        }
+      });
+  }
+
+  protected submitAssistantReview(approved: boolean): void {
+    const action = this.pendingAssistantAction;
+    if (!action || this.assistantReviewSubmitting) {
+      return;
+    }
+
+    this.assistantReviewSubmitting = true;
+    this.assistantChatService.reviewAction(action, approved, this.assistantReviewNote)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: result => {
+          this.assistantReviewSubmitting = false;
+          this.assistantReviewDialogOpen = false;
+          this.pendingAssistantAction = null;
+          this.assistantReviewNote = '';
+          this.assistantInfo.set(result.message || (approved ? 'Action approved.' : 'Action rejected.'));
+          this.refreshInsights();
+          if (approved) {
+            this.navigateAssistantAction(action);
+          }
+        },
+        error: () => {
+          this.assistantReviewSubmitting = false;
+          this.assistantError.set('Unable to submit review decision.');
+        }
+      });
+  }
+
+  protected cancelAssistantReview(): void {
+    this.assistantReviewDialogOpen = false;
+    this.pendingAssistantAction = null;
+    this.assistantReviewNote = '';
+  }
+
+  protected undoAssistantAction(): void {
+    if (!this.assistantUndoActivityId || this.assistantUndoBusy) {
+      return;
+    }
+
+    this.assistantUndoBusy = true;
+    this.assistantChatService.undoAction(this.assistantUndoActivityId, this.assistantUndoActionType ?? undefined)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: result => {
+          this.assistantUndoBusy = false;
+          this.assistantUndoVisible = false;
+          this.assistantUndoMessage = '';
+          this.assistantUndoActivityId = null;
+          this.assistantUndoActionType = null;
+          if (this.assistantUndoTimerId !== null) {
+            window.clearTimeout(this.assistantUndoTimerId);
+            this.assistantUndoTimerId = null;
+          }
+          this.assistantInfo.set(result.message || 'Action undone.');
+          this.refreshInsights();
+        },
+        error: () => {
+          this.assistantUndoBusy = false;
+          this.assistantError.set('Unable to undo action.');
+        }
+      });
+  }
 
   protected formatAssistantMessage(content: string): string {
     if (!content) {
@@ -202,6 +333,19 @@ export class AssistantPanelComponent {
     return `Hi ${firstName}, ${timeGreeting}. How can I help you today? I can help with leads, accounts, opportunities, or activities. I’ll summarize and suggest next steps.`;
   }
 
+  private refreshInsights(): void {
+    this.assistantChatService.getInsights()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: insights => {
+          this.assistantInsights.set(insights ?? this.emptyAssistantInsights);
+        },
+        error: () => {
+          this.assistantInsights.set(this.emptyAssistantInsights);
+        }
+      });
+  }
+
   private runTypewriter(messageId: string, fullText: string): void {
     if (!isPlatformBrowser(this.platformId)) {
       this.updateMessage(messageId, { displayContent: fullText, isTyping: false });
@@ -237,6 +381,46 @@ export class AssistantPanelComponent {
 
   private buildLocalId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  private navigateAssistantAction(action: AssistantInsightsAction): void {
+    const entityType = (action.entityType ?? '').toLowerCase();
+    if (entityType === 'lead') {
+      this.router.navigate(['/app/leads']);
+      return;
+    }
+    if (entityType === 'opportunity') {
+      this.router.navigate(['/app/opportunities']);
+      return;
+    }
+    if (entityType === 'activity') {
+      this.router.navigate(['/app/activities']);
+      return;
+    }
+    if (entityType === 'approval') {
+      this.router.navigate(['/app/settings/approvals']);
+      return;
+    }
+
+    this.router.navigate(['/app/dashboard']);
+  }
+
+  private showAssistantUndo(action: AssistantInsightsAction, createdActivityId: string): void {
+    this.assistantUndoVisible = true;
+    this.assistantUndoBusy = false;
+    this.assistantUndoActivityId = createdActivityId;
+    this.assistantUndoActionType = action.actionType;
+    this.assistantUndoMessage = `${action.title} executed.`;
+    if (this.assistantUndoTimerId !== null) {
+      window.clearTimeout(this.assistantUndoTimerId);
+    }
+    this.assistantUndoTimerId = window.setTimeout(() => {
+      this.assistantUndoVisible = false;
+      this.assistantUndoActivityId = null;
+      this.assistantUndoActionType = null;
+      this.assistantUndoMessage = '';
+      this.assistantUndoTimerId = null;
+    }, 60_000);
   }
 }
 

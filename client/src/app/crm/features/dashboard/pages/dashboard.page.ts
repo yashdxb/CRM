@@ -728,6 +728,39 @@ export class DashboardPage implements OnInit {
     return 'success';
   }
 
+  protected assistantRiskClass(riskTier: string | null | undefined): string {
+    const normalized = (riskTier ?? '').toLowerCase();
+    if (normalized === 'high') {
+      return 'risk-high';
+    }
+    if (normalized === 'medium') {
+      return 'risk-medium';
+    }
+    return 'risk-low';
+  }
+
+  protected assistantUrgencyClass(priority: number | null | undefined): string {
+    const value = Number(priority ?? 0);
+    if (value <= 1) {
+      return 'urgency-immediate';
+    }
+    if (value <= 3) {
+      return 'urgency-soon';
+    }
+    return 'urgency-planned';
+  }
+
+  protected assistantUrgencyLabel(priority: number | null | undefined): string {
+    const urgency = this.assistantUrgencyClass(priority);
+    if (urgency === 'urgency-immediate') {
+      return 'Immediate';
+    }
+    if (urgency === 'urgency-soon') {
+      return 'Soon';
+    }
+    return 'Planned';
+  }
+
   protected openAssistantAction(action: AssistantInsightsAction): void {
     const risk = (action.riskTier ?? '').toLowerCase();
     if (risk === 'medium' || risk === 'high') {

@@ -17,6 +17,41 @@ export interface AssistantChatResponse {
   messages: AssistantChatMessage[];
 }
 
+export interface AssistantInsightsKpi {
+  key: string;
+  label: string;
+  value: number;
+  severity: 'ok' | 'warn' | 'danger' | string;
+}
+
+export interface AssistantInsightsAction {
+  id: string;
+  title: string;
+  description: string;
+  riskTier: 'low' | 'medium' | 'high' | string;
+  ownerScope: string;
+  dueWindow: string;
+  actionType: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  priority: number;
+}
+
+export interface AssistantInsights {
+  scope: string;
+  kpis: AssistantInsightsKpi[];
+  actions: AssistantInsightsAction[];
+  generatedAtUtc: string;
+}
+
+export interface AssistantActionExecutionResult {
+  status: string;
+  message: string;
+  requiresReview: boolean;
+  createdActivityId?: string | null;
+  createdApprovalId?: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AssistantChatService {
   private readonly http = inject(HttpClient);
@@ -33,6 +68,48 @@ export class AssistantChatService {
   sendMessage(message: string) {
     return this.http.post<AssistantChatResponse>(`${this.baseUrl}/api/assistant/chat`, {
       message
+    }, {
+      context: this.skipOverlayContext
+    });
+  }
+
+  getInsights() {
+    return this.http.get<AssistantInsights>(`${this.baseUrl}/api/assistant/insights`, {
+      context: this.skipOverlayContext
+    });
+  }
+
+  executeAction(action: AssistantInsightsAction, note?: string) {
+    return this.http.post<AssistantActionExecutionResult>(`${this.baseUrl}/api/assistant/actions/execute`, {
+      actionId: action.id,
+      actionType: action.actionType,
+      riskTier: action.riskTier,
+      entityType: action.entityType ?? null,
+      entityId: action.entityId ?? null,
+      note: note ?? null
+    }, {
+      context: this.skipOverlayContext
+    });
+  }
+
+  reviewAction(action: AssistantInsightsAction, approved: boolean, reviewNote?: string) {
+    return this.http.post<AssistantActionExecutionResult>(`${this.baseUrl}/api/assistant/actions/review`, {
+      actionId: action.id,
+      actionType: action.actionType,
+      riskTier: action.riskTier,
+      entityType: action.entityType ?? null,
+      entityId: action.entityId ?? null,
+      approved,
+      reviewNote: reviewNote ?? null
+    }, {
+      context: this.skipOverlayContext
+    });
+  }
+
+  undoAction(createdActivityId: string, actionType?: string) {
+    return this.http.post<AssistantActionExecutionResult>(`${this.baseUrl}/api/assistant/actions/undo`, {
+      createdActivityId,
+      actionType: actionType ?? null
     }, {
       context: this.skipOverlayContext
     });

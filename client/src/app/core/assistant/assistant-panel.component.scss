@@ -231,34 +231,6 @@ ul.assistant-list {
   list-style-type: disc;
 }
 
-.assistant-message.thinking {
-  background: rgba(36, 48, 90, 0.72);
-  border-style: dashed;
-}
-
-.thinking-dots {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 6px;
-
-  span {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: rgba(200, 214, 255, 0.9);
-    animation: thinking-bounce 1s ease-in-out infinite;
-  }
-
-  span:nth-child(2) {
-    animation-delay: 0.2s;
-  }
-
-  span:nth-child(3) {
-    animation-delay: 0.4s;
-  }
-}
-
 .assistant-role {
   display: block;
   font-size: $font-size-xs;
@@ -315,6 +287,149 @@ ul.assistant-list {
   }
 }
 
+.assistant-actions {
+  display: grid;
+  gap: $space-2;
+  margin-top: $space-2;
+}
+
+.assistant-actions-title {
+  font-size: $font-size-xs;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: rgba(211, 226, 255, 0.9);
+  text-transform: uppercase;
+}
+
+.assistant-action-item {
+  display: flex;
+  gap: $space-2;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid rgba(130, 170, 255, 0.2);
+  background: rgba(18, 26, 52, 0.72);
+  border-radius: $radius-md;
+  padding: $space-2;
+}
+
+.assistant-action-content {
+  display: grid;
+  gap: 4px;
+
+  h4 {
+    margin: 0;
+    font-size: $font-size-sm;
+    color: rgba(234, 242, 255, 0.95);
+  }
+
+  p {
+    margin: 0;
+    font-size: $font-size-xs;
+    color: rgba(210, 224, 249, 0.85);
+  }
+}
+
+.assistant-action-meta {
+  display: flex;
+  gap: $space-2;
+  font-size: 0.7rem;
+  color: rgba(194, 210, 237, 0.78);
+}
+
+.assistant-action-btn {
+  border: 1px solid rgba(130, 170, 255, 0.35);
+  background: rgba(70, 112, 240, 0.28);
+  color: rgba(232, 241, 255, 0.95);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.assistant-undo-strip {
+  margin-top: -2px;
+  border: 1px solid rgba(130, 170, 255, 0.25);
+  border-radius: $radius-lg;
+  background: rgba(16, 22, 48, 0.82);
+  padding: $space-2 $space-3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+  font-size: $font-size-xs;
+
+  button {
+    border: 1px solid rgba(130, 170, 255, 0.35);
+    background: rgba(70, 112, 240, 0.25);
+    color: rgba(232, 241, 255, 0.95);
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: $font-size-xs;
+    cursor: pointer;
+  }
+}
+
+.assistant-review-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(6, 10, 22, 0.72);
+  display: grid;
+  place-items: center;
+  z-index: 5;
+}
+
+.assistant-review-dialog {
+  width: min(320px, 88vw);
+  border: 1px solid rgba(130, 170, 255, 0.3);
+  border-radius: $radius-xl;
+  background: rgba(14, 20, 44, 0.98);
+  padding: $space-3;
+  display: grid;
+  gap: $space-2;
+
+  h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #eef5ff;
+  }
+
+  p {
+    margin: 0;
+    color: rgba(216, 229, 250, 0.88);
+    font-size: $font-size-xs;
+    line-height: 1.4;
+  }
+
+  textarea {
+    width: 100%;
+    border: 1px solid rgba(130, 170, 255, 0.3);
+    border-radius: 10px;
+    background: rgba(12, 18, 38, 0.9);
+    color: rgba(238, 246, 255, 0.94);
+    padding: $space-2;
+    resize: vertical;
+    min-height: 72px;
+  }
+}
+
+.assistant-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2;
+
+  button {
+    border: 1px solid rgba(130, 170, 255, 0.35);
+    background: rgba(70, 112, 240, 0.25);
+    color: rgba(232, 241, 255, 0.95);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: $font-size-xs;
+    cursor: pointer;
+  }
+}
+
 @keyframes bolt-breathe {
   0% {
     transform: scale(1);
@@ -338,17 +453,6 @@ ul.assistant-list {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes thinking-bounce {
-  0%, 100% {
-    transform: translateY(0);
-    opacity: 0.6;
-  }
-  50% {
-    transform: translateY(-4px);
-    opacity: 1;
   }
 }
 
