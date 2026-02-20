@@ -104,7 +104,11 @@ public class AssistantController : ControllerBase
                 action.ActionType,
                 action.EntityType,
                 action.EntityId,
-                action.Priority)).ToList(),
+                action.Priority,
+                action.Reasons,
+                action.Entities,
+                action.ImpactEstimate,
+                action.ReviewGuidance)).ToList(),
             insights.GeneratedAtUtc));
     }
 

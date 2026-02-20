@@ -305,13 +305,12 @@
 
 .ai-orchestration-section {
   position: relative;
-  margin-top: 20px;
+  margin-top: 0;
   padding: 18px 18px 14px;
   border: 1px solid rgba(188, 198, 226, 0.58);
-  background:
-    linear-gradient(140deg, rgba(248, 250, 255, 0.94), rgba(233, 238, 251, 0.9));
+  background: linear-gradient(140deg, rgba(245, 248, 255, 0.95), rgba(236, 241, 252, 0.93));
   backdrop-filter: blur(20px) saturate(130%);
-  box-shadow: 0 24px 48px rgba(56, 75, 121, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 30px rgba(56, 75, 121, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.92);
   overflow: hidden;
 }
 
@@ -420,7 +419,7 @@
 .ai-action-shell {
   position: relative;
   z-index: 1;
-  display: grid;
+  display: block;
   gap: 8px;
   border: 1px solid rgba(188, 199, 228, 0.7);
   border-radius: 14px;
@@ -445,20 +444,31 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding: 0 4px;
+  padding: 8px 4px;
+}
+
+.ai-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .ai-action-row {
   position: relative;
   display: grid;
+  flex-shrink: 0;
+  min-height: 136px;
   grid-template-columns: 196px minmax(0, 1fr) 156px 168px;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid rgba(178, 190, 223, 0.62);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 255, 0.86));
-  box-shadow: 0 8px 18px rgba(41, 61, 104, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  box-shadow: 0 4px 10px rgba(41, 61, 104, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   overflow: hidden;
 }
 
@@ -505,8 +515,8 @@
   width: 160px;
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(202, 174, 111, 0.55);
-  background: linear-gradient(180deg, #f9b548, #e08b1f);
+  border: 1px solid rgba(120, 194, 155, 0.7);
+  background: linear-gradient(180deg, #66cfa6, #35ab84);
   color: #fff;
 }
 
@@ -523,26 +533,32 @@
 }
 
 .ai-score-main {
-  padding: 6px 10px 0;
-  font-size: 2.3rem;
+  padding: 8px 10px 0;
+  font-size: 2.6rem;
   line-height: 1;
   font-weight: 800;
 }
 
 .ai-score-impact {
-  padding: 2px 10px 6px;
-  font-size: 0.76rem;
+  padding: 3px 10px 8px;
+  font-size: 1rem;
+  line-height: 1.15;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  background: transparent;
+  border-top: 0;
 }
 
 .ai-score-urgency {
-  background: rgba(255, 255, 255, 0.9);
-  color: #9a6520;
-  padding: 5px 10px;
-  font-size: 0.62rem;
+  background: rgba(241, 244, 238, 0.98);
+  color: #8a5b18;
+  padding: 7px 10px;
+  font-size: 0.74rem;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.04em;
 }
 
@@ -557,6 +573,39 @@
   font-size: 0.92rem;
   color: #2a3d65;
   line-height: 1.35;
+}
+
+.ai-impact-inline {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(166, 181, 215, 0.65);
+  background: rgba(235, 241, 253, 0.9);
+  color: #344c7d;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-impact-inline.risk-high {
+  border-color: rgba(177, 52, 73, 0.46);
+  background: rgba(255, 230, 235, 0.96);
+  color: #a52640;
+}
+
+.ai-impact-inline.risk-medium {
+  border-color: rgba(186, 140, 60, 0.45);
+  background: rgba(255, 243, 216, 0.96);
+  color: #915e1d;
+}
+
+.ai-impact-inline.risk-low {
+  border-color: rgba(54, 154, 116, 0.46);
+  background: rgba(224, 246, 236, 0.96);
+  color: #1e7b57;
 }
 
 .ai-task-meta {
@@ -574,6 +623,39 @@
   padding: 3px 8px;
 }
 
+.ai-impact-pill {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ai-impact-pill.risk-high {
+  background: linear-gradient(180deg, #ff6e86, #e13a5a);
+  color: #fff;
+  border-color: rgba(175, 40, 64, 0.55);
+}
+
+.ai-impact-pill.risk-medium {
+  background: linear-gradient(180deg, #f3cb73, #e6b44f);
+  color: #3e2a10;
+  border-color: rgba(167, 122, 49, 0.5);
+}
+
+.ai-impact-pill.risk-low {
+  background: linear-gradient(180deg, #63cca2, #37ae86);
+  color: #fff;
+  border-color: rgba(44, 144, 105, 0.55);
+}
+
+.ai-urgency-pill {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #8a5b18;
+  background: linear-gradient(180deg, #f4efe1, #ece3cf);
+  border-color: rgba(178, 152, 95, 0.45);
+}
+
 .ai-risk-col,
 .ai-cta-col {
   display: flex;
@@ -587,12 +669,12 @@
 
 .ai-risk-chip {
   min-width: 130px;
-  border-radius: 9px;
+  border-radius: 10px;
   padding: 6px 10px;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  font-size: 0.84rem;
+  font-size: 0.92rem;
   font-weight: 800;
   color: #fff;
 }
@@ -606,7 +688,7 @@
 }
 
 .ai-risk-chip.risk-low {
-  background: linear-gradient(180deg, #60cfa2, #32ad84);
+  background: linear-gradient(180deg, #58c99f, #2fa77f);
 }
 
 .ai-cta-btn {
@@ -627,9 +709,32 @@
   gap: 8px;
 }
 
+.ai-cta-btn.execute.risk-low {
+  border-color: rgba(49, 147, 109, 0.58);
+  background: linear-gradient(180deg, #35b586, #229b6f);
+  color: #ffffff;
+  box-shadow: 0 8px 16px rgba(35, 141, 101, 0.28);
+}
+
+.ai-cta-btn.review.risk-medium {
+  border-color: rgba(190, 140, 64, 0.55);
+  background: linear-gradient(180deg, #f0d99b, #e4c574);
+  color: #3b2b12;
+}
+
+.ai-cta-btn.review.risk-high {
+  border-color: rgba(179, 51, 72, 0.52);
+  background: linear-gradient(180deg, #ff6f86, #e63d5f);
+  color: #ffffff;
+}
+
 .ai-expand-btn {
   width: 100%;
   justify-content: center;
+  border: 1px solid rgba(198, 207, 228, 0.8);
+  background: linear-gradient(180deg, #f4f6fb, #e9edf6);
+  color: #2e3d63;
+  box-shadow: none;
 }
 
 .ai-action-detail {
@@ -640,7 +745,7 @@
   border: 1px solid rgba(178, 190, 223, 0.52);
   background: linear-gradient(145deg, rgba(239, 244, 255, 0.72), rgba(229, 237, 252, 0.62));
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -662,6 +767,16 @@
   color: #20365f;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+.ai-detail-list {
+  margin: 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 3px;
+  color: #20365f;
+  font-size: 0.83rem;
+  font-weight: 500;
 }
 
 .assistant-detail-content {
@@ -696,6 +811,10 @@
   gap: 3px;
 }
 
+.assistant-detail-cell-wide {
+  grid-column: 1 / -1;
+}
+
 .assistant-detail-label {
   font-size: 0.74rem;
   text-transform: uppercase;
@@ -709,6 +828,16 @@
   color: #20365f;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.assistant-detail-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  color: #20365f;
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .ai-cta-btn.execute.risk-high {
@@ -790,7 +919,7 @@
   }
 
   .ai-action-detail {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .assistant-detail-grid {
@@ -1172,6 +1301,34 @@
   &[data-card-id] {
     min-height: 360px;
   }
+}
+
+.dashboard-card.full-width-card {
+  grid-column: 1 / -1;
+  height: auto;
+  min-height: 420px;
+  overflow: visible;
+}
+
+.dashboard-card.full-width-card .card-body {
+  min-height: 0;
+  overflow: visible;
+}
+
+.dashboard-card.full-width-card .ai-orchestration-section {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  padding-right: 4px;
+}
+
+.dashboard-card.full-width-card .ai-action-shell {
+  min-height: 0;
+}
+
+.dashboard-card.full-width-card .ai-action-list {
+  min-height: 136px;
+  overflow-y: auto;
 }
 
 // Liquid Glass: add a subtle highlight layer and richer blur for dashboard cards.

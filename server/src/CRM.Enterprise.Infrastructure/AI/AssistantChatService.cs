@@ -502,7 +502,16 @@ public sealed class AssistantChatService : IAssistantChatService
                 "lead_follow_up",
                 "lead",
                 snapshot.LeadForFollowUpId,
-                score));
+                score,
+                new[]
+                {
+                    $"{snapshot.LeadSlaBreaches} lead(s) breached first-touch SLA.",
+                    "Customer response probability drops when first touch is delayed.",
+                    "Immediate outreach is required to recover conversion momentum."
+                },
+                BuildEntities("Lead", snapshot.LeadForFollowUpId),
+                $"Potentially recover up to {snapshot.LeadSlaBreaches} delayed lead(s) in today's outreach window.",
+                "Verify lead ownership and contact validity before triggering follow-up tasks."));
         }
 
         if (snapshot.OpenOpportunitiesWithoutRecentActivity > 0)
@@ -524,7 +533,16 @@ public sealed class AssistantChatService : IAssistantChatService
                 "opportunity_recovery",
                 "opportunity",
                 snapshot.TopAtRiskOpportunityId,
-                score));
+                score,
+                new[]
+                {
+                    $"{snapshot.OpenOpportunitiesWithoutRecentActivity} opportunity(ies) have no activity in 7+ days.",
+                    "Inactive pipeline items reduce forecast reliability.",
+                    "Reactivation now prevents further stage decay."
+                },
+                BuildEntities("Opportunity", snapshot.TopAtRiskOpportunityId, snapshot.TopAtRiskOpportunityNames),
+                $"Reactivation can restore movement on {snapshot.OpenOpportunitiesWithoutRecentActivity} stalled opportunity(ies) within 24 hours.",
+                "Confirm opportunity still active and align next step owner before executing updates."));
         }
 
         if (snapshot.PendingApprovals > 0)
@@ -542,7 +560,16 @@ public sealed class AssistantChatService : IAssistantChatService
                 "approval_follow_up",
                 "opportunity",
                 null,
-                score));
+                score,
+                new[]
+                {
+                    $"{snapshot.PendingApprovals} approval request(s) are pending in queue.",
+                    "Pending approvals can block opportunity progression and close dates.",
+                    "Queue clearing reduces decision latency for active deals."
+                },
+                BuildEntities("Approval", null),
+                $"Clearing the queue can unblock up to {snapshot.PendingApprovals} deal decision(s) in the next 48 hours.",
+                "Validate discount/exception rationale and ensure policy compliance before approving."));
         }
 
         if (snapshot.LowConfidenceLeads > 0)
@@ -560,7 +587,16 @@ public sealed class AssistantChatService : IAssistantChatService
                 "lead_qualification",
                 "lead",
                 snapshot.LeadForFollowUpId,
-                score));
+                score,
+                new[]
+                {
+                    $"{snapshot.LowConfidenceLeads} lead(s) are below confidence threshold.",
+                    "Low-confidence records create qualification risk and rework.",
+                    "Collecting missing evidence improves conversion quality."
+                },
+                BuildEntities("Lead", snapshot.LeadForFollowUpId),
+                $"Improving confidence can unlock cleaner progression for {snapshot.LowConfidenceLeads} lead(s) this week.",
+                "Review missing qualification fields and evidence before advancing lead status."));
         }
 
         if (snapshot.OverdueActivities > 0)
@@ -578,12 +614,42 @@ public sealed class AssistantChatService : IAssistantChatService
                 "activity_cleanup",
                 "activity",
                 null,
-                score));
+                score,
+                new[]
+                {
+                    $"{snapshot.OverdueActivities} activity item(s) are overdue.",
+                    "Overdue activities increase follow-up risk and missed commitments.",
+                    "Backlog cleanup restores daily execution discipline."
+                },
+                BuildEntities("Activity", null),
+                $"Completing/rescheduling {snapshot.OverdueActivities} overdue item(s) can improve near-term execution health today.",
+                "Confirm customer context and avoid auto-closing tasks without logging outcome."));
         }
 
         return actions
             .OrderByDescending(action => action.Priority)
             .ToList();
+    }
+
+    private static string[] BuildEntities(string entityTypeLabel, Guid? primaryEntityId, params string[] names)
+    {
+        var entities = new List<string>();
+        if (primaryEntityId.HasValue)
+        {
+            entities.Add($"{entityTypeLabel} ID: {primaryEntityId.Value}");
+        }
+
+        foreach (var name in names.Where(name => !string.IsNullOrWhiteSpace(name)).Take(3))
+        {
+            entities.Add($"{entityTypeLabel}: {name.Trim()}");
+        }
+
+        if (entities.Count == 0)
+        {
+            entities.Add($"{entityTypeLabel}: Aggregate queue scope");
+        }
+
+        return entities.ToArray();
     }
 
     private static int ComputeScore(decimal weight, int count)

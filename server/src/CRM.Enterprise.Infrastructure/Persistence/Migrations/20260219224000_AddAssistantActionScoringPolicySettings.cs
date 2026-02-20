@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 #nullable disable
 
 namespace CRM.Enterprise.Infrastructure.Persistence.Migrations;
 
+[DbContext(typeof(CrmDbContext))]
+[Migration("20260219224000_AddAssistantActionScoringPolicySettings")]
 public partial class AddAssistantActionScoringPolicySettings : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)

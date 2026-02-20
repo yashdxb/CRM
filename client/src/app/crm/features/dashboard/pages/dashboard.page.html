@@ -122,7 +122,8 @@
       </div>
     </section>
 
-    <section class="ai-orchestration-section glass-card">
+    <ng-template #aiOrchestrationCard>
+    <section class="ai-orchestration-section">
       <div class="ai-orchestration-header">
         <div class="ai-orchestration-title-group">
           <h2 class="section-title">
@@ -156,105 +157,63 @@
           <div>Action</div>
         </div>
 
-        <div class="ai-action-toolbar" *ngIf="assistantActions().length > 1">
-          <button pButton type="button" class="btn-glass btn-sm" (click)="expandAllAssistantActions()">
-            <i class="pi pi-angle-double-down"></i>
-            Expand all
-          </button>
-          <button pButton type="button" class="btn-glass btn-sm" (click)="collapseAllAssistantActions()">
-            <i class="pi pi-angle-double-up"></i>
-            Collapse all
-          </button>
+        <div class="ai-action-list">
+          <article
+            class="ai-action-row"
+            *ngFor="let action of assistantActions(); let idx = index"
+            [ngClass]="[
+              assistantRiskClass(action.riskTier),
+              assistantUrgencyClass(action.priority, action.urgency)
+            ]"
+          >
+            <div class="ai-score-col">
+              <div class="ai-row-index">{{ idx + 1 }}</div>
+              <div class="ai-score-card" [ngClass]="assistantRiskClass(action.riskTier)">
+                <div class="ai-score-main">{{ action.score }}</div>
+                <div class="ai-score-impact">{{ assistantImpactLabel(action.score) }}</div>
+                <div class="ai-score-urgency">{{ assistantImpactUrgencyLabel(action.score, action.priority, action.urgency) }}</div>
+              </div>
+            </div>
+
+            <div class="ai-task-col">
+              <h3 class="card-title">{{ action.title }}</h3>
+              <div class="ai-impact-inline" [ngClass]="assistantRiskClass(action.riskTier)">
+                {{ assistantImpactLabel(action.score) }} · {{ assistantUrgencyLabel(action.priority, action.urgency) }} urgency
+              </div>
+              <p>{{ action.description }}</p>
+              <div class="ai-task-meta">
+                <span class="meta-chip ai-impact-pill" [ngClass]="assistantRiskClass(action.riskTier)">
+                  {{ assistantImpactLabel(action.score) }}
+                </span>
+                <span class="meta-chip ai-urgency-pill">{{ assistantUrgencyLabel(action.priority, action.urgency) }} urgency</span>
+                <span class="meta-chip"><i class="pi pi-users"></i> {{ action.ownerScope }}</span>
+                <span><i class="pi pi-clock"></i> {{ action.dueWindow }}</span>
+              </div>
+            </div>
+
+            <div class="ai-risk-col">
+              <span class="ai-risk-chip" [ngClass]="assistantRiskClass(action.riskTier)">
+                {{ assistantRiskLabel(action.riskTier) }}
+              </span>
+            </div>
+
+            <div class="ai-cta-col">
+              <button
+                pButton
+                type="button"
+                class="ai-cta-btn"
+                [ngClass]="[
+                  assistantRiskClass(action.riskTier),
+                  (action.riskTier || '').toLowerCase() === 'low' ? 'execute' : 'review'
+                ]"
+                (click)="openAssistantAction(action)"
+              >
+                <i class="pi" [ngClass]="(action.riskTier || '').toLowerCase() === 'low' ? 'pi-bolt' : 'pi-search'"></i>
+                {{ (action.riskTier || '').toLowerCase() === 'low' ? 'Execute' : 'Review' }}
+              </button>
+            </div>
+          </article>
         </div>
-
-        <article
-          class="ai-action-row"
-          *ngFor="let action of assistantActions(); let idx = index"
-          [ngClass]="[
-            assistantRiskClass(action.riskTier),
-            assistantUrgencyClass(action.priority, action.urgency)
-          ]"
-        >
-          <div class="ai-score-col">
-            <div class="ai-row-index">{{ idx + 1 }}</div>
-            <div class="ai-score-card" [ngClass]="assistantRiskClass(action.riskTier)">
-              <div class="ai-score-main">{{ action.score }}</div>
-              <div class="ai-score-impact">{{ assistantImpactLabel(action.score) }}</div>
-              <div class="ai-score-urgency">{{ assistantImpactUrgencyLabel(action.score, action.priority, action.urgency) }}</div>
-            </div>
-          </div>
-
-          <div class="ai-task-col">
-            <h3 class="card-title">{{ action.title }}</h3>
-            <p>{{ action.description }}</p>
-            <div class="ai-task-meta">
-              <span class="meta-chip"><i class="pi pi-users"></i> {{ action.ownerScope }}</span>
-              <span><i class="pi pi-clock"></i> {{ action.dueWindow }}</span>
-            </div>
-          </div>
-
-          <div class="ai-risk-col">
-            <span class="ai-risk-chip" [ngClass]="assistantRiskClass(action.riskTier)">
-              {{ assistantRiskLabel(action.riskTier) }}
-            </span>
-          </div>
-
-          <div class="ai-cta-col">
-            <button
-              pButton
-              type="button"
-              class="ai-cta-btn"
-              [ngClass]="[
-                assistantRiskClass(action.riskTier),
-                (action.riskTier || '').toLowerCase() === 'low' ? 'execute' : 'review'
-              ]"
-              (click)="openAssistantAction(action)"
-            >
-              <i class="pi" [ngClass]="(action.riskTier || '').toLowerCase() === 'low' ? 'pi-bolt' : 'pi-search'"></i>
-              {{ (action.riskTier || '').toLowerCase() === 'low' ? 'Execute' : 'Review' }}
-            </button>
-            <button
-              pButton
-              type="button"
-              class="btn-glass btn-sm ai-expand-btn"
-              (click)="toggleAssistantActionExpansion(action.id)"
-            >
-              <i class="pi" [ngClass]="isAssistantActionExpanded(action.id) ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
-              {{ isAssistantActionExpanded(action.id) ? 'Less' : 'Expand' }}
-            </button>
-            <button pButton type="button" class="btn-glass btn-sm ai-expand-btn" (click)="openAssistantDetailDialog(action)">
-              <i class="pi pi-window-maximize"></i>
-              Full view
-            </button>
-          </div>
-
-          <div class="ai-action-detail" *ngIf="isAssistantActionExpanded(action.id)">
-            <div class="ai-detail-item">
-              <span class="ai-detail-label">Action type</span>
-              <span class="ai-detail-value">{{ action.actionType || 'N/A' }}</span>
-            </div>
-            <div class="ai-detail-item">
-              <span class="ai-detail-label">Entity</span>
-              <span class="ai-detail-value">{{ action.entityType || 'General' }}</span>
-            </div>
-            <div class="ai-detail-item">
-              <span class="ai-detail-label">Entity ID</span>
-              <span class="ai-detail-value">{{ action.entityId || 'N/A' }}</span>
-            </div>
-            <div class="ai-detail-item">
-              <span class="ai-detail-label">Priority rank</span>
-              <span class="ai-detail-value">{{ action.priority }}</span>
-            </div>
-            <div class="ai-detail-item">
-              <span class="ai-detail-label">Urgency</span>
-              <span class="ai-detail-value">{{ assistantUrgencyLabel(action.priority, action.urgency) }}</span>
-            </div>
-            <div class="ai-detail-item">
-              <span class="ai-detail-label">Recommended owner</span>
-              <span class="ai-detail-value">{{ action.ownerScope }}</span>
-            </div>
-          </div>
-        </article>
       </div>
       <ng-template #noAiActions>
         <div class="empty-state-inline">No urgent AI actions right now.</div>
@@ -267,6 +226,7 @@
         </button>
       </div>
     </section>
+    </ng-template>
 
     <p-dialog
       [(visible)]="assistantDetailDialogOpen"
@@ -322,6 +282,26 @@
           <div class="assistant-detail-cell">
             <span class="assistant-detail-label">Entity ID</span>
             <span class="assistant-detail-value">{{ action.entityId || 'N/A' }}</span>
+          </div>
+          <div class="assistant-detail-cell assistant-detail-cell-wide">
+            <span class="assistant-detail-label">Why now</span>
+            <ul class="assistant-detail-list">
+              <li *ngFor="let reason of action.reasons">{{ reason }}</li>
+            </ul>
+          </div>
+          <div class="assistant-detail-cell assistant-detail-cell-wide">
+            <span class="assistant-detail-label">Entities in scope</span>
+            <ul class="assistant-detail-list">
+              <li *ngFor="let entity of action.entities">{{ entity }}</li>
+            </ul>
+          </div>
+          <div class="assistant-detail-cell assistant-detail-cell-wide">
+            <span class="assistant-detail-label">Expected impact</span>
+            <span class="assistant-detail-value">{{ action.impactEstimate }}</span>
+          </div>
+          <div class="assistant-detail-cell assistant-detail-cell-wide">
+            <span class="assistant-detail-label">Review guidance</span>
+            <span class="assistant-detail-value">{{ action.reviewGuidance }}</span>
           </div>
         </div>
       </div>
@@ -387,6 +367,7 @@
           *ngFor="let cardId of layoutOrder"
           [ngSwitch]="cardId"
           [ngClass]="getCardSizeClass(cardId)"
+          [class.full-width-card]="cardId === 'ai-orchestration' || cardId === 'my-tasks'"
           [class.my-tasks-card]="cardId === 'my-tasks'"
           cdkDrag
           (cdkDragStarted)="onCardDragStart($event)"
@@ -397,6 +378,10 @@
           data-min-width="280"
           [attr.data-min-height]="cardId === 'my-tasks' ? 360 : 220"
         >
+        <ng-container *ngSwitchCase="'ai-orchestration'">
+          <ng-container *ngTemplateOutlet="aiOrchestrationCard"></ng-container>
+        </ng-container>
+
         <!-- Pipeline Value Chart -->
         <ng-container *ngSwitchCase="'pipeline'">
           <div class="card-header">

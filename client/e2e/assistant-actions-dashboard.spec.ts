@@ -54,7 +54,11 @@ test('dashboard assistant action queue execute/review flow', async ({ page, requ
             actionType: 'lead_follow_up',
             entityType: null,
             entityId: null,
-            priority: 100
+            priority: 100,
+            reasons: ['1 lead breached first-touch SLA.', 'Delayed outreach reduces conversion probability.'],
+            entities: ['Lead: Aggregate queue scope'],
+            impactEstimate: 'Recover delayed lead outreach within today.',
+            reviewGuidance: 'Verify owner and contact data before execution.'
           },
           {
             id: 'approval-queue',
@@ -68,7 +72,11 @@ test('dashboard assistant action queue execute/review flow', async ({ page, requ
             actionType: 'approval_follow_up',
             entityType: 'opportunity',
             entityId: '00000000-0000-0000-0000-000000000222',
-            priority: 90
+            priority: 90,
+            reasons: ['1 approval pending in queue.', 'Pending approvals can block close progression.'],
+            entities: ['Opportunity ID: 00000000-0000-0000-0000-000000000222'],
+            impactEstimate: 'Unblock one near-term decision in 48 hours.',
+            reviewGuidance: 'Validate policy compliance before approval.'
           }
         ]
       })

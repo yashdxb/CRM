@@ -187,6 +187,10 @@ export interface AssistantInsightsAction {
   entityType?: string | null;
   entityId?: string | null;
   priority: number;
+  reasons: string[];
+  entities: string[];
+  impactEstimate: string;
+  reviewGuidance: string;
 }
 
 export interface AssistantActionExecutionResult {

@@ -12,4 +12,8 @@ public sealed record AssistantInsightsActionItem(
     string ActionType,
     string? EntityType,
     Guid? EntityId,
-    int Priority);
+    int Priority,
+    IReadOnlyList<string> Reasons,
+    IReadOnlyList<string> Entities,
+    string ImpactEstimate,
+    string ReviewGuidance);

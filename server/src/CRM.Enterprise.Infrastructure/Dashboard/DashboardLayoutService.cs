@@ -8,8 +8,10 @@ namespace CRM.Enterprise.Infrastructure.Dashboard;
 
 public class DashboardLayoutService : IDashboardLayoutService
 {
+    private const string AiOrchestrationCardId = "ai-orchestration";
     private static readonly IReadOnlyList<string> DefaultOrder =
     [
+        "ai-orchestration",
         "pipeline",
         "truth-metrics",
         "risk-register",
@@ -546,6 +548,7 @@ public class DashboardLayoutService : IDashboardLayoutService
             layout.CardOrder.Where(AllowedIds.Contains),
             StringComparer.OrdinalIgnoreCase);
         var inferredHidden = AllowedIds
+            .Where(id => !string.Equals(id, AiOrchestrationCardId, StringComparison.OrdinalIgnoreCase))
             .Where(id => !visible.Contains(id))
             .ToList();
 
@@ -680,6 +683,7 @@ public class DashboardLayoutService : IDashboardLayoutService
             payload.CardOrder.Where(AllowedIds.Contains),
             StringComparer.OrdinalIgnoreCase);
         var inferredHidden = AllowedIds
+            .Where(id => !string.Equals(id, AiOrchestrationCardId, StringComparison.OrdinalIgnoreCase))
             .Where(id => !visible.Contains(id))
             .ToList();
 
