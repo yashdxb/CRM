@@ -108,12 +108,12 @@ test('dashboard assistant action queue execute/review flow', async ({ page, requ
   await page.goto('/app/dashboard');
   const section = page.locator('section.ai-orchestration-section');
   await expect(section).toBeVisible();
-  await expect(section.locator('.ai-action-item')).toHaveCount(2);
+  await expect(section.locator('.ai-action-row')).toHaveCount(2);
 
-  await section.locator('.ai-action-btn').filter({ hasText: 'Execute' }).first().click();
+  await section.locator('.ai-cta-btn').filter({ hasText: 'Execute' }).first().click();
   await expect.poll(() => executeCalled).toBe(1);
 
-  await section.locator('.ai-action-btn').filter({ hasText: 'Review' }).first().click();
+  await section.locator('.ai-cta-btn').filter({ hasText: 'Review' }).first().click();
   await expect(page.getByRole('dialog', { name: 'Review Assistant Action' })).toBeVisible();
   await page.getByRole('button', { name: 'Reject' }).click();
   await expect.poll(() => reviewCalled).toBe(1);

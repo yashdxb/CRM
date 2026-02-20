@@ -190,6 +190,9 @@ export class DashboardPage implements OnInit {
   protected assistantReviewNote = '';
   protected assistantReviewSubmitting = false;
   private pendingAssistantAction: AssistantInsightsAction | null = null;
+  protected assistantExpandedActionIds = signal<string[]>([]);
+  protected assistantDetailDialogOpen = false;
+  protected assistantDetailAction: AssistantInsightsAction | null = null;
   protected assistantUndoVisible = false;
   protected assistantUndoBusy = false;
   protected assistantUndoMessage = '';
@@ -653,6 +656,7 @@ export class DashboardPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((insights) => {
         this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
+        this.assistantExpandedActionIds.set([]);
       });
 
     this.loadExpansionSignals();
@@ -739,6 +743,55 @@ export class DashboardPage implements OnInit {
     return 'risk-low';
   }
 
+  protected assistantRiskLabel(riskTier: string | null | undefined): string {
+    const normalized = (riskTier ?? '').trim().toLowerCase();
+    if (normalized === 'high') {
+      return 'HIGH RISK';
+    }
+    if (normalized === 'medium') {
+      return 'MEDIUM RISK';
+    }
+    if (normalized === 'low') {
+      return 'LOW RISK';
+    }
+    return 'UNKNOWN RISK';
+  }
+
+  protected assistantKpiTooltip(key: string | null | undefined, label: string): string {
+    const normalizedKey = (key ?? '').trim().toLowerCase();
+    if (normalizedKey === 'at-risk-deals') {
+      return 'Open opportunities with stale or missing recent activity. Source: live pipeline + activity signals.';
+    }
+    if (normalizedKey === 'sla-breaches') {
+      return 'Leads past first-touch SLA due time. Source: lead SLA timers in the current workspace scope.';
+    }
+    if (normalizedKey === 'pending-approvals') {
+      return 'Open approval decisions awaiting action. Source: approval inbox queue for this scope.';
+    }
+    return `${label}: live orchestration snapshot metric for the selected scope.`;
+  }
+
+  protected assistantImpactLabel(score: number | null | undefined): string {
+    const value = Number(score ?? 0);
+    if (value >= 80) {
+      return 'HIGH IMPACT';
+    }
+    if (value >= 60) {
+      return 'MODERATE IMPACT';
+    }
+    return 'LOW IMPACT';
+  }
+
+  protected assistantImpactUrgencyLabel(
+    score: number | null | undefined,
+    priority: number | null | undefined,
+    urgency?: string | null
+  ): string {
+    const impact = this.assistantImpactLabel(score);
+    const urgencyLabel = this.assistantUrgencyLabel(priority, urgency).toUpperCase();
+    return `${impact}, ${urgencyLabel} URGENCY`;
+  }
+
   protected assistantUrgencyClass(priority: number | null | undefined, urgency?: string | null): string {
     const normalizedUrgency = (urgency ?? '').trim().toLowerCase();
     if (normalizedUrgency === 'immediate') {
@@ -778,6 +831,46 @@ export class DashboardPage implements OnInit {
     return 'Planned';
   }
 
+  protected isAssistantActionExpanded(actionId: string): boolean {
+    return this.assistantExpandedActionIds().includes(actionId);
+  }
+
+  protected toggleAssistantActionExpansion(actionId: string): void {
+    const current = this.assistantExpandedActionIds();
+    if (current.includes(actionId)) {
+      this.assistantExpandedActionIds.set(current.filter((id) => id !== actionId));
+      return;
+    }
+    this.assistantExpandedActionIds.set([...current, actionId]);
+  }
+
+  protected expandAllAssistantActions(): void {
+    this.assistantExpandedActionIds.set(this.assistantActions().map((action) => action.id));
+  }
+
+  protected collapseAllAssistantActions(): void {
+    this.assistantExpandedActionIds.set([]);
+  }
+
+  protected openAssistantDetailDialog(action: AssistantInsightsAction): void {
+    this.assistantDetailAction = action;
+    this.assistantDetailDialogOpen = true;
+  }
+
+  protected closeAssistantDetailDialog(): void {
+    this.assistantDetailDialogOpen = false;
+    this.assistantDetailAction = null;
+  }
+
+  protected runAssistantActionFromDetail(): void {
+    if (!this.assistantDetailAction) {
+      return;
+    }
+    const action = this.assistantDetailAction;
+    this.closeAssistantDetailDialog();
+    this.openAssistantAction(action);
+  }
+
   protected openAssistantAction(action: AssistantInsightsAction): void {
     const risk = (action.riskTier ?? '').toLowerCase();
     if (risk === 'medium' || risk === 'high') {
@@ -797,7 +890,10 @@ export class DashboardPage implements OnInit {
           }
           this.dashboardData.getAssistantInsights()
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((insights) => this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights));
+            .subscribe((insights) => {
+              this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
+              this.assistantExpandedActionIds.set([]);
+            });
           this.navigateAssistantAction(action);
         },
         error: () => this.toastService.show('error', 'Unable to execute assistant action.')
@@ -822,7 +918,10 @@ export class DashboardPage implements OnInit {
           this.toastService.show('success', result.message || (approved ? 'Action approved.' : 'Action rejected.'));
           this.dashboardData.getAssistantInsights()
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((insights) => this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights));
+            .subscribe((insights) => {
+              this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
+              this.assistantExpandedActionIds.set([]);
+            });
           if (approved) {
             this.navigateAssistantAction(action);
           }
@@ -862,7 +961,10 @@ export class DashboardPage implements OnInit {
           this.toastService.show('success', result.message || 'Action undone.');
           this.dashboardData.getAssistantInsights()
             .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe((insights) => this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights));
+            .subscribe((insights) => {
+              this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
+              this.assistantExpandedActionIds.set([]);
+            });
         },
         error: () => {
           this.assistantUndoBusy = false;

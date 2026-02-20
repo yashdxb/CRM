@@ -129,7 +129,7 @@
             <i class="pi pi-bolt"></i>
             AI Execution Orchestration
           </h2>
-          <p class="ai-orchestration-subtitle">Prioritized by risk and immediacy for faster operator decisions.</p>
+          <p class="ai-orchestration-subtitle">Priority-driven actions to resolve critical sales risk effectively.</p>
         </div>
         <div class="ai-orchestration-header-meta">
           <span class="card-badge">{{ assistantInsights().scope }} scope</span>
@@ -138,59 +138,122 @@
       </div>
 
       <div class="ai-kpi-grid">
-        <article class="ai-kpi-card" *ngFor="let kpi of assistantKpis()">
-          <div class="ai-kpi-head">
-            <div class="ai-kpi-label">{{ kpi.label }}</div>
-            <span class="ai-kpi-dot" [ngClass]="assistantSeverityClass(kpi.severity)"></span>
-          </div>
+        <article
+          class="ai-kpi-card"
+          *ngFor="let kpi of assistantKpis()"
+          [attr.title]="assistantKpiTooltip(kpi.key, kpi.label)"
+        >
+          <div class="ai-kpi-label">{{ kpi.label }}</div>
           <div class="ai-kpi-value" [ngClass]="assistantSeverityClass(kpi.severity)">{{ kpi.value | number:'1.0-0' }}</div>
         </article>
       </div>
 
-      <div class="ai-action-queue" *ngIf="assistantActions().length; else noAiActions">
+      <div class="ai-action-shell" *ngIf="assistantActions().length; else noAiActions">
+        <div class="ai-action-table-head">
+          <div>Priority Score</div>
+          <div>Task Description</div>
+          <div>Risk</div>
+          <div>Action</div>
+        </div>
+
+        <div class="ai-action-toolbar" *ngIf="assistantActions().length > 1">
+          <button pButton type="button" class="btn-glass btn-sm" (click)="expandAllAssistantActions()">
+            <i class="pi pi-angle-double-down"></i>
+            Expand all
+          </button>
+          <button pButton type="button" class="btn-glass btn-sm" (click)="collapseAllAssistantActions()">
+            <i class="pi pi-angle-double-up"></i>
+            Collapse all
+          </button>
+        </div>
+
         <article
-          class="ai-action-item"
+          class="ai-action-row"
           *ngFor="let action of assistantActions(); let idx = index"
           [ngClass]="[
             assistantRiskClass(action.riskTier),
             assistantUrgencyClass(action.priority, action.urgency)
           ]"
         >
-          <div class="ai-action-rank">{{ idx + 1 }}</div>
-          <div class="ai-action-content">
-            <div class="ai-action-title-row">
-              <h3 class="card-title">{{ action.title }}</h3>
-              <span class="ai-risk-pill" [ngClass]="assistantRiskClass(action.riskTier)">
-                {{ action.riskTier || 'unknown' }} risk
-              </span>
+          <div class="ai-score-col">
+            <div class="ai-row-index">{{ idx + 1 }}</div>
+            <div class="ai-score-card" [ngClass]="assistantRiskClass(action.riskTier)">
+              <div class="ai-score-main">{{ action.score }}</div>
+              <div class="ai-score-impact">{{ assistantImpactLabel(action.score) }}</div>
+              <div class="ai-score-urgency">{{ assistantImpactUrgencyLabel(action.score, action.priority, action.urgency) }}</div>
             </div>
+          </div>
+
+          <div class="ai-task-col">
+            <h3 class="card-title">{{ action.title }}</h3>
             <p>{{ action.description }}</p>
-            <div class="ai-action-meta">
-              <span class="ai-urgency-pill" [ngClass]="assistantUrgencyClass(action.priority, action.urgency)">
-                <i class="pi pi-bolt"></i>
-                {{ assistantUrgencyLabel(action.priority, action.urgency) }}
-              </span>
-              <span class="ai-score-pill">
-                <i class="pi pi-chart-line"></i>
-                Score {{ action.score }}
-              </span>
-              <span><i class="pi pi-user"></i> {{ action.ownerScope }}</span>
+            <div class="ai-task-meta">
+              <span class="meta-chip"><i class="pi pi-users"></i> {{ action.ownerScope }}</span>
               <span><i class="pi pi-clock"></i> {{ action.dueWindow }}</span>
             </div>
           </div>
-          <button
-            pButton
-            type="button"
-            class="ai-action-btn"
-            [ngClass]="[
-              (action.riskTier || '').toLowerCase() === 'low' ? 'btn-gradient' : 'btn-glass',
-              assistantUrgencyClass(action.priority, action.urgency)
-            ]"
-            (click)="openAssistantAction(action)"
-          >
-            <i class="pi" [ngClass]="(action.riskTier || '').toLowerCase() === 'low' ? 'pi-play-circle' : 'pi-eye'"></i>
-            {{ (action.riskTier || '').toLowerCase() === 'low' ? 'Execute' : 'Review' }}
-          </button>
+
+          <div class="ai-risk-col">
+            <span class="ai-risk-chip" [ngClass]="assistantRiskClass(action.riskTier)">
+              {{ assistantRiskLabel(action.riskTier) }}
+            </span>
+          </div>
+
+          <div class="ai-cta-col">
+            <button
+              pButton
+              type="button"
+              class="ai-cta-btn"
+              [ngClass]="[
+                assistantRiskClass(action.riskTier),
+                (action.riskTier || '').toLowerCase() === 'low' ? 'execute' : 'review'
+              ]"
+              (click)="openAssistantAction(action)"
+            >
+              <i class="pi" [ngClass]="(action.riskTier || '').toLowerCase() === 'low' ? 'pi-bolt' : 'pi-search'"></i>
+              {{ (action.riskTier || '').toLowerCase() === 'low' ? 'Execute' : 'Review' }}
+            </button>
+            <button
+              pButton
+              type="button"
+              class="btn-glass btn-sm ai-expand-btn"
+              (click)="toggleAssistantActionExpansion(action.id)"
+            >
+              <i class="pi" [ngClass]="isAssistantActionExpanded(action.id) ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+              {{ isAssistantActionExpanded(action.id) ? 'Less' : 'Expand' }}
+            </button>
+            <button pButton type="button" class="btn-glass btn-sm ai-expand-btn" (click)="openAssistantDetailDialog(action)">
+              <i class="pi pi-window-maximize"></i>
+              Full view
+            </button>
+          </div>
+
+          <div class="ai-action-detail" *ngIf="isAssistantActionExpanded(action.id)">
+            <div class="ai-detail-item">
+              <span class="ai-detail-label">Action type</span>
+              <span class="ai-detail-value">{{ action.actionType || 'N/A' }}</span>
+            </div>
+            <div class="ai-detail-item">
+              <span class="ai-detail-label">Entity</span>
+              <span class="ai-detail-value">{{ action.entityType || 'General' }}</span>
+            </div>
+            <div class="ai-detail-item">
+              <span class="ai-detail-label">Entity ID</span>
+              <span class="ai-detail-value">{{ action.entityId || 'N/A' }}</span>
+            </div>
+            <div class="ai-detail-item">
+              <span class="ai-detail-label">Priority rank</span>
+              <span class="ai-detail-value">{{ action.priority }}</span>
+            </div>
+            <div class="ai-detail-item">
+              <span class="ai-detail-label">Urgency</span>
+              <span class="ai-detail-value">{{ assistantUrgencyLabel(action.priority, action.urgency) }}</span>
+            </div>
+            <div class="ai-detail-item">
+              <span class="ai-detail-label">Recommended owner</span>
+              <span class="ai-detail-value">{{ action.ownerScope }}</span>
+            </div>
+          </div>
         </article>
       </div>
       <ng-template #noAiActions>
@@ -204,6 +267,80 @@
         </button>
       </div>
     </section>
+
+    <p-dialog
+      [(visible)]="assistantDetailDialogOpen"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [dismissableMask]="true"
+      header="Assistant Action Detail"
+      [style]="{ width: '96vw', maxWidth: '1200px' }"
+      [contentStyle]="{ minHeight: '72vh' }"
+      (onHide)="closeAssistantDetailDialog()"
+    >
+      <div class="assistant-detail-content" *ngIf="assistantDetailAction as action">
+        <div class="assistant-detail-hero">
+          <div>
+            <h3 class="card-title">{{ action.title }}</h3>
+            <p>{{ action.description }}</p>
+          </div>
+          <span class="ai-risk-chip" [ngClass]="assistantRiskClass(action.riskTier)">
+            {{ assistantRiskLabel(action.riskTier) }}
+          </span>
+        </div>
+
+        <div class="assistant-detail-grid">
+          <div class="assistant-detail-cell">
+            <span class="assistant-detail-label">Score</span>
+            <span class="assistant-detail-value">{{ action.score }}</span>
+          </div>
+          <div class="assistant-detail-cell">
+            <span class="assistant-detail-label">Priority rank</span>
+            <span class="assistant-detail-value">{{ action.priority }}</span>
+          </div>
+          <div class="assistant-detail-cell">
+            <span class="assistant-detail-label">Urgency</span>
+            <span class="assistant-detail-value">{{ assistantUrgencyLabel(action.priority, action.urgency) }}</span>
+          </div>
+          <div class="assistant-detail-cell">
+            <span class="assistant-detail-label">Owner scope</span>
+            <span class="assistant-detail-value">{{ action.ownerScope }}</span>
+          </div>
+          <div class="assistant-detail-cell">
+            <span class="assistant-detail-label">Due window</span>
+            <span class="assistant-detail-value">{{ action.dueWindow }}</span>
+          </div>
+          <div class="assistant-detail-cell">
+            <span class="assistant-detail-label">Action type</span>
+            <span class="assistant-detail-value">{{ action.actionType || 'N/A' }}</span>
+          </div>
+          <div class="assistant-detail-cell">
+            <span class="assistant-detail-label">Entity type</span>
+            <span class="assistant-detail-value">{{ action.entityType || 'General' }}</span>
+          </div>
+          <div class="assistant-detail-cell">
+            <span class="assistant-detail-label">Entity ID</span>
+            <span class="assistant-detail-value">{{ action.entityId || 'N/A' }}</span>
+          </div>
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <button pButton type="button" class="btn-glass" (click)="closeAssistantDetailDialog()">
+          Close
+        </button>
+        <button
+          pButton
+          type="button"
+          class="btn-gradient"
+          [ngClass]="(assistantDetailAction?.riskTier || '').toLowerCase() === 'low' ? 'execute' : 'review'"
+          [disabled]="!assistantDetailAction"
+          (click)="runAssistantActionFromDetail()"
+        >
+          {{ (assistantDetailAction?.riskTier || '').toLowerCase() === 'low' ? 'Execute' : 'Review' }}
+        </button>
+      </ng-template>
+    </p-dialog>
 
     <p-dialog
       [(visible)]="assistantReviewDialogOpen"
