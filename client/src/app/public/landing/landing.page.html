@@ -28,37 +28,144 @@
         <span class="hero-brand-crm">CRM</span>
       </div>
       <h1>Run Your Pipeline<br />on Verified Truth</h1>
-      <p>Confidence is earned through evidence and freshness. Promotions are gated. Forecasts weight themselves.</p>
       <div class="hero-cta">
         <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--ghost" (click)="onWatchDemo()"></button>
       </div>
     </div>
     <div class="hero-visual">
-      <article class="hero-panel">
-        <div class="hero-panel-row">
-          <span class="key">Pipeline</span>
-          <span class="val">{{ viewModel.dashboard.pipelineValue | currency:'USD':'symbol':'1.0-0' }}</span>
+      <article class="hero-panel hero-panel--preview">
+        <div class="hero-preview-carousel" (click)="advanceHeroPreview()" (wheel)="onHeroPreviewWheel($event)">
+          <div class="hero-preview-track" [style.transform]="'translateX(-' + (activeHeroPreview * 100) + '%)'">
+            <div class="hero-preview-slide">
+              <section class="preview-card preview-card--truth">
+                <div class="preview-card-header">
+                  <span class="preview-title">Truth Metrics</span>
+                  <span class="preview-badge">83%</span>
+                </div>
+                <div class="truth-grid">
+                  <div class="truth-cell">
+                    <span class="truth-label">Truth Coverage</span>
+                    <strong class="truth-value">83%</strong>
+                  </div>
+                  <div class="truth-cell">
+                    <span class="truth-label">Confidence</span>
+                    <strong class="truth-value truth-value--good">High</strong>
+                  </div>
+                  <div class="truth-cell">
+                    <span class="truth-label">Time-to-Truth</span>
+                    <strong class="truth-value">0.8d</strong>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="hero-preview-slide">
+              <section class="preview-card preview-card--pipeline">
+                <div class="preview-card-header">
+                  <span class="preview-title">Verified Pipeline</span>
+                  <span class="preview-live">$65,070 defensible</span>
+                </div>
+                <div class="hero-panel-row">
+                  <span class="key">Pipeline</span>
+                  <span class="val">$120,500</span>
+                </div>
+                <div class="hero-panel-row emphasis">
+                  <span class="key">Defensible</span>
+                  <span class="val">$65,070</span>
+                </div>
+                <div class="hero-panel-row">
+                  <span class="key">Win rate</span>
+                  <span class="val">72%</span>
+                </div>
+              </section>
+            </div>
+
+            <div class="hero-preview-slide">
+              <section class="preview-card preview-card--risk">
+                <div class="preview-card-header">
+                  <span class="preview-title">Risk Register</span>
+                  <span class="preview-badge preview-badge--warn">9</span>
+                </div>
+                <div class="risk-preview-chips">
+                  <span class="risk-chip risk-chip--high">High 3</span>
+                  <span class="risk-chip risk-chip--medium">Medium 4</span>
+                  <span class="risk-chip risk-chip--low">Low 2</span>
+                </div>
+                <div class="risk-preview-bars" aria-hidden="true">
+                  <div class="risk-bar-row">
+                    <span class="risk-bar-label">SLA</span>
+                    <div class="risk-bar-track"><span class="risk-bar-fill risk-bar-fill--high" style="width: 78%"></span></div>
+                    <strong class="risk-bar-value">1</strong>
+                  </div>
+                  <div class="risk-bar-row">
+                    <span class="risk-bar-label">No next step</span>
+                    <div class="risk-bar-track"><span class="risk-bar-fill risk-bar-fill--medium" style="width: 62%"></span></div>
+                    <strong class="risk-bar-value">3</strong>
+                  </div>
+                  <div class="risk-bar-row">
+                    <span class="risk-bar-label">Stale activity</span>
+                    <div class="risk-bar-track"><span class="risk-bar-fill risk-bar-fill--low" style="width: 86%"></span></div>
+                    <strong class="risk-bar-value">5</strong>
+                  </div>
+                </div>
+                <div class="risk-preview-list">
+                  <div class="risk-preview-item">
+                    <span>At-risk deals</span>
+                    <strong>9</strong>
+                  </div>
+                  <div class="risk-preview-item">
+                    <span>No next step</span>
+                    <strong>3</strong>
+                  </div>
+                  <div class="risk-preview-item">
+                    <span>SLA breaches</span>
+                    <strong>1</strong>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="hero-preview-slide">
+              <section class="preview-card preview-card--ai">
+                <div class="preview-card-header">
+                  <span class="preview-title">AI Execution Orchestration</span>
+                  <span class="preview-live">Live queue</span>
+                </div>
+                <div class="ai-preview-row">
+                  <div class="ai-preview-copy">
+                    <strong>Recover breached first-touch SLAs</strong>
+                    <small>1 lead missed SLA. Prioritize outreach today.</small>
+                  </div>
+                  <span class="ai-preview-chip ai-preview-chip--high">High risk</span>
+                </div>
+                <div class="ai-preview-row">
+                  <div class="ai-preview-copy">
+                    <strong>Reactivate stale opportunities</strong>
+                    <small>9 opportunities inactive 7+ days.</small>
+                  </div>
+                  <span class="ai-preview-chip ai-preview-chip--medium">Review</span>
+                </div>
+              </section>
+            </div>
+          </div>
         </div>
-        <div class="hero-panel-row emphasis">
-          <span class="key">Defensible</span>
-          <span class="val">{{ (viewModel.dashboard.pipelineValue * 0.54) | currency:'USD':'symbol':'1.0-0' }}</span>
+        <div class="hero-preview-controls" aria-label="KPI preview carousel">
+          <button
+            *ngFor="let slide of heroPreviewSlides; let i = index"
+            type="button"
+            class="hero-preview-dot"
+            [class.is-active]="activeHeroPreview === i"
+            [attr.aria-label]="'Show ' + slide"
+            [attr.aria-pressed]="activeHeroPreview === i"
+            (click)="$event.stopPropagation(); goToHeroPreview(i)"
+          ></button>
         </div>
-        <div class="hero-panel-row">
-          <span class="key">Timeline</span>
-          <span class="val status-bad">Invalid</span>
-        </div>
-        <div class="hero-panel-row">
-          <span class="key">Status</span>
-          <span class="val status-bad">Blocked</span>
-        </div>
-        <p class="hero-panel-note">Only forecast what survives scrutiny.</p>
       </article>
     </div>
   </section>
 
   <section class="shell final-cta">
     <h2>If You Cannot Defend the Confidence, It Is Not Forecastable.</h2>
-    <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--ghost" (click)="onWatchDemo()"></button>
   </section>
 
   <p-dialog

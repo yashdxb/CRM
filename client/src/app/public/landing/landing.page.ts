@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -36,9 +36,11 @@ import { AppToastService } from '../../core/app-toast.service';
 })
 export class LandingPage implements OnInit {
   private readonly torontoZone = 'America/Toronto';
+  private readonly heroPreviewIntervalMs = 4200;
   private readonly svc = inject(CrmLandingService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly toastService = inject(AppToastService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -49,8 +51,12 @@ export class LandingPage implements OnInit {
   submittingDemo = false;
   demoSubmitted = false;
   minDemoDateTime = new Date();
+  activeHeroPreview = 0;
+  readonly heroPreviewSlides = ['Truth Metrics', 'Verified Pipeline', 'Risk Register', 'AI Execution'];
   readonly timezoneOptions = this.buildTimeZoneOptions();
   private readonly detectedTimeZone = this.detectBrowserTimeZone();
+  private heroPreviewIntervalId: number | null = null;
+  private lastHeroPreviewWheelAt = 0;
   readonly teamSizeOptions = [
     { label: '1-10', value: '1-10' },
     { label: '11-50', value: '11-50' },
@@ -73,6 +79,7 @@ export class LandingPage implements OnInit {
 
   ngOnInit(): void {
     this.vm = this.svc.getVm();
+    this.startHeroPreviewCarousel();
     this.demoForm.controls.timezone.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -94,6 +101,49 @@ export class LandingPage implements OnInit {
 
   onSignIn(): void {
     void this.router.navigate(['/login']);
+  }
+
+  goToHeroPreview(index: number): void {
+    if (!this.heroPreviewSlides.length) {
+      return;
+    }
+    this.activeHeroPreview = Math.max(0, Math.min(index, this.heroPreviewSlides.length - 1));
+    this.cdr.markForCheck();
+    this.restartHeroPreviewCarousel();
+  }
+
+  advanceHeroPreview(): void {
+    if (!this.heroPreviewSlides.length) {
+      return;
+    }
+    this.activeHeroPreview = (this.activeHeroPreview + 1) % this.heroPreviewSlides.length;
+    this.cdr.markForCheck();
+    this.restartHeroPreviewCarousel();
+  }
+
+  onHeroPreviewWheel(event: WheelEvent): void {
+    if (!this.heroPreviewSlides.length) {
+      return;
+    }
+    const now = Date.now();
+    if (now - this.lastHeroPreviewWheelAt < 280) {
+      event.preventDefault();
+      return;
+    }
+    const delta = Math.abs(event.deltaY) > Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+    if (delta === 0) {
+      return;
+    }
+    event.preventDefault();
+    this.lastHeroPreviewWheelAt = now;
+    if (delta > 0) {
+      this.advanceHeroPreview();
+      return;
+    }
+    this.activeHeroPreview =
+      (this.activeHeroPreview - 1 + this.heroPreviewSlides.length) % this.heroPreviewSlides.length;
+    this.cdr.markForCheck();
+    this.restartHeroPreviewCarousel();
   }
 
   closeDemoForm(): void {
@@ -305,5 +355,28 @@ export class LandingPage implements OnInit {
       ? supportedValuesOf('timeZone')
       : fallback;
     return zones.map((zone) => ({ label: zone, value: zone }));
+  }
+
+  private startHeroPreviewCarousel(): void {
+    if (typeof window === 'undefined' || this.heroPreviewSlides.length <= 1) {
+      return;
+    }
+    this.stopHeroPreviewCarousel();
+    this.heroPreviewIntervalId = window.setInterval(() => {
+      this.activeHeroPreview = (this.activeHeroPreview + 1) % this.heroPreviewSlides.length;
+      this.cdr.markForCheck();
+    }, this.heroPreviewIntervalMs);
+    this.destroyRef.onDestroy(() => this.stopHeroPreviewCarousel());
+  }
+
+  private restartHeroPreviewCarousel(): void {
+    this.startHeroPreviewCarousel();
+  }
+
+  private stopHeroPreviewCarousel(): void {
+    if (this.heroPreviewIntervalId !== null && typeof window !== 'undefined') {
+      window.clearInterval(this.heroPreviewIntervalId);
+      this.heroPreviewIntervalId = null;
+    }
   }
 }

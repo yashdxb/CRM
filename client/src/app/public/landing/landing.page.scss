@@ -305,9 +305,9 @@
 .hero-copy p {
   margin: 1.2rem 0 1.6rem;
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: 1.06rem;
   max-width: 560px;
-  line-height: 1.75;
+  line-height: 1.8;
 }
 
 .hero-visual {
@@ -394,11 +394,344 @@
 .hero-panel-note {
   position: relative;
   z-index: 1;
-  margin: 1rem 0 0;
+  margin: 0;
   color: rgba(255, 255, 255, 0.82);
   text-align: center;
-  font-size: 1rem;
+  font-size: 0.92rem;
   letter-spacing: -0.01em;
+}
+
+.hero-panel--preview {
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.hero-preview-carousel {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  border-radius: 0.95rem;
+}
+
+.hero-preview-track {
+  display: flex;
+  transition: transform 360ms ease;
+  will-change: transform;
+}
+
+.hero-preview-slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding: 0.05rem;
+}
+
+.preview-card {
+  border-radius: 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 0.72rem;
+  backdrop-filter: blur(8px);
+  min-height: 236px;
+}
+
+.preview-card--ai {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.preview-card--pipeline {
+  display: grid;
+  align-content: start;
+}
+
+.hero-preview-controls {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  gap: 0.42rem;
+}
+
+.hero-preview-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.14);
+  padding: 0;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.hero-preview-dot:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.hero-preview-dot.is-active {
+  width: 1.35rem;
+  background: linear-gradient(90deg, rgba(120, 220, 255, 0.9), rgba(88, 126, 255, 0.9));
+  border-color: rgba(120, 220, 255, 0.34);
+}
+
+.preview-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.preview-title {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.26rem 0.55rem;
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(238, 246, 255, 0.96);
+  background: linear-gradient(180deg, rgba(104, 197, 255, 0.16), rgba(86, 125, 255, 0.1));
+  border: 1px solid rgba(126, 208, 255, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.preview-badge {
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: rgba(113, 225, 255, 0.96);
+  background: rgba(113, 225, 255, 0.12);
+  border: 1px solid rgba(113, 225, 255, 0.22);
+}
+
+.preview-badge--warn {
+  color: rgba(255, 210, 145, 0.96);
+  background: rgba(255, 180, 82, 0.12);
+  border-color: rgba(255, 180, 82, 0.2);
+}
+
+.preview-live {
+  font-size: 0.94rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(129, 248, 209, 0.92);
+}
+
+.truth-grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.truth-cell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.truth-label {
+  font-size: 1.04rem;
+  color: rgba(225, 236, 255, 0.65);
+}
+
+.truth-value {
+  font-size: 1.24rem;
+  font-weight: 800;
+}
+
+.truth-value--good {
+  color: rgba(136, 240, 211, 0.95);
+}
+
+.preview-card--pipeline .hero-panel-row {
+  margin-top: 0.42rem;
+  padding: 0.62rem 0.68rem;
+  border-radius: 0.72rem;
+}
+
+.preview-card--pipeline .hero-panel-row.emphasis .val {
+  font-size: clamp(1.18rem, 2vw, 1.6rem);
+}
+
+.preview-card--pipeline .hero-panel-row .key {
+  font-size: 1.06rem;
+}
+
+.preview-card--pipeline .hero-panel-row .val {
+  font-size: 1.24rem;
+}
+
+.risk-preview-list {
+  display: grid;
+  gap: 0.42rem;
+  margin-top: 0.5rem;
+}
+
+.risk-preview-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.risk-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.14rem 0.4rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.risk-chip--high {
+  color: rgba(255, 191, 204, 0.96);
+  background: rgba(255, 95, 126, 0.13);
+  border-color: rgba(255, 95, 126, 0.22);
+}
+
+.risk-chip--medium {
+  color: rgba(255, 220, 165, 0.96);
+  background: rgba(255, 180, 82, 0.12);
+  border-color: rgba(255, 180, 82, 0.2);
+}
+
+.risk-chip--low {
+  color: rgba(170, 244, 224, 0.96);
+  background: rgba(71, 213, 179, 0.12);
+  border-color: rgba(71, 213, 179, 0.2);
+}
+
+.risk-preview-bars {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.42rem 0.5rem;
+  border-radius: 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.risk-bar-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.risk-bar-label {
+  min-width: 56px;
+  font-size: 0.94rem;
+  color: rgba(225, 236, 255, 0.68);
+}
+
+.risk-bar-track {
+  height: 0.32rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.risk-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.risk-bar-fill--high {
+  background: linear-gradient(90deg, rgba(255, 118, 145, 0.95), rgba(255, 95, 126, 0.95));
+}
+
+.risk-bar-fill--medium {
+  background: linear-gradient(90deg, rgba(255, 201, 112, 0.95), rgba(255, 180, 82, 0.95));
+}
+
+.risk-bar-fill--low {
+  background: linear-gradient(90deg, rgba(115, 236, 206, 0.95), rgba(71, 213, 179, 0.95));
+}
+
+.risk-bar-value {
+  font-size: 0.96rem;
+  color: rgba(237, 244, 255, 0.9);
+}
+
+.risk-preview-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.46rem 0.55rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 1.06rem;
+}
+
+.risk-preview-item span {
+  color: rgba(225, 236, 255, 0.72);
+}
+
+.risk-preview-item strong {
+  color: rgba(255, 208, 144, 0.95);
+}
+
+.ai-preview-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+  align-items: start;
+  padding: 0.46rem 0.52rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ai-preview-copy strong {
+  display: block;
+  font-size: 1.08rem;
+  line-height: 1.3;
+}
+
+.ai-preview-copy small {
+  display: block;
+  margin-top: 0.14rem;
+  color: rgba(225, 236, 255, 0.64);
+  font-size: 0.99rem;
+  line-height: 1.4;
+}
+
+.ai-preview-chip {
+  border-radius: 999px;
+  padding: 0.18rem 0.42rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.ai-preview-chip--high {
+  color: rgba(255, 191, 204, 0.96);
+  background: rgba(255, 95, 126, 0.13);
+  border-color: rgba(255, 95, 126, 0.22);
+}
+
+.ai-preview-chip--medium {
+  color: rgba(255, 220, 165, 0.96);
+  background: rgba(255, 180, 82, 0.12);
+  border-color: rgba(255, 180, 82, 0.2);
 }
 
 @keyframes hero-float {
@@ -627,6 +960,8 @@
 
 .final-cta h2 {
   margin-bottom: 1.2rem;
+  font-size: clamp(2rem, 3.4vw, 2.8rem);
+  line-height: 1.08;
 }
 
 .demo-modal-header {
@@ -864,6 +1199,10 @@
   .panel-table {
     grid-column: auto;
   }
+
+  .preview-card {
+    min-height: 220px;
+  }
 }
 
 @media (max-width: 760px) {
@@ -909,6 +1248,29 @@
 
   .hero-visual {
     min-height: min(340px, 54vh);
+  }
+
+  .preview-card {
+    min-height: 206px;
+  }
+
+  .ai-preview-row {
+    grid-template-columns: 1fr;
+  }
+
+  .risk-bar-row {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+    align-items: start;
+  }
+
+  .risk-bar-label {
+    min-width: 0;
+  }
+
+  .risk-bar-value {
+    justify-self: end;
+    margin-top: -0.1rem;
   }
 
   .table-grid {
