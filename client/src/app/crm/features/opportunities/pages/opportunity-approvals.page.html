@@ -1,5 +1,5 @@
 <div class="page-container approvals-page">
-  <div class="bg-orbs">
+  <div class="bg-orbs" aria-hidden="true">
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
@@ -7,29 +7,60 @@
 
   <app-breadcrumbs></app-breadcrumbs>
 
-  <section class="hero-section">
-    <div class="hero-content">
+  <section class="hero-shell liquid-card">
+    <div class="hero-copy">
       <div class="hero-badge">
         <span class="badge-dot"></span>
         <span>Decision Inbox</span>
       </div>
-      <h1 class="hero-title">
-        <span class="title-gradient">Decision</span>
-        <span class="title-light">Inbox</span>
-      </h1>
+      <h1 class="hero-title">Decision Inbox</h1>
       <p class="hero-description">
-        Review pending decisions, handle approvals, and keep deals moving.
+        Prioritized approvals and exceptions with SLA visibility, policy context, and operator-ready actions.
       </p>
-      <div class="hero-actions">
-        <button pButton type="button" class="btn btn-secondary" (click)="load()">
-          <i class="pi pi-refresh"></i>
-          <span>Refresh</span>
-        </button>
-      </div>
+    </div>
+    <div class="hero-actions">
+      <button pButton type="button" class="command-btn command-btn--ghost" (click)="load()">
+        <i class="pi pi-refresh"></i>
+        <span>Refresh</span>
+      </button>
     </div>
   </section>
 
-  <section class="filters">
+  <section class="kpi-grid">
+    <article class="kpi-card liquid-card">
+      <div class="kpi-label">Pending decisions</div>
+      <div class="kpi-value">{{ kpis().pending }}</div>
+      <div class="kpi-meta">Actionable now</div>
+    </article>
+    <article class="kpi-card liquid-card tone-danger">
+      <div class="kpi-label">Overdue SLA</div>
+      <div class="kpi-value">{{ kpis().overdue }}</div>
+      <div class="kpi-meta">Escalation risk</div>
+    </article>
+    <article class="kpi-card liquid-card tone-warn">
+      <div class="kpi-label">High-risk queue</div>
+      <div class="kpi-value">{{ kpis().critical }}</div>
+      <div class="kpi-meta">Critical / high risk</div>
+    </article>
+    <article class="kpi-card liquid-card tone-cyan">
+      <div class="kpi-label">Pending value</div>
+      <div class="kpi-value">{{ formatCompactCurrency(kpis().totalAmount) }}</div>
+      <div class="kpi-meta">Avg age {{ kpis().avgAge | number:'1.0-1' }}h</div>
+    </article>
+  </section>
+
+  <section class="filter-shell liquid-card">
+    <div class="filter-field search-field">
+      <label>Search queue</label>
+      <span class="search-icon pi pi-search"></span>
+      <input
+        pInputText
+        type="text"
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchInput($event)"
+        placeholder="Search opportunity, account, requester, rule, risk"
+      />
+    </div>
     <div class="filter-field">
       <label>Status</label>
       <p-select
@@ -56,77 +87,222 @@
     </div>
   </section>
 
-  <section class="table-container glass-card">
-    <p-table
-      [value]="approvals()"
-      [loading]="loading()"
-      responsiveLayout="scroll"
-      [tableStyle]="{ 'min-width': '72rem' }">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Opportunity</th>
-          <th>Account</th>
-          <th>Requested By</th>
-          <th>Purpose</th>
-          <th>Step</th>
-          <th>Chain</th>
-          <th>Status</th>
-          <th>Amount</th>
-          <th>Requested</th>
-          <th style="width: 240px">Action</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-item>
-        <tr>
-          <td>
-            <button class="link" type="button" (click)="openOpportunity(item)">
-              {{ item.opportunityName }}
-            </button>
-          </td>
-          <td>{{ item.accountName }}</td>
-          <td>{{ item.requestedByName || '—' }}</td>
-          <td>{{ item.purpose }}</td>
-          <td>{{ item.stepOrder || 1 }} / {{ item.totalSteps || 1 }}</td>
-          <td>{{ item.chainStatus || item.status }}</td>
-          <td>
+  <section class="decision-inbox-grid">
+    <div class="queue-pane liquid-card">
+      <div class="pane-header">
+        <div>
+          <h2 class="pane-title">Queue</h2>
+          <p class="pane-subtitle">Prioritized by SLA risk and policy impact.</p>
+        </div>
+      </div>
+
+      <p-tabs class="queue-tabs" [value]="activeQueueView()" (valueChange)="onQueueViewChange($event)">
+        <p-tablist>
+          <p-tab value="all">
+            <span class="queue-tab-label">All</span>
+            <span class="queue-tab-badge">{{ queueTabBadge().all }}</span>
+          </p-tab>
+          <p-tab value="attention">
+            <span class="queue-tab-label">Attention</span>
+            <span class="queue-tab-badge danger">{{ queueTabBadge().attention }}</span>
+          </p-tab>
+          <p-tab value="completed">
+            <span class="queue-tab-label">Completed</span>
+            <span class="queue-tab-badge muted">{{ queueTabBadge().completed }}</span>
+          </p-tab>
+        </p-tablist>
+      </p-tabs>
+
+      <div class="queue-list" *ngIf="!loading(); else queueLoading">
+        <button
+          type="button"
+          class="queue-card"
+          *ngFor="let item of filteredApprovals(); trackBy: trackByApprovalId"
+          [class.is-selected]="isSelected(item)"
+          [class.tone-critical]="queueCardTone(item) === 'critical'"
+          [class.tone-warn]="queueCardTone(item) === 'warn'"
+          (click)="selectDecision(item)"
+        >
+          <div class="queue-card-head">
+            <div class="queue-card-title-wrap">
+              <div class="queue-card-title">{{ item.opportunityName }}</div>
+              <div class="queue-card-subtitle">{{ item.accountName }}</div>
+            </div>
             <p-tag [value]="item.status" [severity]="statusSeverity(item.status)"></p-tag>
-          </td>
-          <td>{{ item.amount | number:'1.0-2' }} {{ item.currency }}</td>
-          <td>{{ item.requestedOn | date:'medium' }}</td>
-          <td class="row-actions">
-            <input
-              pInputText
-              class="notes"
-              placeholder="Notes (optional)"
-              [disabled]="!canManage() || item.status !== 'Pending' || isActioning(item.id)"
-              [(ngModel)]="noteInputs[item.id]"
-            />
+          </div>
+
+          <div class="queue-chip-row">
+            <p-chip [label]="humanizeDecisionType(item.decisionType || item.purpose)"></p-chip>
+            <p-tag [value]="(item.priority || 'normal').toUpperCase()" [severity]="prioritySeverity(item.priority)"></p-tag>
+            <p-tag [value]="(item.riskLevel || 'low').toUpperCase() + ' RISK'" [severity]="riskSeverity(item.riskLevel)"></p-tag>
+          </div>
+
+          <div class="queue-metrics">
+            <div class="metric-line">
+              <span class="label">Value</span>
+              <span class="value">{{ formatCurrency(item.amount, item.currency) }}</span>
+            </div>
+            <div class="metric-line">
+              <span class="label">SLA</span>
+              <span class="value" [class.overdue]="item.slaStatus === 'overdue'">{{ slaLabel(item) }}</span>
+            </div>
+            <div class="metric-line">
+              <span class="label">Requester</span>
+              <span class="value">{{ item.requestedByName || '—' }}</span>
+            </div>
+          </div>
+
+          <div class="queue-card-foot">
+            <span class="queue-policy">{{ item.policyReason || 'Policy review required' }}</span>
+            <span class="queue-age">{{ relativeTime(item.requestedOn) }}</span>
+          </div>
+        </button>
+
+        <div class="empty-state" *ngIf="!filteredApprovals().length">
+          No decision items match the selected queue and filters.
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-pane liquid-card" *ngIf="selectedApproval() as selected; else emptyDetail">
+      <div class="pane-header detail-header">
+        <div>
+          <div class="detail-kicker">{{ humanizeDecisionType(selected.decisionType || selected.purpose) }}</div>
+          <h2 class="pane-title">{{ selected.opportunityName }}</h2>
+          <p class="pane-subtitle">{{ selected.accountName }} • {{ formatCurrency(selected.amount, selected.currency) }}</p>
+        </div>
+        <div class="detail-header-actions">
+          <button pButton type="button" class="command-btn command-btn--ghost" (click)="openOpportunity(selected)">
+            <i class="pi pi-external-link"></i>
+            <span>Open record</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="detail-status-strip">
+        <p-tag [value]="selected.status" [severity]="statusSeverity(selected.status)"></p-tag>
+        <p-tag [value]="(selected.priority || 'normal').toUpperCase() + ' PRIORITY'" [severity]="prioritySeverity(selected.priority)"></p-tag>
+        <p-tag [value]="(selected.riskLevel || 'low').toUpperCase() + ' RISK'" [severity]="riskSeverity(selected.riskLevel)"></p-tag>
+        <p-tag [value]="(selected.slaStatus || 'on-track').toUpperCase()" [severity]="slaSeverity(selected.slaStatus)"></p-tag>
+      </div>
+
+      <div class="detail-micro-grid">
+        <div class="micro-card">
+          <div class="micro-label">Business impact</div>
+          <div class="micro-value">{{ selected.businessImpactLabel || formatCompactCurrency(selected.amount) }}</div>
+          <div class="micro-meta">{{ formatCurrency(selected.amount, selected.currency) }}</div>
+        </div>
+        <div class="micro-card">
+          <div class="micro-label">SLA countdown</div>
+          <div class="micro-value" [class.overdue]="selected.slaStatus === 'overdue'">{{ slaLabel(selected) }}</div>
+          <div class="micro-meta" *ngIf="selected.slaDueAtUtc">Due {{ selected.slaDueAtUtc | date:'MMM d, h:mm a' }}</div>
+          <div class="micro-meta" *ngIf="!selected.slaDueAtUtc">No due date set</div>
+        </div>
+        <div class="micro-card">
+          <div class="micro-label">Current step</div>
+          <div class="micro-value">{{ (selected.stepOrder || 1) }} / {{ selected.totalSteps || 1 }}</div>
+          <div class="micro-meta">{{ selected.approverRole || 'Approver' }} • {{ selected.chainStatus || selected.status }}</div>
+        </div>
+        <div class="micro-card">
+          <div class="micro-label">Requester</div>
+          <div class="micro-value">{{ selected.requestedByName || '—' }}</div>
+          <div class="micro-meta">Requested {{ selected.requestedOn | date:'MMM d, h:mm a' }}</div>
+        </div>
+      </div>
+
+      <div class="detail-grid">
+        <section class="detail-panel liquid-subcard">
+          <div class="panel-title-row">
+            <h3 class="panel-title">Policy explanation</h3>
+            <p-chip [label]="selected.purpose + ' workflow'"></p-chip>
+          </div>
+          <p class="panel-copy">{{ selected.policyReason || 'Approval required by workflow policy.' }}</p>
+          <div class="decision-meta-list">
+            <div class="meta-item">
+              <span class="meta-label">Decision type</span>
+              <span class="meta-value">{{ humanizeDecisionType(selected.decisionType) }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Approval chain</span>
+              <span class="meta-value">{{ selected.approvalChainId || 'Single-step' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Requested age</span>
+              <span class="meta-value">{{ selected.requestedAgeHours | number:'1.0-1' }}h</span>
+            </div>
+            <div class="meta-item" *ngIf="selected.approverName">
+              <span class="meta-label">Last approver</span>
+              <span class="meta-value">{{ selected.approverName }}</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="detail-panel liquid-subcard">
+          <div class="panel-title-row">
+            <h3 class="panel-title">Decision actions</h3>
+            <p-tag [value]="canManage() ? 'Authorized' : 'Read only'" [severity]="canManage() ? 'success' : 'info'"></p-tag>
+          </div>
+
+          <label class="notes-label" [for]="'approval-note-' + selected.id">Approval note</label>
+          <textarea
+            pTextarea
+            rows="4"
+            class="decision-notes"
+            [id]="'approval-note-' + selected.id"
+            [disabled]="!canManage() || !isPending(selected) || isActioning(selected.id)"
+            [(ngModel)]="noteInputs[selected.id]"
+            placeholder="Add decision context, policy exception rationale, or request clarification notes"
+          ></textarea>
+
+          <div class="action-row">
             <button
               pButton
               type="button"
-              class="btn btn-primary btn-sm"
-              [disabled]="!canManage() || item.status !== 'Pending' || isActioning(item.id)"
-              (click)="decide(item, true)">
-              Approve
+              class="command-btn command-btn--success"
+              [disabled]="!canManage() || !isPending(selected) || isActioning(selected.id)"
+              (click)="decide(selected, true)"
+            >
+              <i class="pi pi-check"></i>
+              <span>Approve</span>
             </button>
             <button
               pButton
               type="button"
-              class="btn btn-ghost btn-sm"
-              [disabled]="!canManage() || item.status !== 'Pending' || isActioning(item.id)"
-              (click)="decide(item, false)">
-              Reject
+              class="command-btn command-btn--danger"
+              [disabled]="!canManage() || !isPending(selected) || isActioning(selected.id)"
+              (click)="decide(selected, false)"
+            >
+              <i class="pi pi-times"></i>
+              <span>Reject</span>
             </button>
-          </td>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="emptymessage">
-        <tr>
-          <td colspan="10">
-            <div class="empty-state">No decision items match the selected filters.</div>
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
+            <button pButton type="button" class="command-btn command-btn--ghost" (click)="openOpportunity(selected)">
+              <i class="pi pi-arrow-right"></i>
+              <span>Open Opportunity</span>
+            </button>
+          </div>
+
+          <div class="decision-status-note" *ngIf="!canManage()">
+            You can review decisions, but your role does not have approval permissions.
+          </div>
+          <div class="decision-status-note" *ngIf="canManage() && !isPending(selected)">
+            This decision is already {{ selected.status.toLowerCase() }}.
+          </div>
+        </section>
+      </div>
+    </div>
   </section>
 </div>
+
+<ng-template #queueLoading>
+  <div class="queue-loading">
+    <div class="skeleton-row" *ngFor="let row of [1,2,3,4,5]"></div>
+  </div>
+</ng-template>
+
+<ng-template #emptyDetail>
+  <div class="detail-pane liquid-card empty-detail">
+    <div class="empty-illustration pi pi-inbox"></div>
+    <h2 class="pane-title">No decision selected</h2>
+    <p class="pane-subtitle">Choose an item from the queue to review policy context and take action.</p>
+  </div>
+</ng-template>

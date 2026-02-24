@@ -49,6 +49,28 @@ The dev server launches at `http://localhost:4200` and proxies `/api/**` request
 - To add an org palette, extend `THEMES` inside `theme.tokens.ts` and set the desired key in the environment files.
 - Every page must inherit from the global design system (no isolated one-off styles). See `docs/STYLE_GUIDE.md` for the source-of-truth global style files.
 
+### Mobile responsive design
+
+The CRM Enterprise app is fully responsive with a **mobile-first** approach while maintaining the premium glass UI aesthetic across all breakpoints.
+
+- **Breakpoints**: `320px` (mobile), `480px` (mobile-lg), `768px` (tablet), `1024px` (desktop), `1200px+` (desktop-lg)
+- **SCSS Mixins**: Use `@include respond-to('tablet')` instead of raw media queries; defined in `src/styles/_design-tokens.scss`
+- **Device Detection**: Inject `DeviceService` in components for reactive device type signals; see `src/app/core/device/device.service.ts`
+- **UI Philosophy**: Glass cards, gradients, and shadows adapt beautifully to mobile—adjust spacing and layout, not aesthetics
+- **Documentation**: 
+  - **Beginner**: Start with `docs/MOBILE_RESPONSIVE_GUIDE.md` (end-to-end guide with examples)
+  - **Developer**: Refer to `docs/MOBILE_TECHNICAL_REFERENCE.md` (mixin API, patterns, testing)
+- **Example**: The sidebar automatically goes off-canvas on mobile; desktop topbar is responsive; tables adapt to card layout on phones
+
+For new components, follow these steps:
+1. Build desktop layout first with flexbox/grid
+2. Import `@use 'styles/design-tokens' as *`
+3. Add `@include respond-to('tablet')` and `@include respond-to('mobile-lg')` to adjust spacing/columns
+4. Test at **375px** (mobile), **768px** (tablet), **1024px** (desktop) in Chrome DevTools (Ctrl+Shift+M)
+5. No need for separate mobile components unless layout drastically differs
+
+The responsive infrastructure is production-ready. **Test all new features at mobile sizes before merging.**
+
 ### Feature structure
 
 ```

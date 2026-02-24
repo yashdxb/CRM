@@ -160,6 +160,14 @@ export interface OpportunityApprovalInboxItem {
   notes?: string | null;
   amount: number;
   currency: string;
+  decisionType: string;
+  priority: 'normal' | 'medium' | 'high' | 'critical' | string;
+  riskLevel: 'low' | 'medium' | 'high' | string;
+  slaStatus: 'on-track' | 'at-risk' | 'overdue' | 'completed' | string;
+  slaDueAtUtc?: string | null;
+  requestedAgeHours: number;
+  policyReason: string;
+  businessImpactLabel: string;
 }
 
 export type OpportunityReviewKind = 'Review' | 'Acknowledgment';

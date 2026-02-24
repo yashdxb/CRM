@@ -22,4 +22,12 @@ public record OpportunityApprovalInboxItem(
     DateTime? DecisionOn,
     string? Notes,
     decimal Amount,
-    string Currency);
+    string Currency,
+    string DecisionType,
+    string Priority,
+    string RiskLevel,
+    string SlaStatus,
+    DateTime? SlaDueAtUtc,
+    double RequestedAgeHours,
+    string PolicyReason,
+    string BusinessImpactLabel);

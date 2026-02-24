@@ -104,6 +104,12 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         string? purpose = null,
         CancellationToken cancellationToken = default)
     {
+        var nowUtc = DateTime.UtcNow;
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == _tenantProvider.TenantId, cancellationToken);
+        var amountThreshold = tenant?.ApprovalAmountThreshold;
+
         var approvalsQuery = _dbContext.OpportunityApprovals
             .AsNoTracking()
             .Where(a => !a.IsDeleted);
@@ -166,6 +172,15 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         return approvals.Select(item =>
         {
             chains.TryGetValue(item.approval.ApprovalChainId ?? Guid.Empty, out var chain);
+            var metadata = BuildInboxMetadata(
+                item.approval.Purpose,
+                item.approval.Status,
+                item.approval.Amount,
+                item.approval.RequestedOn,
+                nowUtc,
+                amountThreshold,
+                item.approval.StepOrder,
+                chain?.TotalSteps ?? 1);
             return new OpportunityApprovalInboxItemDto(
                 item.approval.Id,
                 item.approval.OpportunityId,
@@ -186,8 +201,72 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 item.approval.DecisionOn,
                 item.approval.Notes,
                 item.approval.Amount,
-                item.approval.Currency);
+                item.approval.Currency,
+                "Opportunity Approval",
+                metadata.Priority,
+                metadata.RiskLevel,
+                metadata.SlaStatus,
+                metadata.SlaDueAtUtc,
+                metadata.RequestedAgeHours,
+                metadata.PolicyReason,
+                metadata.BusinessImpactLabel);
         }).ToList();
+    }
+
+    private static (string Priority, string RiskLevel, string SlaStatus, DateTime? SlaDueAtUtc, double RequestedAgeHours, string PolicyReason, string BusinessImpactLabel)
+        BuildInboxMetadata(
+            string purpose,
+            string status,
+            decimal amount,
+            DateTime requestedOn,
+            DateTime nowUtc,
+            decimal? amountThreshold,
+            int stepOrder,
+            int totalSteps)
+    {
+        var normalizedPurpose = string.IsNullOrWhiteSpace(purpose) ? "Close" : purpose.Trim();
+        var baseSlaHours = normalizedPurpose.Equals("Discount", StringComparison.OrdinalIgnoreCase) ? 4
+            : normalizedPurpose.Equals("Close", StringComparison.OrdinalIgnoreCase) ? 8
+            : 24;
+        var stepAdjustmentHours = Math.Max(0, stepOrder - 1);
+        var slaDueAtUtc = status.Equals("Pending", StringComparison.OrdinalIgnoreCase)
+            ? requestedOn.AddHours(baseSlaHours + stepAdjustmentHours)
+            : (DateTime?)null;
+
+        var requestedAgeHours = Math.Max(0, (nowUtc - requestedOn).TotalHours);
+        var isPending = status.Equals("Pending", StringComparison.OrdinalIgnoreCase);
+        var isOverdue = isPending && slaDueAtUtc.HasValue && nowUtc > slaDueAtUtc.Value;
+        var isAtRisk = isPending && slaDueAtUtc.HasValue && !isOverdue && (slaDueAtUtc.Value - nowUtc).TotalMinutes <= 60;
+
+        var slaStatus = !isPending ? "completed"
+            : isOverdue ? "overdue"
+            : isAtRisk ? "at-risk"
+            : "on-track";
+
+        var thresholdTriggered = amountThreshold.HasValue && amountThreshold.Value > 0 && amount >= amountThreshold.Value;
+        var largeDeal = amountThreshold.HasValue && amountThreshold.Value > 0 && amount >= amountThreshold.Value * 2m;
+        var riskLevel = isOverdue || largeDeal ? "high"
+            : isAtRisk || thresholdTriggered || normalizedPurpose.Equals("Discount", StringComparison.OrdinalIgnoreCase) ? "medium"
+            : "low";
+
+        var priority = isOverdue ? "critical"
+            : riskLevel == "high" ? "high"
+            : riskLevel == "medium" ? "medium"
+            : "normal";
+
+        var policyReason = thresholdTriggered && amountThreshold.HasValue
+            ? $"Amount {amount:0.##} exceeds tenant threshold {amountThreshold.Value:0.##}."
+            : normalizedPurpose.Equals("Discount", StringComparison.OrdinalIgnoreCase)
+                ? "Discount exception requires approver sign-off."
+                : totalSteps > 1
+                    ? $"Approval chain step {stepOrder} of {totalSteps} is pending."
+                    : $"Approval routing requires role {normalizedPurpose} sign-off.";
+
+        var businessImpactLabel = amount >= 100000m ? "high impact"
+            : amount >= 25000m ? "medium impact"
+            : "low impact";
+
+        return (priority, riskLevel, slaStatus, slaDueAtUtc, Math.Round(requestedAgeHours, 1), policyReason, businessImpactLabel);
     }
 
     public async Task<OpportunityOperationResult<OpportunityApprovalDto>> RequestAsync(

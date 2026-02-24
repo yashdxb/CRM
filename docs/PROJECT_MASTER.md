@@ -103,6 +103,34 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - **Auth screens parity:** All public auth pages (login, accept-invite, change-password, password reset) must match the login screen’s visual system: same background (orbs + grid + noise), glass card treatment, typography, spacing, and button styling.
 - **Auth shell component:** Public auth pages must use the shared `AuthShellComponent` to ensure visual parity and avoid style drift.
 
+### Mobile Responsive Guiding Principles (Mandatory)
+- Mobile responsiveness is a **core product requirement** for CRM pages (not a later polish item).
+- Preserve the premium CRM visual language on mobile: glass, gradients, shadows, and typography hierarchy should **adapt**, not be removed.
+- Default implementation approach:
+  - layout/spacing adapt first
+  - information hierarchy stays intact
+  - avoid hiding critical workflow actions/data on mobile
+- Use shared responsive utilities and breakpoints from `client/src/styles/_design-tokens.scss` (do not create page-local breakpoint systems).
+- Use `DeviceService` (`client/src/app/core/device/device.service.ts`) for reactive device-aware rendering when CSS-only adaptation is not sufficient.
+- For dense tabular UI (especially PrimeNG DataTable), prefer the shared wrapper pattern:
+  - `client/src/app/shared/mobile-table-wrapper.component.ts`
+- Touch interaction standards are required:
+  - minimum touch targets (`44x44px`)
+  - readable spacing
+  - no hover-only critical actions
+- Responsive validation is required before closing UI work:
+  - desktop, tablet, and mobile viewport checks
+  - verify no horizontal overflow and maintain actionability/readability
+- Mobile implementation must remain aligned with the CRM Page Design System and PrimeNG component usage rules above.
+
+### Mobile Responsive Documentation (Source of Truth)
+- `docs/MOBILE_IMPLEMENTATION_SUMMARY.md`
+  - implementation status and delivered infrastructure (tokens, `DeviceService`, wrapper component, docs references)
+- `docs/MOBILE_RESPONSIVE_GUIDE.md`
+  - product/UX + developer guidance, breakpoints, responsive patterns, testing and best practices
+- `docs/MOBILE_TECHNICAL_REFERENCE.md`
+  - developer technical reference for mixins, `DeviceService`, common responsive implementation patterns
+
 ### Global Style Files (Source of Truth)
 - `client/src/styles.scss`
 - `client/src/styles/_design-tokens.scss`
@@ -950,10 +978,21 @@ Legend:
   - UI: `client/src/app/core/assistant/assistant-panel.component.ts`
   - Guide: `docs/ai/FOUNDARY_FINE_TUNING_GUIDE.md`
   - Knowledge grounding guide: `docs/ai/KNOWLEDGE_GROUNDING_GUIDE.md`
+  - Team quick start: `docs/AI_ASSISTANT_KNOWLEDGE_QUICK_START.md`
+  - Team feeding workflow guide: `docs/AI_KNOWLEDGE_FEEDING_GUIDE.md`
+  - Capability-to-knowledge mapping: `docs/CRM_CAPABILITIES_KNOWLEDGE_MAPPING.md`
   - Knowledge manifest builder: `scripts/build_ai_knowledge_manifest.py`
   - Search index setup script: `scripts/setup_ai_knowledge_search_index.py`
   - Search uploader script: `scripts/push_ai_knowledge_to_search.py`
   - Azure AI Search (dev): `crmenterprisesearchdevca` / index `crm-ai-knowledge`
+
+### AI Assistant Knowledge Team Guides (Operational)
+- Use these documents for knowledge authoring, coverage planning, and publishing workflow standardization:
+  - `docs/AI_ASSISTANT_KNOWLEDGE_QUICK_START.md` (quick onboarding / TL;DR publishing flow)
+  - `docs/AI_KNOWLEDGE_FEEDING_GUIDE.md` (end-to-end workflow and validation)
+  - `docs/CRM_CAPABILITIES_KNOWLEDGE_MAPPING.md` (CRM capability coverage → knowledge document mapping)
+- Runtime/system grounding reference remains:
+  - `docs/ai/KNOWLEDGE_GROUNDING_GUIDE.md`
 
 ---
 

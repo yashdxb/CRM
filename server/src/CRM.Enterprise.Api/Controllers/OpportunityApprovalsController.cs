@@ -146,7 +146,15 @@ public class OpportunityApprovalsController : ControllerBase
             dto.DecisionOn,
             dto.Notes,
             dto.Amount,
-            dto.Currency);
+            dto.Currency,
+            dto.DecisionType,
+            dto.Priority,
+            dto.RiskLevel,
+            dto.SlaStatus,
+            dto.SlaDueAtUtc,
+            dto.RequestedAgeHours,
+            dto.PolicyReason,
+            dto.BusinessImpactLabel);
     }
 
     private ActorContext GetActor()

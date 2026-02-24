@@ -540,6 +540,8 @@
         rgba(255, 255, 255, 0.22)
       );
       box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+      background-size: 220% 100%;
+      animation: lead-tab-active-strip 1.6s ease-in-out infinite;
     }
 
     :host ::ng-deep .lead-tabs .p-tab.p-tab-active::before {
@@ -650,8 +652,25 @@
       }
     }
 
+    @keyframes lead-tab-active-strip {
+      0%, 100% {
+        background-position: 0% 50%;
+        opacity: 0.88;
+        transform: scaleX(0.985);
+      }
+      50% {
+        background-position: 100% 50%;
+        opacity: 1;
+        transform: scaleX(1);
+      }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       :host ::ng-deep .lead-tabs .p-tab.p-tab-active {
+        animation: none;
+      }
+
+      :host ::ng-deep .lead-tabs .p-tab.p-tab-active::after {
         animation: none;
       }
     }

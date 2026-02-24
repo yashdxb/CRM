@@ -152,3 +152,124 @@ $z-modal: 500;
 $z-popover: 600;
 $z-tooltip: 700;
 $z-toast: 800;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESPONSIVE BREAKPOINTS & MIXINS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Breakpoint map (mobile-first approach)
+$breakpoints: (
+  'mobile': 320px,
+  'mobile-lg': 480px,
+  'tablet': 768px,
+  'desktop': 1024px,
+  'desktop-lg': 1200px,
+  'desktop-xl': 1440px,
+  'desktop-2xl': 1920px
+);
+
+/// Mixin for responsive media queries (max-width approach)
+/// Usage: @include respond-to('tablet') { ... }
+@mixin respond-to($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $size: map-get($breakpoints, $breakpoint);
+    @media (max-width: ($size - 1px)) {
+      @content;
+    }
+  } @else {
+    @warn "Breakpoint '#{$breakpoint}' not found in $breakpoints map";
+  }
+}
+
+/// Mixin for min-width media queries (desktop-first approach)
+/// Usage: @include respond-min('desktop') { ... }
+@mixin respond-min($breakpoint) {
+  @if map-has-key($breakpoints, $breakpoint) {
+    $size: map-get($breakpoints, $breakpoint);
+    @media (min-width: $size) {
+      @content;
+    }
+  } @else {
+    @warn "Breakpoint '#{$breakpoint}' not found in $breakpoints map";
+  }
+}
+
+/// Mobile-first responsive utilities
+@mixin touch-target {
+  // Minimum touch target size (Apple HIG: 44x44pt, Google MDC: 48x48dp)
+  min-width: 44px;
+  min-height: 44px;
+}
+
+@mixin safe-padding-mobile {
+  // Safe area for notched devices
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/// Hide/Show utilities
+@mixin hide-desktop {
+  @include respond-min('desktop') {
+    display: none !important;
+  }
+}
+
+@mixin hide-mobile {
+  @include respond-to('tablet') {
+    display: none !important;
+  }
+}
+
+@mixin hide-tablet {
+  @include respond-to('tablet') {
+    display: none !important;
+  }
+  @include respond-min('desktop') {
+    display: block !important;
+  }
+}
+
+@mixin show-mobile {
+  display: none !important;
+  @include respond-to('tablet') {
+    display: block !important;
+  }
+}
+
+@mixin show-tablet {
+  display: none !important;
+  @include respond-to('tablet') {
+    display: block !important;
+  }
+}
+
+/// Responsive typography scaling (clamp for fluid sizing)
+@mixin fluid-font($min, $max, $min-screen: 320px, $max-screen: 1920px) {
+  font-size: clamp($min, calc($min + ($max - $min) * ((100vw - $min-screen) / ($max-screen - $min-screen))), $max);
+}
+
+/// Common mobile-first media query patterns
+@mixin mobile-only {
+  @include respond-to('mobile-lg') {
+    @content;
+  }
+}
+
+@mixin tablet-up {
+  @include respond-min('tablet') {
+    @content;
+  }
+}
+
+@mixin desktop-up {
+  @include respond-min('desktop') {
+    @content;
+  }
+}
+
+@mixin desktop-lg-up {
+  @include respond-min('desktop-lg') {
+    @content;
+  }
+}
