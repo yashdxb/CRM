@@ -15,10 +15,12 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { KnobModule } from 'primeng/knob';
 import { TableModule } from 'primeng/table';
+import { FileUploadModule } from 'primeng/fileupload';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputMaskModule } from 'primeng/inputmask';
 import { TabsModule } from 'primeng/tabs';
+import { AccordionModule } from 'primeng/accordion';
 import { PhoneNumberFormat, PhoneNumberUtil } from 'google-libphonenumber';
 
 import { map, Observable } from 'rxjs';
@@ -45,6 +47,8 @@ import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from 
 import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
+import { SupportingDocumentPolicy } from '../../settings/models/workspace-settings.model';
+import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
 import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreResult } from './lead-scoring.util';
 
 interface StatusOption {
@@ -155,6 +159,7 @@ const CQVS_GROUP_DEFINITIONS: Array<{
     ProgressBarModule,
     KnobModule,
     TableModule,
+    FileUploadModule,
     TagModule,
     DialogModule,
     DatePickerModule,
@@ -163,13 +168,25 @@ const CQVS_GROUP_DEFINITIONS: Array<{
     InputGroupAddonModule,
     InputMaskModule,
     TabsModule,
+    AccordionModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./lead-form.page.html",
   styleUrls: ["./lead-form.page.scss"]
 })
 export class LeadFormPage implements OnInit {
-  protected activeTab = signal<'overview' | 'qualification' | 'activity' | 'history'>('overview');
+  private static readonly ACCORDION_STATE_STORAGE_KEY = 'crm.lead-form.accordion-state.v1';
+  protected activeTab = signal<'overview' | 'qualification' | 'activity' | 'history' | 'documents'>('overview');
+  protected overviewAccordionOpenPanels = signal<string[]>(['lead-basics', 'contact-details', 'score']);
+  protected qualificationAccordionOpenPanels = signal<string[]>([
+    'qualification-factors',
+    'qualification-scoring',
+    'qualification-context',
+    'qualification-disposition'
+  ]);
+  protected activityAccordionOpenPanels = signal<string[]>(['activity-main']);
+  protected documentsAccordionOpenPanels = signal<string[]>(['documents-main']);
+  protected historyAccordionOpenPanels = signal<string[]>(['history-main']);
   protected readonly statusOptions: StatusOption[] = LEAD_STATUSES.map((status) => ({
     label: status,
     value: status,
@@ -259,6 +276,11 @@ export class LeadFormPage implements OnInit {
   protected riskFlags = signal<string[]>([]);
   protected routingReason = signal<string | null>(null);
   protected statusHistory = signal<LeadStatusHistoryItem[]>([]);
+  protected attachments = signal<AttachmentItem[]>([]);
+  protected attachmentsLoading = signal(false);
+  protected attachmentUploading = signal(false);
+  protected attachmentDeletingIds = signal<string[]>([]);
+  protected attachmentUploadError = signal<string | null>(null);
   protected cadenceTouches = signal<LeadCadenceTouch[]>([]);
   protected cadenceChannel: LeadCadenceChannel = 'Call';
   protected cadenceChannelOptions: CadenceChannelOption[] = [];
@@ -280,6 +302,7 @@ export class LeadFormPage implements OnInit {
   protected duplicateDialogVisible = signal(false);
   protected duplicateCheckResult = signal<LeadDuplicateCheckResponse | null>(null);
   protected duplicateMatches = signal<LeadDuplicateCheckCandidate[]>([]);
+  protected supportingDocumentPolicy = signal<SupportingDocumentPolicy | null>(null);
   private readonly toastService = inject(AppToastService);
   private readonly phoneUtil = PhoneNumberUtil.getInstance();
   private readonly regionDisplay = typeof Intl !== 'undefined' && 'DisplayNames' in Intl
@@ -290,6 +313,7 @@ export class LeadFormPage implements OnInit {
   private readonly userAdminData = inject(UserAdminDataService);
   private readonly referenceData = inject(ReferenceDataService);
   private readonly workspaceSettings = inject(WorkspaceSettingsService);
+  private readonly attachmentData = inject(AttachmentDataService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
@@ -303,6 +327,7 @@ export class LeadFormPage implements OnInit {
     this.editingId = this.route.snapshot.paramMap.get('id');
     this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
     this.activeTab.set(this.getDefaultTab());
+    this.restoreAccordionState();
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
     this.loadCadenceChannels();
@@ -310,17 +335,20 @@ export class LeadFormPage implements OnInit {
     this.loadPhoneTypes();
     this.loadPhoneCountries();
     this.loadLeadDataWeights();
+    this.loadSupportingDocumentPolicy();
     this.resolveAssignmentAccess();
     if (this.editingId && lead) {
       this.prefillFromLead(lead);
       this.loadStatusHistory(this.editingId);
       this.loadCadenceTouches(this.editingId);
+      this.loadSupportingDocuments(this.editingId);
     } else if (this.editingId) {
       this.leadData.get(this.editingId).subscribe({
         next: (data) => {
           this.prefillFromLead(data);
           this.loadStatusHistory(this.editingId!);
           this.loadCadenceTouches(this.editingId!);
+          this.loadSupportingDocuments(this.editingId!);
         },
         error: () => this.router.navigate(['/app/leads'])
       });
@@ -331,7 +359,42 @@ export class LeadFormPage implements OnInit {
     return !!this.editingId;
   }
 
-  protected setActiveTab(tab: 'overview' | 'qualification' | 'activity' | 'history') {
+  protected onAccordionValueChange(
+    section: 'overview' | 'qualification' | 'activity' | 'documents' | 'history',
+    value: string | number | Array<string | number> | null | undefined
+  ): void {
+    const normalized = Array.isArray(value)
+      ? value
+          .map((item) => (typeof item === 'number' ? String(item) : item))
+          .filter((item): item is string => typeof item === 'string')
+      : typeof value === 'string'
+        ? [value]
+        : typeof value === 'number'
+          ? [String(value)]
+        : [];
+
+    switch (section) {
+      case 'overview':
+        this.overviewAccordionOpenPanels.set(normalized);
+        break;
+      case 'qualification':
+        this.qualificationAccordionOpenPanels.set(normalized);
+        break;
+      case 'activity':
+        this.activityAccordionOpenPanels.set(normalized);
+        break;
+      case 'documents':
+        this.documentsAccordionOpenPanels.set(normalized);
+        break;
+      case 'history':
+        this.historyAccordionOpenPanels.set(normalized);
+        break;
+    }
+
+    this.persistAccordionState();
+  }
+
+  protected setActiveTab(tab: 'overview' | 'qualification' | 'activity' | 'history' | 'documents') {
     if (this.isTabDisabled(tab)) {
       return;
     }
@@ -342,12 +405,12 @@ export class LeadFormPage implements OnInit {
     if (typeof tab !== 'string') {
       return;
     }
-    if (tab === 'overview' || tab === 'qualification' || tab === 'activity' || tab === 'history') {
+    if (tab === 'overview' || tab === 'qualification' || tab === 'activity' || tab === 'history' || tab === 'documents') {
       this.setActiveTab(tab);
     }
   }
 
-  protected isTabDisabled(tab: 'overview' | 'qualification' | 'activity' | 'history') {
+  protected isTabDisabled(tab: 'overview' | 'qualification' | 'activity' | 'history' | 'documents') {
     return !this.isEditMode() && tab !== 'overview';
   }
 
@@ -380,10 +443,6 @@ export class LeadFormPage implements OnInit {
     const first = this.form.firstName?.trim() ?? '';
     const last = this.form.lastName?.trim() ?? '';
     return `${first} ${last}`.trim() || 'Lead';
-  }
-
-  protected qualificationRuleMessage(): string {
-    return 'Unknown is neutral. Select at least 3 factors before setting to Qualified.';
   }
 
   protected qualificationInlineError(): string | null {
@@ -762,6 +821,7 @@ export class LeadFormPage implements OnInit {
         this.prefillFromLead(lead);
         this.loadStatusHistory(leadId);
         this.loadCadenceTouches(leadId);
+        this.loadSupportingDocuments(leadId);
       }
     });
   }
@@ -954,6 +1014,197 @@ export class LeadFormPage implements OnInit {
         this.leadDataWeights = [];
       }
     });
+  }
+
+  private loadSupportingDocumentPolicy() {
+    this.workspaceSettings.getSettings().subscribe({
+      next: (settings) => {
+        this.supportingDocumentPolicy.set(settings.supportingDocumentPolicy ?? this.defaultSupportingDocumentPolicy());
+      },
+      error: () => {
+        this.supportingDocumentPolicy.set(this.defaultSupportingDocumentPolicy());
+      }
+    });
+  }
+
+  private loadSupportingDocuments(leadId: string) {
+    this.attachmentsLoading.set(true);
+    this.attachmentData.list('Lead', leadId).subscribe({
+      next: (items) => {
+        this.attachments.set(items);
+        this.attachmentsLoading.set(false);
+      },
+      error: () => {
+        this.attachments.set([]);
+        this.attachmentsLoading.set(false);
+        this.raiseToast('error', 'Unable to load supporting documents.');
+      }
+    });
+  }
+
+  protected onAttachmentUpload(event: { files: File[] }) {
+    if (!this.editingId || !event.files?.length || this.attachmentUploading()) {
+      return;
+    }
+
+    if (this.isSupportingDocumentLimitReached()) {
+      this.raiseToast('error', `Supporting document limit reached (${this.supportingDocumentMaxCount()} per record).`);
+      return;
+    }
+
+    this.attachmentUploadError.set(null);
+    this.attachmentUploading.set(true);
+    this.attachmentData.upload(event.files[0], 'Lead', this.editingId).subscribe({
+      next: (attachment) => {
+        this.attachmentUploading.set(false);
+        this.attachments.set([attachment, ...this.attachments()]);
+        this.raiseToast('success', 'Supporting document uploaded.');
+      },
+      error: (err) => {
+        this.attachmentUploading.set(false);
+        const message = this.extractApiErrorMessage(err, 'Unable to upload supporting document.');
+        this.attachmentUploadError.set(message);
+        this.raiseToast('error', message);
+      }
+    });
+  }
+
+  protected downloadAttachment(item: AttachmentItem) {
+    window.open(this.attachmentData.downloadUrl(item.id), '_blank');
+  }
+
+  protected deleteAttachment(item: AttachmentItem) {
+    if (!item?.id) {
+      return;
+    }
+    const confirmed = window.confirm(`Delete supporting document \"${item.fileName}\"?`);
+    if (!confirmed) {
+      return;
+    }
+    if (this.attachmentDeletingIds().includes(item.id)) {
+      return;
+    }
+
+    this.attachmentDeletingIds.set([...this.attachmentDeletingIds(), item.id]);
+    this.attachmentData.delete(item.id).subscribe({
+      next: () => {
+        this.attachments.set(this.attachments().filter((entry) => entry.id !== item.id));
+        this.attachmentDeletingIds.set(this.attachmentDeletingIds().filter((id) => id !== item.id));
+        this.raiseToast('success', 'Supporting document deleted.');
+      },
+      error: (err) => {
+        this.attachmentDeletingIds.set(this.attachmentDeletingIds().filter((id) => id !== item.id));
+        this.raiseToast('error', this.extractApiErrorMessage(err, 'Unable to delete supporting document.'));
+      }
+    });
+  }
+
+  protected attachmentDeleting(itemId: string): boolean {
+    return this.attachmentDeletingIds().includes(itemId);
+  }
+
+  protected supportingDocumentMaxCount(): number {
+    return this.supportingDocumentPolicy()?.maxDocumentsPerRecord ?? 10;
+  }
+
+  protected supportingDocumentMaxFileSizeMb(): number {
+    return this.supportingDocumentPolicy()?.maxFileSizeMb ?? 10;
+  }
+
+  protected supportingDocumentAllowedExtensions(): string {
+    return (this.supportingDocumentPolicy()?.allowedExtensions ?? this.defaultSupportingDocumentPolicy().allowedExtensions).join(', ');
+  }
+
+  protected supportingDocumentRemainingCount(): number {
+    return Math.max(0, this.supportingDocumentMaxCount() - this.attachments().length);
+  }
+
+  protected isSupportingDocumentLimitReached(): boolean {
+    return this.attachments().length >= this.supportingDocumentMaxCount();
+  }
+
+  protected supportingDocumentUsageLabel(): string {
+    return `Used ${this.attachments().length} / ${this.supportingDocumentMaxCount()}`;
+  }
+
+  private defaultSupportingDocumentPolicy(): SupportingDocumentPolicy {
+    return {
+      maxDocumentsPerRecord: 10,
+      maxFileSizeMb: 10,
+      allowedExtensions: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.png', '.jpg', '.jpeg', '.webp']
+    };
+  }
+
+  private restoreAccordionState(): void {
+    const stored = this.readAccordionStateStorage();
+    if (!stored) {
+      return;
+    }
+
+    this.overviewAccordionOpenPanels.set(this.normalizeAccordionPanelState(stored.overview, ['lead-basics', 'contact-details', 'score']));
+    const qualificationFallback = [
+      'qualification-factors',
+      'qualification-scoring',
+      'qualification-context',
+      'qualification-disposition'
+    ];
+    const qualificationStored = Array.isArray(stored.qualification) ? stored.qualification : [];
+    const hasLegacyQualificationPanel = qualificationStored.some((value) => value === 'qualification-main');
+    this.qualificationAccordionOpenPanels.set(
+      hasLegacyQualificationPanel
+        ? qualificationFallback
+        : this.normalizeAccordionPanelState(stored.qualification, qualificationFallback)
+    );
+    this.activityAccordionOpenPanels.set(this.normalizeAccordionPanelState(stored.activity, ['activity-main']));
+    this.documentsAccordionOpenPanels.set(this.normalizeAccordionPanelState(stored.documents, ['documents-main']));
+    this.historyAccordionOpenPanels.set(this.normalizeAccordionPanelState(stored.history, ['history-main']));
+  }
+
+  private persistAccordionState(): void {
+    if (typeof localStorage === 'undefined') {
+      return;
+    }
+
+    const state = {
+      overview: this.overviewAccordionOpenPanels(),
+      qualification: this.qualificationAccordionOpenPanels(),
+      activity: this.activityAccordionOpenPanels(),
+      documents: this.documentsAccordionOpenPanels(),
+      history: this.historyAccordionOpenPanels()
+    };
+
+    try {
+      localStorage.setItem(LeadFormPage.ACCORDION_STATE_STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Ignore storage write failures (private mode/quota) and keep UI state in memory only.
+    }
+  }
+
+  private readAccordionStateStorage():
+    | Partial<Record<'overview' | 'qualification' | 'activity' | 'documents' | 'history', unknown>>
+    | null {
+    if (typeof localStorage === 'undefined') {
+      return null;
+    }
+
+    try {
+      const raw = localStorage.getItem(LeadFormPage.ACCORDION_STATE_STORAGE_KEY);
+      if (!raw) {
+        return null;
+      }
+      const parsed = JSON.parse(raw) as unknown;
+      return parsed && typeof parsed === 'object' ? parsed as Partial<Record<'overview' | 'qualification' | 'activity' | 'documents' | 'history', unknown>> : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private normalizeAccordionPanelState(value: unknown, fallback: string[]): string[] {
+    if (!Array.isArray(value)) {
+      return [...fallback];
+    }
+    const normalized = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+    return normalized;
   }
 
   private applyOwnerDefault(options: OwnerOption[]) {
@@ -1444,6 +1695,19 @@ export class LeadFormPage implements OnInit {
     return `Overall score ${score.finalLeadScore} / 100`;
   }
 
+  protected overallScoreBadgeValue(): number {
+    const value = this.form.score ?? this.computeAutoScore();
+    return Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0;
+  }
+
+  protected overallScoreBadgeTone(): 'high' | 'medium' | 'low' | 'none' {
+    const score = this.overallScoreBadgeValue();
+    if (!score) return 'none';
+    if (score >= 70) return 'high';
+    if (score >= 45) return 'medium';
+    return 'low';
+  }
+
   protected qualificationSubtitleLabel(): string {
     const factorCount = this.countQualificationFactors();
     if (factorCount === 0) {
@@ -1458,6 +1722,10 @@ export class LeadFormPage implements OnInit {
     const qualificationScore = this.scoreSnapshot().qualificationScore100;
     const coverage = this.truthCoveragePercent();
     return `Qualification in progress: ${qualificationScore}/100 with ${factorCount}/6 factors and ${coverage}% evidence coverage.`;
+  }
+
+  protected qualificationFactorsSelectedLabel(): string {
+    return `${this.countQualificationFactors()} / 6`;
   }
 
   protected scoreKnobValueColor(): string {
@@ -2002,9 +2270,9 @@ export class LeadFormPage implements OnInit {
     this.followUpHint.set(hint);
   }
 
-  private getDefaultTab(): 'overview' | 'qualification' | 'activity' | 'history' {
+  private getDefaultTab(): 'overview' | 'qualification' | 'activity' | 'history' | 'documents' {
     const stateTab = history.state?.defaultTab;
-    if (stateTab === 'qualification' || stateTab === 'overview' || stateTab === 'activity' || stateTab === 'history') {
+    if (stateTab === 'qualification' || stateTab === 'overview' || stateTab === 'activity' || stateTab === 'history' || stateTab === 'documents') {
       return stateTab;
     }
     if (!this.isEditMode()) {

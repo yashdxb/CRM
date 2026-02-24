@@ -3,6 +3,7 @@ namespace CRM.Enterprise.Api.Contracts.Workspace;
 using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Application.Qualifications;
+using CRM.Enterprise.Application.Tenants;
 
 public record WorkspaceSettingsResponse(
     Guid Id,
@@ -17,4 +18,5 @@ public record WorkspaceSettingsResponse(
     string? ApprovalApproverRole,
     ApprovalWorkflowPolicy ApprovalWorkflowPolicy,
     QualificationPolicy QualificationPolicy,
-    AssistantActionScoringPolicy AssistantActionScoringPolicy);
+    AssistantActionScoringPolicy AssistantActionScoringPolicy,
+    SupportingDocumentPolicy SupportingDocumentPolicy);

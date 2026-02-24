@@ -259,6 +259,38 @@
           </section>
 
           <section class="form-card">
+            <h3 class="section-title section-title--warning">
+              <i class="pi pi-paperclip"></i>
+              Supporting Documents
+            </h3>
+            <p class="section-description">Global document limits for CRM records (lead-first rollout)</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>Max documents per record</label>
+                <p-inputNumber
+                  formControlName="supportingDocsMaxPerRecord"
+                  [min]="1"
+                  [max]="100"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <small class="field-hint">Default is 10. Applies when uploading supporting documents to CRM records.</small>
+              </div>
+
+              <div class="field">
+                <label>Max file size (MB)</label>
+                <p-inputNumber
+                  formControlName="supportingDocsMaxFileSizeMb"
+                  [min]="1"
+                  [max]="100"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <small class="field-hint">Allowed formats are PDF, Office documents, and images.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-briefcase"></i>
               Delivery & Renewal Defaults

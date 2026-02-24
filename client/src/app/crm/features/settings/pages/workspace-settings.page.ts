@@ -80,7 +80,9 @@ export class WorkspaceSettingsPage {
     scoreMediumRiskFrom: [45, [Validators.min(1), Validators.max(95)]],
     scoreHighRiskFrom: [75, [Validators.min(5), Validators.max(99)]],
     scoreSoonUrgencyFrom: [50, [Validators.min(1), Validators.max(95)]],
-    scoreImmediateUrgencyFrom: [80, [Validators.min(5), Validators.max(99)]]
+    scoreImmediateUrgencyFrom: [80, [Validators.min(5), Validators.max(99)]],
+    supportingDocsMaxPerRecord: [10, [Validators.min(1), Validators.max(100)]],
+    supportingDocsMaxFileSizeMb: [10, [Validators.min(1), Validators.max(100)]]
   });
 
   constructor() {
@@ -135,6 +137,11 @@ export class WorkspaceSettingsPage {
           soonUrgencyFrom: Number(payload.scoreSoonUrgencyFrom ?? 50),
           immediateUrgencyFrom: Number(payload.scoreImmediateUrgencyFrom ?? 80)
         }
+      },
+      supportingDocumentPolicy: {
+        maxDocumentsPerRecord: Number(payload.supportingDocsMaxPerRecord ?? 10),
+        maxFileSizeMb: Number(payload.supportingDocsMaxFileSizeMb ?? 10),
+        allowedExtensions: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.png', '.jpg', '.jpeg', '.webp']
       }
     };
     this.saving.set(true);
@@ -167,7 +174,9 @@ export class WorkspaceSettingsPage {
       scoreMediumRiskFrom: settings.assistantActionScoringPolicy?.thresholds?.mediumRiskFrom ?? 45,
       scoreHighRiskFrom: settings.assistantActionScoringPolicy?.thresholds?.highRiskFrom ?? 75,
       scoreSoonUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.soonUrgencyFrom ?? 50,
-      scoreImmediateUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.immediateUrgencyFrom ?? 80
+      scoreImmediateUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.immediateUrgencyFrom ?? 80,
+      supportingDocsMaxPerRecord: settings.supportingDocumentPolicy?.maxDocumentsPerRecord ?? 10,
+      supportingDocsMaxFileSizeMb: settings.supportingDocumentPolicy?.maxFileSizeMb ?? 10
     });
   }
 

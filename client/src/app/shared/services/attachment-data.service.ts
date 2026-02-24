@@ -36,4 +36,8 @@ export class AttachmentDataService {
   downloadUrl(id: string) {
     return `${this.baseUrl}/api/attachments/${id}/download`;
   }
+
+  delete(id: string) {
+    return this.http.delete<void>(`${this.baseUrl}/api/attachments/${id}`);
+  }
 }

@@ -146,29 +146,43 @@
           <p-tabs class="lead-tabs-shell" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
             <p-tablist class="lead-tabs">
               <p-tab value="overview" [disabled]="isTabDisabled('overview')" [pt]="{ root: { class: 'lead-tab' } }">
-                Overview
+                <span class="lead-tab-label">Overview</span>
               </p-tab>
               <p-tab value="qualification" [disabled]="isTabDisabled('qualification')" [pt]="{ root: { class: 'lead-tab' } }">
-                Qualification
-                <span class="tab-badge" *ngIf="qualificationTabBadge()">{{ qualificationTabBadge() }}</span>
+                <span class="lead-tab-label">Qualifications</span>
+                <span class="tab-badge danger" *ngIf="qualificationTabBadge()">{{ qualificationTabBadge() }}</span>
               </p-tab>
               <p-tab value="activity" [disabled]="isTabDisabled('activity')" [pt]="{ root: { class: 'lead-tab' } }">
-                Activity &amp; Follow-Up
+                <span class="lead-tab-label">Activity &amp;<br />Follow-up</span>
                 <span class="tab-badge warn" *ngIf="activityTabBadge()">{{ activityTabBadge() }}</span>
               </p-tab>
+              <p-tab value="documents" [disabled]="isTabDisabled('documents')" [pt]="{ root: { class: 'lead-tab' } }">
+                <span class="lead-tab-label">Supporting<br />Documents</span>
+                <span class="tab-badge" *ngIf="isEditMode() && attachments().length">{{ attachments().length }}</span>
+              </p-tab>
               <p-tab value="history" [disabled]="isTabDisabled('history')" [pt]="{ root: { class: 'lead-tab' } }">
-                History
+                <span class="lead-tab-label">History</span>
               </p-tab>
             </p-tablist>
             <p-tabpanels>
               <p-tabpanel value="overview">
-          <section class="form-section form-section--overview">
-            <div class="section-block">
-              <h2 class="section-title">
-                <i class="pi pi-user"></i>
-                Lead basics
-              </h2>
-              <div class="form-grid qualification-grid">
+          <p-accordion
+            class="overview-accordion-shell"
+            [multiple]="true"
+            [value]="overviewAccordionOpenPanels()"
+            (valueChange)="onAccordionValueChange('overview', $event)"
+          >
+            <p-accordion-panel value="lead-basics">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-user"></i>
+                  Lead basics
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--overview form-section--accordion-body">
+                  <div class="section-block">
+                    <div class="form-grid qualification-grid">
                 <div class="field">
                   <label>First name <span class="required">*</span></label>
                   <input pInputText name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" class="w-full" />
@@ -249,19 +263,25 @@
                         {{ option.label }}
                       </div>
                     </ng-template>
-                  </p-select>
-                </div>
-              </div>
-            </div>
+                    </p-select>
+                  </div>
+                    </div>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-            <div class="section-divider"></div>
-
-            <div class="section-block">
-              <h2 class="section-title">
-                <i class="pi pi-phone"></i>
-                Contact details
-              </h2>
-              <div class="form-grid">
+            <p-accordion-panel value="contact-details">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-phone"></i>
+                  Contact details
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--overview form-section--accordion-body">
+                  <div class="section-block">
+                    <div class="form-grid">
                 <div class="field">
                   <label>Email</label>
                   <input
@@ -358,21 +378,38 @@
                     [disabled]="true"
                   />
                 </div>
-              </div>
-            </div>
-          </section>
+                    </div>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-section form-section--score">
-            <h2 class="section-title">
-              <i class="pi pi-chart-line"></i>
-              Score
-            </h2>
-            <p-progressBar
-              *ngIf="aiScoring()"
-              styleClass="ai-score-progress ai-score-progress--top"
-              mode="indeterminate"
-            ></p-progressBar>
-            <div class="form-grid">
+            <p-accordion-panel value="score">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion section-title--accordion-summary">
+                  <i class="pi pi-chart-line"></i>
+                  <span>Score</span>
+                  <span class="accordion-header-summary">
+                    <span class="accordion-header-badge accordion-header-badge--score" [attr.data-tone]="overallScoreBadgeTone()">
+                      Overall {{ overallScoreBadgeValue() }}/100
+                    </span>
+                    <span class="accordion-header-badge accordion-header-badge--meta" *ngIf="aiScoreConfidenceLabel() as confidence">
+                      {{ confidence }}
+                    </span>
+                    <span class="accordion-header-badge accordion-header-badge--meta" *ngIf="scoreSourceBadge() as source">
+                      {{ source }}
+                    </span>
+                  </span>
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--score form-section--accordion-body">
+                  <p-progressBar
+                    *ngIf="aiScoring()"
+                    styleClass="ai-score-progress ai-score-progress--top"
+                    mode="indeterminate"
+                  ></p-progressBar>
+                  <div class="form-grid">
               <div class="field score-field">
                 <label>Score</label>
                 <p-inputNumber
@@ -413,35 +450,141 @@
                 <label>Territory</label>
                 <input pInputText name="territory" [(ngModel)]="form.territory" placeholder="West, EMEA, APAC" class="w-full" />
               </div>
-            </div>
-          </section>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+          </p-accordion>
 
               </p-tabpanel>
               <p-tabpanel value="qualification">
-          <section class="form-section form-section--qualification">
-            <h2 class="section-title">
-              <i class="pi pi-chart-line"></i>
-              Qualification
-            </h2>
-            <div class="form-grid">
-              <div class="field full-row">
-                <p class="status-rule">{{ qualificationRuleMessage() }}</p>
-                <p class="status-note">
-                  A discovery meeting (completed or due) must be logged before setting status to Qualified.
-                </p>
-                <p class="status-error" *ngIf="qualificationInlineError()">{{ qualificationInlineError() }}</p>
-                <p class="status-note" *ngIf="isEditMode() && form.status !== 'Converted'">
-                  Convert via the "Convert lead" button after qualification.
-                </p>
+          <section class="qualification-summary-card" aria-label="Qualification summary">
+            <div class="qualification-summary-card__header">
+              <div class="qualification-summary-card__title">
+                <i class="pi pi-chart-line" aria-hidden="true"></i>
+                <div>
+                  <h2>Qualification Summary</h2>
+                  <p>{{ qualificationStatusHint() }}</p>
+                </div>
               </div>
-              <div class="field full-row" *ngIf="isEditMode()">
-                <p class="status-note" *ngIf="firstTouchDueAtUtc()">
-                  First touch due: {{ firstTouchDueAtUtc() | date:'medium' }}
-                </p>
-                <p class="status-note" *ngIf="firstTouchedAtUtc()">
-                  First touched: {{ firstTouchedAtUtc() | date:'medium' }}
-                </p>
+              <div class="qualification-summary-card__chips">
+                <span class="summary-chip">Qualification {{ qualificationContributionTotal() }}/100</span>
+                <span class="summary-chip">Lead data {{ leadDataQualityTotal() }}/100</span>
+                <span class="summary-chip">Confidence {{ qualificationConfidenceDisplayLabel() }}</span>
               </div>
+            </div>
+
+            <p class="status-error qualification-summary-card__error" *ngIf="qualificationInlineError()">{{ qualificationInlineError() }}</p>
+
+            <div class="qualification-summary-card__metrics">
+              <article class="summary-metric summary-metric--primary">
+                <div class="summary-metric__icon">
+                  <i class="pi pi-chart-line" aria-hidden="true"></i>
+                </div>
+                <div class="summary-metric__content">
+                  <span class="summary-metric__label">Qualification Score</span>
+                  <div class="summary-metric__value-row">
+                    <strong class="summary-metric__value">{{ qualificationContributionTotal() }}</strong>
+                    <span class="summary-metric__suffix">/100</span>
+                  </div>
+                </div>
+              </article>
+              <article class="summary-metric summary-metric--confidence">
+                <div class="summary-metric__icon">
+                  <i class="pi pi-shield" aria-hidden="true"></i>
+                </div>
+                <div class="summary-metric__content">
+                  <span class="summary-metric__label">Confidence</span>
+                  <div class="summary-metric__value-row">
+                    <strong class="summary-metric__value">{{ qualificationConfidenceDisplayLabel() }}</strong>
+                  </div>
+                  <span class="summary-metric__hint">{{ qualificationConfidencePercent() }}%</span>
+                </div>
+              </article>
+              <article class="summary-metric summary-metric--coverage">
+                <div class="summary-metric__icon">
+                  <i class="pi pi-check-circle" aria-hidden="true"></i>
+                </div>
+                <div class="summary-metric__content">
+                  <span class="summary-metric__label">Evidence Coverage</span>
+                  <div class="summary-metric__value-row">
+                    <strong class="summary-metric__value">{{ truthCoveragePercent() }}%</strong>
+                  </div>
+                  <span class="summary-metric__hint">Truth coverage</span>
+                </div>
+              </article>
+              <article class="summary-metric summary-metric--factors">
+                <div class="summary-metric__icon">
+                  <i class="pi pi-list-check" aria-hidden="true"></i>
+                </div>
+                <div class="summary-metric__content">
+                  <span class="summary-metric__label">Factors Selected</span>
+                  <div class="summary-metric__value-row">
+                    <strong class="summary-metric__value">{{ qualificationFactorsSelectedLabel() }}</strong>
+                  </div>
+                  <span class="summary-metric__hint">Required 3+ to qualify</span>
+                </div>
+              </article>
+            </div>
+
+            <div class="qualification-feedback qualification-feedback--summary" *ngIf="qualificationFeedback() as feedback">
+              <span class="feedback-title">Qualification status</span>
+              <div class="qualification-summary-card__focus" *ngIf="feedback.weakestSignal">
+                <span class="focus-pill">Priority gap</span>
+                <strong>{{ feedback.weakestSignal }}</strong>
+                <span class="focus-state">{{ feedback.weakestState }}</span>
+              </div>
+              <div class="feedback-metrics">
+                <span class="feedback-item feedback-item--confidence">
+                  <i class="pi pi-chart-line feedback-icon" aria-hidden="true"></i>
+                  Confidence:
+                  <p-tag
+                    [value]="feedback.confidenceLabel"
+                    [severity]="feedback.confidenceLabel === 'High' ? 'success' : feedback.confidenceLabel === 'Medium' ? 'info' : 'warn'"
+                  ></p-tag>
+                </span>
+                <span class="feedback-item feedback-item--truth" *ngIf="truthCoverage() !== null">
+                  <i class="pi pi-check-circle feedback-icon" aria-hidden="true"></i>
+                  Evidence coverage:
+                  <strong>{{ truthCoveragePercent() }}%</strong>
+                </span>
+                <span class="feedback-item feedback-item--assumptions" *ngIf="assumptionsOutstanding() !== null">
+                  <i class="pi pi-exclamation-circle feedback-icon" aria-hidden="true"></i>
+                  Assumptions outstanding:
+                  <strong>{{ assumptionsOutstandingLabel() }}</strong>
+                </span>
+                <span class="feedback-item feedback-item--weakest" *ngIf="feedback.weakestSignal">
+                  <i class="pi pi-bolt feedback-icon" aria-hidden="true"></i>
+                  Weakest signal:
+                  <strong>{{ feedback.weakestSignal }}</strong>
+                  <span class="feedback-state">({{ feedback.weakestState }})</span>
+                </span>
+              </div>
+              <div class="feedback-suggestions" *ngIf="nextEvidenceSuggestions().length">
+                <span class="feedback-title">Suggested next evidence</span>
+                <ul class="feedback-suggestions-list">
+                  <li *ngFor="let suggestion of nextEvidenceSuggestions()">{{ suggestion }}</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <p-accordion
+            class="tab-content-accordion-shell"
+            [multiple]="true"
+            [value]="qualificationAccordionOpenPanels()"
+            (valueChange)="onAccordionValueChange('qualification', $event)"
+          >
+            <p-accordion-panel value="qualification-factors">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-chart-line"></i>
+                  Qualification factors
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--qualification form-section--accordion-body">
+                  <div class="form-grid">
               <div class="field full-row">
                 <div class="qualification-header">
                   <div>
@@ -455,41 +598,6 @@
                       <p-tag value="Verified" severity="success"></p-tag>
                       <p-tag value="Invalid" severity="danger"></p-tag>
                     </div>
-                  </div>
-                </div>
-                <div class="qualification-feedback" *ngIf="qualificationFeedback() as feedback">
-                  <span class="feedback-title">Qualification status</span>
-                  <div class="feedback-metrics">
-                    <span class="feedback-item feedback-item--confidence">
-                      <i class="pi pi-chart-line feedback-icon" aria-hidden="true"></i>
-                      Confidence:
-                      <p-tag
-                        [value]="feedback.confidenceLabel"
-                        [severity]="feedback.confidenceLabel === 'High' ? 'success' : feedback.confidenceLabel === 'Medium' ? 'info' : 'warn'"
-                      ></p-tag>
-                    </span>
-                    <span class="feedback-item feedback-item--truth" *ngIf="truthCoverage() !== null">
-                      <i class="pi pi-check-circle feedback-icon" aria-hidden="true"></i>
-                      Evidence coverage:
-                      <strong>{{ truthCoveragePercent() }}%</strong>
-                    </span>
-                    <span class="feedback-item feedback-item--assumptions" *ngIf="assumptionsOutstanding() !== null">
-                      <i class="pi pi-exclamation-circle feedback-icon" aria-hidden="true"></i>
-                      Assumptions outstanding:
-                      <strong>{{ assumptionsOutstandingLabel() }}</strong>
-                    </span>
-                    <span class="feedback-item feedback-item--weakest" *ngIf="feedback.weakestSignal">
-                      <i class="pi pi-bolt feedback-icon" aria-hidden="true"></i>
-                      Weakest signal:
-                      <strong>{{ feedback.weakestSignal }}</strong>
-                      <span class="feedback-state">({{ feedback.weakestState }})</span>
-                    </span>
-                  </div>
-                  <div class="feedback-suggestions" *ngIf="nextEvidenceSuggestions().length">
-                    <span class="feedback-title">Suggested next evidence</span>
-                    <ul class="feedback-suggestions-list">
-                      <li *ngFor="let suggestion of nextEvidenceSuggestions()">{{ suggestion }}</li>
-                    </ul>
                   </div>
                 </div>
               </div>
@@ -812,6 +920,21 @@
                   </ng-template>
                 </p-select>
               </div>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+
+            <p-accordion-panel value="qualification-scoring">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-calculator"></i>
+                  Scoring breakdown
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--qualification form-section--accordion-body">
+                  <div class="form-grid">
               <div class="field full-row" *ngIf="isEditMode()">
                 <div class="score-breakdown">
                   <div class="score-breakdown__header">
@@ -903,6 +1026,21 @@
                   </div>
                 </div>
               </div>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+
+            <p-accordion-panel value="qualification-context">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-file-edit"></i>
+                  Context &amp; supporting notes
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--qualification form-section--accordion-body">
+                  <div class="form-grid">
               <div class="field full-row">
                 <label>Context &amp; supporting notes <span class="required" *ngIf="form.status === 'Qualified'">*</span></label>
                 <p class="hint-text compact">Context only. Does not change Score.</p>
@@ -915,6 +1053,21 @@
                   [(ngModel)]="form.qualifiedNotes"
                 ></textarea>
               </div>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+
+            <p-accordion-panel value="qualification-disposition">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-flag"></i>
+                  Disposition &amp; outcome details
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--qualification form-section--accordion-body">
+                  <div class="form-grid">
               <div class="field" *ngIf="form.status === 'Nurture'">
                 <label>Nurture follow-up date <span class="required">*</span></label>
                 <p-datepicker
@@ -967,18 +1120,32 @@
                   [(ngModel)]="form.lossNotes"
                 ></textarea>
               </div>
-            </div>
-          </section>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+          </p-accordion>
 
               </p-tabpanel>
               <p-tabpanel value="activity">
-          <section class="form-section cadence-section" *ngIf="isEditMode()">
-            <h2 class="section-title">
-              <i class="pi pi-bullseye"></i>
-              Follow-Up Plan
-            </h2>
-            <p class="hint-text compact" *ngIf="followUpHint()">{{ followUpHint() }}</p>
-            <div class="cadence-grid">
+          <p-accordion
+            class="tab-content-accordion-shell"
+            [multiple]="true"
+            [value]="activityAccordionOpenPanels()"
+            (valueChange)="onAccordionValueChange('activity', $event)"
+            *ngIf="isEditMode()"
+          >
+            <p-accordion-panel value="activity-main">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-bullseye"></i>
+                  Follow-Up Plan
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section cadence-section form-section--accordion-body">
+                  <p class="hint-text compact" *ngIf="followUpHint()">{{ followUpHint() }}</p>
+                  <div class="cadence-grid">
               <div class="field">
                 <label>Channel</label>
                 <p-select
@@ -1014,8 +1181,8 @@
                   placeholder="Connected, voicemail, no response, meeting booked..."
                 />
               </div>
-            </div>
-            <div class="cadence-actions">
+                  </div>
+                  <div class="cadence-actions">
               <button
                 pButton
                 type="button"
@@ -1025,8 +1192,8 @@
                 (click)="logCadenceTouch()"
                 [disabled]="cadenceSubmitting() || !cadenceOutcome.trim()"
               ></button>
-            </div>
-            <div class="cadence-history" *ngIf="cadenceTouches().length; else noCadenceTouches">
+                  </div>
+                  <div class="cadence-history" *ngIf="cadenceTouches().length; else noCadenceTouches">
               <div class="cadence-item" *ngFor="let touch of cadenceTouches()">
                 <div class="cadence-item__meta">
                   <strong>{{ touch.channel }}</strong>
@@ -1037,20 +1204,136 @@
                   Next step due {{ touch.nextStepDueAtUtc | date:'mediumDate' }}
                 </div>
               </div>
-            </div>
-            <ng-template #noCadenceTouches>
-              <div class="history-empty">No cadence touches logged yet.</div>
-            </ng-template>
-          </section>
+                  </div>
+                  <ng-template #noCadenceTouches>
+                    <div class="history-empty">No cadence touches logged yet.</div>
+                  </ng-template>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+          </p-accordion>
 
               </p-tabpanel>
+              <p-tabpanel value="documents">
+          <p-accordion
+            class="tab-content-accordion-shell"
+            [multiple]="true"
+            [value]="documentsAccordionOpenPanels()"
+            (valueChange)="onAccordionValueChange('documents', $event)"
+            *ngIf="isEditMode()"
+          >
+            <p-accordion-panel value="documents-main">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-paperclip"></i>
+                  Supporting documents
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section supporting-documents-panel form-section--accordion-body">
+                  <div class="supporting-documents-header">
+              <div>
+                <p class="hint-text compact">
+                  Add proposal files, requirements, screenshots, or supporting evidence for this lead.
+                </p>
+              </div>
+              <div class="supporting-documents-stats">
+                <span class="docs-usage-pill">{{ supportingDocumentUsageLabel() }}</span>
+                <span class="docs-remaining-pill" *ngIf="!isSupportingDocumentLimitReached()">
+                  {{ supportingDocumentRemainingCount() }} remaining
+                </span>
+                <span class="docs-limit-pill" *ngIf="isSupportingDocumentLimitReached()">Limit reached</span>
+              </div>
+                  </div>
+
+                  <div class="supporting-documents-uploader">
+              <p-fileUpload
+                mode="basic"
+                chooseLabel="Upload file"
+                [customUpload]="true"
+                [auto]="true"
+                styleClass="lead-doc-upload"
+                [disabled]="attachmentUploading() || isSupportingDocumentLimitReached()"
+                (uploadHandler)="onAttachmentUpload($event)"
+              ></p-fileUpload>
+              <div class="docs-policy-note">
+                Allowed: {{ supportingDocumentAllowedExtensions() }} · Max {{ supportingDocumentMaxFileSizeMb() }} MB/file
+              </div>
+              <div class="field-error" *ngIf="attachmentUploadError()">{{ attachmentUploadError() }}</div>
+                  </div>
+
+                  <div class="supporting-documents-list" *ngIf="!attachmentsLoading(); else docsLoadingTpl">
+              <p-table [value]="attachments()" [paginator]="false" [rows]="10" styleClass="compact-table docs-table">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>File</th>
+                    <th>Type</th>
+                    <th>Uploaded by</th>
+                    <th>Size</th>
+                    <th>Date</th>
+                    <th></th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-row>
+                  <tr>
+                    <td class="docs-file-name">{{ row.fileName }}</td>
+                    <td>{{ row.contentType || '—' }}</td>
+                    <td>{{ row.uploadedBy || '—' }}</td>
+                    <td>{{ row.size | number }} bytes</td>
+                    <td>{{ row.createdAtUtc | date:'MMM d, yyyy · h:mm a' }}</td>
+                    <td class="table-actions">
+                      <button
+                        pButton
+                        type="button"
+                        class="icon-btn danger"
+                        icon="pi pi-trash"
+                        (click)="deleteAttachment(row)"
+                        [disabled]="attachmentDeleting(row.id)"
+                        pTooltip="Delete"
+                        tooltipPosition="top"
+                      ></button>
+                      <button
+                        pButton
+                        type="button"
+                        class="icon-btn"
+                        icon="pi pi-download"
+                        (click)="downloadAttachment(row)"
+                        [disabled]="attachmentDeleting(row.id)"
+                        pTooltip="Download"
+                        tooltipPosition="top"
+                      ></button>
+                    </td>
+                  </tr>
+                </ng-template>
+              </p-table>
+              <div class="history-empty" *ngIf="!attachments().length">No supporting documents uploaded yet.</div>
+                  </div>
+                  <ng-template #docsLoadingTpl>
+                    <div class="history-empty">Loading supporting documents...</div>
+                  </ng-template>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+          </p-accordion>
+              </p-tabpanel>
               <p-tabpanel value="history">
-          <section class="form-section" *ngIf="isEditMode()">
-            <h2 class="section-title">
-              <i class="pi pi-history"></i>
-              Status history
-            </h2>
-            <div class="history-list" *ngIf="statusHistory().length; else noHistory">
+          <p-accordion
+            class="tab-content-accordion-shell"
+            [multiple]="true"
+            [value]="historyAccordionOpenPanels()"
+            (valueChange)="onAccordionValueChange('history', $event)"
+            *ngIf="isEditMode()"
+          >
+            <p-accordion-panel value="history-main">
+              <p-accordion-header>
+                <h2 class="section-title section-title--accordion">
+                  <i class="pi pi-history"></i>
+                  Status history
+                </h2>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-section form-section--accordion-body">
+                  <div class="history-list" *ngIf="statusHistory().length; else noHistory">
               <div class="history-item" *ngFor="let entry of statusHistory()">
                 <div class="history-header">
                   <p-tag [value]="entry.status" [severity]="statusSeverity(entry.status)"></p-tag>
@@ -1061,11 +1344,14 @@
                 </div>
                 <div class="history-notes" *ngIf="entry.notes">{{ entry.notes }}</div>
               </div>
-            </div>
-            <ng-template #noHistory>
-              <div class="history-empty">No status changes recorded yet.</div>
-            </ng-template>
-          </section>
+                  </div>
+                  <ng-template #noHistory>
+                    <div class="history-empty">No status changes recorded yet.</div>
+                  </ng-template>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+          </p-accordion>
 
               </p-tabpanel>
             </p-tabpanels>

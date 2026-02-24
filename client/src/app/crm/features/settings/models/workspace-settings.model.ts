@@ -12,6 +12,7 @@ export interface WorkspaceSettings {
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy: QualificationPolicy;
   assistantActionScoringPolicy: AssistantActionScoringPolicy;
+  supportingDocumentPolicy?: SupportingDocumentPolicy | null;
 }
 
 export interface UpdateWorkspaceSettingsRequest {
@@ -26,6 +27,13 @@ export interface UpdateWorkspaceSettingsRequest {
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy?: QualificationPolicy | null;
   assistantActionScoringPolicy?: AssistantActionScoringPolicy | null;
+  supportingDocumentPolicy?: SupportingDocumentPolicy | null;
+}
+
+export interface SupportingDocumentPolicy {
+  maxDocumentsPerRecord: number;
+  maxFileSizeMb: number;
+  allowedExtensions: string[];
 }
 
 export interface AssistantActionScoringPolicy {

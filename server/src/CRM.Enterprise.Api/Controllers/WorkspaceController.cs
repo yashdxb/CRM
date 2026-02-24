@@ -54,7 +54,8 @@ public class WorkspaceController : ControllerBase
             tenant.ApprovalApproverRole,
             ResolveApprovalWorkflowPolicy(tenant),
             ResolveQualificationPolicy(tenant),
-            ResolveAssistantActionScoringPolicy(tenant)));
+            ResolveAssistantActionScoringPolicy(tenant),
+            ResolveSupportingDocumentPolicy(tenant)));
     }
 
     [HttpPut]
@@ -92,6 +93,12 @@ public class WorkspaceController : ControllerBase
         {
             tenant.AssistantActionScoringPolicyJson = JsonSerializer.Serialize(request.AssistantActionScoringPolicy, JsonOptions);
         }
+        if (request.SupportingDocumentPolicy is not null)
+        {
+            tenant.SupportingDocumentPolicyJson = JsonSerializer.Serialize(
+                SupportingDocumentPolicyDefaults.Normalize(request.SupportingDocumentPolicy),
+                JsonOptions);
+        }
         tenant.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -109,7 +116,8 @@ public class WorkspaceController : ControllerBase
             tenant.ApprovalApproverRole,
             ResolveApprovalWorkflowPolicy(tenant),
             ResolveQualificationPolicy(tenant),
-            ResolveAssistantActionScoringPolicy(tenant)));
+            ResolveAssistantActionScoringPolicy(tenant),
+            ResolveSupportingDocumentPolicy(tenant)));
     }
 
     private static QualificationPolicy ResolveQualificationPolicy(Tenant tenant)
@@ -169,6 +177,24 @@ public class WorkspaceController : ControllerBase
         catch (JsonException)
         {
             return AssistantActionScoringPolicyDefaults.CreateDefault();
+        }
+    }
+
+    private static SupportingDocumentPolicy ResolveSupportingDocumentPolicy(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.SupportingDocumentPolicyJson))
+        {
+            return SupportingDocumentPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<SupportingDocumentPolicy>(tenant.SupportingDocumentPolicyJson, JsonOptions);
+            return SupportingDocumentPolicyDefaults.Normalize(parsed);
+        }
+        catch (JsonException)
+        {
+            return SupportingDocumentPolicyDefaults.CreateDefault();
         }
     }
 }

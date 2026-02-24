@@ -158,13 +158,13 @@ Status source rules for this summary:
 | Epic | Stories | Completed | In progress | Must | Unmarked | Epic status (current) | Notes |
 |---|---:|---:|---:|---:|---:|---|---|
 | Epic 1 - AI Revenue Execution Orchestration | 15 | 0 | 0 | 0 | 15 | `partial` | 8/8 outcome stories now exist in ClickUp; implementation still partial/not-started across items |
-| Epic 2 - Lead Intake, Qualification, Evidence, and Conversion | 15 | 1 | 1 | 0 | 13 | `partial` | CQVS labeling explicitly marked in progress |
+| Epic 2 - Lead Intake, Qualification, Evidence, and Conversion | 16 | 2 | 1 | 0 | 13 | `partial` | CQVS labeling explicitly marked in progress |
 | Epic 3 - Activity Discipline, Next-Step Hygiene, and Coaching Signals | 5 | 0 | 0 | 0 | 5 | `partial` | No explicit done markers; do not infer completion from surrounding features |
 | Epic 4 - Opportunity Execution, Recovery, and Stage Discipline | 9 | 3 | 0 | 0 | 6 | `partial` | Several core stage-flow stories done; recovery/forecast discipline still open |
 | Epic 5 - Dashboard Command Center, Forecast, and Truth Visibility | 14 | 3 | 0 | 0 | 11 | `partial` | Mix of delivered widgets and open command-center/reporting items |
 | Epic 6 - Sales Motion Workflow (Qualification to Handoff) | 9 | 5 | 0 | 0 | 4 | `partial` | Later-stage workflow and handoff largely delivered; remaining items still open |
 | Epic 7 - Contacts and Buying Group Mapping | 3 | 1 | 0 | 0 | 2 | `partial` | Core contact context done; buying-group mapping still open |
-| Epic 8 - Governance, Approvals, and Workspace Settings | 11 | 3 | 0 | 1 | 7 | `partial` | Contains one `Must` policy permission story; settings/admin work mixed |
+| Epic 8 - Governance, Approvals, and Workspace Settings | 12 | 4 | 0 | 1 | 7 | `partial` | Contains one `Must` policy permission story; settings/admin work mixed |
 | Epic 9 - People, Access, Security Levels, and Role-Based Packs | 8 | 4 | 0 | 0 | 4 | `partial` | Strong delivery progress; module packs item still placeholder wording |
 
 ### Epic 1 | AI Revenue Execution Orchestration (Predominantly `Complex Orchestration`)
@@ -199,7 +199,8 @@ Status source rules for this summary:
 12. `Module: Leads | As a rep, I see an inline qualification status summary with confidence + weakest signal`
 13. `Module: Leads | As a Sales Rep, I want a single conversion action that creates Account + Contact + Opportunity and transfers activities/notes.`
 14. `Module: Leads | As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.`
-15. `Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends. (Done)`
+15. `Module: Leads | As a Sales Rep, I want a Supporting Documents tab on Lead Edit so I can upload, view, download, and delete evidence files (within workspace policy limits) and keep qualification/conversion proof attached to the lead. (Done) (ClickUp: 86e00gx2d)`
+16. `Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends. (Done)`
 
 ### Epic 3 | Activity Discipline, Next-Step Hygiene, and Coaching Signals
 1. `Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene.`
@@ -265,7 +266,8 @@ Status source rules for this summary:
 8. `Module: Settings | As an Admin, I want configurable exposure weights per qualification factor so Cost of Not Knowing reflects my business. (Done)`
 9. `Module: Settings | As an Admin, I want currencies sourced from the system reference data so selectors stay consistent. (Done)`
 10. `Module: Settings | As an Admin, I want settings navigation grouped into People & Access, Workspace & Org, Workflow & Rules, and Trust & Audit so I can find policies quickly and scale as new settings are added.`
-11. `Module: Settings | As an Admin, I want named dashboard templates so default Command Center layouts are not hard-coded and can be reused.`
+11. `Module: Settings | As an Admin, I want a global supporting document policy (max documents per record and max file size) so evidence uploads are enforced consistently across CRM transactions. (Done) (ClickUp: 86e00gx30)`
+12. `Module: Settings | As an Admin, I want named dashboard templates so default Command Center layouts are not hard-coded and can be reused.`
 
 ### Epic 9 | People, Access, Security Levels, and Role-Based Packs
 1. `Module: Settings | As a Super Admin, I want to manage configurable security levels (create/edit/delete, set default) so high-risk actions are gated independently of hierarchy with no hard-coded tiers.`
@@ -279,6 +281,8 @@ Status source rules for this summary:
 9. `Module: Settings | Tenant setting for module packs` (placeholder wording retained; rewrite with full actor/outcome before implementation)
 
 ### Supporting Implementation/UI Tasks (Non-Canonical User Stories)
+- `Module: Leads | Lead Edit page IA + visual polish for daily-use compactness (Qualification tab helper text reduction + Supporting Documents tab UX) (Done)`
+- `Module: Auth | Login Sign In button liquid-glass visual theme (locked baseline, PrimeNG green override fixed) (Done)`
 - `Module: Settings | Approval Settings page`
 - `Module: Settings | Qualification Policy page`
 - `Module: Settings | Contextual Threshold Rules page`
