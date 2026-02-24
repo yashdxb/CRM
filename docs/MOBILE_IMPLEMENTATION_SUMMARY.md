@@ -1,5 +1,12 @@
 # Mobile Responsive Implementation Summary
 
+> **Doc Role**
+> - **Source of truth**: No (`Operational Guide`)
+> - **Canonical references**: `docs/PROJECT_MASTER.md` (UI/UX standards + mobile guiding principles), `docs/DOCS_INDEX.md`
+> - **Use this doc for**: Delivery summary of mobile responsive infrastructure and implementation status
+> - **Status**: Active
+
+
 **Date**: February 23, 2026  
 **Status**: ✅ Complete and Ready for Use
 

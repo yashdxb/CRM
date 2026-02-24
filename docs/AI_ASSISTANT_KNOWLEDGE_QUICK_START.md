@@ -1,5 +1,12 @@
 # AI Assistant Knowledge Feeding - Quick Reference
 
+> **Doc Role**
+> - **Source of truth**: No (`Operational Guide`)
+> - **Canonical references**: `docs/PROJECT_MASTER.md` (AI assistant guidance references), `docs/DOCS_INDEX.md`
+> - **Use this doc for**: Fast onboarding workflow to create/publish AI knowledge docs
+> - **Status**: Active
+
+
 **TL;DR**: Your CRM has an AI Assistant powered by Azure Search. To feed it knowledge, write Markdown files in `docs/ai/knowledge/`, run 3 Python scripts, and done.
 
 ---
@@ -336,4 +343,3 @@ python3 scripts/push_ai_knowledge_to_search.py
 - **What to Write**: See [CRM_CAPABILITIES_KNOWLEDGE_MAPPING.md](CRM_CAPABILITIES_KNOWLEDGE_MAPPING.md)
 - **Scripts Help**: Run `python3 scripts/build_ai_knowledge_manifest.py --help`
 - **Test Cases**: See `docs/ai/prompt-tests/assistant_grounding_test_set.json`
-

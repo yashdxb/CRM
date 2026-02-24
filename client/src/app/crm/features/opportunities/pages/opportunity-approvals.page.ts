@@ -15,10 +15,11 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { OpportunityApprovalService } from '../services/opportunity-approval.service';
 import {
+  DecisionAssistDraft,
   OpportunityApprovalInboxItem,
   OpportunityApprovalStatus
 } from '../models/opportunity.model';
-import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 
 interface FilterOption {
@@ -26,7 +27,8 @@ interface FilterOption {
   value: string;
 }
 
-type QueueView = 'all' | 'attention' | 'completed';
+type QueueView = 'my' | 'team' | 'attention' | 'completed';
+type DecisionViewMode = 'inbox' | 'approvals' | 'ai-reviews';
 
 @Component({
   selector: 'app-opportunity-approvals-page',
@@ -54,14 +56,18 @@ export class OpportunityApprovalsPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly currentUserId = readUserId();
 
   protected readonly approvals = signal<OpportunityApprovalInboxItem[]>([]);
   protected readonly loading = signal(true);
-  protected readonly activeQueueView = signal<QueueView>('all');
+  protected readonly decisionViewMode = signal<DecisionViewMode>('inbox');
+  protected readonly activeQueueView = signal<QueueView>('my');
   protected readonly selectedApprovalId = signal<string | null>(null);
   protected readonly searchQuery = signal('');
   protected readonly actioningIds = signal(new Set<string>());
+  protected readonly draftingIds = signal(new Set<string>());
   protected noteInputs: Record<string, string> = {};
+  protected assistDrafts: Record<string, DecisionAssistDraft> = {};
 
   protected readonly statusOptions: FilterOption[] = [
     { label: 'All', value: 'all' },
@@ -87,15 +93,33 @@ export class OpportunityApprovalsPage {
     );
   });
 
+  protected readonly canViewTeamQueue = computed(() => this.canManage());
+
   protected readonly filteredApprovals = computed(() => {
     const query = this.searchQuery().trim().toLowerCase();
     const queueView = this.activeQueueView();
+    const viewMode = this.decisionViewMode();
 
     return this.approvals().filter((item) => {
+      if (!this.matchesDecisionView(item, viewMode)) {
+        return false;
+      }
+      if (queueView === 'my' && !this.isMyDecision(item)) {
+        return false;
+      }
+      if (queueView === 'team') {
+        if (!this.canViewTeamQueue()) {
+          return false;
+        }
+        const isTeam = item.status === 'Pending' && !this.isMyDecision(item);
+        if (!isTeam) {
+          return false;
+        }
+      }
       if (queueView === 'attention') {
         const attention =
           item.status === 'Pending' &&
-          (item.slaStatus === 'overdue' || item.slaStatus === 'at-risk' || item.priority === 'critical');
+          (item.slaStatus === 'overdue' || item.slaStatus === 'at-risk' || item.priority === 'critical' || !!item.isEscalated);
         if (!attention) {
           return false;
         }
@@ -161,19 +185,89 @@ export class OpportunityApprovalsPage {
   });
 
   protected readonly queueTabBadge = computed(() => ({
-    all: this.approvals().length,
+    my: this.approvals().filter((item) => this.matchesDecisionView(item, this.decisionViewMode()) && this.isMyDecision(item)).length,
+    team: this.canViewTeamQueue()
+      ? this.approvals().filter((item) => this.matchesDecisionView(item, this.decisionViewMode()) && item.status === 'Pending' && !this.isMyDecision(item)).length
+      : 0,
     attention: this.approvals().filter(
       (item) =>
+        this.matchesDecisionView(item, this.decisionViewMode()) &&
         item.status === 'Pending' &&
-        (item.slaStatus === 'overdue' || item.slaStatus === 'at-risk' || item.priority === 'critical')
+        (item.slaStatus === 'overdue' || item.slaStatus === 'at-risk' || item.priority === 'critical' || !!item.isEscalated)
     ).length,
-    completed: this.approvals().filter((item) => item.status !== 'Pending').length
+    completed: this.approvals().filter((item) => this.matchesDecisionView(item, this.decisionViewMode()) && item.status !== 'Pending').length
   }));
 
+  protected readonly pageTitle = computed(() => {
+    switch (this.decisionViewMode()) {
+      case 'approvals':
+        return 'Approval Workflows';
+      case 'ai-reviews':
+        return 'AI Review Queue';
+      default:
+        return 'Decision Inbox';
+    }
+  });
+
+  protected readonly heroDescription = computed(() => {
+    switch (this.decisionViewMode()) {
+      case 'approvals':
+        return 'Approval-focused decision queue for discount, exception, and workflow-gated commercial approvals.';
+      case 'ai-reviews':
+        return 'Human review queue for high-risk AI-generated actions and policy-sensitive automation decisions.';
+      default:
+        return 'Prioritized approvals and exceptions with SLA visibility, policy context, and operator-ready actions.';
+    }
+  });
+
+  protected readonly queueSubtitle = computed(() => {
+    switch (this.decisionViewMode()) {
+      case 'approvals':
+        return 'Approval decisions prioritized by SLA, risk, and business impact.';
+      case 'ai-reviews':
+        return 'AI-assisted decisions awaiting human review, policy confirmation, or override.';
+      default:
+        return 'My Decisions, Team Queue, and SLA-prioritized exceptions.';
+    }
+  });
+
+  protected readonly emptyListMessage = computed(() => {
+    switch (this.decisionViewMode()) {
+      case 'approvals':
+        return 'No approval decisions match the selected queue and filters.';
+      case 'ai-reviews':
+        return 'No AI review items match the selected queue and filters.';
+      default:
+        return 'No decision items match the selected queue and filters.';
+    }
+  });
+
+  protected readonly emptyDetailSubtitle = computed(() => {
+    switch (this.decisionViewMode()) {
+      case 'approvals':
+        return 'Choose an approval item from the queue to review policy context and take action.';
+      case 'ai-reviews':
+        return 'Choose an AI review item from the queue to review policy context and decide whether to proceed.';
+      default:
+        return 'Choose an item from the queue to review policy context and take action.';
+    }
+  });
+
   constructor() {
+    this.route.data.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((data) => {
+      const mode = data['decisionView'];
+      if (mode === 'approvals' || mode === 'ai-reviews' || mode === 'inbox') {
+        this.decisionViewMode.set(mode);
+      } else {
+        this.decisionViewMode.set('inbox');
+      }
+      this.ensureSelection();
+    });
+
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const status = params.get('status');
       const purpose = params.get('purpose');
+      const selected = params.get('selected');
       this.statusFilter =
         status && this.statusOptions.some((option) => option.value === status)
           ? status
@@ -182,6 +276,9 @@ export class OpportunityApprovalsPage {
         purpose && this.purposeOptions.some((option) => option.value === purpose)
           ? purpose
           : this.purposeFilter;
+      if (selected) {
+        this.selectedApprovalId.set(selected);
+      }
       this.load();
     });
   }
@@ -205,7 +302,12 @@ export class OpportunityApprovalsPage {
   }
 
   protected onQueueViewChange(value: string | number | null | undefined) {
-    if (value === 'all' || value === 'attention' || value === 'completed') {
+    if (value === 'my' || value === 'team' || value === 'attention' || value === 'completed') {
+      if (value === 'team' && !this.canViewTeamQueue()) {
+        this.activeQueueView.set('my');
+        this.ensureSelection();
+        return;
+      }
       this.activeQueueView.set(value);
       this.ensureSelection();
     }
@@ -234,7 +336,7 @@ export class OpportunityApprovalsPage {
     nextActioning.add(item.id);
     this.actioningIds.set(nextActioning);
 
-    this.approvalService.decide(item.id, { approved, notes }).subscribe({
+    this.approvalService.decideDecision(item.id, { approved, notes }).subscribe({
       next: (updatedItem) => {
         const nextList = this.approvals().map((row) =>
           row.id === updatedItem.id
@@ -257,7 +359,11 @@ export class OpportunityApprovalsPage {
       },
       error: (err) => {
         this.clearActioning(item.id);
-        const message = typeof err?.error === 'string' ? err.error : 'Unable to update approval.';
+        const message = typeof err?.error?.message === 'string'
+          ? err.error.message
+          : typeof err?.error === 'string'
+            ? err.error
+            : 'Unable to update decision.';
         this.toastService.show('error', message, 3500);
       }
     });
@@ -265,6 +371,52 @@ export class OpportunityApprovalsPage {
 
   protected isActioning(id: string): boolean {
     return this.actioningIds().has(id);
+  }
+
+  protected isDrafting(id: string): boolean {
+    return this.draftingIds().has(id);
+  }
+
+  protected generateDraft(item: OpportunityApprovalInboxItem): void {
+    if (this.draftingIds().has(item.id)) {
+      return;
+    }
+
+    const next = new Set(this.draftingIds());
+    next.add(item.id);
+    this.draftingIds.set(next);
+
+    this.approvalService.generateDecisionAssistDraft(item.id).subscribe({
+      next: (draft) => {
+        this.assistDrafts[item.id] = draft;
+        this.noteInputs[item.id] = this.pickDraftNote(draft);
+        this.toastService.show('success', 'AI draft prepared (assist-only).', 2500);
+        this.clearDrafting(item.id);
+      },
+      error: (err) => {
+        this.clearDrafting(item.id);
+        const message = typeof err?.error?.message === 'string'
+          ? err.error.message
+          : 'Unable to generate decision draft.';
+        this.toastService.show('error', message, 3500);
+      }
+    });
+  }
+
+  protected assistDraftFor(id: string): DecisionAssistDraft | null {
+    return this.assistDrafts[id] ?? null;
+  }
+
+  protected applyAssistDraft(item: OpportunityApprovalInboxItem, mode: 'approve' | 'reject' | 'request_info'): void {
+    const draft = this.assistDrafts[item.id];
+    if (!draft) {
+      return;
+    }
+
+    this.noteInputs[item.id] =
+      mode === 'approve' ? draft.approvalDraftNote :
+      mode === 'reject' ? draft.rejectDraftNote :
+      draft.requestInfoDraftNote;
   }
 
   protected isPending(item: OpportunityApprovalInboxItem | null): boolean {
@@ -394,7 +546,7 @@ export class OpportunityApprovalsPage {
   }
 
   protected queueCardTone(item: OpportunityApprovalInboxItem): 'critical' | 'warn' | 'normal' {
-    if (item.status === 'Pending' && (item.priority === 'critical' || item.slaStatus === 'overdue')) {
+    if (item.status === 'Pending' && (item.priority === 'critical' || item.slaStatus === 'overdue' || item.isEscalated)) {
       return 'critical';
     }
     if (item.status === 'Pending' && (item.priority === 'high' || item.slaStatus === 'at-risk')) {
@@ -419,9 +571,55 @@ export class OpportunityApprovalsPage {
     }
   }
 
+  protected isMyDecision(item: OpportunityApprovalInboxItem): boolean {
+    const userId = this.currentUserId?.toLowerCase();
+    if (!userId) {
+      return false;
+    }
+
+    return (
+      (item.approverUserId ?? '').toLowerCase() === userId ||
+      (item.requestedByUserId ?? '').toLowerCase() === userId
+    );
+  }
+
   private clearActioning(id: string) {
     const updated = new Set(this.actioningIds());
     updated.delete(id);
     this.actioningIds.set(updated);
+  }
+
+  private clearDrafting(id: string) {
+    const updated = new Set(this.draftingIds());
+    updated.delete(id);
+    this.draftingIds.set(updated);
+  }
+
+  private pickDraftNote(draft: DecisionAssistDraft): string {
+    switch ((draft.recommendedAction || '').toLowerCase()) {
+      case 'reject':
+        return draft.rejectDraftNote;
+      case 'request_info':
+        return draft.requestInfoDraftNote;
+      case 'approve':
+      default:
+        return draft.approvalDraftNote;
+    }
+  }
+
+  private matchesDecisionView(item: OpportunityApprovalInboxItem, mode: DecisionViewMode): boolean {
+    const decisionType = (item.decisionType || '').toLowerCase();
+    const purpose = (item.purpose || '').toLowerCase();
+    const policy = (item.policyReason || '').toLowerCase();
+
+    if (mode === 'approvals') {
+      return !decisionType.includes('ai') && !purpose.includes('ai review');
+    }
+
+    if (mode === 'ai-reviews') {
+      return decisionType.includes('ai') || purpose.includes('ai') || policy.includes('ai action');
+    }
+
+    return true;
   }
 }

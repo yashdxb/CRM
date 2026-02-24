@@ -15,6 +15,9 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
 {
     private const string OpportunityEntityType = "Opportunity";
     private const string ApprovalEntityType = "OpportunityApproval";
+    private const string DecisionRequestType = "OpportunityApproval";
+    private const string ApprovalSlaEscalatedAction = "ApprovalSlaEscalated";
+    private const string SystemActor = "System";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
@@ -169,18 +172,75 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             .Select(u => new { u.Id, u.FullName })
             .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
 
+        var metadataByApprovalId = approvals.ToDictionary(
+            item => item.approval.Id,
+            item =>
+            {
+                chains.TryGetValue(item.approval.ApprovalChainId ?? Guid.Empty, out var chainForMetadata);
+                return BuildInboxMetadata(
+                    item.approval.Purpose,
+                    item.approval.Status,
+                    item.approval.Amount,
+                    item.approval.RequestedOn,
+                    nowUtc,
+                    amountThreshold,
+                    item.approval.StepOrder,
+                    chainForMetadata?.TotalSteps ?? 1);
+            });
+
+        var overduePendingIds = metadataByApprovalId
+            .Where(kvp => kvp.Value.SlaStatus == "overdue")
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        var escalatedIds = new HashSet<Guid>();
+        if (overduePendingIds.Count > 0)
+        {
+            var existingEscalatedIds = await _dbContext.AuditEvents
+                .AsNoTracking()
+                .Where(a =>
+                    a.EntityType == ApprovalEntityType &&
+                    a.Action == ApprovalSlaEscalatedAction &&
+                    overduePendingIds.Contains(a.EntityId))
+                .Select(a => a.EntityId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            escalatedIds = existingEscalatedIds.ToHashSet();
+
+            var missingEscalations = approvals
+                .Where(item => overduePendingIds.Contains(item.approval.Id) && !escalatedIds.Contains(item.approval.Id))
+                .Select(item =>
+                {
+                    var metadata = metadataByApprovalId[item.approval.Id];
+                    return new AuditEventEntry(
+                        ApprovalEntityType,
+                        item.approval.Id,
+                        ApprovalSlaEscalatedAction,
+                        "SlaStatus",
+                        metadata.SlaStatus,
+                        "escalated",
+                        null,
+                        SystemActor);
+                })
+                .ToList();
+
+            if (missingEscalations.Count > 0)
+            {
+                await _auditEvents.TrackManyAsync(missingEscalations, cancellationToken);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                foreach (var item in missingEscalations)
+                {
+                    escalatedIds.Add(item.EntityId);
+                }
+            }
+        }
+
         return approvals.Select(item =>
         {
             chains.TryGetValue(item.approval.ApprovalChainId ?? Guid.Empty, out var chain);
-            var metadata = BuildInboxMetadata(
-                item.approval.Purpose,
-                item.approval.Status,
-                item.approval.Amount,
-                item.approval.RequestedOn,
-                nowUtc,
-                amountThreshold,
-                item.approval.StepOrder,
-                chain?.TotalSteps ?? 1);
+            var metadata = metadataByApprovalId[item.approval.Id];
+            var isEscalated = escalatedIds.Contains(item.approval.Id);
             return new OpportunityApprovalInboxItemDto(
                 item.approval.Id,
                 item.approval.OpportunityId,
@@ -207,6 +267,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 metadata.RiskLevel,
                 metadata.SlaStatus,
                 metadata.SlaDueAtUtc,
+                isEscalated,
                 metadata.RequestedAgeHours,
                 metadata.PolicyReason,
                 metadata.BusinessImpactLabel);
@@ -382,6 +443,15 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 actor.UserId,
                 actor.UserName),
             cancellationToken);
+
+        await CreateOrUpdateDecisionRequestFromApprovalAsync(
+            approval,
+            chain,
+            opportunity.Name,
+            actor,
+            createdAction: "Submitted",
+            cancellationToken);
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         await _approvalQueue.EnqueueAsync(
@@ -458,6 +528,14 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 approval.Status,
                 actor.UserId,
                 actor.UserName),
+            cancellationToken);
+
+        await CreateOrUpdateDecisionRequestFromApprovalAsync(
+            approval,
+            chain,
+            opportunityName: null,
+            actor,
+            createdAction: approved ? "Approved" : "Rejected",
             cancellationToken);
 
         if (chain is not null)
@@ -559,6 +637,126 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             approval.Notes,
             approval.Amount,
             approval.Currency);
+    }
+
+    private async Task CreateOrUpdateDecisionRequestFromApprovalAsync(
+        OpportunityApproval approval,
+        OpportunityApprovalChain? chain,
+        string? opportunityName,
+        ActorContext actor,
+        string createdAction,
+        CancellationToken cancellationToken)
+    {
+        if (approval.ApprovalChainId is null)
+        {
+            return;
+        }
+
+        var decision = await _dbContext.DecisionRequests
+            .FirstOrDefaultAsync(d =>
+                !d.IsDeleted &&
+                d.LegacyApprovalChainId == approval.ApprovalChainId &&
+                d.Type == DecisionRequestType,
+                cancellationToken);
+
+        var nowUtc = DateTime.UtcNow;
+        var totalSteps = chain?.TotalSteps ?? 1;
+        var metadata = BuildInboxMetadata(
+            approval.Purpose,
+            approval.Status,
+            approval.Amount,
+            approval.RequestedOn,
+            nowUtc,
+            amountThreshold: null,
+            approval.StepOrder,
+            totalSteps);
+
+        if (decision is null)
+        {
+            decision = new DecisionRequest
+            {
+                LegacyApprovalId = approval.Id,
+                LegacyApprovalChainId = approval.ApprovalChainId,
+                Type = DecisionRequestType,
+                EntityType = OpportunityEntityType,
+                EntityId = approval.OpportunityId,
+                Status = approval.Status,
+                Priority = metadata.Priority,
+                RiskLevel = metadata.RiskLevel,
+                RequestedByUserId = approval.RequestedByUserId,
+                RequestedOnUtc = approval.RequestedOn,
+                DueAtUtc = metadata.SlaDueAtUtc,
+                CompletedAtUtc = approval.DecisionOn,
+                PolicyReason = metadata.PolicyReason,
+                PayloadJson = JsonSerializer.Serialize(new
+                {
+                    approval.Purpose,
+                    approval.Amount,
+                    approval.Currency,
+                    approval.ApproverRole,
+                    OpportunityName = opportunityName
+                }, JsonOptions)
+            };
+            _dbContext.DecisionRequests.Add(decision);
+        }
+        else
+        {
+            decision.LegacyApprovalId = approval.Id;
+            decision.Status = approval.Status;
+            decision.Priority = metadata.Priority;
+            decision.RiskLevel = metadata.RiskLevel;
+            decision.DueAtUtc = metadata.SlaDueAtUtc;
+            decision.CompletedAtUtc = approval.DecisionOn;
+            decision.PolicyReason = metadata.PolicyReason;
+            decision.UpdatedAtUtc = nowUtc;
+            decision.UpdatedBy = actor.UserName;
+        }
+
+        var existingStep = await _dbContext.DecisionSteps
+            .FirstOrDefaultAsync(s =>
+                !s.IsDeleted &&
+                s.DecisionRequestId == decision.Id &&
+                s.StepOrder == approval.StepOrder,
+                cancellationToken);
+
+        if (existingStep is null)
+        {
+            _dbContext.DecisionSteps.Add(new DecisionStep
+            {
+                DecisionRequestId = decision.Id,
+                StepOrder = approval.StepOrder,
+                StepType = "Approval",
+                Status = approval.Status == "Pending" ? "Pending" : approval.Status,
+                ApproverRole = approval.ApproverRole,
+                AssigneeUserId = approval.ApproverUserId,
+                AssigneeNameSnapshot = actor.UserName,
+                DueAtUtc = metadata.SlaDueAtUtc,
+                CompletedAtUtc = approval.DecisionOn
+            });
+        }
+        else
+        {
+            existingStep.Status = approval.Status == "Pending" ? "Pending" : approval.Status;
+            existingStep.AssigneeUserId = approval.ApproverUserId;
+            existingStep.DueAtUtc = metadata.SlaDueAtUtc;
+            existingStep.CompletedAtUtc = approval.DecisionOn;
+            existingStep.Notes = approval.Notes;
+            existingStep.UpdatedAtUtc = nowUtc;
+            existingStep.UpdatedBy = actor.UserName;
+        }
+
+        _dbContext.DecisionActionLogs.Add(new DecisionActionLog
+        {
+            DecisionRequestId = decision.Id,
+            Action = createdAction,
+            ActorUserId = actor.UserId,
+            ActorName = actor.UserName,
+            Notes = approval.Notes,
+            Field = "Status",
+            OldValue = createdAction == "Submitted" ? null : "Pending",
+            NewValue = approval.Status,
+            ActionAtUtc = nowUtc
+        });
     }
 
     private async Task<OpportunityApprovalDto> MapDtoAsync(

@@ -165,6 +165,7 @@ public sealed record OpportunityApprovalInboxItemDto(
     string RiskLevel,
     string SlaStatus,
     DateTime? SlaDueAtUtc,
+    bool IsEscalated,
     double RequestedAgeHours,
     string PolicyReason,
     string BusinessImpactLabel);

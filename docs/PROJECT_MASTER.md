@@ -1,5 +1,11 @@
 # CRM Enterprise Project Master
 
+> **Doc Role**
+> - **Source of truth**: **Yes (Canonical)**
+> - **Canonical scope**: Project contract, architecture/UI rules, operational standards, governance
+> - **Companion canonical doc**: `docs/USER_STORIES.md` (normalized epic-based user stories + ClickUp sync rollups)
+> - **Master registry**: `docs/DOCS_INDEX.md`
+
 Single source of truth for the CRM Enterprise codebase. This document consolidates the current project contract, roadmap, style guides, issue fixes, lessons learned, user guide, use cases, test plan, and Azure roadmap. If any conflict exists, the **running codebase** is the source of truth and this document must be updated.
 
 ---

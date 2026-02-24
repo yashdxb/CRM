@@ -30,6 +30,38 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ---
 
+**Date:** 2026-02-24  
+**Environment:** Dev (Local)  
+**Owner:** Copilot / Yasser
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 17:42 | Mobile/Responsive | Dashboard not responsive on mobile phones (user tested on real device) | High | Yasser |
+| 17:45 | Backend API | API authentication endpoint returning 401 for valid credentials; CORS proxy issues between dev server and backend | Medium | Testing |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Dashboard non-responsive on mobile | Responsive SCSS mixins created but never applied to `dashboard.page.scss` component | Applied `@include respond-to('mobile')` and `@include respond-to('tablet')` mixins to 12+ grid/layout sections; adjusted padding, column count, card heights for mobile/tablet breakpoints | `/client/src/app/crm/features/dashboard/pages/dashboard.page.scss` | Copilot ([screenshots captured](#screenshots)) | Desktop (1440px): 2-column grid ✓ | Tablet (768px): 1 column ✓ | Mobile (375px): Single column, proper stacking ✓ |
+| Backend API connectivity | (1) API process zombie/non-responsive (Exit Code 134); (2) Auth endpoint returning 401 for test user credentials; (3) Browser CORS proxy not configured correctly | (1) Killed zombie process PID 75471, restarted API cleanly; (2) Enabled mock API in `environment.ts` (`useMockApi: true`) to bypass real auth for testing; (3) Verified API responds on port 5014 with `curl` | API process; `/client/src/environments/environment.ts` | Copilot | Mock API allows dashboard load; real API responds (401 expected for nonexistent user) |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Verify real user credentials in test environment | Eng/QA | 2026-02-25 | Current test login (yasser.ahamed@live.com / yAsh@123) may not exist in seeded DB; verify `DatabaseInitializer` creates admin user or check actual user records |
+| Update dashboard SCSS deprecation warnings | Eng | 2026-02-25 | Angular Sass compiler warns about `map-has-key()` and `map-get()` deprecated syntax; convert to `map.has-key()` and `map.get()` for Dart Sass 3.0 compliance |
+| Disable mock API for production builds | CI/CD | Before Deploy | Ensure `useMockApi: false` is set in `environment.production.ts` before Azure deployment |
+
+### Summary for Project Master (If Verified)
+✅ **Mobile Responsiveness Testing Verified**: Dashboard responsive at 375px (mobile), 768px (tablet), and 1440px (desktop). All SCSS grid transforms working correctly. Glass UI design maintained across all viewports. No content overflow or horizontal scrolling on mobile.
+
+✅ **SCSS Changes Applied**: 12+ grid/layout sections in `dashboard.page.scss` now include responsive breakpoints using mobile-first approach with `respond-to()` mixins.
+
+✅ **Test Environment**: Mock API enabled for frontend testing while backend connectivity issues are resolved.
+
+---
+
 **Date:** 2026-01-31  
 **Environment:** Prod (Azure App Service + Foundry)  
 **Owner:** Yasser / Eng

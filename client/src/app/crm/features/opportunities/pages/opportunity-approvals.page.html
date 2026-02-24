@@ -11,12 +11,10 @@
     <div class="hero-copy">
       <div class="hero-badge">
         <span class="badge-dot"></span>
-        <span>Decision Inbox</span>
+        <span>{{ pageTitle() }}</span>
       </div>
-      <h1 class="hero-title">Decision Inbox</h1>
-      <p class="hero-description">
-        Prioritized approvals and exceptions with SLA visibility, policy context, and operator-ready actions.
-      </p>
+      <h1 class="hero-title">{{ pageTitle() }}</h1>
+      <p class="hero-description">{{ heroDescription() }}</p>
     </div>
     <div class="hero-actions">
       <button pButton type="button" class="command-btn command-btn--ghost" (click)="load()">
@@ -92,15 +90,19 @@
       <div class="pane-header">
         <div>
           <h2 class="pane-title">Queue</h2>
-          <p class="pane-subtitle">Prioritized by SLA risk and policy impact.</p>
+          <p class="pane-subtitle">{{ queueSubtitle() }}</p>
         </div>
       </div>
 
       <p-tabs class="queue-tabs" [value]="activeQueueView()" (valueChange)="onQueueViewChange($event)">
         <p-tablist>
-          <p-tab value="all">
-            <span class="queue-tab-label">All</span>
-            <span class="queue-tab-badge">{{ queueTabBadge().all }}</span>
+          <p-tab value="my">
+            <span class="queue-tab-label">My Decisions</span>
+            <span class="queue-tab-badge">{{ queueTabBadge().my }}</span>
+          </p-tab>
+          <p-tab value="team" *ngIf="canViewTeamQueue()">
+            <span class="queue-tab-label">Team Queue</span>
+            <span class="queue-tab-badge">{{ queueTabBadge().team }}</span>
           </p-tab>
           <p-tab value="attention">
             <span class="queue-tab-label">Attention</span>
@@ -135,6 +137,7 @@
             <p-chip [label]="humanizeDecisionType(item.decisionType || item.purpose)"></p-chip>
             <p-tag [value]="(item.priority || 'normal').toUpperCase()" [severity]="prioritySeverity(item.priority)"></p-tag>
             <p-tag [value]="(item.riskLevel || 'low').toUpperCase() + ' RISK'" [severity]="riskSeverity(item.riskLevel)"></p-tag>
+            <p-tag *ngIf="item.isEscalated" value="ESCALATED" severity="danger"></p-tag>
           </div>
 
           <div class="queue-metrics">
@@ -159,7 +162,7 @@
         </button>
 
         <div class="empty-state" *ngIf="!filteredApprovals().length">
-          No decision items match the selected queue and filters.
+          {{ emptyListMessage() }}
         </div>
       </div>
     </div>
@@ -184,6 +187,7 @@
         <p-tag [value]="(selected.priority || 'normal').toUpperCase() + ' PRIORITY'" [severity]="prioritySeverity(selected.priority)"></p-tag>
         <p-tag [value]="(selected.riskLevel || 'low').toUpperCase() + ' RISK'" [severity]="riskSeverity(selected.riskLevel)"></p-tag>
         <p-tag [value]="(selected.slaStatus || 'on-track').toUpperCase()" [severity]="slaSeverity(selected.slaStatus)"></p-tag>
+        <p-tag *ngIf="selected.isEscalated" value="ESCALATED" severity="danger"></p-tag>
       </div>
 
       <div class="detail-micro-grid">
@@ -244,6 +248,19 @@
           </div>
 
           <label class="notes-label" [for]="'approval-note-' + selected.id">Approval note</label>
+          <div class="assist-row">
+            <button
+              pButton
+              type="button"
+              class="command-btn command-btn--ghost"
+              [disabled]="isDrafting(selected.id)"
+              (click)="generateDraft(selected)"
+            >
+              <i class="pi pi-sparkles"></i>
+              <span>{{ isDrafting(selected.id) ? 'Drafting…' : 'Draft rationale' }}</span>
+            </button>
+            <span class="assist-hint">Assist only. Reviewer remains final authority.</span>
+          </div>
           <textarea
             pTextarea
             rows="4"
@@ -253,6 +270,32 @@
             [(ngModel)]="noteInputs[selected.id]"
             placeholder="Add decision context, policy exception rationale, or request clarification notes"
           ></textarea>
+
+          <div class="assist-draft-panel" *ngIf="assistDraftFor(selected.id) as draft">
+            <div class="assist-draft-head">
+              <div class="assist-draft-title">AI decision summary</div>
+              <p-tag [value]="(draft.recommendedAction || 'review').toUpperCase()" severity="info"></p-tag>
+            </div>
+            <p class="assist-draft-summary">{{ draft.summary }}</p>
+            <div class="assist-draft-chips" *ngIf="draft.missingEvidence.length">
+              <p-chip *ngFor="let gap of draft.missingEvidence" [label]="gap"></p-chip>
+            </div>
+            <div class="assist-draft-actions">
+              <button pButton type="button" class="command-btn command-btn--ghost" (click)="applyAssistDraft(selected, 'approve')">
+                <i class="pi pi-check"></i>
+                <span>Use approve draft</span>
+              </button>
+              <button pButton type="button" class="command-btn command-btn--ghost" (click)="applyAssistDraft(selected, 'reject')">
+                <i class="pi pi-times"></i>
+                <span>Use reject draft</span>
+              </button>
+              <button pButton type="button" class="command-btn command-btn--ghost" (click)="applyAssistDraft(selected, 'request_info')">
+                <i class="pi pi-info-circle"></i>
+                <span>Use request-info draft</span>
+              </button>
+            </div>
+            <div class="assist-draft-disclaimer">{{ draft.disclaimer }}</div>
+          </div>
 
           <div class="action-row">
             <button
@@ -303,6 +346,6 @@
   <div class="detail-pane liquid-card empty-detail">
     <div class="empty-illustration pi pi-inbox"></div>
     <h2 class="pane-title">No decision selected</h2>
-    <p class="pane-subtitle">Choose an item from the queue to review policy context and take action.</p>
+    <p class="pane-subtitle">{{ emptyDetailSubtitle() }}</p>
   </div>
 </ng-template>

@@ -3,7 +3,19 @@ import { NavLink } from './navigation.model';
 
 export const NAV_LINKS: NavLink[] = [
   { label: 'Dashboard', icon: 'pi-chart-bar', path: '/app/dashboard', permission: PERMISSION_KEYS.dashboardView },
-  { label: 'Decision Inbox', icon: 'pi-inbox', path: '/app/decisions', permission: PERMISSION_KEYS.opportunitiesView },
+  {
+    label: 'Decision Inbox',
+    icon: 'pi-inbox',
+    path: '/app/decisions',
+    permission: PERMISSION_KEYS.opportunitiesView,
+    children: [
+      { label: 'Inbox', icon: 'pi-inbox', path: '/app/decisions/inbox', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'Approvals', icon: 'pi-check-circle', path: '/app/decisions/approvals', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'AI Reviews', icon: 'pi-sparkles', path: '/app/decisions/ai-reviews', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'Policies & SLA', icon: 'pi-shield', path: '/app/decisions/policies', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'Decision History', icon: 'pi-history', path: '/app/decisions/audit', permission: PERMISSION_KEYS.opportunitiesView }
+    ]
+  },
   { 
     label: 'Customers', 
     icon: 'pi-building', 

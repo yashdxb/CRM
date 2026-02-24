@@ -1,5 +1,12 @@
 # CRM Enterprise - Mobile Responsive Design Guide
 
+> **Doc Role**
+> - **Source of truth**: No (`Operational Guide`)
+> - **Canonical references**: `docs/PROJECT_MASTER.md` (mobile guiding principles), `docs/DOCS_INDEX.md`
+> - **Use this doc for**: Mobile UX/dev implementation guidance, breakpoints, patterns, and responsive QA expectations
+> - **Status**: Active
+
+
 ## 📱 Overview
 
 The CRM Enterprise application is now fully responsive with mobile-first design principles. The premium glass UI aesthetic is preserved across all breakpoints while ensuring excellent usability on phones, tablets, and desktops.

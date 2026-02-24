@@ -31,6 +31,9 @@ public class CrmDbContext : DbContext
     public DbSet<OpportunityReviewChecklistItem> OpportunityReviewChecklistItems => Set<OpportunityReviewChecklistItem>();
     public DbSet<OpportunityApproval> OpportunityApprovals => Set<OpportunityApproval>();
     public DbSet<OpportunityApprovalChain> OpportunityApprovalChains => Set<OpportunityApprovalChain>();
+    public DbSet<DecisionRequest> DecisionRequests => Set<DecisionRequest>();
+    public DbSet<DecisionStep> DecisionSteps => Set<DecisionStep>();
+    public DbSet<DecisionActionLog> DecisionActionLogs => Set<DecisionActionLog>();
     public DbSet<OpportunityTeamMember> OpportunityTeamMembers => Set<OpportunityTeamMember>();
     public DbSet<OpportunityOnboardingItem> OpportunityOnboardingItems => Set<OpportunityOnboardingItem>();
     public DbSet<OpportunityStageAutomationRule> OpportunityStageAutomationRules => Set<OpportunityStageAutomationRule>();
@@ -126,6 +129,9 @@ public class CrmDbContext : DbContext
             .HasIndex(r => new { r.TenantId, r.StageName, r.Name });
         modelBuilder.Entity<OpportunityApproval>().ToTable("OpportunityApprovals", CrmSchema);
         modelBuilder.Entity<OpportunityApprovalChain>().ToTable("OpportunityApprovalChains", CrmSchema);
+        modelBuilder.Entity<DecisionRequest>().ToTable("DecisionRequests", CrmSchema);
+        modelBuilder.Entity<DecisionStep>().ToTable("DecisionSteps", CrmSchema);
+        modelBuilder.Entity<DecisionActionLog>().ToTable("DecisionActionLogs", CrmSchema);
         modelBuilder.Entity<OpportunityReviewChecklistItem>().ToTable("OpportunityReviewChecklistItems", CrmSchema);
         modelBuilder.Entity<OpportunityTeamMember>().ToTable("OpportunityTeamMembers", CrmSchema);
         modelBuilder.Entity<OpportunityOnboardingItem>().ToTable("OpportunityOnboardingItems", CrmSchema);
@@ -134,6 +140,53 @@ public class CrmDbContext : DbContext
             .IsUnique();
         modelBuilder.Entity<OpportunityOnboardingItem>()
             .HasIndex(item => new { item.OpportunityId, item.Type, item.Title });
+        modelBuilder.Entity<DecisionRequest>()
+            .HasIndex(d => new { d.TenantId, d.Status, d.CreatedAtUtc });
+        modelBuilder.Entity<DecisionRequest>()
+            .HasIndex(d => new { d.TenantId, d.EntityType, d.EntityId });
+        modelBuilder.Entity<DecisionRequest>()
+            .HasIndex(d => new { d.TenantId, d.LegacyApprovalId })
+            .HasFilter("[LegacyApprovalId] IS NOT NULL AND [IsDeleted] = 0");
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.Type).HasMaxLength(80).IsRequired();
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.EntityType).HasMaxLength(80).IsRequired();
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.Status).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.Priority).HasMaxLength(32);
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.RiskLevel).HasMaxLength(32);
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.PolicyReason).HasMaxLength(2000);
+        modelBuilder.Entity<DecisionStep>()
+            .HasIndex(s => new { s.TenantId, s.DecisionRequestId, s.StepOrder })
+            .IsUnique();
+        modelBuilder.Entity<DecisionStep>()
+            .Property(s => s.StepType).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<DecisionStep>()
+            .Property(s => s.Status).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<DecisionStep>()
+            .Property(s => s.ApproverRole).HasMaxLength(120);
+        modelBuilder.Entity<DecisionStep>()
+            .Property(s => s.AssigneeNameSnapshot).HasMaxLength(200);
+        modelBuilder.Entity<DecisionActionLog>()
+            .HasIndex(a => new { a.TenantId, a.DecisionRequestId, a.ActionAtUtc });
+        modelBuilder.Entity<DecisionActionLog>()
+            .Property(a => a.Action).HasMaxLength(64).IsRequired();
+        modelBuilder.Entity<DecisionActionLog>()
+            .Property(a => a.ActorName).HasMaxLength(200);
+        modelBuilder.Entity<DecisionActionLog>()
+            .Property(a => a.Field).HasMaxLength(120);
+        modelBuilder.Entity<DecisionActionLog>()
+            .Property(a => a.OldValue).HasMaxLength(2000);
+        modelBuilder.Entity<DecisionActionLog>()
+            .Property(a => a.NewValue).HasMaxLength(2000);
+        modelBuilder.Entity<DecisionRequest>()
+            .HasMany(d => d.Steps)
+            .WithOne(s => s.DecisionRequest)
+            .HasForeignKey(s => s.DecisionRequestId)
+            .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<Activity>().ToTable("Activities", CrmSchema);
         modelBuilder.Entity<Attachment>().ToTable("Attachments", CrmSchema);
         modelBuilder.Entity<ImportJob>().ToTable("ImportJobs", CrmSchema);

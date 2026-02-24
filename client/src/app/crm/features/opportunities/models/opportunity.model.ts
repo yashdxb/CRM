@@ -165,9 +165,41 @@ export interface OpportunityApprovalInboxItem {
   riskLevel: 'low' | 'medium' | 'high' | string;
   slaStatus: 'on-track' | 'at-risk' | 'overdue' | 'completed' | string;
   slaDueAtUtc?: string | null;
+  isEscalated?: boolean;
   requestedAgeHours: number;
   policyReason: string;
   businessImpactLabel: string;
+}
+
+export interface DecisionAssistDraft {
+  decisionId: string;
+  summary: string;
+  recommendedAction: 'approve' | 'reject' | 'request_info' | 'review' | string;
+  approvalDraftNote: string;
+  rejectDraftNote: string;
+  requestInfoDraftNote: string;
+  missingEvidence: string[];
+  disclaimer: string;
+}
+
+export interface DecisionHistoryItem {
+  actionLogId: string;
+  decisionId: string;
+  action: string;
+  actionAtUtc: string;
+  actorName?: string | null;
+  actorUserId?: string | null;
+  decisionType: string;
+  workflowType: string;
+  entityType: string;
+  entityId: string;
+  entityName: string;
+  status: string;
+  priority?: string | null;
+  riskLevel?: string | null;
+  notes?: string | null;
+  policyReason?: string | null;
+  isEscalated: boolean;
 }
 
 export type OpportunityReviewKind = 'Review' | 'Acknowledgment';

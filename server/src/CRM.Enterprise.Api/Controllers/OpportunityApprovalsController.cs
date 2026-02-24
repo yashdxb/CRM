@@ -152,6 +152,7 @@ public class OpportunityApprovalsController : ControllerBase
             dto.RiskLevel,
             dto.SlaStatus,
             dto.SlaDueAtUtc,
+            dto.IsEscalated,
             dto.RequestedAgeHours,
             dto.PolicyReason,
             dto.BusinessImpactLabel);

@@ -55,8 +55,65 @@ export const routes: Routes = [
         path: 'decisions',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Decision Inbox', icon: 'pi-inbox' },
-        loadComponent: () =>
-          import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            redirectTo: 'inbox'
+          },
+          {
+            path: '',
+            loadComponent: () =>
+              import('./crm/features/opportunities/pages/decision-inbox-shell.page').then((m) => m.DecisionInboxShellPage),
+            children: [
+              {
+                path: 'inbox',
+                data: { breadcrumb: 'Inbox' },
+                loadComponent: () =>
+                  import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+              },
+              {
+                path: 'approvals',
+                data: {
+                  breadcrumb: 'Approvals',
+                  decisionView: 'approvals'
+                },
+                loadComponent: () =>
+                  import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+              },
+              {
+                path: 'ai-reviews',
+                data: {
+                  breadcrumb: 'AI Reviews',
+                  decisionView: 'ai-reviews'
+                },
+                loadComponent: () =>
+                  import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+              },
+              {
+                path: 'policies',
+                data: {
+                  breadcrumb: 'Policies & SLA',
+                  title: 'Policies & SLA',
+                  heading: 'Decision Policies & SLA Controls',
+                  description: 'Policy routing, thresholds, and escalation SLA controls belong here in the enterprise rollout. This page is stubbed to establish the navigation architecture.'
+                },
+                loadComponent: () =>
+                  import('./crm/features/opportunities/pages/decision-inbox-placeholder.page').then((m) => m.DecisionInboxPlaceholderPage)
+              },
+              {
+                path: 'audit',
+                data: {
+                  breadcrumb: 'Decision History',
+                  title: 'Decision History',
+                  heading: 'Decision History'
+                },
+                loadComponent: () =>
+                  import('./crm/features/opportunities/pages/decision-history.page').then((m) => m.DecisionHistoryPage)
+              }
+            ]
+          }
+        ]
       },
       {
         path: 'customers',
@@ -157,10 +214,8 @@ export const routes: Routes = [
       },
       {
         path: 'opportunities/approvals',
-        canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.opportunitiesApprovalsApprove, breadcrumb: 'Approvals', icon: 'pi-check-circle' },
-        loadComponent: () =>
-          import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+        redirectTo: 'decisions/approvals',
+        pathMatch: 'full'
       },
       {
         path: 'opportunities/:id/edit',

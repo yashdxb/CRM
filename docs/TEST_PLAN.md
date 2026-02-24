@@ -40,7 +40,24 @@ Scope: validate acceptance criteria in `docs/PHASE1.md` and `docs/PHASE2.md`.
 - UI: KPI cards render, upcoming activities, recent accounts
 - API: `GET /api/dashboard/summary`
 
-7) Done-when flow
+7) Responsive Mobile Design
+- **Status**: ✅ **VERIFIED (2026-02-24)**
+- **Breakpoints Tested**: 375px (iPhone SE), 768px (iPad), 1440px (Desktop)
+- **Test Results**:
+  - ✅ **Login Page**: Scales properly at all sizes; glassmorphic design preserved
+  - ✅ **Dashboard (Desktop 1440px)**: 2-column grid layout, multi-card views
+  - ✅ **Dashboard (Tablet 768px)**: Single-column layout, content stacks properly
+  - ✅ **Dashboard (Mobile 375px)**: Full vertical flow, sidebar hidden, no overflow
+  - ✅ **Grid Transforms**: 12+ SCSS grid sections properly collapse via `@include respond-to()` mixins
+  - ✅ **Glass UI Preserved**: Cards maintain `backdrop-filter: blur()` and styling across all sizes
+  - ✅ **Touch Targets**: Spacing appropriate for mobile interaction (44px minimum)
+  - ✅ **No Horizontal Scroll**: All content fits within viewport at mobile width
+- **Files Modified**: `/client/src/app/crm/features/dashboard/pages/dashboard.page.scss`
+- **Files Updated**: `/client/src/environments/environment.ts` (enabled `useMockApi: true` for testing)
+- **Evidence**: Screenshots captured at 375px, 768px, 1440px viewports showing responsive behavior
+- **Note**: Mock API enabled for dashboard testing due to auth connectivity issue in dev environment
+
+8) Done-when flow
 - E2E: Account → Contact → Opportunity → Activity (already in `client/e2e/core-flows.spec.ts`)
 
 ## Next Test Matrix

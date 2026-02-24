@@ -1,5 +1,12 @@
 # How to Feed Complete CRM Knowledge to AI Assistant
 
+> **Doc Role**
+> - **Source of truth**: No (`Operational Guide`)
+> - **Canonical references**: `docs/PROJECT_MASTER.md` (AI assistant team guides / governance), `docs/DOCS_INDEX.md`
+> - **Use this doc for**: End-to-end AI knowledge authoring, publishing, validation, and expansion workflow
+> - **Status**: Active
+
+
 **Status**: 17 documents indexed | Ready for expansion  
 **Last Updated**: 2026-02-23  
 **Guide Version**: 1.0
@@ -611,4 +618,3 @@ head -15 docs/ai/knowledge/leads/bad-file.md
 3. **Iterate**: Update CHANGELOG.md and re-upload as needed
 4. **Monitor**: Track which questions the assistant answers well vs poorly
 5. **Improve**: Add more specific knowledge based on user questions
-

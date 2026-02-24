@@ -1,0 +1,175 @@
+<section class="history-page">
+  <section class="hero-shell liquid-card">
+    <div>
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Decision History</span>
+      </div>
+      <h1 class="hero-title">Decision History</h1>
+      <p class="hero-description">
+        Searchable operational history for decisions, approvals, escalations, and review actions.
+      </p>
+    </div>
+    <button pButton type="button" class="command-btn command-btn--ghost" (click)="load()">
+      <i class="pi pi-refresh"></i>
+      <span>Refresh</span>
+    </button>
+  </section>
+
+  <section class="kpi-grid">
+    <article class="kpi-card liquid-card">
+      <div class="kpi-label">History events</div>
+      <div class="kpi-value">{{ kpis().total }}</div>
+      <div class="kpi-meta">Loaded rows</div>
+    </article>
+    <article class="kpi-card liquid-card tone-warn">
+      <div class="kpi-label">Escalations</div>
+      <div class="kpi-value">{{ kpis().escalations }}</div>
+      <div class="kpi-meta">SLA escalation events</div>
+    </article>
+    <article class="kpi-card liquid-card tone-cyan">
+      <div class="kpi-label">Approvals</div>
+      <div class="kpi-value">{{ kpis().approvals }}</div>
+      <div class="kpi-meta">Approved actions</div>
+    </article>
+    <article class="kpi-card liquid-card tone-danger">
+      <div class="kpi-label">Rejections</div>
+      <div class="kpi-value">{{ kpis().rejections }}</div>
+      <div class="kpi-meta">Rejected actions</div>
+    </article>
+  </section>
+
+  <section class="filter-shell liquid-card">
+    <div class="filter-field search-field">
+      <label>Search history</label>
+      <span class="search-icon pi pi-search"></span>
+      <input
+        pInputText
+        type="text"
+        [ngModel]="search()"
+        (ngModelChange)="onSearch($event)"
+        placeholder="Search action, actor, decision type, notes, policy reason"
+      />
+    </div>
+    <div class="filter-field">
+      <label>Action</label>
+      <p-select
+        appendTo="body"
+        [options]="actionOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="actionFilter"
+        (onChange)="refreshFilters()"
+      ></p-select>
+    </div>
+    <div class="filter-field">
+      <label>Status</label>
+      <p-select
+        appendTo="body"
+        [options]="statusOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="statusFilter"
+        (onChange)="refreshFilters()"
+      ></p-select>
+    </div>
+    <div class="filter-field">
+      <label>Decision Type</label>
+      <p-select
+        appendTo="body"
+        [options]="decisionTypeOptions"
+        optionLabel="label"
+        optionValue="value"
+        [(ngModel)]="decisionTypeFilter"
+        (onChange)="refreshFilters()"
+      ></p-select>
+    </div>
+  </section>
+
+  <section class="history-table-shell liquid-card">
+    <p-table
+      [value]="filteredRows()"
+      [loading]="loading()"
+      [paginator]="true"
+      [rows]="15"
+      [rowsPerPageOptions]="[15,25,50]"
+      responsiveLayout="scroll"
+      styleClass="history-table"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th>When</th>
+          <th>Action</th>
+          <th>Decision</th>
+          <th>Entity</th>
+          <th>Actor</th>
+          <th>Status</th>
+          <th>Risk</th>
+          <th>Notes / Policy</th>
+          <th class="actions-col">Open</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-row>
+        <tr>
+          <td>
+            <div class="when-cell">
+              <div>{{ row.actionAtUtc | date:'MMM d, y' }}</div>
+              <small>{{ row.actionAtUtc | date:'h:mm a' }}</small>
+            </div>
+          </td>
+          <td>
+            <div class="action-cell">
+              <p-tag [value]="row.action" [severity]="actionSeverity(row.action)"></p-tag>
+              <p-tag *ngIf="row.isEscalated" value="ESCALATED" severity="warn"></p-tag>
+            </div>
+          </td>
+          <td>
+            <div class="decision-cell">
+              <div class="decision-type">{{ row.decisionType }}</div>
+              <div class="decision-workflow">{{ row.workflowType }}</div>
+            </div>
+          </td>
+          <td>
+            <div class="entity-cell">
+              <div class="entity-type">{{ row.entityType }}</div>
+              <div class="entity-name">{{ row.entityName }}</div>
+            </div>
+          </td>
+          <td>{{ row.actorName || 'System' }}</td>
+          <td>
+            <p-chip [label]="row.status"></p-chip>
+          </td>
+          <td>
+            <div class="risk-cell">
+              <p-tag [value]="(row.riskLevel || 'n/a').toUpperCase()" [severity]="riskSeverity(row.riskLevel)"></p-tag>
+              <small *ngIf="row.priority">{{ row.priority | uppercase }} priority</small>
+            </div>
+          </td>
+          <td>
+            <div class="notes-cell">
+              <div *ngIf="row.notes">{{ row.notes }}</div>
+              <small *ngIf="row.policyReason">{{ row.policyReason }}</small>
+            </div>
+          </td>
+          <td class="actions-col">
+            <button pButton type="button" class="command-btn command-btn--ghost command-btn--sm" (click)="openInInbox(row)">
+              <i class="pi pi-arrow-right"></i>
+              <span>Inbox</span>
+            </button>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              No decision history events match the current filters.
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </section>
+</section>

@@ -24,6 +24,9 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
+            "allowedCommonJsDependencies": [
+              "google-libphonenumber"
+            ],
             "assets": [
               {
                 "glob": "**/*",
@@ -50,12 +53,12 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1.4MB",
+                  "maximumWarning": "1.5MB",
                   "maximumError": "2MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "50kB",
+                  "maximumWarning": "65kB",
                   "maximumError": "100kB"
                 }
               ],

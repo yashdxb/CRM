@@ -2,7 +2,48 @@
 
 This file tracks recurring UI/data issues and how to fix them quickly.
 
-## 1) PrimeNG select value not showing on edit until click
+## 1) Dashboard not responsive on mobile phones
+**Symptoms**
+- Dashboard tested on real mobile device (375px width) shows broken layout
+- Content doesn't stack vertically; tables and grids overflow horizontally
+- No adaptation for tablet (768px) or mobile breakpoints
+
+**Root cause**
+- Responsive SCSS mixin system (`respond-to()`) was created but never applied to `dashboard.page.scss`
+- Components had fixed grid layouts without mobile-first `@media` queries
+- Grid columns fixed at 2-4 columns regardless of viewport size
+
+**Fix pattern**
+1) Applied `@include respond-to('tablet')` and `@include respond-to('mobile')` to all grid/layout sections
+2) Used mobile-first approach: base styles mobile, breakpoints add complexity
+3) Transformed grid layouts from fixed columns to single-column on mobile
+4) Adjusted padding, heights, and gaps for smaller screens
+5) Hid verbose table headers on mobile, card layout shown instead
+
+**Example implementation**
+- File: `/client/src/app/crm/features/dashboard/pages/dashboard.page.scss`
+- Applied responsive mixins to 12+ grid sections:
+  - `.dashboard-card-grid`: `repeat(2, 1fr)` → `1fr` on tablet/mobile
+  - `.metrics-grid`: `1.5fr repeat(4, 1fr)` → `1fr` on mobile
+  - `.ai-action-row`: `4 columns` → `1 column` on mobile
+  - `.dashboard-card`: `height: 360px` → `auto` on mobile
+  - Padding: `$space-5 $space-6` (desktop) → `$space-3 $space-3` (mobile)
+
+**Verification**
+- ✅ Tested at 375px (iPhone SE): Single-column layout, proper stacking
+- ✅ Tested at 768px (iPad): Optimized spacing, 1-column grids
+- ✅ Tested at 1440px (Desktop): 2-column layouts, spacing preserved
+- ✅ No content overflow or horizontal scrolling at any size
+- ✅ Glass UI design maintained across all breakpoints
+- ✅ Touch targets remain adequate for mobile (44px+)
+
+**Why this is safe**
+- Uses existing responsive mixin system already in codebase
+- Mobile-first approach ensures smaller screens load less CSS
+- No breaking changes; layout adapts gracefully
+- All existing desktop functionality preserved
+
+## 2) PrimeNG select value not showing on edit until click
 **Symptoms**
 - On edit forms (e.g., Activity Edit), owner or related entity fields appear empty.
 - After clicking anywhere in the form, the selected value suddenly appears.

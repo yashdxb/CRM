@@ -105,6 +105,18 @@
   min-height: auto;
   height: auto;
   padding: $space-5 $space-6;
+
+  @include respond-to('mobile') {
+    padding: $space-3 $space-3;
+  }
+
+  @include respond-to('mobileLg') {
+    padding: $space-3 $space-4;
+  }
+
+  @include respond-to('tablet') {
+    padding: $space-4 $space-5;
+  }
 }
 
 .page-content {
@@ -121,6 +133,10 @@
   display: flex;
   flex-direction: column;
   gap: $space-6;
+
+  @include respond-to('mobile') {
+    gap: $space-4;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -139,6 +155,19 @@
   border-radius: $radius-2xl;
   border: 1px solid $glass-border;
   animation: fade-in-down 0.5s ease-out;
+
+  @include respond-to('tablet') {
+    flex-direction: column;
+    gap: $space-4;
+    padding: $space-4;
+  }
+
+  @include respond-to('mobile') {
+    flex-direction: column;
+    gap: $space-3;
+    padding: $space-3;
+    margin-bottom: $space-4;
+  }
 }
 
 .hero-content {
@@ -312,6 +341,10 @@
   backdrop-filter: blur(20px) saturate(130%);
   box-shadow: 0 14px 30px rgba(56, 75, 121, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.92);
   overflow: hidden;
+
+  @include respond-to('mobile') {
+    padding: 12px 12px 10px;
+  }
 }
 
 .ai-orchestration-section::before,
@@ -379,6 +412,14 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
+
+  @include respond-to('tablet') {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+  }
 }
 
 .ai-kpi-card {
@@ -387,6 +428,11 @@
   border: 1px solid rgba(184, 196, 228, 0.7);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.83), rgba(246, 248, 255, 0.8));
   min-height: 72px;
+
+  @include respond-to('mobile') {
+    padding: 8px 10px;
+    min-height: auto;
+  }
 }
 
 .ai-kpi-value {
@@ -438,6 +484,16 @@
   color: rgba(45, 60, 96, 0.96);
   font-size: 0.9rem;
   font-weight: 700;
+
+  @include respond-to('tablet') {
+    grid-template-columns: 1fr minmax(0, 1fr) 120px;
+    gap: 6px;
+    font-size: 0.85rem;
+  }
+
+  @include respond-to('mobile') {
+    @include hide-mobile;
+  }
 }
 
 .ai-action-toolbar {
@@ -470,6 +526,20 @@
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 255, 0.86));
   box-shadow: 0 4px 10px rgba(41, 61, 104, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
   overflow: hidden;
+
+  @include respond-to('tablet') {
+    grid-template-columns: 1fr minmax(0, 1fr) 100px;
+    min-height: auto;
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    gap: 8px;
+    padding: 12px;
+  }
 }
 
 .ai-action-row::before {
@@ -748,6 +818,18 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+
+  @include respond-to('tablet') {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 8px;
+  }
 }
 
 .ai-detail-item {
@@ -801,6 +883,11 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
 }
 
 .assistant-detail-cell {
@@ -1028,6 +1115,16 @@
   display: grid;
   grid-template-columns: 1.5fr repeat(4, 1fr);
   gap: $space-4;
+
+  @include respond-to('tablet') {
+    grid-template-columns: 1fr;
+    gap: $space-3;
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+    gap: $space-3;
+  }
 }
 
 .metric-card {
@@ -1273,6 +1370,16 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-5;
   align-items: stretch;
+
+  @include respond-to('tablet') {
+    grid-template-columns: 1fr;
+    gap: $space-4;
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+    gap: $space-3;
+  }
 }
 
 .dashboard-card {
@@ -1285,6 +1392,11 @@
   width: 100%;
   height: 360px;
   overflow: hidden;
+
+  @include respond-to('mobile') {
+    height: auto;
+    min-height: 300px;
+  }
 
   &.size-sm {
     width: 100%;
@@ -1530,6 +1642,16 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: $space-5;
   margin-bottom: $space-5;
+
+  @include respond-to('tablet') {
+    grid-template-columns: 1fr;
+    gap: $space-4;
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+    gap: $space-3;
+  }
 }
 
 .charts-row.cdk-drop-list-dragging .chart-card:not(.cdk-drag-placeholder) {
@@ -2022,6 +2144,16 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: $space-3;
+
+  @include respond-to('tablet') {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-2;
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+    gap: $space-2;
+  }
 }
 
 .truth-metric {
@@ -2575,6 +2707,14 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: $space-2;
+
+  @include respond-to('tablet') {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+  }
 }
 
 .health-pill {
@@ -3635,6 +3775,18 @@
   margin-top: $space-4;
   padding-top: $space-4;
   border-top: 1px solid $glass-border;
+
+  @include respond-to('tablet') {
+    grid-template-columns: repeat(2, 1fr);
+    gap: $space-2;
+  }
+
+  @include respond-to('mobile') {
+    grid-template-columns: 1fr;
+    gap: $space-2;
+    margin-top: $space-2;
+    padding-top: $space-2;
+  }
 }
 
 .pipeline-stat {

@@ -1,5 +1,12 @@
 # CRM Capabilities → Knowledge Mapping
 
+> **Doc Role**
+> - **Source of truth**: No (`Reference / Mapping`)
+> - **Canonical references**: `docs/PROJECT_MASTER.md` (AI assistant operational guidance), `docs/USER_STORIES.md` (story priorities), `docs/DOCS_INDEX.md`
+> - **Use this doc for**: Capability coverage planning and gap analysis for AI knowledge corpus
+> - **Status**: Active
+
+
 **Purpose**: Systematically identify all CRM capabilities and map them to knowledge documents  
 **Owner**: Product/RevOps team  
 **Last Updated**: 2026-02-23
@@ -504,4 +511,3 @@ Use this to track which documents exist:
 2. **Add missing capabilities** not listed here
 3. **Create files** for [CREATE] items using templates in main guide
 4. **Iterate**: Expand docs based on user questions the assistant can't answer
-

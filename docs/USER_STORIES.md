@@ -1,5 +1,11 @@
 # CRM Enterprise User Stories (All Roles)
 
+> **Doc Role**
+> - **Source of truth**: **Yes (Canonical)**
+> - **Canonical scope**: Normalized epic-based user stories and ClickUp story sync snapshots documented here
+> - **Companion canonical doc**: `docs/PROJECT_MASTER.md` (project contract, architecture/UI/ops standards)
+> - **Master registry**: `docs/DOCS_INDEX.md`
+
 Legacy narrative preserved in `docs/USER_STORIES_LEGACY.md`.
 
 Purpose: Central location for role-based, end-to-end CRM user stories. This document complements `PROJECT_MASTER.md` and drives backlog + acceptance criteria. Keep it updated as new roles or flows are introduced.
@@ -83,6 +89,39 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
     - `86dzzkby4` (playbook runtime)
     - `86dzzkby7` (closed-loop learning)
   - Telemetry support exists (`86dzxrdqy`) but implementation still needs full learning-loop behavior beyond audit telemetry.
+
+### Decision Inbox & Approval Workflow Roadmap Sync (ClickUp -> Docs)
+- Sync date: **February 24, 2026**
+- Epic: `Epic | Decision Inbox | Approval Workflow Orchestration & Operations` (ClickUp: `86e00nx1x`)
+- Purpose: Track the enterprise Decision Inbox / approval workflow modernization roadmap in `Now / Next / Later` buckets without rewriting existing approval mechanics already in production.
+- Duplicate-aware note:
+  - This roadmap **extends** existing approval workflow/rules.
+  - Some assistant execution mechanics already exist under `Epic | AI Assistant | Action Execution & Review Controls` (`86dzxrdp5`) and should be treated as supporting stories, not duplicates.
+
+**Now**
+- `86e00nx2e` — Module: Approvals | Generic `DecisionRequest + DecisionStep` engine with audit log
+- `86e00nx2r` — Module: Approvals | Decision Inbox list page (`My Decisions`, `Team Queue`)
+- `86e00nx2v` — Module: Approvals | Discount/exception workflow routed through Decision Inbox engine
+- `86e00nx34` — Module: Approvals | SLA countdown + escalation on decision steps
+- `86e00nx3c` — Module: Assistant | AI decision summary + rationale draft in Decision Inbox (assist only)
+
+**Next**
+- `86e00nx3h` — Module: Approvals | Stage override approvals routed through Decision Inbox
+- `86e00nx3t` — Module: Assistant | High-risk AI action review routed into Decision Inbox
+- `86e00nx40` — Module: Approvals | Delegation and out-of-office routing
+- `86e00nx4c` — Module: Dashboard | Decision inbox KPIs (pending / overdue / cycle time / bottlenecks)
+
+**Later**
+- `86e00nx4j` — Module: Approvals | Parallel approvals
+- `86e00nx4q` — Module: Approvals | Advanced routing (segment / region / product)
+- `86e00nx4x` — Module: Approvals | Approval analytics + bottleneck insights
+- `86e00nx5b` — Module: Approvals | Closed-loop policy tuning
+
+**Related existing stories (supporting, not duplicates)**
+- `86dzxrdq4` — Review-required flow for medium/high-risk assistant actions
+- `86dzxrdqr` — Action policy engine (risk tier + confidence threshold)
+- `86dzxrdqy` — Assistant action audit trail and acceptance telemetry
+- `86dzxrdr4` — Dashboard action queue execute/review UX and state badges
 
 ---
 

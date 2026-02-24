@@ -1,5 +1,12 @@
 # Mobile Responsive Implementation - Technical Reference
 
+> **Doc Role**
+> - **Source of truth**: No (`Operational Guide`)
+> - **Canonical references**: `docs/PROJECT_MASTER.md` (mobile standards), `docs/DOCS_INDEX.md`
+> - **Use this doc for**: Technical implementation patterns, code snippets, and responsive component reference
+> - **Status**: Active
+
+
 ## Quick Start for Developers
 
 ### 1. Make a Component Responsive (5 Minutes)
