@@ -616,6 +616,29 @@
   letter-spacing: 0.06em;
 }
 
+.delegate-row {
+  margin-top: 0.55rem;
+  margin-bottom: 0.25rem;
+}
+
+.delegate-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+:host ::ng-deep .delegate-select.p-select,
+:host ::ng-deep .delegate-select .p-select-label {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  border-color: rgba(203, 213, 225, 0.9);
+}
+
+:host ::ng-deep .delegate-select.p-select {
+  border-radius: 12px;
+  min-height: 40px;
+}
+
 .action-row {
   display: flex;
   flex-wrap: wrap;
@@ -668,6 +691,18 @@
 
 .command-btn--danger:hover {
   box-shadow: 0 8px 18px rgba(239, 68, 68, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.command-btn--info {
+  border-color: rgba(56, 189, 248, 0.28);
+  color: #dbeafe;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.22), rgba(14, 165, 233, 0.12)),
+    rgba(10, 20, 36, 0.62);
+}
+
+.command-btn--info:hover {
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 :host ::ng-deep .command-btn.p-button {

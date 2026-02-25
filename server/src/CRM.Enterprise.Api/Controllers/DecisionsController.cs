@@ -72,6 +72,7 @@ public class DecisionsController : ControllerBase
         [FromBody] CreateDecisionRequest request,
         CancellationToken cancellationToken)
     {
+        var actor = GetActor();
         var created = await _decisionInboxService.CreateAsync(
             new DecisionCreateRequestDto(
                 request.DecisionType,
@@ -90,8 +91,8 @@ public class DecisionsController : ControllerBase
                 request.BusinessImpactLabel ?? "unknown impact",
                 request.Amount,
                 request.Currency ?? "USD",
-                request.RequestedByUserId,
-                request.RequestedByName,
+                request.RequestedByUserId ?? actor.UserId,
+                request.RequestedByName ?? actor.UserName,
                 request.AssigneeUserId,
                 request.AssigneeName,
                 request.RequestedOn ?? DateTime.UtcNow,
@@ -161,6 +162,79 @@ public class DecisionsController : ControllerBase
                     GetActor().UserName),
                 cancellationToken);
 
+            return Ok(Map(updated));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { message = "Decision item not found." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("api/decisions/{id:guid}/request-info")]
+    public async Task<ActionResult<DecisionInboxItem>> RequestInfo(
+        Guid id,
+        [FromBody] DecisionRequestInfoRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!CanApprove())
+        {
+            return Forbid();
+        }
+
+        var actor = GetActor();
+        try
+        {
+            var updated = await _decisionInboxService.RequestInfoAsync(
+                id,
+                new DecisionRequestInfoDto(
+                    string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
+            return Ok(Map(updated));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { message = "Decision item not found." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("api/decisions/{id:guid}/delegate")]
+    public async Task<ActionResult<DecisionInboxItem>> Delegate(
+        Guid id,
+        [FromBody] DecisionDelegateRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!CanApprove())
+        {
+            return Forbid();
+        }
+
+        if (request.DelegateUserId == Guid.Empty)
+        {
+            return BadRequest(new { message = "Delegate user is required." });
+        }
+
+        var actor = GetActor();
+        try
+        {
+            var updated = await _decisionInboxService.DelegateAsync(
+                id,
+                new DecisionDelegateRequestDto(
+                    request.DelegateUserId,
+                    string.IsNullOrWhiteSpace(request.DelegateUserName) ? null : request.DelegateUserName.Trim(),
+                    string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
             return Ok(Map(updated));
         }
         catch (KeyNotFoundException)

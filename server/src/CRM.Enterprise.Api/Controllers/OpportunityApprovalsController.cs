@@ -86,7 +86,7 @@ public class OpportunityApprovalsController : ControllerBase
             request.Approved,
             request.Notes,
             GetActor(),
-            cancellationToken);
+            cancellationToken: cancellationToken);
 
         if (result.NotFound)
         {

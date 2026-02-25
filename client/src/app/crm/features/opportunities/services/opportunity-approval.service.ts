@@ -56,6 +56,44 @@ interface DecisionInboxApiItem {
   steps: DecisionInboxApiStep[];
 }
 
+interface CreateDecisionRequestPayload {
+  decisionType: string;
+  workflowType: string;
+  entityType: string;
+  entityId: string;
+  entityName: string;
+  parentEntityName?: string | null;
+  purpose: string;
+  status?: string | null;
+  priority?: string | null;
+  riskLevel?: string | null;
+  slaStatus?: string | null;
+  slaDueAtUtc?: string | null;
+  policyReason?: string | null;
+  businessImpactLabel?: string | null;
+  amount: number;
+  currency?: string | null;
+  requestedByUserId?: string | null;
+  requestedByName?: string | null;
+  assigneeUserId?: string | null;
+  assigneeName?: string | null;
+  requestedOn?: string | null;
+  currentStepOrder?: number | null;
+  totalSteps?: number | null;
+  stepRole?: string | null;
+  chainStatus?: string | null;
+  payloadJson?: string | null;
+  policySnapshotJson?: string | null;
+  steps?: Array<{
+    stepOrder: number;
+    stepType?: string | null;
+    approverRole?: string | null;
+    assigneeUserId?: string | null;
+    assigneeName?: string | null;
+    dueAtUtc?: string | null;
+  }> | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OpportunityApprovalService {
   private readonly http = inject(HttpClient);
@@ -87,6 +125,33 @@ export class OpportunityApprovalService {
     );
   }
 
+  requestApprovalViaDecisionEngine(
+    opportunityId: string,
+    payload: OpportunityApprovalRequest & { opportunityName: string; accountName?: string | null }
+  ) {
+    const request: CreateDecisionRequestPayload = {
+      decisionType: 'OpportunityApproval',
+      workflowType: 'OpportunityApproval',
+      entityType: 'Opportunity',
+      entityId: opportunityId,
+      entityName: payload.opportunityName,
+      parentEntityName: payload.accountName ?? null,
+      purpose: payload.purpose ?? 'Close',
+      amount: payload.amount,
+      currency: payload.currency ?? 'USD',
+      status: 'Submitted',
+      policyReason:
+        (payload.purpose ?? 'Close') === 'Discount'
+          ? 'Discount exception requires approval.'
+          : 'Opportunity close approval required.',
+      businessImpactLabel: 'commercial approval'
+    };
+
+    return this.http
+      .post<DecisionInboxApiItem>(`${this.baseUrl}/api/decisions/requests`, request)
+      .pipe(map((item) => this.mapDecisionInboxItemToApproval(item)));
+  }
+
   decide(approvalId: string, payload: OpportunityApprovalDecisionRequest) {
     return this.http.patch<OpportunityApprovalItem>(
       `${this.baseUrl}/api/opportunity-approvals/${approvalId}`,
@@ -98,6 +163,24 @@ export class OpportunityApprovalService {
     return this.http.patch<DecisionInboxApiItem>(
       `${this.baseUrl}/api/decisions/${decisionId}/decision`,
       payload
+    ).pipe(map((item) => this.mapDecisionInboxItem(item)));
+  }
+
+  requestDecisionInfo(decisionId: string, notes?: string | null) {
+    return this.http.post<DecisionInboxApiItem>(
+      `${this.baseUrl}/api/decisions/${decisionId}/request-info`,
+      { notes: notes ?? null }
+    ).pipe(map((item) => this.mapDecisionInboxItem(item)));
+  }
+
+  delegateDecision(decisionId: string, payload: { delegateUserId: string; delegateUserName?: string | null; notes?: string | null }) {
+    return this.http.post<DecisionInboxApiItem>(
+      `${this.baseUrl}/api/decisions/${decisionId}/delegate`,
+      {
+        delegateUserId: payload.delegateUserId,
+        delegateUserName: payload.delegateUserName ?? null,
+        notes: payload.notes ?? null
+      }
     ).pipe(map((item) => this.mapDecisionInboxItem(item)));
   }
 
@@ -159,6 +242,32 @@ export class OpportunityApprovalService {
       requestedAgeHours: item.requestedAgeHours,
       policyReason: item.policyReason,
       businessImpactLabel: item.businessImpactLabel
+    };
+  }
+
+  private mapDecisionInboxItemToApproval(item: DecisionInboxApiItem): OpportunityApprovalItem {
+    return {
+      id: item.id,
+      opportunityId: item.entityId,
+      status: (item.status as OpportunityApprovalItem['status']) ?? 'Pending',
+      purpose: item.purpose,
+      approverRole:
+        item.stepRole ??
+        item.steps?.find((step) => step.stepOrder === item.currentStepOrder)?.approverRole ??
+        'Approver',
+      approvalChainId: null,
+      stepOrder: item.currentStepOrder,
+      totalSteps: item.totalSteps,
+      chainStatus: item.chainStatus ?? item.status,
+      approverUserId: item.assigneeUserId,
+      approverName: item.assigneeName,
+      requestedByUserId: item.requestedByUserId,
+      requestedByName: item.requestedByName,
+      requestedOn: item.requestedOn,
+      decisionOn: item.decisionOn,
+      notes: item.notes,
+      amount: item.amount,
+      currency: item.currency
     };
   }
 }

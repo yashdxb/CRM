@@ -474,6 +474,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         bool approved,
         string? notes,
         ActorContext actor,
+        bool syncDecisionRequest = true,
         CancellationToken cancellationToken = default)
     {
         var approval = await _dbContext.OpportunityApprovals
@@ -530,13 +531,16 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 actor.UserName),
             cancellationToken);
 
-        await CreateOrUpdateDecisionRequestFromApprovalAsync(
-            approval,
-            chain,
-            opportunityName: null,
-            actor,
-            createdAction: approved ? "Approved" : "Rejected",
-            cancellationToken);
+        if (syncDecisionRequest)
+        {
+            await CreateOrUpdateDecisionRequestFromApprovalAsync(
+                approval,
+                chain,
+                opportunityName: null,
+                actor,
+                createdAction: approved ? "Approved" : "Rejected",
+                cancellationToken);
+        }
 
         if (chain is not null)
         {
@@ -604,6 +608,201 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         return OpportunityOperationResult<OpportunityApprovalDto>.Ok(dto);
     }
 
+    public async Task ProjectLinkedDecisionProgressionAsync(
+        Guid decisionRequestId,
+        int actedStepOrder,
+        bool approved,
+        string? notes,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var nowUtc = DateTime.UtcNow;
+        var decision = await _dbContext.DecisionRequests
+            .Include(d => d.Steps)
+            .FirstOrDefaultAsync(d => d.Id == decisionRequestId && !d.IsDeleted, cancellationToken);
+        if (decision is null || !decision.LegacyApprovalChainId.HasValue)
+        {
+            return;
+        }
+
+        var chain = await _dbContext.OpportunityApprovalChains
+            .FirstOrDefaultAsync(c => c.Id == decision.LegacyApprovalChainId.Value && !c.IsDeleted, cancellationToken);
+        if (chain is null)
+        {
+            return;
+        }
+
+        var approvals = await _dbContext.OpportunityApprovals
+            .Where(a => !a.IsDeleted && a.ApprovalChainId == chain.Id)
+            .OrderBy(a => a.StepOrder)
+            .ThenBy(a => a.RequestedOn)
+            .ToListAsync(cancellationToken);
+
+        var actedLegacy = approvals
+            .Where(a => a.StepOrder == actedStepOrder)
+            .OrderByDescending(a => a.RequestedOn)
+            .FirstOrDefault();
+
+        if (actedLegacy is not null)
+        {
+            var oldStatus = actedLegacy.Status;
+            actedLegacy.Status = approved ? "Approved" : "Rejected";
+            actedLegacy.DecisionOn = nowUtc;
+            actedLegacy.Notes = string.IsNullOrWhiteSpace(notes) ? actedLegacy.Notes : notes.Trim();
+            actedLegacy.ApproverUserId = actor.UserId;
+            actedLegacy.UpdatedAtUtc = nowUtc;
+            actedLegacy.UpdatedBy = actor.UserName;
+
+            if (!string.Equals(oldStatus, actedLegacy.Status, StringComparison.OrdinalIgnoreCase))
+            {
+                await _auditEvents.TrackAsync(
+                    new AuditEventEntry(
+                        ApprovalEntityType,
+                        actedLegacy.Id,
+                        "Decision",
+                        "Status",
+                        oldStatus,
+                        actedLegacy.Status,
+                        actor.UserId,
+                        actor.UserName),
+                    cancellationToken);
+
+                await _auditEvents.TrackAsync(
+                    new AuditEventEntry(
+                        OpportunityEntityType,
+                        actedLegacy.OpportunityId,
+                        approved ? "ApprovalGranted" : "ApprovalRejected",
+                        "Status",
+                        oldStatus,
+                        actedLegacy.Status,
+                        actor.UserId,
+                        actor.UserName),
+                    cancellationToken);
+            }
+        }
+
+        var genericSteps = decision.Steps
+            .Where(s => !s.IsDeleted)
+            .OrderBy(s => s.StepOrder)
+            .ToList();
+
+        var pendingGenericStep = genericSteps.FirstOrDefault(s => string.Equals(s.Status, "Pending", StringComparison.OrdinalIgnoreCase));
+        var pendingStepOrder = pendingGenericStep?.StepOrder;
+
+        var chainWorkflowSteps = JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(chain.StepsJson, JsonOptions)
+                                 ?? new List<ApprovalWorkflowStep>();
+
+        if (pendingGenericStep is not null)
+        {
+            var existingPendingLegacy = approvals
+                .Where(a => string.Equals(a.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(a => a.StepOrder)
+                .ThenByDescending(a => a.RequestedOn)
+                .FirstOrDefault(a => a.StepOrder == pendingGenericStep.StepOrder);
+
+            if (existingPendingLegacy is null)
+            {
+                var templateApproval = approvals
+                    .OrderByDescending(a => a.RequestedOn)
+                    .FirstOrDefault();
+
+                if (templateApproval is not null)
+                {
+                    var workflowStep = chainWorkflowSteps
+                        .OrderBy(s => s.Order)
+                        .FirstOrDefault(s => s.Order == pendingGenericStep.StepOrder);
+
+                    var nextApproval = new OpportunityApproval
+                    {
+                        OpportunityId = chain.OpportunityId,
+                        ApprovalChainId = chain.Id,
+                        StepOrder = pendingGenericStep.StepOrder,
+                        ApproverRole = workflowStep?.ApproverRole ?? pendingGenericStep.ApproverRole ?? templateApproval.ApproverRole,
+                        RequestedByUserId = decision.RequestedByUserId ?? templateApproval.RequestedByUserId,
+                        ApproverUserId = pendingGenericStep.AssigneeUserId,
+                        Status = "Pending",
+                        Purpose = templateApproval.Purpose,
+                        RequestedOn = nowUtc,
+                        Amount = templateApproval.Amount,
+                        Currency = string.IsNullOrWhiteSpace(templateApproval.Currency) ? "USD" : templateApproval.Currency
+                    };
+
+                    _dbContext.OpportunityApprovals.Add(nextApproval);
+                    approvals.Add(nextApproval);
+
+                    await _auditEvents.TrackAsync(
+                        new AuditEventEntry(
+                            OpportunityEntityType,
+                            nextApproval.OpportunityId,
+                            "ApprovalStepQueued",
+                            "Status",
+                            null,
+                            nextApproval.Status,
+                            actor.UserId,
+                            actor.UserName),
+                        cancellationToken);
+
+                    await _approvalQueue.EnqueueAsync(
+                        new ApprovalQueueMessage(
+                            nextApproval.OpportunityId,
+                            nextApproval.RequestedByUserId,
+                            nextApproval.Amount,
+                            nextApproval.Currency,
+                            nextApproval.RequestedOn,
+                            nextApproval.ApproverRole,
+                            nextApproval.Purpose),
+                        cancellationToken);
+                }
+            }
+            else
+            {
+                existingPendingLegacy.ApproverUserId = pendingGenericStep.AssigneeUserId ?? existingPendingLegacy.ApproverUserId;
+                existingPendingLegacy.ApproverRole = pendingGenericStep.ApproverRole ?? existingPendingLegacy.ApproverRole;
+                existingPendingLegacy.UpdatedAtUtc = nowUtc;
+                existingPendingLegacy.UpdatedBy = actor.UserName;
+            }
+        }
+
+        foreach (var approval in approvals.Where(a => !string.Equals(a.Status, "Rejected", StringComparison.OrdinalIgnoreCase)))
+        {
+            var step = genericSteps.FirstOrDefault(s => s.StepOrder == approval.StepOrder);
+            if (step is null)
+            {
+                continue;
+            }
+
+            if (string.Equals(step.Status, "Approved", StringComparison.OrdinalIgnoreCase))
+            {
+                approval.Status = "Approved";
+                approval.DecisionOn ??= step.CompletedAtUtc ?? nowUtc;
+            }
+            else if (string.Equals(step.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                approval.Status = "Rejected";
+                approval.DecisionOn ??= step.CompletedAtUtc ?? nowUtc;
+            }
+        }
+
+        chain.TotalSteps = Math.Max(chain.TotalSteps, genericSteps.Count);
+        chain.CurrentStep = pendingStepOrder ?? chain.TotalSteps;
+        chain.Status = MapLegacyChainStatus(decision.Status);
+        chain.CompletedOn = IsClosedDecisionStatus(decision.Status) ? (decision.CompletedAtUtc ?? nowUtc) : null;
+        chain.UpdatedAtUtc = nowUtc;
+        chain.UpdatedBy = actor.UserName;
+
+        var currentLegacyPending = approvals
+            .Where(a => string.Equals(a.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(a => a.StepOrder)
+            .ThenByDescending(a => a.RequestedOn)
+            .FirstOrDefault();
+
+        decision.LegacyApprovalId = currentLegacyPending?.Id ?? actedLegacy?.Id ?? decision.LegacyApprovalId;
+        decision.UpdatedAtUtc = nowUtc;
+        decision.UpdatedBy = actor.UserName;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     private async Task<OpportunityApprovalDto> MapDtoAsync(
         OpportunityApproval approval,
         OpportunityApprovalChain? chain,
@@ -637,6 +836,23 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             approval.Notes,
             approval.Amount,
             approval.Currency);
+    }
+
+    private static string MapLegacyChainStatus(string? decisionStatus)
+    {
+        if (string.Equals(decisionStatus, "Approved", StringComparison.OrdinalIgnoreCase)) return "Approved";
+        if (string.Equals(decisionStatus, "Rejected", StringComparison.OrdinalIgnoreCase)) return "Rejected";
+        if (string.Equals(decisionStatus, "Cancelled", StringComparison.OrdinalIgnoreCase)) return "Cancelled";
+        if (string.Equals(decisionStatus, "Expired", StringComparison.OrdinalIgnoreCase)) return "Expired";
+        return "Pending";
+    }
+
+    private static bool IsClosedDecisionStatus(string? status)
+    {
+        return string.Equals(status, "Approved", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(status, "Rejected", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(status, "Cancelled", StringComparison.OrdinalIgnoreCase)
+               || string.Equals(status, "Expired", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task CreateOrUpdateDecisionRequestFromApprovalAsync(
@@ -712,37 +928,88 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             decision.UpdatedBy = actor.UserName;
         }
 
-        var existingStep = await _dbContext.DecisionSteps
-            .FirstOrDefaultAsync(s =>
-                !s.IsDeleted &&
-                s.DecisionRequestId == decision.Id &&
-                s.StepOrder == approval.StepOrder,
-                cancellationToken);
+        var chainSteps = chain is not null
+            ? (JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(chain.StepsJson, JsonOptions) ?? new List<ApprovalWorkflowStep>())
+            : new List<ApprovalWorkflowStep>();
 
-        if (existingStep is null)
+        if (chainSteps.Count == 0)
         {
-            _dbContext.DecisionSteps.Add(new DecisionStep
-            {
-                DecisionRequestId = decision.Id,
-                StepOrder = approval.StepOrder,
-                StepType = "Approval",
-                Status = approval.Status == "Pending" ? "Pending" : approval.Status,
-                ApproverRole = approval.ApproverRole,
-                AssigneeUserId = approval.ApproverUserId,
-                AssigneeNameSnapshot = actor.UserName,
-                DueAtUtc = metadata.SlaDueAtUtc,
-                CompletedAtUtc = approval.DecisionOn
-            });
+            chainSteps.Add(new ApprovalWorkflowStep(
+                approval.StepOrder <= 0 ? 1 : approval.StepOrder,
+                approval.ApproverRole,
+                null,
+                null));
         }
-        else
+
+        var existingDecisionSteps = await _dbContext.DecisionSteps
+            .Where(s => !s.IsDeleted && s.DecisionRequestId == decision.Id)
+            .ToListAsync(cancellationToken);
+
+        foreach (var workflowStep in chainSteps.OrderBy(s => s.Order))
         {
-            existingStep.Status = approval.Status == "Pending" ? "Pending" : approval.Status;
-            existingStep.AssigneeUserId = approval.ApproverUserId;
-            existingStep.DueAtUtc = metadata.SlaDueAtUtc;
-            existingStep.CompletedAtUtc = approval.DecisionOn;
-            existingStep.Notes = approval.Notes;
-            existingStep.UpdatedAtUtc = nowUtc;
-            existingStep.UpdatedBy = actor.UserName;
+            var isCurrent = workflowStep.Order == approval.StepOrder;
+            var isEarlier = workflowStep.Order < approval.StepOrder;
+            var isLater = workflowStep.Order > approval.StepOrder;
+
+            string stepStatus;
+            if (isCurrent)
+            {
+                stepStatus = approval.Status == "Pending" ? "Pending" : approval.Status;
+            }
+            else if (isEarlier)
+            {
+                stepStatus = "Approved";
+            }
+            else if (chain is not null && string.Equals(chain.Status, "Rejected", StringComparison.OrdinalIgnoreCase))
+            {
+                stepStatus = "Skipped";
+            }
+            else if (chain is not null && chain.CurrentStep == workflowStep.Order && string.Equals(chain.Status, "Pending", StringComparison.OrdinalIgnoreCase))
+            {
+                stepStatus = "Pending";
+            }
+            else
+            {
+                stepStatus = "Queued";
+            }
+
+            var dueAt = isCurrent ? metadata.SlaDueAtUtc : (DateTime?)null;
+            var completedAt = stepStatus is "Approved" or "Rejected" or "Skipped"
+                ? (isCurrent ? approval.DecisionOn : nowUtc)
+                : null;
+
+            var existingStep = existingDecisionSteps.FirstOrDefault(s => s.StepOrder == workflowStep.Order);
+            if (existingStep is null)
+            {
+                _dbContext.DecisionSteps.Add(new DecisionStep
+                {
+                    DecisionRequestId = decision.Id,
+                    StepOrder = workflowStep.Order,
+                    StepType = "Approval",
+                    Status = stepStatus,
+                    ApproverRole = workflowStep.ApproverRole,
+                    AssigneeUserId = isCurrent ? approval.ApproverUserId : null,
+                    AssigneeNameSnapshot = isCurrent ? actor.UserName : null,
+                    DueAtUtc = dueAt,
+                    CompletedAtUtc = completedAt,
+                    Notes = isCurrent ? approval.Notes : null
+                });
+            }
+            else
+            {
+                existingStep.Status = stepStatus;
+                existingStep.ApproverRole = workflowStep.ApproverRole;
+                existingStep.AssigneeUserId = isCurrent ? approval.ApproverUserId : existingStep.AssigneeUserId;
+                existingStep.DueAtUtc = dueAt;
+                existingStep.CompletedAtUtc = completedAt;
+                if (isCurrent)
+                {
+                    existingStep.Notes = approval.Notes;
+                    existingStep.AssigneeNameSnapshot = actor.UserName;
+                }
+                existingStep.UpdatedAtUtc = nowUtc;
+                existingStep.UpdatedBy = actor.UserName;
+            }
         }
 
         _dbContext.DecisionActionLogs.Add(new DecisionActionLog

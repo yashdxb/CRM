@@ -99,7 +99,7 @@ export const routes: Routes = [
                   description: 'Policy routing, thresholds, and escalation SLA controls belong here in the enterprise rollout. This page is stubbed to establish the navigation architecture.'
                 },
                 loadComponent: () =>
-                  import('./crm/features/opportunities/pages/decision-inbox-placeholder.page').then((m) => m.DecisionInboxPlaceholderPage)
+                  import('./crm/features/opportunities/pages/decision-policies-sla.page').then((m) => m.DecisionPoliciesSlaPage)
               },
               {
                 path: 'audit',

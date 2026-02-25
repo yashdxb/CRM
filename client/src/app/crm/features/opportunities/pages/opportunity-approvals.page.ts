@@ -21,6 +21,8 @@ import {
 } from '../models/opportunity.model';
 import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
+import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
+import { UserLookupItem } from '../../settings/models/user-admin.model';
 
 interface FilterOption {
   label: string;
@@ -56,6 +58,7 @@ export class OpportunityApprovalsPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly userAdminData = inject(UserAdminDataService);
   private readonly currentUserId = readUserId();
 
   protected readonly approvals = signal<OpportunityApprovalInboxItem[]>([]);
@@ -66,8 +69,11 @@ export class OpportunityApprovalsPage {
   protected readonly searchQuery = signal('');
   protected readonly actioningIds = signal(new Set<string>());
   protected readonly draftingIds = signal(new Set<string>());
+  protected readonly delegateLoading = signal(false);
+  protected readonly delegateUsers = signal<UserLookupItem[]>([]);
   protected noteInputs: Record<string, string> = {};
   protected assistDrafts: Record<string, DecisionAssistDraft> = {};
+  protected delegateUserInputs: Record<string, string | null> = {};
 
   protected readonly statusOptions: FilterOption[] = [
     { label: 'All', value: 'all' },
@@ -281,6 +287,10 @@ export class OpportunityApprovalsPage {
       }
       this.load();
     });
+
+    if (this.canManage()) {
+      this.loadDelegateUsers();
+    }
   }
 
   protected load() {
@@ -369,9 +379,79 @@ export class OpportunityApprovalsPage {
     });
   }
 
+  protected requestInfo(item: OpportunityApprovalInboxItem) {
+    if (this.actioningIds().has(item.id)) {
+      return;
+    }
+    const notes = this.noteInputs[item.id] ?? null;
+    const nextActioning = new Set(this.actioningIds());
+    nextActioning.add(item.id);
+    this.actioningIds.set(nextActioning);
+
+    this.approvalService.requestDecisionInfo(item.id, notes).subscribe({
+      next: (updatedItem) => {
+        this.replaceApprovalRow(updatedItem);
+        this.clearActioning(item.id);
+        this.toastService.show('success', 'More information requested.', 2500);
+        this.ensureSelection();
+      },
+      error: (err) => {
+        this.clearActioning(item.id);
+        const message = typeof err?.error?.message === 'string'
+          ? err.error.message
+          : 'Unable to request information.';
+        this.toastService.show('error', message, 3500);
+      }
+    });
+  }
+
+  protected delegateDecision(item: OpportunityApprovalInboxItem) {
+    if (this.actioningIds().has(item.id)) {
+      return;
+    }
+    const delegateUserId = this.delegateUserInputs[item.id];
+    if (!delegateUserId) {
+      this.toastService.show('error', 'Select a user to delegate this decision.', 3000);
+      return;
+    }
+    const delegateUser = this.delegateUsers().find((u) => u.id === delegateUserId);
+    const notes = this.noteInputs[item.id] ?? null;
+
+    const nextActioning = new Set(this.actioningIds());
+    nextActioning.add(item.id);
+    this.actioningIds.set(nextActioning);
+
+    this.approvalService.delegateDecision(item.id, {
+      delegateUserId,
+      delegateUserName: delegateUser?.fullName ?? null,
+      notes
+    }).subscribe({
+      next: (updatedItem) => {
+        this.replaceApprovalRow(updatedItem);
+        this.clearActioning(item.id);
+        this.toastService.show('success', 'Decision delegated.', 2500);
+        this.ensureSelection();
+      },
+      error: (err) => {
+        this.clearActioning(item.id);
+        const message = typeof err?.error?.message === 'string'
+          ? err.error.message
+          : 'Unable to delegate decision.';
+        this.toastService.show('error', message, 3500);
+      }
+    });
+  }
+
   protected isActioning(id: string): boolean {
     return this.actioningIds().has(id);
   }
+
+  protected delegateOptions = computed(() =>
+    this.delegateUsers().map((user) => ({
+      label: `${user.fullName} (${user.email})`,
+      value: user.id
+    }))
+  );
 
   protected isDrafting(id: string): boolean {
     return this.draftingIds().has(id);
@@ -593,6 +673,28 @@ export class OpportunityApprovalsPage {
     const updated = new Set(this.draftingIds());
     updated.delete(id);
     this.draftingIds.set(updated);
+  }
+
+  private replaceApprovalRow(updatedItem: OpportunityApprovalInboxItem) {
+    const nextList = this.approvals().map((row) =>
+      row.id === updatedItem.id
+        ? { ...row, ...updatedItem }
+        : row
+    );
+    this.approvals.set(nextList);
+  }
+
+  private loadDelegateUsers() {
+    this.delegateLoading.set(true);
+    this.userAdminData.lookupActive(undefined, 100).subscribe({
+      next: (users) => {
+        this.delegateUsers.set(users ?? []);
+        this.delegateLoading.set(false);
+      },
+      error: () => {
+        this.delegateLoading.set(false);
+      }
+    });
   }
 
   private pickDraftNote(draft: DecisionAssistDraft): string {

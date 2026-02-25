@@ -271,6 +271,22 @@
             placeholder="Add decision context, policy exception rationale, or request clarification notes"
           ></textarea>
 
+          <div class="delegate-row" *ngIf="canManage() && isPending(selected)">
+            <div class="delegate-field">
+              <label class="notes-label" [for]="'delegate-user-' + selected.id">Delegate to</label>
+              <p-select
+                [inputId]="'delegate-user-' + selected.id"
+                [options]="delegateOptions()"
+                [disabled]="delegateLoading() || isActioning(selected.id)"
+                [filter]="true"
+                filterBy="label"
+                placeholder="Select user"
+                [(ngModel)]="delegateUserInputs[selected.id]"
+                styleClass="delegate-select"
+              ></p-select>
+            </div>
+          </div>
+
           <div class="assist-draft-panel" *ngIf="assistDraftFor(selected.id) as draft">
             <div class="assist-draft-head">
               <div class="assist-draft-title">AI decision summary</div>
@@ -298,6 +314,26 @@
           </div>
 
           <div class="action-row">
+            <button
+              pButton
+              type="button"
+              class="command-btn command-btn--ghost"
+              [disabled]="!canManage() || !isPending(selected) || isActioning(selected.id)"
+              (click)="requestInfo(selected)"
+            >
+              <i class="pi pi-info-circle"></i>
+              <span>Request Info</span>
+            </button>
+            <button
+              pButton
+              type="button"
+              class="command-btn command-btn--info"
+              [disabled]="!canManage() || !isPending(selected) || isActioning(selected.id) || !delegateUserInputs[selected.id]"
+              (click)="delegateDecision(selected)"
+            >
+              <i class="pi pi-share-alt"></i>
+              <span>Delegate</span>
+            </button>
             <button
               pButton
               type="button"

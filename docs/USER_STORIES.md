@@ -91,7 +91,7 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
   - Telemetry support exists (`86dzxrdqy`) but implementation still needs full learning-loop behavior beyond audit telemetry.
 
 ### Decision Inbox & Approval Workflow Roadmap Sync (ClickUp -> Docs)
-- Sync date: **February 24, 2026**
+- Sync date: **February 25, 2026**
 - Epic: `Epic | Decision Inbox | Approval Workflow Orchestration & Operations` (ClickUp: `86e00nx1x`)
 - Purpose: Track the enterprise Decision Inbox / approval workflow modernization roadmap in `Now / Next / Later` buckets without rewriting existing approval mechanics already in production.
 - Duplicate-aware note:
@@ -99,11 +99,35 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
   - Some assistant execution mechanics already exist under `Epic | AI Assistant | Action Execution & Review Controls` (`86dzxrdp5`) and should be treated as supporting stories, not duplicates.
 
 **Now**
-- `86e00nx2e` — Module: Approvals | Generic `DecisionRequest + DecisionStep` engine with audit log
-- `86e00nx2r` — Module: Approvals | Decision Inbox list page (`My Decisions`, `Team Queue`)
-- `86e00nx2v` — Module: Approvals | Discount/exception workflow routed through Decision Inbox engine
-- `86e00nx34` — Module: Approvals | SLA countdown + escalation on decision steps
-- `86e00nx3c` — Module: Assistant | AI decision summary + rationale draft in Decision Inbox (assist only)
+- `86e00nx2e` — Module: Approvals | Generic `DecisionRequest + DecisionStep` engine with audit log (`Partial+`)
+  - Implemented: persisted tables (`DecisionRequests`, `DecisionSteps`, `DecisionActionLogs`), generic inbox API, history API, approve/reject/request-info/delegate actions, generic-first inbox reads with legacy fallback.
+  - Implemented: linked decision approve/reject now executes generic `DecisionRequest/DecisionStep` progression first and uses legacy approval-chain rows as a compatibility projection (not legacy `DecideAsync` progression authority).
+  - Remaining: migrate remaining linked workflow side-effects (all business progression side-effects/notifications) to generic-first orchestration and reduce legacy chain to pure compatibility projection.
+- `86e00nx2r` — Module: Approvals | Decision Inbox list page (`My Decisions`, `Team Queue`) (`Completed`)
+  - Implemented: enterprise split-pane inbox, queue tabs (`My`, `Team`, `Attention`, `Completed`), child menu shell (`Inbox`, `Approvals`, `AI Reviews`, `Policies & SLA`, `Decision History`).
+- `86e00nx2v` — Module: Approvals | Discount/exception workflow routed through Decision Inbox engine (`Partial+`)
+  - Implemented: Opportunity form approval request create path now calls generic decision API; backend bridges to existing approval chain; generic actions and generic-first inbox rendering are active.
+  - Implemented: linked approve/reject compatibility path now resolves the target legacy approval from the generic `DecisionStep` current pending step (cutover bridge toward generic progression authority).
+  - Implemented: linked approve/reject path now writes canonical generic `DecisionRequest/DecisionStep` progression state while legacy approval chain runs in compatibility mode (`syncDecisionRequest=false`).
+  - Implemented: linked approve/reject no longer calls legacy approval `DecideAsync` for progression; generic progression is canonical and legacy rows/chains are synchronized as compatibility projection (including next-step queue row materialization).
+  - Remaining: complete generic-first ownership of all legacy business side-effects and retire remaining legacy progression assumptions.
+- `86e00nx34` — Module: Approvals | SLA countdown + escalation on decision steps (`Partial+`)
+  - Implemented: SLA status in inbox/detail, audited escalation marker, background escalation worker, assignee email alerts, approver-role fallback, `Sales Manager` fallback.
+  - Implemented: persisted `DecisionEscalationPolicy` workspace setting + Decision Inbox `Policies & SLA` quick controls (admin-editable) driving worker behavior (enable/email/assignee/step-role/fallback role).
+  - Remaining: richer configurable escalation routing/notification rules and policy editor support.
+- `86e00nx3c` — Module: Assistant | AI decision summary + rationale draft in Decision Inbox (assist only) (`Completed`)
+  - Implemented: `Draft rationale` action, assist-only summary, recommended action chip, draft note insertion for approve/reject/request-info.
+
+**Detailed implementation stories (created under Decision Inbox epic, support the roadmap stories above)**
+- `86e01ft01` — Module: Approvals | Decision Inbox child-menu shell + scoped child views (`Completed`)
+- `86e01ft0h` — Module: Approvals | Decision History page (real data, filters, table, Inbox deep-link) (`Completed`)
+- `86e01ft0y` — Module: Approvals | Policies & SLA read page (workflow policy + SLA health + escalation visibility) (`Completed`)
+- `86e01ft2m` — Module: Approvals | Decision Inbox `Request Info` + `Delegate` actions (generic engine + legacy compatibility) (`Completed`)
+- `86e01ft2q` — Module: Approvals | Decision SLA escalation automation worker + notification fallback chain (`In progress`)
+- `86e01p4b2` — Module: Approvals | Linked approval action target resolution from generic `DecisionStep` current pending step (cutover bridge) (`Completed`)
+- `86e01pga2` — Module: Approvals | Linked approve/reject generic canonical state write with legacy compatibility execution (`Completed`)
+- `86e01pga8` — Module: Approvals | Persisted DecisionEscalationPolicy + Decision Inbox Policies & SLA quick controls (`Completed`)
+- `86e01pmkp` — Module: Approvals | Generic linked approval progression cutover (legacy chain compatibility projection sync after generic decision execution) (`Completed`)
 
 **Next**
 - `86e00nx3h` — Module: Approvals | Stage override approvals routed through Decision Inbox

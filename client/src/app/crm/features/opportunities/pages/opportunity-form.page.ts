@@ -656,10 +656,12 @@ export class OpportunityFormPage implements OnInit {
 
     this.approvalRequesting.set(true);
     this.approvalService
-      .requestApproval(this.editingId, {
+      .requestApprovalViaDecisionEngine(this.editingId, {
         amount,
         currency: this.approvalRequest.currency || this.resolveCurrencyCode(),
-        purpose: this.approvalRequest.purpose
+        purpose: this.approvalRequest.purpose,
+        opportunityName: this.form.name?.trim() || 'Opportunity',
+        accountName: this.form.accountId ? this.accountLabel() : null
       })
       .subscribe({
         next: (item) => {

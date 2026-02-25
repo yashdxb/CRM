@@ -12,6 +12,7 @@ export interface WorkspaceSettings {
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy: QualificationPolicy;
   assistantActionScoringPolicy: AssistantActionScoringPolicy;
+  decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
 }
 
@@ -27,7 +28,16 @@ export interface UpdateWorkspaceSettingsRequest {
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy?: QualificationPolicy | null;
   assistantActionScoringPolicy?: AssistantActionScoringPolicy | null;
+  decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
+}
+
+export interface DecisionEscalationPolicy {
+  enabled: boolean;
+  sendEmailNotifications: boolean;
+  notifyCurrentAssignee: boolean;
+  notifyPendingStepRole: boolean;
+  fallbackRoleName: string;
 }
 
 export interface SupportingDocumentPolicy {

@@ -1,0 +1,277 @@
+<section class="policy-page">
+  <section class="hero-shell liquid-card">
+    <div>
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Decision Platform Controls</span>
+      </div>
+      <h1 class="hero-title">Policies &amp; SLA</h1>
+      <p class="hero-description">
+        Read-only operational view of approval policy thresholds, routing steps, and SLA health for the Decision Inbox platform.
+      </p>
+    </div>
+    <div class="hero-actions">
+      <a pButton type="button" class="command-btn command-btn--ghost" routerLink="/app/settings/approval-settings">
+        <i class="pi pi-sliders-h"></i>
+        <span>Open Approval Settings</span>
+      </a>
+      <button pButton type="button" class="command-btn command-btn--ghost" (click)="load()" [disabled]="loading()">
+        <i class="pi pi-refresh"></i>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="kpi-grid">
+    <article class="kpi-card liquid-card tone-cyan">
+      <div class="kpi-label">Active policy groups</div>
+      <div class="kpi-value">{{ activePolicyCount() }}</div>
+      <div class="kpi-meta">Thresholds / workflow / SLA policies configured</div>
+    </article>
+    <article class="kpi-card liquid-card tone-warn">
+      <div class="kpi-label">Pending decisions</div>
+      <div class="kpi-value">{{ operationalKpis().pending }}</div>
+      <div class="kpi-meta">{{ operationalKpis().atRisk }} at risk · {{ operationalKpis().overdue }} overdue</div>
+    </article>
+    <article class="kpi-card liquid-card tone-danger">
+      <div class="kpi-label">Escalated now</div>
+      <div class="kpi-value">{{ operationalKpis().escalated }}</div>
+      <div class="kpi-meta">Open pending decisions marked escalated</div>
+    </article>
+    <article class="kpi-card liquid-card">
+      <div class="kpi-label">Avg pending age</div>
+      <div class="kpi-value">{{ operationalKpis().avgAgeHours }}</div>
+      <div class="kpi-meta">Hours across pending decision queue</div>
+    </article>
+  </section>
+
+  <section class="page-grid">
+    <article class="liquid-card panel-card">
+      <header class="panel-header">
+        <div>
+          <div class="panel-title">Approval Workflow Policy</div>
+          <div class="panel-subtitle">Workspace-configured routing and threshold controls</div>
+        </div>
+        <p-tag [value]="approvalPolicyEnabledLabel()" [severity]="approvalPolicyEnabledSeverity()"></p-tag>
+      </header>
+
+      <div class="policy-meta-grid">
+        <div class="mini-card">
+          <div class="mini-label">Threshold amount</div>
+          <div class="mini-value">
+            {{ (workspaceSettings()?.approvalAmountThreshold ?? 0) | number:'1.0-0' }}
+            <span>{{ workspaceSettings()?.currency || 'USD' }}</span>
+          </div>
+          <small>Legacy/global amount threshold</small>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Default approver role</div>
+          <div class="mini-value text">{{ workspaceSettings()?.approvalApproverRole || 'Not set' }}</div>
+          <small>Fallback role when workflow step role is absent</small>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">Workflow steps</div>
+          <div class="mini-value">{{ approvalSteps().length }}</div>
+          <small>{{ approvalPolicy()?.enabled ? 'Policy-driven multi-step routing' : 'Workflow policy disabled' }}</small>
+        </div>
+        <div class="mini-card">
+          <div class="mini-label">First-touch SLA</div>
+          <div class="mini-value">{{ workspaceSettings()?.leadFirstTouchSlaHours ?? 0 }}h</div>
+          <small>Cross-workflow SLA shown for operational context</small>
+        </div>
+      </div>
+
+      <section class="control-editor" *ngIf="canManagePolicies()">
+        <div class="subpanel-title">Decision Module Quick Controls</div>
+        <div class="control-grid">
+          <label class="control-field">
+            <span>Amount threshold ({{ workspaceSettings()?.currency || 'USD' }})</span>
+            <input
+              pInputText
+              type="number"
+              min="0"
+              [ngModel]="quickApprovalAmountThreshold() ?? ''"
+              (ngModelChange)="quickApprovalAmountThreshold.set($event === '' ? null : +$event)"
+            />
+          </label>
+          <label class="control-field">
+            <span>Default approver role</span>
+            <input
+              pInputText
+              type="text"
+              [ngModel]="quickApprovalApproverRole()"
+              (ngModelChange)="quickApprovalApproverRole.set($event ?? '')"
+              placeholder="e.g. Sales Manager"
+            />
+          </label>
+          <label class="control-toggle">
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="escalationPolicyDraft().enabled"
+              (ngModelChange)="updateEscalationPolicy('enabled', !!$event)"
+              inputId="decisionEscEnabled"
+            ></p-checkbox>
+            <span>Enable escalation worker policy</span>
+          </label>
+          <label class="control-toggle">
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="escalationPolicyDraft().sendEmailNotifications"
+              (ngModelChange)="updateEscalationPolicy('sendEmailNotifications', !!$event)"
+              inputId="decisionEscEmail"
+            ></p-checkbox>
+            <span>Send escalation email notifications</span>
+          </label>
+          <label class="control-toggle">
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="escalationPolicyDraft().notifyCurrentAssignee"
+              (ngModelChange)="updateEscalationPolicy('notifyCurrentAssignee', !!$event)"
+              inputId="decisionEscAssignee"
+            ></p-checkbox>
+            <span>Notify current assignee first</span>
+          </label>
+          <label class="control-toggle">
+            <p-checkbox
+              [binary]="true"
+              [ngModel]="escalationPolicyDraft().notifyPendingStepRole"
+              (ngModelChange)="updateEscalationPolicy('notifyPendingStepRole', !!$event)"
+              inputId="decisionEscRole"
+            ></p-checkbox>
+            <span>Notify pending-step approver role users</span>
+          </label>
+          <label class="control-field control-field--full">
+            <span>Fallback role name</span>
+            <input
+              pInputText
+              type="text"
+              [ngModel]="escalationPolicyDraft().fallbackRoleName"
+              (ngModelChange)="updateEscalationPolicy('fallbackRoleName', ($event ?? '').toString())"
+              placeholder="Sales Manager"
+            />
+            <small>Used when assignee and step-role recipients are unavailable.</small>
+          </label>
+        </div>
+        <div class="control-actions">
+          <button pButton type="button" class="command-btn command-btn--ghost" (click)="saveQuickPolicyControls()" [disabled]="saving() || loading()">
+            <i class="pi" [class.pi-spin]="saving()" [class.pi-save]="!saving()" [class.pi-spinner]="saving()"></i>
+            <span>{{ saving() ? 'Saving...' : 'Save Controls' }}</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="table-shell" *ngIf="approvalSteps().length; else noSteps">
+        <p-table [value]="approvalSteps()" responsiveLayout="scroll" styleClass="policy-table">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Step</th>
+              <th>Approver Role</th>
+              <th>Amount Threshold</th>
+              <th>Purpose Scope</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-step>
+            <tr>
+              <td><p-chip [label]="'Step ' + step.order"></p-chip></td>
+              <td>{{ step.approverRole }}</td>
+              <td>
+                <span *ngIf="step.amountThreshold != null; else noThreshold">
+                  {{ step.amountThreshold | number:'1.0-0' }} {{ workspaceSettings()?.currency || 'USD' }}
+                </span>
+                <ng-template #noThreshold>Any amount</ng-template>
+              </td>
+              <td>{{ step.purpose || 'All purposes' }}</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+      <ng-template #noSteps>
+        <div class="empty-state">No approval workflow steps are configured for this workspace.</div>
+      </ng-template>
+    </article>
+
+    <article class="liquid-card panel-card">
+      <header class="panel-header">
+        <div>
+          <div class="panel-title">SLA Health & Escalation Signals</div>
+          <div class="panel-subtitle">Live queue and recent history indicators</div>
+        </div>
+      </header>
+
+      <div class="sla-strip">
+        <div class="sla-pill">
+          <span class="pill-label">Overdue</span>
+          <p-tag [value]="'' + operationalKpis().overdue" severity="danger"></p-tag>
+        </div>
+        <div class="sla-pill">
+          <span class="pill-label">At Risk</span>
+          <p-tag [value]="'' + operationalKpis().atRisk" severity="warn"></p-tag>
+        </div>
+        <div class="sla-pill">
+          <span class="pill-label">Escalated (Open)</span>
+          <p-tag [value]="'' + operationalKpis().escalated" severity="warn"></p-tag>
+        </div>
+        <div class="sla-pill">
+          <span class="pill-label">Escalations (7d)</span>
+          <p-tag [value]="'' + historyKpis().escalations7d" severity="info"></p-tag>
+        </div>
+      </div>
+
+      <div class="distribution-grid">
+        <section class="subpanel">
+          <div class="subpanel-title">Escalation Routing (Current)</div>
+          <div class="routing-list">
+            <div class="routing-row" *ngFor="let row of escalationRoutingRows()">
+              <div class="routing-order">{{ row.order }}</div>
+              <div class="routing-main">
+                <div class="routing-head">
+                  <strong>{{ row.target }}</strong>
+                  <p-tag [value]="row.status | uppercase" [severity]="routingRowSeverity(row.status)"></p-tag>
+                </div>
+                <div class="routing-source">{{ row.source }}</div>
+                <small>{{ row.description }}</small>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="subpanel">
+          <div class="subpanel-title">Pending Queue by Purpose</div>
+          <div *ngIf="purposeDistribution().length; else noPurposeBreakdown" class="bars">
+            <div class="bar-row" *ngFor="let item of purposeDistribution(); let first = first">
+              <div class="bar-head">
+                <span>{{ item.label }}</span>
+                <strong>{{ item.count }}</strong>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" [style.width.%]="(item.count / (purposeDistribution()[0]?.count || 1)) * 100"></div>
+              </div>
+            </div>
+          </div>
+          <ng-template #noPurposeBreakdown>
+            <div class="empty-state compact">No pending decisions in queue.</div>
+          </ng-template>
+        </section>
+
+        <section class="subpanel">
+          <div class="subpanel-title">Recent Escalation Events</div>
+          <div *ngIf="escalationTrendRows().length; else noEscalations" class="event-list">
+            <div class="event-row" *ngFor="let row of escalationTrendRows()">
+              <div class="event-main">
+                <div class="event-title">{{ row.entityName }}</div>
+                <small>{{ row.decisionType }} · {{ row.actionAtUtc | date:'MMM d, h:mm a' }}</small>
+              </div>
+              <div class="event-tags">
+                <p-tag [value]="row.status" severity="warn"></p-tag>
+                <p-tag *ngIf="row.priority" [value]="row.priority | uppercase" [severity]="prioritySeverity(row.priority)"></p-tag>
+              </div>
+            </div>
+          </div>
+          <ng-template #noEscalations>
+            <div class="empty-state compact">No escalation events found in recent decision history.</div>
+          </ng-template>
+        </section>
+      </div>
+    </article>
+  </section>
+</section>

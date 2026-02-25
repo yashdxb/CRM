@@ -1,6 +1,7 @@
 using CRM.Enterprise.Api.Contracts.Workspace;
 using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Assistant;
+using CRM.Enterprise.Application.Decisions;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
@@ -55,6 +56,7 @@ public class WorkspaceController : ControllerBase
             ResolveApprovalWorkflowPolicy(tenant),
             ResolveQualificationPolicy(tenant),
             ResolveAssistantActionScoringPolicy(tenant),
+            ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant)));
     }
 
@@ -93,6 +95,12 @@ public class WorkspaceController : ControllerBase
         {
             tenant.AssistantActionScoringPolicyJson = JsonSerializer.Serialize(request.AssistantActionScoringPolicy, JsonOptions);
         }
+        if (request.DecisionEscalationPolicy is not null)
+        {
+            tenant.DecisionEscalationPolicyJson = JsonSerializer.Serialize(
+                DecisionEscalationPolicyDefaults.Normalize(request.DecisionEscalationPolicy),
+                JsonOptions);
+        }
         if (request.SupportingDocumentPolicy is not null)
         {
             tenant.SupportingDocumentPolicyJson = JsonSerializer.Serialize(
@@ -117,6 +125,7 @@ public class WorkspaceController : ControllerBase
             ResolveApprovalWorkflowPolicy(tenant),
             ResolveQualificationPolicy(tenant),
             ResolveAssistantActionScoringPolicy(tenant),
+            ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant)));
     }
 
@@ -177,6 +186,24 @@ public class WorkspaceController : ControllerBase
         catch (JsonException)
         {
             return AssistantActionScoringPolicyDefaults.CreateDefault();
+        }
+    }
+
+    private static DecisionEscalationPolicy ResolveDecisionEscalationPolicy(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.DecisionEscalationPolicyJson))
+        {
+            return DecisionEscalationPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<DecisionEscalationPolicy>(tenant.DecisionEscalationPolicyJson, JsonOptions);
+            return DecisionEscalationPolicyDefaults.Normalize(parsed);
+        }
+        catch (JsonException)
+        {
+            return DecisionEscalationPolicyDefaults.CreateDefault();
         }
     }
 

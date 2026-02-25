@@ -20,6 +20,16 @@ public interface IDecisionInboxService
         DecisionDecisionRequestDto request,
         CancellationToken cancellationToken = default);
 
+    Task<DecisionInboxItemDto> RequestInfoAsync(
+        Guid decisionId,
+        DecisionRequestInfoDto request,
+        CancellationToken cancellationToken = default);
+
+    Task<DecisionInboxItemDto> DelegateAsync(
+        Guid decisionId,
+        DecisionDelegateRequestDto request,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<DecisionHistoryItemDto>> GetHistoryAsync(
         string? action = null,
         string? status = null,

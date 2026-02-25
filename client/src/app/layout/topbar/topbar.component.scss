@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--md-space-4);
   padding: var(--md-space-4) var(--md-space-7);
   border-bottom: 1px solid var(--border-subtle);
   backdrop-filter: blur(10px);
@@ -15,6 +16,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--md-space-1);
+  min-width: 0;
 }
 
 .topbar__title {
@@ -33,6 +35,9 @@
   display: flex;
   align-items: center;
   gap: var(--md-space-3);
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .assistant-topbar {
@@ -87,6 +92,7 @@
   font-size: 0.875rem;
   transition: all 0.15s ease;
   min-width: 200px;
+  flex: 0 1 240px;
 }
 
 .topbar__command-palette.p-button:hover {
@@ -125,6 +131,109 @@
   .topbar__command-palette {
     min-width: auto;
     padding: 8px 12px;
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 840px) {
+  .topbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: var(--md-space-3) var(--md-space-4);
+    gap: var(--md-space-3);
+  }
+
+  .topbar__left {
+    flex: 1 1 100%;
+    gap: 2px;
+  }
+
+  .topbar__title {
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .topbar__subtitle {
+    font-size: 0.76rem;
+    line-height: 1.2;
+    max-width: 18ch;
+  }
+
+  .topbar__actions {
+    width: 100%;
+    gap: var(--md-space-2);
+    justify-content: flex-start;
+    align-items: center;
+  }
+
+  .topbar__command-palette.p-button {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: auto;
+    justify-content: center;
+    padding: 8px 10px;
+  }
+
+  .topbar__command-palette kbd {
+    display: none;
+  }
+
+  .assistant-topbar {
+    padding: 6px 10px;
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .assistant-topbar span:last-child {
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .topbar__toggle.p-button {
+    order: -1;
+  }
+
+  :host ::ng-deep app-notification-center,
+  :host ::ng-deep app-user-menu {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  :host ::ng-deep .topbar__new.p-button {
+    min-width: 0;
+    padding-inline: 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar__subtitle {
+    display: none;
+  }
+
+  .assistant-topbar span:last-child {
+    display: none;
+  }
+
+  .assistant-topbar {
+    padding-inline: 9px;
+  }
+
+  .topbar__command-palette.p-button {
+    flex: 1 1 140px;
+  }
+
+  .topbar__actions {
+    row-gap: 8px;
+  }
+
+  :host ::ng-deep .topbar__new.p-button .p-button-label {
+    display: none;
+  }
+
+  :host ::ng-deep .topbar__new.p-button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
   }
 }
 

@@ -97,6 +97,18 @@ public sealed record DecisionDecisionRequestDto(
     Guid? ActorUserId,
     string? ActorName);
 
+public sealed record DecisionRequestInfoDto(
+    string? Notes,
+    Guid? ActorUserId,
+    string? ActorName);
+
+public sealed record DecisionDelegateRequestDto(
+    Guid DelegateUserId,
+    string? DelegateUserName,
+    string? Notes,
+    Guid? ActorUserId,
+    string? ActorName);
+
 public sealed record DecisionHistoryItemDto(
     Guid ActionLogId,
     Guid DecisionId,
