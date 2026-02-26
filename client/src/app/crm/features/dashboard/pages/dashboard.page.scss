@@ -120,7 +120,9 @@
 }
 
 .page-content {
-  max-width: 1400px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   margin: 0 auto;
   animation: fade-in-up 0.6s ease-out;
 }
@@ -1531,23 +1533,40 @@
   }
 }
 
-:host ::ng-deep .layout-dialog .p-orderlist {
-  background: transparent;
-  border: none;
-}
-
-:host ::ng-deep .layout-dialog .p-orderlist-list {
+.layout-order-list {
   max-height: 360px;
+  overflow: auto;
   border: 1px solid $glass-border;
   border-radius: $radius-xl;
   background: rgba(255, 255, 255, 0.7);
   padding: $space-2;
+  display: grid;
+  gap: $space-2;
 }
 
-:host ::ng-deep .layout-dialog .p-orderlist-item {
-  padding: 0;
-  background: transparent;
-  border: none;
+.layout-item-row.cdk-drag-placeholder {
+  opacity: 0.35;
+
+  .layout-item {
+    border-style: dashed;
+    background: rgba($primary, 0.05);
+  }
+}
+
+.layout-item-row.cdk-drag-animating {
+  transition: transform 180ms ease;
+}
+
+.layout-order-list.cdk-drop-list-dragging .layout-item-row:not(.cdk-drag-placeholder) {
+  transition: transform 180ms ease;
+}
+
+.layout-item-row.cdk-drag-preview {
+  .layout-item {
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
+    border-color: rgba($primary, 0.28);
+    background: rgba(255, 255, 255, 0.95);
+  }
 }
 
 .layout-chart-section {
@@ -1596,6 +1615,37 @@
   border: 1px solid rgba($glass-border, 0.6);
   background: rgba($primary, 0.04);
   transition: all $transition-fast;
+}
+
+.layout-item__drag {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid rgba($glass-border, 0.8);
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.8);
+  color: $text-muted;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  flex-shrink: 0;
+
+  i {
+    font-size: 0.78rem;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.layout-item__index {
+  width: 1.25rem;
+  text-align: center;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  color: $text-muted;
+  flex-shrink: 0;
 }
 
 .layout-item:hover {

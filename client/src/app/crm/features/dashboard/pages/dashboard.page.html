@@ -1441,19 +1441,24 @@
   [styleClass]="'layout-dialog'"
   >
   <p>Drag cards to reorder your Command Center view.</p>
-  <p-orderList
-    [value]="layoutDraft"
-    [dragdrop]="true"
-    [listStyle]="{ height: '320px' }"
-    [metaKeySelection]="false"
+  <div
+    class="layout-order-list"
+    cdkDropList
+    [cdkDropListData]="layoutDraft"
+    cdkDropListOrientation="vertical"
+    (cdkDropListDropped)="onLayoutDraftDrop($event)"
   >
-    <ng-template pTemplate="item" let-card>
+    <div class="layout-item-row" *ngFor="let card of layoutDraft; let index = index" cdkDrag>
       <div class="layout-item">
+        <button type="button" class="layout-item__drag" cdkDragHandle aria-label="Reorder row">
+          <i class="pi pi-bars"></i>
+        </button>
+        <span class="layout-item__index">{{ index + 1 }}</span>
         <i class="pi" [class]="card.icon"></i>
         <span>{{ card.label }}</span>
       </div>
-    </ng-template>
-  </p-orderList>
+    </div>
+  </div>
   <div class="layout-chart-section">
     <h4>Command Center cards ({{ activePackName() }})</h4>
     <div class="layout-chart-list">

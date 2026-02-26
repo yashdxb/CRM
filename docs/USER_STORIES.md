@@ -154,6 +154,22 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
 - `86dzxrdqy` — Assistant action audit trail and acceptance telemetry
 - `86dzxrdr4` — Dashboard action queue execute/review UX and state badges
 
+### Recent UI/UX Implementation Sync (ClickUp -> Docs)
+- Sync date: **February 26, 2026**
+- Scope: Dashboard pack management ordering UX, Lead Edit page width/responsiveness, Qualification Policy page Factor Evidence Mapping readability + visual polish
+- Purpose: Capture detailed implementation stories for recent UI/UX work without duplicating canonical Epic 2 / Epic 5 / Epic 8 story wording.
+
+**Detailed implementation stories (Completed)**
+- `86e02gm0t` — Module: Dashboard | Pack management row drag-and-drop ordering in Customize Layout (exact drop position)
+  - Implemented: Angular CDK vertical row drag/drop in Dashboard pack management customize-layout dialog (`cdkDropList`/`cdkDrag`) with drag handle + row index.
+  - Implemented: exact drop positioning replaces prior PrimeNG `p-orderList` drag behavior for more reliable row ordering.
+- `86e02gm15` — Module: Leads | Lead Edit page full-width content lane + mobile-first responsive width parity with Customer Workspace
+  - Implemented: removed nested width caps on Lead Edit header/form/related summary containers so the page fills the CRM content lane like Customer Workspace.
+  - Implemented: desktop/tablet/mobile width and overflow validation (Playwright) with no horizontal overflow.
+- `86e02gm19` — Module: Settings | Qualification Policy page full-width alignment + Factor Evidence Mapping readable vivid card redesign
+  - Implemented: fixed Qualification Policy content container alignment and removed reserved side-lane gap behavior.
+  - Implemented: Factor Evidence Mapping redesigned as full-width stacked factor cards with vivid per-factor color accents and improved readability.
+
 ---
 
 ## Strategic Benchmark & Differentiation (Current Plan)

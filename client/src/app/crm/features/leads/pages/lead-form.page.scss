@@ -121,7 +121,8 @@
     }
 
     .header-content {
-      max-width: 1240px;
+      width: 100%;
+      max-width: none;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -266,7 +267,7 @@
       position: relative;
       z-index: 1;
       width: 100%;
-      max-width: 1240px;
+      max-width: none;
       margin: 0 auto;
       padding: 1rem;
     }
@@ -2237,8 +2238,8 @@
     }
 
     .related-summary {
-      max-width: 1240px;
-      width: min(1240px, calc(100% - 3rem));
+      max-width: none;
+      width: calc(100% - 3rem);
       margin: 1rem auto 0;
       padding: 0.75rem 1rem;
       border-radius: 16px;
@@ -2247,6 +2248,7 @@
       box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
       display: grid;
       gap: 0.5rem;
+      min-width: 0;
     }
 
     .related-summary-label {

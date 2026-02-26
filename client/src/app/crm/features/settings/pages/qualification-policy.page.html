@@ -300,7 +300,7 @@
               </div>
 
               <div class="factor-evidence-grid">
-                <article class="factor-evidence-card" *ngFor="let factor of qualificationFactorOptions">
+                <article class="factor-evidence-card" [attr.data-factor]="factor.key" *ngFor="let factor of qualificationFactorOptions">
                   <div class="factor-evidence-card__header">
                     <div class="factor-evidence-card__title">
                       <span class="factor-evidence-card__icon" [attr.data-factor]="factor.key">

@@ -1329,6 +1329,15 @@ export class DashboardPage implements OnInit {
     });
   }
 
+  protected onLayoutDraftDrop(
+    event: CdkDragDrop<Array<{ id: string; label: string; icon: string }>>
+  ): void {
+    if (event.previousIndex === event.currentIndex) return;
+    const nextDraft = [...this.layoutDraft];
+    moveItemInArray(nextDraft, event.previousIndex, event.currentIndex);
+    this.layoutDraft = nextDraft;
+  }
+
   protected hideCard(cardId: string): void {
     const nextOrder = this.layoutOrder.filter(id => id !== cardId);
     this.layoutOrder = nextOrder;
