@@ -98,23 +98,24 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
   - This roadmap **extends** existing approval workflow/rules.
   - Some assistant execution mechanics already exist under `Epic | AI Assistant | Action Execution & Review Controls` (`86dzxrdp5`) and should be treated as supporting stories, not duplicates.
 
-**Now**
-- `86e00nx2e` — Module: Approvals | Generic `DecisionRequest + DecisionStep` engine with audit log (`Partial+`)
+**Now (Completed - Enterprise MVP baseline)**
+- `86e00nx2e` — Module: Approvals | Generic `DecisionRequest + DecisionStep` engine with audit log (`Completed`)
   - Implemented: persisted tables (`DecisionRequests`, `DecisionSteps`, `DecisionActionLogs`), generic inbox API, history API, approve/reject/request-info/delegate actions, generic-first inbox reads with legacy fallback.
   - Implemented: linked decision approve/reject now executes generic `DecisionRequest/DecisionStep` progression first and uses legacy approval-chain rows as a compatibility projection (not legacy `DecideAsync` progression authority).
-  - Remaining: migrate remaining linked workflow side-effects (all business progression side-effects/notifications) to generic-first orchestration and reduce legacy chain to pure compatibility projection.
+  - Implemented: linked approval audit/queue side-effects (`ApprovalGranted/Rejected`, `ApprovalStepQueued`, queue enqueue) were extracted into generic decision orchestration hooks; legacy chain sync now acts as compatibility projection.
+  - Hardening moved to **Next**: reduce legacy compatibility chain to pure read/projection behavior and move remaining linked workflow semantics into generic orchestration policies/hooks.
 - `86e00nx2r` — Module: Approvals | Decision Inbox list page (`My Decisions`, `Team Queue`) (`Completed`)
   - Implemented: enterprise split-pane inbox, queue tabs (`My`, `Team`, `Attention`, `Completed`), child menu shell (`Inbox`, `Approvals`, `AI Reviews`, `Policies & SLA`, `Decision History`).
-- `86e00nx2v` — Module: Approvals | Discount/exception workflow routed through Decision Inbox engine (`Partial+`)
+- `86e00nx2v` — Module: Approvals | Discount/exception workflow routed through Decision Inbox engine (`Completed`)
   - Implemented: Opportunity form approval request create path now calls generic decision API; backend bridges to existing approval chain; generic actions and generic-first inbox rendering are active.
   - Implemented: linked approve/reject compatibility path now resolves the target legacy approval from the generic `DecisionStep` current pending step (cutover bridge toward generic progression authority).
   - Implemented: linked approve/reject path now writes canonical generic `DecisionRequest/DecisionStep` progression state while legacy approval chain runs in compatibility mode (`syncDecisionRequest=false`).
   - Implemented: linked approve/reject no longer calls legacy approval `DecideAsync` for progression; generic progression is canonical and legacy rows/chains are synchronized as compatibility projection (including next-step queue row materialization).
-  - Remaining: complete generic-first ownership of all legacy business side-effects and retire remaining legacy progression assumptions.
-- `86e00nx34` — Module: Approvals | SLA countdown + escalation on decision steps (`Partial+`)
+  - Hardening moved to **Next**: retire remaining legacy progression assumptions and complete generic-first orchestration ownership.
+- `86e00nx34` — Module: Approvals | SLA countdown + escalation on decision steps (`Completed`)
   - Implemented: SLA status in inbox/detail, audited escalation marker, background escalation worker, assignee email alerts, approver-role fallback, `Sales Manager` fallback.
   - Implemented: persisted `DecisionEscalationPolicy` workspace setting + Decision Inbox `Policies & SLA` quick controls (admin-editable) driving worker behavior (enable/email/assignee/step-role/fallback role).
-  - Remaining: richer configurable escalation routing/notification rules and policy editor support.
+  - Hardening moved to **Next**: richer escalation routing matrix/rules and full policy editor support.
 - `86e00nx3c` — Module: Assistant | AI decision summary + rationale draft in Decision Inbox (assist only) (`Completed`)
   - Implemented: `Draft rationale` action, assist-only summary, recommended action chip, draft note insertion for approve/reject/request-info.
 
@@ -128,12 +129,18 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
 - `86e01pga2` — Module: Approvals | Linked approve/reject generic canonical state write with legacy compatibility execution (`Completed`)
 - `86e01pga8` — Module: Approvals | Persisted DecisionEscalationPolicy + Decision Inbox Policies & SLA quick controls (`Completed`)
 - `86e01pmkp` — Module: Approvals | Generic linked approval progression cutover (legacy chain compatibility projection sync after generic decision execution) (`Completed`)
+- `86e01x75p` — Module: Approvals | Extract linked approval side-effects into generic-first orchestration hooks (legacy sync projection-only) (`Completed`)
+- `PENDING-CU-STAGEOVR-1` — Module: Approvals | Stage override request path from Opportunity form creates generic `StageOverride` decision via Decision Inbox (`Completed`, pending ClickUp sync)
+- `PENDING-CU-STAGEOVR-2` — Module: Approvals | Approved `StageOverride` decision executes audited opportunity stage override (`Completed`, pending ClickUp sync)
 
 **Next**
-- `86e00nx3h` — Module: Approvals | Stage override approvals routed through Decision Inbox
+- `86e00nx3h` — Module: Approvals | Stage override approvals routed through Decision Inbox (`Completed`)
 - `86e00nx3t` — Module: Assistant | High-risk AI action review routed into Decision Inbox
 - `86e00nx40` — Module: Approvals | Delegation and out-of-office routing
 - `86e00nx4c` — Module: Dashboard | Decision inbox KPIs (pending / overdue / cycle time / bottlenecks)
+- `86e01xvgb` — Module: Approvals | Generic linked workflow orchestration hardening (reduce legacy chain to pure projection/read compatibility)
+- `86e01xvgq` — Module: Approvals | Escalation routing matrix and notification policy editor in Decision module
+- `86e01xvh0` — Module: Approvals | Generic orchestration policy hooks for linked approval workflows (step activation / notifications / audit policy)
 
 **Later**
 - `86e00nx4j` — Module: Approvals | Parallel approvals
@@ -227,7 +234,7 @@ Status source rules for this summary:
 | Epic 5 - Dashboard Command Center, Forecast, and Truth Visibility | 14 | 3 | 0 | 0 | 11 | `partial` | Mix of delivered widgets and open command-center/reporting items |
 | Epic 6 - Sales Motion Workflow (Qualification to Handoff) | 9 | 5 | 0 | 0 | 4 | `partial` | Later-stage workflow and handoff largely delivered; remaining items still open |
 | Epic 7 - Contacts and Buying Group Mapping | 3 | 1 | 0 | 0 | 2 | `partial` | Core contact context done; buying-group mapping still open |
-| Epic 8 - Governance, Approvals, and Workspace Settings | 12 | 4 | 0 | 1 | 7 | `partial` | Contains one `Must` policy permission story; settings/admin work mixed |
+| Epic 8 - Governance, Approvals, and Workspace Settings | 13 | 5 | 0 | 1 | 7 | `partial` | Contains one `Must` policy permission story; settings/admin work mixed |
 | Epic 9 - People, Access, Security Levels, and Role-Based Packs | 8 | 4 | 0 | 0 | 4 | `partial` | Strong delivery progress; module packs item still placeholder wording |
 
 ### Epic 1 | AI Revenue Execution Orchestration (Predominantly `Complex Orchestration`)
@@ -254,7 +261,7 @@ Status source rules for this summary:
 4. `Module: Leads | As a Sales Rep, I want to log outcomes (Connected / Voicemail / No Response) and next steps so my pipeline is always up to date.`
 5. `Module: Leads | As a Sales Rep, I want lead outcomes enforced (Disqualified reason, Nurture follow-up date, Qualified notes) to keep data clean.`
 6. `Module: Leads | As a Sales Rep, I want to qualify leads by company fit, authority, need, and timing so only real opportunities move forward.`
-7. `Module: Leads | Configurable qualification policy + conversion guardrails`
+7. `Module: Leads | Configurable qualification policy + conversion guardrails (including evidence enforcement and factor-to-evidence-source mapping)`
 8. `Module: Leads | As a manager, score breakdown aligns with CQVS labels (Company fit, Qualification readiness, Value/Problem severity, Stakeholder access) (In progress: explicit C/Q/V/S labeling pending)`
 9. `Module: Leads | As a rep, AI suggests next evidence to resolve weakest signal`
 10. `Module: Leads | As a rep, evidence is disabled when a factor is Unknown and locked to "No evidence yet"`
@@ -264,6 +271,32 @@ Status source rules for this summary:
 14. `Module: Leads | As a Sales Rep, I want the lead to close automatically after conversion to avoid duplicate work.`
 15. `Module: Leads | As a Sales Rep, I want a Supporting Documents tab on Lead Edit so I can upload, view, download, and delete evidence files (within workspace policy limits) and keep qualification/conversion proof attached to the lead. (Done) (ClickUp: 86e00gx2d)`
 16. `Module: Leads | As a Sales Rep, I want to record loss reason, competitor, and notes so leadership can analyze trends. (Done)`
+
+#### Epic 2 Implementation Note | Evidence Enforcement (Qualified Gate)
+- **Approach (implemented)**: qualification factor selections are treated as claims, and evidence fields are treated as proof. `Evidence Coverage` is now a configurable policy gate before setting a lead to `Qualified`.
+- **Approach refinement (implemented in Now)**: keep the six core qualification factors fixed for scoring and CQVS compatibility, but make their evidence behavior configurable (`Require evidence` + `Allowed evidence sources`) so reps see factor-relevant source choices and tenants can tune enforcement without changing factor keys.
+- **Why this shape (enterprise-safe)**:
+  - preserves stable scoring/CQVS/reporting keys (`budget`, `readiness`, `timeline`, `problem`, `economicBuyer`, `icpFit`)
+  - removes rep confusion in evidence selection by filtering factor-specific source choices
+  - avoids premature full dynamic factor-builder complexity in `Now`
+- **Configuration (Settings -> Qualification Policy -> Evidence Enforcement)**:
+  - `Require evidence before setting lead to Qualified` (default: `true`)
+  - `Minimum evidence coverage (%)` (default: `50`)
+- **Configuration (Settings -> Qualification Policy -> Factor Evidence Mapping)**:
+  - factor-specific `Require evidence` toggle (Budget / Readiness / Timeline / Problem / Economic Buyer / ICP Fit)
+  - factor-specific `Allowed evidence sources` multi-select (filters the Lead Qualification tab dropdowns per factor)
+  - purpose: reduce rep confusion by showing only relevant evidence-source choices for each qualification factor
+- **Backend enforcement (server-authoritative)**:
+  - lead status transition validation blocks `Contacted -> Qualified` when evidence coverage is below tenant policy threshold
+  - returns structured error code: `LEAD_STATUS_REQUIRES_EVIDENCE_COVERAGE`
+- **Lead form UX (compact guidance)**:
+  - progressive status dropdown hides `Qualified` until activity/factors/notes/evidence conditions are met (unless already in that status)
+  - `Next recommended` chip shows `Add evidence` when evidence is the remaining blocker
+  - inline status blocker message maps the structured server error code to a user-readable hint
+  - evidence source dropdowns in Qualification tab are filtered by factor-specific policy mapping (with safe fallback to the global evidence catalog)
+- **Next (backlog hardening)**:
+  - configurable factor metadata (`label`, `help text`, `enabled`, `display order`) for the six core factors
+  - optional full tenant factor catalog (custom factors) only after scoring/reporting/AI prompt contracts are versioned
 
 ### Epic 3 | Activity Discipline, Next-Step Hygiene, and Coaching Signals
 1. `Module: Activities | As a Sales Rep, I want every activity to require an outcome and a next step with due date, ensuring pipeline hygiene.`
@@ -327,10 +360,11 @@ Status source rules for this summary:
 6. `Module: Settings | As an Admin, I want policy gates for high-risk actions (discount %, deal size, stage gates) so enforcement is consistent. (Done)`
 7. `Module: Settings | As an Admin, I want separate permissions for request/approve/override so edit rights do not grant approvals. (Must)`
 8. `Module: Settings | As an Admin, I want configurable exposure weights per qualification factor so Cost of Not Knowing reflects my business. (Done)`
-9. `Module: Settings | As an Admin, I want currencies sourced from the system reference data so selectors stay consistent. (Done)`
-10. `Module: Settings | As an Admin, I want settings navigation grouped into People & Access, Workspace & Org, Workflow & Rules, and Trust & Audit so I can find policies quickly and scale as new settings are added.`
-11. `Module: Settings | As an Admin, I want a global supporting document policy (max documents per record and max file size) so evidence uploads are enforced consistently across CRM transactions. (Done) (ClickUp: 86e00gx30)`
-12. `Module: Settings | As an Admin, I want named dashboard templates so default Command Center layouts are not hard-coded and can be reused.`
+9. `Module: Settings | As an Admin, I want Qualification Policy to control factor-level evidence requirements and factor-specific evidence source choices so reps see only relevant evidence options in Lead Qualification and qualification gates remain enforceable. (Done)`
+10. `Module: Settings | As an Admin, I want currencies sourced from the system reference data so selectors stay consistent. (Done)`
+11. `Module: Settings | As an Admin, I want settings navigation grouped into People & Access, Workspace & Org, Workflow & Rules, and Trust & Audit so I can find policies quickly and scale as new settings are added.`
+12. `Module: Settings | As an Admin, I want a global supporting document policy (max documents per record and max file size) so evidence uploads are enforced consistently across CRM transactions. (Done) (ClickUp: 86e00gx30)`
+13. `Module: Settings | As an Admin, I want named dashboard templates so default Command Center layouts are not hard-coded and can be reused.`
 
 ### Epic 9 | People, Access, Security Levels, and Role-Based Packs
 1. `Module: Settings | As a Super Admin, I want to manage configurable security levels (create/edit/delete, set default) so high-risk actions are gated independently of hierarchy with no hard-coded tiers.`

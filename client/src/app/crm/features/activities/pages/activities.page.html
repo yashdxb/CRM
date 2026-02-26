@@ -122,6 +122,15 @@
         </div>
         <div class="toolbar-right">
           <p-select appendTo="body"
+            [options]="groupByOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="groupBy"
+            (ngModelChange)="onGroupByChange($event)"
+            placeholder="Group by"
+            styleClass="filter-select"
+          ></p-select>
+          <p-select appendTo="body"
             [options]="ownerOptions()"
             optionLabel="label"
             optionValue="value"
@@ -142,6 +151,144 @@
     <section class="table-section" *ngIf="currentView() === 'table'">
       <div class="data-table-wrapper glass-card">
         <ng-container *ngIf="!loading(); else loadingState">
+          <ng-container *ngIf="groupBy !== 'none'; else flatTableView">
+            <ng-container *ngIf="groupBy === 'lead'; else opportunityGroupedView">
+            <ng-container *ngIf="leadGroupedActivities().length; else emptyState">
+              <div class="grouped-activities">
+                <div class="grouped-activities__summary">
+                  <span class="grouped-activities__label">Grouped by Lead</span>
+                  <span class="grouped-activities__count">{{ groupedLeadActivityCount() }} lead{{ groupedLeadActivityCount() === 1 ? '' : 's' }}</span>
+                </div>
+
+                <div class="lead-group-card" *ngFor="let group of leadGroupedActivities()">
+                  <div class="lead-group-card__header">
+                    <div class="lead-group-card__identity">
+                      <div class="lead-group-card__title-row">
+                        <span class="lead-group-card__title">{{ group.leadName }}</span>
+                        <a
+                          class="lead-group-card__lead-link"
+                          [routerLink]="['/app/leads', group.leadId, 'edit']"
+                          (click)="$event.stopPropagation()"
+                        >
+                          <i class="pi pi-link"></i>
+                          Open Lead
+                        </a>
+                      </div>
+                      <div class="lead-group-card__meta">
+                        <span>{{ group.items.length }} activit{{ group.items.length === 1 ? 'y' : 'ies' }}</span>
+                        <span *ngIf="group.lastActivityAt">• Last activity {{ asLocalDate(group.lastActivityAt) | date:'MMM d, h:mm a' }}</span>
+                      </div>
+                    </div>
+                    <div class="lead-group-card__stats">
+                      <span class="group-chip neutral">Open {{ group.openCount }}</span>
+                      <span class="group-chip success">Done {{ group.completedCount }}</span>
+                      <span class="group-chip danger" *ngIf="group.overdueCount">Overdue {{ group.overdueCount }}</span>
+                    </div>
+                  </div>
+
+                  <div class="lead-group-card__items">
+                    <button
+                      type="button"
+                      class="lead-group-activity"
+                      *ngFor="let row of group.items"
+                      (click)="canManage() ? onEdit(row) : null"
+                    >
+                      <div class="lead-group-activity__left">
+                        <span class="type-badge" [attr.data-type]="row.type">
+                          <i class="pi"
+                             [class.pi-phone]="row.type === 'Call'"
+                             [class.pi-envelope]="row.type === 'Email'"
+                             [class.pi-users]="row.type === 'Meeting'"
+                             [class.pi-check-square]="row.type === 'Task'"></i>
+                          {{ row.type }}
+                        </span>
+                        <span class="lead-group-activity__subject">{{ row.subject }}</span>
+                      </div>
+                      <div class="lead-group-activity__right">
+                        <span class="status-chip"
+                              [class.upcoming]="row.status === 'Upcoming'"
+                              [class.completed]="row.status === 'Completed'"
+                              [class.overdue]="row.status === 'Overdue'">
+                          {{ row.status }}
+                        </span>
+                        <span class="lead-group-activity__date">{{ asLocalDate(row.completedDateUtc || row.dueDateUtc || row.createdAtUtc) | date: 'MMM d, h:mm a' }}</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+            </ng-container>
+            <ng-template #opportunityGroupedView>
+              <ng-container *ngIf="opportunityGroupedActivities().length; else emptyState">
+                <div class="grouped-activities">
+                  <div class="grouped-activities__summary">
+                    <span class="grouped-activities__label">Grouped by Opportunity</span>
+                    <span class="grouped-activities__count">{{ groupedOpportunityActivityCount() }} opportunit{{ groupedOpportunityActivityCount() === 1 ? 'y' : 'ies' }}</span>
+                  </div>
+
+                  <div class="lead-group-card" *ngFor="let group of opportunityGroupedActivities()">
+                    <div class="lead-group-card__header">
+                      <div class="lead-group-card__identity">
+                        <div class="lead-group-card__title-row">
+                          <span class="lead-group-card__title">{{ group.opportunityName }}</span>
+                          <a
+                            class="lead-group-card__lead-link"
+                            [routerLink]="['/app/opportunities', group.opportunityId, 'edit']"
+                            (click)="$event.stopPropagation()"
+                          >
+                            <i class="pi pi-link"></i>
+                            Open Opportunity
+                          </a>
+                        </div>
+                        <div class="lead-group-card__meta">
+                          <span>{{ group.items.length }} activit{{ group.items.length === 1 ? 'y' : 'ies' }}</span>
+                          <span *ngIf="group.lastActivityAt">• Last activity {{ asLocalDate(group.lastActivityAt) | date:'MMM d, h:mm a' }}</span>
+                        </div>
+                      </div>
+                      <div class="lead-group-card__stats">
+                        <span class="group-chip neutral">Open {{ group.openCount }}</span>
+                        <span class="group-chip success">Done {{ group.completedCount }}</span>
+                        <span class="group-chip danger" *ngIf="group.overdueCount">Overdue {{ group.overdueCount }}</span>
+                      </div>
+                    </div>
+
+                    <div class="lead-group-card__items">
+                      <button
+                        type="button"
+                        class="lead-group-activity"
+                        *ngFor="let row of group.items"
+                        (click)="canManage() ? onEdit(row) : null"
+                      >
+                        <div class="lead-group-activity__left">
+                          <span class="type-badge" [attr.data-type]="row.type">
+                            <i class="pi"
+                               [class.pi-phone]="row.type === 'Call'"
+                               [class.pi-envelope]="row.type === 'Email'"
+                               [class.pi-users]="row.type === 'Meeting'"
+                               [class.pi-check-square]="row.type === 'Task'"></i>
+                            {{ row.type }}
+                          </span>
+                          <span class="lead-group-activity__subject">{{ row.subject }}</span>
+                        </div>
+                        <div class="lead-group-activity__right">
+                          <span class="status-chip"
+                                [class.upcoming]="row.status === 'Upcoming'"
+                                [class.completed]="row.status === 'Completed'"
+                                [class.overdue]="row.status === 'Overdue'">
+                            {{ row.status }}
+                          </span>
+                          <span class="lead-group-activity__date">{{ asLocalDate(row.completedDateUtc || row.dueDateUtc || row.createdAtUtc) | date: 'MMM d, h:mm a' }}</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-template>
+          </ng-container>
+
+          <ng-template #flatTableView>
           <ng-container *ngIf="filteredActivities().length; else emptyState">
             <div class="table-responsive">
               <p-table class="data-table" [value]="filteredActivities()">
@@ -261,6 +408,7 @@
               ></p-paginator>
             </div>
           </ng-container>
+          </ng-template>
         </ng-container>
 
         <ng-template #loadingState>

@@ -13,6 +13,7 @@ public class User : AuditableEntity
     public string? Locale { get; set; }
     public string? NotificationPreferencesJson { get; set; }
     public string? CommandCenterLayoutJson { get; set; }
+    public string? UiPreferencesJson { get; set; }
     public decimal? MonthlyQuota { get; set; }
     public string? InviteTokenHash { get; set; }
     public DateTime? InviteTokenExpiresAtUtc { get; set; }

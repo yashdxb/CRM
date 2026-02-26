@@ -95,6 +95,23 @@
         </div>
 
         <form class="settings-form" *ngIf="!loading()" [formGroup]="settingsForm" (ngSubmit)="saveSettings()">
+          <p-accordion
+            class="policy-accordion-shell"
+            [multiple]="true"
+            [value]="policyAccordionValue()"
+            (valueChange)="onPolicyAccordionValueChange($event)"
+          >
+          <p-accordion-panel value="thresholds">
+            <p-accordion-header>
+              <div class="policy-accordion-header">
+                <div class="policy-accordion-title">
+                  <i class="pi pi-sliders-h"></i>
+                  <span>Thresholds & Guardrails</span>
+                </div>
+                <span class="policy-accordion-badge">Default {{ qualificationPolicy().defaultThreshold }}</span>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
           <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-sliders-h"></i>
@@ -183,7 +200,171 @@
               </div>
             </div>
           </section>
+            </p-accordion-content>
+          </p-accordion-panel>
 
+          <p-accordion-panel value="evidence-enforcement">
+            <p-accordion-header>
+              <div class="policy-accordion-header">
+                <div class="policy-accordion-title">
+                  <i class="pi pi-check-square"></i>
+                  <span>Evidence Enforcement</span>
+                </div>
+                <span class="policy-accordion-badge" [class.is-off]="!qualificationPolicy().requireEvidenceBeforeQualified">
+                  {{ qualificationPolicy().requireEvidenceBeforeQualified ? (qualificationPolicy().minimumEvidenceCoveragePercent + '% min') : 'Disabled' }}
+                </span>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-check-square"></i>
+              Evidence Enforcement
+            </h3>
+            <p class="section-description">
+              Define the minimum evidence coverage required before a lead can move to Qualified.
+            </p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label>Qualification evidence gate</label>
+                <div class="toggle-row">
+                  <label class="checkbox-field">
+                    <p-checkbox
+                      [binary]="true"
+                      [ngModel]="qualificationPolicy().requireEvidenceBeforeQualified"
+                      (ngModelChange)="setPolicyField('requireEvidenceBeforeQualified', $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                    ></p-checkbox>
+                    <span>Require evidence before setting lead to Qualified</span>
+                  </label>
+                </div>
+                <small class="field-hint">Uses truth/evidence coverage, not factor selections alone.</small>
+              </div>
+
+              <div class="field">
+                <label>Minimum evidence coverage (%)</label>
+                <p-inputNumber
+                  [ngModel]="qualificationPolicy().minimumEvidenceCoveragePercent"
+                  (ngModelChange)="setPolicyField('minimumEvidenceCoveragePercent', $event)"
+                  [min]="0"
+                  [max]="100"
+                  [ngModelOptions]="{ standalone: true }"
+                  [disabled]="!qualificationPolicy().requireEvidenceBeforeQualified"
+                  styleClass="w-full"
+                ></p-inputNumber>
+                <small class="field-hint">
+                  Recommended: 50% (roughly 3 of 6 evidence fields) before qualification.
+                </small>
+              </div>
+            </div>
+          </section>
+            </p-accordion-content>
+          </p-accordion-panel>
+
+          <p-accordion-panel value="factor-evidence">
+            <p-accordion-header>
+              <div class="policy-accordion-header">
+                <div class="policy-accordion-title">
+                  <i class="pi pi-sitemap"></i>
+                  <span>Factor Evidence Mapping</span>
+                </div>
+                <span class="policy-accordion-badge">
+                  {{ requiredFactorEvidenceCount() }}/{{ qualificationFactorOptions.length }} required
+                </span>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-sitemap"></i>
+              Factor Evidence Mapping
+            </h3>
+            <p class="section-description">
+              Define which evidence sources are shown for each qualification factor and whether factor-level evidence is expected.
+            </p>
+
+            <div class="policy-block">
+              <div class="factor-evidence-toolbar">
+                <div class="factor-evidence-toolbar__summary">
+                  <span class="factor-evidence-toolbar__stat">
+                    <i class="pi pi-shield"></i>
+                    {{ requiredFactorEvidenceCount() }} factors require evidence
+                  </span>
+                  <span class="factor-evidence-toolbar__stat factor-evidence-toolbar__stat--muted">
+                    <i class="pi pi-list"></i>
+                    {{ qualificationPolicy().evidenceSources.length }} evidence sources available
+                  </span>
+                </div>
+                <p class="hint">Configure source choices per factor so reps only see relevant options in the lead form.</p>
+              </div>
+
+              <div class="factor-evidence-grid">
+                <article class="factor-evidence-card" *ngFor="let factor of qualificationFactorOptions">
+                  <div class="factor-evidence-card__header">
+                    <div class="factor-evidence-card__title">
+                      <span class="factor-evidence-card__icon" [attr.data-factor]="factor.key">
+                        <i class="pi pi-sparkles"></i>
+                      </span>
+                      <div class="factor-evidence-card__title-text">
+                        <strong>{{ factor.label }}</strong>
+                        <small>Evidence source options shown in Lead Qualification</small>
+                      </div>
+                    </div>
+
+                    <label class="checkbox-field factor-evidence-card__toggle">
+                      <p-checkbox
+                        [binary]="true"
+                        [ngModel]="factorEvidenceRuleFor(factor.key).requireEvidence"
+                        (ngModelChange)="updateFactorEvidenceRequire(factor.key, $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                      ></p-checkbox>
+                      <span>Require evidence</span>
+                    </label>
+                  </div>
+
+                  <div class="factor-evidence-card__body">
+                    <label class="factor-evidence-card__label">Allowed evidence sources</label>
+                    <p-multiSelect
+                      [options]="qualificationPolicy().evidenceSources"
+                      [ngModel]="factorEvidenceRuleFor(factor.key).allowedEvidenceSources"
+                      (ngModelChange)="updateFactorEvidenceSources(factor.key, $event)"
+                      [ngModelOptions]="{ standalone: true }"
+                      [filter]="true"
+                      [showClear]="true"
+                      [display]="'chip'"
+                      defaultLabel="Select sources"
+                      appendTo="body"
+                      styleClass="w-full"
+                    ></p-multiSelect>
+                    <div class="factor-evidence-card__meta">
+                      <span class="factor-evidence-card__count">
+                        {{ factorEvidenceRuleFor(factor.key).allowedEvidenceSources.length }} selected
+                      </span>
+                      <span class="factor-evidence-card__state" [class.is-required]="factorEvidenceRuleFor(factor.key).requireEvidence">
+                        {{ factorEvidenceRuleFor(factor.key).requireEvidence ? 'Gate enforced' : 'Optional evidence' }}
+                      </span>
+                    </div>
+                  </div>
+                </article>
+              </div>
+              <p class="hint">Tip: keep sources narrow per factor to reduce rep confusion in the Lead Qualification tab.</p>
+            </div>
+          </section>
+            </p-accordion-content>
+          </p-accordion-panel>
+
+          <p-accordion-panel value="modifiers">
+            <p-accordion-header>
+              <div class="policy-accordion-header">
+                <div class="policy-accordion-title">
+                  <i class="pi pi-bolt"></i>
+                  <span>Modifiers</span>
+                </div>
+                <span class="policy-accordion-badge">{{ qualificationPolicy().modifiers.length }} rules</span>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
           <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-bolt"></i>
@@ -230,7 +411,22 @@
               </ng-template>
             </div>
           </section>
+            </p-accordion-content>
+          </p-accordion-panel>
 
+          <p-accordion-panel value="exposure-weights">
+            <p-accordion-header>
+              <div class="policy-accordion-header">
+                <div class="policy-accordion-title">
+                  <i class="pi pi-exclamation-circle"></i>
+                  <span>Exposure Weights</span>
+                </div>
+                <span class="policy-accordion-badge" [class.is-warn]="exposureWeightTotal() !== 100">
+                  Total {{ exposureWeightTotal() }}%
+                </span>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
           <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-exclamation-circle"></i>
@@ -264,7 +460,22 @@
               </p>
             </div>
           </section>
+            </p-accordion-content>
+          </p-accordion-panel>
 
+          <p-accordion-panel value="lead-data-weights">
+            <p-accordion-header>
+              <div class="policy-accordion-header">
+                <div class="policy-accordion-title">
+                  <i class="pi pi-chart-line"></i>
+                  <span>Lead Data Quality Weights</span>
+                </div>
+                <span class="policy-accordion-badge" [class.is-warn]="leadDataWeightTotal() !== 100">
+                  Total {{ leadDataWeightTotal() }}%
+                </span>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
           <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-chart-line"></i>
@@ -298,7 +509,20 @@
               </p>
             </div>
           </section>
+            </p-accordion-content>
+          </p-accordion-panel>
 
+          <p-accordion-panel value="evidence-sources">
+            <p-accordion-header>
+              <div class="policy-accordion-header">
+                <div class="policy-accordion-title">
+                  <i class="pi pi-list-check"></i>
+                  <span>Evidence Sources</span>
+                </div>
+                <span class="policy-accordion-badge">{{ qualificationPolicy().evidenceSources.length }} sources</span>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
           <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-list-check"></i>
@@ -342,6 +566,9 @@
               </ng-template>
             </div>
           </section>
+            </p-accordion-content>
+          </p-accordion-panel>
+          </p-accordion>
 
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">

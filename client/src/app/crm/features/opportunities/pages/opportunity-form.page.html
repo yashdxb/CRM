@@ -41,6 +41,18 @@
           <strong>Policy gate triggered</strong>
           <p>{{ gateMessage }}</p>
         </div>
+        <div class="policy-gate-actions" *ngIf="canRequestStageOverride()">
+          <button
+            pButton
+            type="button"
+            class="policy-gate-action-button"
+            icon="pi pi-send"
+            [label]="stageOverrideRequesting() ? 'Submitting...' : 'Request Stage Override'"
+            [loading]="stageOverrideRequesting()"
+            [disabled]="stageOverrideRequesting()"
+            (click)="requestStageOverride()">
+          </button>
+        </div>
       </div>
 
       <section class="related-summary" *ngIf="isEditMode()">

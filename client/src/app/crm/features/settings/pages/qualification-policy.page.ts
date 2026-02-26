@@ -1,4 +1,5 @@
 import { NgFor, NgIf } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -7,7 +8,9 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { SkeletonModule } from 'primeng/skeleton';
+import { AccordionModule } from 'primeng/accordion';
 
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -18,6 +21,7 @@ import { ReferenceDataService } from '../../../../core/services/reference-data.s
 import {
   QualificationModifierRule,
   QualificationExposureWeight,
+  QualificationFactorEvidenceRule,
   QualificationPolicy,
   WorkspaceSettings
 } from '../models/workspace-settings.model';
@@ -36,10 +40,12 @@ interface Option<T = string> {
     InputTextModule,
     InputNumberModule,
     SelectModule,
+    MultiSelectModule,
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
     SkeletonModule,
+    AccordionModule,
     NgIf,
     NgFor,
     BreadcrumbsComponent
@@ -48,10 +54,22 @@ interface Option<T = string> {
   styleUrl: './qualification-policy.page.scss'
 })
 export class QualificationPolicyPage {
+  private static readonly accordionStateKey = 'qualification-policy-accordion';
+  private static readonly defaultAccordionPanels = [
+    'thresholds',
+    'evidence-enforcement',
+    'factor-evidence',
+    'modifiers',
+    'exposure-weights',
+    'lead-data-weights',
+    'evidence-sources'
+  ] as const;
+
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly toastService = inject(AppToastService);
   private readonly fb = inject(FormBuilder);
   private readonly referenceData = inject(ReferenceDataService);
+  private readonly http = inject(HttpClient);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -66,6 +84,9 @@ export class QualificationPolicyPage {
   });
 
   protected readonly qualificationPolicy = signal<QualificationPolicy>(QualificationPolicyPage.defaultPolicy());
+  protected readonly policyAccordionValue = signal<string[]>([
+    ...QualificationPolicyPage.defaultAccordionPanels
+  ]);
 
   protected readonly modifierKeyOptions: Option[] = [
     { label: 'Competitive deal', value: 'competitive' },
@@ -93,11 +114,21 @@ export class QualificationPolicyPage {
     { key: 'source', label: 'Source' }
   ];
 
+  protected readonly qualificationFactorOptions: Array<{ key: string; label: string }> = [
+    { key: 'budget', label: 'Budget availability' },
+    { key: 'readiness', label: 'Readiness to spend' },
+    { key: 'timeline', label: 'Buying timeline' },
+    { key: 'problem', label: 'Problem severity' },
+    { key: 'economicBuyer', label: 'Economic buyer' },
+    { key: 'icpFit', label: 'ICP fit' }
+  ];
+
   private loadedSettings: WorkspaceSettings | null = null;
   private currencyFallback = '';
 
   constructor() {
     this.loadCurrencyFallback();
+    this.loadAccordionState();
     this.loadSettings();
   }
 
@@ -147,6 +178,20 @@ export class QualificationPolicyPage {
     });
   }
 
+  protected onPolicyAccordionValueChange(value: string[] | number[] | string | number | null | undefined) {
+    const next = this.normalizeAccordionValue(value);
+    this.policyAccordionValue.set(next);
+    this.http
+      .put<{ key: string; value: unknown }>(`/api/users/me/ui-state/${QualificationPolicyPage.accordionStateKey}`, {
+        value: next
+      })
+      .subscribe({
+        error: () => {
+          // Non-blocking UX preference save. Avoid toast noise on transient failures.
+        }
+      });
+  }
+
   private applySettings(settings: WorkspaceSettings) {
     this.loadedSettings = settings;
     this.settingsForm.patchValue({
@@ -164,8 +209,12 @@ export class QualificationPolicyPage {
       leadDataWeights: (policy.leadDataWeights && policy.leadDataWeights.length > 0)
         ? policy.leadDataWeights
         : QualificationPolicyPage.defaultPolicy().leadDataWeights,
+      minimumEvidenceCoveragePercent: Number.isFinite(policy.minimumEvidenceCoveragePercent)
+        ? Math.max(0, Math.min(100, policy.minimumEvidenceCoveragePercent))
+        : QualificationPolicyPage.defaultPolicy().minimumEvidenceCoveragePercent,
       evidenceSources: this.normalizeEvidenceSources(policy.evidenceSources)
     };
+    normalized.factorEvidenceRules = this.normalizeFactorEvidenceRules(policy.factorEvidenceRules, normalized.evidenceSources);
     this.qualificationPolicy.set(normalized);
   }
 
@@ -224,6 +273,10 @@ export class QualificationPolicyPage {
     );
   }
 
+  protected requiredFactorEvidenceCount() {
+    return (this.qualificationPolicy().factorEvidenceRules ?? []).filter((rule) => rule.requireEvidence).length;
+  }
+
   protected removeModifierRule(index: number) {
     const current = this.qualificationPolicy();
     const next = current.modifiers.filter((_, idx) => idx !== index);
@@ -248,6 +301,7 @@ export class QualificationPolicyPage {
       ...current,
       evidenceSources: [...current.evidenceSources, nextName]
     });
+    this.syncFactorEvidenceRulesToCatalog();
   }
 
   protected updateEvidenceSource(index: number, value: string) {
@@ -259,6 +313,7 @@ export class QualificationPolicyPage {
       ...current,
       evidenceSources: this.normalizeEvidenceSources(next)
     });
+    this.syncFactorEvidenceRulesToCatalog();
   }
 
   protected removeEvidenceSource(index: number) {
@@ -275,6 +330,37 @@ export class QualificationPolicyPage {
       ...current,
       evidenceSources: this.normalizeEvidenceSources(next)
     });
+    this.syncFactorEvidenceRulesToCatalog();
+  }
+
+  protected factorEvidenceRuleFor(key: string): QualificationFactorEvidenceRule {
+    const current = this.qualificationPolicy();
+    return (
+      current.factorEvidenceRules?.find((rule) => rule.factorKey === key) ??
+      QualificationPolicyPage.defaultFactorEvidenceRules(current.evidenceSources).find((rule) => rule.factorKey === key) ?? {
+        factorKey: key,
+        requireEvidence: false,
+        allowedEvidenceSources: ['No evidence yet']
+      }
+    );
+  }
+
+  protected updateFactorEvidenceRequire(key: string, requireEvidence: boolean) {
+    const current = this.qualificationPolicy();
+    const next = (current.factorEvidenceRules ?? []).map((rule) =>
+      rule.factorKey === key ? { ...rule, requireEvidence: !!requireEvidence } : rule
+    );
+    this.qualificationPolicy.set({ ...current, factorEvidenceRules: next });
+  }
+
+  protected updateFactorEvidenceSources(key: string, selected: string[] | null | undefined) {
+    const current = this.qualificationPolicy();
+    const catalog = this.normalizeEvidenceSources(current.evidenceSources);
+    const allowed = this.normalizeAllowedEvidenceSources(selected, catalog);
+    const next = (current.factorEvidenceRules ?? []).map((rule) =>
+      rule.factorKey === key ? { ...rule, allowedEvidenceSources: allowed } : rule
+    );
+    this.qualificationPolicy.set({ ...current, evidenceSources: catalog, factorEvidenceRules: next });
   }
 
   protected clearToast() {
@@ -293,6 +379,37 @@ export class QualificationPolicyPage {
         this.settingsForm.patchValue({ currency: this.currencyFallback });
       }
     });
+  }
+
+  private loadAccordionState() {
+    this.http
+      .get<{ key: string; value: unknown }>(`/api/users/me/ui-state/${QualificationPolicyPage.accordionStateKey}`)
+      .subscribe({
+        next: (response) => {
+          this.policyAccordionValue.set(
+            this.normalizeAccordionValue(response?.value as string[] | number[] | string | number | null | undefined)
+          );
+        },
+        error: () => {
+          this.policyAccordionValue.set([...QualificationPolicyPage.defaultAccordionPanels]);
+        }
+      });
+  }
+
+  private normalizeAccordionValue(value: string[] | number[] | string | number | null | undefined): string[] {
+    const allowed = new Set<string>(QualificationPolicyPage.defaultAccordionPanels);
+    const incoming = Array.isArray(value)
+      ? value.map((item) => String(item))
+      : (typeof value === 'string' || typeof value === 'number') && String(value).trim().length > 0
+        ? [String(value)]
+        : [...QualificationPolicyPage.defaultAccordionPanels];
+
+    const normalized = incoming
+      .map((item) => (item ?? '').trim())
+      .filter((item): item is string => item.length > 0 && allowed.has(item))
+      .filter((item, index, all) => all.indexOf(item) === index);
+
+    return normalized.length ? normalized : [...QualificationPolicyPage.defaultAccordionPanels];
   }
 
   private resolveCurrency(value: string | null) {
@@ -322,6 +439,47 @@ export class QualificationPolicyPage {
     return normalized;
   }
 
+  private normalizeAllowedEvidenceSources(items: string[] | null | undefined, catalog: string[]): string[] {
+    const catalogSet = new Set(catalog.map((item) => item.toLowerCase()));
+    const normalized = (items ?? [])
+      .map((item) => (item ?? '').trim())
+      .filter((item) => item.length > 0 && catalogSet.has(item.toLowerCase()))
+      .filter((item, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+
+    if (!normalized.some((item) => item.toLowerCase() === 'no evidence yet') && catalogSet.has('no evidence yet')) {
+      normalized.unshift(catalog.find((item) => item.toLowerCase() === 'no evidence yet') ?? 'No evidence yet');
+    }
+
+    return normalized.length ? normalized : ['No evidence yet'];
+  }
+
+  private normalizeFactorEvidenceRules(
+    rules: QualificationFactorEvidenceRule[] | null | undefined,
+    catalog: string[]
+  ): QualificationFactorEvidenceRule[] {
+    const defaults = QualificationPolicyPage.defaultFactorEvidenceRules(catalog);
+    const byKey = new Map((rules ?? []).map((rule) => [rule.factorKey, rule]));
+    return defaults.map((def) => {
+      const configured = byKey.get(def.factorKey);
+      if (!configured) return def;
+      return {
+        factorKey: def.factorKey,
+        requireEvidence: configured.requireEvidence ?? def.requireEvidence,
+        allowedEvidenceSources: this.normalizeAllowedEvidenceSources(configured.allowedEvidenceSources, catalog)
+      };
+    });
+  }
+
+  private syncFactorEvidenceRulesToCatalog() {
+    const current = this.qualificationPolicy();
+    const catalog = this.normalizeEvidenceSources(current.evidenceSources);
+    this.qualificationPolicy.set({
+      ...current,
+      evidenceSources: catalog,
+      factorEvidenceRules: this.normalizeFactorEvidenceRules(current.factorEvidenceRules, catalog)
+    });
+  }
+
   private nextEvidenceSourceName(): string {
     const existing = new Set(this.qualificationPolicy().evidenceSources.map((item) => item.toLowerCase()));
     for (let i = 1; i <= 999; i += 1) {
@@ -334,6 +492,7 @@ export class QualificationPolicyPage {
   }
 
   private static defaultPolicy(): QualificationPolicy {
+    const defaultEvidenceSources = QualificationPolicyPage.defaultEvidenceSources();
     return {
       defaultThreshold: 75,
       managerApprovalBelow: 50,
@@ -341,6 +500,9 @@ export class QualificationPolicyPage {
       allowOverrides: true,
       requireOverrideReason: true,
       showCqvsInLeadList: false,
+      requireEvidenceBeforeQualified: true,
+      minimumEvidenceCoveragePercent: 50,
+      factorEvidenceRules: QualificationPolicyPage.defaultFactorEvidenceRules(defaultEvidenceSources),
       thresholdRules: [],
       modifiers: [
         { key: 'competitive', delta: 10 },
@@ -365,29 +527,48 @@ export class QualificationPolicyPage {
         { key: 'jobTitle', weight: 12 },
         { key: 'source', weight: 8 }
       ],
-      evidenceSources: [
-        'No evidence yet',
-        'Customer call',
-        'Call notes',
-        'Call recap',
-        'Follow-up call notes',
-        'Discovery call notes',
-        'Discovery meeting notes',
-        'Meeting notes',
-        'Email confirmation',
-        'Email from buyer',
-        'Buyer email',
-        'Written confirmation',
-        'Chat transcript',
-        'Proposal feedback',
-        'Internal plan mention',
-        'Ops review notes',
-        'Org chart reference',
-        'Account research',
-        'Third-party confirmation',
-        'Historical / prior deal',
-        'Inferred from context'
-      ]
+      evidenceSources: defaultEvidenceSources
     };
+  }
+
+  private static defaultEvidenceSources(): string[] {
+    return [
+      'No evidence yet',
+      'Customer call',
+      'Call notes',
+      'Call recap',
+      'Follow-up call notes',
+      'Discovery call notes',
+      'Discovery meeting notes',
+      'Meeting notes',
+      'Email confirmation',
+      'Email from buyer',
+      'Buyer email',
+      'Written confirmation',
+      'Chat transcript',
+      'Proposal feedback',
+      'Internal plan mention',
+      'Ops review notes',
+      'Org chart reference',
+      'Account research',
+      'Third-party confirmation',
+      'Historical / prior deal',
+      'Inferred from context'
+    ];
+  }
+
+  private static defaultFactorEvidenceRules(catalog: string[]): QualificationFactorEvidenceRule[] {
+    const source = catalog;
+    const pick = (...names: string[]) =>
+      source.filter((item) => names.some((name) => name.toLowerCase() === item.toLowerCase()));
+
+    return [
+      { factorKey: 'budget', requireEvidence: true, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Call notes', 'Discovery call notes', 'Discovery meeting notes', 'Email confirmation', 'Buyer email', 'Written confirmation', 'Proposal feedback') },
+      { factorKey: 'readiness', requireEvidence: false, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Call notes', 'Discovery call notes', 'Meeting notes', 'Email confirmation', 'Chat transcript', 'Internal plan mention') },
+      { factorKey: 'timeline', requireEvidence: true, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Call notes', 'Discovery meeting notes', 'Meeting notes', 'Email confirmation', 'Buyer email', 'Written confirmation', 'Proposal feedback') },
+      { factorKey: 'problem', requireEvidence: true, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Call recap', 'Discovery call notes', 'Discovery meeting notes', 'Meeting notes', 'Ops review notes', 'Chat transcript') },
+      { factorKey: 'economicBuyer', requireEvidence: true, allowedEvidenceSources: pick('No evidence yet', 'Customer call', 'Meeting notes', 'Email from buyer', 'Buyer email', 'Written confirmation', 'Org chart reference') },
+      { factorKey: 'icpFit', requireEvidence: false, allowedEvidenceSources: pick('No evidence yet', 'Account research', 'Org chart reference', 'Third-party confirmation', 'Historical / prior deal', 'Customer call') }
+    ];
   }
 }

@@ -94,6 +94,13 @@ interface CreateDecisionRequestPayload {
   }> | null;
 }
 
+interface StageOverrideDecisionResponse {
+  decisionId: string;
+  status: string;
+  requestedStage: string;
+  message: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OpportunityApprovalService {
   private readonly http = inject(HttpClient);
@@ -150,6 +157,20 @@ export class OpportunityApprovalService {
     return this.http
       .post<DecisionInboxApiItem>(`${this.baseUrl}/api/decisions/requests`, request)
       .pipe(map((item) => this.mapDecisionInboxItemToApproval(item)));
+  }
+
+  requestStageOverrideDecision(
+    opportunityId: string,
+    payload: { requestedStage: string; blockerReason: string; notes?: string | null }
+  ) {
+    return this.http.post<StageOverrideDecisionResponse>(
+      `${this.baseUrl}/api/opportunities/${opportunityId}/stage-override-request`,
+      {
+        requestedStage: payload.requestedStage,
+        blockerReason: payload.blockerReason,
+        notes: payload.notes ?? null
+      }
+    );
   }
 
   decide(approvalId: string, payload: OpportunityApprovalDecisionRequest) {

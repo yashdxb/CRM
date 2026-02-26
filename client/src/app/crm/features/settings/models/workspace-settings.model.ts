@@ -85,11 +85,20 @@ export interface QualificationPolicy {
   allowOverrides: boolean;
   requireOverrideReason: boolean;
   showCqvsInLeadList: boolean;
+  requireEvidenceBeforeQualified: boolean;
+  minimumEvidenceCoveragePercent: number;
+  factorEvidenceRules: QualificationFactorEvidenceRule[];
   thresholdRules: QualificationThresholdRule[];
   modifiers: QualificationModifierRule[];
   exposureWeights: QualificationExposureWeight[];
   leadDataWeights: QualificationLeadDataWeight[];
   evidenceSources: string[];
+}
+
+export interface QualificationFactorEvidenceRule {
+  factorKey: string;
+  requireEvidence: boolean;
+  allowedEvidenceSources: string[];
 }
 
 export interface QualificationThresholdRule {

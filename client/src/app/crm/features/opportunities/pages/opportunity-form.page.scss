@@ -89,6 +89,21 @@
     font-size: 0.9rem;
     line-height: 1.4;
   }
+
+  .policy-gate-actions {
+    margin-left: auto;
+    align-self: center;
+  }
+
+  .policy-gate-action-button.p-button {
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.95), rgba(99, 102, 241, 0.92)) !important;
+    border: 1px solid rgba(191, 219, 254, 0.75) !important;
+    color: #fff !important;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+    font-weight: 600;
+  }
 }
 
 .form-body {

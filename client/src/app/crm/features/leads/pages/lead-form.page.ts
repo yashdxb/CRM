@@ -47,15 +47,22 @@ import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from 
 import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
-import { SupportingDocumentPolicy } from '../../settings/models/workspace-settings.model';
+import { QualificationPolicy, SupportingDocumentPolicy } from '../../settings/models/workspace-settings.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
 import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreResult } from './lead-scoring.util';
+import { Activity } from '../../activities/models/activity.model';
+import { ActivityDataService } from '../../activities/services/activity-data.service';
 
 interface StatusOption {
   label: string;
   value: LeadStatus;
   icon: string;
   disabled?: boolean;
+}
+
+interface StatusRecommendationChip {
+  label: string;
+  tone: 'info' | 'success' | 'warn';
 }
 
 interface AssignmentOption {
@@ -253,6 +260,7 @@ export class LeadFormPage implements OnInit {
   protected form: SaveLeadRequest & { autoScore: boolean } = this.createEmptyForm();
   protected saving = signal(false);
   protected aiScoring = signal(false);
+  protected statusApiError = signal<string | null>(null);
   protected aiScoreNote = signal<string | null>(null);
   protected aiScoreSeverity = signal<'success' | 'info' | 'warn' | 'error'>('info');
   protected aiScoreConfidence = signal<number | null>(null);
@@ -282,6 +290,11 @@ export class LeadFormPage implements OnInit {
   protected attachmentDeletingIds = signal<string[]>([]);
   protected attachmentUploadError = signal<string | null>(null);
   protected cadenceTouches = signal<LeadCadenceTouch[]>([]);
+  protected recentLeadActivities = signal<Activity[]>([]);
+  protected recentLeadActivitiesLoading = signal(false);
+  protected transferredActivityCount = signal<number>(0);
+  protected transferredLastActivity = signal<Activity | null>(null);
+  protected transferredActivityEntityType = signal<'Opportunity' | 'Account' | null>(null);
   protected cadenceChannel: LeadCadenceChannel = 'Call';
   protected cadenceChannelOptions: CadenceChannelOption[] = [];
   protected cadenceOutcome = '';
@@ -302,6 +315,7 @@ export class LeadFormPage implements OnInit {
   protected duplicateDialogVisible = signal(false);
   protected duplicateCheckResult = signal<LeadDuplicateCheckResponse | null>(null);
   protected duplicateMatches = signal<LeadDuplicateCheckCandidate[]>([]);
+  protected qualificationPolicyConfig = signal<QualificationPolicy | null>(null);
   protected supportingDocumentPolicy = signal<SupportingDocumentPolicy | null>(null);
   private readonly toastService = inject(AppToastService);
   private readonly phoneUtil = PhoneNumberUtil.getInstance();
@@ -314,6 +328,7 @@ export class LeadFormPage implements OnInit {
   private readonly referenceData = inject(ReferenceDataService);
   private readonly workspaceSettings = inject(WorkspaceSettingsService);
   private readonly attachmentData = inject(AttachmentDataService);
+  private readonly activityData = inject(ActivityDataService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
@@ -341,6 +356,7 @@ export class LeadFormPage implements OnInit {
       this.prefillFromLead(lead);
       this.loadStatusHistory(this.editingId);
       this.loadCadenceTouches(this.editingId);
+      this.loadRecentLeadActivities(this.editingId);
       this.loadSupportingDocuments(this.editingId);
     } else if (this.editingId) {
       this.leadData.get(this.editingId).subscribe({
@@ -348,6 +364,7 @@ export class LeadFormPage implements OnInit {
           this.prefillFromLead(data);
           this.loadStatusHistory(this.editingId!);
           this.loadCadenceTouches(this.editingId!);
+          this.loadRecentLeadActivities(this.editingId!);
           this.loadSupportingDocuments(this.editingId!);
         },
         error: () => this.router.navigate(['/app/leads'])
@@ -447,7 +464,13 @@ export class LeadFormPage implements OnInit {
 
   protected qualificationInlineError(): string | null {
     if (this.form.status !== 'Qualified') return null;
-    return this.countQualificationFactors() < 3 ? '3 qualification factors required to qualify.' : null;
+    if (this.countQualificationFactors() < 3) {
+      return '3 qualification factors required to qualify.';
+    }
+    if (this.requiresEvidenceBeforeQualified() && this.truthCoveragePercent() < this.minimumEvidenceCoveragePercent()) {
+      return `Evidence coverage must be at least ${this.minimumEvidenceCoveragePercent()}% to qualify.`;
+    }
+    return null;
   }
 
   protected qualificationTabBadge(): string | null {
@@ -515,9 +538,23 @@ export class LeadFormPage implements OnInit {
     if (this.hasAdministrationManagePermission()) {
       return this.statusOptions.map((option) => ({ ...option, disabled: false }));
     }
+    if (!this.isEditMode()) {
+      return this.statusOptions.filter((option) => option.value === 'New').map((option) => ({ ...option, disabled: false }));
+    }
     const isConverted = this.form.status === 'Converted';
     const hasFirstTouch = !!this.firstTouchedAtUtc();
-    return this.statusOptions.map((option) => ({
+    const meetsEvidenceThreshold = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
+    const canShowQualified =
+      this.form.status === 'Qualified' ||
+      (hasFirstTouch && this.countQualificationFactors() >= 3 && !!this.form.qualifiedNotes?.trim() && meetsEvidenceThreshold);
+    return this.statusOptions
+      .filter((option) => {
+        if (option.value === 'Converted' && !isConverted) return false;
+        if (option.value === 'Contacted' && !hasFirstTouch && this.form.status !== 'Contacted') return false;
+        if (option.value === 'Qualified' && !canShowQualified) return false;
+        return true;
+      })
+      .map((option) => ({
       ...option,
       disabled:
         (option.value === 'Converted' && !isConverted) ||
@@ -527,6 +564,10 @@ export class LeadFormPage implements OnInit {
   }
 
   protected statusPolicyHint(): string | null {
+    const apiError = this.statusApiError();
+    if (apiError) {
+      return apiError;
+    }
     if (!this.isEditMode()) {
       return null;
     }
@@ -539,6 +580,36 @@ export class LeadFormPage implements OnInit {
     if (this.form.status === 'Contacted' && this.firstTouchedAtUtc()) {
       return 'Contacted was set by completed activity.';
     }
+    return null;
+  }
+
+  protected nextRecommendedStatusChip(): StatusRecommendationChip | null {
+    if (!this.isEditMode() || this.form.status === 'Converted') {
+      return null;
+    }
+
+    const hasFirstTouch = !!this.firstTouchedAtUtc();
+    const hasQualifiedSignals = this.countQualificationFactors() >= 3 && !!this.form.qualifiedNotes?.trim();
+
+    if ((this.form.status === 'New' || this.form.status === 'Nurture') && !hasFirstTouch) {
+      return { label: 'Next recommended: Contacted', tone: 'warn' };
+    }
+
+    if ((this.form.status === 'New' || this.form.status === 'Contacted' || this.form.status === 'Nurture') && hasFirstTouch && hasQualifiedSignals) {
+      if (this.requiresEvidenceBeforeQualified() && this.truthCoveragePercent() < this.minimumEvidenceCoveragePercent()) {
+        return { label: 'Next recommended: Add evidence', tone: 'warn' };
+      }
+      return { label: 'Next recommended: Qualified', tone: 'success' };
+    }
+
+    if ((this.form.status === 'New' || this.form.status === 'Contacted' || this.form.status === 'Nurture') && hasFirstTouch) {
+      return { label: 'Next recommended: Contacted', tone: 'info' };
+    }
+
+    if (this.form.status === 'Qualified' && this.canConvertLead()) {
+      return { label: 'Next recommended: Convert lead', tone: 'success' };
+    }
+
     return null;
   }
 
@@ -597,6 +668,7 @@ export class LeadFormPage implements OnInit {
       this.form.score = resolvedScore;
     }
 
+    this.statusApiError.set(null);
     this.saving.set(true);
     const isEdit = !!this.editingId;
     this.submitWithDuplicateGuard(payload, isEdit);
@@ -697,6 +769,7 @@ export class LeadFormPage implements OnInit {
         if (isEdit && this.editingId) {
           this.reloadLeadDetails(this.editingId);
         }
+        this.statusApiError.set(null);
         const message = isEdit ? 'Lead updated.' : 'Lead created. Complete qualification now or later.';
         this.raiseToast('success', message);
         this.updateQualificationFeedback();
@@ -704,7 +777,9 @@ export class LeadFormPage implements OnInit {
       error: (err) => {
         this.saving.set(false);
         const fallback = this.editingId ? 'Unable to update lead.' : 'Unable to create lead.';
-        this.raiseToast('error', this.extractApiErrorMessage(err, fallback));
+        const parsed = this.extractApiError(err, fallback);
+        this.statusApiError.set(this.mapLeadStatusErrorToHint(parsed.code, parsed.message));
+        this.raiseToast('error', parsed.message);
       }
     });
   }
@@ -713,11 +788,12 @@ export class LeadFormPage implements OnInit {
     this.toastService.show(tone, message, 3000);
   }
 
-  private extractApiErrorMessage(error: unknown, fallback: string): string {
+  private extractApiError(error: unknown, fallback: string): { message: string; code: string | null } {
     const httpError = error as HttpErrorResponse | null;
     const payload = httpError?.error;
+    const code = (payload as { code?: string } | null | undefined)?.code;
     if (typeof payload === 'string' && payload.trim().length > 0) {
-      return payload.trim();
+      return { message: payload.trim(), code: null };
     }
 
     const errors = (payload as { errors?: Record<string, string[] | string> } | null | undefined)?.errors;
@@ -725,19 +801,51 @@ export class LeadFormPage implements OnInit {
       const firstKey = Object.keys(errors)[0];
       const value = firstKey ? errors[firstKey] : null;
       if (Array.isArray(value) && value[0]) {
-        return value[0];
+        return { message: value[0], code: code ?? null };
       }
       if (typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
+        return { message: value.trim(), code: code ?? null };
       }
+    }
+
+    const message = (payload as { message?: string } | null | undefined)?.message;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return { message: message.trim(), code: code ?? null };
     }
 
     const title = (payload as { title?: string } | null | undefined)?.title;
     if (typeof title === 'string' && title.trim().length > 0 && title !== 'One or more validation errors occurred.') {
-      return title.trim();
+      return { message: title.trim(), code: code ?? null };
     }
 
-    return fallback;
+    return { message: fallback, code: code ?? null };
+  }
+
+  private extractApiErrorMessage(error: unknown, fallback: string): string {
+    return this.extractApiError(error, fallback).message;
+  }
+
+  private mapLeadStatusErrorToHint(code: string | null, fallbackMessage: string): string | null {
+    switch (code) {
+      case 'LEAD_STATUS_REQUIRES_ACTIVITY':
+        return 'Log a completed call, email, or meeting before setting the lead to Contacted.';
+      case 'LEAD_STATUS_REQUIRES_DISCOVERY_MEETING':
+        return 'Complete or schedule a discovery meeting before setting the lead to Qualified.';
+      case 'LEAD_STATUS_REQUIRES_QUALIFICATION_FACTORS':
+        return 'Select at least 3 qualification factors before setting the lead to Qualified.';
+      case 'LEAD_STATUS_REQUIRES_QUALIFICATION_NOTES':
+        return 'Add qualification notes before setting the lead to Qualified.';
+      case 'LEAD_STATUS_REQUIRES_EVIDENCE_COVERAGE':
+        return `Add evidence until coverage reaches at least ${this.minimumEvidenceCoveragePercent()}% before setting the lead to Qualified.`;
+      case 'LEAD_STATUS_REQUIRES_NURTURE_FOLLOWUP':
+        return 'Add a nurture follow-up date before setting the lead to Nurture.';
+      case 'LEAD_STATUS_REQUIRES_OUTCOME_REASON':
+        return 'Add the required reason/details before moving to this lead outcome status.';
+      case 'LEAD_STATUS_INVALID_TRANSITION':
+        return fallbackMessage;
+      default:
+        return null;
+    }
   }
 
   private prefillFromLead(lead: Lead) {
@@ -815,12 +923,81 @@ export class LeadFormPage implements OnInit {
     });
   }
 
+  private loadRecentLeadActivities(leadId: string) {
+    this.recentLeadActivitiesLoading.set(true);
+    this.transferredActivityCount.set(0);
+    this.transferredLastActivity.set(null);
+    this.transferredActivityEntityType.set(null);
+    this.activityData
+      .search({
+        page: 1,
+        pageSize: 6,
+        relatedEntityType: 'Lead',
+        relatedEntityId: leadId
+      })
+      .subscribe({
+        next: (res) => {
+          const items = (res.items ?? []).slice(0, 6);
+          this.recentLeadActivities.set(items);
+          if (items.length > 0) {
+            this.recentLeadActivitiesLoading.set(false);
+            return;
+          }
+
+          if (this.form.status === 'Converted' && (this.linkedOpportunityId() || this.linkedAccountId())) {
+            this.loadTransferredActivitiesSummary();
+            return;
+          }
+
+          this.recentLeadActivitiesLoading.set(false);
+        },
+        error: () => {
+          this.recentLeadActivities.set([]);
+          this.recentLeadActivitiesLoading.set(false);
+        }
+      });
+  }
+
+  private loadTransferredActivitiesSummary(): void {
+    const opportunityId = this.linkedOpportunityId();
+    const accountId = this.linkedAccountId();
+    const targetType: 'Opportunity' | 'Account' | null = opportunityId ? 'Opportunity' : (accountId ? 'Account' : null);
+    const targetId = opportunityId ?? accountId;
+
+    if (!targetType || !targetId) {
+      this.recentLeadActivitiesLoading.set(false);
+      return;
+    }
+
+    this.activityData.search({
+      page: 1,
+      pageSize: 10,
+      relatedEntityType: targetType,
+      relatedEntityId: targetId
+    }).subscribe({
+      next: (res) => {
+        const items = res.items ?? [];
+        this.transferredActivityCount.set(res.total ?? items.length);
+        this.transferredLastActivity.set(items[0] ?? null);
+        this.transferredActivityEntityType.set(targetType);
+        this.recentLeadActivitiesLoading.set(false);
+      },
+      error: () => {
+        this.transferredActivityCount.set(0);
+        this.transferredLastActivity.set(null);
+        this.transferredActivityEntityType.set(null);
+        this.recentLeadActivitiesLoading.set(false);
+      }
+    });
+  }
+
   private reloadLeadDetails(leadId: string): void {
     this.leadData.get(leadId).subscribe({
       next: (lead) => {
         this.prefillFromLead(lead);
         this.loadStatusHistory(leadId);
         this.loadCadenceTouches(leadId);
+        this.loadRecentLeadActivities(leadId);
         this.loadSupportingDocuments(leadId);
       }
     });
@@ -859,6 +1036,7 @@ export class LeadFormPage implements OnInit {
           }
           this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
           this.loadCadenceTouches(this.editingId!);
+          this.loadRecentLeadActivities(this.editingId!);
           this.raiseToast('success', 'Cadence touch logged and next step scheduled.');
         },
         error: () => {
@@ -870,6 +1048,62 @@ export class LeadFormPage implements OnInit {
 
   protected isFirstTouchPending(): boolean {
     return !!this.firstTouchDueAtUtc() && !this.firstTouchedAtUtc();
+  }
+
+  protected activityTypeIcon(type: Activity['type']): string {
+    switch (type) {
+      case 'Meeting':
+        return 'pi pi-users';
+      case 'Call':
+        return 'pi pi-phone';
+      case 'Email':
+        return 'pi pi-envelope';
+      case 'Task':
+        return 'pi pi-check-square';
+      case 'Note':
+      default:
+        return 'pi pi-file-edit';
+    }
+  }
+
+  protected activityTimelineDateLabel(item: Activity): string | undefined {
+    return item.completedDateUtc ?? item.dueDateUtc ?? item.createdAtUtc;
+  }
+
+  protected openActivityRecord(activityId: string): void {
+    void this.router.navigate(['/app/activities', activityId, 'edit']);
+  }
+
+  protected hasTransferredActivitySummary(): boolean {
+    return this.transferredActivityCount() > 0;
+  }
+
+  protected transferredActivitySummaryLabel(): string {
+    const count = this.transferredActivityCount();
+    const entityType = this.transferredActivityEntityType();
+    if (!count || !entityType) {
+      return 'No transferred activities found.';
+    }
+
+    const target = entityType === 'Opportunity' ? 'opportunity' : 'account';
+    return `${count} ${count === 1 ? 'activity was' : 'activities were'} transferred to the converted ${target}.`;
+  }
+
+  protected openConvertedActivityTimeline(): void {
+    const opportunityId = this.linkedOpportunityId();
+    if (opportunityId) {
+      void this.router.navigate(['/app/activities'], {
+        queryParams: { relatedEntityType: 'Opportunity', relatedEntityId: opportunityId }
+      });
+      return;
+    }
+
+    const accountId = this.linkedAccountId();
+    if (accountId) {
+      void this.router.navigate(['/app/activities'], {
+        queryParams: { relatedEntityType: 'Account', relatedEntityId: accountId }
+      });
+    }
   }
 
   private defaultCadenceDueLocal(): Date {
@@ -1005,12 +1239,14 @@ export class LeadFormPage implements OnInit {
   private loadLeadDataWeights() {
     this.workspaceSettings.getSettings().subscribe({
       next: (settings) => {
+        this.qualificationPolicyConfig.set(settings.qualificationPolicy ?? null);
         this.leadDataWeights = settings.qualificationPolicy?.leadDataWeights ?? [];
         if (this.form.autoScore) {
           this.form.score = this.computeAutoScore();
         }
       },
       error: () => {
+        this.qualificationPolicyConfig.set(null);
         this.leadDataWeights = [];
       }
     });
@@ -1728,6 +1964,57 @@ export class LeadFormPage implements OnInit {
     return `${this.countQualificationFactors()} / 6`;
   }
 
+  protected qualificationFactorsBadgeLabel(): string {
+    return `${this.countQualificationFactors()}/6 selected`;
+  }
+
+  protected qualificationFactorsBadgeTone(): 'high' | 'medium' | 'low' | 'none' {
+    const count = this.countQualificationFactors();
+    if (count === 0) return 'none';
+    if (count >= 5) return 'high';
+    if (count >= 3) return 'medium';
+    return 'low';
+  }
+
+  protected qualificationRequiredBadgeLabel(): string | null {
+    const remaining = Math.max(0, 3 - this.countQualificationFactors());
+    return remaining > 0 ? `${remaining} more to qualify` : null;
+  }
+
+  protected qualifiedNotesBadgeLabel(): string {
+    const notes = this.form.qualifiedNotes?.trim() ?? '';
+    return notes ? `${Math.min(notes.length, 999)} chars` : 'No notes';
+  }
+
+  protected qualifiedNotesBadgeVariant(): 'cyan' | 'neutral' {
+    return (this.form.qualifiedNotes?.trim()?.length ?? 0) > 0 ? 'cyan' : 'neutral';
+  }
+
+  protected dispositionBadgeLabel(): string {
+    switch (this.form.status) {
+      case 'Nurture':
+        return this.form.nurtureFollowUpAtUtc ? 'Nurture scheduled' : 'Nurture pending';
+      case 'Lost':
+        return this.form.lossReason?.trim() ? 'Loss details added' : 'Loss details required';
+      case 'Disqualified':
+        return this.form.disqualifiedReason?.trim() ? 'Reason captured' : 'Reason required';
+      default:
+        return 'Active path';
+    }
+  }
+
+  protected dispositionBadgeVariant(): 'neutral' | 'orange' | 'danger' | 'cyan' {
+    switch (this.form.status) {
+      case 'Nurture':
+        return 'orange';
+      case 'Lost':
+      case 'Disqualified':
+        return 'danger';
+      default:
+        return 'neutral';
+    }
+  }
+
   protected scoreKnobValueColor(): string {
     const confidence = this.qualificationConfidencePercent();
     if (confidence >= 75) return '#0ea5a4';
@@ -1932,6 +2219,21 @@ export class LeadFormPage implements OnInit {
     return this.isUnknownValue(value);
   }
 
+  protected evidenceOptionsForFactor(factorKey: 'budget' | 'readiness' | 'timeline' | 'problem' | 'economicBuyer' | 'icpFit'): OptionItem[] {
+    const rules = this.qualificationPolicyConfig()?.factorEvidenceRules ?? [];
+    const rule = rules.find((candidate) => (candidate.factorKey ?? '').toLowerCase() === factorKey.toLowerCase());
+    const allowed = (rule?.allowedEvidenceSources ?? [])
+      .map((value) => (value ?? '').trim().toLowerCase())
+      .filter((value) => value.length > 0);
+
+    if (!allowed.length) {
+      return this.evidenceOptions;
+    }
+
+    const filtered = this.evidenceOptions.filter((option) => allowed.includes(option.value.toLowerCase()));
+    return filtered.length ? filtered : this.evidenceOptions;
+  }
+
   private isUnknownValue(value?: string | null): boolean {
     if (!value) return true;
     return value.trim().toLowerCase().includes('unknown');
@@ -2106,6 +2408,18 @@ export class LeadFormPage implements OnInit {
     const coverage = this.truthCoverage();
     if (coverage === null || Number.isNaN(coverage)) return 0;
     return Math.round(coverage * 100);
+  }
+
+  protected requiresEvidenceBeforeQualified(): boolean {
+    return this.qualificationPolicyConfig()?.requireEvidenceBeforeQualified ?? false;
+  }
+
+  protected minimumEvidenceCoveragePercent(): number {
+    const configured = this.qualificationPolicyConfig()?.minimumEvidenceCoveragePercent;
+    if (configured === null || configured === undefined || Number.isNaN(configured)) {
+      return 50;
+    }
+    return Math.min(100, Math.max(0, Math.round(configured)));
   }
 
   protected assumptionsOutstandingLabel(): string {

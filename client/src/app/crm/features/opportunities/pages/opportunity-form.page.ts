@@ -152,6 +152,9 @@ export class OpportunityFormPage implements OnInit {
   private approvalAmountLocked = false;
   private syncingApprovalAmount = false;
   protected readonly policyGateMessage = signal<string | null>(null);
+  protected readonly canRequestStageOverride = signal(false);
+  protected readonly stageOverrideRequesting = signal(false);
+  protected readonly lastStageOverrideDecisionId = signal<string | null>(null);
   protected readonly reviewOutcomeOptions: Option[] = [
     { label: 'Approved', value: 'Approved' },
     { label: 'Needs Work', value: 'Needs Work' },
@@ -250,6 +253,7 @@ export class OpportunityFormPage implements OnInit {
     }
     const validationError = this.validateStageRequirements();
     if (validationError) {
+      this.handlePolicyGateMessage(validationError);
       this.toastService.show('error', validationError, 4000);
       return;
     }
@@ -302,6 +306,7 @@ export class OpportunityFormPage implements OnInit {
           this.saving.set(false);
           this.originalStage = this.selectedStage;
           this.policyGateMessage.set(null);
+          this.canRequestStageOverride.set(false);
         },
         error: (err) => {
           this.saving.set(false);
@@ -310,6 +315,38 @@ export class OpportunityFormPage implements OnInit {
           this.toastService.show('error', message, 4000);
         }
       });
+  }
+
+  protected requestStageOverride() {
+    const opportunityId = this.editingId;
+    const gateMessage = this.policyGateMessage();
+    const requestedStage = this.selectedStage;
+    if (!opportunityId || !gateMessage || !requestedStage || !this.isStageOverrideContext()) {
+      return;
+    }
+
+    this.stageOverrideRequesting.set(true);
+    this.approvalService.requestStageOverrideDecision(opportunityId, {
+      requestedStage,
+      blockerReason: gateMessage
+    }).subscribe({
+      next: (result) => {
+        this.stageOverrideRequesting.set(false);
+        this.lastStageOverrideDecisionId.set(result.decisionId);
+        this.toastService.show('success', result.message, 3500);
+        void this.router.navigate(['/app/decisions/approvals'], {
+          queryParams: { selected: result.decisionId }
+        });
+      },
+      error: (err) => {
+        this.stageOverrideRequesting.set(false);
+        const message =
+          (typeof err?.error?.message === 'string' && err.error.message) ||
+          (typeof err?.error === 'string' && err.error) ||
+          'Unable to request stage override approval.';
+        this.toastService.show('error', message, 4000);
+      }
+    });
   }
 
   protected triggerKickoff() {
@@ -566,11 +603,35 @@ export class OpportunityFormPage implements OnInit {
 
   private handlePolicyGateMessage(message: string) {
     const normalized = message.toLowerCase();
-    const isPolicyGate =
+    const isApprovalGate =
       normalized.includes('approval required') ||
       normalized.includes('discount approval required') ||
       normalized.includes('approval role must be configured');
-    this.policyGateMessage.set(isPolicyGate ? message : null);
+    const isStageOverrideCandidate =
+      this.isStageOverrideContext() &&
+      !normalized.includes('unable to save') &&
+      (
+        normalized.includes('before moving to') ||
+        normalized.includes('before changing stage') ||
+        normalized.includes('required before moving') ||
+        normalized.includes('must be approved before moving')
+      );
+
+    const gateMessage = (isApprovalGate || isStageOverrideCandidate) ? message : null;
+    this.policyGateMessage.set(gateMessage);
+    this.canRequestStageOverride.set(Boolean(gateMessage && isStageOverrideCandidate && this.canRequestApproval()));
+  }
+
+  private isStageOverrideContext(): boolean {
+    const stage = (this.selectedStage ?? '').trim();
+    return Boolean(
+      this.isEditMode() &&
+      this.editingId &&
+      this.originalStage &&
+      stage &&
+      !stage.startsWith('Closed') &&
+      stage !== this.originalStage
+    );
   }
 
   private validateTeamMembers(): string | null {

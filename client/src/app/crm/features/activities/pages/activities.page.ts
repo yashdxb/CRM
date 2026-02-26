@@ -24,6 +24,33 @@ interface StatusOption {
   value: Activity['status'] | 'all';
 }
 
+interface GroupByOption {
+  label: string;
+  value: 'none' | 'lead' | 'opportunity';
+}
+
+interface LeadActivityGroup {
+  key: string;
+  leadId: string;
+  leadName: string;
+  items: Activity[];
+  openCount: number;
+  completedCount: number;
+  overdueCount: number;
+  lastActivityAt?: string;
+}
+
+interface OpportunityActivityGroup {
+  key: string;
+  opportunityId: string;
+  opportunityName: string;
+  items: Activity[];
+  openCount: number;
+  completedCount: number;
+  overdueCount: number;
+  lastActivityAt?: string;
+}
+
 @Component({
   selector: 'app-activities-page',
   standalone: true,
@@ -54,6 +81,11 @@ export class ActivitiesPage {
     { label: 'Completed', value: 'Completed' },
     { label: 'Overdue', value: 'Overdue' }
   ];
+  protected readonly groupByOptions: GroupByOption[] = [
+    { label: 'No grouping', value: 'none' },
+    { label: 'Lead', value: 'lead' },
+    { label: 'Opportunity', value: 'opportunity' }
+  ];
 
   protected readonly activities = signal<Activity[]>([]);
   protected readonly total = signal(0);
@@ -79,6 +111,7 @@ export class ActivitiesPage {
   });
 
   protected activeOwnerFilter: string | 'all' = 'all';
+  protected groupBy: GroupByOption['value'] = 'none';
   protected searchQuery = '';
   protected typeFilter: ActivityType | 'all' = 'all';
   protected isDueTodayActive = false;
@@ -189,6 +222,116 @@ export class ActivitiesPage {
       return this.toDateKey(activity.dueDateUtc) === this.todayKey;
     })
   );
+  protected readonly leadGroupedActivities = computed<LeadActivityGroup[]>(() => {
+    const groups = new Map<string, LeadActivityGroup>();
+    for (const activity of this.filteredActivities()) {
+      if (activity.relatedEntityType !== 'Lead' || !activity.relatedEntityId) {
+        continue;
+      }
+      const key = activity.relatedEntityId;
+      const existing = groups.get(key);
+      if (!existing) {
+        groups.set(key, {
+          key,
+          leadId: activity.relatedEntityId,
+          leadName: activity.relatedEntityName || 'Lead',
+          items: [activity],
+          openCount: activity.status !== 'Completed' ? 1 : 0,
+          completedCount: activity.status === 'Completed' ? 1 : 0,
+          overdueCount: activity.status === 'Overdue' ? 1 : 0,
+          lastActivityAt: activity.completedDateUtc ?? activity.dueDateUtc ?? activity.createdAtUtc
+        });
+        continue;
+      }
+
+      existing.items.push(activity);
+      if (activity.status !== 'Completed') existing.openCount += 1;
+      if (activity.status === 'Completed') existing.completedCount += 1;
+      if (activity.status === 'Overdue') existing.overdueCount += 1;
+
+      const candidate = activity.completedDateUtc ?? activity.dueDateUtc ?? activity.createdAtUtc;
+      if (!candidate) continue;
+      if (!existing.lastActivityAt) {
+        existing.lastActivityAt = candidate;
+        continue;
+      }
+      const a = this.asLocalDate(candidate)?.getTime() ?? 0;
+      const b = this.asLocalDate(existing.lastActivityAt)?.getTime() ?? 0;
+      if (a > b) {
+        existing.lastActivityAt = candidate;
+      }
+    }
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        items: [...group.items].sort((a, b) => {
+          const aTime = this.asLocalDate(a.completedDateUtc ?? a.dueDateUtc ?? a.createdAtUtc)?.getTime() ?? 0;
+          const bTime = this.asLocalDate(b.completedDateUtc ?? b.dueDateUtc ?? b.createdAtUtc)?.getTime() ?? 0;
+          return bTime - aTime;
+        })
+      }))
+      .sort((a, b) => {
+        const aTime = this.asLocalDate(a.lastActivityAt)?.getTime() ?? 0;
+        const bTime = this.asLocalDate(b.lastActivityAt)?.getTime() ?? 0;
+        return bTime - aTime;
+      });
+  });
+  protected readonly opportunityGroupedActivities = computed<OpportunityActivityGroup[]>(() => {
+    const groups = new Map<string, OpportunityActivityGroup>();
+    for (const activity of this.filteredActivities()) {
+      if (activity.relatedEntityType !== 'Opportunity' || !activity.relatedEntityId) {
+        continue;
+      }
+      const key = activity.relatedEntityId;
+      const existing = groups.get(key);
+      if (!existing) {
+        groups.set(key, {
+          key,
+          opportunityId: activity.relatedEntityId,
+          opportunityName: activity.relatedEntityName || 'Opportunity',
+          items: [activity],
+          openCount: activity.status !== 'Completed' ? 1 : 0,
+          completedCount: activity.status === 'Completed' ? 1 : 0,
+          overdueCount: activity.status === 'Overdue' ? 1 : 0,
+          lastActivityAt: activity.completedDateUtc ?? activity.dueDateUtc ?? activity.createdAtUtc
+        });
+        continue;
+      }
+
+      existing.items.push(activity);
+      if (activity.status !== 'Completed') existing.openCount += 1;
+      if (activity.status === 'Completed') existing.completedCount += 1;
+      if (activity.status === 'Overdue') existing.overdueCount += 1;
+
+      const candidate = activity.completedDateUtc ?? activity.dueDateUtc ?? activity.createdAtUtc;
+      if (!candidate) continue;
+      if (!existing.lastActivityAt) {
+        existing.lastActivityAt = candidate;
+        continue;
+      }
+      const a = this.asLocalDate(candidate)?.getTime() ?? 0;
+      const b = this.asLocalDate(existing.lastActivityAt)?.getTime() ?? 0;
+      if (a > b) {
+        existing.lastActivityAt = candidate;
+      }
+    }
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        items: [...group.items].sort((a, b) => {
+          const aTime = this.asLocalDate(a.completedDateUtc ?? a.dueDateUtc ?? a.createdAtUtc)?.getTime() ?? 0;
+          const bTime = this.asLocalDate(b.completedDateUtc ?? b.dueDateUtc ?? b.createdAtUtc)?.getTime() ?? 0;
+          return bTime - aTime;
+        })
+      }))
+      .sort((a, b) => {
+        const aTime = this.asLocalDate(a.lastActivityAt)?.getTime() ?? 0;
+        const bTime = this.asLocalDate(b.lastActivityAt)?.getTime() ?? 0;
+        return bTime - aTime;
+      });
+  });
 
   protected relatedLink(activity: Activity): string | null {
     if (!activity.relatedEntityId || !activity.relatedEntityType) {
@@ -269,6 +412,10 @@ export class ActivitiesPage {
     this.load();
   }
 
+  protected onGroupByChange(value: GroupByOption['value']) {
+    this.groupBy = value ?? 'none';
+  }
+
   protected toggleMine() {
     this.myView.set(!this.myView());
     this.pageIndex = 0;
@@ -314,6 +461,14 @@ export class ActivitiesPage {
   protected relationLabel(type?: Activity['relatedEntityType']) {
     if (!type) return 'Record';
     return type;
+  }
+
+  protected groupedLeadActivityCount(): number {
+    return this.leadGroupedActivities().length;
+  }
+
+  protected groupedOpportunityActivityCount(): number {
+    return this.opportunityGroupedActivities().length;
   }
 
   protected asLocalDate(value?: Date | string | null): Date | null {

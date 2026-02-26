@@ -52,7 +52,7 @@ test('qualification policy exposes configurable evidence sources and lead edit s
 
   await page.goto(`/app/leads/${leadId}/edit`);
   await page.waitForLoadState('networkidle');
-  await page.getByRole('button', { name: 'Qualification' }).click();
+  await page.getByRole('tab', { name: /Qualifications?/i }).click();
 
   const budgetEvidenceSelect = page.locator('p-select[name="budgetEvidence"]');
   await expect(budgetEvidenceSelect).toBeVisible();

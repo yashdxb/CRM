@@ -148,13 +148,13 @@
               <p-tab value="overview" [disabled]="isTabDisabled('overview')" [pt]="{ root: { class: 'lead-tab' } }">
                 <span class="lead-tab-label">Overview</span>
               </p-tab>
-              <p-tab value="qualification" [disabled]="isTabDisabled('qualification')" [pt]="{ root: { class: 'lead-tab' } }">
-                <span class="lead-tab-label">Qualifications</span>
-                <span class="tab-badge danger" *ngIf="qualificationTabBadge()">{{ qualificationTabBadge() }}</span>
-              </p-tab>
               <p-tab value="activity" [disabled]="isTabDisabled('activity')" [pt]="{ root: { class: 'lead-tab' } }">
                 <span class="lead-tab-label">Activity &amp;<br />Follow-up</span>
                 <span class="tab-badge warn" *ngIf="activityTabBadge()">{{ activityTabBadge() }}</span>
+              </p-tab>
+              <p-tab value="qualification" [disabled]="isTabDisabled('qualification')" [pt]="{ root: { class: 'lead-tab' } }">
+                <span class="lead-tab-label">Qualifications</span>
+                <span class="tab-badge danger" *ngIf="qualificationTabBadge()">{{ qualificationTabBadge() }}</span>
               </p-tab>
               <p-tab value="documents" [disabled]="isTabDisabled('documents')" [pt]="{ root: { class: 'lead-tab' } }">
                 <span class="lead-tab-label">Supporting<br />Documents</span>
@@ -222,6 +222,10 @@
                       <span *ngIf="!option" class="status-placeholder">Select status</span>
                     </ng-template>
                   </p-select>
+                  <div class="status-next-chip" *ngIf="nextRecommendedStatusChip() as next" [attr.data-tone]="next.tone">
+                    <i class="pi pi-sparkles"></i>
+                    <span>{{ next.label }}</span>
+                  </div>
                   <p class="status-note" *ngIf="statusPolicyHint() as hint">{{ hint }}</p>
                 </div>
                 <div class="field">
@@ -282,7 +286,7 @@
                 <section class="form-section form-section--overview form-section--accordion-body">
                   <div class="section-block">
                     <div class="form-grid">
-                <div class="field">
+                <div class="field full-row">
                   <label>Email</label>
                   <input
                     pInputText
@@ -295,7 +299,7 @@
                   />
                   <p class="field-error" *ngIf="emailError()">{{ emailError() }}</p>
                 </div>
-                <div class="field full">
+                <div class="field full-row">
                   <label>Phone</label>
                   <div class="phone-grid">
                     <p-select
@@ -577,9 +581,17 @@
           >
             <p-accordion-panel value="qualification-factors">
               <p-accordion-header>
-                <h2 class="section-title section-title--accordion">
+                <h2 class="section-title section-title--accordion section-title--accordion-summary">
                   <i class="pi pi-chart-line"></i>
                   Qualification factors
+                  <span class="accordion-header-summary">
+                    <span class="accordion-header-badge accordion-header-badge--score" [attr.data-tone]="qualificationFactorsBadgeTone()">
+                      {{ qualificationFactorsBadgeLabel() }}
+                    </span>
+                    <span class="accordion-header-badge accordion-header-badge--meta" *ngIf="qualificationRequiredBadgeLabel() as label">
+                      {{ label }}
+                    </span>
+                  </span>
                 </h2>
               </p-accordion-header>
               <p-accordion-content>
@@ -631,7 +643,7 @@
                 <label>Evidence source</label>
                 <p-select
                   name="budgetEvidence"
-                  [options]="evidenceOptions"
+                  [options]="evidenceOptionsForFactor('budget')"
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.budgetEvidence"
@@ -683,7 +695,7 @@
                 <label>Evidence source</label>
                 <p-select
                   name="readinessEvidence"
-                  [options]="evidenceOptions"
+                  [options]="evidenceOptionsForFactor('readiness')"
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.readinessEvidence"
@@ -735,7 +747,7 @@
                 <label>Evidence source</label>
                 <p-select
                   name="timelineEvidence"
-                  [options]="evidenceOptions"
+                  [options]="evidenceOptionsForFactor('timeline')"
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.timelineEvidence"
@@ -787,7 +799,7 @@
                 <label>Evidence source</label>
                 <p-select
                   name="problemEvidence"
-                  [options]="evidenceOptions"
+                  [options]="evidenceOptionsForFactor('problem')"
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.problemEvidence"
@@ -839,7 +851,7 @@
                 <label>Evidence source</label>
                 <p-select
                   name="economicBuyerEvidence"
-                  [options]="evidenceOptions"
+                  [options]="evidenceOptionsForFactor('economicBuyer')"
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.economicBuyerEvidence"
@@ -898,7 +910,7 @@
                 <label>Evidence source</label>
                 <p-select
                   name="icpFitEvidence"
-                  [options]="evidenceOptions"
+                  [options]="evidenceOptionsForFactor('icpFit')"
                   optionLabel="label"
                   optionValue="value"
                   [(ngModel)]="form.icpFitEvidence"
@@ -927,9 +939,17 @@
 
             <p-accordion-panel value="qualification-scoring">
               <p-accordion-header>
-                <h2 class="section-title section-title--accordion">
+                <h2 class="section-title section-title--accordion section-title--accordion-summary">
                   <i class="pi pi-calculator"></i>
                   Scoring breakdown
+                  <span class="accordion-header-summary">
+                    <span class="accordion-header-badge accordion-header-badge--score" [attr.data-tone]="overallScoreBadgeTone()">
+                      Overall {{ overallScoreBadgeValue() }}/100
+                    </span>
+                    <span class="accordion-header-badge accordion-header-badge--meta" [attr.data-variant]="'cyan'">
+                      Confidence {{ qualificationConfidenceDisplayLabel() }}
+                    </span>
+                  </span>
                 </h2>
               </p-accordion-header>
               <p-accordion-content>
@@ -968,9 +988,9 @@
                     <p class="hint-text compact" *ngIf="qualificationConfidenceHint()">{{ qualificationConfidenceHint() }}</p>
                   </div>
                   <div class="cqvs-group-grid">
-                    <article class="cqvs-group-card" *ngFor="let group of cqvsGroupRows()">
+                    <article class="cqvs-group-card" *ngFor="let group of cqvsGroupRows()" [attr.data-cqvs]="group.code">
                       <div class="cqvs-group-card__head">
-                        <span class="cqvs-code">{{ group.code }}</span>
+                          <span class="cqvs-code" [attr.data-cqvs]="group.code">{{ group.code }}</span>
                         <div class="cqvs-group-card__title">
                           <strong>{{ group.title }}</strong>
                           <span>{{ group.description }}</span>
@@ -1001,7 +1021,7 @@
                     <ng-template pTemplate="body" let-row>
                       <tr>
                         <td class="col-cqvs">
-                          <span class="cqvs-badge">{{ row.cqvs }}</span>
+                            <span class="cqvs-badge" [attr.data-cqvs]="row.cqvs">{{ row.cqvs }}</span>
                         </td>
                         <td class="col-factor">{{ row.factor }}</td>
                         <td class="col-weight">{{ row.weight }}</td>
@@ -1033,9 +1053,14 @@
 
             <p-accordion-panel value="qualification-context">
               <p-accordion-header>
-                <h2 class="section-title section-title--accordion">
+                <h2 class="section-title section-title--accordion section-title--accordion-summary">
                   <i class="pi pi-file-edit"></i>
                   Context &amp; supporting notes
+                  <span class="accordion-header-summary">
+                    <span class="accordion-header-badge accordion-header-badge--meta" [attr.data-variant]="qualifiedNotesBadgeVariant()">
+                      {{ qualifiedNotesBadgeLabel() }}
+                    </span>
+                  </span>
                 </h2>
               </p-accordion-header>
               <p-accordion-content>
@@ -1060,9 +1085,14 @@
 
             <p-accordion-panel value="qualification-disposition">
               <p-accordion-header>
-                <h2 class="section-title section-title--accordion">
+                <h2 class="section-title section-title--accordion section-title--accordion-summary">
                   <i class="pi pi-flag"></i>
                   Disposition &amp; outcome details
+                  <span class="accordion-header-summary">
+                    <span class="accordion-header-badge accordion-header-badge--meta" [attr.data-variant]="dispositionBadgeVariant()">
+                      {{ dispositionBadgeLabel() }}
+                    </span>
+                  </span>
                 </h2>
               </p-accordion-header>
               <p-accordion-content>
@@ -1206,8 +1236,82 @@
               </div>
                   </div>
                   <ng-template #noCadenceTouches>
-                    <div class="history-empty">No cadence touches logged yet.</div>
+                    <div class="history-empty">
+                      No cadence touches logged yet.
+                      <span class="history-empty__subtle">Activities logged in the Activities module appear below in Recent Lead Activities.</span>
+                    </div>
                   </ng-template>
+
+                  <div class="lead-activity-timeline">
+                    <div class="lead-activity-timeline__header">
+                      <h3>
+                        <i class="pi pi-clock"></i>
+                        Recent Lead Activities
+                      </h3>
+                      <button
+                        pButton
+                        type="button"
+                        class="crm-button crm-button--ghost crm-button--sm"
+                        icon="pi pi-external-link"
+                        label="Open Activities"
+                        (click)="logActivity()"
+                      ></button>
+                    </div>
+
+                    <div class="history-empty" *ngIf="recentLeadActivitiesLoading()">Loading activities...</div>
+
+                    <div class="lead-activity-timeline__list" *ngIf="!recentLeadActivitiesLoading() && recentLeadActivities().length; else noLeadActivities">
+                      <button
+                        type="button"
+                        class="lead-activity-timeline__item"
+                        *ngFor="let activity of recentLeadActivities()"
+                        (click)="openActivityRecord(activity.id)"
+                      >
+                        <div class="lead-activity-timeline__icon" [attr.data-type]="activity.type">
+                          <i class="pi" [ngClass]="activityTypeIcon(activity.type)"></i>
+                        </div>
+                        <div class="lead-activity-timeline__content">
+                          <div class="lead-activity-timeline__top">
+                            <span class="lead-activity-timeline__subject">{{ activity.subject }}</span>
+                            <span class="lead-activity-timeline__status" [attr.data-status]="activity.status">{{ activity.status }}</span>
+                          </div>
+                          <div class="lead-activity-timeline__meta">
+                            <span>{{ activity.type }}</span>
+                            <span *ngIf="activity.ownerName">• {{ activity.ownerName }}</span>
+                            <span *ngIf="activityTimelineDateLabel(activity)">• {{ activityTimelineDateLabel(activity) | date:'medium' }}</span>
+                          </div>
+                          <div class="lead-activity-timeline__outcome" *ngIf="activity.outcome">{{ activity.outcome }}</div>
+                        </div>
+                      </button>
+                    </div>
+
+                    <ng-template #noLeadActivities>
+                      <div class="history-empty" *ngIf="!recentLeadActivitiesLoading() && !hasTransferredActivitySummary()">No related activities yet.</div>
+                      <div class="lead-activity-transfer-summary" *ngIf="!recentLeadActivitiesLoading() && hasTransferredActivitySummary()">
+                        <div class="lead-activity-transfer-summary__header">
+                          <i class="pi pi-share-alt"></i>
+                          <span>Converted lead activity summary</span>
+                        </div>
+                        <p class="lead-activity-transfer-summary__text">{{ transferredActivitySummaryLabel() }}</p>
+                        <div class="lead-activity-transfer-summary__last" *ngIf="transferredLastActivity() as last">
+                          <span class="lead-activity-transfer-summary__label">Last transferred activity</span>
+                          <strong>{{ last.subject }}</strong>
+                          <span>
+                            {{ last.type }}
+                            <ng-container *ngIf="activityTimelineDateLabel(last)">• {{ activityTimelineDateLabel(last) | date:'medium' }}</ng-container>
+                          </span>
+                        </div>
+                        <button
+                          pButton
+                          type="button"
+                          class="crm-button crm-button--ghost crm-button--sm"
+                          icon="pi pi-external-link"
+                          label="Open transferred activities"
+                          (click)="openConvertedActivityTimeline()"
+                        ></button>
+                      </div>
+                    </ng-template>
+                  </div>
                 </section>
               </p-accordion-content>
             </p-accordion-panel>
