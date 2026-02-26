@@ -109,51 +109,29 @@
        ═══════════════════════════════════════════════════════════════════════════ -->
   <section class="data-section">
     <div class="data-card workspace-card">
-      <p-tabs [value]="activeWorkspaceTab()" (valueChange)="onWorkspaceTabChange($event)">
-        <p-tablist>
-          <p-tab value="directory">
-            <i class="pi pi-sitemap"></i>
-            <span>Directory</span>
-          </p-tab>
-          <p-tab value="presets">
-            <i class="pi pi-th-large"></i>
-            <span>Presets</span>
-          </p-tab>
-          <p-tab value="drift">
-            <i class="pi pi-sliders-h"></i>
-            <span>Drift</span>
-          </p-tab>
-        </p-tablist>
-        <p-tabpanels>
-          <p-tabpanel value="directory">
+      <p-accordion
+        class="roles-workspace-accordion"
+        [multiple]="true"
+        [value]="rolesWorkspacePanels()"
+        (valueChange)="onWorkspacePanelsChange($event)"
+      >
+        <p-accordion-panel value="directory">
+          <p-accordion-header>
+            <div class="workspace-accordion-header">
+              <div class="workspace-accordion-header__title">
+                <i class="pi pi-sitemap"></i>
+                <span>Role Directory</span>
+              </div>
+              <div class="workspace-accordion-header__badges">
+                <span class="status-badge status-badge--info">{{ roles().length }} roles</span>
+              </div>
+            </div>
+          </p-accordion-header>
+          <p-accordion-content>
             <div class="data-header">
               <div class="header-title">
                 <h2>Role Directory</h2>
                 <span class="record-count">{{ roles().length }} roles configured</span>
-              </div>
-              <div class="view-toggle view-toggle--segmented" data-testid="roles-directory-view-toggle">
-                <button
-                  pButton
-                  type="button"
-                  class="toggle-btn"
-                  [class.active]="!showHierarchy()"
-                  [attr.aria-pressed]="!showHierarchy()"
-                  data-testid="roles-view-list"
-                  (click)="toggleView('list')"
-                >
-                  List
-                </button>
-                <button
-                  pButton
-                  type="button"
-                  class="toggle-btn"
-                  [class.active]="showHierarchy()"
-                  [attr.aria-pressed]="showHierarchy()"
-                  data-testid="roles-view-hierarchy"
-                  (click)="toggleView('hierarchy')"
-                >
-                  Hierarchy
-                </button>
               </div>
               <div class="header-actions">
                 <button pButton type="button" class="action-btn action-btn--primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
@@ -189,7 +167,7 @@
               </button>
             </div>
 
-            <div class="table-wrapper table-wrapper--roles" *ngIf="!loadingRoles() && roles().length > 0 && !showHierarchy()">
+            <div class="table-wrapper table-wrapper--roles" *ngIf="!loadingRoles() && roles().length > 0">
               <p-table
                 class="data-table roles-directory-table"
                 [value]="roles()"
@@ -289,11 +267,57 @@
                 </ng-template>
               </p-table>
             </div>
+          </p-accordion-content>
+        </p-accordion-panel>
 
-            <div class="orgchart-wrapper" *ngIf="!loadingRoles() && roles().length > 0 && showHierarchy()">
+        <p-accordion-panel value="hierarchy">
+          <p-accordion-header>
+            <div class="workspace-accordion-header">
+              <div class="workspace-accordion-header__title">
+                <i class="pi pi-share-alt"></i>
+                <span>Organization Hierarchy</span>
+              </div>
+              <div class="workspace-accordion-header__badges">
+                <span class="status-badge status-badge--security">{{ roles().length }} nodes</span>
+              </div>
+            </div>
+          </p-accordion-header>
+          <p-accordion-content>
+            <div class="data-header">
+              <div class="header-title">
+                <h2>Organization Hierarchy</h2>
+                <span class="record-count">Visual org chart of role relationships</span>
+              </div>
+              <div class="header-actions">
+                <button pButton type="button" class="action-btn" (click)="loadRoles()" [disabled]="loadingRoles()">
+                  <i class="pi pi-refresh"></i>
+                  <span>Reload</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="loading-state" *ngIf="loadingRoles()">
+              <div class="skeleton-row" *ngFor="let _ of [0, 1, 2]">
+                <div class="skeleton skeleton-text"></div>
+              </div>
+            </div>
+
+            <div class="empty-state" *ngIf="!loadingRoles() && roles().length === 0">
+              <div class="empty-icon">
+                <i class="pi pi-share-alt"></i>
+              </div>
+              <h3>No hierarchy to display</h3>
+              <p>Create roles to visualize the organization hierarchy.</p>
+            </div>
+
+            <div class="orgchart-wrapper" *ngIf="!loadingRoles() && roles().length > 0">
               <p-organizationChart [value]="orgChartNodes()" selectionMode="single">
-                <ng-template pTemplate="person" let-node>
-                  <div class="org-node">
+                <ng-template pTemplate="default" let-node>
+                  <div
+                    class="org-node"
+                    [attr.data-level]="node.data?.hierarchyLevel ?? ''"
+                    [attr.data-role-name]="(node.data?.name || '').toLowerCase()"
+                  >
                     <div class="org-title">
                       <span class="org-name">{{ node.data?.name }}</span>
                       <span class="org-badges">
@@ -307,9 +331,22 @@
                 </ng-template>
               </p-organizationChart>
             </div>
-          </p-tabpanel>
+          </p-accordion-content>
+        </p-accordion-panel>
 
-          <p-tabpanel value="presets">
+        <p-accordion-panel value="presets">
+          <p-accordion-header>
+            <div class="workspace-accordion-header">
+              <div class="workspace-accordion-header__title">
+                <i class="pi pi-th-large"></i>
+                <span>Role Presets</span>
+              </div>
+              <div class="workspace-accordion-header__badges">
+                <span class="status-badge status-badge--info">{{ intentPacks().length + permissionPackPresets().length }} items</span>
+              </div>
+            </div>
+          </p-accordion-header>
+          <p-accordion-content>
             <div class="security-levels-section">
               <div class="security-levels-header">
                 <div class="security-levels-title">
@@ -372,9 +409,24 @@
                 </p-table>
               </div>
             </div>
-          </p-tabpanel>
+          </p-accordion-content>
+        </p-accordion-panel>
 
-          <p-tabpanel value="drift">
+        <p-accordion-panel value="drift">
+          <p-accordion-header>
+            <div class="workspace-accordion-header">
+              <div class="workspace-accordion-header__title">
+                <i class="pi pi-sliders-h"></i>
+                <span>Drift Monitor</span>
+              </div>
+              <div class="workspace-accordion-header__badges">
+                <span class="status-badge" [class.status-badge--warning]="driftedRolesCount() > 0" [class.status-badge--success]="driftedRolesCount() === 0">
+                  {{ driftedRolesCount() }} drifted
+                </span>
+              </div>
+            </div>
+          </p-accordion-header>
+          <p-accordion-content>
             <div class="security-levels-section">
               <div class="security-levels-header">
                 <div class="security-levels-title">
@@ -414,9 +466,9 @@
                 </p-table>
               </div>
             </div>
-          </p-tabpanel>
-        </p-tabpanels>
-      </p-tabs>
+          </p-accordion-content>
+        </p-accordion-panel>
+      </p-accordion>
     </div>
   </section>
 

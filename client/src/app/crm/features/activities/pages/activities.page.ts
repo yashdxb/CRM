@@ -486,10 +486,7 @@ export class ActivitiesPage {
       return;
     }
     this.currentView.set(view);
-    if (view === 'calendar') {
-      this.myView.set(true);
-      this.activeOwnerFilter = this.myOwnerId() ?? 'all';
-    }
+    // Calendar is enforced as personal-only in load(); do not mutate table/task owner filters.
     if (view === 'tasks') {
       this.typeFilter = 'Task';
     } else if (this.typeFilter === 'Task') {

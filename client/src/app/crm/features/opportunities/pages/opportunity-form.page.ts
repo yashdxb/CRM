@@ -8,6 +8,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
+import { AccordionModule } from 'primeng/accordion';
 import { map, of, switchMap } from 'rxjs';
 
 import { OpportunityDataService, OpportunityReviewOutcomeRequest, SaveOpportunityRequest } from '../services/opportunity-data.service';
@@ -37,6 +38,12 @@ interface Option<T = string> {
   value: T;
 }
 
+interface ApprovalRequirementBadge {
+  label: string;
+  detail?: string | null;
+  tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger';
+}
+
 @Component({
   selector: 'app-opportunity-form-page',
   standalone: true,
@@ -50,12 +57,28 @@ interface Option<T = string> {
     TextareaModule,
     SelectModule,
     DatePickerModule,
+    AccordionModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./opportunity-form.page.html",
   styleUrls: ['./opportunity-form.page.scss']
 })
 export class OpportunityFormPage implements OnInit {
+  private static readonly DISCOUNT_PERCENT_APPROVAL_THRESHOLD = 10;
+  private static readonly DISCOUNT_AMOUNT_APPROVAL_THRESHOLD = 1000;
+  protected readonly accordionPanels = signal<string[]>([
+    'opportunity-details',
+    'deal-settings',
+    'pricing-discounts',
+    'quote-proposal',
+    'pre-sales-team',
+    'approval-workflow',
+    'security-legal',
+    'delivery-handoff',
+    'onboarding',
+    'review-thread'
+  ]);
+
   protected readonly stageOptions: Option[] = [
     { label: 'Prospecting', value: 'Prospecting' },
     { label: 'Qualification', value: 'Qualification' },
@@ -151,6 +174,7 @@ export class OpportunityFormPage implements OnInit {
   protected approvalDecidingIds = new Set<string>();
   private approvalAmountLocked = false;
   private syncingApprovalAmount = false;
+  private approvalAmountThreshold: number | null = null;
   protected readonly policyGateMessage = signal<string | null>(null);
   protected readonly canRequestStageOverride = signal(false);
   protected readonly stageOverrideRequesting = signal(false);
@@ -242,6 +266,167 @@ export class OpportunityFormPage implements OnInit {
     this.form.isClosed = stage.startsWith('Closed');
     this.form.isWon = stage === 'Closed Won';
     this.form.forecastCategory = this.estimateForecastCategory(stage);
+  }
+
+  protected amountApprovalBadge(): ApprovalRequirementBadge {
+    const threshold = this.approvalAmountThreshold ?? 0;
+    const amount = Number(this.form.amount ?? 0);
+    const closeApproval = this.latestApprovalByPurpose('Close');
+    if (closeApproval) {
+      const status = (closeApproval.status || '').toLowerCase();
+      if (status === 'pending') {
+        return { label: 'Approval pending', detail: 'Close approval request submitted', tone: 'warning' };
+      }
+      if (status === 'approved') {
+        return { label: 'Approval approved', detail: 'Close approval already granted', tone: 'success' };
+      }
+      if (status === 'rejected') {
+        return { label: 'Approval rejected', detail: 'Close approval was rejected', tone: 'danger' };
+      }
+    }
+
+    if (!threshold || threshold <= 0) {
+      return { label: 'No close threshold', detail: 'No amount-based close approval rule configured', tone: 'neutral' };
+    }
+
+    if (amount >= threshold) {
+      const closing = Boolean(this.form.isClosed || this.selectedStage?.startsWith('Closed'));
+      return {
+        label: closing ? 'Approval required' : 'Approval likely on close',
+        detail: `Threshold ${threshold.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${this.resolveCurrencyCode()}`,
+        tone: closing ? 'danger' : 'warning'
+      };
+    }
+
+    return {
+      label: 'Within close threshold',
+      detail: `Below ${threshold.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${this.resolveCurrencyCode()}`,
+      tone: 'success'
+    };
+  }
+
+  protected discountApprovalBadge(): ApprovalRequirementBadge {
+    const discountApproval = this.latestApprovalByPurpose('Discount');
+    if (discountApproval) {
+      const status = (discountApproval.status || '').toLowerCase();
+      if (status === 'pending') {
+        return { label: 'Approval pending', detail: 'Discount approval request submitted', tone: 'warning' };
+      }
+      if (status === 'approved') {
+        return { label: 'Approval approved', detail: 'Discount approval already granted', tone: 'success' };
+      }
+      if (status === 'rejected') {
+        return { label: 'Approval rejected', detail: 'Discount approval was rejected', tone: 'danger' };
+      }
+    }
+
+    const percent = Number(this.form.discountPercent ?? 0);
+    const amount = Number(this.form.discountAmount ?? 0);
+    const requiresApproval =
+      percent >= OpportunityFormPage.DISCOUNT_PERCENT_APPROVAL_THRESHOLD ||
+      amount >= OpportunityFormPage.DISCOUNT_AMOUNT_APPROVAL_THRESHOLD;
+
+    if (requiresApproval) {
+      return {
+        label: 'Discount approval required',
+        detail: `>=${OpportunityFormPage.DISCOUNT_PERCENT_APPROVAL_THRESHOLD}% or >=${OpportunityFormPage.DISCOUNT_AMOUNT_APPROVAL_THRESHOLD} ${this.resolveCurrencyCode()}`,
+        tone: 'danger'
+      };
+    }
+
+    if (percent > 0 || amount > 0) {
+      return {
+        label: 'Within discount policy',
+        detail: `Below ${OpportunityFormPage.DISCOUNT_PERCENT_APPROVAL_THRESHOLD}% / ${OpportunityFormPage.DISCOUNT_AMOUNT_APPROVAL_THRESHOLD} ${this.resolveCurrencyCode()}`,
+        tone: 'info'
+      };
+    }
+
+    return { label: 'No discount approval', detail: 'No discount entered', tone: 'neutral' };
+  }
+
+  protected opportunityDetailsBadge(): string {
+    const nameReady = Boolean(this.form.name?.trim());
+    const stageReady = Boolean((this.selectedStage || this.form.stageName || '').trim());
+    if (nameReady && stageReady) {
+      return `${this.selectedStage || this.form.stageName}`;
+    }
+    if (nameReady) {
+      return 'Name ready';
+    }
+    return 'Setup';
+  }
+
+  protected dealSettingsHeaderBadge(): string {
+    return this.amountApprovalBadge().label;
+  }
+
+  protected pricingHeaderBadge(): string {
+    return this.discountApprovalBadge().label;
+  }
+
+  protected proposalHeaderBadge(): string {
+    return this.form.proposalStatus || 'Not Started';
+  }
+
+  protected preSalesTeamHeaderBadge(): string {
+    return this.teamMembers.length ? `${this.teamMembers.length} teammate${this.teamMembers.length > 1 ? 's' : ''}` : 'No teammates';
+  }
+
+  protected approvalWorkflowHeaderBadge(): string {
+    if (!this.isEditMode()) {
+      return 'Save first';
+    }
+    const pending = this.approvals.filter((a) => (a.status || '').toLowerCase() === 'pending').length;
+    if (pending > 0) {
+      return `${pending} pending`;
+    }
+    if (this.approvals.length > 0) {
+      return `${this.approvals.length} total`;
+    }
+    return 'No requests';
+  }
+
+  protected approvalWorkflowHeaderTone(): ApprovalRequirementBadge['tone'] {
+    return this.approvals.some((a) => (a.status || '').toLowerCase() === 'pending') ? 'warning' : 'neutral';
+  }
+
+  protected securityLegalHeaderBadge(): string {
+    const total = this.securityChecklist.length + this.legalChecklist.length + this.technicalChecklist.length;
+    if (!total) {
+      return 'No checks';
+    }
+    const blocked = [...this.securityChecklist, ...this.legalChecklist, ...this.technicalChecklist]
+      .filter((item) => (item.status || '').toLowerCase() === 'blocked').length;
+    return blocked > 0 ? `${blocked} blocked` : `${total} checks`;
+  }
+
+  protected deliveryHeaderBadge(): string {
+    return this.form.deliveryStatus || 'Not Started';
+  }
+
+  protected onboardingHeaderBadge(): string {
+    const total = this.onboardingChecklist.length + this.onboardingMilestones.length;
+    if (!total) {
+      return 'No items';
+    }
+    return `${total} items`;
+  }
+
+  protected reviewThreadHeaderBadge(): string {
+    if (!this.isEditMode()) {
+      return 'Save first';
+    }
+    const pendingAck = this.hasPendingAcknowledgment();
+    if (pendingAck) {
+      return 'Ack pending';
+    }
+    const count = this.reviewThread().length;
+    return count ? `${count} entries` : 'No reviews';
+  }
+
+  protected reviewThreadHeaderTone(): ApprovalRequirementBadge['tone'] {
+    return this.hasPendingAcknowledgment() ? 'warning' : 'neutral';
   }
 
   protected onSave() {
@@ -1151,9 +1336,15 @@ export class OpportunityFormPage implements OnInit {
     this.settingsService.getSettings().subscribe({
       next: (settings) => {
         const resolved = settings.currency || this.currencyFallback;
+        this.approvalAmountThreshold =
+          settings.approvalAmountThreshold != null ? Number(settings.approvalAmountThreshold) : null;
         this.applyCurrencyDefaults(resolved);
       }
     });
+  }
+
+  private latestApprovalByPurpose(purpose: 'Close' | 'Discount'): OpportunityApprovalItem | null {
+    return this.approvals.find((approval) => (approval.purpose || '').toLowerCase() === purpose.toLowerCase()) ?? null;
   }
 
   private applyCurrencyDefaults(currencyCode: string) {

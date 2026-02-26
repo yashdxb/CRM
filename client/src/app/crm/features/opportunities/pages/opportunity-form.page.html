@@ -70,11 +70,19 @@
 
       <div class="form-body">
         <form class="form-layout" (ngSubmit)="onSave()">
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-briefcase"></i>
-              Opportunity Details
-            </h3>
+          <p-accordion class="opportunity-section-accordion" [multiple]="true" [value]="accordionPanels()">
+            <p-accordion-panel value="opportunity-details">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-briefcase"></i>
+                    Opportunity Details
+                  </span>
+                  <span class="opportunity-accordion-badge">{{ opportunityDetailsBadge() }}</span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
               <div class="field">
                 <label for="oppName">Opportunity name <span class="required">*</span></label>
@@ -134,15 +142,36 @@
               </div>
             </div>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-chart-line"></i>
-              Deal Settings
-            </h3>
+            <p-accordion-panel value="deal-settings">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-chart-line"></i>
+                    Deal Settings
+                  </span>
+                  <span class="opportunity-accordion-badge"
+                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + amountApprovalBadge().tone">
+                    {{ dealSettingsHeaderBadge() }}
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
               <div class="field">
-                <label for="oppAmount">Amount</label>
+                <div class="field-label-row">
+                  <label for="oppAmount">Amount</label>
+                  <span
+                    class="approval-requirement-badge"
+                    [class]="'approval-requirement-badge approval-requirement-badge--' + amountApprovalBadge().tone"
+                    [title]="amountApprovalBadge().detail || ''"
+                  >
+                    {{ amountApprovalBadge().label }}
+                  </span>
+                </div>
                 <p-inputNumber
                   inputId="oppAmount"
                   [(ngModel)]="form.amount"
@@ -153,6 +182,7 @@
                   placeholder="0"
                   class="w-full"
                 ></p-inputNumber>
+                <small class="field-hint" *ngIf="amountApprovalBadge().detail">{{ amountApprovalBadge().detail }}</small>
               </div>
               <div class="field">
                 <label for="oppCurrency">Currency</label>
@@ -292,15 +322,36 @@
               </div>
             </div>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-percentage"></i>
-              Pricing & Discounts
-            </h3>
+            <p-accordion-panel value="pricing-discounts">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-percentage"></i>
+                    Pricing & Discounts
+                  </span>
+                  <span class="opportunity-accordion-badge"
+                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + discountApprovalBadge().tone">
+                    {{ pricingHeaderBadge() }}
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
               <div class="field">
-                <label for="oppDiscountPercent">Discount (%)</label>
+                <div class="field-label-row">
+                  <label for="oppDiscountPercent">Discount (%)</label>
+                  <span
+                    class="approval-requirement-badge"
+                    [class]="'approval-requirement-badge approval-requirement-badge--' + discountApprovalBadge().tone"
+                    [title]="discountApprovalBadge().detail || ''"
+                  >
+                    {{ discountApprovalBadge().label }}
+                  </span>
+                </div>
                 <p-inputNumber
                   inputId="oppDiscountPercent"
                   [(ngModel)]="form.discountPercent"
@@ -310,6 +361,7 @@
                   [max]="100"
                   class="w-full"
                 ></p-inputNumber>
+                <small class="field-hint" *ngIf="discountApprovalBadge().detail">{{ discountApprovalBadge().detail }}</small>
               </div>
               <div class="field">
                 <label for="oppDiscountAmount">Discount Amount</label>
@@ -338,12 +390,21 @@
               </div>
             </div>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-file-edit"></i>
-              Quote / Proposal
-            </h3>
+            <p-accordion-panel value="quote-proposal">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-file-edit"></i>
+                    Quote / Proposal
+                  </span>
+                  <span class="opportunity-accordion-badge">{{ proposalHeaderBadge() }}</span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card">
             <p class="section-subtitle">Generate and track the proposal before sending to the customer.</p>
             <div class="form-grid">
               <div class="field">
@@ -417,12 +478,21 @@
               </button>
             </div>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-users"></i>
-              Pre-Sales Team
-            </h3>
+            <p-accordion-panel value="pre-sales-team">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-users"></i>
+                    Pre-Sales Team
+                  </span>
+                  <span class="opportunity-accordion-badge">{{ preSalesTeamHeaderBadge() }}</span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card">
             <p class="section-subtitle">Track solution partners and demo owners supporting this deal.</p>
             <div class="team-grid" *ngIf="teamMembers.length; else emptyTeam">
               <div class="team-row" *ngFor="let member of teamMembers; let i = index">
@@ -489,12 +559,24 @@
               </div>
             </div>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card" *ngIf="isEditMode()">
-            <h3 class="section-title">
-              <i class="pi pi-check-circle"></i>
-              Approval Workflow
-            </h3>
+            <p-accordion-panel value="approval-workflow" *ngIf="isEditMode()">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-check-circle"></i>
+                    Approval Workflow
+                  </span>
+                  <span class="opportunity-accordion-badge"
+                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + approvalWorkflowHeaderTone()">
+                    {{ approvalWorkflowHeaderBadge() }}
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card" *ngIf="isEditMode()">
             <div class="approval-request">
               <div class="approval-request-row">
                 <div class="field">
@@ -618,12 +700,21 @@
               <p class="helper-text">No approvals requested yet.</p>
             </ng-template>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-shield"></i>
-              Security & Legal Review
-            </h3>
+            <p-accordion-panel value="security-legal">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-shield"></i>
+                    Security & Legal Review
+                  </span>
+                  <span class="opportunity-accordion-badge">{{ securityLegalHeaderBadge() }}</span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
               <div class="field">
                 <label for="oppSecurityStatus">Security status</label>
@@ -834,12 +925,21 @@
               </div>
             </div>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-briefcase"></i>
-              Delivery Handoff
-            </h3>
+            <p-accordion-panel value="delivery-handoff">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-briefcase"></i>
+                    Delivery Handoff
+                  </span>
+                  <span class="opportunity-accordion-badge">{{ deliveryHeaderBadge() }}</span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card">
             <p class="section-subtitle">Capture scope, risks, and delivery ownership before kickoff.</p>
             <div class="form-grid">
               <div class="field">
@@ -919,12 +1019,21 @@
               </div>
             </div>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card">
-            <h3 class="section-title">
-              <i class="pi pi-list-check"></i>
-              Onboarding Checklist & Milestones
-            </h3>
+            <p-accordion-panel value="onboarding">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-list-check"></i>
+                    Onboarding Checklist & Milestones
+                  </span>
+                  <span class="opportunity-accordion-badge">{{ onboardingHeaderBadge() }}</span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card opportunity-accordion-card">
             <div class="checklist-form">
               <input
                 pInputText
@@ -1047,12 +1156,24 @@
               <p class="empty-state">No onboarding milestones yet.</p>
             </ng-template>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
 
-          <section class="form-card review-thread-card" *ngIf="isEditMode()">
-            <h3 class="section-title">
-              <i class="pi pi-comments"></i>
-              Deal Review Thread
-            </h3>
+            <p-accordion-panel value="review-thread" *ngIf="isEditMode()">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-comments"></i>
+                    Deal Review Thread
+                  </span>
+                  <span class="opportunity-accordion-badge"
+                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + reviewThreadHeaderTone()">
+                    {{ reviewThreadHeaderBadge() }}
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <section class="form-card review-thread-card opportunity-accordion-card" *ngIf="isEditMode()">
 
             <div class="review-thread-controls" *ngIf="isManager(); else repAckBlock">
               <div class="form-grid">
@@ -1155,6 +1276,9 @@
               <p class="helper-text">No manager review comments yet.</p>
             </ng-template>
           </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+          </p-accordion>
 
           <div class="form-actions">
             <button

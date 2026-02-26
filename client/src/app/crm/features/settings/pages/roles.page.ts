@@ -1,13 +1,13 @@
 import { NgClass, NgFor, NgIf, isPlatformBrowser } from '@angular/common';
 import { Component, HostListener, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { FormBuilder, Validators } from '@angular/forms';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
+import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { OrganizationChartModule } from 'primeng/organizationchart';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TableModule, TablePageEvent } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { TabsModule } from 'primeng/tabs';
 import { TooltipModule } from 'primeng/tooltip';
 import { TreeNode } from 'primeng/api';
 
@@ -18,13 +18,12 @@ import { readTokenContext, tokenHasPermission } from '../../../../core/auth/toke
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 
-type RolesWorkspaceTab = 'directory' | 'presets' | 'drift';
-
 @Component({
   selector: 'app-roles-page',
   standalone: true,
   imports: [
     ButtonModule,
+    AccordionModule,
     OrganizationChartModule,
     NgClass,
     NgFor,
@@ -32,7 +31,6 @@ type RolesWorkspaceTab = 'directory' | 'presets' | 'drift';
     RouterLink,
     SkeletonModule,
     TableModule,
-    TabsModule,
     TagModule,
     TooltipModule,
     BreadcrumbsComponent
@@ -44,8 +42,6 @@ export class RolesPage {
   private readonly dataService = inject(UserAdminDataService);
   private readonly toastService = inject(AppToastService);
   private readonly formBuilder = inject(FormBuilder);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly platformId = inject(PLATFORM_ID);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
 
@@ -75,8 +71,7 @@ export class RolesPage {
   protected readonly roleSaving = signal(false);
   protected readonly securityLevelSaving = signal(false);
   protected readonly canManageAdmin = signal(false);
-  protected readonly showHierarchy = signal(false);
-  protected readonly activeWorkspaceTab = signal<RolesWorkspaceTab>('directory');
+  protected readonly rolesWorkspacePanels = signal<string[]>(['directory', 'hierarchy']);
   protected readonly securityEditorOpen = signal(false);
   protected readonly editingSecurityLevel = signal<SecurityLevelDefinition | null>(null);
   protected readonly orgChartNodes = computed(() => this.buildOrgChartNodes());
@@ -135,20 +130,6 @@ export class RolesPage {
     this.loadSecurityLevels();
     this.loadIntentPacks();
     this.loadPermissionPackPresets();
-    this.route.queryParamMap.subscribe((params) => {
-      this.activeWorkspaceTab.set(this.coerceWorkspaceTab(params.get('tab')));
-    });
-  }
-
-  protected onWorkspaceTabChange(next: string | number | undefined) {
-    const tab = this.coerceWorkspaceTab(typeof next === 'string' ? next : null);
-    this.activeWorkspaceTab.set(tab);
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab: tab === 'directory' ? null : tab },
-      queryParamsHandling: 'merge',
-      replaceUrl: true
-    });
   }
 
   protected loadRoles() {
@@ -166,6 +147,18 @@ export class RolesPage {
         this.raiseToast('error', 'Unable to load roles');
       }
     });
+  }
+
+  protected onWorkspacePanelsChange(next: string | number | string[] | number[] | null | undefined) {
+    if (Array.isArray(next)) {
+      this.rolesWorkspacePanels.set(next.map((value) => String(value)));
+      return;
+    }
+    if (typeof next === 'string' || typeof next === 'number') {
+      this.rolesWorkspacePanels.set([String(next)]);
+      return;
+    }
+    this.rolesWorkspacePanels.set([]);
   }
 
   protected loadPermissions() {
@@ -252,10 +245,6 @@ export class RolesPage {
     const nextFirst = event.first ?? 0;
     this.rolesPageSize.set(nextRows);
     this.rolesFirst.set(nextFirst);
-  }
-
-  protected toggleView(mode: 'list' | 'hierarchy') {
-    this.showHierarchy.set(mode === 'hierarchy');
   }
 
   @HostListener('window:resize')
@@ -589,13 +578,6 @@ export class RolesPage {
       i += 1;
     }
     return `${candidate} ${i}`;
-  }
-
-  private coerceWorkspaceTab(value: string | null): RolesWorkspaceTab {
-    if (value === 'presets' || value === 'drift' || value === 'directory') {
-      return value;
-    }
-    return 'directory';
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {

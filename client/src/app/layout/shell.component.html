@@ -7,6 +7,11 @@
           (toggleSidebar)="nav.toggleSidebar()" 
           (openQuickAdd)="openQuickAdd()" 
         />
+        <div
+          class="app-topbar-activity-strip"
+          [class.is-active]="loadingOverlay.visible()"
+          aria-hidden="true"
+        ></div>
 
         <main class="content">
           <router-outlet />
