@@ -1306,6 +1306,50 @@
   flex-wrap: wrap;
 }
 
+.proposal-activity-card {
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(248, 250, 252, 0.85);
+
+  h5 {
+    margin: 0 0 0.55rem;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: rgba(51, 65, 85, 0.88);
+  }
+}
+
+.proposal-activity-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.42rem 0;
+  border-top: 1px dashed rgba(148, 163, 184, 0.32);
+
+  &:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+}
+
+.proposal-activity-row__title {
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: rgba(30, 41, 59, 0.92);
+}
+
+.proposal-activity-row__meta {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  font-size: 0.78rem;
+  color: rgba(71, 85, 105, 0.88);
+}
+
 .btn-icon {
   width: 38px;
   height: 38px;
@@ -1399,6 +1443,15 @@
 
   .proposal-preview-card__actions {
     width: 100%;
+  }
+
+  .proposal-activity-row {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .proposal-activity-row__meta {
+    justify-content: flex-start;
   }
 }
 

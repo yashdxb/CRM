@@ -31,6 +31,7 @@ import {
   OpportunityQuoteDetail,
   OpportunityQuoteSummary,
   OpportunityProposalActionResult,
+  OpportunityAuditEvent,
   PriceListListItem,
   ItemMasterListItem
 } from '../models/opportunity.model';
@@ -317,6 +318,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected proposalSendDialogVisible = false;
   protected proposalSendRecipient = '';
   protected proposalSendMessage = '';
+  protected proposalActivityEvents: OpportunityAuditEvent[] = [];
   private teamDirty = false;
   protected onboardingChecklist: OpportunityOnboardingItem[] = [];
   protected onboardingMilestones: OpportunityOnboardingItem[] = [];
@@ -1520,6 +1522,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       next: (opp) => {
         this.applyOpportunity(opp);
         this.loadQuoteWorkspace(id);
+        this.loadProposalActivity(id);
         if (!this.accountOptions.length) {
           this.pendingOpportunity = opp;
         }
@@ -1591,6 +1594,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     switch (section) {
       case 'quote-proposal':
         this.loadQuoteWorkspace(this.editingId, markDone);
+        this.loadProposalActivity(this.editingId);
         break;
       case 'pre-sales-team':
         this.loadTeamMembers(this.editingId, markDone);
@@ -2040,6 +2044,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       next: (result) => {
         this.proposalGenerating.set(false);
         this.applyProposalActionResult(result);
+        if (this.editingId) {
+          this.loadProposalActivity(this.editingId);
+        }
         this.toastService.show('success', 'Proposal generated successfully.', 2600);
       },
       error: (error) => {
@@ -2072,6 +2079,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       next: (result) => {
         this.proposalSending.set(false);
         this.applyProposalActionResult(result);
+        if (this.editingId) {
+          this.loadProposalActivity(this.editingId);
+        }
         this.proposalSendDialogVisible = false;
         this.proposalSendRecipient = '';
         this.proposalSendMessage = '';
@@ -2101,6 +2111,18 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
     const normalizedPath = raw.startsWith('/') ? raw : `/${raw}`;
     return `${baseUrl}${normalizedPath}`;
+  }
+
+  protected proposalActivityTimeline(): OpportunityAuditEvent[] {
+    return [...this.proposalActivityEvents]
+      .filter((event) => event.action === 'ProposalGenerated' || event.action === 'ProposalSent')
+      .sort((a, b) => new Date(b.createdAtUtc).getTime() - new Date(a.createdAtUtc).getTime());
+  }
+
+  protected proposalActivityLabel(event: OpportunityAuditEvent): string {
+    if (event.action === 'ProposalGenerated') return 'Proposal generated';
+    if (event.action === 'ProposalSent') return 'Proposal sent';
+    return event.action;
   }
 
   protected addQuoteLine() {
@@ -2463,6 +2485,17 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.quoteSummaries = [];
         this.resetQuoteWorkspace();
         onSettled?.();
+      }
+    });
+  }
+
+  private loadProposalActivity(opportunityId: string) {
+    this.opportunityData.getAudit(opportunityId).subscribe({
+      next: (events) => {
+        this.proposalActivityEvents = events ?? [];
+      },
+      error: () => {
+        this.proposalActivityEvents = [];
       }
     });
   }

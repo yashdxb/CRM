@@ -303,9 +303,9 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
                 "Opportunity",
                 quote.OpportunityId,
                 "ProposalGenerated",
-                "ProposalStatus",
+                "ProposalGeneratedAtUtc",
                 null,
-                quote.Opportunity.ProposalStatus,
+                now.ToString("O"),
                 actor.UserId,
                 actor.UserName),
             cancellationToken);
@@ -391,9 +391,9 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
                 "Opportunity",
                 quote.OpportunityId,
                 "ProposalSent",
-                "ProposalStatus",
+                "ProposalSentTo",
                 null,
-                quote.Opportunity.ProposalStatus,
+                recipientEmail,
                 actor.UserId,
                 actor.UserName),
             cancellationToken);

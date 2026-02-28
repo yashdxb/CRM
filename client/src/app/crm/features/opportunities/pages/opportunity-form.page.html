@@ -806,6 +806,19 @@
                   ></a>
                 </div>
               </div>
+              <div class="proposal-activity-card" *ngIf="proposalActivityTimeline().length">
+                <h5>Proposal activity</h5>
+                <div class="proposal-activity-row" *ngFor="let event of proposalActivityTimeline()">
+                  <div class="proposal-activity-row__title">
+                    {{ proposalActivityLabel(event) }}
+                    <span *ngIf="event.field === 'ProposalSentTo' && event.newValue">to {{ event.newValue }}</span>
+                  </div>
+                  <div class="proposal-activity-row__meta">
+                    <span>{{ event.createdAtUtc | date: 'medium' }}</span>
+                    <span *ngIf="event.changedByName">by {{ event.changedByName }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="team-actions">
               <button type="button" class="btn-glass" (click)="addQuoteLine()">

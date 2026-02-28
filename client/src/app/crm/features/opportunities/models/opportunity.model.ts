@@ -178,6 +178,19 @@ export interface OpportunityProposalActionResult {
   recipientEmail?: string | null;
 }
 
+export interface OpportunityAuditEvent {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  field?: string | null;
+  oldValue?: string | null;
+  newValue?: string | null;
+  changedByUserId?: string | null;
+  changedByName?: string | null;
+  createdAtUtc: string;
+}
+
 export interface PriceListListItem {
   id: string;
   name: string;

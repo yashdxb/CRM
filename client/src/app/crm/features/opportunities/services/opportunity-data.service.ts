@@ -15,6 +15,7 @@ import {
   OpportunityCreateQuoteRequest,
   OpportunityUpdateQuoteRequest,
   OpportunityProposalActionResult,
+  OpportunityAuditEvent,
   PriceListListItem,
   ItemMasterListItem
 } from '../models/opportunity.model';
@@ -115,6 +116,10 @@ export class OpportunityDataService {
 
   getById(id: string) {
     return this.http.get<Opportunity>(`${this.baseUrl}/api/opportunities/${id}`);
+  }
+
+  getAudit(id: string) {
+    return this.http.get<OpportunityAuditEvent[]>(`${this.baseUrl}/api/opportunities/${id}/audit`);
   }
 
   getReviewThread(id: string) {
