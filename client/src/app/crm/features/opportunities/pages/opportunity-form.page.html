@@ -796,13 +796,13 @@
                 <i class="pi pi-check-circle"></i>
                 Submit for approval
               </button>
-              <button type="button" class="btn-glass" (click)="generateProposal()">
+              <button type="button" class="btn-glass" [disabled]="proposalGenerating() || !selectedQuoteId" (click)="generateProposal()">
                 <i class="pi pi-file"></i>
-                Generate proposal
+                {{ proposalGenerating() ? 'Generating...' : 'Generate proposal' }}
               </button>
-              <button type="button" class="btn-glass" (click)="markProposalSent()">
+              <button type="button" class="btn-glass" [disabled]="proposalSending() || !selectedQuoteId" (click)="markProposalSent()">
                 <i class="pi pi-send"></i>
-                Mark sent
+                {{ proposalSending() ? 'Sending...' : 'Send proposal' }}
               </button>
             </div>
           </section>

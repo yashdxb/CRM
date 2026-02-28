@@ -1,8 +1,13 @@
+using System.Text;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Application.Opportunities;
+using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Infrastructure.Opportunities;
@@ -16,15 +21,24 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
     private readonly CrmDbContext _dbContext;
     private readonly IAuditEventService _auditEvents;
     private readonly IOpportunityApprovalService _approvalService;
+    private readonly IWebHostEnvironment _environment;
+    private readonly ITenantProvider _tenantProvider;
+    private readonly IEmailSender _emailSender;
 
     public OpportunityQuoteService(
         CrmDbContext dbContext,
         IAuditEventService auditEvents,
-        IOpportunityApprovalService approvalService)
+        IOpportunityApprovalService approvalService,
+        IWebHostEnvironment environment,
+        ITenantProvider tenantProvider,
+        IEmailSender emailSender)
     {
         _dbContext = dbContext;
         _auditEvents = auditEvents;
         _approvalService = approvalService;
+        _environment = environment;
+        _tenantProvider = tenantProvider;
+        _emailSender = emailSender;
     }
 
     public async Task<IReadOnlyList<OpportunityQuoteListItemDto>?> GetByOpportunityAsync(Guid opportunityId, CancellationToken cancellationToken = default)
@@ -215,6 +229,185 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(opportunityId, quote.Id, cancellationToken);
+    }
+
+    public async Task<OpportunityProposalActionResultDto?> GenerateProposalAsync(
+        Guid opportunityId,
+        Guid quoteId,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var quote = await _dbContext.OpportunityQuotes
+            .Include(q => q.Opportunity)
+            .ThenInclude(o => o!.Account)
+            .Include(q => q.Lines.Where(l => !l.IsDeleted))
+            .ThenInclude(l => l.ItemMaster)
+            .FirstOrDefaultAsync(
+                q => q.Id == quoteId && q.OpportunityId == opportunityId && !q.IsDeleted,
+                cancellationToken);
+        if (quote?.Opportunity is null)
+        {
+            return null;
+        }
+
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            opportunityId,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            throw new InvalidOperationException(lockViolation);
+        }
+
+        var now = DateTime.UtcNow;
+        var proposalContent = BuildProposalContent(quote);
+        var tenantKey = string.IsNullOrWhiteSpace(_tenantProvider.TenantKey) ? "default" : _tenantProvider.TenantKey.Trim().ToLowerInvariant();
+        var storageRoot = Path.Combine(_environment.ContentRootPath, "uploads", tenantKey, "proposals");
+        Directory.CreateDirectory(storageRoot);
+
+        var safeQuoteNumber = new string((quote.QuoteNumber ?? "quote").Select(ch => char.IsLetterOrDigit(ch) ? ch : '-').ToArray());
+        var fileName = $"Proposal-{safeQuoteNumber}-{now:yyyyMMddHHmmss}.txt";
+        var storedName = $"{Guid.NewGuid():N}_{fileName}";
+        var absolutePath = Path.Combine(storageRoot, storedName);
+        await File.WriteAllTextAsync(absolutePath, proposalContent, Encoding.UTF8, cancellationToken);
+        var relativePath = Path.Combine("uploads", tenantKey, "proposals", storedName).Replace('\\', '/');
+        var size = new FileInfo(absolutePath).Length;
+
+        var attachment = new Attachment
+        {
+            FileName = fileName,
+            ContentType = "text/plain",
+            Size = size,
+            StoragePath = relativePath,
+            RelatedEntityType = ActivityRelationType.Opportunity,
+            RelatedEntityId = quote.OpportunityId,
+            UploadedById = actor.UserId ?? Guid.Empty,
+            CreatedAtUtc = now,
+            CreatedBy = actor.UserName
+        };
+        _dbContext.Attachments.Add(attachment);
+
+        quote.Opportunity.ProposalStatus = "Draft";
+        quote.Opportunity.ProposalGeneratedAtUtc = now;
+        quote.Opportunity.ProposalLink = $"/api/attachments/{attachment.Id}/download";
+        if (string.IsNullOrWhiteSpace(quote.Opportunity.ProposalNotes) && !string.IsNullOrWhiteSpace(quote.Notes))
+        {
+            quote.Opportunity.ProposalNotes = quote.Notes;
+        }
+        quote.Opportunity.UpdatedAtUtc = now;
+        quote.Opportunity.UpdatedBy = actor.UserName;
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "Opportunity",
+                quote.OpportunityId,
+                "ProposalGenerated",
+                "ProposalStatus",
+                null,
+                quote.Opportunity.ProposalStatus,
+                actor.UserId,
+                actor.UserName),
+            cancellationToken);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new OpportunityProposalActionResultDto(
+            quote.OpportunityId,
+            quote.Id,
+            quote.Opportunity.ProposalStatus ?? "Draft",
+            quote.Opportunity.ProposalLink,
+            quote.Opportunity.ProposalGeneratedAtUtc,
+            quote.Opportunity.ProposalSentAtUtc,
+            null);
+    }
+
+    public async Task<OpportunityProposalActionResultDto?> SendProposalAsync(
+        Guid opportunityId,
+        Guid quoteId,
+        OpportunityQuoteSendProposalRequest request,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var quote = await _dbContext.OpportunityQuotes
+            .Include(q => q.Opportunity)
+            .ThenInclude(o => o!.PrimaryContact)
+            .FirstOrDefaultAsync(
+                q => q.Id == quoteId && q.OpportunityId == opportunityId && !q.IsDeleted,
+                cancellationToken);
+        if (quote?.Opportunity is null)
+        {
+            return null;
+        }
+
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            opportunityId,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            throw new InvalidOperationException(lockViolation);
+        }
+
+        if (string.IsNullOrWhiteSpace(quote.Opportunity.ProposalLink))
+        {
+            throw new InvalidOperationException("Generate the proposal before sending.");
+        }
+
+        var recipientEmail = string.IsNullOrWhiteSpace(request.ToEmail)
+            ? quote.Opportunity.PrimaryContact?.Email?.Trim()
+            : request.ToEmail.Trim();
+        if (string.IsNullOrWhiteSpace(recipientEmail))
+        {
+            throw new InvalidOperationException("No recipient email found. Set a primary contact email or provide recipient email.");
+        }
+
+        var subject = $"Proposal for {quote.Opportunity.Name}";
+        var customMessage = string.IsNullOrWhiteSpace(request.Message) ? null : request.Message.Trim();
+        var link = quote.Opportunity.ProposalLink;
+        var htmlBody = $"""
+<p>Hello,</p>
+<p>{(customMessage ?? "Please review the attached proposal details from our CRM workspace.")}</p>
+<p><a href="{link}">Open proposal</a></p>
+<p>Regards,<br/>{(string.IsNullOrWhiteSpace(actor.UserName) ? "CRM Team" : actor.UserName)}</p>
+""";
+        var textBody =
+            $"Hello,{Environment.NewLine}{Environment.NewLine}" +
+            $"{(customMessage ?? "Please review the attached proposal details from our CRM workspace.")}{Environment.NewLine}" +
+            $"Open proposal: {link}{Environment.NewLine}{Environment.NewLine}" +
+            $"Regards,{Environment.NewLine}{(string.IsNullOrWhiteSpace(actor.UserName) ? "CRM Team" : actor.UserName)}";
+
+        await _emailSender.SendAsync(recipientEmail, subject, htmlBody, textBody, cancellationToken);
+
+        var now = DateTime.UtcNow;
+        quote.Opportunity.ProposalStatus = "Sent";
+        quote.Opportunity.ProposalSentAtUtc = now;
+        quote.Opportunity.UpdatedAtUtc = now;
+        quote.Opportunity.UpdatedBy = actor.UserName;
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "Opportunity",
+                quote.OpportunityId,
+                "ProposalSent",
+                "ProposalStatus",
+                null,
+                quote.Opportunity.ProposalStatus,
+                actor.UserId,
+                actor.UserName),
+            cancellationToken);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new OpportunityProposalActionResultDto(
+            quote.OpportunityId,
+            quote.Id,
+            quote.Opportunity.ProposalStatus ?? "Sent",
+            quote.Opportunity.ProposalLink,
+            quote.Opportunity.ProposalGeneratedAtUtc,
+            quote.Opportunity.ProposalSentAtUtc,
+            recipientEmail);
     }
 
     public async Task<OpportunityQuoteDetailDto?> UpdateAsync(
@@ -439,6 +632,43 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
         }
 
         return quote.Status;
+    }
+
+    private static string BuildProposalContent(OpportunityQuote quote)
+    {
+        var opportunity = quote.Opportunity;
+        var sb = new StringBuilder();
+        sb.AppendLine("CRM Enterprise Proposal");
+        sb.AppendLine($"Generated UTC: {DateTime.UtcNow:O}");
+        sb.AppendLine($"Quote Number: {quote.QuoteNumber}");
+        sb.AppendLine($"Quote Name: {quote.Name}");
+        sb.AppendLine($"Opportunity: {opportunity?.Name ?? "N/A"}");
+        sb.AppendLine($"Account: {opportunity?.Account?.Name ?? "N/A"}");
+        sb.AppendLine($"Currency: {quote.Currency}");
+        sb.AppendLine();
+        sb.AppendLine("Line Items");
+        sb.AppendLine("----------");
+        foreach (var line in quote.Lines.Where(l => !l.IsDeleted).OrderBy(l => l.CreatedAtUtc))
+        {
+            sb.AppendLine($"- {line.ItemMaster?.Name ?? line.Description ?? "Item"} | Qty: {line.Quantity} | Unit: {line.UnitPrice:0.00} | Discount: {line.DiscountPercent:0.##}% | Total: {line.LineTotal:0.00}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Totals");
+        sb.AppendLine("------");
+        sb.AppendLine($"Subtotal: {quote.Subtotal:0.00}");
+        sb.AppendLine($"Discount: {quote.DiscountAmount:0.00}");
+        sb.AppendLine($"Tax: {quote.TaxAmount:0.00}");
+        sb.AppendLine($"Total: {quote.TotalAmount:0.00}");
+        if (!string.IsNullOrWhiteSpace(quote.Notes))
+        {
+            sb.AppendLine();
+            sb.AppendLine("Notes");
+            sb.AppendLine("-----");
+            sb.AppendLine(quote.Notes.Trim());
+        }
+
+        return sb.ToString();
     }
 
     private static void ValidateRequest(

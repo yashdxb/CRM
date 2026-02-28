@@ -62,3 +62,16 @@ public sealed record UpdateOpportunityQuoteRequest(
     decimal TaxAmount,
     string? Notes,
     IReadOnlyList<OpportunityQuoteLineRequest> Lines);
+
+public sealed record SendOpportunityProposalRequest(
+    string? ToEmail,
+    string? Message);
+
+public sealed record OpportunityProposalActionResult(
+    Guid OpportunityId,
+    Guid QuoteId,
+    string ProposalStatus,
+    string? ProposalLink,
+    DateTime? ProposalGeneratedAtUtc,
+    DateTime? ProposalSentAtUtc,
+    string? RecipientEmail);

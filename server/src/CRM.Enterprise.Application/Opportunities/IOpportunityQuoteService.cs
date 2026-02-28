@@ -9,4 +9,6 @@ public interface IOpportunityQuoteService
     Task<OpportunityQuoteDetailDto?> CreateAsync(Guid opportunityId, OpportunityQuoteCreateRequest request, ActorContext actor, CancellationToken cancellationToken = default);
     Task<OpportunityQuoteDetailDto?> UpdateAsync(Guid opportunityId, Guid quoteId, OpportunityQuoteUpdateRequest request, ActorContext actor, CancellationToken cancellationToken = default);
     Task<OpportunityQuoteDetailDto?> SubmitForApprovalAsync(Guid opportunityId, Guid quoteId, ActorContext actor, CancellationToken cancellationToken = default);
+    Task<OpportunityProposalActionResultDto?> GenerateProposalAsync(Guid opportunityId, Guid quoteId, ActorContext actor, CancellationToken cancellationToken = default);
+    Task<OpportunityProposalActionResultDto?> SendProposalAsync(Guid opportunityId, Guid quoteId, OpportunityQuoteSendProposalRequest request, ActorContext actor, CancellationToken cancellationToken = default);
 }

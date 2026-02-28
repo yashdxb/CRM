@@ -168,6 +168,16 @@ export interface OpportunityUpdateQuoteRequest extends OpportunityCreateQuoteReq
   status: string;
 }
 
+export interface OpportunityProposalActionResult {
+  opportunityId: string;
+  quoteId: string;
+  proposalStatus: string;
+  proposalLink?: string | null;
+  proposalGeneratedAtUtc?: string | null;
+  proposalSentAtUtc?: string | null;
+  recipientEmail?: string | null;
+}
+
 export interface PriceListListItem {
   id: string;
   name: string;

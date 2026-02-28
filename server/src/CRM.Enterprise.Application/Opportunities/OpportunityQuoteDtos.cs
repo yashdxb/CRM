@@ -38,3 +38,12 @@ public sealed record OpportunityQuoteDetailDto(
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc,
     IReadOnlyList<OpportunityQuoteLineDto> Lines);
+
+public sealed record OpportunityProposalActionResultDto(
+    Guid OpportunityId,
+    Guid QuoteId,
+    string ProposalStatus,
+    string? ProposalLink,
+    DateTime? ProposalGeneratedAtUtc,
+    DateTime? ProposalSentAtUtc,
+    string? RecipientEmail);

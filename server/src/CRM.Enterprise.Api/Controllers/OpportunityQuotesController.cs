@@ -141,6 +141,62 @@ public sealed class OpportunityQuotesController : ControllerBase
         return Ok(MapDetail(result));
     }
 
+    [HttpPost("api/opportunities/{opportunityId:guid}/quotes/{quoteId:guid}/generate-proposal")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityProposalActionResult>> GenerateProposal(
+        Guid opportunityId,
+        Guid quoteId,
+        CancellationToken cancellationToken)
+    {
+        OpportunityProposalActionResultDto? result;
+        try
+        {
+            result = await _service.GenerateProposalAsync(opportunityId, quoteId, GetActor(), cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(MapProposalResult(result));
+    }
+
+    [HttpPost("api/opportunities/{opportunityId:guid}/quotes/{quoteId:guid}/send-proposal")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityProposalActionResult>> SendProposal(
+        Guid opportunityId,
+        Guid quoteId,
+        [FromBody] SendOpportunityProposalRequest request,
+        CancellationToken cancellationToken)
+    {
+        OpportunityProposalActionResultDto? result;
+        try
+        {
+            result = await _service.SendProposalAsync(
+                opportunityId,
+                quoteId,
+                new OpportunityQuoteSendProposalRequest(request.ToEmail, request.Message),
+                GetActor(),
+                cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(MapProposalResult(result));
+    }
+
     private static CRM.Enterprise.Application.Opportunities.OpportunityQuoteLineRequest MapLineRequest(
         CRM.Enterprise.Api.Contracts.Opportunities.OpportunityQuoteLineRequest request)
         => new(request.ItemMasterId, request.Description, request.Quantity, request.UnitPrice, request.DiscountPercent);
@@ -174,6 +230,16 @@ public sealed class OpportunityQuotesController : ControllerBase
                 l.UnitPrice,
                 l.DiscountPercent,
                 l.LineTotal)).ToList());
+
+    private static OpportunityProposalActionResult MapProposalResult(OpportunityProposalActionResultDto item)
+        => new(
+            item.OpportunityId,
+            item.QuoteId,
+            item.ProposalStatus,
+            item.ProposalLink,
+            item.ProposalGeneratedAtUtc,
+            item.ProposalSentAtUtc,
+            item.RecipientEmail);
 
     private ActorContext GetActor()
     {

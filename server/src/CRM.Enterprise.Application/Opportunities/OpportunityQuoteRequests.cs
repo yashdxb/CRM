@@ -23,3 +23,7 @@ public sealed record OpportunityQuoteUpdateRequest(
     decimal TaxAmount,
     string? Notes,
     IReadOnlyList<OpportunityQuoteLineRequest> Lines);
+
+public sealed record OpportunityQuoteSendProposalRequest(
+    string? ToEmail,
+    string? Message);

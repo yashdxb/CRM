@@ -29,6 +29,7 @@ import {
   OpportunityTeamMember,
   OpportunityQuoteDetail,
   OpportunityQuoteSummary,
+  OpportunityProposalActionResult,
   PriceListListItem,
   ItemMasterListItem
 } from '../models/opportunity.model';
@@ -308,6 +309,8 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected quoteSaving = signal(false);
   protected quoteLoading = signal(false);
   protected quoteApprovalSubmitting = signal(false);
+  protected proposalGenerating = signal(false);
+  protected proposalSending = signal(false);
   private teamDirty = false;
   protected onboardingChecklist: OpportunityOnboardingItem[] = [];
   protected onboardingMilestones: OpportunityOnboardingItem[] = [];
@@ -2021,31 +2024,43 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   }
 
   protected generateProposal() {
-    const now = new Date();
-    const status = this.form.proposalStatus || 'Not Started';
-    if (status === 'Not Started') {
-      this.form.proposalStatus = 'Draft';
+    if (!this.editingId || !this.selectedQuoteId) {
+      this.toastService.show('error', 'Save and select a quote first.', 2500);
+      return;
     }
-    if (!this.form.proposalGeneratedAtUtc) {
-      this.form.proposalGeneratedAtUtc = now;
-    }
-    if (!this.form.proposalNotes && this.form.pricingNotes) {
-      this.form.proposalNotes = this.form.pricingNotes;
-    }
-    if (!this.activeQuote && this.quoteLines.length > 0 && this.editingId) {
-      this.saveQuoteAsDraft();
-    }
-    this.toastService.show('success', 'Proposal draft created.', 2500);
+
+    this.proposalGenerating.set(true);
+    this.opportunityData.generateQuoteProposal(this.editingId, this.selectedQuoteId).subscribe({
+      next: (result) => {
+        this.proposalGenerating.set(false);
+        this.applyProposalActionResult(result);
+        this.toastService.show('success', 'Proposal generated successfully.', 2600);
+      },
+      error: (error) => {
+        this.proposalGenerating.set(false);
+        this.toastService.show('error', this.resolveApiErrorMessage(error, 'Unable to generate proposal.'), 3200);
+      }
+    });
   }
 
   protected markProposalSent() {
-    const now = new Date();
-    if (!this.form.proposalGeneratedAtUtc) {
-      this.form.proposalGeneratedAtUtc = now;
+    if (!this.editingId || !this.selectedQuoteId) {
+      this.toastService.show('error', 'Save and select a quote first.', 2500);
+      return;
     }
-    this.form.proposalStatus = 'Sent';
-    this.form.proposalSentAtUtc = now;
-    this.toastService.show('success', 'Proposal marked as sent.', 2500);
+
+    this.proposalSending.set(true);
+    this.opportunityData.sendQuoteProposal(this.editingId, this.selectedQuoteId).subscribe({
+      next: (result) => {
+        this.proposalSending.set(false);
+        this.applyProposalActionResult(result);
+        this.toastService.show('success', `Proposal sent${result.recipientEmail ? ` to ${result.recipientEmail}` : ''}.`, 2800);
+      },
+      error: (error) => {
+        this.proposalSending.set(false);
+        this.toastService.show('error', this.resolveApiErrorMessage(error, 'Unable to send proposal.'), 3200);
+      }
+    });
   }
 
   protected addQuoteLine() {
@@ -2159,10 +2174,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.quoteSaving.set(false);
-        const message = typeof error?.error === 'string'
-          ? error.error
-          : error?.error?.message || 'Unable to save quote.';
-        this.toastService.show('error', message, 3200);
+        this.toastService.show('error', this.resolveApiErrorMessage(error, 'Unable to save quote.'), 3200);
       }
     });
   }
@@ -2203,10 +2215,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       },
       error: (error) => {
         this.quoteApprovalSubmitting.set(false);
-        const message = typeof error?.error === 'string'
-          ? error.error
-          : error?.error?.message || 'Unable to submit quote for approval.';
-        this.toastService.show('error', message, 3200);
+        this.toastService.show('error', this.resolveApiErrorMessage(error, 'Unable to submit quote for approval.'), 3200);
       }
     });
   }
@@ -2436,6 +2445,32 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       lineTotal: line.lineTotal
     }));
     this.onQuoteLineChanged();
+  }
+
+  private applyProposalActionResult(result: OpportunityProposalActionResult) {
+    this.form.proposalStatus = result.proposalStatus || this.form.proposalStatus || 'Draft';
+    this.form.proposalLink = result.proposalLink ?? this.form.proposalLink ?? '';
+    if (result.proposalGeneratedAtUtc) {
+      this.form.proposalGeneratedAtUtc = new Date(result.proposalGeneratedAtUtc);
+    }
+    if (result.proposalSentAtUtc) {
+      this.form.proposalSentAtUtc = new Date(result.proposalSentAtUtc);
+    }
+    if (!this.form.proposalNotes && this.form.pricingNotes) {
+      this.form.proposalNotes = this.form.pricingNotes;
+    }
+  }
+
+  private resolveApiErrorMessage(error: any, fallback: string): string {
+    const payload = error?.error;
+    if (typeof payload === 'string' && payload.trim()) {
+      return payload.trim();
+    }
+    const message = payload?.message;
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim();
+    }
+    return fallback;
   }
 
   private resetQuoteWorkspace() {

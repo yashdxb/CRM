@@ -14,6 +14,7 @@ import {
   OpportunityQuoteDetail,
   OpportunityCreateQuoteRequest,
   OpportunityUpdateQuoteRequest,
+  OpportunityProposalActionResult,
   PriceListListItem,
   ItemMasterListItem
 } from '../models/opportunity.model';
@@ -162,6 +163,20 @@ export class OpportunityDataService {
 
   submitQuoteForApproval(opportunityId: string, quoteId: string) {
     return this.http.post<OpportunityQuoteDetail>(`${this.baseUrl}/api/opportunities/${opportunityId}/quotes/${quoteId}/submit-approval`, {});
+  }
+
+  generateQuoteProposal(opportunityId: string, quoteId: string) {
+    return this.http.post<OpportunityProposalActionResult>(
+      `${this.baseUrl}/api/opportunities/${opportunityId}/quotes/${quoteId}/generate-proposal`,
+      {}
+    );
+  }
+
+  sendQuoteProposal(opportunityId: string, quoteId: string, payload?: { toEmail?: string | null; message?: string | null }) {
+    return this.http.post<OpportunityProposalActionResult>(
+      `${this.baseUrl}/api/opportunities/${opportunityId}/quotes/${quoteId}/send-proposal`,
+      payload ?? {}
+    );
   }
 
   getPriceLists(page = 1, pageSize = 100) {
