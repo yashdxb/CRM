@@ -91,6 +91,7 @@ Important:
 | `docs/USER_GUIDE.md` | Operational Guide | No | Active | Product/Support | End-user/system usage guide |
 | `docs/TEST_PLAN.md` | Operational Guide | No | Active | QA/Engineering | Test plan and validation reference |
 | `docs/REVIEW_FLOWS.md` | Operational Guide | No | Active | Product/Engineering | Review workflow guidance |
+| `docs/MARKETING_CAMPAIGNS_ROLLOUT_RUNBOOK.md` | Operational Guide | No | Active | Engineering/Product | Tenant feature-flag rollout steps for marketing campaigns |
 | `docs/SCM_BACKLOG.md` | Roadmap / Backlog Planning | No | Active | Product | SCM backlog planning |
 | `docs/CLICKUP_AI_ASSISTANT_ACTION_EXECUTION_SYNC.md` | Sync / Audit Snapshot | No | Active | Engineering/Product | ClickUp sync snapshot for AI action execution |
 | `docs/CLICKUP_AI_ASSISTANT_KNOWLEDGE_SYNC.md` | Sync / Audit Snapshot | No | Active | Engineering/Product | ClickUp sync snapshot for AI knowledge stories |
@@ -102,6 +103,7 @@ Important:
 | `docs/login-cors-fix.md` | Sync / Audit Snapshot | No | Active | Engineering | Issue-specific fix note |
 | `docs/DAILY_OPERATIONS_LOG.md` | Sync / Audit Snapshot | No | Active | Engineering/Ops | Daily issue/fix log |
 | `docs/ISSUE_FIXES.md` | Sync / Audit Snapshot | No | Active | Engineering | Aggregated issue fixes |
+| `docs/MARKETING_MVP_GO_NO_GO_2026-02-28.md` | Sync / Audit Snapshot | No | Active | Engineering | Point-in-time go/no-go evidence and release conditions for Marketing MVP |
 | `docs/LESSONS_LEARNED.md` | Reference / Mapping | No | Active | Engineering | Retrospective patterns/lessons |
 | `docs/UseCases_V1.txt` | Reference / Mapping | No | Reference | Product | Legacy use-case notes |
 
