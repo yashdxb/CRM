@@ -1686,6 +1686,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         await BackfillTenantIdsAsync(defaultTenant.Id, cancellationToken);
         await SeedTenantDataAsync(defaultTenant, cancellationToken);
         await SeedAuditEventsAsync(defaultTenant.Id, cancellationToken);
+        await EnsureDefaultTenantCatalogAsync(defaultTenant.Id, cancellationToken);
         
         // All sample data seeding disabled
         // await SeedSampleSuppliersAsync(defaultTenant.Id, cancellationToken);
@@ -1724,6 +1725,17 @@ public class DatabaseInitializer : IDatabaseInitializer
             // All sample data seeding disabled for seed tenants
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    private async Task EnsureDefaultTenantCatalogAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        // Keep CPQ/quote flows deterministic for the primary default tenant without enabling broader sample data.
+        await SeedItemMasterAsync(tenantId, cancellationToken);
     }
 
     private async Task SeedRolesAsync(CancellationToken cancellationToken)
