@@ -93,6 +93,8 @@ export interface AttributionSummaryItem {
   sampleOpportunityId?: string;
 }
 
+export type AttributionModel = 'first_touch' | 'last_touch' | 'linear';
+
 export interface CampaignHealthMetrics {
   influencedOpportunities: number;
   influencedPipelineAmount: number;

@@ -340,14 +340,20 @@ public sealed class MarketingController : ControllerBase
     }
 
     [HttpGet("attribution/summary")]
-    public async Task<ActionResult<IEnumerable<AttributionSummaryItem>>> GetAttributionSummary(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<AttributionSummaryItem>>> GetAttributionSummary([FromQuery] string? model, CancellationToken cancellationToken)
     {
         if (!IsMarketingCampaignsEnabled())
         {
             return FeatureDisabled();
         }
 
-        var items = await _marketingService.GetAttributionSummaryAsync(cancellationToken);
+        var normalizedModel = model?.Trim().ToLowerInvariant();
+        if (normalizedModel is not null && normalizedModel is not ("first_touch" or "last_touch" or "linear"))
+        {
+            return SafeBadRequest("Attribution model must be first_touch, last_touch, or linear.");
+        }
+
+        var items = await _marketingService.GetAttributionSummaryAsync(normalizedModel, cancellationToken);
         return Ok(items.Select(item => new AttributionSummaryItem(
             item.CampaignId,
             item.CampaignName,

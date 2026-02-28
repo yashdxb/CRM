@@ -145,6 +145,18 @@
     overflow-x: auto;
   }
 
+  .filter-group {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 280px;
+  }
+
+  .filter-group label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+  }
+
   .cell-numeric {
     text-align: right;
     font-variant-numeric: tabular-nums;

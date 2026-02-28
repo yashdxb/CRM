@@ -77,6 +77,18 @@
             placeholder="Search campaign"
           />
         </div>
+        <div class="filter-group">
+          <label for="attribution-model">Model</label>
+          <p-select
+            inputId="attribution-model"
+            appendTo="body"
+            [options]="attributionModels"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="selectedModel()"
+            (ngModelChange)="changeAttributionModel($event)"
+          ></p-select>
+        </div>
       </div>
     </section>
 
@@ -199,7 +211,7 @@
                   class="crm-button crm-button--text"
                   icon="pi pi-info-circle"
                   label="Explain"
-                  [disabled]="!row.sampleOpportunityId"
+                  [disabled]="!row.sampleOpportunityId || !canExplainAttribution()"
                   (click)="row.sampleOpportunityId && showExplainability(row.sampleOpportunityId)"
                 ></button>
               </td>

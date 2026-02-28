@@ -13,6 +13,7 @@ import { AppToastService } from '../../../../core/app-toast.service';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 import {
   AttributionExplainability,
+  AttributionModel,
   AttributionSummaryItem,
   CampaignHealthScore,
   CampaignRecommendation
@@ -31,6 +32,12 @@ export class CampaignAttributionPage {
   protected readonly items = signal<AttributionSummaryItem[]>([]);
   protected readonly loading = signal(true);
   protected readonly searchTerm = signal('');
+  protected readonly selectedModel = signal<AttributionModel>('first_touch');
+  protected readonly attributionModels: Array<{ label: string; value: AttributionModel }> = [
+    { label: 'First-touch (source of truth)', value: 'first_touch' },
+    { label: 'Last-touch (compare)', value: 'last_touch' },
+    { label: 'Linear (compare)', value: 'linear' }
+  ];
   protected readonly rowsPerPageOptions = [10, 20, 50];
   protected readonly currencyCode = signal<string>('');
   private currencyFallback = '';
@@ -54,6 +61,7 @@ export class CampaignAttributionPage {
       item.campaignName.toLowerCase().includes(term) || item.status.toLowerCase().includes(term)
     );
   });
+  protected readonly canExplainAttribution = computed(() => this.selectedModel() === 'first_touch');
   protected readonly totals = computed(() => {
     const rows = this.filteredItems();
     return {
@@ -83,7 +91,7 @@ export class CampaignAttributionPage {
 
   protected load(): void {
     this.loading.set(true);
-    this.data.getAttributionSummary().subscribe({
+    this.data.getAttributionSummary(this.selectedModel()).subscribe({
       next: (rows) => {
         this.items.set(rows);
         this.loading.set(false);
@@ -157,6 +165,11 @@ export class CampaignAttributionPage {
   }
 
   protected showExplainability(opportunityId: string): void {
+    if (!this.canExplainAttribution()) {
+      this.toast.show('success', 'Explainability is available for first-touch model only.');
+      return;
+    }
+
     this.loadingExplainability.set(true);
     this.explainabilityOpen.set(true);
     this.data.explainOpportunityAttribution(opportunityId).subscribe({
@@ -195,6 +208,11 @@ export class CampaignAttributionPage {
 
   protected openSettings(): void {
     this.router.navigate(['/app/settings/marketing']);
+  }
+
+  protected changeAttributionModel(model: AttributionModel): void {
+    this.selectedModel.set(model);
+    this.load();
   }
 
   protected statusSeverity(status: string): 'success' | 'warn' | 'secondary' | 'info' {

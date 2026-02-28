@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../../../environments/environment';
 import {
   AttributionExplainability,
+  AttributionModel,
   AttributionSummaryItem,
   CampaignDetailResponse,
   CampaignHealthScore,
@@ -67,8 +68,9 @@ export class MarketingDataService {
     return this.http.get(`${this.baseUrl}/api/marketing/campaigns/${campaignId}/performance`);
   }
 
-  getAttributionSummary() {
-    return this.http.get<AttributionSummaryItem[]>(`${this.baseUrl}/api/marketing/attribution/summary`);
+  getAttributionSummary(model: AttributionModel = 'first_touch') {
+    const params = new HttpParams().set('model', model);
+    return this.http.get<AttributionSummaryItem[]>(`${this.baseUrl}/api/marketing/attribution/summary`, { params });
   }
 
   getCampaignHealthScore(campaignId: string) {

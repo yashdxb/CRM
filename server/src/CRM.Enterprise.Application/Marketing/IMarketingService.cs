@@ -10,7 +10,7 @@ public interface IMarketingService
     Task<MarketingOperationResult<CampaignMemberItemDto>> AddMemberAsync(Guid campaignId, CampaignMemberUpsertRequest request, CancellationToken cancellationToken = default);
     Task<MarketingOperationResult<bool>> RemoveMemberAsync(Guid campaignId, Guid memberId, CancellationToken cancellationToken = default);
     Task<CampaignPerformanceDto?> GetPerformanceAsync(Guid campaignId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<AttributionSummaryItemDto>> GetAttributionSummaryAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AttributionSummaryItemDto>> GetAttributionSummaryAsync(string? model = null, CancellationToken cancellationToken = default);
     Task<CampaignHealthScoreDto?> GetCampaignHealthScoreAsync(Guid campaignId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CampaignRecommendationDto>> GetCampaignRecommendationsAsync(Guid campaignId, CancellationToken cancellationToken = default);
     Task<MarketingOperationResult<CampaignRecommendationDto>> ApplyRecommendationDecisionAsync(Guid recommendationId, RecommendationDecisionRequest request, Guid? decidedByUserId, CancellationToken cancellationToken = default);

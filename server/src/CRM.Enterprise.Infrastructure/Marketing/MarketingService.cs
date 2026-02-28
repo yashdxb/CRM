@@ -10,6 +10,8 @@ namespace CRM.Enterprise.Infrastructure.Marketing;
 public sealed class MarketingService : IMarketingService, ICampaignAttributionService
 {
     private const string FirstTouchModel = "first_touch";
+    private const string LastTouchModel = "last_touch";
+    private const string LinearModel = "linear";
     private const string FirstTouchRuleVersion = "first_touch:v1";
     private const int HealthWindowDays = 30;
     private const int StalledAgeDays = 21;
@@ -343,26 +345,23 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
         return await BuildPerformanceAsync(campaignId, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<AttributionSummaryItemDto>> GetAttributionSummaryAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<AttributionSummaryItemDto>> GetAttributionSummaryAsync(string? model = null, CancellationToken cancellationToken = default)
     {
+        var selectedModel = (model ?? FirstTouchModel).Trim().ToLowerInvariant();
+        if (selectedModel is not (FirstTouchModel or LastTouchModel or LinearModel))
+        {
+            selectedModel = FirstTouchModel;
+        }
+
         var campaigns = await _dbContext.Campaigns
             .AsNoTracking()
             .Where(c => !c.IsDeleted)
             .OrderByDescending(c => c.CreatedAtUtc)
             .ToListAsync(cancellationToken);
 
-        var campaignIds = campaigns.Select(c => c.Id).ToList();
-        var attributionRows = await _dbContext.CampaignAttributions
-            .AsNoTracking()
-            .Where(a => campaignIds.Contains(a.CampaignId) && !a.IsDeleted)
-            .ToListAsync(cancellationToken);
-
-        var opportunityIds = attributionRows.Select(a => a.OpportunityId).Distinct().ToList();
-        var opportunityLookup = await _dbContext.Opportunities
-            .AsNoTracking()
-            .Where(o => opportunityIds.Contains(o.Id) && !o.IsDeleted)
-            .Select(o => new { o.Id, o.IsWon, o.IsClosed })
-            .ToDictionaryAsync(o => o.Id, o => o, cancellationToken);
+        var attributionRows = selectedModel == FirstTouchModel
+            ? await BuildFirstTouchSummaryRowsAsync(campaigns.Select(c => c.Id).ToList(), cancellationToken)
+            : await BuildComparisonSummaryRowsAsync(selectedModel, cancellationToken);
 
         var result = campaigns.Select(campaign =>
         {
@@ -370,10 +369,15 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
             var influenced = rows.Select(r => r.OpportunityId).Distinct().Count();
             var pipelineAmount = rows.Sum(r => r.AttributedAmount);
             var wonRevenue = rows
-                .Where(r => opportunityLookup.TryGetValue(r.OpportunityId, out var opp) && opp.IsClosed && opp.IsWon)
+                .Where(r => r.IsClosedWon)
                 .Sum(r => r.AttributedAmount);
-            var conversionRate = influenced == 0 ? 0 : Math.Round((decimal)rows.Count(r => opportunityLookup.TryGetValue(r.OpportunityId, out var opp) && opp.IsClosed && opp.IsWon) / influenced * 100m, 2);
-            var sampleOpportunityId = rows.OrderByDescending(r => r.AttributedUtc).Select(r => (Guid?)r.OpportunityId).FirstOrDefault();
+            var conversionRate = influenced == 0
+                ? 0
+                : Math.Round((decimal)rows.Where(r => r.IsClosedWon).Select(r => r.OpportunityId).Distinct().Count() / influenced * 100m, 2);
+            var sampleOpportunityId = rows
+                .OrderByDescending(r => r.AttributedUtc)
+                .Select(r => (Guid?)r.OpportunityId)
+                .FirstOrDefault();
 
             return new AttributionSummaryItemDto(
                 campaign.Id,
@@ -387,6 +391,157 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
         }).ToList();
 
         return result;
+    }
+
+    private async Task<List<AttributionSummaryRow>> BuildFirstTouchSummaryRowsAsync(IReadOnlyCollection<Guid> campaignIds, CancellationToken cancellationToken)
+    {
+        var attributionRows = await _dbContext.CampaignAttributions
+            .AsNoTracking()
+            .Where(a => campaignIds.Contains(a.CampaignId) && a.Model == FirstTouchModel && !a.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        var opportunityIds = attributionRows.Select(a => a.OpportunityId).Distinct().ToList();
+        var opportunityLookup = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => opportunityIds.Contains(o.Id) && !o.IsDeleted)
+            .Select(o => new { o.Id, o.IsWon, o.IsClosed })
+            .ToDictionaryAsync(o => o.Id, o => new { o.IsWon, o.IsClosed }, cancellationToken);
+
+        return attributionRows
+            .Select(row => new AttributionSummaryRow(
+                row.CampaignId,
+                row.OpportunityId,
+                row.AttributedAmount,
+                row.AttributedUtc,
+                opportunityLookup.TryGetValue(row.OpportunityId, out var opp) && opp.IsClosed && opp.IsWon))
+            .ToList();
+    }
+
+    private async Task<List<AttributionSummaryRow>> BuildComparisonSummaryRowsAsync(string model, CancellationToken cancellationToken)
+    {
+        var opportunities = await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(o => !o.IsDeleted)
+            .Select(o => new { o.Id, o.Amount, o.IsClosed, o.IsWon, o.PrimaryContactId })
+            .ToListAsync(cancellationToken);
+
+        if (opportunities.Count == 0)
+        {
+            return [];
+        }
+
+        var opportunityIds = opportunities.Select(o => o.Id).ToList();
+        var leads = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => l.ConvertedOpportunityId.HasValue && opportunityIds.Contains(l.ConvertedOpportunityId.Value) && !l.IsDeleted)
+            .Select(l => new { OpportunityId = l.ConvertedOpportunityId!.Value, LeadId = l.Id, l.ContactId })
+            .ToListAsync(cancellationToken);
+
+        var leadIds = leads.Select(l => l.LeadId).Distinct().ToList();
+        var contactIds = leads.Where(l => l.ContactId.HasValue).Select(l => l.ContactId!.Value).ToHashSet();
+        foreach (var primaryContactId in opportunities.Where(o => o.PrimaryContactId.HasValue).Select(o => o.PrimaryContactId!.Value))
+        {
+            contactIds.Add(primaryContactId);
+        }
+        var contactIdList = contactIds.ToList();
+
+        var members = await _dbContext.CampaignMembers
+            .AsNoTracking()
+            .Where(m => !m.IsDeleted &&
+                        ((m.EntityType == "Lead" && leadIds.Contains(m.EntityId)) ||
+                         (m.EntityType == "Contact" && contactIdList.Contains(m.EntityId))))
+            .Select(m => new { m.CampaignId, m.EntityType, m.EntityId, m.AddedUtc, m.CreatedAtUtc })
+            .ToListAsync(cancellationToken);
+
+        var leadIdsByOpportunity = leads
+            .GroupBy(l => l.OpportunityId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.LeadId).ToHashSet());
+        var contactIdsByOpportunity = leads
+            .Where(l => l.ContactId.HasValue)
+            .GroupBy(l => l.OpportunityId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ContactId!.Value).ToHashSet());
+
+        foreach (var opportunity in opportunities)
+        {
+            if (!contactIdsByOpportunity.TryGetValue(opportunity.Id, out var perOpportunityContacts))
+            {
+                perOpportunityContacts = new HashSet<Guid>();
+                contactIdsByOpportunity[opportunity.Id] = perOpportunityContacts;
+            }
+
+            if (opportunity.PrimaryContactId.HasValue)
+            {
+                perOpportunityContacts.Add(opportunity.PrimaryContactId.Value);
+            }
+        }
+
+        var projectedRows = new List<AttributionSummaryRow>();
+
+        foreach (var opportunity in opportunities)
+        {
+            leadIdsByOpportunity.TryGetValue(opportunity.Id, out var mappedLeadIds);
+            contactIdsByOpportunity.TryGetValue(opportunity.Id, out var mappedContactIds);
+            mappedLeadIds ??= [];
+            mappedContactIds ??= [];
+
+            var relatedMembers = members
+                .Where(m =>
+                    (m.EntityType == "Lead" && mappedLeadIds.Contains(m.EntityId)) ||
+                    (m.EntityType == "Contact" && mappedContactIds.Contains(m.EntityId)))
+                .OrderBy(m => m.AddedUtc)
+                .ThenBy(m => m.CreatedAtUtc)
+                .ToList();
+
+            if (relatedMembers.Count == 0)
+            {
+                continue;
+            }
+
+            if (model == LastTouchModel)
+            {
+                var selected = relatedMembers
+                    .OrderByDescending(m => m.AddedUtc)
+                    .ThenByDescending(m => m.CreatedAtUtc)
+                    .First();
+
+                projectedRows.Add(new AttributionSummaryRow(
+                    selected.CampaignId,
+                    opportunity.Id,
+                    opportunity.Amount,
+                    selected.AddedUtc,
+                    opportunity.IsClosed && opportunity.IsWon));
+                continue;
+            }
+
+            var grouped = relatedMembers
+                .GroupBy(m => m.CampaignId)
+                .Select(g => new
+                {
+                    CampaignId = g.Key,
+                    SortAtUtc = g.Min(x => x.AddedUtc)
+                })
+                .OrderBy(g => g.SortAtUtc)
+                .ToList();
+
+            var shareCount = grouped.Count;
+            if (shareCount == 0)
+            {
+                continue;
+            }
+
+            var perCampaignAmount = opportunity.Amount / shareCount;
+            foreach (var group in grouped)
+            {
+                projectedRows.Add(new AttributionSummaryRow(
+                    group.CampaignId,
+                    opportunity.Id,
+                    perCampaignAmount,
+                    group.SortAtUtc,
+                    opportunity.IsClosed && opportunity.IsWon));
+            }
+        }
+
+        return projectedRows;
     }
 
     public async Task<CampaignHealthScoreDto?> GetCampaignHealthScoreAsync(Guid campaignId, CancellationToken cancellationToken = default)
@@ -1296,4 +1451,11 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
         existing.DeletedAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private sealed record AttributionSummaryRow(
+        Guid CampaignId,
+        Guid OpportunityId,
+        decimal AttributedAmount,
+        DateTime AttributedUtc,
+        bool IsClosedWon);
 }
