@@ -11,7 +11,7 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CsvColumn, exportToCsv } from '../../../../shared/utils/csv';
 
 import { Opportunity, OpportunitySearchRequest, OpportunityStatus } from '../models/opportunity.model';
@@ -70,6 +70,7 @@ export class OpportunitiesPage {
   private readonly toastService = inject(AppToastService);
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly referenceData = inject(ReferenceDataService);
+  private readonly route = inject(ActivatedRoute);
   protected readonly canManage = computed(() => {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.opportunitiesManage);
@@ -114,6 +115,7 @@ export class OpportunitiesPage {
     private readonly router: Router,
     private readonly userAdminData: UserAdminDataService
   ) {
+    this.applyInitialQueryParams();
     this.load();
     this.loadOwners();
     this.loadCurrencyContext();
@@ -327,5 +329,19 @@ export class OpportunitiesPage {
       const options = res.items.map((user) => ({ label: user.fullName, value: user.id }));
       this.ownerOptionsForAssign.set(options);
     });
+  }
+
+  private applyInitialQueryParams(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const search = params.get('search');
+    const focus = params.get('focus')?.toLowerCase() ?? '';
+
+    if (search) {
+      this.searchTerm = search;
+    }
+
+    if (focus.includes('stalled') || focus.includes('reengage') || focus.includes('follow-up')) {
+      this.missingNextStepOnly = true;
+    }
   }
 }

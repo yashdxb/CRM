@@ -64,6 +64,45 @@
       </div>
     </section>
 
+    <section class="metrics-dashboard" *ngIf="pilotMetrics() as metrics">
+      <div class="metrics-grid metrics-grid--pilot">
+        <article class="metric-card metric-card--pilot">
+          <div class="metric-header">
+            <div class="metric-icon primary"><i class="pi pi-lightbulb"></i></div>
+          </div>
+          <span class="metric-label">Active Recommendations</span>
+          <strong class="metric-value">{{ metrics.activeRecommendations }}</strong>
+        </article>
+        <article class="metric-card metric-card--pilot">
+          <div class="metric-header">
+            <div class="metric-icon success"><i class="pi pi-check-circle"></i></div>
+          </div>
+          <span class="metric-label">Acceptance Rate</span>
+          <strong class="metric-value">{{ metrics.acceptanceRatePct }}%</strong>
+        </article>
+        <article class="metric-card metric-card--pilot">
+          <div class="metric-header">
+            <div class="metric-icon info"><i class="pi pi-list-check"></i></div>
+          </div>
+          <span class="metric-label">Action Tasks Created</span>
+          <strong class="metric-value">{{ metrics.actionTasksCreated }}</strong>
+        </article>
+        <article class="metric-card metric-card--pilot">
+          <div class="metric-header">
+            <div class="metric-icon warning"><i class="pi pi-clock"></i></div>
+          </div>
+          <span class="metric-label">Avg Decision Hours</span>
+          <strong class="metric-value">{{ metrics.avgDecisionHours }}</strong>
+        </article>
+      </div>
+      <div class="pilot-summary">
+        Decisions in 30 days:
+        <strong>{{ metrics.acceptedCount }}</strong> accepted,
+        <strong>{{ metrics.dismissedCount }}</strong> dismissed,
+        <strong>{{ metrics.snoozedCount }}</strong> snoozed.
+      </div>
+    </section>
+
     <section class="data-card no-hover policy-card">
       <header class="data-card-header">
         <div>

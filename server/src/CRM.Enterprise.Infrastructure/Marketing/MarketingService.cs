@@ -659,6 +659,11 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
             return MarketingOperationResult<CampaignRecommendationDto>.Fail("Decision must be accept, dismiss, or snooze.");
         }
 
+        if (decision == "accept" && string.Equals(recommendation.Status, "accepted", StringComparison.OrdinalIgnoreCase))
+        {
+            return MarketingOperationResult<CampaignRecommendationDto>.Ok(ToRecommendationDto(recommendation));
+        }
+
         recommendation.Status = decision switch
         {
             "accept" => "accepted",
@@ -685,6 +690,52 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return MarketingOperationResult<CampaignRecommendationDto>.Ok(ToRecommendationDto(recommendation));
+    }
+
+    public async Task<RecommendationPilotMetricsDto> GetRecommendationPilotMetricsAsync(CancellationToken cancellationToken = default)
+    {
+        var windowEnd = DateTime.UtcNow;
+        var windowStart = windowEnd.AddDays(-30);
+
+        var recommendations = await _dbContext.CampaignRecommendations
+            .AsNoTracking()
+            .Where(r => !r.IsDeleted && r.GeneratedUtc >= windowStart)
+            .ToListAsync(cancellationToken);
+
+        var activeCount = recommendations.Count(r => string.Equals(r.Status, "active", StringComparison.OrdinalIgnoreCase));
+        var acceptedCount = recommendations.Count(r => string.Equals(r.Status, "accepted", StringComparison.OrdinalIgnoreCase));
+        var dismissedCount = recommendations.Count(r => string.Equals(r.Status, "dismissed", StringComparison.OrdinalIgnoreCase));
+        var snoozedCount = recommendations.Count(r => string.Equals(r.Status, "snoozed", StringComparison.OrdinalIgnoreCase));
+
+        var decided = recommendations
+            .Where(r => r.DecidedUtc.HasValue)
+            .Select(r => (r.DecidedUtc!.Value - r.GeneratedUtc).TotalHours)
+            .Where(hours => hours >= 0)
+            .ToList();
+        var avgDecisionHours = decided.Count == 0 ? 0m : Math.Round((decimal)decided.Average(), 2);
+
+        var actionTasksCreated = await _dbContext.Activities
+            .AsNoTracking()
+            .CountAsync(a =>
+                !a.IsDeleted &&
+                a.Type == ActivityType.Task &&
+                a.CreatedAtUtc >= windowStart &&
+                EF.Functions.Like(a.Subject, "Marketing recommendation follow-up:%"),
+                cancellationToken);
+
+        var decidedTotal = acceptedCount + dismissedCount + snoozedCount;
+        var acceptanceRate = decidedTotal == 0 ? 0m : Math.Round((decimal)acceptedCount / decidedTotal * 100m, 2);
+
+        return new RecommendationPilotMetricsDto(
+            activeCount,
+            acceptedCount,
+            dismissedCount,
+            snoozedCount,
+            actionTasksCreated,
+            acceptanceRate,
+            avgDecisionHours,
+            windowStart,
+            windowEnd);
     }
 
     public async Task<AttributionExplainabilityDto?> GetAttributionExplainabilityAsync(Guid opportunityId, CancellationToken cancellationToken = default)
@@ -1159,9 +1210,26 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
 
         foreach (var opp in staleOpps.Take(20))
         {
+            var subject = $"Marketing recommendation follow-up: {opp.Name}";
+            var existingOpenTask = await _dbContext.Activities
+                .AsNoTracking()
+                .AnyAsync(a =>
+                    !a.IsDeleted &&
+                    a.Type == ActivityType.Task &&
+                    a.RelatedEntityType == ActivityRelationType.Opportunity &&
+                    a.RelatedEntityId == opp.Id &&
+                    a.CompletedDateUtc == null &&
+                    a.Subject == subject,
+                    cancellationToken);
+
+            if (existingOpenTask)
+            {
+                continue;
+            }
+
             _dbContext.Activities.Add(new Activity
             {
-                Subject = $"Marketing recommendation follow-up: {opp.Name}",
+                Subject = subject,
                 Description = $"Auto-created from accepted recommendation ({recommendation.Type}). Re-engage this influenced opportunity and update next step.",
                 Type = ActivityType.Task,
                 RelatedEntityType = ActivityRelationType.Opportunity,

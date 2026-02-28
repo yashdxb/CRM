@@ -117,6 +117,17 @@ public sealed record AttributionExplainabilityDto(
     IReadOnlyList<string> Evidence,
     IReadOnlyList<AttributionExplainabilityCandidateDto> Candidates);
 
+public sealed record RecommendationPilotMetricsDto(
+    int ActiveRecommendations,
+    int AcceptedCount,
+    int DismissedCount,
+    int SnoozedCount,
+    int ActionTasksCreated,
+    decimal AcceptanceRatePct,
+    decimal AvgDecisionHours,
+    DateTime WindowStartUtc,
+    DateTime WindowEndUtc);
+
 public sealed record MarketingOperationResult<T>(bool Success, T? Value, string? Error, bool NotFound = false)
 {
     public static MarketingOperationResult<T> Ok(T value) => new(true, value, null, false);

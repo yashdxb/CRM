@@ -1,5 +1,6 @@
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Marketing;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -347,6 +348,169 @@ public class MarketingAttributionIntegrationTests
             .AsNoTracking()
             .CountAsync(x => x.RecommendationId == first.Id && !x.IsDeleted);
         Assert.Equal(1, decisionCount);
+    }
+
+    [Fact]
+    public async Task RecommendationAccept_IsIdempotent_ForFollowUpTaskCreation()
+    {
+        using var dbContext = CreateDbContext(out var tenantProvider);
+        var (tenant, owner, account, stage, _) = SeedCoreData(dbContext, tenantProvider);
+
+        var contact = new Contact
+        {
+            TenantId = tenant.Id,
+            FirstName = "Ada",
+            LastName = "Morris",
+            OwnerId = owner.Id,
+            AccountId = account.Id
+        };
+        dbContext.Contacts.Add(contact);
+
+        var campaign = new Campaign
+        {
+            TenantId = tenant.Id,
+            Name = "Idempotent campaign",
+            Type = "Web",
+            Channel = "Organic",
+            Status = "Active",
+            OwnerUserId = owner.Id,
+            BudgetPlanned = 1000m,
+            BudgetActual = 1800m
+        };
+        dbContext.Campaigns.Add(campaign);
+
+        var opportunity = new Opportunity
+        {
+            TenantId = tenant.Id,
+            Name = "Open opp",
+            AccountId = account.Id,
+            PrimaryContactId = contact.Id,
+            StageId = stage.Id,
+            OwnerId = owner.Id,
+            Amount = 5000m,
+            Currency = "USD",
+            Probability = 20,
+            ExpectedCloseDate = DateTime.UtcNow.AddDays(30),
+            IsClosed = false
+        };
+        dbContext.Opportunities.Add(opportunity);
+
+        dbContext.CampaignMembers.Add(new CampaignMember
+        {
+            TenantId = tenant.Id,
+            CampaignId = campaign.Id,
+            EntityType = "Contact",
+            EntityId = contact.Id,
+            ResponseStatus = "Responded",
+            AddedUtc = DateTime.UtcNow.AddDays(-10)
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var service = new MarketingService(dbContext);
+        await service.RecomputeForOpportunityAsync(opportunity.Id);
+        var recommendations = await service.GetCampaignRecommendationsAsync(campaign.Id);
+        var recommendation = recommendations.First();
+
+        var accept1 = await service.ApplyRecommendationDecisionAsync(
+            recommendation.Id,
+            new CRM.Enterprise.Application.Marketing.RecommendationDecisionRequest("accept", "first accept"),
+            owner.Id);
+        Assert.True(accept1.Success);
+
+        var taskCountAfterFirst = await dbContext.Activities
+            .AsNoTracking()
+            .CountAsync(a =>
+                !a.IsDeleted &&
+                a.Type == ActivityType.Task &&
+                a.Subject.StartsWith("Marketing recommendation follow-up:"));
+        Assert.True(taskCountAfterFirst >= 1);
+
+        var accept2 = await service.ApplyRecommendationDecisionAsync(
+            recommendation.Id,
+            new CRM.Enterprise.Application.Marketing.RecommendationDecisionRequest("accept", "second accept"),
+            owner.Id);
+        Assert.True(accept2.Success);
+
+        var taskCountAfterSecond = await dbContext.Activities
+            .AsNoTracking()
+            .CountAsync(a =>
+                !a.IsDeleted &&
+                a.Type == ActivityType.Task &&
+                a.Subject.StartsWith("Marketing recommendation follow-up:"));
+
+        Assert.Equal(taskCountAfterFirst, taskCountAfterSecond);
+    }
+
+    [Fact]
+    public async Task PilotMetrics_ReturnsDecisionAndActionCounts()
+    {
+        using var dbContext = CreateDbContext(out var tenantProvider);
+        var (tenant, owner, account, stage, _) = SeedCoreData(dbContext, tenantProvider);
+
+        var campaign = new Campaign
+        {
+            TenantId = tenant.Id,
+            Name = "Metrics campaign",
+            Type = "Email",
+            Channel = "Email",
+            Status = "Active",
+            OwnerUserId = owner.Id,
+            BudgetPlanned = 900m,
+            BudgetActual = 1500m
+        };
+        dbContext.Campaigns.Add(campaign);
+
+        var contact = new Contact
+        {
+            TenantId = tenant.Id,
+            FirstName = "Pilot",
+            LastName = "User",
+            OwnerId = owner.Id,
+            AccountId = account.Id
+        };
+        dbContext.Contacts.Add(contact);
+
+        var opportunity = new Opportunity
+        {
+            TenantId = tenant.Id,
+            Name = "Metrics opp",
+            AccountId = account.Id,
+            PrimaryContactId = contact.Id,
+            StageId = stage.Id,
+            OwnerId = owner.Id,
+            Amount = 3200m,
+            Currency = "USD",
+            Probability = 30,
+            ExpectedCloseDate = DateTime.UtcNow.AddDays(20)
+        };
+        dbContext.Opportunities.Add(opportunity);
+
+        dbContext.CampaignMembers.Add(new CampaignMember
+        {
+            TenantId = tenant.Id,
+            CampaignId = campaign.Id,
+            EntityType = "Contact",
+            EntityId = contact.Id,
+            ResponseStatus = "Sent",
+            AddedUtc = DateTime.UtcNow.AddDays(-7)
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var service = new MarketingService(dbContext);
+        await service.RecomputeForOpportunityAsync(opportunity.Id);
+        var recommendation = (await service.GetCampaignRecommendationsAsync(campaign.Id)).First();
+        var decision = await service.ApplyRecommendationDecisionAsync(
+            recommendation.Id,
+            new CRM.Enterprise.Application.Marketing.RecommendationDecisionRequest("accept", "metrics run"),
+            owner.Id);
+        Assert.True(decision.Success);
+
+        var metrics = await service.GetRecommendationPilotMetricsAsync();
+        Assert.True(metrics.AcceptedCount >= 1);
+        Assert.True(metrics.ActionTasksCreated >= 1);
+        Assert.True(metrics.WindowEndUtc >= metrics.WindowStartUtc);
     }
 
     private static CrmDbContext CreateDbContext(out TestTenantProvider tenantProvider)

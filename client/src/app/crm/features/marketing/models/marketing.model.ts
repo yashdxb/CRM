@@ -156,3 +156,15 @@ export interface AttributionExplainability {
   evidence: string[];
   candidates: AttributionExplainabilityCandidate[];
 }
+
+export interface RecommendationPilotMetrics {
+  activeRecommendations: number;
+  acceptedCount: number;
+  dismissedCount: number;
+  snoozedCount: number;
+  actionTasksCreated: number;
+  acceptanceRatePct: number;
+  avgDecisionHours: number;
+  windowStartUtc: string;
+  windowEndUtc: string;
+}

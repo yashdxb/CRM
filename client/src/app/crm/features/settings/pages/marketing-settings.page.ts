@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
+import { MarketingDataService } from '../../marketing/services/marketing-data.service';
+import { RecommendationPilotMetrics } from '../../marketing/models/marketing.model';
 
 @Component({
   selector: 'app-marketing-settings-page',
@@ -14,10 +16,16 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
   styleUrl: './marketing-settings.page.scss'
 })
 export class MarketingSettingsPage {
-  constructor(private readonly router: Router) {}
-
   protected readonly attributionModel = 'First-touch';
   protected readonly attributionDescription = 'Earliest campaign membership across linked lead/contact determines the single campaign credited per opportunity.';
+  protected readonly pilotMetrics = signal<RecommendationPilotMetrics | null>(null);
+
+  private readonly router = inject(Router);
+  private readonly marketingData = inject(MarketingDataService);
+
+  constructor() {
+    this.loadPilotMetrics();
+  }
 
   protected openCampaigns(): void {
     this.router.navigate(['/app/marketing/campaigns']);
@@ -25,5 +33,12 @@ export class MarketingSettingsPage {
 
   protected openAttribution(): void {
     this.router.navigate(['/app/marketing/attribution']);
+  }
+
+  protected loadPilotMetrics(): void {
+    this.marketingData.getRecommendationPilotMetrics().subscribe({
+      next: (metrics) => this.pilotMetrics.set(metrics),
+      error: () => this.pilotMetrics.set(null)
+    });
   }
 }

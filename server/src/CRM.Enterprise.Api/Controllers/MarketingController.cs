@@ -415,6 +415,27 @@ public sealed class MarketingController : ControllerBase
         return Ok(ToExplainabilityResponse(result));
     }
 
+    [HttpGet("recommendations/pilot-metrics")]
+    public async Task<ActionResult<RecommendationPilotMetricsItem>> GetRecommendationPilotMetrics(CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled())
+        {
+            return FeatureDisabled();
+        }
+
+        var result = await _marketingService.GetRecommendationPilotMetricsAsync(cancellationToken);
+        return Ok(new RecommendationPilotMetricsItem(
+            result.ActiveRecommendations,
+            result.AcceptedCount,
+            result.DismissedCount,
+            result.SnoozedCount,
+            result.ActionTasksCreated,
+            result.AcceptanceRatePct,
+            result.AvgDecisionHours,
+            result.WindowStartUtc,
+            result.WindowEndUtc));
+    }
+
     private static CampaignListItem ToCampaignItem(CampaignListItemDto dto)
         => new(
             dto.Id,

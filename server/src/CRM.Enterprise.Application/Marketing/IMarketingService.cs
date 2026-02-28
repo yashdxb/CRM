@@ -15,4 +15,5 @@ public interface IMarketingService
     Task<IReadOnlyList<CampaignRecommendationDto>> GetCampaignRecommendationsAsync(Guid campaignId, CancellationToken cancellationToken = default);
     Task<MarketingOperationResult<CampaignRecommendationDto>> ApplyRecommendationDecisionAsync(Guid recommendationId, RecommendationDecisionRequest request, Guid? decidedByUserId, CancellationToken cancellationToken = default);
     Task<AttributionExplainabilityDto?> GetAttributionExplainabilityAsync(Guid opportunityId, CancellationToken cancellationToken = default);
+    Task<RecommendationPilotMetricsDto> GetRecommendationPilotMetricsAsync(CancellationToken cancellationToken = default);
 }

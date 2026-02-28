@@ -7,6 +7,7 @@ import {
   CampaignDetailResponse,
   CampaignHealthScore,
   CampaignMember,
+  RecommendationPilotMetrics,
   CampaignRecommendation,
   CampaignSearchResponse,
   RecommendationDecisionRequest,
@@ -84,5 +85,9 @@ export class MarketingDataService {
 
   explainOpportunityAttribution(opportunityId: string) {
     return this.http.get<AttributionExplainability>(`${this.baseUrl}/api/marketing/attribution/opportunities/${opportunityId}/explain`);
+  }
+
+  getRecommendationPilotMetrics() {
+    return this.http.get<RecommendationPilotMetrics>(`${this.baseUrl}/api/marketing/recommendations/pilot-metrics`);
   }
 }
