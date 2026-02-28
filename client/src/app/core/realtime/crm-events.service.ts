@@ -5,19 +5,28 @@ import { environment } from '../../../environments/environment';
 import { readTokenContext } from '../auth/token.utils';
 import { getTenantKey, resolveTenantKeyFromHost } from '../tenant/tenant.utils';
 import { NotificationService, NotificationType } from '../notifications/notification.service';
+import { TenantContextService } from '../tenant/tenant-context.service';
 
 interface CrmEventEnvelope {
   eventType: string;
   tenantId: string;
   occurredAtUtc: string;
+  schemaVersion?: number;
+  correlationId?: string;
   payload?: Record<string, unknown> | null;
 }
 
+type PresenceRegistration = { entityType: string; recordId: string };
+
 @Injectable({ providedIn: 'root' })
 export class CrmEventsService {
+  private readonly tenantContext = inject(TenantContextService);
   private readonly notificationService = inject(NotificationService);
   private readonly eventsSubject = new Subject<CrmEventEnvelope>();
+  private featureFlags: Record<string, boolean> = {};
+  private featureFlagsLoaded = false;
   private connection: HubConnection | null = null;
+  private pendingPresence = new Map<string, PresenceRegistration>();
 
   constructor(private readonly zone: NgZone) {}
 
@@ -36,6 +45,19 @@ export class CrmEventsService {
         this.connection.state === HubConnectionState.Reconnecting)
     ) {
       return;
+    }
+
+    if (!this.featureFlagsLoaded) {
+      this.tenantContext.getTenantContext().subscribe({
+        next: (context) => {
+          this.featureFlags = context.featureFlags ?? {};
+          this.featureFlagsLoaded = true;
+        },
+        error: () => {
+          this.featureFlags = {};
+          this.featureFlagsLoaded = true;
+        }
+      });
     }
 
     const tenantKey = getTenantKey();
@@ -59,8 +81,48 @@ export class CrmEventsService {
       this.zone.run(() => this.handleEvent(envelope));
     });
 
-    this.connection.start().catch(() => {
+    this.connection.start().then(() => {
+      this.flushPendingPresence();
+    }).catch(() => {
       // Realtime is best-effort; UX falls back to explicit refresh actions.
+    });
+  }
+
+  isFeatureEnabled(flag: string): boolean {
+    return this.featureFlags?.[flag] === true;
+  }
+
+  joinRecordPresence(entityType: string, recordId: string) {
+    if (!this.isFeatureEnabled('realtime.recordPresence')) {
+      return;
+    }
+
+    const key = `${entityType.toLowerCase()}:${recordId}`;
+    this.pendingPresence.set(key, { entityType, recordId });
+
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      return;
+    }
+
+    this.connection.invoke('JoinRecordPresence', entityType, recordId).catch(() => {
+      // Presence is best effort.
+    });
+  }
+
+  leaveRecordPresence(entityType: string, recordId: string) {
+    if (!this.isFeatureEnabled('realtime.recordPresence')) {
+      return;
+    }
+
+    const key = `${entityType.toLowerCase()}:${recordId}`;
+    this.pendingPresence.delete(key);
+
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      return;
+    }
+
+    this.connection.invoke('LeaveRecordPresence', entityType, recordId).catch(() => {
+      // Presence is best effort.
     });
   }
 
@@ -108,8 +170,22 @@ export class CrmEventsService {
         return 'Renewal automation update';
       case 'email.delivery.status':
         return 'Email delivery update';
+      case 'dashboard.metrics.delta':
+      case 'dashboard.metrics.refresh-requested':
+      case 'pipeline.lead.moved':
+      case 'pipeline.lead.created':
+      case 'pipeline.lead.updated':
+      case 'pipeline.lead.deleted':
+      case 'entity.crud.changed':
+      case 'import.job.progress':
+      case 'record.presence.snapshot':
+      case 'record.presence.changed':
+      case 'assistant.chat.token':
+      case 'assistant.chat.completed':
+      case 'assistant.chat.failed':
+        return '';
       default:
-        return 'Realtime update';
+        return '';
     }
   }
 
@@ -145,5 +221,17 @@ export class CrmEventsService {
       return String(envelope.payload?.['status'] ?? '').toLowerCase() === 'failed' ? 'error' : 'success';
     }
     return 'info';
+  }
+
+  private flushPendingPresence() {
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      return;
+    }
+
+    for (const registration of this.pendingPresence.values()) {
+      this.connection.invoke('JoinRecordPresence', registration.entityType, registration.recordId).catch(() => {
+        // Presence is best effort.
+      });
+    }
   }
 }

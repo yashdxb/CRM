@@ -57,6 +57,20 @@ public class TenantContextController : ControllerBase
             ["marketing.campaigns"] = marketingEnabled
         };
 
+        var realtimeDefaultEnabled = _configuration.GetValue<bool?>("Features:Realtime:EnabledByDefault") ?? false;
+        var realtimeEnabledTenants = _configuration
+            .GetSection("Features:Realtime:EnabledTenants")
+            .Get<string[]>() ?? Array.Empty<string>();
+        var realtimeTenantEnabled = realtimeDefaultEnabled
+            || realtimeEnabledTenants.Contains(tenant.Key, StringComparer.OrdinalIgnoreCase);
+
+        featureFlags["realtime.dashboard"] = IsRealtimeFlagEnabled("realtime.dashboard", tenant.Key, realtimeTenantEnabled);
+        featureFlags["realtime.pipeline"] = IsRealtimeFlagEnabled("realtime.pipeline", tenant.Key, realtimeTenantEnabled);
+        featureFlags["realtime.entityCrud"] = IsRealtimeFlagEnabled("realtime.entityCrud", tenant.Key, realtimeTenantEnabled);
+        featureFlags["realtime.importProgress"] = IsRealtimeFlagEnabled("realtime.importProgress", tenant.Key, realtimeTenantEnabled);
+        featureFlags["realtime.recordPresence"] = IsRealtimeFlagEnabled("realtime.recordPresence", tenant.Key, realtimeTenantEnabled);
+        featureFlags["realtime.assistantStreaming"] = IsRealtimeFlagEnabled("realtime.assistantStreaming", tenant.Key, realtimeTenantEnabled);
+
         return Ok(new TenantContextResponse(
             tenant.Id,
             tenant.Key,
@@ -64,5 +78,32 @@ public class TenantContextController : ControllerBase
             tenant.IndustryPreset,
             modules,
             featureFlags));
+    }
+
+    private bool IsRealtimeFlagEnabled(string flagName, string tenantKey, bool realtimeTenantEnabled)
+    {
+        if (!realtimeTenantEnabled)
+        {
+            return false;
+        }
+
+        var normalized = flagName.Replace("realtime.", string.Empty, StringComparison.OrdinalIgnoreCase);
+        var defaultEnabled = _configuration.GetValue<bool?>($"Features:Realtime:Flags:{normalized}:EnabledByDefault") ?? false;
+        if (defaultEnabled)
+        {
+            return true;
+        }
+
+        var enabledTenants = _configuration
+            .GetSection($"Features:Realtime:Flags:{normalized}:EnabledTenants")
+            .Get<string[]>() ?? Array.Empty<string>();
+
+        if (enabledTenants.Length > 0)
+        {
+            return enabledTenants.Contains(tenantKey, StringComparer.OrdinalIgnoreCase);
+        }
+
+        // Default pilot behavior in absence of explicit config.
+        return string.Equals(tenantKey, "default", StringComparison.OrdinalIgnoreCase);
     }
 }

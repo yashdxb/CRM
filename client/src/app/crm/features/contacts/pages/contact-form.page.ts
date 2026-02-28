@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -24,6 +25,7 @@ import { Activity } from '../../activities/models/activity.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
 import { Opportunity } from '../../opportunities/models/opportunity.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
+import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 
 interface Option<T = string> {
   label: string;
@@ -51,7 +53,7 @@ interface Option<T = string> {
   templateUrl: "./contact-form.page.html",
   styleUrls: ["./contact-form.page.scss"]
 })
-export class ContactFormPage implements OnInit {
+export class ContactFormPage implements OnInit, OnDestroy {
   protected readonly lifecycleOptions: Option<string>[] = [
     { label: 'Lead', value: 'Lead' },
     { label: 'Prospect', value: 'Prospect' },
@@ -78,6 +80,7 @@ export class ContactFormPage implements OnInit {
   protected readonly attachments = signal<AttachmentItem[]>([]);
   protected readonly timelineLoading = signal(false);
   protected readonly noteSaving = signal(false);
+  protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string }>>([]);
   protected noteText = '';
   private readonly toastService = inject(AppToastService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -89,11 +92,16 @@ export class ContactFormPage implements OnInit {
   private readonly attachmentData = inject(AttachmentDataService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
+  private readonly crmEvents = inject(CrmEventsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private editingId: string | null = null;
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
+    if (this.editingId) {
+      this.initializePresence(this.editingId);
+    }
     const contact = history.state?.contact as Contact | undefined;
     if (this.editingId && contact) {
       this.prefill(contact);
@@ -111,6 +119,12 @@ export class ContactFormPage implements OnInit {
         this.cdr.markForCheck();
       });
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.editingId) {
+      this.crmEvents.leaveRecordPresence('contact', this.editingId);
+    }
   }
 
   protected isEditMode() {
@@ -183,6 +197,60 @@ export class ContactFormPage implements OnInit {
       activityScore: 0,
       linkedInProfile: ''
     };
+  }
+
+  private initializePresence(recordId: string): void {
+    this.crmEvents.joinRecordPresence('contact', recordId);
+    this.crmEvents.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        if (!event?.payload) {
+          return;
+        }
+
+        const entityType = String(event.payload['entityType'] ?? '').toLowerCase();
+        const payloadRecordId = String(event.payload['recordId'] ?? '');
+        if (entityType !== 'contact' || payloadRecordId !== recordId) {
+          return;
+        }
+
+        if (event.eventType === 'record.presence.snapshot') {
+          const usersRaw = Array.isArray(event.payload['users']) ? event.payload['users'] : [];
+          const users = usersRaw
+            .map((item) => {
+              const value = item as Record<string, unknown>;
+              return {
+                userId: String(value['userId'] ?? ''),
+                displayName: String(value['displayName'] ?? 'User')
+              };
+            })
+            .filter((item) => !!item.userId);
+          this.presenceUsers.set(users);
+          return;
+        }
+
+        if (event.eventType === 'record.presence.changed') {
+          const userId = String(event.payload['userId'] ?? '');
+          const displayName = String(event.payload['displayName'] ?? 'User');
+          const action = String(event.payload['action'] ?? '').toLowerCase();
+          if (!userId) {
+            return;
+          }
+
+          this.presenceUsers.update((users) => {
+            if (action === 'joined') {
+              if (users.some((user) => user.userId === userId)) {
+                return users;
+              }
+              return [...users, { userId, displayName }];
+            }
+            if (action === 'left') {
+              return users.filter((user) => user.userId !== userId);
+            }
+            return users;
+          });
+        }
+      });
   }
 
   protected addNote() {

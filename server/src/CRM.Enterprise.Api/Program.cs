@@ -29,6 +29,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<ICrmRealtimePublisher, SignalRCrmRealtimePublisher>();
+builder.Services.AddHostedService<ImportJobRealtimeProgressWorker>();
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<CrmDbContext>("db");
 

@@ -1,5 +1,6 @@
 import { NgFor, NgIf } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -29,6 +30,7 @@ import { ImportJobService } from '../../../../shared/services/import-job.service
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
+import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 
 interface LifecycleOption {
   label: string;
@@ -135,6 +137,9 @@ export class ContactsPage {
   protected readonly importError = signal<string | null>(null);
   protected readonly importing = signal(false);
   private importPoll?: Subscription;
+  private activeImportJobId: string | null = null;
+  private readonly crmEventsService = inject(CrmEventsService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly filteredContacts = computed(() => {
     let rows = [...this.contacts()];
@@ -165,6 +170,16 @@ export class ContactsPage {
     this.load();
     this.loadAccounts();
     this.loadOwners();
+
+    this.crmEventsService.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        if (event.eventType !== 'import.job.progress') {
+          return;
+        }
+
+        this.handleImportProgressEvent(event.payload ?? null);
+      });
   }
 
   protected load() {
@@ -197,6 +212,7 @@ export class ContactsPage {
   protected openImport() {
     this.importDialogVisible = true;
     this.importFile = null;
+    this.activeImportJobId = null;
     this.importJob.set(null);
     this.importStatus.set(null);
     this.importError.set(null);
@@ -205,6 +221,7 @@ export class ContactsPage {
 
   protected closeImport() {
     this.importDialogVisible = false;
+    this.activeImportJobId = null;
     this.stopImportPolling();
   }
 
@@ -231,9 +248,14 @@ export class ContactsPage {
     this.contactsData.importCsv(this.importFile).subscribe({
       next: (job) => {
         this.importJob.set(job);
+        this.activeImportJobId = job.id;
         this.importStatus.set(null);
         this.raiseToast('success', 'Contact import queued.');
-        this.startImportPolling(job.id);
+        if (this.crmEventsService.isFeatureEnabled('realtime.importProgress')) {
+          this.importing.set(true);
+        } else {
+          this.startImportPolling(job.id);
+        }
       },
       error: () => {
         this.importError.set('Import failed. Please check your CSV and try again.');
@@ -327,6 +349,60 @@ export class ContactsPage {
     if (this.importPoll) {
       this.importPoll.unsubscribe();
       this.importPoll = undefined;
+    }
+  }
+
+  private handleImportProgressEvent(payload: Record<string, unknown> | null) {
+    if (!payload || !this.crmEventsService.isFeatureEnabled('realtime.importProgress')) {
+      return;
+    }
+
+    const jobId = String(payload['jobId'] ?? '');
+    if (!jobId || (this.activeImportJobId && this.activeImportJobId !== jobId)) {
+      return;
+    }
+
+    const status = String(payload['status'] ?? 'Queued') as CsvImportJobStatusResponse['status'];
+    const processed = Number(payload['processed'] ?? 0);
+    const succeeded = Number(payload['succeeded'] ?? 0);
+    const failed = Number(payload['failed'] ?? 0);
+    const total = Number(payload['total'] ?? processed);
+    const startedAtUtc = String(payload['startedAtUtc'] ?? new Date().toISOString());
+    const finishedAtUtcRaw = payload['finishedAtUtc'];
+    const errorSummaryRaw = payload['errorSummary'];
+
+    this.importing.set(status === 'Queued' || status === 'Processing');
+    this.importStatus.set({
+      id: jobId,
+      entityType: String(payload['entityType'] ?? 'Contacts'),
+      status,
+      total,
+      imported: succeeded,
+      skipped: failed,
+      errors: [],
+      createdAtUtc: startedAtUtc,
+      completedAtUtc: typeof finishedAtUtcRaw === 'string' ? finishedAtUtcRaw : null,
+      errorMessage: typeof errorSummaryRaw === 'string' ? errorSummaryRaw : null
+    });
+
+    if (status === 'Completed') {
+      this.importing.set(false);
+      this.activeImportJobId = null;
+      this.load();
+      this.raiseToast('success', 'Contact import completed.');
+      return;
+    }
+
+    if (status === 'Failed') {
+      this.importing.set(false);
+      this.activeImportJobId = null;
+      this.importError.set(typeof errorSummaryRaw === 'string' ? errorSummaryRaw : 'Import failed. Please check your CSV and try again.');
+      this.raiseToast('error', 'Contact import failed.');
+      return;
+    }
+
+    if (total > 0 && processed >= total) {
+      this.importing.set(false);
     }
   }
 

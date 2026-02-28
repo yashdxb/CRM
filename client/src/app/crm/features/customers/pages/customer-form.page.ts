@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
@@ -23,6 +24,7 @@ import { Contact } from '../../contacts/models/contact.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
 import { Opportunity } from '../../opportunities/models/opportunity.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
+import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 
 interface StatusOption {
   label: string;
@@ -50,7 +52,7 @@ interface StatusOption {
   templateUrl: "./customer-form.page.html",
   styleUrls: ["./customer-form.page.scss"]
 })
-export class CustomerFormPage implements OnInit {
+export class CustomerFormPage implements OnInit, OnDestroy {
   protected readonly statusOptions: StatusOption[] = [
     { label: 'Lead', value: 'Lead' },
     { label: 'Prospect', value: 'Prospect' },
@@ -65,6 +67,8 @@ export class CustomerFormPage implements OnInit {
   private readonly contactData = inject(ContactDataService);
   private readonly opportunityData = inject(OpportunityDataService);
   private readonly attachmentData = inject(AttachmentDataService);
+  private readonly crmEvents = inject(CrmEventsService);
+  private readonly destroyRef = inject(DestroyRef);
   protected customerId: string | null = null;
 
   protected readonly activities = signal<Activity[]>([]);
@@ -75,6 +79,7 @@ export class CustomerFormPage implements OnInit {
   protected readonly timelineLoading = signal(false);
   protected readonly noteSaving = signal(false);
   protected readonly parentAccountOptions = signal<{ label: string; value: string }[]>([]);
+  protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string }>>([]);
 
   protected noteText = '';
 
@@ -100,6 +105,7 @@ export class CustomerFormPage implements OnInit {
   ngOnInit() {
     this.customerId = this.route.snapshot.paramMap.get('id');
     if (this.customerId) {
+      this.initializePresence(this.customerId);
       this.isEditMode.set(true);
       this.loadCustomer();
       this.loadDetailData();
@@ -113,6 +119,12 @@ export class CustomerFormPage implements OnInit {
         this.parentAccountOptions.set(items);
       }, 0);
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.customerId) {
+      this.crmEvents.leaveRecordPresence('customer', this.customerId);
+    }
   }
 
   private loadCustomer() {
@@ -327,5 +339,59 @@ export class CustomerFormPage implements OnInit {
   protected latestOpportunityCreatedAt() {
     const latest = this.relatedOpportunitiesSorted().slice(-1)[0];
     return latest?.createdAtUtc ?? null;
+  }
+
+  private initializePresence(recordId: string): void {
+    this.crmEvents.joinRecordPresence('customer', recordId);
+    this.crmEvents.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        if (!event?.payload) {
+          return;
+        }
+
+        const entityType = String(event.payload['entityType'] ?? '').toLowerCase();
+        const payloadRecordId = String(event.payload['recordId'] ?? '');
+        if (entityType !== 'customer' || payloadRecordId !== recordId) {
+          return;
+        }
+
+        if (event.eventType === 'record.presence.snapshot') {
+          const usersRaw = Array.isArray(event.payload['users']) ? event.payload['users'] : [];
+          const users = usersRaw
+            .map((item) => {
+              const value = item as Record<string, unknown>;
+              return {
+                userId: String(value['userId'] ?? ''),
+                displayName: String(value['displayName'] ?? 'User')
+              };
+            })
+            .filter((item) => !!item.userId);
+          this.presenceUsers.set(users);
+          return;
+        }
+
+        if (event.eventType === 'record.presence.changed') {
+          const userId = String(event.payload['userId'] ?? '');
+          const displayName = String(event.payload['displayName'] ?? 'User');
+          const action = String(event.payload['action'] ?? '').toLowerCase();
+          if (!userId) {
+            return;
+          }
+
+          this.presenceUsers.update((users) => {
+            if (action === 'joined') {
+              if (users.some((user) => user.userId === userId)) {
+                return users;
+              }
+              return [...users, { userId, displayName }];
+            }
+            if (action === 'left') {
+              return users.filter((user) => user.userId !== userId);
+            }
+            return users;
+          });
+        }
+      });
   }
 }

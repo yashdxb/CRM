@@ -14,6 +14,7 @@ import {
   AssistantInsightsAction
 } from './assistant-chat.service';
 import { AuthService } from '../auth/auth.service';
+import { CrmEventsService } from '../realtime/crm-events.service';
 
 @Component({
   selector: 'app-assistant-panel',
@@ -28,7 +29,10 @@ export class AssistantPanelComponent {
   private readonly assistantService = inject(AssistantService);
   private readonly assistantChatService = inject(AssistantChatService);
   private readonly authService = inject(AuthService);
+  private readonly crmEventsService = inject(CrmEventsService);
   private readonly router = inject(Router);
+  private activeConversationId: string | null = null;
+  private activeConversationMessageId: string | null = null;
 
   private readonly emptyAssistantInsights: AssistantInsights = {
     scope: 'Self',
@@ -86,23 +90,61 @@ export class AssistantPanelComponent {
     this.assistantInfo.set(null);
     this.assistantInput.set('');
 
-    this.assistantChatService.sendMessage(message).subscribe({
+    const streamEnabled = this.crmEventsService.isFeatureEnabled('realtime.assistantStreaming');
+    const conversationId = streamEnabled ? this.buildLocalId('conversation') : undefined;
+    if (conversationId) {
+      const assistantMessage: AssistantUiMessage = {
+        id: this.buildLocalId('assistant'),
+        role: 'assistant',
+        content: '',
+        displayContent: '',
+        isTyping: true,
+        createdAtUtc: new Date().toISOString()
+      };
+      this.assistantMessages.update(messages => [...messages, assistantMessage]);
+      this.activeConversationId = conversationId;
+      this.activeConversationMessageId = assistantMessage.id;
+    }
+
+    this.assistantChatService.sendMessage(message, { stream: streamEnabled, conversationId }).subscribe({
       next: response => {
+        if (streamEnabled && response.streamed) {
+          return;
+        }
+
         const reply = response.reply ?? '';
-        const assistantMessage: AssistantUiMessage = {
-          id: this.buildLocalId('assistant'),
-          role: 'assistant',
-          content: reply,
-          displayContent: '',
-          isTyping: true,
-          createdAtUtc: new Date().toISOString()
-        };
-        this.assistantMessages.update(messages => [...messages, assistantMessage]);
+        const existingMessageId = this.activeConversationMessageId;
+        const assistantMessage: AssistantUiMessage = existingMessageId
+          ? {
+              id: existingMessageId,
+              role: 'assistant',
+              content: reply,
+              displayContent: '',
+              isTyping: true,
+              createdAtUtc: new Date().toISOString()
+            }
+          : {
+              id: this.buildLocalId('assistant'),
+              role: 'assistant',
+              content: reply,
+              displayContent: '',
+              isTyping: true,
+              createdAtUtc: new Date().toISOString()
+            };
+        if (existingMessageId) {
+          this.updateMessage(existingMessageId, assistantMessage);
+        } else {
+          this.assistantMessages.update(messages => [...messages, assistantMessage]);
+        }
+        this.activeConversationId = null;
+        this.activeConversationMessageId = null;
         this.assistantSending.set(false);
         this.runTypewriter(assistantMessage.id, reply);
         this.refreshInsights();
       },
       error: err => {
+        this.activeConversationId = null;
+        this.activeConversationMessageId = null;
         const fallback = typeof err?.error?.error === 'string'
           ? err.error.error
           : 'Assistant is unavailable right now. Please try again.';
@@ -148,6 +190,10 @@ export class AssistantPanelComponent {
     if (isPlatformBrowser(this.platformId)) {
       this.refreshInsights();
     }
+
+    this.crmEventsService.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => this.handleRealtimeAssistantEvent(event));
   }
 
   protected assistantActionLabel(action: AssistantInsightsAction): string {
@@ -381,6 +427,57 @@ export class AssistantPanelComponent {
 
   private buildLocalId(prefix: string): string {
     return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  }
+
+  private handleRealtimeAssistantEvent(event: { eventType?: string; payload?: Record<string, unknown> | null }) {
+    if (!this.crmEventsService.isFeatureEnabled('realtime.assistantStreaming')) {
+      return;
+    }
+
+    if (!event?.eventType || !event.payload) {
+      return;
+    }
+
+    const conversationId = String(event.payload['conversationId'] ?? '');
+    if (!conversationId || !this.activeConversationId || conversationId !== this.activeConversationId || !this.activeConversationMessageId) {
+      return;
+    }
+
+    if (event.eventType === 'assistant.chat.token') {
+      const token = String(event.payload['token'] ?? '');
+      if (!token) {
+        return;
+      }
+
+      const messageId = this.activeConversationMessageId;
+      const current = this.assistantMessages().find((message) => message.id === messageId);
+      const next = `${current?.displayContent ?? ''}${token}`;
+      this.updateMessage(messageId, { displayContent: next, content: next, isTyping: true });
+      return;
+    }
+
+    if (event.eventType === 'assistant.chat.completed') {
+      const messageId = this.activeConversationMessageId;
+      const content = String(event.payload['content'] ?? '');
+      const current = this.assistantMessages().find((message) => message.id === messageId);
+      const resolved = content || current?.displayContent || current?.content || '';
+      this.updateMessage(messageId, { displayContent: resolved, content: resolved, isTyping: false });
+      this.assistantSending.set(false);
+      this.activeConversationId = null;
+      this.activeConversationMessageId = null;
+      this.refreshInsights();
+      return;
+    }
+
+    if (event.eventType === 'assistant.chat.failed') {
+      const messageId = this.activeConversationMessageId;
+      this.updateMessage(messageId, { isTyping: false });
+      const error = String(event.payload['error'] ?? 'Assistant is unavailable right now. Please try again.');
+      this.assistantError.set(error);
+      this.assistantSending.set(false);
+      this.activeConversationId = null;
+      this.activeConversationMessageId = null;
+    }
   }
 
   private navigateAssistantAction(action: AssistantInsightsAction): void {

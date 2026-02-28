@@ -198,7 +198,7 @@ test('core create flows', async ({ page, request }) => {
   await page.locator('textarea[name="successCriteria"]').fill('E2E success criteria agreed.');
   const [oppResponse] = await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/opportunities') && response.request().method() === 'POST'),
-    page.locator('button:has-text("Save opportunity")').click()
+    page.locator('button:has-text("Save deal")').click()
   ]);
   if (!oppResponse.ok()) {
     console.log('opportunity create failed:', oppResponse.status(), await oppResponse.text());

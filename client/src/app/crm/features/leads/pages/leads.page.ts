@@ -1,4 +1,5 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgFor, NgIf, DecimalPipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -25,6 +26,7 @@ import { ImportJobService } from '../../../../shared/services/import-job.service
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
+import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { computeLeadScore, LeadDataWeight, LeadScoreInputs, LeadScoreResult } from './lead-scoring.util';
 
 interface StatusOption {
@@ -79,6 +81,8 @@ export class LeadsPage {
   protected readonly Math = Math;
   protected viewMode: 'table' | 'kanban' = 'table';
   private readonly toastService = inject(AppToastService);
+  private readonly crmEventsService = inject(CrmEventsService);
+  private readonly destroyRef = inject(DestroyRef);
   
   protected readonly statusOptions: StatusOption[] = [
     { label: 'All', value: 'all', icon: 'pi-inbox' },
@@ -199,6 +203,7 @@ export class LeadsPage {
     }
   }
   private importPoll?: Subscription;
+  private activeImportJobId: string | null = null;
 
   constructor(
     private readonly leadData: LeadDataService,
@@ -221,6 +226,33 @@ export class LeadsPage {
       history.replaceState({}, '');
     }
     this.load();
+
+    this.crmEventsService.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        if (event.eventType === 'import.job.progress') {
+          this.handleImportProgressEvent(event.payload ?? null);
+          return;
+        }
+
+        if (event.eventType === 'pipeline.lead.created'
+          || event.eventType === 'pipeline.lead.updated'
+          || event.eventType === 'pipeline.lead.deleted'
+          || event.eventType === 'pipeline.lead.moved')
+        {
+          this.load();
+          return;
+        }
+
+        if (event.eventType !== 'entity.crud.changed') {
+          return;
+        }
+
+        const entityType = String(event.payload?.['entityType'] ?? '').toLowerCase();
+        if (entityType === 'lead') {
+          this.load();
+        }
+      });
   }
 
   // Get funnel width percentage based on total leads
@@ -268,6 +300,7 @@ export class LeadsPage {
   protected openImport() {
     this.importDialogVisible = true;
     this.importFile = null;
+    this.activeImportJobId = null;
     this.importJob.set(null);
     this.importStatus.set(null);
     this.importError.set(null);
@@ -276,6 +309,7 @@ export class LeadsPage {
 
   protected closeImport() {
     this.importDialogVisible = false;
+    this.activeImportJobId = null;
     if (this.router.url.includes('/leads/import')) {
       this.router.navigate(['/app/leads']);
     }
@@ -305,9 +339,14 @@ export class LeadsPage {
     this.leadData.importCsv(this.importFile).subscribe({
       next: (job) => {
         this.importJob.set(job);
+        this.activeImportJobId = job.id;
         this.importStatus.set(null);
         this.raiseToast('success', 'Lead import queued.');
-        this.startImportPolling(job.id);
+        if (this.crmEventsService.isFeatureEnabled('realtime.importProgress')) {
+          this.importing.set(true);
+        } else {
+          this.startImportPolling(job.id);
+        }
       },
       error: () => {
         this.importError.set('Import failed. Please check your CSV and try again.');
@@ -408,6 +447,60 @@ export class LeadsPage {
     if (this.importPoll) {
       this.importPoll.unsubscribe();
       this.importPoll = undefined;
+    }
+  }
+
+  private handleImportProgressEvent(payload: Record<string, unknown> | null) {
+    if (!payload || !this.crmEventsService.isFeatureEnabled('realtime.importProgress')) {
+      return;
+    }
+
+    const jobId = String(payload['jobId'] ?? '');
+    if (!jobId || (this.activeImportJobId && this.activeImportJobId !== jobId)) {
+      return;
+    }
+
+    const status = String(payload['status'] ?? 'Queued') as CsvImportJobStatusResponse['status'];
+    const processed = Number(payload['processed'] ?? 0);
+    const succeeded = Number(payload['succeeded'] ?? 0);
+    const failed = Number(payload['failed'] ?? 0);
+    const total = Number(payload['total'] ?? processed);
+    const startedAtUtc = String(payload['startedAtUtc'] ?? new Date().toISOString());
+    const finishedAtUtcRaw = payload['finishedAtUtc'];
+    const errorSummaryRaw = payload['errorSummary'];
+
+    this.importing.set(status === 'Queued' || status === 'Processing');
+    this.importStatus.set({
+      id: jobId,
+      entityType: String(payload['entityType'] ?? 'Leads'),
+      status,
+      total,
+      imported: succeeded,
+      skipped: failed,
+      errors: [],
+      createdAtUtc: startedAtUtc,
+      completedAtUtc: typeof finishedAtUtcRaw === 'string' ? finishedAtUtcRaw : null,
+      errorMessage: typeof errorSummaryRaw === 'string' ? errorSummaryRaw : null
+    });
+
+    if (status === 'Completed') {
+      this.importing.set(false);
+      this.activeImportJobId = null;
+      this.load();
+      this.raiseToast('success', 'Lead import completed.');
+      return;
+    }
+
+    if (status === 'Failed') {
+      this.importing.set(false);
+      this.activeImportJobId = null;
+      this.importError.set(typeof errorSummaryRaw === 'string' ? errorSummaryRaw : 'Import failed. Please check your CSV and try again.');
+      this.raiseToast('error', 'Lead import failed.');
+      return;
+    }
+
+    if (total > 0 && processed >= total) {
+      this.importing.set(false);
     }
   }
 

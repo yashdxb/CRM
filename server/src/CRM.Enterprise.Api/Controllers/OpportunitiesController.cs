@@ -31,17 +31,20 @@ public class OpportunitiesController : ControllerBase
     private readonly IOpportunityService _opportunityService;
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
     private const decimal DiscountPercentApprovalThreshold = 10m;
     private const decimal DiscountAmountApprovalThreshold = 1000m;
 
     public OpportunitiesController(
         IOpportunityService opportunityService,
         CrmDbContext dbContext,
-        ITenantProvider tenantProvider)
+        ITenantProvider tenantProvider,
+        ICrmRealtimePublisher realtimePublisher)
     {
         _opportunityService = opportunityService;
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
+        _realtimePublisher = realtimePublisher;
     }
 
     [HttpGet]
@@ -109,6 +112,7 @@ public class OpportunitiesController : ControllerBase
 
         var result = await _opportunityService.CreateAsync(MapUpsertRequest(request), GetActor(), cancellationToken);
         if (!result.Success) return BadRequest(result.Error);
+        await PublishOpportunityRealtimeAsync("created", result.Value!.Id, cancellationToken);
         return CreatedAtAction(nameof(GetOpportunity), new { id = result.Value!.Id }, ToApiItem(result.Value!));
     }
 
@@ -131,6 +135,7 @@ public class OpportunitiesController : ControllerBase
         var result = await _opportunityService.UpdateAsync(id, MapUpsertRequest(request), GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        await PublishOpportunityRealtimeAsync("updated", id, cancellationToken);
         return NoContent();
     }
 
@@ -141,6 +146,7 @@ public class OpportunitiesController : ControllerBase
         var result = await _opportunityService.DeleteAsync(id, GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        await PublishOpportunityRealtimeAsync("deleted", id, cancellationToken);
         return NoContent();
     }
 
@@ -174,6 +180,7 @@ public class OpportunitiesController : ControllerBase
         var result = await _opportunityService.UpdateStageAsync(id, request.Stage, GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        await PublishOpportunityRealtimeAsync("updated", id, cancellationToken);
         return NoContent();
     }
 
@@ -506,5 +513,40 @@ public class OpportunitiesController : ControllerBase
             || role.Contains("admin", StringComparison.OrdinalIgnoreCase)
             || role.Contains("supervisor", StringComparison.OrdinalIgnoreCase)
             || role.Contains("lead", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task PublishOpportunityRealtimeAsync(string action, Guid opportunityId, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        await _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "entity.crud.changed",
+            new
+            {
+                entityType = "Opportunity",
+                entityId = opportunityId,
+                action,
+                changedFields = Array.Empty<string>(),
+                actorUserId = GetActor().UserId,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+
+        await _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "dashboard.metrics.delta",
+            new
+            {
+                source = "opportunity",
+                opportunityId,
+                action,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
     }
 }

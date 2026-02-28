@@ -15,6 +15,8 @@ export interface AssistantChatMessage {
 export interface AssistantChatResponse {
   reply: string;
   messages: AssistantChatMessage[];
+  conversationId?: string | null;
+  streamed?: boolean;
 }
 
 export interface AssistantInsightsKpi {
@@ -67,9 +69,11 @@ export class AssistantChatService {
     });
   }
 
-  sendMessage(message: string) {
+  sendMessage(message: string, options?: { stream?: boolean; conversationId?: string }) {
     return this.http.post<AssistantChatResponse>(`${this.baseUrl}/api/assistant/chat`, {
-      message
+      message,
+      stream: options?.stream === true,
+      conversationId: options?.conversationId ?? null
     }, {
       context: this.skipOverlayContext
     });

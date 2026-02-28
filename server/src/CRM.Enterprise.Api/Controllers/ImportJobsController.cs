@@ -1,6 +1,8 @@
 using System.Text.Json;
 using CRM.Enterprise.Api.Contracts.Imports;
 using CRM.Enterprise.Api.Contracts.Shared;
+using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -14,10 +16,17 @@ namespace CRM.Enterprise.Api.Controllers;
 public class ImportJobsController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
+    private readonly ITenantProvider _tenantProvider;
 
-    public ImportJobsController(CrmDbContext dbContext)
+    public ImportJobsController(
+        CrmDbContext dbContext,
+        ICrmRealtimePublisher realtimePublisher,
+        ITenantProvider tenantProvider)
     {
         _dbContext = dbContext;
+        _realtimePublisher = realtimePublisher;
+        _tenantProvider = tenantProvider;
     }
 
     [HttpGet("{id:guid}")]
@@ -45,6 +54,8 @@ public class ImportJobsController : ControllerBase
             }
         }
 
+        await PublishProgressAsync(job, cancellationToken);
+
         return Ok(new ImportJobStatusResponse(
             job.Id,
             job.EntityType,
@@ -56,5 +67,36 @@ public class ImportJobsController : ControllerBase
             job.CreatedAtUtc,
             job.CompletedAtUtc,
             job.ErrorMessage));
+    }
+
+    private async Task PublishProgressAsync(ImportJob job, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty || job.TenantId != tenantId)
+        {
+            return;
+        }
+
+        var payload = new
+        {
+            jobId = job.Id,
+            entityType = job.EntityType,
+            status = job.Status,
+            processed = job.Imported + job.Skipped,
+            total = job.TotalRows,
+            succeeded = job.Imported,
+            failed = job.Skipped,
+            startedAtUtc = job.CreatedAtUtc,
+            finishedAtUtc = job.CompletedAtUtc,
+            errorSummary = job.ErrorMessage
+        };
+
+        if (job.RequestedById is Guid requestedBy && requestedBy != Guid.Empty)
+        {
+            await _realtimePublisher.PublishUserEventAsync(tenantId, requestedBy, "import.job.progress", payload, cancellationToken);
+            return;
+        }
+
+        await _realtimePublisher.PublishTenantEventAsync(tenantId, "import.job.progress", payload, cancellationToken);
     }
 }

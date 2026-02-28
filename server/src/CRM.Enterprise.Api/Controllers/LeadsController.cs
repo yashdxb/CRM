@@ -13,6 +13,8 @@ using CRM.Enterprise.Api.Contracts.Imports;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Application.Qualifications;
+using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Tenants;
 // using CRM.Enterprise.Api.Jobs; // Removed Hangfire
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
@@ -29,15 +31,21 @@ public class LeadsController : ControllerBase
     private readonly ILeadService _leadService;
     private readonly ILeadImportService _leadImportService;
     private readonly CrmDbContext _dbContext;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
+    private readonly ITenantProvider _tenantProvider;
 
     public LeadsController(
         ILeadService leadService,
         ILeadImportService leadImportService,
-        CrmDbContext dbContext)
+        CrmDbContext dbContext,
+        ICrmRealtimePublisher realtimePublisher,
+        ITenantProvider tenantProvider)
     {
         _leadService = leadService;
         _leadImportService = leadImportService;
         _dbContext = dbContext;
+        _realtimePublisher = realtimePublisher;
+        _tenantProvider = tenantProvider;
     }
 
     [HttpGet]
@@ -224,6 +232,7 @@ public class LeadsController : ControllerBase
             return BadRequest(result.Error);
         }
 
+        await PublishLeadRealtimeAsync("created", result.Value!.Id, result.Value.Status, cancellationToken);
         return CreatedAtAction(nameof(GetLead), new { id = result.Value!.Id }, ToApiItem(result.Value!));
     }
 
@@ -255,6 +264,7 @@ public class LeadsController : ControllerBase
         var result = await _leadImportService.QueueImportAsync(stream, file.FileName, GetActor(), cancellationToken);
         if (!result.Success) return BadRequest(result.Error);
         var value = result.Value!;
+        await PublishImportProgressAsync(value.ImportJobId, value.EntityType, value.Status, 0, 0, 0, 0, null, cancellationToken);
         return Accepted(new ImportJobResponse(value.ImportJobId, value.EntityType, value.Status));
     }
 
@@ -262,9 +272,19 @@ public class LeadsController : ControllerBase
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpsertLeadRequest request, CancellationToken cancellationToken)
     {
+        var before = await _leadService.GetAsync(id, cancellationToken);
         var result = await _leadService.UpdateAsync(id, MapUpsertRequest(request), GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        var after = await _leadService.GetAsync(id, cancellationToken);
+        if (after is not null)
+        {
+            if (!string.Equals(before?.Status, after.Status, StringComparison.OrdinalIgnoreCase))
+            {
+                await PublishLeadMovedRealtimeAsync(after.Id, before?.Status, after.Status, cancellationToken);
+            }
+            await PublishLeadRealtimeAsync("updated", after.Id, after.Status, cancellationToken);
+        }
         return NoContent();
     }
 
@@ -276,6 +296,8 @@ public class LeadsController : ControllerBase
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
         var value = result.Value!;
+        await PublishLeadMovedRealtimeAsync(id, "Qualified", "Converted", cancellationToken);
+        await PublishLeadRealtimeAsync("updated", id, "Converted", cancellationToken);
         return Ok(new LeadConversionResponse(value.LeadId, value.AccountId, value.ContactId, value.OpportunityId));
     }
 
@@ -286,6 +308,7 @@ public class LeadsController : ControllerBase
         var result = await _leadService.DeleteAsync(id, GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        await PublishLeadRealtimeAsync("deleted", id, null, cancellationToken);
         return NoContent();
     }
 
@@ -311,9 +334,16 @@ public class LeadsController : ControllerBase
             return BadRequest("Status is required.");
         }
 
+        var before = await _leadService.GetAsync(id, cancellationToken);
         var result = await _leadService.UpdateStatusAsync(id, request.Status, GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        var after = await _leadService.GetAsync(id, cancellationToken);
+        if (after is not null)
+        {
+            await PublishLeadMovedRealtimeAsync(id, before?.Status, after.Status, cancellationToken);
+            await PublishLeadRealtimeAsync("updated", id, after.Status, cancellationToken);
+        }
         return NoContent();
     }
 
@@ -405,6 +435,111 @@ public class LeadsController : ControllerBase
             dto.NextEvidenceSuggestions,
             dto.ScoreBreakdown.Select(item => new CRM.Enterprise.Api.Contracts.Leads.LeadScoreBreakdownItem(item.Factor, item.Score, item.MaxScore)),
             dto.RiskFlags);
+    }
+
+    private async Task PublishLeadRealtimeAsync(string action, Guid leadId, string? status, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        await _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            $"pipeline.lead.{action}",
+            new
+            {
+                leadId,
+                action,
+                status,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+
+        await _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "entity.crud.changed",
+            new
+            {
+                entityType = "Lead",
+                entityId = leadId,
+                action,
+                changedFields = status is null ? Array.Empty<string>() : new[] { "Status" },
+                actorUserId = GetActor().UserId,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+
+        await _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "dashboard.metrics.delta",
+            new
+            {
+                source = "lead",
+                leadId,
+                action,
+                status,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+    }
+
+    private Task PublishLeadMovedRealtimeAsync(Guid leadId, string? fromStatus, string? toStatus, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(toStatus) || string.Equals(fromStatus, toStatus, StringComparison.OrdinalIgnoreCase))
+        {
+            return Task.CompletedTask;
+        }
+
+        return _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "pipeline.lead.moved",
+            new
+            {
+                leadId,
+                fromStatus,
+                toStatus,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+    }
+
+    private Task PublishImportProgressAsync(
+        Guid jobId,
+        string entityType,
+        string status,
+        int processed,
+        int total,
+        int succeeded,
+        int failed,
+        string? errorSummary,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "import.job.progress",
+            new
+            {
+                jobId,
+                entityType,
+                status,
+                processed,
+                total,
+                succeeded,
+                failed,
+                startedAtUtc = DateTime.UtcNow,
+                finishedAtUtc = status is "Completed" or "Failed" ? DateTime.UtcNow : (DateTime?)null,
+                errorSummary
+            },
+            cancellationToken);
     }
 
     private static LeadUpsertRequest MapUpsertRequest(UpsertLeadRequest request)

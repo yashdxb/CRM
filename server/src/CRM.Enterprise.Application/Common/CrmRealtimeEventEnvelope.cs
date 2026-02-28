@@ -4,4 +4,6 @@ public sealed record CrmRealtimeEventEnvelope(
     string EventType,
     Guid TenantId,
     DateTime OccurredAtUtc,
-    object Payload);
+    object Payload,
+    int SchemaVersion = 1,
+    string? CorrelationId = null);

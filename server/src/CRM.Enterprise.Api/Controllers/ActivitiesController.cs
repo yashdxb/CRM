@@ -6,6 +6,7 @@ using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Tenants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -18,10 +19,17 @@ namespace CRM.Enterprise.Api.Controllers;
 public class ActivitiesController : ControllerBase
 {
     private readonly IActivityService _activityService;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
+    private readonly ITenantProvider _tenantProvider;
 
-    public ActivitiesController(IActivityService activityService)
+    public ActivitiesController(
+        IActivityService activityService,
+        ICrmRealtimePublisher realtimePublisher,
+        ITenantProvider tenantProvider)
     {
         _activityService = activityService;
+        _realtimePublisher = realtimePublisher;
+        _tenantProvider = tenantProvider;
     }
 
     [HttpGet]
@@ -76,6 +84,7 @@ public class ActivitiesController : ControllerBase
     {
         var result = await _activityService.CreateAsync(MapUpsertRequest(request), GetActor(), cancellationToken);
         if (!result.Success) return BadRequest(result.Error);
+        await PublishActivityRealtimeAsync("created", result.Value!.Id, cancellationToken);
         return CreatedAtAction(nameof(GetActivities), new { id = result.Value!.Id }, ToApiItem(result.Value!));
     }
 
@@ -86,6 +95,7 @@ public class ActivitiesController : ControllerBase
         var result = await _activityService.UpdateAsync(id, MapUpsertRequest(request), GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        await PublishActivityRealtimeAsync("updated", id, cancellationToken);
         return NoContent();
     }
 
@@ -96,6 +106,7 @@ public class ActivitiesController : ControllerBase
         var result = await _activityService.DeleteAsync(id, GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        await PublishActivityRealtimeAsync("deleted", id, cancellationToken);
         return NoContent();
     }
 
@@ -146,5 +157,40 @@ public class ActivitiesController : ControllerBase
         var userId = Guid.TryParse(id, out var parsed) ? parsed : (Guid?)null;
         var name = User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name;
         return new ActorContext(userId, name);
+    }
+
+    private async Task PublishActivityRealtimeAsync(string action, Guid activityId, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        await _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "entity.crud.changed",
+            new
+            {
+                entityType = "Activity",
+                entityId = activityId,
+                action,
+                changedFields = Array.Empty<string>(),
+                actorUserId = GetActor().UserId,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+
+        await _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "dashboard.metrics.delta",
+            new
+            {
+                source = "activity",
+                activityId,
+                action,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
     }
 }

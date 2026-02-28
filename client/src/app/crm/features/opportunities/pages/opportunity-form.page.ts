@@ -270,6 +270,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected readonly canRequestStageOverride = signal(false);
   protected readonly stageOverrideRequesting = signal(false);
   protected readonly lastStageOverrideDecisionId = signal<string | null>(null);
+  protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string }>>([]);
   protected readonly reviewOutcomeOptions: Option[] = [
     { label: 'Approved', value: 'Approved' },
     { label: 'Needs Work', value: 'Needs Work' },
@@ -380,14 +381,21 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     });
 
     this.route.paramMap.subscribe((params) => {
+      const previousId = this.editingId;
       const id = params.get('id');
+      if (previousId && previousId !== id) {
+        this.crmEvents.leaveRecordPresence('opportunity', previousId);
+      }
+
       this.editingId = id;
       this.isEditMode.set(!!id);
       if (id) {
+        this.crmEvents.joinRecordPresence('opportunity', id);
         this.loadOpportunity(id);
         this.ensureSectionDataLoaded('approval-workflow');
         this.loadSectionsForOpenPanels();
       } else {
+        this.presenceUsers.set([]);
         this.form = this.createEmptyForm();
         this.resetQuoteWorkspace();
         this.selectedStage = this.form.stageName ?? 'Prospecting';
@@ -415,6 +423,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.editingId) {
+      this.crmEvents.leaveRecordPresence('opportunity', this.editingId);
+    }
     this.destroy$.next();
     this.destroy$.complete();
     if (this.proposalResendChipTimeoutHandle) {
@@ -1727,6 +1738,11 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     }
 
     const eventType = event.eventType.toLowerCase();
+    if (eventType === 'record.presence.snapshot' || eventType === 'record.presence.changed') {
+      this.applyPresenceEvent(event, this.editingId);
+      return;
+    }
+
     if (!eventType.startsWith('decision.')) {
       return;
     }
@@ -1741,6 +1757,57 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     if (decisionId) {
       this.loadDecisionHistory(decisionId);
     }
+  }
+
+  private applyPresenceEvent(
+    event: { eventType?: string; payload?: Record<string, unknown> | null },
+    recordId: string): void
+  {
+    const payload = event.payload;
+    if (!payload) {
+      return;
+    }
+
+    const entityType = String(payload['entityType'] ?? '').toLowerCase();
+    const payloadRecordId = String(payload['recordId'] ?? '');
+    if (entityType !== 'opportunity' || payloadRecordId !== recordId) {
+      return;
+    }
+
+    if (event.eventType === 'record.presence.snapshot') {
+      const usersRaw = Array.isArray(payload['users']) ? payload['users'] : [];
+      const users = usersRaw
+        .map((item) => {
+          const value = item as Record<string, unknown>;
+          return {
+            userId: String(value['userId'] ?? ''),
+            displayName: String(value['displayName'] ?? 'User')
+          };
+        })
+        .filter((item) => !!item.userId);
+      this.presenceUsers.set(users);
+      return;
+    }
+
+    const userId = String(payload['userId'] ?? '');
+    const displayName = String(payload['displayName'] ?? 'User');
+    const action = String(payload['action'] ?? '').toLowerCase();
+    if (!userId) {
+      return;
+    }
+
+    this.presenceUsers.update((users) => {
+      if (action === 'joined') {
+        if (users.some((user) => user.userId === userId)) {
+          return users;
+        }
+        return [...users, { userId, displayName }];
+      }
+      if (action === 'left') {
+        return users.filter((user) => user.userId !== userId);
+      }
+      return users;
+    });
   }
 
   private hasApprovalByPurpose(purpose: string): boolean {

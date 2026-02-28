@@ -4,6 +4,7 @@ using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Api.Contracts.Imports;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Contacts;
+using CRM.Enterprise.Application.Tenants;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,13 +20,19 @@ public class ContactsController : ControllerBase
 {
     private readonly IContactService _contactService;
     private readonly IContactImportService _contactImportService;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
+    private readonly ITenantProvider _tenantProvider;
 
     public ContactsController(
         IContactService contactService,
-        IContactImportService contactImportService)
+        IContactImportService contactImportService,
+        ICrmRealtimePublisher realtimePublisher,
+        ITenantProvider tenantProvider)
     {
         _contactService = contactService;
         _contactImportService = contactImportService;
+        _realtimePublisher = realtimePublisher;
+        _tenantProvider = tenantProvider;
     }
 
     [HttpGet]
@@ -59,6 +66,7 @@ public class ContactsController : ControllerBase
             return BadRequest(result.Error);
         }
 
+        await PublishContactRealtimeAsync("created", result.Value!.Id, cancellationToken);
         return CreatedAtAction(nameof(GetContact), new { id = result.Value!.Id }, ToApiDetail(result.Value!));
     }
 
@@ -90,6 +98,7 @@ public class ContactsController : ControllerBase
         var result = await _contactImportService.QueueImportAsync(stream, file.FileName, GetActor(), cancellationToken);
         if (!result.Success) return BadRequest(result.Error);
         var value = result.Value!;
+        await PublishImportProgressAsync(value.ImportJobId, value.EntityType, value.Status, 0, 0, 0, 0, null, cancellationToken);
         return Accepted(new ImportJobResponse(value.ImportJobId, value.EntityType, value.Status));
     }
 
@@ -100,6 +109,7 @@ public class ContactsController : ControllerBase
         var result = await _contactService.UpdateAsync(id, MapUpsertRequest(request), GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        await PublishContactRealtimeAsync("updated", id, cancellationToken);
         return NoContent();
     }
 
@@ -110,6 +120,7 @@ public class ContactsController : ControllerBase
         var result = await _contactService.DeleteAsync(id, GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
+        await PublishContactRealtimeAsync("deleted", id, cancellationToken);
         return NoContent();
     }
 
@@ -243,5 +254,64 @@ public class ContactsController : ControllerBase
         var name = User.FindFirstValue(ClaimTypes.Name);
         var parsed = Guid.TryParse(id, out var value) ? value : (Guid?)null;
         return new ActorContext(parsed, name);
+    }
+
+    private Task PublishContactRealtimeAsync(string action, Guid contactId, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "entity.crud.changed",
+            new
+            {
+                entityType = "Contact",
+                entityId = contactId,
+                action,
+                changedFields = Array.Empty<string>(),
+                actorUserId = GetActor().UserId,
+                occurredAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+    }
+
+    private Task PublishImportProgressAsync(
+        Guid jobId,
+        string entityType,
+        string status,
+        int processed,
+        int total,
+        int succeeded,
+        int failed,
+        string? errorSummary,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "import.job.progress",
+            new
+            {
+                jobId,
+                entityType,
+                status,
+                processed,
+                total,
+                succeeded,
+                failed,
+                startedAtUtc = DateTime.UtcNow,
+                finishedAtUtc = status is "Completed" or "Failed" ? DateTime.UtcNow : (DateTime?)null,
+                errorSummary
+            },
+            cancellationToken);
     }
 }

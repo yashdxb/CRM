@@ -10,6 +10,7 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { OrderListModule } from 'primeng/orderlist';
 import { Subject, startWith, switchMap } from 'rxjs';
+import { debounceTime, filter } from 'rxjs/operators';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
 import { AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal } from '../models/dashboard.model';
@@ -26,6 +27,7 @@ import { NotificationService } from '../../../../core/notifications';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
+import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { DASHBOARD_CARD_CATALOG, DASHBOARD_CHART_CATALOG, type DashboardChartId } from '../dashboard-catalog';
 
 type ChartId = DashboardChartId;
@@ -84,6 +86,7 @@ export class DashboardPage implements OnInit {
   private readonly commandPaletteService = inject(CommandPaletteService);
   private readonly toastService = inject(AppToastService);
   private readonly notificationService = inject(NotificationService);
+  private readonly crmEventsService = inject(CrmEventsService);
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly referenceData = inject(ReferenceDataService);
   private readonly opportunityData = inject(OpportunityDataService);
@@ -159,6 +162,7 @@ export class DashboardPage implements OnInit {
     reviewQueue: []
   };
   private readonly managerHealthRefresh$ = new Subject<void>();
+  private readonly dashboardRealtimeRefresh$ = new Subject<void>();
   private readonly managerHealthSignal = signal<ManagerPipelineHealth>(this.emptyManagerHealth);
   private readonly emptyAssistantInsights: AssistantInsights = {
     scope: 'Self',
@@ -671,6 +675,29 @@ export class DashboardPage implements OnInit {
       )
       .subscribe(health => {
         this.managerHealthSignal.set(health ?? this.emptyManagerHealth);
+      });
+
+    this.crmEventsService.events$
+      .pipe(
+        filter((event) => event.eventType === 'dashboard.metrics.delta' || event.eventType === 'dashboard.metrics.refresh-requested'),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.dashboardRealtimeRefresh$.next());
+
+    this.dashboardRealtimeRefresh$
+      .pipe(
+        debounceTime(1500),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => {
+        this.dashboardData.getSummary()
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe(summary => {
+            const resolvedSummary = summary ?? this.emptySummary;
+            this.summarySignal.set(resolvedSummary);
+            this.emitRiskAlerts(resolvedSummary);
+          });
+        this.managerHealthRefresh$.next();
       });
 
     const { order, sizes, dimensions, hasLocalPreference } = this.loadLayoutPreferences();

@@ -8,6 +8,8 @@ using AppAssistantActionExecutionRequest = CRM.Enterprise.Application.Assistant.
 using AppAssistantActionReviewRequest = CRM.Enterprise.Application.Assistant.AssistantActionReviewRequest;
 using AppAssistantActionUndoRequest = CRM.Enterprise.Application.Assistant.AssistantActionUndoRequest;
 using CRM.Enterprise.Application.Assistant;
+using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Tenants;
 using SecurityPermissions = CRM.Enterprise.Security.Permissions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +24,19 @@ public class AssistantController : ControllerBase
 {
     private readonly IAssistantChatService _chatService;
     private readonly ILogger<AssistantController> _logger;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
+    private readonly ITenantProvider _tenantProvider;
 
-    public AssistantController(IAssistantChatService chatService, ILogger<AssistantController> logger)
+    public AssistantController(
+        IAssistantChatService chatService,
+        ILogger<AssistantController> logger,
+        ICrmRealtimePublisher realtimePublisher,
+        ITenantProvider tenantProvider)
     {
         _chatService = chatService;
         _logger = logger;
+        _realtimePublisher = realtimePublisher;
+        _tenantProvider = tenantProvider;
     }
 
     [HttpGet("history")]
@@ -58,22 +68,50 @@ public class AssistantController : ControllerBase
         try
         {
             var result = await _chatService.SendAsync(userId.Value, request.Message ?? string.Empty, cancellationToken);
+            var conversationId = string.IsNullOrWhiteSpace(request.ConversationId)
+                ? Guid.NewGuid().ToString("N")
+                : request.ConversationId!.Trim();
+
+            if (request.Stream)
+            {
+                await PublishAssistantStreamAsync(userId.Value, conversationId, result.Reply, cancellationToken);
+                return Ok(new AssistantChatResponse(
+                    string.Empty,
+                    result.Messages.Select(MapMessage).ToList(),
+                    conversationId,
+                    Streamed: true));
+            }
+
             return Ok(new AssistantChatResponse(
                 result.Reply,
-                result.Messages.Select(MapMessage).ToList()));
+                result.Messages.Select(MapMessage).ToList(),
+                conversationId,
+                Streamed: false));
         }
         catch (AssistantRateLimitException ex)
         {
+            if (request.Stream)
+            {
+                await PublishAssistantFailureAsync(userId.Value, request.ConversationId, ex.Message, cancellationToken);
+            }
             Response.Headers["Retry-After"] = ex.RetryAfterSeconds.ToString();
             return StatusCode(429, new { error = ex.Message, retryAfterSeconds = ex.RetryAfterSeconds });
         }
         catch (InvalidOperationException ex)
         {
+            if (request.Stream)
+            {
+                await PublishAssistantFailureAsync(userId.Value, request.ConversationId, "Assistant is unavailable right now. Please try again shortly.", cancellationToken);
+            }
             _logger.LogWarning(ex, "Assistant service unavailable for user {UserId}", userId);
             return StatusCode(503, new { error = "Assistant is unavailable right now. Please try again shortly." });
         }
         catch (Exception ex)
         {
+            if (request.Stream)
+            {
+                await PublishAssistantFailureAsync(userId.Value, request.ConversationId, "An unexpected error occurred while processing your message", cancellationToken);
+            }
             _logger.LogError(ex, "Unexpected error sending chat message for user {UserId}", userId);
             return StatusCode(500, new { error = "An unexpected error occurred while processing your message" });
         }
@@ -292,5 +330,71 @@ public class AssistantController : ControllerBase
         return User.Claims.Any(claim =>
             string.Equals(claim.Type, SecurityPermissions.ClaimType, StringComparison.OrdinalIgnoreCase)
             && string.Equals(claim.Value, permission, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task PublishAssistantStreamAsync(
+        Guid userId,
+        string conversationId,
+        string reply,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty || userId == Guid.Empty)
+        {
+            return;
+        }
+
+        const int chunkSize = 48;
+        var safeReply = reply ?? string.Empty;
+        var sequence = 0;
+
+        for (var i = 0; i < safeReply.Length; i += chunkSize)
+        {
+            var token = safeReply.Substring(i, Math.Min(chunkSize, safeReply.Length - i));
+            await _realtimePublisher.PublishUserEventAsync(
+                tenantId,
+                userId,
+                "assistant.chat.token",
+                new
+                {
+                    conversationId,
+                    sequence,
+                    token
+                },
+                cancellationToken);
+            sequence++;
+        }
+
+        await _realtimePublisher.PublishUserEventAsync(
+            tenantId,
+            userId,
+            "assistant.chat.completed",
+            new
+            {
+                conversationId,
+                content = safeReply,
+                tokenCount = sequence
+            },
+            cancellationToken);
+    }
+
+    private Task PublishAssistantFailureAsync(Guid userId, string? conversationId, string error, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty || userId == Guid.Empty)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _realtimePublisher.PublishUserEventAsync(
+            tenantId,
+            userId,
+            "assistant.chat.failed",
+            new
+            {
+                conversationId = string.IsNullOrWhiteSpace(conversationId) ? null : conversationId,
+                error
+            },
+            cancellationToken);
     }
 }
