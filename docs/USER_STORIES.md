@@ -156,7 +156,7 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
 
 ### Recent UI/UX Implementation Sync (ClickUp -> Docs)
 - Sync date: **February 26, 2026**
-- Scope: Dashboard pack management ordering UX, Lead Edit page width/responsiveness, Qualification Policy page Factor Evidence Mapping readability + visual polish
+- Scope: Dashboard pack management ordering UX, Lead Edit page width/responsiveness, Qualification Policy page Factor Evidence Mapping readability + visual polish, Deal form sticky-summary responsive hardening
 - Purpose: Capture detailed implementation stories for recent UI/UX work without duplicating canonical Epic 2 / Epic 5 / Epic 8 story wording.
 
 **Detailed implementation stories (Completed)**
@@ -169,6 +169,142 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
 - `86e02gm19` — Module: Settings | Qualification Policy page full-width alignment + Factor Evidence Mapping readable vivid card redesign
   - Implemented: fixed Qualification Policy content container alignment and removed reserved side-lane gap behavior.
   - Implemented: Factor Evidence Mapping redesigned as full-width stacked factor cards with vivid per-factor color accents and improved readability.
+- `PENDING-CU-DEAL-RESP-1` — Module: Opportunities | Deal sticky-summary cards responsive hardening for narrow/laptop widths (`Completed`, pending ClickUp sync)
+  - Implemented: summary card grid now uses auto-fit columns to prevent card squeeze/overlap at intermediate viewport widths.
+  - Implemented: risk/approval status badges now wrap safely (no clipped text) with mobile fallback to single-column summary layout.
+
+### Competitive Audit Roadmap Sync (ClickUp -> Docs)
+- Sync date: **February 26, 2026**
+- Source: `docs/North_Edge_CRM_Competitive_Audit_Report.pdf` (competitive audit benchmark and gap roadmap)
+- Epic: `Epic | Competitive Audit | Gap Closure, Parity, and Ecosystem Roadmap` (ClickUp: `86e02y3vw`)
+- Purpose: Capture the competitive gap-closure roadmap (`Now / Next / Later`) as an execution epic with canonical stories in `CRM Backlog`, aligned to the audit report and dependency chain.
+- Scope note:
+  - This roadmap is competitive-gap and platform-parity focused (email, reports, CPQ, webhooks, marketing, service, mobile, ecosystem).
+  - It extends existing CRM module epics and should not overwrite the already-active Decision Inbox / AI execution modernization track.
+- Critical path from audit (tracked as sequencing guidance, not duplicate stories):
+  - `Email Integration` -> `Product & Price Book` -> `Quote / Proposal` -> `Report Builder` -> `Webhook / Event System`
+
+**Now (0–3 months) — Deal-breakers that block sales**
+- `86e02y3w7` — Module: Communications | Bidirectional email integration (send + inbound reply sync) so reps can work from CRM without leaving reply context.
+- `86e02y3xc` — Module: Reporting | Ad-hoc report builder (filters + grouping + chart + export) so VP/Director users can self-serve reporting.
+- `86e02y3xh` — Module: Opportunities | Product catalog + price book attachment to opportunities so deal values are line-item based, not manual only.
+- `86e02y3xr` — Module: Opportunities | Quote / proposal generation from opportunity products and pricing so reps can close inside CRM.
+- `86e02y3xv` — Module: Settings | Custom fields management UI for admins so schema changes do not require developer intervention.
+- `86e02y3y4` — Module: Leads | Web-to-lead / embeddable forms so website submissions create leads directly in CRM.
+- `86e02y3yr` — Module: Reporting | Scheduled reports and digest delivery so managers receive recurring pipeline and performance summaries.
+- `86e02y3z3` — Module: Integrations | Webhook / outbound event system so CRM changes can integrate with Slack/Teams/Zapier/Make/N8N.
+
+**Next (3–6 months) — Competitive parity**
+- `86e02y3za` — Module: Marketing | Campaign Management with campaign-to-opportunity attribution so marketing-to-sales pipeline is visible.
+- `86e02y3zh` — Module: Contracts | Contract Management entity and lifecycle so renewal automation runs against real contracts.
+- `86e02y3zv` — Module: Settings | Territory Management with territory-based routing/visibility so larger sales orgs can segment access.
+- `86e02y400` — Module: Forecasting | Forecasting engine with target-vs-actual tracking so confidence-weighted pipeline becomes plan-vs-performance forecasting.
+- `86e02y407` — Module: Data Quality | Cross-entity duplicate detection across leads, contacts, and accounts so duplicate prevention extends beyond leads.
+- `86e02y40e` — Module: CRM Core | Structured notes + attachment system across records so reps can capture interaction context consistently.
+- `86e02y40r` — Module: Marketing | Basic email marketing (lists + sends + engagement tracking) bridging CRM email integration and future automation.
+- `86e02y40x` — Module: UX | Saved list views / filters so reps and managers can preserve table working views across modules.
+- `86e02y41a` — Module: UX | Inline table editing for key fields so users avoid opening records for single-field changes.
+- `86e02y3za0` — Module: Activities | Task / reminder automation on stage changes and workflow triggers so follow-up actions are generated automatically.
+
+**Later (6–12 months) — Differentiation & Tier 1 push**
+- `86e02y41r` — Module: Marketing | Full marketing automation (journeys, nurture, scoring) so CRM can replace a separate marketing platform.
+- `86e02y420` — Module: Workflow | Visual workflow builder for business automation so admins can compose rule flows without code.
+- `86e02y42d` — Module: Portal | Customer portal for self-service access so CRM extends into customer-facing collaboration.
+- `86e02y42n` — Module: Service | Case / support ticketing so North Edge expands from Sales CRM to sales + service CRM.
+- `86e02y42v` — Module: Platform | Plugin / extension framework so partners/customers can extend the platform safely.
+- `86e02y431` — Module: Analytics | Advanced analytics & BI (pivot/cohort/drill-down) so teams can analyze beyond standard reports.
+- `86e02y436` — Module: Integrations | Social media integration for enrichment and listening so reps have social context in CRM.
+- `86e02y43b` — Module: AI | AI conversation intelligence (transcription, sentiment, coaching insights) so call interactions feed coaching and deal quality.
+- `86e02y43h` — Module: Mobile | Native mobile app (iOS/Android, offline-first flows) for field sales execution.
+- `86e02y41r0` — Module: Platform | Multi-language & localization (language packs, RTL, localization formatting) for global deployments.
+- `86e02y41r1` — Module: Compliance | Audit & compliance suite (retention, field-level history, compliance controls) for enterprise governance.
+- `86e02y41r2` — Module: Collaboration | Real-time collaboration (SignalR updates, presence, @mentions) across CRM workflows.
+
+**Technical quick wins / accelerators from audit recommendations (separate from roadmap buckets)**
+- `86e02y44n` — Module: Platform | SignalR real-time update foundation for notifications, Decision Inbox counts, and live stage/queue updates.
+- `86e02y457` — Module: Access | SSO / SAML federation for enterprise identity integration.
+- `86e02y45j` — Module: Integrations | Read-only OData or GraphQL access layer for power users and external integrations.
+
+### SignalR Integration Opportunities (Detailed Stories, Refreshed Feb 27, 2026)
+
+Epic alignment: `Epic 10 - Competitive Gap Closure, Platform Parity, and Ecosystem Expansion`.
+
+Now stories (current implementation wave):
+1. `Module: Platform | Realtime alert delivery from NotificationAlertWorker`
+   ClickUp: `86e030ymv`
+   As a CRM user, I want SLA/idle/coaching alerts pushed in-app in realtime so I do not need to refresh to see critical alerts.
+   Acceptance:
+   - `notification.alert` event emitted on worker alert send
+   - tenant/user targeting respected
+   - UI receives event and writes to notification inbox
+   Status: `Implemented`.
+2. `Module: Decisions | Realtime Decision Inbox create/update events`
+   ClickUp: `86e030ymw`
+   As an approver, I want decision requests and status changes to appear live so inbox badges and queues stay current.
+   Acceptance:
+   - `decision.created` on request creation
+   - `decision.updated` on approve/reject/request-info/delegate
+   - events include decision id + status + workflow context
+   Status: `Implemented`.
+3. `Module: Decisions | Realtime SLA escalation push`
+   ClickUp: `86e030yxd`
+   As an approver or manager, I want overdue decision escalations pushed immediately so SLA breaches are handled quickly.
+   Acceptance:
+   - `decision.sla.escalated` emitted by escalation worker
+   - events target tenant and known assignee recipients
+   Status: `Implemented`.
+4. `Module: Opportunities | Pipeline stage-change push for live Kanban sync`
+   ClickUp: `86e030yne`
+   As a sales manager, I want stage transitions broadcast in realtime so board/list views reflect current pipeline flow.
+   Acceptance:
+   - `opportunity.stage.changed` emitted on stage updates
+   - payload includes opportunity id/name + previous/next stage
+   Status: `Implemented`.
+5. `Module: Dashboard | Live metric delta broadcast`
+   ClickUp: `86e030ynb`
+   As an executive user, I want key metric deltas broadcast so dashboard tiles update without hard refresh.
+   Acceptance:
+   - `dashboard.metrics.delta` emitted from core entity changes (initial: opportunity stage changes)
+   - payload identifies source and impacted values
+   Status: `Implemented (initial scope)`.
+6. `Module: Opportunities | Renewal automation realtime summaries`
+   ClickUp: `86e030yxf`
+   As an owner/manager, I want renewal automation outcomes pushed so newly created renewals are visible immediately.
+   Acceptance:
+   - `renewal.automation.completed` emitted when renewals/tasks created
+   - payload includes renewal/task counts and timestamp
+   Status: `Implemented (tenant summary)`.
+7. `Module: Notifications | Email queue delivery status push`
+   ClickUp: `86e030yxj`
+   As a sender, I want sent/failed email delivery statuses pushed back so I can react without polling logs.
+   Acceptance:
+   - `email.delivery.status` emitted by email queue worker
+   - sender-targeted push when request context is available
+   - tenant-level fallback push when sender context is unavailable
+   Status: `Implemented`.
+
+Next stories (planned):
+1. `Module: Assistant | Token streaming over SignalR`
+   ClickUp: `86e030yn1`
+   As a seller, I want token-by-token assistant output streaming so long responses feel immediate.
+   Acceptance:
+   - assistant endpoint supports `IAsyncEnumerable` stream
+   - SignalR stream endpoint emits partial tokens and completion signals
+   Status: `Planned`.
+2. `Module: Collaboration | Realtime review threads on opportunities`
+   ClickUp: `86e030yxm`
+   As reviewers, I want live threaded comments on opportunities/decisions so collaboration is synchronous and traceable.
+   Acceptance:
+   - thread messages broadcast in realtime by record thread id
+   - unread counts and mention notifications supported
+   Status: `Planned`.
+3. `Module: Collaboration | Record-level presence indicators`
+   ClickUp: `86e030yxn`
+   As users, I want to see who is currently viewing the same record so edits/reviews are coordinated.
+   Acceptance:
+   - connection tracking per record session
+   - presence chips show active viewers on lead/opportunity pages
+   Status: `Planned`.
 
 ---
 
@@ -252,6 +388,7 @@ Status source rules for this summary:
 | Epic 7 - Contacts and Buying Group Mapping | 3 | 1 | 0 | 0 | 2 | `partial` | Core contact context done; buying-group mapping still open |
 | Epic 8 - Governance, Approvals, and Workspace Settings | 13 | 5 | 0 | 1 | 7 | `partial` | Contains one `Must` policy permission story; settings/admin work mixed |
 | Epic 9 - People, Access, Security Levels, and Role-Based Packs | 8 | 4 | 0 | 0 | 4 | `partial` | Strong delivery progress; module packs item still placeholder wording |
+| Epic 10 - Competitive Gap Closure, Platform Parity, and Ecosystem Expansion | 30 | 0 | 0 | 0 | 30 | `partial` | Added from Feb 26 competitive audit roadmap (`Now / Next / Later`) and synced to ClickUp epic `86e02y3vw` |
 
 ### Epic 1 | AI Revenue Execution Orchestration (Predominantly `Complex Orchestration`)
 1. `Module: Assistant | Next-best-action orchestration engine from live CRM signals`
@@ -332,6 +469,14 @@ Status source rules for this summary:
 8. `Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close.`
 9. `Module: Opportunities | As a Sales Rep, I want renewal tasks created and tracked like any opportunity.`
 10. `Module: Opportunities | As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal. (Done)`
+11. `Module: Opportunities | As a requester, I want deal edits locked while my approval request is pending, with clear read-only indicators, so data remains policy-compliant until decision resolution. (Done)`
+    - Acceptance criteria:
+      - requester pending approval locks deal mutations server-side (`Update`, `Owner`, `Stage`, `Team`, checklist, onboarding, `Delete`).
+      - manager/admin bypass is allowed during requester lock.
+      - UI shows top banner + sticky approval chip: `Approval Pending` with read-only tooltip.
+      - decision/approval actions remain available for approvers.
+      - after approval resolves, requester lock is removed automatically.
+      - lock violation returns a consistent API message: `Deal is locked while your approval request is pending.`
 
 ### Epic 5 | Dashboard Command Center, Forecast, and Truth Visibility
 1. `Module: Dashboard | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at-risk deals, and my forecast snapshot so I can prioritize work immediately.` (moved from Leads; dashboard-owned experience)
@@ -392,6 +537,38 @@ Status source rules for this summary:
 7. `Module: Settings | As an Admin, I want H1/H2/H3 packs as presets with role drift tracking so I can safely customize roles. (Done)`
 8. `Module: Settings | As an Admin, I want People & Access tabs to preserve tab/filter context and provide inline Security Level actions (set default, duplicate) so admin work is faster and stable after navigation/refresh. (Done) (ClickUp: 86dztkycq)`
 9. `Module: Settings | Tenant setting for module packs` (placeholder wording retained; rewrite with full actor/outcome before implementation)
+
+### Epic 10 | Competitive Gap Closure, Platform Parity, and Ecosystem Expansion
+1. `Module: Communications | As a Sales Rep, I want bidirectional email integration (send + inbound reply sync) so I can work from CRM without leaving reply context.`
+2. `Module: Reporting | As a manager, I want an ad-hoc report builder (filters + grouping + chart + export) so I can self-serve pipeline and performance reporting without engineering support.`
+3. `Module: Opportunities | As a Sales Rep, I want product catalog and price-book line items on opportunities so deal values are based on products instead of manual totals.`
+4. `Module: Opportunities | As a Sales Rep, I want quote/proposal generation from opportunity products and pricing so I can send quotes without leaving CRM.`
+5. `Module: Settings | As an Admin, I want a custom fields management UI so I can add and manage fields without developer changes.`
+6. `Module: Leads | As a marketing or sales user, I want web-to-lead / embeddable forms so website inquiries create leads directly in CRM.`
+7. `Module: Reporting | As a manager, I want scheduled reports and digest delivery so I receive recurring summaries without manual exports.`
+8. `Module: Integrations | As an Admin, I want an outbound webhook/event system so CRM events can trigger Slack, Teams, Zapier, Make, and custom integrations.`
+9. `Module: Marketing | As a marketing user, I want campaign management with campaign-to-opportunity attribution so I can measure marketing contribution to revenue.`
+10. `Module: Contracts | As a revenue or CS user, I want contract management so renewals and obligations run against real contract records.`
+11. `Module: Settings | As an Admin, I want territory management so routing, ownership, and visibility can be organized by territory at scale.`
+12. `Module: Forecasting | As a manager, I want target-vs-actual forecasting on top of confidence-weighted pipeline so forecast accountability is measurable.`
+13. `Module: Data Quality | As a user, I want cross-entity duplicate detection across leads, contacts, and accounts so duplicate prevention is consistent across CRM.`
+14. `Module: CRM Core | As a user, I want structured notes and attachments across core entities so interactions and supporting context are stored consistently.`
+15. `Module: Marketing | As a marketing user, I want basic email marketing (lists, sends, engagement tracking) so CRM email capabilities bridge toward marketing automation.`
+16. `Module: UX | As a user, I want saved list views and filters so I can keep my working views across CRM modules.`
+17. `Module: UX | As a user, I want inline editing in tables for common fields so I can update records faster without opening forms.`
+18. `Module: Activities | As a system, I want task/reminder automation from stage changes and workflow triggers so follow-up actions are created automatically.`
+19. `Module: Marketing | As a marketing user, I want full marketing automation (journeys, nurture, scoring) so CRM can replace a separate marketing platform.`
+20. `Module: Workflow | As an Admin, I want a visual workflow builder so I can compose business automations without code.`
+21. `Module: Portal | As a customer-facing team, I want a customer portal so customers can self-serve key CRM workflows and updates.`
+22. `Module: Service | As a support team, I want case/ticket management so North Edge supports sales + service CRM workflows.`
+23. `Module: Platform | As a partner/admin, I want a plugin/extension framework so the platform can be extended safely without core forks.`
+24. `Module: Analytics | As a manager/executive, I want advanced analytics and BI (pivot, cohort, drill-down) so I can analyze revenue performance beyond standard reports.`
+25. `Module: Integrations | As a user, I want social media integration for enrichment and listening so CRM records include social context.`
+26. `Module: AI | As a manager, I want AI conversation intelligence (transcription, sentiment, coaching insights) so call interactions improve coaching and deal quality.`
+27. `Module: Mobile | As a field seller, I want a native mobile app with offline-capable core workflows so I can work reliably outside the office.`
+28. `Module: Platform | As an Admin, I want multi-language and localization support so CRM can be deployed across regions and language requirements.`
+29. `Module: Compliance | As an Admin, I want an audit and compliance suite (retention, field-level history, compliance controls) so enterprise governance requirements are met.`
+30. `Module: Collaboration | As a user, I want real-time collaboration (live updates, presence, mentions) so CRM work stays synchronized across teams.`
 
 ### Supporting Implementation/UI Tasks (Non-Canonical User Stories)
 - `Module: Leads | Lead Edit page IA + visual polish for daily-use compactness (Qualification tab helper text reduction + Supporting Documents tab UX) (Done)`

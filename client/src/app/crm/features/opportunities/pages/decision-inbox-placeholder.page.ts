@@ -14,7 +14,7 @@ import { ButtonModule } from 'primeng/button';
         <h1>{{ heading() }}</h1>
         <p>{{ description() }}</p>
         <div class="decision-placeholder__actions">
-          <a pButton class="placeholder-btn" routerLink="/app/decisions/inbox">
+          <a pButton class="placeholder-btn" routerLink="/app/decisions/pending-action">
             <i class="pi pi-arrow-left"></i>
             <span>Back to Inbox</span>
           </a>
@@ -81,4 +81,3 @@ export class DecisionInboxPlaceholderPage {
       'This child view is reserved for the Decision Inbox platform rollout.'
   );
 }
-

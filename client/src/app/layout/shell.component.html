@@ -3,6 +3,12 @@
       <app-sidebar (toggleSidebar)="nav.toggleSidebar()" />
 
       <div class="body">
+        <div class="shell-page-background" aria-hidden="true">
+          <div class="shell-animated-orb orb-1"></div>
+          <div class="shell-animated-orb orb-2"></div>
+          <div class="shell-animated-orb orb-3"></div>
+          <div class="shell-grid-pattern"></div>
+        </div>
         <app-topbar 
           (toggleSidebar)="nav.toggleSidebar()" 
           (openQuickAdd)="openQuickAdd()" 

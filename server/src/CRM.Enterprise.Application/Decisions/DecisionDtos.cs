@@ -109,6 +109,11 @@ public sealed record DecisionDelegateRequestDto(
     Guid? ActorUserId,
     string? ActorName);
 
+public sealed record DecisionEscalateRequestDto(
+    string? Notes,
+    Guid? ActorUserId,
+    string? ActorName);
+
 public sealed record DecisionHistoryItemDto(
     Guid ActionLogId,
     Guid DecisionId,

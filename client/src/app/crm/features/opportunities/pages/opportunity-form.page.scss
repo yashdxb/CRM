@@ -1,4 +1,5 @@
 @use '../../../../shared/form-page-styles' as form;
+@use '../../../../../styles/design-tokens' as *;
 
 :host {
   @include form.premium-selection;
@@ -106,12 +107,361 @@
   }
 }
 
+.decision-review-banner {
+  max-width: 1400px;
+  width: min(1400px, calc(100% - 3rem));
+  margin: 0 auto;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(224, 242, 254, 0.72);
+  border: 1px solid rgba(14, 116, 144, 0.25);
+  color: rgba(12, 74, 110, 0.95);
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  box-shadow: 0 10px 24px rgba(12, 74, 110, 0.08);
+
+  i {
+    color: #0284c7;
+    margin-top: 0.2rem;
+  }
+
+  strong {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 0.1rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+}
+
+.approval-lock-banner {
+  background: rgba(254, 242, 242, 0.8);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: rgba(127, 29, 29, 0.95);
+
+  i {
+    color: #dc2626;
+  }
+}
+
 .form-body {
   @include form.form-container;
 }
 
+.deal-sticky-summary {
+  position: sticky;
+  top: calc(var(--shell-topbar-height, 47px) + var(--shell-topbar-strip-height, 4px) + var(--shell-floating-gap, 10px) + 10px);
+  z-index: 12;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+  padding: 0.65rem;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(248, 250, 252, 0.8)),
+    linear-gradient(135deg, rgba(59, 130, 246, 0.09), rgba(14, 165, 233, 0.08));
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+}
+
+.deal-sticky-summary .metric-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  box-shadow: $glass-shadow;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 92px;
+  transition: all $transition-base;
+  animation: fade-in-up 0.5s ease-out backwards;
+
+  @for $i from 1 through 6 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.05}s;
+    }
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-lg;
+
+    .metric-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+  }
+
+  .metric-icon {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-md;
+    font-size: $font-size-lg;
+    color: white;
+    flex-shrink: 0;
+    transition: transform $transition-spring;
+  }
+
+  .metric-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .metric-label {
+    font-size: $font-size-xs;
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  .metric-value {
+    font-size: $font-size-lg;
+    font-weight: 700;
+    color: $gray-800;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+}
+
+.deal-sticky-summary .metric-card--total .metric-value,
+.deal-sticky-summary .metric-card--leads .metric-value,
+.deal-sticky-summary .metric-card--customers .metric-value {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.deal-sticky-summary .metric-card--total .metric-icon { background: $primary-gradient; }
+.deal-sticky-summary .metric-card--leads .metric-icon { background: $cyan-gradient; }
+.deal-sticky-summary .metric-card--prospects .metric-icon { background: linear-gradient(135deg, $purple 0%, #9333ea 100%); }
+.deal-sticky-summary .metric-card--customers .metric-icon { background: $success-gradient; }
+.deal-sticky-summary .metric-card--risk .metric-icon { background: $orange-gradient; }
+.deal-sticky-summary .metric-card--approval .metric-icon { background: linear-gradient(135deg, #ef4444 0%, #f43f5e 100%); }
+
+.deal-sticky-summary .metric-card--risk,
+.deal-sticky-summary .metric-card--approval {
+  align-items: center;
+}
+
+.deal-sticky-summary .metric-card__status-badge {
+  margin-top: 0.2rem;
+  align-self: flex-start;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  text-align: left;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .form-layout {
   @include form.form-layout;
+}
+
+.deal-workbench-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.deal-workbench-content {
+  min-width: 0;
+}
+
+.deal-workbench-nav {
+  position: sticky;
+  top: calc(var(--shell-topbar-height, 47px) + var(--shell-topbar-strip-height, 4px) + var(--shell-floating-gap, 10px) + 126px);
+  z-index: 8;
+  border-radius: 16px;
+  border: 1px solid rgba(191, 219, 254, 0.28);
+  background:
+    linear-gradient(120deg, rgba(59, 130, 246, 0.2), rgba(20, 184, 166, 0.16), rgba(139, 92, 246, 0.2)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(248, 250, 252, 0.52));
+  box-shadow:
+    0 12px 28px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  padding: 0.8rem;
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+
+.deal-workbench-nav__title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: rgba(15, 23, 42, 0.84);
+  margin-bottom: 0.6rem;
+}
+
+.deal-workbench-nav__groups {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.deal-workbench-nav__group {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  padding: 0.45rem;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.deal-workbench-nav__group[data-group='core'] {
+  background: linear-gradient(120deg, rgba(59, 130, 246, 0.16), rgba(147, 197, 253, 0.12));
+}
+
+.deal-workbench-nav__group[data-group='execution'] {
+  background: linear-gradient(120deg, rgba(6, 182, 212, 0.16), rgba(45, 212, 191, 0.12));
+}
+
+.deal-workbench-nav__group[data-group='governance'] {
+  background: linear-gradient(120deg, rgba(249, 115, 22, 0.16), rgba(251, 191, 36, 0.12));
+}
+
+.deal-workbench-nav__group[data-group='delivery'] {
+  background: linear-gradient(120deg, rgba(139, 92, 246, 0.16), rgba(99, 102, 241, 0.12));
+}
+
+.deal-workbench-nav__group[data-group='audit'] {
+  background: linear-gradient(120deg, rgba(100, 116, 139, 0.16), rgba(148, 163, 184, 0.12));
+}
+
+.deal-workbench-nav__group-label {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+  color: rgba(30, 41, 59, 0.78);
+  margin-bottom: 0.35rem;
+  padding-inline: 0.2rem;
+}
+
+.deal-workbench-nav__items {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.deal-workbench-nav__item {
+  width: 100%;
+  border: 1px solid rgba(191, 219, 254, 0.36);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.42)),
+    linear-gradient(120deg, rgba(219, 234, 254, 0.36), rgba(224, 242, 254, 0.22));
+  border-radius: 12px;
+  padding: 0.5rem 0.55rem;
+  display: grid;
+  gap: 0.35rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease, background 150ms ease, filter 150ms ease;
+}
+
+.deal-workbench-nav__item:hover {
+  border-color: rgba(37, 99, 235, 0.42);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+  transform: translateY(-1px);
+  filter: saturate(1.12);
+}
+
+.deal-workbench-nav__item--active {
+  border-color: rgba(29, 78, 216, 0.52);
+  background:
+    linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(14, 165, 233, 0.22), rgba(139, 92, 246, 0.22)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(248, 250, 252, 0.46));
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+}
+
+.deal-workbench-nav__item--locked {
+  cursor: not-allowed;
+}
+
+.deal-workbench-nav__item:disabled {
+  opacity: 0.82;
+  transform: none;
+  box-shadow: none;
+}
+
+.deal-workbench-nav__item-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(30, 41, 59, 0.92);
+
+  i {
+    color: #2563eb;
+    font-size: 0.82rem;
+  }
+}
+
+.form-layout--read-only {
+  .opportunity-accordion-card input,
+  .opportunity-accordion-card textarea,
+  .opportunity-accordion-card .p-inputtext,
+  .opportunity-accordion-card .p-inputnumber,
+  .opportunity-accordion-card .p-datepicker,
+  .opportunity-accordion-card .p-select,
+  .opportunity-accordion-card .btn-glass,
+  .opportunity-accordion-card .crm-button--primary,
+  .opportunity-accordion-card .crm-button--ghost {
+    pointer-events: none;
+  }
+
+  .opportunity-accordion-card input,
+  .opportunity-accordion-card textarea,
+  .opportunity-accordion-card .p-inputtext,
+  .opportunity-accordion-card .p-inputnumber .p-inputtext,
+  .opportunity-accordion-card .p-select,
+  .opportunity-accordion-card .p-datepicker input {
+    background: rgba(248, 250, 252, 0.72) !important;
+    color: rgba(51, 65, 85, 0.85) !important;
+  }
+
+  .decision-review-panel textarea,
+  .decision-review-panel .crm-button--primary,
+  .decision-review-panel .crm-button--ghost {
+    pointer-events: auto;
+  }
 }
 
 .opportunity-section-accordion {
@@ -125,6 +475,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.opportunity-accordion-header-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .opportunity-accordion-title {
@@ -177,6 +535,21 @@
   padding: 0.9rem 1rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(248, 250, 252, 0.72));
   border: 0;
+}
+
+:host ::ng-deep .opportunity-section-accordion .p-accordionpanel.p-disabled,
+:host ::ng-deep .opportunity-section-accordion .p-accordionpanel[aria-disabled='true'] {
+  border-color: rgba(239, 68, 68, 0.2);
+  background: rgba(248, 250, 252, 0.62);
+}
+
+:host ::ng-deep .opportunity-section-accordion .p-accordionheader[aria-disabled='true'] .p-accordionheader-link {
+  opacity: 0.82;
+  cursor: not-allowed;
+}
+
+:host ::ng-deep .opportunity-section-accordion .p-accordionheader[aria-disabled='true'] .opportunity-accordion-title i {
+  color: #dc2626;
 }
 
 :host ::ng-deep .opportunity-section-accordion .p-accordioncontent,
@@ -374,6 +747,119 @@
   justify-content: flex-end;
 }
 
+.decision-review-actions {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.decision-action-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) auto;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 0.85rem;
+  justify-content: end;
+  justify-items: end;
+
+  .crm-button--primary {
+    padding: 0.42rem 0.78rem;
+    min-height: 34px;
+    font-size: 0.84rem;
+    line-height: 1;
+    min-width: 128px;
+    width: fit-content !important;
+    justify-self: start;
+    align-self: center;
+  }
+}
+
+.decision-summary {
+  padding: 0.75rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.78);
+  margin-bottom: 0.75rem;
+}
+
+.decision-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+}
+
+.decision-summary-item {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.decision-summary-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(71, 85, 105, 0.78);
+}
+
+.decision-summary-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(30, 41, 59, 0.92);
+}
+
+.approval-history-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.approval-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.approval-history-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.approval-history-item {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.approval-history-item__header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.approval-history-item__details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  color: rgba(71, 85, 105, 0.85);
+  font-size: 0.8rem;
+}
+
+.approval-history-meta {
+  color: rgba(71, 85, 105, 0.85);
+  font-size: 0.8rem;
+}
+
+.approval-history-notes,
+.approval-history-policy {
+  margin: 0;
+  color: rgba(30, 41, 59, 0.88);
+  font-size: 0.88rem;
+}
+
 .review-thread-list {
   display: grid;
   gap: 0.75rem;
@@ -449,6 +935,26 @@
   margin-bottom: 1rem;
 }
 
+.approval-current-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.approval-current-status__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(71, 85, 105, 0.8);
+}
+
 .approval-request-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
@@ -466,7 +972,22 @@
   gap: 0.75rem;
 }
 
+.approval-summary-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .approval-item {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+}
+
+.approval-summary-item {
   display: grid;
   gap: 0.5rem;
   padding: 0.75rem;
@@ -596,6 +1117,12 @@
   color: rgba(71, 85, 105, 0.75);
 }
 
+.section-loading-card {
+  display: grid;
+  place-items: center;
+  min-height: 92px;
+}
+
 .section-subtitle {
   margin: -0.25rem 0 1rem;
   font-size: 0.9rem;
@@ -635,8 +1162,38 @@
 }
 
 @media (max-width: 900px) {
+  .deal-workbench-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .deal-workbench-nav {
+    position: static;
+    top: auto;
+    padding: 0.6rem;
+  }
+
+  .deal-workbench-nav__items {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 0.45rem;
+  }
+
+  .deal-sticky-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .deal-sticky-summary .metric-card--risk,
+  .deal-sticky-summary .metric-card--approval {
+    .opportunity-accordion-badge {
+      font-size: 0.7rem;
+    }
+  }
+
   .opportunity-accordion-header {
     align-items: flex-start;
+  }
+
+  .opportunity-accordion-header-meta {
+    justify-content: flex-start;
   }
 
   .opportunity-accordion-title {
@@ -657,6 +1214,17 @@
 
   .team-row {
     grid-template-columns: 1fr;
+  }
+
+  .approval-history-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .decision-action-row {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+    justify-items: stretch;
   }
 }
 
@@ -685,6 +1253,15 @@
 }
 
 @media (max-width: 768px) {
+  .deal-workbench-nav__items {
+    grid-template-columns: 1fr;
+  }
+
+  .deal-sticky-summary {
+    top: calc(var(--shell-topbar-height, 106px) + var(--shell-topbar-strip-height, 4px) + var(--shell-floating-gap, 6px) + 8px);
+    grid-template-columns: 1fr;
+  }
+
   .opportunity-accordion-header {
     flex-direction: column;
     align-items: flex-start;

@@ -59,7 +59,7 @@ export const routes: Routes = [
           {
             path: '',
             pathMatch: 'full',
-            redirectTo: 'inbox'
+            redirectTo: 'pending-action'
           },
           {
             path: '',
@@ -67,28 +67,28 @@ export const routes: Routes = [
               import('./crm/features/opportunities/pages/decision-inbox-shell.page').then((m) => m.DecisionInboxShellPage),
             children: [
               {
-                path: 'inbox',
-                data: { breadcrumb: 'Inbox' },
+                path: 'pending-action',
+                data: {
+                  breadcrumb: 'Pending Action',
+                  decisionView: 'pending-action'
+                },
                 loadComponent: () =>
                   import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+              },
+              {
+                path: 'inbox',
+                pathMatch: 'full',
+                redirectTo: 'pending-action'
               },
               {
                 path: 'approvals',
-                data: {
-                  breadcrumb: 'Approvals',
-                  decisionView: 'approvals'
-                },
-                loadComponent: () =>
-                  import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+                pathMatch: 'full',
+                redirectTo: 'pending-action'
               },
               {
                 path: 'ai-reviews',
-                data: {
-                  breadcrumb: 'AI Reviews',
-                  decisionView: 'ai-reviews'
-                },
-                loadComponent: () =>
-                  import('./crm/features/opportunities/pages/opportunity-approvals.page').then((m) => m.OpportunityApprovalsPage)
+                pathMatch: 'full',
+                redirectTo: 'pending-action'
               },
               {
                 path: 'policies',
@@ -208,26 +208,26 @@ export const routes: Routes = [
       {
         path: 'opportunities/new',
         canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'New Opportunity', icon: 'pi-plus' },
+        data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'New Deal', icon: 'pi-plus' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
       },
       {
         path: 'opportunities/approvals',
-        redirectTo: 'decisions/approvals',
+        redirectTo: 'decisions/pending-action',
         pathMatch: 'full'
       },
       {
         path: 'opportunities/:id/edit',
         canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Edit Opportunity', icon: 'pi-pencil' },
+        data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Edit Deal', icon: 'pi-pencil' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
       },
       {
         path: 'opportunities',
         canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Opportunities', icon: 'pi-chart-line' },
+        data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Deals', icon: 'pi-chart-line' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
       },
@@ -358,7 +358,7 @@ export const routes: Routes = [
           {
             path: 'opportunity-automation',
             canActivate: [roleGuard],
-            data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Opportunity Automation' },
+            data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Deal Automation' },
             loadComponent: () =>
               import('./crm/features/settings/pages/opportunity-automation.page').then((m) => m.OpportunityAutomationPage)
           },

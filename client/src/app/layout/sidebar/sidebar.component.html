@@ -69,6 +69,7 @@
                 <div class="nav__text">
                   <span class="nav__label">{{ child.label }}</span>
                 </div>
+                <span *ngIf="child.badge" class="nav__badge">{{ child.badge }}</span>
                 <i
                   *ngIf="child.children?.length"
                   class="pi nav__chevron nav__chevron--child"

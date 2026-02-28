@@ -35,6 +35,7 @@ public class DecisionsController : ControllerBase
         [FromQuery] string? status,
         [FromQuery] string? decisionType,
         [FromQuery] string? search,
+        [FromQuery] Guid? decisionId,
         [FromQuery] int take = 200,
         CancellationToken cancellationToken = default)
     {
@@ -43,6 +44,7 @@ public class DecisionsController : ControllerBase
             status,
             decisionType,
             search,
+            decisionId,
             take,
             cancellationToken);
 
@@ -231,6 +233,39 @@ public class DecisionsController : ControllerBase
                 new DecisionDelegateRequestDto(
                     request.DelegateUserId,
                     string.IsNullOrWhiteSpace(request.DelegateUserName) ? null : request.DelegateUserName.Trim(),
+                    string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
+            return Ok(Map(updated));
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { message = "Decision item not found." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("api/decisions/{id:guid}/escalate")]
+    public async Task<ActionResult<DecisionInboxItem>> Escalate(
+        Guid id,
+        [FromBody] DecisionEscalateRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!CanApprove())
+        {
+            return Forbid();
+        }
+
+        var actor = GetActor();
+        try
+        {
+            var updated = await _decisionInboxService.EscalateAsync(
+                id,
+                new DecisionEscalateRequestDto(
                     string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim(),
                     actor.UserId,
                     actor.UserName),

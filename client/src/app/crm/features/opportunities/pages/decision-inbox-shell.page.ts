@@ -121,10 +121,8 @@ export class DecisionInboxShellPage {
     const canAdmin = tokenHasPermission(payload, PERMISSION_KEYS.administrationView);
 
     const items: DecisionNavItem[] = [
-      { label: 'Inbox', path: '/app/decisions/inbox', icon: 'pi-inbox', visible: true },
-      { label: 'Approvals', path: '/app/decisions/approvals', icon: 'pi-check-circle', visible: true },
-      { label: 'AI Reviews', path: '/app/decisions/ai-reviews', icon: 'pi-sparkles', visible: canApprove },
-      { label: 'Policies & SLA', path: '/app/decisions/policies', icon: 'pi-shield', visible: canAdmin },
+      { label: 'Pending Action', path: '/app/decisions/pending-action', icon: 'pi-inbox', visible: true },
+      { label: 'Policies & SLA', path: '/app/decisions/policies', icon: 'pi-shield', visible: canAdmin || canApprove },
       { label: 'Decision History', path: '/app/decisions/audit', icon: 'pi-history', visible: canApprove || canAdmin }
     ];
 

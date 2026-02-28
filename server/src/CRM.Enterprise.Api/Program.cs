@@ -1,10 +1,12 @@
 using CRM.Enterprise.Security;
 using CRM.Enterprise.Application;
+using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Infrastructure;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Auth;
 using CRM.Enterprise.Api.Middleware;
 using CRM.Enterprise.Api.Hubs;
+using CRM.Enterprise.Api.Realtime;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
@@ -26,6 +28,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddSingleton<ICrmRealtimePublisher, SignalRCrmRealtimePublisher>();
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<CrmDbContext>("db");
 
@@ -125,7 +128,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/api/hubs/presence"))
+                if (!string.IsNullOrWhiteSpace(accessToken) &&
+                    (path.StartsWithSegments("/api/hubs/presence") || path.StartsWithSegments("/api/hubs/crm-events")))
                 {
                     context.Token = accessToken;
                 }
@@ -203,6 +207,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<PresenceHub>("/api/hubs/presence").RequireCors(CorsPolicyName);
+app.MapHub<CrmEventsHub>("/api/hubs/crm-events").RequireCors(CorsPolicyName);
 app.MapGet("/health", () => Results.Ok(new
 {
     Status = "ok",

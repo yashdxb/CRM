@@ -3,6 +3,7 @@
   --shell-topbar-height: 47px;
   --shell-topbar-strip-height: 4px;
   --shell-footer-safe-height: 30px;
+  --shell-floating-gap: 10px;
   display: grid;
   grid-template-columns: 256px 1fr;
   width: 100%;
@@ -38,13 +39,83 @@
 }
 
 .body {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 100dvh;
-  padding-top: calc(var(--shell-topbar-height) + var(--shell-topbar-strip-height));
-  padding-bottom: var(--shell-footer-safe-height);
-  background: linear-gradient(135deg, var(--surface-base) 0%, #f2f6ff 40%, var(--surface-base) 100%);
+  padding-top: calc(var(--shell-topbar-height) + var(--shell-topbar-strip-height) + var(--shell-floating-gap));
+  padding-bottom: calc(var(--shell-footer-safe-height) + var(--shell-floating-gap));
+  // Fallback baseline for CRM pages/forms that do not render an explicit .page-background layer.
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+    linear-gradient(135deg, #e8e4f4 0%, #dde8f8 50%, #e4f0f8 100%);
+  background-size: 60px 60px, 60px 60px, auto;
+  background-position: 0 0, 0 0, 0 0;
+}
+
+.shell-page-background {
+  position: fixed;
+  inset: 0 0 0 var(--shell-sidebar-width);
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(135deg, #e8e4f4 0%, #dde8f8 50%, #e4f0f8 100%);
+  transition: opacity 180ms ease;
+}
+
+.shell-animated-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.7;
+  animation: orb-float 25s ease-in-out infinite;
+
+  &.orb-1 {
+    width: 500px;
+    height: 500px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.95), rgba(118, 75, 162, 0.9));
+    top: -150px;
+    right: -100px;
+    animation-delay: 0s;
+  }
+
+  &.orb-2 {
+    width: 400px;
+    height: 400px;
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.9), rgba(56, 189, 248, 0.85));
+    bottom: 10%;
+    left: -100px;
+    animation-delay: -7s;
+  }
+
+  &.orb-3 {
+    width: 350px;
+    height: 350px;
+    background: linear-gradient(135deg, rgba(244, 114, 182, 0.82), rgba(168, 85, 247, 0.8));
+    bottom: -80px;
+    right: 20%;
+    animation-delay: -14s;
+  }
+}
+
+.shell-grid-pattern {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.5;
+}
+
+// If a page renders its own background layer (e.g., Activity Workspace), suppress the shell fallback
+// so the visuals don't stack.
+@supports selector(.body:has(.content .page-background)) {
+  .body:has(.content .page-background) .shell-page-background {
+    opacity: 0;
+  }
 }
 
 .content {
@@ -53,13 +124,15 @@
   padding: var(--md-space-6) var(--md-space-7) var(--md-space-8);
   backdrop-filter: blur(4px);
   overflow-x: clip;
+  position: relative;
+  z-index: 1;
 }
 
 .app-topbar-activity-strip {
   position: fixed;
-  top: var(--shell-topbar-height);
-  left: var(--shell-sidebar-width);
-  right: 0;
+  top: calc(var(--shell-topbar-height) + var(--shell-floating-gap));
+  left: calc(var(--shell-sidebar-width) + var(--shell-floating-gap));
+  right: var(--shell-floating-gap);
   height: var(--shell-topbar-strip-height);
   z-index: 29;
   pointer-events: none;
@@ -125,9 +198,9 @@
 
 .app-footer {
   position: fixed;
-  left: var(--shell-sidebar-width);
-  right: 0;
-  bottom: 0;
+  left: calc(var(--shell-sidebar-width) + var(--shell-floating-gap));
+  right: var(--shell-floating-gap);
+  bottom: var(--shell-floating-gap);
   z-index: 26;
   display: flex;
   align-items: center;
@@ -135,11 +208,8 @@
   gap: 10px;
   margin: 0;
   padding: 3px 10px;
-  border-radius: 0;
-  border-top: 1px solid rgba(148, 163, 184, 0.10);
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
+  border-radius: 12px;
+  border: 1px solid rgba(186, 220, 255, 0.16);
   color: rgba(226, 232, 240, 0.88);
   font-size: 0.68rem;
   background:
@@ -147,7 +217,7 @@
     linear-gradient(135deg, rgba(15, 23, 42, 0.42), rgba(17, 24, 39, 0.38) 45%, rgba(30, 41, 59, 0.34));
   backdrop-filter: blur(14px) saturate(135%);
   box-shadow:
-    0 -4px 14px rgba(2, 6, 23, 0.08),
+    0 10px 24px rgba(2, 6, 23, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
@@ -214,15 +284,20 @@
 }
 
 @media (max-width: 768px) {
+  .shell {
+    --shell-floating-gap: 6px;
+  }
+
   .app-footer {
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: var(--shell-floating-gap);
+    right: var(--shell-floating-gap);
+    bottom: var(--shell-floating-gap);
     padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
-    border-radius: 0;
+    border-radius: 10px;
+    border: 1px solid rgba(186, 220, 255, 0.14);
   }
 }
 
@@ -238,6 +313,7 @@
     --shell-topbar-height: 106px;
     --shell-topbar-strip-height: 4px;
     --shell-footer-safe-height: 56px;
+    --shell-floating-gap: 6px;
     grid-template-columns: 1fr;
     position: relative;
     width: 100%;
@@ -264,16 +340,32 @@
   .body {
     width: 100%;
     max-width: 100%;
+    padding-top: calc(var(--shell-topbar-height) + var(--shell-topbar-strip-height) + var(--shell-floating-gap));
+    padding-bottom: calc(var(--shell-footer-safe-height) + var(--shell-floating-gap));
+  }
+
+  .shell-page-background {
+    inset: 0;
   }
 
   .content {
     padding: var(--md-space-4);
+  }
+
+  .app-topbar-activity-strip {
+    top: calc(var(--shell-topbar-height) + var(--shell-floating-gap));
+    left: var(--shell-floating-gap);
+    right: var(--shell-floating-gap);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .app-topbar-activity-strip.is-active,
   .app-topbar-activity-strip.is-active::before {
+    animation: none;
+  }
+
+  .shell-animated-orb {
     animation: none;
   }
 }

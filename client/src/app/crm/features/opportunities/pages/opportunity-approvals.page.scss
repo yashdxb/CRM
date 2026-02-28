@@ -245,6 +245,93 @@
   z-index: 1;
 }
 
+.pending-table-panel {
+  margin-top: 1rem;
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.table-wrap {
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:host ::ng-deep .pending-actions-table .p-datatable-thead > tr > th {
+  background: rgba(248, 250, 252, 0.95);
+  color: #1e293b;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+}
+
+:host ::ng-deep .pending-actions-table .p-datatable-tbody > tr > td {
+  font-size: 0.84rem;
+  color: #334155;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  vertical-align: middle;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:host ::ng-deep .pending-actions-table .p-datatable-tbody > tr.pending-row {
+  cursor: pointer;
+}
+
+:host ::ng-deep .pending-actions-table .p-datatable-tbody > tr:hover > td {
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.subject-cell {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.subject-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.subject-subtitle {
+  font-size: 0.75rem;
+  color: rgba(71, 85, 105, 0.8);
+}
+
+.sla-text {
+  color: #334155;
+  font-weight: 600;
+}
+
+.sla-text.overdue {
+  color: #dc2626;
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.action-btn {
+  min-width: 2rem;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-table {
+  text-align: center;
+  color: rgba(71, 85, 105, 0.8);
+  padding: 1rem;
+}
+
 .queue-pane,
 .detail-pane {
   padding: 0.95rem;

@@ -38,16 +38,24 @@ public sealed class OpportunityOnboardingController : ControllerBase
         [FromBody] UpsertOpportunityOnboardingItemRequest request,
         CancellationToken cancellationToken)
     {
-        var created = await _service.CreateAsync(
-            id,
-            new OpportunityOnboardingCreateRequest(
-                request.Type,
-                request.Title,
-                request.Status,
-                request.DueDateUtc,
-                request.Notes),
-            GetActor(),
-            cancellationToken);
+        OpportunityOnboardingItemDto? created;
+        try
+        {
+            created = await _service.CreateAsync(
+                id,
+                new OpportunityOnboardingCreateRequest(
+                    request.Type,
+                    request.Title,
+                    request.Status,
+                    request.DueDateUtc,
+                    request.Notes),
+                GetActor(),
+                cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         if (created is null)
         {
@@ -64,15 +72,23 @@ public sealed class OpportunityOnboardingController : ControllerBase
         [FromBody] UpsertOpportunityOnboardingItemRequest request,
         CancellationToken cancellationToken)
     {
-        var updated = await _service.UpdateAsync(
-            itemId,
-            new OpportunityOnboardingUpdateRequest(
-                request.Title,
-                request.Status,
-                request.DueDateUtc,
-                request.Notes),
-            GetActor(),
-            cancellationToken);
+        OpportunityOnboardingItemDto? updated;
+        try
+        {
+            updated = await _service.UpdateAsync(
+                itemId,
+                new OpportunityOnboardingUpdateRequest(
+                    request.Title,
+                    request.Status,
+                    request.DueDateUtc,
+                    request.Notes),
+                GetActor(),
+                cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         if (updated is null)
         {
@@ -86,7 +102,15 @@ public sealed class OpportunityOnboardingController : ControllerBase
     [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<IActionResult> Delete(Guid itemId, CancellationToken cancellationToken)
     {
-        var deleted = await _service.DeleteAsync(itemId, GetActor(), cancellationToken);
+        bool deleted;
+        try
+        {
+            deleted = await _service.DeleteAsync(itemId, GetActor(), cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
         if (!deleted)
         {
             return NotFound();

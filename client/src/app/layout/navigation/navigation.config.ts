@@ -9,9 +9,7 @@ export const NAV_LINKS: NavLink[] = [
     path: '/app/decisions',
     permission: PERMISSION_KEYS.opportunitiesView,
     children: [
-      { label: 'Inbox', icon: 'pi-inbox', path: '/app/decisions/inbox', permission: PERMISSION_KEYS.opportunitiesView },
-      { label: 'Approvals', icon: 'pi-check-circle', path: '/app/decisions/approvals', permission: PERMISSION_KEYS.opportunitiesView },
-      { label: 'AI Reviews', icon: 'pi-sparkles', path: '/app/decisions/ai-reviews', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'Pending Action', icon: 'pi-inbox', path: '/app/decisions/pending-action', permission: PERMISSION_KEYS.opportunitiesView },
       { label: 'Policies & SLA', icon: 'pi-shield', path: '/app/decisions/policies', permission: PERMISSION_KEYS.opportunitiesView },
       { label: 'Decision History', icon: 'pi-history', path: '/app/decisions/audit', permission: PERMISSION_KEYS.opportunitiesView }
     ]
@@ -39,13 +37,13 @@ export const NAV_LINKS: NavLink[] = [
     ]
   },
   { 
-    label: 'Opportunities', 
+    label: 'Deal', 
     icon: 'pi-chart-line', 
     path: '/app/opportunities', 
     permission: PERMISSION_KEYS.opportunitiesView,
     children: [
-      { label: 'All Opportunities', icon: 'pi-list', path: '/app/opportunities', permission: PERMISSION_KEYS.opportunitiesView },
-      { label: 'Add Opportunity', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage }
+      { label: 'All Deals', icon: 'pi-list', path: '/app/opportunities', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'Add Deal', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage }
     ]
   },
   { 

@@ -23,12 +23,12 @@
       </div>
       
       <h1 class="hero-title">
-        <span class="title-gradient">Opportunity</span>
+        <span class="title-gradient">Deal</span>
         <span class="title-light">Pipeline</span>
       </h1>
       
       <p class="hero-description">
-        Track deals, forecast revenue, and close opportunities with AI-powered insights
+        Track deals, forecast revenue, and close deals with AI-powered insights
       </p>
 
       <div class="hero-stats">
@@ -65,7 +65,7 @@
       <div class="hero-actions">
         <button pButton type="button" class="btn btn-primary btn-glow" [disabled]="!canManage()" (click)="onCreate()">
           <i class="pi pi-plus"></i>
-          <span>New Opportunity</span>
+          <span>New Deal</span>
           <div class="btn-shine"></div>
         </button>
         <button pButton type="button" class="btn btn-secondary" (click)="load()">
@@ -210,7 +210,7 @@
           pInputText
           type="search"
           class="search-input"
-          placeholder="Search opportunities, accounts, deals..."
+          placeholder="Search deals, accounts..."
           [(ngModel)]="searchTerm"
           (ngModelChange)="onSearch($event)"
         />
@@ -277,7 +277,7 @@
     <div class="data-card">
       <header class="data-header">
         <div class="header-title">
-          <h2>Opportunity Records</h2>
+          <h2>Deal Records</h2>
           <span class="record-count">
             {{ opportunities().length }} of {{ total() }} records
           </span>
@@ -289,7 +289,7 @@
           </button>
           <button pButton type="button" class="action-btn action-btn--primary" [disabled]="!canManage()" (click)="onCreate()">
             <i class="pi pi-plus"></i>
-            <span>Add Opportunity</span>
+            <span>Add Deal</span>
           </button>
         </div>
       </header>
@@ -311,7 +311,7 @@
         <div class="empty-icon">
           <i class="pi pi-briefcase"></i>
         </div>
-        <h3>No opportunities found</h3>
+        <h3>No deals found</h3>
         <p>Try adjusting your search or filters to find what you're looking for</p>
         <button pButton type="button" class="btn btn-primary" (click)="onStageChange('all')">
           <i class="pi pi-refresh"></i>
@@ -325,7 +325,7 @@
           <ng-template pTemplate="header">
             <tr>
               <th class="th-opportunity" pSortableColumn="name" pResizableColumn>
-                Opportunity
+                Deal
                 <p-sortIcon field="name"></p-sortIcon>
               </th>
               <th pSortableColumn="account" pResizableColumn>

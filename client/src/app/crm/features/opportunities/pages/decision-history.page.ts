@@ -141,7 +141,7 @@ export class DecisionHistoryPage {
   }
 
   protected openInInbox(row: DecisionHistoryItem): void {
-    this.router.navigate(['/app/decisions/inbox'], { queryParams: { selected: row.decisionId } });
+    this.router.navigate(['/app/decisions/pending-action'], { queryParams: { selected: row.decisionId } });
   }
 
   protected actionSeverity(action: string): 'success' | 'danger' | 'warn' | 'info' {
@@ -160,4 +160,3 @@ export class DecisionHistoryPage {
     return 'info';
   }
 }
-

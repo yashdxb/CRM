@@ -92,6 +92,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Global styles are authoritative: `client/src/styles` and `client/src/app/shared`.
 - **Style change control (mandatory):** Do not change, alter, or refactor visual styles unless the user explicitly requests a style/UI change in that task.
 - Pages must use the animated orb background and shared layout containers.
+- **CRM page/form background baseline (mandatory):** Use the shared Activity Workspace aurora background as the default CRM background system. For pages with explicit background layers, use `.page-background` + `.animated-orb` + `.grid-pattern` from `client/src/styles/_components.scss`; for pages/forms without explicit background markup, rely on the shell-level fallback background in `client/src/app/layout/shell.component.scss`. Do not create page-local background variants unless explicitly requested.
 - Premium glass/gradient styling is required; do not create one-off themes.
 - Button styles must use the global CRM button classes.
 - List pages and form pages follow the Component Style Guide templates.
@@ -152,6 +153,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
   <div class="animated-orb orb-1"></div>
   <div class="animated-orb orb-2"></div>
   <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
 </div>
 
 <div class="page-container">
@@ -194,7 +196,10 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 ## 10) Operational Notes (Current Reality)
 - CORS is controlled in `CRM.Enterprise.Api/Program.cs` and App Service CORS settings.
 - Production frontend must target the production API host (do not point to dev API in prod builds).
-- SignalR hub is mapped to `/api/hubs/presence` and uses the same CORS policy.
+- SignalR hubs are mapped to:
+  - `/api/hubs/presence` (online/offline user presence)
+  - `/api/hubs/crm-events` (tenant/user-targeted CRM realtime events: decision, notifications, stage changes, renewals, email delivery)
+  Both use the same CORS policy and JWT query-token handling for websocket connections.
 - **Deployment gate:** before any deploy, verify both client and API builds succeed.
 - **Deployment method:** push to `master` triggers GitHub Actions for both client and API.
   - Client workflow: `.github/workflows/azure-static-web-apps-jolly-dune-0d9d1fe0f.yml`

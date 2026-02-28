@@ -2,7 +2,10 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { readTokenContext, tokenHasPermission } from '../../core/auth/token.utils';
+import { PERMISSION_KEYS } from '../../core/auth/permission.constants';
 import { TenantContext, TenantContextService } from '../../core/tenant/tenant-context.service';
+import { CrmEventsService } from '../../core/realtime/crm-events.service';
+import { OpportunityApprovalService } from '../../crm/features/opportunities/services/opportunity-approval.service';
 import { NavLink } from './navigation.model';
 import { NAV_LINKS, SUPPLY_CHAIN_MODULES } from './navigation.config';
 
@@ -13,6 +16,8 @@ export class NavigationService {
   
   private readonly router = inject(Router);
   private readonly tenantContextService = inject(TenantContextService);
+  private readonly crmEventsService = inject(CrmEventsService);
+  private readonly approvalService = inject(OpportunityApprovalService);
 
   // Sidebar collapsed state
   private readonly _collapsed = signal(this.loadCollapsedState());
@@ -35,9 +40,10 @@ export class NavigationService {
   private readonly expandedChildMenus = signal<Set<string>>(new Set());
   private seededChildMenus = false;
   private readonly navVersion = signal(0);
+  private readonly decisionPendingCount = signal(0);
 
   // Navigation links
-  readonly navLinks: NavLink[] = NAV_LINKS;
+  readonly navLinks = computed(() => this.applyDynamicBadges(NAV_LINKS, this.decisionPendingCount()));
 
   readonly visibleNavLinks = computed(() => {
     this.navVersion();
@@ -69,7 +75,7 @@ export class NavigationService {
         return acc;
       }, []) ?? [];
 
-    return this.navLinks.reduce<NavLink[]>((acc, link) => {
+    return this.navLinks().reduce<NavLink[]>((acc, link) => {
       const children = filterChildren(link.children);
       if ((!hasPermission(link) || !hasPackAccess(link)) && children.length === 0) return acc;
       acc.push({ ...link, children });
@@ -86,6 +92,22 @@ export class NavigationService {
     this.autoExpandActiveMenu();
     this.seedSupplyChainChildren();
     this.loadTenantContext();
+    this.refreshDecisionPendingCount();
+    this.crmEventsService.events$
+      .pipe(filter((event) => event.eventType.startsWith('decision.')))
+      .subscribe((event) => {
+        const payloadCount = Number(event.payload?.['pendingCount']);
+        if (Number.isFinite(payloadCount) && payloadCount >= 0) {
+          this.decisionPendingCount.set(payloadCount);
+          return;
+        }
+
+        if (event.eventType === 'decision.pending-count') {
+          return;
+        }
+
+        this.refreshDecisionPendingCount();
+      });
   }
 
   private loadTenantContext() {
@@ -197,7 +219,7 @@ export class NavigationService {
 
   private seedSupplyChainChildren() {
     if (this.seededChildMenus) return;
-    const supplyChain = this.navLinks.find((link) => link.label === 'Supply Chain');
+    const supplyChain = this.navLinks().find((link) => link.label === 'Supply Chain');
     if (!supplyChain?.children?.length) return;
     const next = new Set<string>();
     const firstExpandable = supplyChain.children.find((child) => child.children?.length);
@@ -213,7 +235,7 @@ export class NavigationService {
   private autoExpandActiveMenu() {
     const currentUrl = this.router.url.split('?')[0];
 
-    for (const link of this.navLinks) {
+    for (const link of this.navLinks()) {
       if (link.children?.length) {
         const isChildActive = link.children.some((child) =>
           currentUrl === child.path || currentUrl.startsWith(child.path + '/')
@@ -238,5 +260,42 @@ export class NavigationService {
         });
       }
     }
+  }
+
+  private refreshDecisionPendingCount() {
+    const context = readTokenContext();
+    const payload = context?.payload ?? null;
+    const canViewDecisions =
+      tokenHasPermission(payload, PERMISSION_KEYS.opportunitiesView) ||
+      tokenHasPermission(payload, PERMISSION_KEYS.opportunitiesApprovalsApprove);
+    if (!canViewDecisions) {
+      this.decisionPendingCount.set(0);
+      return;
+    }
+
+    this.approvalService.getInbox('Pending').subscribe({
+      next: (items) => this.decisionPendingCount.set((items ?? []).filter((item) => item.status === 'Pending').length),
+      error: () => this.decisionPendingCount.set(0)
+    });
+  }
+
+  private applyDynamicBadges(links: NavLink[], decisionPendingCount: number): NavLink[] {
+    return links.map((link) => {
+      const children = link.children
+        ? this.applyDynamicBadges(link.children, decisionPendingCount)
+        : undefined;
+
+      const isDecisionParent = link.path === '/app/decisions';
+      const isPendingAction = link.path === '/app/decisions/pending-action';
+      const badge = (isDecisionParent || isPendingAction) && decisionPendingCount > 0
+        ? String(decisionPendingCount)
+        : link.badge;
+
+      return {
+        ...link,
+        badge,
+        children
+      };
+    });
   }
 }

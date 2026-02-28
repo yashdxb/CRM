@@ -1,7 +1,13 @@
 # CRM Enterprise – Competitive Analysis vs. Top 10 CRM Leaders
 
 **Date**: February 26, 2026  
+**Last Updated**: February 27, 2026 (SignalR opportunities refresh + implementation status)  
 **Methodology**: Feature-by-feature audit of our codebase (75 entities, 41 pages, 36 API controllers, 44 services) compared against publicly documented capabilities of the top 10 CRM platforms by market share (Gartner Magic Quadrant 2025, G2 Grid 2025, IDC MarketScape 2025).
+
+> **Doc Role**
+> - **Source of truth**: No (reference / benchmark analysis)
+> - **Canonical roadmap execution tracking**: `docs/USER_STORIES.md` (Epic 10 + Competitive Audit Roadmap Sync)
+> - **Use this doc for**: competitive benchmark evidence, gap framing, and roadmap rationale
 
 ---
 
@@ -225,6 +231,23 @@
 - Presence: `PresenceHub` (SignalR), `PresenceTracker`, Azure SignalR Service support
 
 **Our Score: 5/9 — Strong infrastructure but missing email tracking, VoIP, live chat, social media.**
+
+### SignalR Integration Opportunities (Refreshed)
+
+The previous SignalR opportunity notes are now superseded by this refreshed priority matrix (source date: February 26, 2026 report, applied on February 27, 2026).
+
+| Priority | Module | Effort | Impact | How | Current implementation status |
+|---|---|---|---|---|---|
+| 1st | NotificationAlertWorker | Low | High | Worker writes to DB; push `hubContext.SendAsync()` after alert write/send | `Implemented` (`notification.alert` realtime event) |
+| 2nd | Decision Inbox | Low | High | Broadcast on approval request creation for live badges/counts | `Implemented` (`decision.created`/`decision.updated`) |
+| 3rd | AI Assistant Streaming | Medium | High | Switch to `IAsyncEnumerable` + SignalR stream token-by-token | `Planned (Now backlog)` |
+| 4th | Dashboard Live Metrics | Medium | Medium | Entity change detection + broadcast deltas | `Implemented (initial)` (`dashboard.metrics.delta` on stage changes) |
+| 5th | Pipeline Kanban | Medium | Medium | Broadcast opportunity stage changes for live card moves | `Implemented` (`opportunity.stage.changed`) |
+| 6th | DecisionSlaEscalationWorker | Low | Medium | Push escalation alerts directly to approver browser | `Implemented` (`decision.sla.escalated`) |
+| 7th | RenewalAutomationWorker | Low | Medium | Push renewal-created updates to owners/tenant feed | `Implemented (tenant-level summary)` (`renewal.automation.completed`) |
+| 8th | EmailQueueWorker | Low | Low | Push delivery status (`Sent`/`Failed`) back to sender | `Implemented` (`email.delivery.status`, sender-targeted when request context exists) |
+| 9th | Review Threads | Medium | Medium | Live comments as realtime chat on deals | `Planned (Now backlog)` |
+| 10th | Presence Indicators | Medium | Medium | Connection tracking showing who is viewing a record | `Partial` (online presence exists; record-view presence pending) |
 
 ---
 

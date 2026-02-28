@@ -2,6 +2,7 @@ using System;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
@@ -27,11 +28,16 @@ public sealed class NotificationAlertWorker : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<NotificationAlertWorker> _logger;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
 
-    public NotificationAlertWorker(IServiceScopeFactory scopeFactory, ILogger<NotificationAlertWorker> logger)
+    public NotificationAlertWorker(
+        IServiceScopeFactory scopeFactory,
+        ILogger<NotificationAlertWorker> logger,
+        ICrmRealtimePublisher realtimePublisher)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _realtimePublisher = realtimePublisher;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -63,9 +69,9 @@ public sealed class NotificationAlertWorker : BackgroundService
         foreach (var tenant in tenants)
         {
             tenantProvider.SetTenant(tenant.Id, tenant.Key);
-            await ProcessLeadSlaAlertsAsync(dbContext, emailSender, auditEvents, cancellationToken);
-            await ProcessIdleDealAlertsAsync(dbContext, emailSender, auditEvents, cancellationToken);
-            await ProcessCoachingEscalationsAsync(dbContext, emailSender, auditEvents, cancellationToken);
+            await ProcessLeadSlaAlertsAsync(dbContext, emailSender, auditEvents, tenant.Id, cancellationToken);
+            await ProcessIdleDealAlertsAsync(dbContext, emailSender, auditEvents, tenant.Id, cancellationToken);
+            await ProcessCoachingEscalationsAsync(dbContext, emailSender, auditEvents, tenant.Id, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             dbContext.ChangeTracker.Clear();
         }
@@ -75,6 +81,7 @@ public sealed class NotificationAlertWorker : BackgroundService
         CrmDbContext dbContext,
         IEmailSender emailSender,
         IAuditEventService auditEvents,
+        Guid tenantId,
         CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
@@ -112,6 +119,13 @@ public sealed class NotificationAlertWorker : BackgroundService
                     var subject = $"Lead SLA breach: {lead.FirstName} {lead.LastName}";
                     var body = BuildLeadSlaBody(lead, owner.FullName);
                     await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                    await PublishNotificationAlertAsync(
+                        tenantId,
+                        owner.Id,
+                        "lead-sla",
+                        lead.Id,
+                        subject,
+                        cancellationToken);
                 }
             }
 
@@ -126,6 +140,13 @@ public sealed class NotificationAlertWorker : BackgroundService
                 var subject = $"SLA breach (Lead): {lead.FirstName} {lead.LastName}";
                 var body = BuildLeadManagerBody(lead, manager.FullName);
                 await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
+                await PublishNotificationAlertAsync(
+                    tenantId,
+                    manager.Id,
+                    "lead-sla",
+                    lead.Id,
+                    subject,
+                    cancellationToken);
             }
 
             await auditEvents.TrackAsync(
@@ -138,6 +159,7 @@ public sealed class NotificationAlertWorker : BackgroundService
         CrmDbContext dbContext,
         IEmailSender emailSender,
         IAuditEventService auditEvents,
+        Guid tenantId,
         CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
@@ -234,6 +256,13 @@ public sealed class NotificationAlertWorker : BackgroundService
                     var subject = $"Idle deal alert: {opportunity.Name}";
                     var body = BuildIdleDealBody(opportunity, lastActivityAtUtc, owner.FullName, reason);
                     await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                    await PublishNotificationAlertAsync(
+                        tenantId,
+                        owner.Id,
+                        "idle-deal",
+                        opportunity.Id,
+                        subject,
+                        cancellationToken);
                     sentAny = true;
                 }
             }
@@ -254,6 +283,13 @@ public sealed class NotificationAlertWorker : BackgroundService
                 var subject = $"Idle deal alert: {opportunity.Name}";
                 var body = BuildIdleDealManagerBody(opportunity, lastActivityAtUtc, manager.FullName, reason);
                 await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
+                await PublishNotificationAlertAsync(
+                    tenantId,
+                    manager.Id,
+                    "idle-deal",
+                    opportunity.Id,
+                    subject,
+                    cancellationToken);
                 sentAny = true;
             }
 
@@ -270,6 +306,7 @@ public sealed class NotificationAlertWorker : BackgroundService
         CrmDbContext dbContext,
         IEmailSender emailSender,
         IAuditEventService auditEvents,
+        Guid tenantId,
         CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
@@ -341,6 +378,13 @@ public sealed class NotificationAlertWorker : BackgroundService
                 }
 
                 await SendAlertAsync(emailSender, manager.Manager.Email, subject, body, cancellationToken);
+                await PublishNotificationAlertAsync(
+                    tenantId,
+                    manager.Manager.Id,
+                    "coaching-escalation",
+                    task.Id,
+                    subject,
+                    cancellationToken);
                 sentAny = true;
             }
 
@@ -411,6 +455,29 @@ public sealed class NotificationAlertWorker : BackgroundService
         }
 
         await emailSender.SendAsync(toEmail, subject, htmlBody, htmlBody, cancellationToken);
+    }
+
+    private async Task PublishNotificationAlertAsync(
+        Guid tenantId,
+        Guid userId,
+        string category,
+        Guid entityId,
+        string title,
+        CancellationToken cancellationToken)
+    {
+        var payload = new
+        {
+            category,
+            entityId,
+            title
+        };
+
+        await _realtimePublisher.PublishUserEventAsync(
+            tenantId,
+            userId,
+            "notification.alert",
+            payload,
+            cancellationToken);
     }
 
     private sealed record EmailAlertSettings(

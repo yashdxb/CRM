@@ -1,5 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -9,7 +9,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { AccordionModule } from 'primeng/accordion';
-import { map, of, switchMap } from 'rxjs';
+import { Subject, map, of, switchMap, takeUntil } from 'rxjs';
 
 import { OpportunityDataService, OpportunityReviewOutcomeRequest, SaveOpportunityRequest } from '../services/opportunity-data.service';
 import { OpportunityApprovalService } from '../services/opportunity-approval.service';
@@ -20,18 +20,20 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import {
   Opportunity,
   OpportunityApprovalItem,
+  DecisionHistoryItem,
   OpportunityReviewChecklistItem,
   OpportunityReviewThreadItem,
   OpportunityOnboardingItem,
   OpportunityTeamMember
 } from '../models/opportunity.model';
 import { AppToastService } from '../../../../core/app-toast.service';
-import { readTokenContext, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
+import { readTokenContext, readUserId, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { UserListItem } from '../../settings/models/user-admin.model';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
+import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 
 interface Option<T = string> {
   label: string;
@@ -43,6 +45,43 @@ interface ApprovalRequirementBadge {
   detail?: string | null;
   tone: 'neutral' | 'info' | 'warning' | 'success' | 'danger';
 }
+
+interface DealSectionNavItem {
+  key: DealPanelKey;
+  label: string;
+  icon: string;
+}
+
+interface DealSectionNavGroup {
+  key: 'core' | 'execution' | 'governance' | 'delivery' | 'audit';
+  label: string;
+  items: DealSectionNavItem[];
+}
+
+type DealPanelKey =
+  | 'opportunity-details'
+  | 'deal-settings'
+  | 'pricing-discounts'
+  | 'quote-proposal'
+  | 'pre-sales-team'
+  | 'approval-workflow'
+  | 'security-legal'
+  | 'delivery-handoff'
+  | 'onboarding'
+  | 'review-thread';
+
+const DEAL_PANEL_ORDER: DealPanelKey[] = [
+  'opportunity-details',
+  'deal-settings',
+  'pricing-discounts',
+  'quote-proposal',
+  'pre-sales-team',
+  'approval-workflow',
+  'security-legal',
+  'delivery-handoff',
+  'onboarding',
+  'review-thread'
+];
 
 @Component({
   selector: 'app-opportunity-form-page',
@@ -63,21 +102,23 @@ interface ApprovalRequirementBadge {
   templateUrl: "./opportunity-form.page.html",
   styleUrls: ['./opportunity-form.page.scss']
 })
-export class OpportunityFormPage implements OnInit {
+export class OpportunityFormPage implements OnInit, OnDestroy {
   private static readonly DISCOUNT_PERCENT_APPROVAL_THRESHOLD = 10;
   private static readonly DISCOUNT_AMOUNT_APPROVAL_THRESHOLD = 1000;
   protected readonly accordionPanels = signal<string[]>([
     'opportunity-details',
+    'deal-settings'
+  ]);
+  protected readonly loadedSectionKeys = signal<Set<DealPanelKey>>(new Set<DealPanelKey>([
+    'opportunity-details',
     'deal-settings',
     'pricing-discounts',
     'quote-proposal',
-    'pre-sales-team',
-    'approval-workflow',
-    'security-legal',
-    'delivery-handoff',
-    'onboarding',
-    'review-thread'
-  ]);
+    'delivery-handoff'
+  ]));
+  protected readonly loadingSectionKeys = signal<Set<DealPanelKey>>(new Set<DealPanelKey>());
+  private readonly lockWarningShown = signal<string | null>(null);
+  protected readonly activeSectionNav = signal<DealPanelKey>('opportunity-details');
 
   protected readonly stageOptions: Option[] = [
     { label: 'Prospecting', value: 'Prospecting' },
@@ -146,7 +187,12 @@ export class OpportunityFormPage implements OnInit {
   });
   protected readonly isManager = computed(() => {
     const payload = readTokenContext()?.payload ?? null;
-    return tokenHasRole(payload, 'Sales Manager') || tokenHasRole(payload, 'System Administrator');
+    return (
+      tokenHasRole(payload, 'Sales Manager') ||
+      tokenHasRole(payload, 'System Administrator') ||
+      tokenHasRole(payload, 'Admin') ||
+      tokenHasRole(payload, 'Super Admin')
+    );
   });
   protected readonly hasPendingAcknowledgment = computed(() =>
     this.reviewThread().some((item) => item.kind === 'Acknowledgment' && !item.completedDateUtc)
@@ -170,6 +216,18 @@ export class OpportunityFormPage implements OnInit {
     currency: ''
   };
   protected approvalRequesting = signal(false);
+  protected readonly decisionReviewMode = signal(false);
+  protected readonly activeDecisionId = signal<string | null>(null);
+  protected readonly decisionHistory = signal<DecisionHistoryItem[]>([]);
+  protected readonly decisionActionSubmitting = signal(false);
+  protected decisionReviewComment = '';
+  protected decisionAction = '';
+  protected readonly decisionActionOptions: Option[] = [
+    { label: 'Approve', value: 'approve' },
+    { label: 'Reject', value: 'reject' },
+    { label: 'Review', value: 'review' },
+    { label: 'Escalate', value: 'escalate' }
+  ];
   protected approvalDecisionNotes: Record<string, string> = {};
   protected approvalDecidingIds = new Set<string>();
   private approvalAmountLocked = false;
@@ -223,28 +281,45 @@ export class OpportunityFormPage implements OnInit {
   private readonly userAdminData = inject(UserAdminDataService);
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly referenceData = inject(ReferenceDataService);
+  private readonly crmEvents = inject(CrmEventsService);
   protected readonly router = inject(Router);
   protected readonly customerData = inject(CustomerDataService);
   private readonly toastService = inject(AppToastService);
   private readonly route = inject(ActivatedRoute);
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly currentUserId = readUserId();
   private currencyFallback = '';
+  private readonly destroy$ = new Subject<void>();
 
   ngOnInit() {
     this.loadCurrencyContext();
     this.loadAccounts();
     this.reviewAckDueLocal = this.defaultReviewDueLocal();
+
+    this.route.queryParamMap.subscribe((params) => {
+      const isDecisionReview = params.get('reviewMode') === 'decision';
+      const decisionId = params.get('decisionId');
+      const isActiveReview = isDecisionReview && !!decisionId;
+      this.decisionReviewMode.set(isActiveReview);
+      this.activeDecisionId.set(isActiveReview ? decisionId : null);
+      this.decisionReviewComment = '';
+      if (isActiveReview && decisionId) {
+        this.loadDecisionHistory(decisionId);
+        this.ensureSectionDataLoaded('approval-workflow');
+      } else {
+        this.decisionHistory.set([]);
+      }
+    });
+
     this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
       this.editingId = id;
       this.isEditMode.set(!!id);
       if (id) {
         this.loadOpportunity(id);
-        this.loadChecklists(id);
-        this.loadApprovals(id);
-        this.loadReviewThread(id);
-        this.loadOnboarding(id);
-        this.loadTeamMembers(id);
+        this.ensureSectionDataLoaded('approval-workflow');
+        this.loadSectionsForOpenPanels();
       } else {
         this.form = this.createEmptyForm();
         this.selectedStage = this.form.stageName ?? 'Prospecting';
@@ -254,9 +329,356 @@ export class OpportunityFormPage implements OnInit {
         this.onboardingMilestones = [];
         this.approvals = [];
         this.reviewThread.set([]);
+        this.loadedSectionKeys.set(new Set<DealPanelKey>([
+          'opportunity-details',
+          'deal-settings',
+          'pricing-discounts',
+          'quote-proposal',
+          'delivery-handoff'
+        ]));
+        this.loadingSectionKeys.set(new Set<DealPanelKey>());
       }
     });
     this.loadTeamMemberOptions();
+    this.crmEvents.connect();
+    this.crmEvents.events$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((event) => this.handleRealtimeEvent(event));
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  protected onAccordionPanelsChange(value: string[] | string | number[] | number | null | undefined) {
+    const next = Array.isArray(value)
+      ? value.map((item) => String(item))
+      : (value != null ? [String(value)] : []);
+    const normalized = this.normalizePanels(next);
+    this.accordionPanels.set(normalized);
+    const active = normalized.find((panel) => DEAL_PANEL_ORDER.includes(panel as DealPanelKey)) as DealPanelKey | undefined;
+    if (active) {
+      this.activeSectionNav.set(active);
+    }
+    const rejected = next.find((panel) => !normalized.includes(panel));
+    if (rejected) {
+      const reason = this.sectionLockReason(rejected as DealPanelKey) ?? 'Section is locked by workflow policy.';
+      if (this.lockWarningShown() !== rejected) {
+        this.toastService.show('error', reason, 2800);
+        this.lockWarningShown.set(rejected);
+      }
+    } else {
+      this.lockWarningShown.set(null);
+    }
+    this.loadSectionsForOpenPanels();
+  }
+
+  protected isSectionLoaded(section: DealPanelKey): boolean {
+    return this.loadedSectionKeys().has(section);
+  }
+
+  protected isSectionLoading(section: DealPanelKey): boolean {
+    return this.loadingSectionKeys().has(section);
+  }
+
+  protected isSectionLocked(section: DealPanelKey): boolean {
+    return !!this.sectionLockReason(section);
+  }
+
+  protected sectionLockReason(section: DealPanelKey): string | null {
+    const stage = this.selectedStage || this.form.stageName || 'Prospecting';
+    const stageRank = this.stageRank(stage);
+    const detailsReady = Boolean(this.form.name?.trim()) && Boolean(this.form.accountId);
+
+    if (section === 'opportunity-details' || section === 'deal-settings' || section === 'pricing-discounts') {
+      return null;
+    }
+
+    if (section === 'quote-proposal') {
+      if (!detailsReady) return 'Complete deal basics first (name and account).';
+      if (stageRank < this.stageRank('Proposal')) return 'Move to Proposal stage to unlock Quote / Proposal.';
+      return null;
+    }
+
+    if (section === 'pre-sales-team') {
+      if (!this.isEditMode()) return 'Save deal first to assign pre-sales team.';
+      if (stageRank < this.stageRank('Proposal')) return 'Move to Proposal stage to unlock Pre-Sales Team.';
+      return null;
+    }
+
+    if (section === 'approval-workflow') {
+      if (!this.isEditMode()) return 'Save deal first to request approvals.';
+      if (!this.shouldShowApprovalWorkflowSection() && !this.approvals.length) {
+        return 'Approval workflow appears only when approval is required.';
+      }
+      return null;
+    }
+
+    if (section === 'security-legal') {
+      if (!this.isEditMode()) return 'Save deal first to manage Security & Legal checklists.';
+      if (stageRank < this.stageRank('Security / Legal Review')) {
+        return 'Move to Security / Legal Review stage to unlock this section.';
+      }
+      return null;
+    }
+
+    if (section === 'delivery-handoff') {
+      if (!this.isEditMode()) return 'Save deal first to plan delivery handoff.';
+      if (stageRank < this.stageRank('Commit')) return 'Move to Commit stage to unlock Delivery & Handoff.';
+      return null;
+    }
+
+    if (section === 'onboarding') {
+      if (!this.isEditMode()) return 'Save deal first to manage onboarding.';
+      if (!this.form.isWon && stage !== 'Closed Won') return 'Onboarding unlocks after Closed Won.';
+      return null;
+    }
+
+    if (section === 'review-thread') {
+      if (!this.isEditMode()) return 'Save deal first to use review thread.';
+      if (stageRank < this.stageRank('Qualification')) return 'Move to Qualification stage to unlock review thread.';
+      return null;
+    }
+
+    return null;
+  }
+
+  protected sectionStatus(section: DealPanelKey): 'locked' | 'ready' | 'in-progress' | 'complete' {
+    if (this.isSectionLocked(section)) return 'locked';
+
+    if (section === 'opportunity-details') {
+      return this.form.name?.trim() && this.form.accountId ? 'complete' : 'in-progress';
+    }
+    if (section === 'deal-settings') {
+      return this.form.amount && this.form.amount > 0 ? 'complete' : 'in-progress';
+    }
+    if (section === 'pricing-discounts') {
+      return (this.form.discountAmount || this.form.discountPercent) ? 'in-progress' : 'ready';
+    }
+    if (section === 'quote-proposal') {
+      return this.form.proposalStatus && this.form.proposalStatus !== 'Not Started' ? 'in-progress' : 'ready';
+    }
+    if (section === 'pre-sales-team') {
+      return this.teamMembers.length ? 'in-progress' : 'ready';
+    }
+    if (section === 'approval-workflow') {
+      if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'pending')) return 'in-progress';
+      if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'approved')) return 'complete';
+      return 'ready';
+    }
+    if (section === 'security-legal') {
+      const any = this.securityChecklist.length + this.legalChecklist.length + this.technicalChecklist.length;
+      return any > 0 ? 'in-progress' : 'ready';
+    }
+    if (section === 'delivery-handoff') {
+      return this.form.deliveryOwnerId && this.form.deliveryHandoffScope?.trim() ? 'in-progress' : 'ready';
+    }
+    if (section === 'onboarding') {
+      const any = this.onboardingChecklist.length + this.onboardingMilestones.length;
+      return any > 0 ? 'in-progress' : 'ready';
+    }
+    if (section === 'review-thread') {
+      return this.reviewThread().length ? 'in-progress' : 'ready';
+    }
+    return 'ready';
+  }
+
+  protected dealSectionNavGroups(): DealSectionNavGroup[] {
+    const groups: DealSectionNavGroup[] = [
+      {
+        key: 'core',
+        label: 'Core',
+        items: [
+          { key: 'opportunity-details', label: 'Deal Details', icon: 'pi pi-briefcase' },
+          { key: 'deal-settings', label: 'Deal Settings', icon: 'pi pi-chart-line' },
+          { key: 'pricing-discounts', label: 'Pricing & Discounts', icon: 'pi pi-percentage' }
+        ]
+      },
+      {
+        key: 'execution',
+        label: 'Sales Execution',
+        items: [
+          { key: 'quote-proposal', label: 'Quote / Proposal', icon: 'pi pi-file-edit' },
+          { key: 'pre-sales-team', label: 'Pre-Sales Team', icon: 'pi pi-users' }
+        ]
+      },
+      {
+        key: 'governance',
+        label: 'Governance',
+        items: [
+          { key: 'approval-workflow', label: 'Approval Workflow', icon: 'pi pi-check-circle' },
+          { key: 'security-legal', label: 'Security & Legal', icon: 'pi pi-shield' }
+        ]
+      },
+      {
+        key: 'delivery',
+        label: 'Delivery',
+        items: [
+          { key: 'delivery-handoff', label: 'Delivery & Handoff', icon: 'pi pi-briefcase' },
+          { key: 'onboarding', label: 'Onboarding', icon: 'pi pi-list-check' }
+        ]
+      },
+      {
+        key: 'audit',
+        label: 'Audit',
+        items: [{ key: 'review-thread', label: 'Review / History', icon: 'pi pi-comments' }]
+      }
+    ];
+
+    return groups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => this.isSectionVisible(item.key))
+      }))
+      .filter((group) => group.items.length > 0);
+  }
+
+  protected sectionStatusLabel(section: DealPanelKey): string {
+    if (section === 'pricing-discounts') {
+      const discountPercent = Number(this.form.discountPercent ?? 0);
+      const discountAmount = Number(this.form.discountAmount ?? 0);
+      const needsDiscountApproval =
+        discountPercent >= OpportunityFormPage.DISCOUNT_PERCENT_APPROVAL_THRESHOLD ||
+        discountAmount >= OpportunityFormPage.DISCOUNT_AMOUNT_APPROVAL_THRESHOLD;
+
+      if (this.hasFinalApprovalByPurpose('discount', 'rejected')) return 'Action Required';
+      if (this.hasFinalApprovalByPurpose('discount', 'approved')) return 'Approved';
+      if (this.hasPendingApprovalByPurpose('discount')) return 'Submitted';
+      if (needsDiscountApproval) return 'Needs Approval';
+      if (discountPercent > 0 || discountAmount > 0) return 'Configured';
+    }
+    if (section === 'approval-workflow') {
+      if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'pending')) return 'Approval Pending';
+      if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'approved')) return 'Approved';
+      if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'rejected')) return 'Rejected';
+      if (this.approvals.length > 0) return 'Submitted';
+    }
+    const status = this.sectionStatus(section);
+    if (status === 'locked') return 'Locked';
+    if (status === 'complete') return 'Complete';
+    if (status === 'in-progress') return 'In Progress';
+    return 'Ready';
+  }
+
+  protected sectionStatusTone(section: DealPanelKey): 'neutral' | 'info' | 'warning' | 'success' | 'danger' {
+    if (section === 'pricing-discounts') {
+      const discountPercent = Number(this.form.discountPercent ?? 0);
+      const discountAmount = Number(this.form.discountAmount ?? 0);
+      const needsDiscountApproval =
+        discountPercent >= OpportunityFormPage.DISCOUNT_PERCENT_APPROVAL_THRESHOLD ||
+        discountAmount >= OpportunityFormPage.DISCOUNT_AMOUNT_APPROVAL_THRESHOLD;
+
+      if (this.hasFinalApprovalByPurpose('discount', 'rejected')) return 'danger';
+      if (this.hasFinalApprovalByPurpose('discount', 'approved')) return 'success';
+      if (this.hasPendingApprovalByPurpose('discount')) return 'info';
+      if (needsDiscountApproval) return 'warning';
+      if (discountPercent > 0 || discountAmount > 0) return 'info';
+    }
+    if (section === 'approval-workflow') {
+      if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'pending')) return 'warning';
+      if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'approved')) return 'success';
+      if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'rejected')) return 'danger';
+      if (this.approvals.length > 0) return 'info';
+    }
+    const status = this.sectionStatus(section);
+    if (status === 'locked') return 'danger';
+    if (status === 'complete') return 'success';
+    if (status === 'in-progress') return 'info';
+    return 'neutral';
+  }
+
+  protected isSectionVisible(section: DealPanelKey): boolean {
+    const stage = this.selectedStage || this.form.stageName || 'Prospecting';
+    const rank = this.stageRank(stage);
+    const proposalRank = this.stageRank('Proposal');
+    const securityRank = this.stageRank('Security / Legal Review');
+    const commitRank = this.stageRank('Commit');
+    const qualificationRank = this.stageRank('Qualification');
+
+    if (section === 'opportunity-details' || section === 'deal-settings' || section === 'pricing-discounts') {
+      return true;
+    }
+
+    if (section === 'approval-workflow') {
+      return this.shouldShowApprovalWorkflowSection() || this.approvals.length > 0 || this.decisionReviewMode() || this.requesterApprovalLocked();
+    }
+
+    if (section === 'quote-proposal' || section === 'pre-sales-team') {
+      return rank >= proposalRank;
+    }
+
+    if (section === 'security-legal') {
+      return rank >= securityRank;
+    }
+
+    if (section === 'delivery-handoff') {
+      return rank >= commitRank && stage !== 'Closed Lost';
+    }
+
+    if (section === 'onboarding') {
+      return stage === 'Closed Won' || !!this.form.isWon;
+    }
+
+    if (section === 'review-thread') {
+      if (this.requesterApprovalLocked()) {
+        return true;
+      }
+      return this.isEditMode() && (rank >= qualificationRank || this.reviewThread().length > 0);
+    }
+
+    return true;
+  }
+
+  protected isSectionActive(section: DealPanelKey): boolean {
+    return this.accordionPanels().includes(section);
+  }
+
+  protected openDealSection(section: DealPanelKey) {
+    if (!this.isSectionVisible(section)) return;
+    const reason = this.sectionLockReason(section);
+    if (reason) {
+      this.toastService.show('error', reason, 2800);
+      return;
+    }
+    const next = this.normalizePanels([...this.accordionPanels(), section]);
+    this.accordionPanels.set(next);
+    this.activeSectionNav.set(section);
+    this.lockWarningShown.set(null);
+    this.loadSectionsForOpenPanels();
+    setTimeout(() => {
+      const sectionNode = this.document?.querySelector<HTMLElement>(`[data-deal-section="${section}"]`);
+      sectionNode?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 70);
+  }
+
+  protected dealOwnerLabel(): string {
+    if (this.form.deliveryOwnerId) {
+      const ownerOption = this.teamMemberOptions.find((option) => option.value === this.form.deliveryOwnerId);
+      if (ownerOption?.label) {
+        return ownerOption.label;
+      }
+    }
+
+    const firstTeamMember = this.teamMembers.find((member) => member.userName?.trim());
+    if (firstTeamMember?.userName) {
+      return firstTeamMember.userName;
+    }
+
+    return 'Not assigned';
+  }
+
+  protected dealRiskSummary(): ApprovalRequirementBadge {
+    if (this.policyGateMessage()) {
+      return { label: 'High Risk', detail: 'Policy gate active', tone: 'danger' };
+    }
+    if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'pending')) {
+      return { label: 'Approval Pending', detail: 'Decision required', tone: 'warning' };
+    }
+    if ((this.selectedStage || '').toLowerCase() === 'commit') {
+      return { label: 'Commit Watch', detail: 'Late-stage control', tone: 'info' };
+    }
+    return { label: 'Normal', detail: 'No active blockers', tone: 'success' };
   }
 
   protected onStageChange(stage: string) {
@@ -266,6 +688,7 @@ export class OpportunityFormPage implements OnInit {
     this.form.isClosed = stage.startsWith('Closed');
     this.form.isWon = stage === 'Closed Won';
     this.form.forecastCategory = this.estimateForecastCategory(stage);
+    this.enforceAccordionAccess();
   }
 
   protected amountApprovalBadge(): ApprovalRequirementBadge {
@@ -391,6 +814,86 @@ export class OpportunityFormPage implements OnInit {
     return this.approvals.some((a) => (a.status || '').toLowerCase() === 'pending') ? 'warning' : 'neutral';
   }
 
+  protected shouldShowApprovalWorkflowSection(): boolean {
+    if (!this.isEditMode()) {
+      return false;
+    }
+
+    if (this.approvals.length > 0) {
+      return true;
+    }
+
+    const discountPercent = Number(this.form.discountPercent ?? 0);
+    const discountAmount = Number(this.form.discountAmount ?? 0);
+    const needsDiscountApproval =
+      discountPercent >= OpportunityFormPage.DISCOUNT_PERCENT_APPROVAL_THRESHOLD ||
+      discountAmount >= OpportunityFormPage.DISCOUNT_AMOUNT_APPROVAL_THRESHOLD;
+
+    const amountThreshold = this.approvalAmountThreshold ?? 0;
+    const amount = Number(this.form.amount ?? 0);
+    const needsAmountApproval = amountThreshold > 0 && amount >= amountThreshold;
+
+    return needsDiscountApproval || needsAmountApproval;
+  }
+
+  protected requesterApprovalLocked(): boolean {
+    if (!this.isEditMode() || !this.currentUserId || this.isManager()) {
+      return false;
+    }
+
+    return this.approvals.some(
+      (approval) =>
+        (approval.status || '').toLowerCase() === 'pending' &&
+        (approval.requestedByUserId || '').toLowerCase() === this.currentUserId!.toLowerCase()
+    );
+  }
+
+  protected currentApprovalStatusLabel(): string {
+    const pendingCount = this.approvals.filter((a) => (a.status || '').toLowerCase() === 'pending').length;
+    if (pendingCount > 0) {
+      return pendingCount === 1 ? 'Pending for Approval' : `${pendingCount} Pending for Approval`;
+    }
+
+    const approvedCount = this.approvals.filter((a) => (a.status || '').toLowerCase() === 'approved').length;
+    if (approvedCount > 0) {
+      return approvedCount === 1 ? 'Approved' : `${approvedCount} Approved`;
+    }
+
+    const rejectedCount = this.approvals.filter((a) => (a.status || '').toLowerCase() === 'rejected').length;
+    if (rejectedCount > 0) {
+      return rejectedCount === 1 ? 'Rejected' : `${rejectedCount} Rejected`;
+    }
+
+    return 'No Approval Requested';
+  }
+
+  protected currentApprovalStatusTone(): ApprovalRequirementBadge['tone'] {
+    if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'pending')) {
+      return 'warning';
+    }
+    if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'approved')) {
+      return 'success';
+    }
+    if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'rejected')) {
+      return 'danger';
+    }
+    return 'neutral';
+  }
+
+  protected approvalPendingSummaryDetail(): string {
+    return this.requesterApprovalLocked()
+      ? 'Read-only until approval decision'
+      : this.currentApprovalStatusLabel();
+  }
+
+  protected decisionReviewSummary(): OpportunityApprovalItem | null {
+    const decisionId = this.activeDecisionId();
+    if (!decisionId) {
+      return null;
+    }
+    return this.approvals.find((approval) => approval.id === decisionId) ?? null;
+  }
+
   protected securityLegalHeaderBadge(): string {
     const total = this.securityChecklist.length + this.legalChecklist.length + this.technicalChecklist.length;
     if (!total) {
@@ -430,6 +933,14 @@ export class OpportunityFormPage implements OnInit {
   }
 
   protected onSave() {
+    if (this.requesterApprovalLocked()) {
+      this.toastService.show('error', 'This deal is locked while approval is pending.', 3000);
+      return;
+    }
+    if (this.decisionReviewMode()) {
+      this.toastService.show('success', 'This record is opened in decision review mode (read-only).', 3000);
+      return;
+    }
     if (!this.form.name) return;
     const teamError = this.validateTeamMembers();
     if (teamError) {
@@ -495,7 +1006,7 @@ export class OpportunityFormPage implements OnInit {
         },
         error: (err) => {
           this.saving.set(false);
-          const message = typeof err?.error === 'string' ? err.error : 'Unable to save opportunity.';
+          const message = typeof err?.error === 'string' ? err.error : 'Unable to save deal.';
           this.handlePolicyGateMessage(message);
           this.toastService.show('error', message, 4000);
         }
@@ -519,7 +1030,7 @@ export class OpportunityFormPage implements OnInit {
         this.stageOverrideRequesting.set(false);
         this.lastStageOverrideDecisionId.set(result.decisionId);
         this.toastService.show('success', result.message, 3500);
-        void this.router.navigate(['/app/decisions/approvals'], {
+        void this.router.navigate(['/app/decisions/pending-action'], {
           queryParams: { selected: result.decisionId }
         });
       },
@@ -604,6 +1115,181 @@ export class OpportunityFormPage implements OnInit {
     return this.accountOptions.find((option) => option.value === id)?.label ?? 'Account';
   }
 
+  protected sendBackForReview() {
+    const decisionId = this.activeDecisionId();
+    if (!decisionId || this.decisionActionSubmitting()) {
+      return;
+    }
+
+    const notes = this.decisionReviewComment?.trim();
+    if (!notes) {
+      this.toastService.show('error', 'Add a review comment before sending back.', 3000);
+      return;
+    }
+
+    this.decisionActionSubmitting.set(true);
+    this.approvalService.requestDecisionInfo(decisionId, notes).subscribe({
+      next: () => {
+        this.decisionActionSubmitting.set(false);
+        this.toastService.show('success', 'Case sent back for review.', 2500);
+        this.decisionReviewComment = '';
+        this.decisionAction = '';
+        this.loadApprovalsForDecisionContext();
+        this.loadDecisionHistory(decisionId);
+      },
+      error: (err) => {
+        this.decisionActionSubmitting.set(false);
+        const message =
+          (typeof err?.error?.message === 'string' && err.error.message) ||
+          (typeof err?.error === 'string' && err.error) ||
+          'Unable to send case back for review.';
+        this.toastService.show('error', message, 3500);
+      }
+    });
+  }
+
+  protected approveDecisionFromReview() {
+    this.executeDecisionOutcomeFromReview(true);
+  }
+
+  protected rejectDecisionFromReview() {
+    this.executeDecisionOutcomeFromReview(false);
+  }
+
+  protected submitDecisionAction() {
+    const action = this.decisionAction;
+    if (!action || this.decisionActionSubmitting()) {
+      return;
+    }
+
+    const noteRequired = action === 'reject' || action === 'review' || action === 'escalate';
+    const comment = this.decisionReviewComment?.trim() ?? '';
+    if (noteRequired && !comment) {
+      this.toastService.show('error', 'Comment is required for this action.', 3000);
+      return;
+    }
+
+    if (action === 'reject') {
+      if (!window.confirm('Confirm reject this decision?')) {
+        return;
+      }
+      this.rejectDecisionFromReview();
+      return;
+    }
+
+    if (action === 'escalate') {
+      if (!window.confirm('Confirm escalate this decision?')) {
+        return;
+      }
+      this.escalateDecisionFromReview();
+      return;
+    }
+
+    if (action === 'review') {
+      this.sendBackForReview();
+      return;
+    }
+
+    this.approveDecisionFromReview();
+  }
+
+  protected escalateDecisionFromReview() {
+    const decisionId = this.activeDecisionId();
+    if (!decisionId || this.decisionActionSubmitting()) {
+      return;
+    }
+
+    this.decisionActionSubmitting.set(true);
+    this.approvalService.escalateDecision(decisionId, {
+      notes: this.decisionReviewComment?.trim() || null
+    }).subscribe({
+      next: () => {
+        this.decisionActionSubmitting.set(false);
+        this.toastService.show('success', 'Decision escalated.', 2500);
+        this.decisionReviewComment = '';
+        this.decisionAction = '';
+        this.loadApprovalsForDecisionContext();
+        this.loadDecisionHistory(decisionId);
+      },
+      error: (err) => {
+        this.decisionActionSubmitting.set(false);
+        const message =
+          (typeof err?.error?.message === 'string' && err.error.message) ||
+          (typeof err?.error === 'string' && err.error) ||
+          'Unable to escalate decision.';
+        this.toastService.show('error', message, 3500);
+      }
+    });
+  }
+
+  protected decisionHistoryTone(item: DecisionHistoryItem): 'neutral' | 'info' | 'warning' | 'success' | 'danger' {
+    const action = (item.action || '').toLowerCase();
+    if (action.includes('approve')) return 'success';
+    if (action.includes('reject')) return 'danger';
+    if (action.includes('escalat')) return 'warning';
+    if (action.includes('request') || action.includes('info') || action.includes('review')) return 'info';
+    return 'neutral';
+  }
+
+  protected decisionStatusTone(status?: string | null): 'neutral' | 'info' | 'warning' | 'success' | 'danger' {
+    const value = (status || '').toLowerCase();
+    if (value === 'approved') return 'success';
+    if (value === 'rejected') return 'danger';
+    if (value === 'pending') return 'warning';
+    if (value === 'escalated') return 'info';
+    return 'neutral';
+  }
+
+  private executeDecisionOutcomeFromReview(approved: boolean) {
+    const decisionId = this.activeDecisionId();
+    if (!decisionId || this.decisionActionSubmitting()) {
+      return;
+    }
+
+    this.decisionActionSubmitting.set(true);
+    this.approvalService
+      .decideDecision(decisionId, { approved, notes: this.decisionReviewComment?.trim() || null })
+      .subscribe({
+        next: () => {
+          this.decisionActionSubmitting.set(false);
+          this.toastService.show('success', approved ? 'Decision approved.' : 'Decision rejected.', 2500);
+          this.decisionReviewComment = '';
+          this.decisionAction = '';
+          this.loadApprovalsForDecisionContext();
+          this.loadDecisionHistory(decisionId);
+        },
+        error: (err) => {
+          this.decisionActionSubmitting.set(false);
+          const message =
+            (typeof err?.error?.message === 'string' && err.error.message) ||
+            (typeof err?.error === 'string' && err.error) ||
+            'Unable to update decision.';
+          this.toastService.show('error', message, 3500);
+        }
+      });
+  }
+
+  private loadApprovalsForDecisionContext() {
+    if (!this.editingId) {
+      return;
+    }
+    this.loadApprovals(this.editingId);
+  }
+
+  private loadDecisionHistory(decisionId: string) {
+    this.approvalService.getDecisionHistory({
+      decisionId,
+      take: 100
+    }).subscribe({
+      next: (items) => {
+        this.decisionHistory.set(items ?? []);
+      },
+      error: () => {
+        this.decisionHistory.set([]);
+      }
+    });
+  }
+
   private loadAccounts() {
     this.customerData.search({ page: 1, pageSize: 50 }).subscribe((res) => {
       this.accountOptions = res.items.map((c) => ({ label: c.name, value: c.id }));
@@ -664,28 +1350,137 @@ export class OpportunityFormPage implements OnInit {
     });
   }
 
-  private loadChecklists(opportunityId: string) {
+  private loadSectionsForOpenPanels() {
+    for (const panel of this.normalizePanels(this.accordionPanels())) {
+      this.ensureSectionDataLoaded(panel as DealPanelKey);
+    }
+  }
+
+  private normalizePanels(panels: string[]): string[] {
+    const filtered = panels
+      .map((panel) => panel as DealPanelKey)
+      .filter((panel) => this.isSectionVisible(panel))
+      .filter((panel) => !this.isSectionLocked(panel));
+
+    return [...new Set(filtered)].sort(
+      (a, b) => DEAL_PANEL_ORDER.indexOf(a) - DEAL_PANEL_ORDER.indexOf(b)
+    );
+  }
+
+  private enforceAccordionAccess() {
+    const normalized = this.normalizePanels(this.accordionPanels());
+    if (normalized.length > 0) {
+      if (normalized.length !== this.accordionPanels().length) {
+        this.accordionPanels.set(normalized);
+      }
+      return;
+    }
+
+    const fallback = DEAL_PANEL_ORDER.find((panel) => this.isSectionVisible(panel) && !this.isSectionLocked(panel));
+    if (fallback) {
+      this.accordionPanels.set([fallback]);
+      this.activeSectionNav.set(fallback);
+    }
+  }
+
+  private ensureSectionDataLoaded(section: DealPanelKey) {
+    if (!this.isEditMode() || !this.editingId) {
+      return;
+    }
+    if (this.loadedSectionKeys().has(section) || this.loadingSectionKeys().has(section)) {
+      return;
+    }
+
+    const markLoading = () => {
+      const next = new Set(this.loadingSectionKeys());
+      next.add(section);
+      this.loadingSectionKeys.set(next);
+    };
+    const markDone = () => {
+      const loading = new Set(this.loadingSectionKeys());
+      loading.delete(section);
+      this.loadingSectionKeys.set(loading);
+
+      const loaded = new Set(this.loadedSectionKeys());
+      loaded.add(section);
+      this.loadedSectionKeys.set(loaded);
+    };
+
+    markLoading();
+
+    switch (section) {
+      case 'pre-sales-team':
+        this.loadTeamMembers(this.editingId, markDone);
+        break;
+      case 'approval-workflow':
+        this.loadApprovals(this.editingId, markDone);
+        break;
+      case 'security-legal':
+        this.loadChecklists(this.editingId, markDone);
+        break;
+      case 'onboarding':
+        this.loadOnboarding(this.editingId, markDone);
+        break;
+      case 'review-thread':
+        this.loadReviewThread(this.editingId, markDone);
+        break;
+      default:
+        markDone();
+        break;
+    }
+  }
+
+  private loadChecklists(opportunityId: string, onSettled?: () => void) {
+    let pending = 3;
+    const done = () => {
+      pending -= 1;
+      if (pending <= 0) {
+        onSettled?.();
+      }
+    };
     this.checklistService.get(opportunityId, 'Security').subscribe({
       next: (items) => {
         this.securityChecklist = items;
         this.cdr.detectChanges();
+        done();
+      },
+      error: () => {
+        this.securityChecklist = [];
+        done();
       }
     });
     this.checklistService.get(opportunityId, 'Legal').subscribe({
       next: (items) => {
         this.legalChecklist = items;
         this.cdr.detectChanges();
+        done();
+      },
+      error: () => {
+        this.legalChecklist = [];
+        done();
       }
     });
     this.checklistService.get(opportunityId, 'Technical').subscribe({
       next: (items) => {
         this.technicalChecklist = items;
         this.cdr.detectChanges();
+        done();
+      },
+      error: () => {
+        this.technicalChecklist = [];
+        done();
       }
     });
   }
 
-  private loadOnboarding(opportunityId: string) {
+  private loadOnboarding(opportunityId: string, onSettled?: () => void) {
+    let pending = 2;
+    const done = () => {
+      pending -= 1;
+      if (pending <= 0) {
+        onSettled?.();
+      }
+    };
     this.onboardingService.get(opportunityId, 'Checklist').subscribe({
       next: (items) => {
         this.onboardingChecklist = (items ?? []).map((item) => ({
@@ -693,9 +1488,11 @@ export class OpportunityFormPage implements OnInit {
           dueDateUtc: item.dueDateUtc ? new Date(item.dueDateUtc) : undefined
         }));
         this.cdr.detectChanges();
+        done();
       },
       error: () => {
         this.onboardingChecklist = [];
+        done();
       }
     });
     this.onboardingService.get(opportunityId, 'Milestone').subscribe({
@@ -705,33 +1502,84 @@ export class OpportunityFormPage implements OnInit {
           dueDateUtc: item.dueDateUtc ? new Date(item.dueDateUtc) : undefined
         }));
         this.cdr.detectChanges();
+        done();
       },
       error: () => {
         this.onboardingMilestones = [];
+        done();
       }
     });
   }
 
-  private loadApprovals(opportunityId: string) {
+  private loadApprovals(opportunityId: string, onSettled?: () => void) {
     this.approvalService.getForOpportunity(opportunityId).subscribe({
       next: (items) => {
         this.approvals = items ?? [];
+        this.enforceAccordionAccess();
         this.cdr.detectChanges();
+        onSettled?.();
       },
       error: () => {
         this.approvals = [];
+        this.enforceAccordionAccess();
+        onSettled?.();
       }
     });
   }
 
-  private loadReviewThread(opportunityId: string) {
+  private handleRealtimeEvent(event: { eventType?: string; payload?: Record<string, unknown> | null } | null | undefined) {
+    if (!event?.eventType || !this.isEditMode() || !this.editingId) {
+      return;
+    }
+
+    const eventType = event.eventType.toLowerCase();
+    if (!eventType.startsWith('decision.')) {
+      return;
+    }
+
+    const payloadEntityId = String(event.payload?.['entityId'] ?? '');
+    if (payloadEntityId && payloadEntityId !== this.editingId) {
+      return;
+    }
+
+    this.loadApprovals(this.editingId);
+    const decisionId = this.activeDecisionId();
+    if (decisionId) {
+      this.loadDecisionHistory(decisionId);
+    }
+  }
+
+  private hasApprovalByPurpose(purpose: string): boolean {
+    const needle = purpose.trim().toLowerCase();
+    return this.approvals.some((approval) => (approval.purpose || '').toLowerCase() === needle);
+  }
+
+  private hasPendingApprovalByPurpose(purpose: string): boolean {
+    const needle = purpose.trim().toLowerCase();
+    return this.approvals.some((approval) =>
+      (approval.purpose || '').toLowerCase() === needle &&
+      (approval.status || '').toLowerCase() === 'pending');
+  }
+
+  private hasFinalApprovalByPurpose(purpose: string, status: 'approved' | 'rejected'): boolean {
+    const needle = purpose.trim().toLowerCase();
+    return this.approvals.some((approval) =>
+      (approval.purpose || '').toLowerCase() === needle &&
+      (approval.status || '').toLowerCase() === status);
+  }
+
+  private loadReviewThread(opportunityId: string, onSettled?: () => void) {
     this.opportunityData.getReviewThread(opportunityId).subscribe({
       next: (items) => {
         this.reviewThread.set(items ?? []);
+        this.enforceAccordionAccess();
         this.cdr.detectChanges();
+        onSettled?.();
       },
       error: () => {
         this.reviewThread.set([]);
+        this.enforceAccordionAccess();
+        onSettled?.();
       }
     });
   }
@@ -751,16 +1599,18 @@ export class OpportunityFormPage implements OnInit {
     });
   }
 
-  private loadTeamMembers(opportunityId: string) {
+  private loadTeamMembers(opportunityId: string, onSettled?: () => void) {
     this.opportunityData.getTeam(opportunityId).subscribe({
       next: (items) => {
         this.teamMembers = items ?? [];
         this.teamDirty = false;
         this.cdr.detectChanges();
+        onSettled?.();
       },
       error: () => {
         this.teamMembers = [];
         this.teamDirty = false;
+        onSettled?.();
       }
     });
   }
@@ -906,7 +1756,7 @@ export class OpportunityFormPage implements OnInit {
         amount,
         currency: this.approvalRequest.currency || this.resolveCurrencyCode(),
         purpose: this.approvalRequest.purpose,
-        opportunityName: this.form.name?.trim() || 'Opportunity',
+        opportunityName: this.form.name?.trim() || 'Deal',
         accountName: this.form.accountId ? this.accountLabel() : null
       })
       .subscribe({
@@ -991,8 +1841,9 @@ export class OpportunityFormPage implements OnInit {
   }
 
   protected onCurrencyChange(currency: string) {
-    this.form.currency = currency;
-    this.approvalRequest.currency = currency;
+    const normalized = this.normalizeCurrencyCode(currency);
+    this.form.currency = normalized;
+    this.approvalRequest.currency = normalized;
   }
 
   protected generateProposal() {
@@ -1216,10 +2067,11 @@ export class OpportunityFormPage implements OnInit {
     this.approvalRequest = {
       ...this.approvalRequest,
       amount: opp.amount ?? this.approvalRequest.amount,
-      currency: opp.currency ?? this.approvalRequest.currency
+      currency: this.resolveCurrency(opp.currency ?? this.approvalRequest.currency)
     };
     this.approvalAmountLocked = false;
     this.syncApprovalAmount();
+    this.enforceAccordionAccess();
     this.cdr.detectChanges();
   }
 
@@ -1305,6 +2157,12 @@ export class OpportunityFormPage implements OnInit {
     return map[stage] ?? 'Pipeline';
   }
 
+  private stageRank(stage: string): number {
+    const order = this.stageOptions.map((item) => item.value);
+    const idx = order.indexOf(stage);
+    return idx >= 0 ? idx : 0;
+  }
+
   private defaultReviewDueLocal(): string {
     const due = new Date();
     due.setDate(due.getDate() + 2);
@@ -1348,23 +2206,38 @@ export class OpportunityFormPage implements OnInit {
   }
 
   private applyCurrencyDefaults(currencyCode: string) {
-    if (!currencyCode) return;
+    const normalized = this.normalizeCurrencyCode(currencyCode);
+    if (!normalized) return;
     if (!this.form?.currency) {
-      this.form = { ...(this.form ?? this.createEmptyForm()), currency: currencyCode };
+      this.form = { ...(this.form ?? this.createEmptyForm()), currency: normalized };
     }
     if (!this.approvalRequest.currency) {
-      this.approvalRequest.currency = currencyCode;
+      this.approvalRequest.currency = normalized;
     }
   }
 
-  private resolveCurrency(value?: string | null) {
-    return value || this.resolveCurrencyCode();
+  protected resolveCurrency(value?: string | null) {
+    const normalized = this.normalizeCurrencyCode(value);
+    return normalized || this.resolveCurrencyCode();
   }
 
   protected resolveCurrencyCode() {
     // `this.form` can be undefined during field initialization (createEmptyForm -> resolveCurrencyCode).
     // Guard for that startup window.
-    return this.form?.currency || this.currencyFallback || this.currencyOptions[0]?.value || 'USD';
+    return (
+      this.normalizeCurrencyCode(this.form?.currency) ||
+      this.normalizeCurrencyCode(this.currencyFallback) ||
+      this.normalizeCurrencyCode(this.currencyOptions[0]?.value) ||
+      'USD'
+    );
+  }
+
+  private normalizeCurrencyCode(value?: string | null): string {
+    if (!value) {
+      return '';
+    }
+    const normalized = value.trim().toUpperCase();
+    return /^[A-Z]{3}$/.test(normalized) ? normalized : '';
   }
 
   protected isPainConfirmationRequired(): boolean {
@@ -1409,13 +2282,13 @@ export class OpportunityFormPage implements OnInit {
 
     if (!this.isEditMode()) {
       if (!stage?.trim()) {
-        return 'Stage is required when creating an opportunity.';
+        return 'Stage is required when creating a deal.';
       }
       if (!this.form.amount || this.form.amount <= 0) {
-        return 'Amount is required when creating an opportunity.';
+        return 'Amount is required when creating a deal.';
       }
       if (!this.form.expectedCloseDate) {
-        return 'Expected close date is required when creating an opportunity.';
+        return 'Expected close date is required when creating a deal.';
       }
     }
 
@@ -1469,7 +2342,7 @@ export class OpportunityFormPage implements OnInit {
 
     if (this.form.isClosed) {
       if (!this.form.forecastCategory) {
-        return 'Forecast category is required before closing an opportunity.';
+        return 'Forecast category is required before closing a deal.';
       }
       if (this.form.isWon && this.form.forecastCategory !== 'Closed') {
         return 'Closed won opportunities must use the Closed forecast category.';

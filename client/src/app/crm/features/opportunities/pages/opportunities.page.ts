@@ -147,14 +147,14 @@ export class OpportunitiesPage {
   }
 
   protected onDelete(row: Opportunity) {
-    const confirmed = confirm(`Delete opportunity ${row.name}?`);
+    const confirmed = confirm(`Delete deal ${row.name}?`);
     if (!confirmed) return;
     this.opportunityData.delete(row.id).subscribe({
       next: () => {
         this.load();
-        this.raiseToast('success', 'Opportunity deleted.');
+        this.raiseToast('success', 'Deal deleted.');
       },
-      error: () => this.raiseToast('error', 'Unable to delete opportunity.')
+      error: () => this.raiseToast('error', 'Unable to delete deal.')
     });
   }
 
@@ -210,7 +210,7 @@ export class OpportunitiesPage {
       { header: 'Status', value: (row) => row.status },
       { header: 'Owner', value: (row) => row.owner }
     ];
-    exportToCsv(rows, columns, 'opportunities.csv');
+    exportToCsv(rows, columns, 'deals.csv');
   }
 
   private loadCurrencyContext() {

@@ -2,6 +2,7 @@ using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Application.Decisions;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,13 +19,16 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<DecisionSlaEscalationWorker> _logger;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
 
     public DecisionSlaEscalationWorker(
         IServiceScopeFactory scopeFactory,
-        ILogger<DecisionSlaEscalationWorker> logger)
+        ILogger<DecisionSlaEscalationWorker> logger,
+        ICrmRealtimePublisher realtimePublisher)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _realtimePublisher = realtimePublisher;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -190,6 +194,7 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
         }
 
         var logs = new List<DecisionActionLog>(decisions.Count);
+        var realtimeEvents = new List<(Guid DecisionId, Guid TenantId, List<Guid> UserIds, DateTime? DueAtUtc, string DecisionType, string EntityType, Guid EntityId)>(decisions.Count);
         foreach (var decision in decisions)
         {
             decision.Priority = string.Equals(decision.Priority, "critical", StringComparison.OrdinalIgnoreCase)
@@ -204,13 +209,13 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
                 .FirstOrDefault(s => string.Equals(s.Status, "Pending", StringComparison.OrdinalIgnoreCase));
 
             var notifiedEmails = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var recipients = new List<(string Name, string Email, string Reason)>();
+            var recipients = new List<(Guid? UserId, string Name, string Email, string Reason)>();
 
             if (escalationPolicy.NotifyCurrentAssignee &&
                 pendingStep?.AssigneeUserId is Guid assigneeId &&
                 userLookup.TryGetValue(assigneeId, out var assigneeUser))
             {
-                recipients.Add((assigneeUser.Name, assigneeUser.Email, "current assignee"));
+                recipients.Add((assigneeId, assigneeUser.Name, assigneeUser.Email, "current assignee"));
                 notifiedEmails.Add(assigneeUser.Email);
             }
 
@@ -223,7 +228,7 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
                 {
                     if (notifiedEmails.Add(candidate.Email))
                     {
-                        recipients.Add((candidate.Name, candidate.Email, $"approver role ({pendingStep.ApproverRole})"));
+                        recipients.Add((candidate.UserId, candidate.Name, candidate.Email, $"approver role ({pendingStep.ApproverRole})"));
                     }
                 }
             }
@@ -235,7 +240,7 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
                 {
                     if (notifiedEmails.Add(manager.Email))
                     {
-                        recipients.Add((manager.Name, manager.Email, $"fallback role ({fallbackRoleName})"));
+                        recipients.Add((manager.UserId, manager.Name, manager.Email, $"fallback role ({fallbackRoleName})"));
                     }
                 }
             }
@@ -280,6 +285,20 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
                 CreatedAtUtc = nowUtc,
                 CreatedBy = "system"
             });
+
+            realtimeEvents.Add((
+                decision.Id,
+                decision.TenantId,
+                recipients
+                    .Select(r => r.UserId)
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value)
+                    .Distinct()
+                    .ToList(),
+                decision.DueAtUtc,
+                decision.Type,
+                decision.EntityType,
+                decision.EntityId));
         }
 
         if (logs.Count == 0)
@@ -289,6 +308,33 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
 
         db.DecisionActionLogs.AddRange(logs);
         await db.SaveChangesAsync(cancellationToken);
+
+        foreach (var realtimeEvent in realtimeEvents)
+        {
+            var payload = new
+            {
+                decisionId = realtimeEvent.DecisionId,
+                status = "escalated",
+                dueAtUtc = realtimeEvent.DueAtUtc,
+                decisionType = realtimeEvent.DecisionType,
+                entityType = realtimeEvent.EntityType,
+                entityId = realtimeEvent.EntityId
+            };
+
+            await _realtimePublisher.PublishTenantEventAsync(
+                realtimeEvent.TenantId,
+                "decision.sla.escalated",
+                payload,
+                cancellationToken);
+
+            await _realtimePublisher.PublishUsersEventAsync(
+                realtimeEvent.TenantId,
+                realtimeEvent.UserIds,
+                "decision.sla.escalated",
+                payload,
+                cancellationToken);
+        }
+
         return logs.Count;
     }
 

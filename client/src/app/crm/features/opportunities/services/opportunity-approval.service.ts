@@ -205,6 +205,15 @@ export class OpportunityApprovalService {
     ).pipe(map((item) => this.mapDecisionInboxItem(item)));
   }
 
+  escalateDecision(decisionId: string, payload?: { notes?: string | null }) {
+    return this.http.post<DecisionInboxApiItem>(
+      `${this.baseUrl}/api/decisions/${decisionId}/escalate`,
+      {
+        notes: payload?.notes ?? null
+      }
+    ).pipe(map((item) => this.mapDecisionInboxItem(item)));
+  }
+
   generateDecisionAssistDraft(decisionId: string) {
     return this.http.post<DecisionAssistDraft>(
       `${this.baseUrl}/api/decisions/${decisionId}/assist-draft`,
@@ -217,6 +226,7 @@ export class OpportunityApprovalService {
     status?: string;
     decisionType?: string;
     search?: string;
+    decisionId?: string;
     take?: number;
   }) {
     const params: Record<string, string> = {};
@@ -224,6 +234,7 @@ export class OpportunityApprovalService {
     if (filters?.status) params['status'] = filters.status;
     if (filters?.decisionType) params['decisionType'] = filters.decisionType;
     if (filters?.search) params['search'] = filters.search;
+    if (filters?.decisionId) params['decisionId'] = filters.decisionId;
     if (typeof filters?.take === 'number') params['take'] = String(filters.take);
 
     return this.http.get<DecisionHistoryItem[]>(

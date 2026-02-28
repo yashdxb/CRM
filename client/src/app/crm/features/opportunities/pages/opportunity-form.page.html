@@ -6,14 +6,14 @@
 
           <button type="button" class="back-link" routerLink="/app/opportunities">
             <i class="pi pi-arrow-left"></i>
-            Back to Opportunities
+            Back to Deals
           </button>
 
           <div class="header-row">
             <div class="header-title">
               <h1 class="hero-title">
                 <span class="title-gradient">{{ isEditMode() ? 'Update' : 'Create' }}</span>
-                <span class="title-light">Opportunity</span>
+                <span class="title-light">Deal</span>
               </h1>
               <p>Capture the deal details, set your stage, and keep the team aligned on next steps.</p>
             </div>
@@ -55,6 +55,22 @@
         </div>
       </div>
 
+      <section class="decision-review-banner" *ngIf="decisionReviewMode()">
+        <i class="pi pi-eye"></i>
+        <div>
+          <strong>Decision review mode</strong>
+          <p>This record is opened from Pending Action in read-only mode. Use the review panel to decide or send back.</p>
+        </div>
+      </section>
+
+      <section class="decision-review-banner approval-lock-banner" *ngIf="requesterApprovalLocked() && !decisionReviewMode()">
+        <i class="pi pi-lock"></i>
+        <div>
+          <strong>Record locked for approval</strong>
+          <p>This deal is read-only until the pending approval is approved or rejected.</p>
+        </div>
+      </section>
+
       <section class="related-summary" *ngIf="isEditMode()">
         <div class="related-summary-label">Related record</div>
         <div class="related-summary-links" *ngIf="accountLink() as link; else noAccountSummary">
@@ -69,23 +85,143 @@
       </section>
 
       <div class="form-body">
-        <form class="form-layout" (ngSubmit)="onSave()">
-          <p-accordion class="opportunity-section-accordion" [multiple]="true" [value]="accordionPanels()">
-            <p-accordion-panel value="opportunity-details">
+        <section class="deal-sticky-summary">
+          <div class="metric-card metric-card--total">
+            <div class="metric-icon">
+              <i class="pi pi-briefcase"></i>
+            </div>
+            <div class="metric-content">
+              <span class="metric-label">Deal</span>
+              <strong class="metric-value">{{ form.name || 'Untitled deal' }}</strong>
+            </div>
+          </div>
+          <div class="metric-card metric-card--leads">
+            <div class="metric-icon">
+              <i class="pi pi-flag"></i>
+            </div>
+            <div class="metric-content">
+              <span class="metric-label">Stage</span>
+              <strong class="metric-value">{{ selectedStage || 'Prospecting' }}</strong>
+            </div>
+          </div>
+          <div class="metric-card metric-card--prospects">
+            <div class="metric-icon">
+              <i class="pi pi-money-bill"></i>
+            </div>
+            <div class="metric-content">
+              <span class="metric-label">Amount</span>
+              <strong class="metric-value">{{ (form.amount || 0) | currency:resolveCurrencyCode():'symbol':'1.0-0' }}</strong>
+            </div>
+          </div>
+          <div class="metric-card metric-card--customers">
+            <div class="metric-icon">
+              <i class="pi pi-user"></i>
+            </div>
+            <div class="metric-content">
+              <span class="metric-label">Owner</span>
+              <strong class="metric-value">{{ dealOwnerLabel() }}</strong>
+            </div>
+          </div>
+          <div class="metric-card metric-card--risk">
+            <div class="metric-icon">
+              <i class="pi pi-shield"></i>
+            </div>
+            <div class="metric-content">
+              <span class="metric-label">Risk</span>
+              <span
+                class="opportunity-accordion-badge metric-card__status-badge"
+                [class]="'opportunity-accordion-badge metric-card__status-badge opportunity-accordion-badge--' + dealRiskSummary().tone"
+                [title]="dealRiskSummary().detail || ''"
+              >
+                {{ dealRiskSummary().label }}
+              </span>
+            </div>
+          </div>
+          <div class="metric-card metric-card--approval">
+            <div class="metric-icon">
+              <i class="pi pi-lock"></i>
+            </div>
+            <div class="metric-content">
+              <span class="metric-label">Approval</span>
+              <span
+                class="opportunity-accordion-badge metric-card__status-badge"
+                [class]="'opportunity-accordion-badge metric-card__status-badge opportunity-accordion-badge--' + currentApprovalStatusTone()"
+                [title]="approvalPendingSummaryDetail()"
+              >
+                {{ requesterApprovalLocked() ? 'Approval Pending' : currentApprovalStatusLabel() }}
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <div class="deal-workbench-layout">
+          <aside class="deal-workbench-nav" aria-label="Deal workflow navigation">
+            <div class="deal-workbench-nav__title">Deal Workbench</div>
+            <div class="deal-workbench-nav__groups">
+              <section
+                class="deal-workbench-nav__group"
+                *ngFor="let group of dealSectionNavGroups()"
+                [attr.data-group]="group.key"
+              >
+                <div class="deal-workbench-nav__group-label">{{ group.label }}</div>
+                <div class="deal-workbench-nav__items">
+                  <button
+                    type="button"
+                    class="deal-workbench-nav__item"
+                    *ngFor="let item of group.items"
+                    [class.deal-workbench-nav__item--active]="isSectionActive(item.key)"
+                    [class.deal-workbench-nav__item--locked]="isSectionLocked(item.key)"
+                    [disabled]="isSectionLocked(item.key)"
+                    [title]="isSectionLocked(item.key) ? (sectionLockReason(item.key) || '') : ''"
+                    (click)="openDealSection(item.key)"
+                  >
+                    <span class="deal-workbench-nav__item-main">
+                      <i [class]="item.icon"></i>
+                      <span>{{ item.label }}</span>
+                    </span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone(item.key)"
+                    >
+                      {{ sectionStatusLabel(item.key) }}
+                    </span>
+                  </button>
+                </div>
+              </section>
+            </div>
+          </aside>
+
+          <div class="deal-workbench-content">
+        <form class="form-layout" [class.form-layout--read-only]="decisionReviewMode() || requesterApprovalLocked()" (ngSubmit)="onSave()">
+          <p-accordion
+            class="opportunity-section-accordion"
+            [multiple]="true"
+            [value]="accordionPanels()"
+            (valueChange)="onAccordionPanelsChange($event)"
+          >
+            <p-accordion-panel value="opportunity-details" [disabled]="isSectionLocked('opportunity-details')" [attr.data-deal-section]="'opportunity-details'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-briefcase"></i>
-                    Opportunity Details
+                    Deal Details
                   </span>
-                  <span class="opportunity-accordion-badge">{{ opportunityDetailsBadge() }}</span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge">{{ opportunityDetailsBadge() }}</span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('opportunity-details')"
+                    >
+                      {{ sectionStatusLabel('opportunity-details') }}
+                    </span>
+                  </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
           <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
               <div class="field">
-                <label for="oppName">Opportunity name <span class="required">*</span></label>
+                <label for="oppName">Deal name <span class="required">*</span></label>
                 <input
                   pInputText
                   id="oppName"
@@ -145,16 +281,26 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="deal-settings">
+            <p-accordion-panel value="deal-settings" [disabled]="isSectionLocked('deal-settings')" [attr.data-deal-section]="'deal-settings'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-chart-line"></i>
                     Deal Settings
                   </span>
-                  <span class="opportunity-accordion-badge"
-                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + amountApprovalBadge().tone">
-                    {{ dealSettingsHeaderBadge() }}
+                  <span class="opportunity-accordion-header-meta">
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + amountApprovalBadge().tone"
+                    >
+                      {{ dealSettingsHeaderBadge() }}
+                    </span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('deal-settings')"
+                    >
+                      {{ sectionStatusLabel('deal-settings') }}
+                    </span>
                   </span>
                 </div>
               </p-accordion-header>
@@ -178,7 +324,7 @@
                   name="amount"
                   (ngModelChange)="syncApprovalAmount()"
                   mode="currency"
-                  [currency]="form.currency"
+                  [currency]="resolveCurrency(form.currency)"
                   placeholder="0"
                   class="w-full"
                 ></p-inputNumber>
@@ -228,7 +374,7 @@
                 <small class="field-hint" *ngIf="forecastGuidance() as guidance">{{ guidance }}</small>
               </div>
               <div class="field">
-                <label for="oppType">Opportunity type</label>
+                <label for="oppType">Deal type</label>
                 <p-select
                   inputId="oppType"
                   appendTo="body"
@@ -325,16 +471,26 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="pricing-discounts">
+            <p-accordion-panel value="pricing-discounts" [disabled]="isSectionLocked('pricing-discounts')" [attr.data-deal-section]="'pricing-discounts'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-percentage"></i>
                     Pricing & Discounts
                   </span>
-                  <span class="opportunity-accordion-badge"
-                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + discountApprovalBadge().tone">
-                    {{ pricingHeaderBadge() }}
+                  <span class="opportunity-accordion-header-meta">
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + discountApprovalBadge().tone"
+                    >
+                      {{ pricingHeaderBadge() }}
+                    </span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('pricing-discounts')"
+                    >
+                      {{ sectionStatusLabel('pricing-discounts') }}
+                    </span>
                   </span>
                 </div>
               </p-accordion-header>
@@ -371,7 +527,7 @@
                   name="discountAmount"
                   (ngModelChange)="syncApprovalAmount()"
                   mode="currency"
-                  [currency]="form.currency"
+                  [currency]="resolveCurrency(form.currency)"
                   placeholder="0"
                   class="w-full"
                 ></p-inputNumber>
@@ -393,14 +549,22 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="quote-proposal">
+            <p-accordion-panel *ngIf="isSectionVisible('quote-proposal')" value="quote-proposal" [disabled]="isSectionLocked('quote-proposal')" [attr.data-deal-section]="'quote-proposal'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-file-edit"></i>
                     Quote / Proposal
                   </span>
-                  <span class="opportunity-accordion-badge">{{ proposalHeaderBadge() }}</span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge">{{ proposalHeaderBadge() }}</span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('quote-proposal')"
+                    >
+                      {{ sectionStatusLabel('quote-proposal') }}
+                    </span>
+                  </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
@@ -481,17 +645,26 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="pre-sales-team">
+            <p-accordion-panel *ngIf="isSectionVisible('pre-sales-team')" value="pre-sales-team" [disabled]="isSectionLocked('pre-sales-team')" [attr.data-deal-section]="'pre-sales-team'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-users"></i>
                     Pre-Sales Team
                   </span>
-                  <span class="opportunity-accordion-badge">{{ preSalesTeamHeaderBadge() }}</span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge">{{ preSalesTeamHeaderBadge() }}</span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('pre-sales-team')"
+                    >
+                      {{ sectionStatusLabel('pre-sales-team') }}
+                    </span>
+                  </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
+          <ng-container *ngIf="!isEditMode() || isSectionLoaded('pre-sales-team'); else preSalesLoading">
           <section class="form-card opportunity-accordion-card">
             <p class="section-subtitle">Track solution partners and demo owners supporting this deal.</p>
             <div class="team-grid" *ngIf="teamMembers.length; else emptyTeam">
@@ -559,24 +732,51 @@
               </div>
             </div>
           </section>
+          </ng-container>
+          <ng-template #preSalesLoading>
+            <section class="form-card opportunity-accordion-card section-loading-card">
+              <p class="helper-text">{{ isSectionLoading('pre-sales-team') ? 'Loading pre-sales team…' : 'Open section to load pre-sales team.' }}</p>
+            </section>
+          </ng-template>
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="approval-workflow" *ngIf="isEditMode()">
+            <p-accordion-panel value="approval-workflow" *ngIf="isSectionVisible('approval-workflow')" [disabled]="isSectionLocked('approval-workflow')" [attr.data-deal-section]="'approval-workflow'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-check-circle"></i>
                     Approval Workflow
                   </span>
-                  <span class="opportunity-accordion-badge"
-                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + approvalWorkflowHeaderTone()">
-                    {{ approvalWorkflowHeaderBadge() }}
+                  <span class="opportunity-accordion-header-meta">
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + approvalWorkflowHeaderTone()"
+                    >
+                      {{ approvalWorkflowHeaderBadge() }}
+                    </span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('approval-workflow')"
+                    >
+                      {{ sectionStatusLabel('approval-workflow') }}
+                    </span>
                   </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
+          <ng-container *ngIf="!isEditMode() || isSectionLoaded('approval-workflow'); else approvalLoading">
           <section class="form-card opportunity-accordion-card" *ngIf="isEditMode()">
+            <div class="approval-current-status">
+              <span class="approval-current-status__label">Current Approval Status</span>
+              <span
+                class="opportunity-accordion-badge"
+                [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + currentApprovalStatusTone()"
+              >
+                {{ currentApprovalStatusLabel() }}
+              </span>
+            </div>
+
             <div class="approval-request">
               <div class="approval-request-row">
                 <div class="field">
@@ -599,7 +799,7 @@
                     [(ngModel)]="approvalRequest.amount"
                     name="approvalAmount"
                     mode="currency"
-                    [currency]="approvalRequest.currency"
+                    [currency]="resolveCurrency(approvalRequest.currency)"
                     class="w-full"
                     (ngModelChange)="onApprovalAmountEdited()"
                   ></p-inputNumber>
@@ -639,8 +839,8 @@
               </ng-template>
             </div>
 
-            <div class="approval-list" *ngIf="approvals.length; else noApprovals">
-              <div class="approval-item" *ngFor="let approval of approvals">
+            <div class="approval-summary-list" *ngIf="approvals.length; else noApprovals">
+              <div class="approval-summary-item" *ngFor="let approval of approvals">
                 <div class="approval-meta">
                   <span [class]="approvalStatusClass(approval.status)">{{ approval.status }}</span>
                   <span class="approval-purpose">{{ approval.purpose }}</span>
@@ -664,56 +864,44 @@
                 <div class="approval-notes" *ngIf="approval.status !== 'Pending' && approval.notes">
                   {{ approval.notes }}
                 </div>
-                <div class="approval-actions" *ngIf="approval.status === 'Pending'">
-                  <input
-                    pInputText
-                    [(ngModel)]="approvalDecisionNotes[approval.id]"
-                    name="approvalNotes{{approval.id}}"
-                    placeholder="Decision notes (optional)"
-                    class="w-full"
-                  />
-                  <button
-                    pButton
-                    type="button"
-                    class="crm-button--primary"
-                    [disabled]="!canDecideApproval() || approvalDecidingIds.has(approval.id)"
-                    (click)="decideApproval(approval, true)"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    pButton
-                    type="button"
-                    class="crm-button--ghost"
-                    [disabled]="!canDecideApproval() || approvalDecidingIds.has(approval.id)"
-                    (click)="decideApproval(approval, false)"
-                  >
-                    Reject
-                  </button>
-                  <p class="helper-text muted" *ngIf="!canDecideApproval()">
-                    You don’t have permission to approve or override approvals.
-                  </p>
-                </div>
               </div>
             </div>
             <ng-template #noApprovals>
               <p class="helper-text">No approvals requested yet.</p>
             </ng-template>
+            <p class="helper-text muted" *ngIf="decisionReviewMode()">
+              Decision actions are handled in the Review Action section.
+            </p>
           </section>
+          </ng-container>
+          <ng-template #approvalLoading>
+            <section class="form-card opportunity-accordion-card section-loading-card">
+              <p class="helper-text">{{ isSectionLoading('approval-workflow') ? 'Loading approvals…' : 'Open section to load approvals.' }}</p>
+            </section>
+          </ng-template>
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="security-legal">
+            <p-accordion-panel *ngIf="isSectionVisible('security-legal')" value="security-legal" [disabled]="isSectionLocked('security-legal')" [attr.data-deal-section]="'security-legal'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-shield"></i>
                     Security & Legal Review
                   </span>
-                  <span class="opportunity-accordion-badge">{{ securityLegalHeaderBadge() }}</span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge">{{ securityLegalHeaderBadge() }}</span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('security-legal')"
+                    >
+                      {{ sectionStatusLabel('security-legal') }}
+                    </span>
+                  </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
+          <ng-container *ngIf="!isEditMode() || isSectionLoaded('security-legal'); else securityLoading">
           <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
               <div class="field">
@@ -925,17 +1113,31 @@
               </div>
             </div>
           </section>
+          </ng-container>
+          <ng-template #securityLoading>
+            <section class="form-card opportunity-accordion-card section-loading-card">
+              <p class="helper-text">{{ isSectionLoading('security-legal') ? 'Loading security and legal checklists…' : 'Open section to load checklists.' }}</p>
+            </section>
+          </ng-template>
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="delivery-handoff">
+            <p-accordion-panel *ngIf="isSectionVisible('delivery-handoff')" value="delivery-handoff" [disabled]="isSectionLocked('delivery-handoff')" [attr.data-deal-section]="'delivery-handoff'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-briefcase"></i>
                     Delivery Handoff
                   </span>
-                  <span class="opportunity-accordion-badge">{{ deliveryHeaderBadge() }}</span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge">{{ deliveryHeaderBadge() }}</span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('delivery-handoff')"
+                    >
+                      {{ sectionStatusLabel('delivery-handoff') }}
+                    </span>
+                  </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
@@ -1022,17 +1224,26 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="onboarding">
+            <p-accordion-panel *ngIf="isSectionVisible('onboarding')" value="onboarding" [disabled]="isSectionLocked('onboarding')" [attr.data-deal-section]="'onboarding'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-list-check"></i>
                     Onboarding Checklist & Milestones
                   </span>
-                  <span class="opportunity-accordion-badge">{{ onboardingHeaderBadge() }}</span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge">{{ onboardingHeaderBadge() }}</span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('onboarding')"
+                    >
+                      {{ sectionStatusLabel('onboarding') }}
+                    </span>
+                  </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
+          <ng-container *ngIf="!isEditMode() || isSectionLoaded('onboarding'); else onboardingLoading">
           <section class="form-card opportunity-accordion-card">
             <div class="checklist-form">
               <input
@@ -1156,23 +1367,40 @@
               <p class="empty-state">No onboarding milestones yet.</p>
             </ng-template>
           </section>
+          </ng-container>
+          <ng-template #onboardingLoading>
+            <section class="form-card opportunity-accordion-card section-loading-card">
+              <p class="helper-text">{{ isSectionLoading('onboarding') ? 'Loading onboarding checklist…' : 'Open section to load onboarding.' }}</p>
+            </section>
+          </ng-template>
               </p-accordion-content>
             </p-accordion-panel>
 
-            <p-accordion-panel value="review-thread" *ngIf="isEditMode()">
+            <p-accordion-panel value="review-thread" *ngIf="isSectionVisible('review-thread')" [disabled]="isSectionLocked('review-thread')" [attr.data-deal-section]="'review-thread'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
                     <i class="pi pi-comments"></i>
                     Deal Review Thread
                   </span>
-                  <span class="opportunity-accordion-badge"
-                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + reviewThreadHeaderTone()">
-                    {{ reviewThreadHeaderBadge() }}
+                  <span class="opportunity-accordion-header-meta">
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + reviewThreadHeaderTone()"
+                    >
+                      {{ reviewThreadHeaderBadge() }}
+                    </span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('review-thread')"
+                    >
+                      {{ sectionStatusLabel('review-thread') }}
+                    </span>
                   </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
+          <ng-container *ngIf="isSectionLoaded('review-thread'); else reviewLoading">
           <section class="form-card review-thread-card opportunity-accordion-card" *ngIf="isEditMode()">
 
             <div class="review-thread-controls" *ngIf="isManager(); else repAckBlock">
@@ -1276,9 +1504,122 @@
               <p class="helper-text">No manager review comments yet.</p>
             </ng-template>
           </section>
+          </ng-container>
+          <ng-template #reviewLoading>
+            <section class="form-card opportunity-accordion-card section-loading-card">
+              <p class="helper-text">{{ isSectionLoading('review-thread') ? 'Loading review history…' : 'Open section to load review history.' }}</p>
+            </section>
+          </ng-template>
               </p-accordion-content>
             </p-accordion-panel>
           </p-accordion>
+
+          <section class="form-card opportunity-accordion-card decision-review-panel" *ngIf="decisionReviewMode()">
+            <h2 class="section-title">Review Action</h2>
+            <p class="section-subtitle">Decision summary and reviewer comment for this pending case.</p>
+            <div class="decision-summary" *ngIf="decisionReviewSummary() as summary">
+              <div class="decision-summary-grid">
+                <div class="decision-summary-item">
+                  <span class="decision-summary-label">Purpose</span>
+                  <span class="decision-summary-value">{{ summary.purpose }}</span>
+                </div>
+                <div class="decision-summary-item">
+                  <span class="decision-summary-label">Status</span>
+                  <span class="decision-summary-value">{{ summary.status }}</span>
+                </div>
+                <div class="decision-summary-item">
+                  <span class="decision-summary-label">Amount</span>
+                  <span class="decision-summary-value">{{ summary.amount | number:'1.0-2' }} {{ summary.currency }}</span>
+                </div>
+                <div class="decision-summary-item">
+                  <span class="decision-summary-label">Requested by</span>
+                  <span class="decision-summary-value">{{ summary.requestedByName || 'Unknown' }}</span>
+                </div>
+                <div class="decision-summary-item">
+                  <span class="decision-summary-label">Requested on</span>
+                  <span class="decision-summary-value">{{ summary.requestedOn | date:'MMM d, y, h:mm a' }}</span>
+                </div>
+                <div class="decision-summary-item" *ngIf="summary.approverRole">
+                  <span class="decision-summary-label">Approver role</span>
+                  <span class="decision-summary-value">{{ summary.approverRole }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div class="field full">
+                <label for="decisionReviewComment">Comment for reviewer / requester</label>
+                <textarea
+                  id="decisionReviewComment"
+                  pTextarea
+                  rows="3"
+                  class="w-full"
+                  [(ngModel)]="decisionReviewComment"
+                  name="decisionReviewComment"
+                  placeholder="Explain decision rationale or required changes"
+                ></textarea>
+              </div>
+            </div>
+            <div class="decision-action-row">
+              <p-select
+                appendTo="body"
+                [options]="decisionActionOptions"
+                optionLabel="label"
+                optionValue="value"
+                name="decisionAction"
+                [(ngModel)]="decisionAction"
+                placeholder="Select action"
+                styleClass="w-full"
+              ></p-select>
+              <button
+                pButton
+                type="button"
+                class="crm-button--primary"
+                [disabled]="decisionActionSubmitting() || !decisionAction"
+                (click)="submitDecisionAction()"
+              >
+                {{ decisionActionSubmitting() ? 'Submitting...' : 'Submit Action' }}
+              </button>
+            </div>
+          </section>
+
+          <section class="form-card opportunity-accordion-card approval-history-section" *ngIf="decisionReviewMode()">
+            <div class="approval-history-header">
+              <h2 class="section-title">Approval History</h2>
+              <span class="opportunity-accordion-badge">{{ decisionHistory().length }} entries</span>
+            </div>
+
+            <div class="approval-history-list" *ngIf="decisionHistory().length; else emptyDecisionHistory">
+              <article class="approval-history-item" *ngFor="let item of decisionHistory()">
+                <div class="approval-history-item__header">
+                  <span
+                    class="opportunity-accordion-badge"
+                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + decisionHistoryTone(item)"
+                  >
+                    {{ item.action }}
+                  </span>
+                  <span
+                    class="opportunity-accordion-badge"
+                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + decisionStatusTone(item.status)"
+                  >
+                    {{ item.status }}
+                  </span>
+                  <span class="approval-history-meta">
+                    {{ item.actorName || 'System' }} · {{ item.actionAtUtc | date: 'MMM d, y, h:mm a' }}
+                  </span>
+                </div>
+                <div class="approval-history-item__details">
+                  <span>Priority: {{ item.priority || 'normal' }}</span>
+                  <span>Risk: {{ item.riskLevel || 'low' }}</span>
+                  <span *ngIf="item.isEscalated">Escalated</span>
+                </div>
+                <p class="approval-history-notes" *ngIf="item.notes">{{ item.notes }}</p>
+                <p class="approval-history-policy" *ngIf="item.policyReason">{{ item.policyReason }}</p>
+              </article>
+            </div>
+            <ng-template #emptyDecisionHistory>
+              <p class="helper-text">No approval history yet for this decision.</p>
+            </ng-template>
+          </section>
 
           <div class="form-actions">
             <button
@@ -1291,12 +1632,14 @@
             <button
               pButton
               type="submit"
-              [label]="isEditMode() ? 'Update opportunity' : 'Save opportunity'"
+              [label]="isEditMode() ? 'Update deal' : 'Save deal'"
               class="crm-button--primary"
-              [disabled]="!form.name || saving()"
+              [disabled]="!form.name || saving() || decisionReviewMode() || requesterApprovalLocked()"
             ></button>
           </div>
         </form>
+          </div>
+        </div>
       </div>
     </section>
   

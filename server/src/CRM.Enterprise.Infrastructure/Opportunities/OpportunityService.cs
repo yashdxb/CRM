@@ -116,6 +116,7 @@ public sealed class OpportunityService : IOpportunityService
     private readonly IMediator _mediator;
     private readonly IOpportunityApprovalService _approvalService;
     private readonly IActivityService _activityService;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
 
     public OpportunityService(
         CrmDbContext dbContext,
@@ -123,7 +124,8 @@ public sealed class OpportunityService : IOpportunityService
         IAuditEventService auditEvents,
         IMediator mediator,
         IOpportunityApprovalService approvalService,
-        IActivityService activityService)
+        IActivityService activityService,
+        ICrmRealtimePublisher realtimePublisher)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
@@ -131,6 +133,7 @@ public sealed class OpportunityService : IOpportunityService
         _mediator = mediator;
         _approvalService = approvalService;
         _activityService = activityService;
+        _realtimePublisher = realtimePublisher;
     }
 
     public async Task<OpportunitySearchResultDto> SearchAsync(OpportunitySearchRequest request, CancellationToken cancellationToken = default)
@@ -632,6 +635,16 @@ public sealed class OpportunityService : IOpportunityService
             return OpportunityOperationResult<bool>.NotFoundResult();
         }
 
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            id,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(lockViolation);
+        }
+
         if (request.IsClosed && string.IsNullOrWhiteSpace(request.WinLossReason))
         {
             return OpportunityOperationResult<bool>.Fail("Win/Loss reason is required when closing an opportunity.");
@@ -948,6 +961,16 @@ public sealed class OpportunityService : IOpportunityService
             return OpportunityOperationResult<bool>.NotFoundResult();
         }
 
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            id,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(lockViolation);
+        }
+
         opp.IsDeleted = true;
         opp.DeletedAtUtc = DateTime.UtcNow;
         await _auditEvents.TrackAsync(
@@ -963,6 +986,16 @@ public sealed class OpportunityService : IOpportunityService
         if (opp is null)
         {
             return OpportunityOperationResult<bool>.NotFoundResult();
+        }
+
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            id,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(lockViolation);
         }
 
         var previousOwnerId = opp.OwnerId;
@@ -996,6 +1029,16 @@ public sealed class OpportunityService : IOpportunityService
         if (opp is null)
         {
             return OpportunityOperationResult<bool>.NotFoundResult();
+        }
+
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            id,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            return OpportunityOperationResult<bool>.Fail(lockViolation);
         }
         var previousForecastCategory = opp.ForecastCategory;
 
@@ -1046,6 +1089,32 @@ public sealed class OpportunityService : IOpportunityService
                 actor.UserId == Guid.Empty ? null : actor.UserId,
                 DateTime.UtcNow), cancellationToken);
             await _dbContext.SaveChangesAsync(cancellationToken);
+            await _realtimePublisher.PublishTenantEventAsync(
+                opp.TenantId,
+                "opportunity.stage.changed",
+                new
+                {
+                    opportunityId = opp.Id,
+                    opportunityName = opp.Name,
+                    previousStage = previousStageName,
+                    nextStage = nextStageName,
+                    amount = opp.Amount,
+                    forecastCategory = opp.ForecastCategory,
+                    changedAtUtc = DateTime.UtcNow
+                },
+                cancellationToken);
+            await _realtimePublisher.PublishTenantEventAsync(
+                opp.TenantId,
+                "dashboard.metrics.delta",
+                new
+                {
+                    source = "opportunity-stage",
+                    opportunityId = opp.Id,
+                    nextStage = nextStageName,
+                    forecastCategory = opp.ForecastCategory,
+                    amount = opp.Amount
+                },
+                cancellationToken);
         }
 
         return OpportunityOperationResult<bool>.Ok(true);
@@ -1666,6 +1735,16 @@ public sealed class OpportunityService : IOpportunityService
         if (opportunity is null)
         {
             return OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>.NotFoundResult();
+        }
+
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            id,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            return OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>.Fail(lockViolation);
         }
 
         var normalized = members

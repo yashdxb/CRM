@@ -38,6 +38,7 @@ using CRM.Enterprise.Infrastructure.Approvals;
 using MediatR;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,7 +97,9 @@ public static class DependencyInjection
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AcsEmailOptions>>().Value;
             if (options.UseQueue && !string.IsNullOrWhiteSpace(options.ServiceBusConnectionString))
             {
-                return new QueuedEmailSender(sp.GetRequiredService<ServiceBusEmailQueue>());
+                return new QueuedEmailSender(
+                    sp.GetRequiredService<ServiceBusEmailQueue>(),
+                    sp.GetRequiredService<IHttpContextAccessor>());
             }
 
             return sp.GetRequiredService<AcsEmailSender>();

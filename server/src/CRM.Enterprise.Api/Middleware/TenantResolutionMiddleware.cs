@@ -79,6 +79,8 @@ public class TenantResolutionMiddleware
         }
 
         tenantProvider.SetTenant(tenant.Id, tenant.Key);
+        context.Items["TenantId"] = tenant.Id;
+        context.Items["TenantKey"] = tenant.Key;
         await _next(context);
     }
 

@@ -6,6 +6,7 @@ import { environment } from '../../../environments/environment';
 import { clearToken, saveToken } from './token.utils';
 import { getTenantKey, setTenantKey } from '../tenant/tenant.utils';
 import { PresenceService } from '../realtime/presence.service';
+import { CrmEventsService } from '../realtime/crm-events.service';
 
 interface LoginRequest {
   email: string;
@@ -34,6 +35,7 @@ export class AuthService {
   private readonly router = inject(Router);
   private readonly currentUserSignal = signal<LoginResponse | null>(null);
   private readonly presenceService = inject(PresenceService);
+  private readonly crmEventsService = inject(CrmEventsService);
 
   get currentUser() {
     return this.currentUserSignal.asReadonly();
@@ -68,6 +70,7 @@ export class AuthService {
           setTenantKey(res.tenantKey);
         }
         this.presenceService.connect();
+        this.crmEventsService.connect();
       })
     );
   }
@@ -105,6 +108,7 @@ export class AuthService {
     this.http.post<void>(url, {}).subscribe({ error: () => {} });
     this.currentUserSignal.set(null);
     this.presenceService.disconnect();
+    this.crmEventsService.disconnect();
     clearToken();
     this.router.navigate(['/login']);
   }

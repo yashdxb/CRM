@@ -4,4 +4,6 @@ public record EmailQueueMessage(
     string ToEmail,
     string Subject,
     string HtmlBody,
-    string? TextBody);
+    string? TextBody,
+    Guid? TenantId = null,
+    Guid? RequestedByUserId = null);

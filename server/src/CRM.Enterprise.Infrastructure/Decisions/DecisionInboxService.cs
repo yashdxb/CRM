@@ -14,15 +14,18 @@ public sealed class DecisionInboxService : IDecisionInboxService
     private readonly IOpportunityApprovalService _opportunityApprovalService;
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
 
     public DecisionInboxService(
         IOpportunityApprovalService opportunityApprovalService,
         CrmDbContext dbContext,
-        ITenantProvider tenantProvider)
+        ITenantProvider tenantProvider,
+        ICrmRealtimePublisher realtimePublisher)
     {
         _opportunityApprovalService = opportunityApprovalService;
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
+        _realtimePublisher = realtimePublisher;
     }
 
     public async Task<IReadOnlyList<DecisionInboxItemDto>> GetInboxAsync(
@@ -158,6 +161,23 @@ public sealed class DecisionInboxService : IDecisionInboxService
         _dbContext.DecisionActionLogs.Add(action);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        await PublishDecisionEventAsync(
+            decision,
+            "decision.created",
+            new
+            {
+                decisionId = decision.Id,
+                type = decision.Type,
+                workflowType = string.IsNullOrWhiteSpace(request.WorkflowType) ? "GenericDecision" : request.WorkflowType.Trim(),
+                status = decision.Status,
+                entityType = decision.EntityType,
+                entityId = decision.EntityId,
+                requestedOnUtc = decision.RequestedOnUtc,
+                dueAtUtc = decision.DueAtUtc
+            },
+            steps.Select(s => s.AssigneeUserId).Where(id => id.HasValue).Select(id => id!.Value).Distinct().ToList(),
+            cancellationToken);
+
         return new DecisionInboxItemDto(
             decision.Id,
             decision.Type,
@@ -285,6 +305,22 @@ public sealed class DecisionInboxService : IDecisionInboxService
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+            await PublishDecisionEventAsync(
+                decision,
+                "decision.updated",
+                new
+                {
+                    decisionId = decision.Id,
+                    status = decision.Status,
+                    action = request.Approved ? "approved" : "rejected",
+                    completedAtUtc = nowUtc
+                },
+                decision.Steps
+                    .Where(s => !s.IsDeleted && s.AssigneeUserId.HasValue)
+                    .Select(s => s.AssigneeUserId!.Value)
+                    .Distinct()
+                    .ToList(),
+                cancellationToken);
 
             return await BuildInboxItemFromDecisionAsync(decision.Id, cancellationToken)
                    ?? throw new KeyNotFoundException("Decision item not found after update.");
@@ -316,6 +352,23 @@ public sealed class DecisionInboxService : IDecisionInboxService
 
         ApplyDecisionOutcomeToGenericDecision(decision, request, actorName, nowUtc);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        await PublishDecisionEventAsync(
+            decision,
+            "decision.updated",
+            new
+            {
+                decisionId = decision.Id,
+                status = decision.Status,
+                action = request.Approved ? "approved" : "rejected",
+                completedAtUtc = nowUtc
+            },
+            decision.Steps
+                .Where(s => !s.IsDeleted && s.AssigneeUserId.HasValue)
+                .Select(s => s.AssigneeUserId!.Value)
+                .Distinct()
+                .ToList(),
+            cancellationToken);
 
         return await BuildInboxItemFromDecisionAsync(decision.Id, cancellationToken)
                ?? throw new KeyNotFoundException("Decision item not found after update.");
@@ -376,6 +429,22 @@ public sealed class DecisionInboxService : IDecisionInboxService
         });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await PublishDecisionEventAsync(
+            decision,
+            "decision.updated",
+            new
+            {
+                decisionId = decision.Id,
+                status = decision.Status,
+                action = "requested-info",
+                requestedAtUtc = nowUtc
+            },
+            decision.Steps
+                .Where(s => !s.IsDeleted && s.AssigneeUserId.HasValue)
+                .Select(s => s.AssigneeUserId!.Value)
+                .Distinct()
+                .ToList(),
+            cancellationToken);
         return await BuildInboxItemFromDecisionAsync(decision.Id, cancellationToken)
                ?? throw new KeyNotFoundException("Decision item not found after update.");
     }
@@ -457,6 +526,92 @@ public sealed class DecisionInboxService : IDecisionInboxService
         });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await PublishDecisionEventAsync(
+            decision,
+            "decision.updated",
+            new
+            {
+                decisionId = decision.Id,
+                status = decision.Status,
+                action = "delegated",
+                delegatedToUserId = request.DelegateUserId,
+                delegatedToName = request.DelegateUserName
+            },
+            new[] { request.DelegateUserId },
+            cancellationToken);
+        return await BuildInboxItemFromDecisionAsync(decision.Id, cancellationToken)
+               ?? throw new KeyNotFoundException("Decision item not found after update.");
+    }
+
+    public async Task<DecisionInboxItemDto> EscalateAsync(
+        Guid decisionId,
+        DecisionEscalateRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var actorName = string.IsNullOrWhiteSpace(request.ActorName) ? "system" : request.ActorName!.Trim();
+        var nowUtc = DateTime.UtcNow;
+
+        var decision = await _dbContext.DecisionRequests
+            .Include(r => r.Steps)
+            .FirstOrDefaultAsync(r => r.Id == decisionId && !r.IsDeleted, cancellationToken);
+
+        if (decision is null)
+        {
+            throw new KeyNotFoundException("Decision item not found.");
+        }
+
+        if (IsClosedDecisionStatus(decision.Status))
+        {
+            throw new InvalidOperationException("Cannot escalate a completed decision.");
+        }
+
+        var currentStep = decision.Steps
+            .Where(s => !s.IsDeleted)
+            .OrderBy(s => s.StepOrder)
+            .FirstOrDefault(s => string.Equals(s.Status, "Pending", StringComparison.OrdinalIgnoreCase));
+
+        decision.Priority = "critical";
+        decision.UpdatedAtUtc = nowUtc;
+        decision.UpdatedBy = actorName;
+
+        _dbContext.DecisionActionLogs.Add(new DecisionActionLog
+        {
+            DecisionRequestId = decision.Id,
+            Action = "EscalatedByUser",
+            ActorUserId = request.ActorUserId,
+            ActorName = actorName,
+            Notes = string.IsNullOrWhiteSpace(request.Notes) ? "Decision escalated manually from Pending Action." : request.Notes!.Trim(),
+            Field = "Priority",
+            OldValue = "normal",
+            NewValue = "critical",
+            ActionAtUtc = nowUtc,
+            CreatedAtUtc = nowUtc,
+            CreatedBy = actorName
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var notifyUserIds = decision.Steps
+            .Where(s => !s.IsDeleted && s.AssigneeUserId.HasValue)
+            .Select(s => s.AssigneeUserId!.Value)
+            .Distinct()
+            .ToList();
+
+        await PublishDecisionEventAsync(
+            decision,
+            "decision.updated",
+            new
+            {
+                decisionId = decision.Id,
+                status = decision.Status,
+                action = "escalated",
+                escalatedByUserId = request.ActorUserId,
+                escalatedAtUtc = nowUtc,
+                currentStep = currentStep?.StepOrder
+            },
+            notifyUserIds,
+            cancellationToken);
+
         return await BuildInboxItemFromDecisionAsync(decision.Id, cancellationToken)
                ?? throw new KeyNotFoundException("Decision item not found after update.");
     }
@@ -466,6 +621,7 @@ public sealed class DecisionInboxService : IDecisionInboxService
         string? status = null,
         string? decisionType = null,
         string? search = null,
+        Guid? decisionId = null,
         int take = 200,
         CancellationToken cancellationToken = default)
     {
@@ -505,6 +661,12 @@ public sealed class DecisionInboxService : IDecisionInboxService
                 (x.request.PolicyReason != null && x.request.PolicyReason.ToLower().Contains(term)) ||
                 (x.log.ActorName != null && x.log.ActorName.ToLower().Contains(term)) ||
                 (x.log.Notes != null && x.log.Notes.ToLower().Contains(term)));
+        }
+
+        if (decisionId.HasValue && decisionId.Value != Guid.Empty)
+        {
+            var targetDecisionId = decisionId.Value;
+            query = query.Where(x => x.request.Id == targetDecisionId);
         }
 
         var rows = await query
@@ -556,6 +718,84 @@ public sealed class DecisionInboxService : IDecisionInboxService
         if (hours < 0) return "overdue";
         if (hours <= 4) return "at-risk";
         return "on-track";
+    }
+
+    private async Task PublishDecisionEventAsync(
+        DecisionRequest decision,
+        string eventType,
+        object payload,
+        IEnumerable<Guid> userIds,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = decision.TenantId != Guid.Empty ? decision.TenantId : _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        var pendingCount = await GetPendingActionCountAsync(cancellationToken);
+        var payloadWithCount = EnrichPayloadWithPendingCount(payload, pendingCount);
+
+        await _realtimePublisher.PublishTenantEventAsync(tenantId, eventType, payloadWithCount, cancellationToken);
+        await _realtimePublisher.PublishUsersEventAsync(tenantId, userIds, eventType, payloadWithCount, cancellationToken);
+        await PublishPendingCountEventAsync(tenantId, pendingCount, cancellationToken);
+    }
+
+    private async Task<int> GetPendingActionCountAsync(CancellationToken cancellationToken)
+    {
+        var pendingItems = await GetInboxAsync("Pending", null, cancellationToken);
+        return pendingItems.Count;
+    }
+
+    private async Task PublishPendingCountEventAsync(Guid tenantId, int pendingCount, CancellationToken cancellationToken)
+    {
+        await _realtimePublisher.PublishTenantEventAsync(
+            tenantId,
+            "decision.pending-count",
+            new
+            {
+                pendingCount,
+                calculatedAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+    }
+
+    private static object EnrichPayloadWithPendingCount(object payload, int pendingCount)
+    {
+        var dict = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["pendingCount"] = pendingCount
+        };
+
+        try
+        {
+            var element = System.Text.Json.JsonSerializer.SerializeToElement(payload);
+            if (element.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var property in element.EnumerateObject())
+                {
+                    dict[property.Name] = property.Value.ValueKind switch
+                    {
+                        System.Text.Json.JsonValueKind.String => property.Value.GetString(),
+                        System.Text.Json.JsonValueKind.Number => property.Value.TryGetInt64(out var longValue)
+                            ? longValue
+                            : property.Value.TryGetDecimal(out var decimalValue)
+                                ? decimalValue
+                                : property.Value.ToString(),
+                        System.Text.Json.JsonValueKind.True => true,
+                        System.Text.Json.JsonValueKind.False => false,
+                        System.Text.Json.JsonValueKind.Null => null,
+                        _ => property.Value.ToString()
+                    };
+                }
+            }
+        }
+        catch
+        {
+            // Best effort only; pendingCount remains available.
+        }
+
+        return dict;
     }
 
     private static int ResolveCurrentStepOrder(IReadOnlyList<DecisionStep> steps)
@@ -922,11 +1162,29 @@ public sealed class DecisionInboxService : IDecisionInboxService
         var mapped = inboxItems.FirstOrDefault(i => i.Id == result.Value.Id);
         if (mapped is not null)
         {
+            var pendingCount = await GetPendingActionCountAsync(cancellationToken);
+            var payload = EnrichPayloadWithPendingCount(
+                new
+                {
+                    decisionId = mapped.Id,
+                    workflowType = mapped.WorkflowType,
+                    status = mapped.Status,
+                    purpose = mapped.Purpose,
+                    amount = mapped.Amount,
+                    currency = mapped.Currency
+                },
+                pendingCount);
+            await _realtimePublisher.PublishTenantEventAsync(
+                _tenantProvider.TenantId,
+                "decision.created",
+                payload,
+                cancellationToken);
+            await PublishPendingCountEventAsync(_tenantProvider.TenantId, pendingCount, cancellationToken);
             return mapped;
         }
 
         // Fallback projection (should be rare if dual-write sync succeeded).
-        return new DecisionInboxItemDto(
+        var fallbackDto = new DecisionInboxItemDto(
             result.Value.Id,
             "OpportunityApproval",
             "OpportunityApproval",
@@ -958,6 +1216,26 @@ public sealed class DecisionInboxService : IDecisionInboxService
             result.Value.ApproverRole,
             result.Value.ChainStatus,
             Array.Empty<DecisionStepDto>());
+
+        var fallbackPendingCount = await GetPendingActionCountAsync(cancellationToken);
+        var fallbackPayload = EnrichPayloadWithPendingCount(
+            new
+            {
+                decisionId = fallbackDto.Id,
+                workflowType = fallbackDto.WorkflowType,
+                status = fallbackDto.Status,
+                purpose = fallbackDto.Purpose,
+                amount = fallbackDto.Amount,
+                currency = fallbackDto.Currency
+            },
+            fallbackPendingCount);
+        await _realtimePublisher.PublishTenantEventAsync(
+            _tenantProvider.TenantId,
+            "decision.created",
+            fallbackPayload,
+            cancellationToken);
+        await PublishPendingCountEventAsync(_tenantProvider.TenantId, fallbackPendingCount, cancellationToken);
+        return fallbackDto;
     }
 
     private async Task<DecisionInboxItemDto> DecideLegacyApprovalAsync(
@@ -983,8 +1261,26 @@ public sealed class DecisionInboxService : IDecisionInboxService
         }
 
         var items = await GetInboxAsync(null, null, cancellationToken);
-        return items.FirstOrDefault(i => i.Id == approvalId)
-               ?? throw new KeyNotFoundException("Decision item not found after update.");
+        var updated = items.FirstOrDefault(i => i.Id == approvalId)
+            ?? throw new KeyNotFoundException("Decision item not found after update.");
+
+        var pendingCount = await GetPendingActionCountAsync(cancellationToken);
+        var payload = EnrichPayloadWithPendingCount(
+            new
+            {
+                decisionId = updated.Id,
+                status = updated.Status,
+                action = request.Approved ? "approved" : "rejected"
+            },
+            pendingCount);
+        await _realtimePublisher.PublishTenantEventAsync(
+            _tenantProvider.TenantId,
+            "decision.updated",
+            payload,
+            cancellationToken);
+        await PublishPendingCountEventAsync(_tenantProvider.TenantId, pendingCount, cancellationToken);
+
+        return updated;
     }
 
     private async Task<DecisionInboxItemDto?> BuildInboxItemFromDecisionAsync(Guid decisionId, CancellationToken cancellationToken)
@@ -1034,7 +1330,9 @@ public sealed class DecisionInboxService : IDecisionInboxService
             request.RiskLevel ?? "low",
             completed ? "completed" : DeriveSlaStatus(request.DueAtUtc),
             request.DueAtUtc,
-            request.ActionLogs.Any(a => a.Action == "ApprovalSlaEscalated"),
+            request.ActionLogs.Any(a =>
+                a.Action == "ApprovalSlaEscalated" ||
+                a.Action == "EscalatedByUser"),
             ageHours,
             request.PolicyReason ?? "Decision review required.",
             payload.BusinessImpactLabel ?? "impact review",

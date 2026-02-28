@@ -71,6 +71,16 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
             return null;
         }
 
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            opportunityId,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            throw new InvalidOperationException(lockViolation);
+        }
+
         var type = NormalizeType(request.Type);
         var title = request.Title?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(title))
@@ -127,6 +137,16 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
         if (item is null)
         {
             return null;
+        }
+
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            item.OpportunityId,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            throw new InvalidOperationException(lockViolation);
         }
 
         if (request.Title is not null)
@@ -189,6 +209,16 @@ public sealed class OpportunityReviewChecklistService : IOpportunityReviewCheckl
         if (item is null)
         {
             return false;
+        }
+
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            item.OpportunityId,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            throw new InvalidOperationException(lockViolation);
         }
 
         item.IsDeleted = true;

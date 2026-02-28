@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { PresenceService } from './core/realtime/presence.service';
+import { CrmEventsService } from './core/realtime/crm-events.service';
 
 @Component({
   selector: 'app-root',
@@ -11,8 +12,10 @@ import { PresenceService } from './core/realtime/presence.service';
 })
 export class App {
   private readonly presenceService = inject(PresenceService);
+  private readonly crmEventsService = inject(CrmEventsService);
 
   constructor() {
     this.presenceService.connect();
+    this.crmEventsService.connect();
   }
 }

@@ -1,5 +1,5 @@
-using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Activities;
+using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Tenants;
@@ -12,35 +12,121 @@ using Xunit;
 
 namespace CRM.Enterprise.Infrastructure.Tests.Opportunities;
 
-public class OpportunityStageNextStepTests
+public class OpportunityApprovalLockDeleteTests
 {
     [Fact]
-    public async Task UpdateStageAsync_ReturnsError_WhenNextStepMissing()
+    public async Task DeleteAsync_ReturnsError_WhenRequesterHasPendingApproval()
     {
         using var dbContext = CreateDbContext(out var tenantProvider);
         var tenant = SeedTenant(dbContext, tenantProvider);
         var account = SeedAccount(dbContext, tenant.Id);
-        var qualificationStage = SeedStage(dbContext, tenant.Id, "Qualification", 2);
-        SeedStage(dbContext, tenant.Id, "Prospecting", 1);
+        var stage = SeedStage(dbContext, tenant.Id, "Prospecting", 1);
+        var requesterId = Guid.NewGuid();
 
         var opportunity = new Opportunity
         {
             TenantId = tenant.Id,
-            Name = "Test Opportunity",
+            Name = "Delete lock test",
             AccountId = account.Id,
-            StageId = qualificationStage.Id,
-            OwnerId = Guid.NewGuid(),
-            Amount = 1200m,
+            StageId = stage.Id,
+            OwnerId = requesterId,
+            Amount = 5000m,
             Currency = "USD",
-            Probability = 35,
-            ExpectedCloseDate = DateTime.UtcNow.AddDays(5),
+            Probability = 25,
+            ExpectedCloseDate = DateTime.UtcNow.AddDays(30),
             IsClosed = false,
             IsWon = false
         };
         dbContext.Opportunities.Add(opportunity);
+        dbContext.OpportunityApprovals.Add(new OpportunityApproval
+        {
+            TenantId = tenant.Id,
+            OpportunityId = opportunity.Id,
+            RequestedByUserId = requesterId,
+            Status = "Pending",
+            Purpose = "Discount",
+            ApproverRole = "Sales Manager",
+            Amount = 900,
+            Currency = "USD",
+            RequestedOn = DateTime.UtcNow
+        });
         await dbContext.SaveChangesAsync();
 
-        var service = new OpportunityService(
+        var service = CreateService(dbContext, tenantProvider);
+
+        var result = await service.DeleteAsync(opportunity.Id, new ActorContext(requesterId, "Leo Martin"));
+
+        Assert.False(result.Success);
+        Assert.Equal("Deal is locked while your approval request is pending.", result.Error);
+        var persisted = await dbContext.Opportunities.AsNoTracking().SingleAsync(o => o.Id == opportunity.Id);
+        Assert.False(persisted.IsDeleted);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AllowsManagerBypass_WhenRequesterHasPendingApproval()
+    {
+        using var dbContext = CreateDbContext(out var tenantProvider);
+        var tenant = SeedTenant(dbContext, tenantProvider);
+        var account = SeedAccount(dbContext, tenant.Id);
+        var stage = SeedStage(dbContext, tenant.Id, "Prospecting", 1);
+        var managerId = Guid.NewGuid();
+
+        var opportunity = new Opportunity
+        {
+            TenantId = tenant.Id,
+            Name = "Manager bypass test",
+            AccountId = account.Id,
+            StageId = stage.Id,
+            OwnerId = managerId,
+            Amount = 7000m,
+            Currency = "USD",
+            Probability = 30,
+            ExpectedCloseDate = DateTime.UtcNow.AddDays(45),
+            IsClosed = false,
+            IsWon = false
+        };
+        dbContext.Opportunities.Add(opportunity);
+        dbContext.OpportunityApprovals.Add(new OpportunityApproval
+        {
+            TenantId = tenant.Id,
+            OpportunityId = opportunity.Id,
+            RequestedByUserId = managerId,
+            Status = "Pending",
+            Purpose = "Close",
+            ApproverRole = "Sales Manager",
+            Amount = 7000m,
+            Currency = "USD",
+            RequestedOn = DateTime.UtcNow
+        });
+
+        var managerRole = new Role
+        {
+            TenantId = tenant.Id,
+            Name = "Sales Manager",
+            Description = "Manager override role"
+        };
+        dbContext.Roles.Add(managerRole);
+        dbContext.UserRoles.Add(new UserRole
+        {
+            TenantId = tenant.Id,
+            UserId = managerId,
+            RoleId = managerRole.Id
+        });
+
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext, tenantProvider);
+
+        var result = await service.DeleteAsync(opportunity.Id, new ActorContext(managerId, "Ava Chen"));
+
+        Assert.True(result.Success);
+        var persisted = await dbContext.Opportunities.AsNoTracking().SingleAsync(o => o.Id == opportunity.Id);
+        Assert.True(persisted.IsDeleted);
+    }
+
+    private static OpportunityService CreateService(CrmDbContext dbContext, TestTenantProvider tenantProvider)
+    {
+        return new OpportunityService(
             dbContext,
             tenantProvider,
             new FakeAuditEventService(),
@@ -48,14 +134,6 @@ public class OpportunityStageNextStepTests
             new FakeApprovalService(),
             new FakeActivityService(),
             new FakeRealtimePublisher());
-
-        var result = await service.UpdateStageAsync(
-            opportunity.Id,
-            "Prospecting",
-            new ActorContext(Guid.NewGuid(), "Tester"));
-
-        Assert.False(result.Success);
-        Assert.Equal("Next step is required before changing stage. Schedule an activity with a due date.", result.Error);
     }
 
     private static CrmDbContext CreateDbContext(out TestTenantProvider tenantProvider)
@@ -134,47 +212,27 @@ public class OpportunityStageNextStepTests
         public Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default) => Task.FromResult(default(TResponse)!);
         public Task<object?> Send(object request, CancellationToken cancellationToken = default) => Task.FromResult<object?>(null);
         public IAsyncEnumerable<TResponse> CreateStream<TResponse>(IStreamRequest<TResponse> request, CancellationToken cancellationToken = default)
-        {
-            return AsyncEnumerable.Empty<TResponse>();
-        }
-
+            => AsyncEnumerable.Empty<TResponse>();
         public IAsyncEnumerable<object?> CreateStream(object request, CancellationToken cancellationToken = default)
-        {
-            return AsyncEnumerable.Empty<object?>();
-        }
+            => AsyncEnumerable.Empty<object?>();
     }
 
     private sealed class FakeApprovalService : IOpportunityApprovalService
     {
         public Task<IReadOnlyList<OpportunityApprovalDto>?> GetForOpportunityAsync(Guid opportunityId, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult<IReadOnlyList<OpportunityApprovalDto>?>(Array.Empty<OpportunityApprovalDto>());
-        }
+            => Task.FromResult<IReadOnlyList<OpportunityApprovalDto>?>(Array.Empty<OpportunityApprovalDto>());
 
         public Task<IReadOnlyList<OpportunityApprovalInboxItemDto>> GetInboxAsync(string? status = null, string? purpose = null, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult<IReadOnlyList<OpportunityApprovalInboxItemDto>>(Array.Empty<OpportunityApprovalInboxItemDto>());
-        }
+            => Task.FromResult<IReadOnlyList<OpportunityApprovalInboxItemDto>>(Array.Empty<OpportunityApprovalInboxItemDto>());
 
         public Task<OpportunityOperationResult<OpportunityApprovalDto>> RequestAsync(Guid opportunityId, decimal amount, string currency, string purpose, ActorContext actor, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(OpportunityOperationResult<OpportunityApprovalDto>.Fail("not used"));
-        }
-
-        public Task<OpportunityOperationResult<OpportunityApprovalDto>> DecideAsync(Guid approvalId, bool approved, string? notes, ActorContext actor, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(OpportunityOperationResult<OpportunityApprovalDto>.Fail("not used"));
-        }
+            => Task.FromResult(OpportunityOperationResult<OpportunityApprovalDto>.Fail("not used"));
 
         public Task<OpportunityOperationResult<OpportunityApprovalDto>> DecideAsync(Guid approvalId, bool approved, string? notes, ActorContext actor, bool syncDecisionRequest = true, CancellationToken cancellationToken = default)
-        {
-            return Task.FromResult(OpportunityOperationResult<OpportunityApprovalDto>.Fail("not used"));
-        }
+            => Task.FromResult(OpportunityOperationResult<OpportunityApprovalDto>.Fail("not used"));
 
         public Task ProjectLinkedDecisionProgressionAsync(Guid decisionRequestId, int actedStepOrder, bool approved, string? notes, ActorContext actor, CancellationToken cancellationToken = default)
-        {
-            return Task.CompletedTask;
-        }
+            => Task.CompletedTask;
     }
 
     private sealed class FakeActivityService : IActivityService

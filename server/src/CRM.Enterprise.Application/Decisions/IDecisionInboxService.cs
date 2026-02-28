@@ -30,11 +30,17 @@ public interface IDecisionInboxService
         DecisionDelegateRequestDto request,
         CancellationToken cancellationToken = default);
 
+    Task<DecisionInboxItemDto> EscalateAsync(
+        Guid decisionId,
+        DecisionEscalateRequestDto request,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<DecisionHistoryItemDto>> GetHistoryAsync(
         string? action = null,
         string? status = null,
         string? decisionType = null,
         string? search = null,
+        Guid? decisionId = null,
         int take = 200,
         CancellationToken cancellationToken = default);
 }

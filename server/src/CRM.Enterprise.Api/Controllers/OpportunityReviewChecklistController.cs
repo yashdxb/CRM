@@ -100,7 +100,15 @@ public sealed class OpportunityReviewChecklistController : ControllerBase
     [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
     public async Task<IActionResult> Delete(Guid itemId, CancellationToken cancellationToken)
     {
-        var deleted = await _service.DeleteAsync(itemId, GetActor(), cancellationToken);
+        bool deleted;
+        try
+        {
+            deleted = await _service.DeleteAsync(itemId, GetActor(), cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
         if (!deleted)
         {
             return NotFound();

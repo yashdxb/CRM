@@ -15,11 +15,16 @@ public sealed class RenewalAutomationWorker : BackgroundService
     private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(30);
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RenewalAutomationWorker> _logger;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
 
-    public RenewalAutomationWorker(IServiceScopeFactory scopeFactory, ILogger<RenewalAutomationWorker> logger)
+    public RenewalAutomationWorker(
+        IServiceScopeFactory scopeFactory,
+        ILogger<RenewalAutomationWorker> logger,
+        ICrmRealtimePublisher realtimePublisher)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _realtimePublisher = realtimePublisher;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -87,8 +92,18 @@ public sealed class RenewalAutomationWorker : BackgroundService
                     tenant.Key,
                     result.RenewalsCreated,
                     result.ReminderTasksCreated);
+
+                await _realtimePublisher.PublishTenantEventAsync(
+                    tenant.Id,
+                    "renewal.automation.completed",
+                    new
+                    {
+                        renewalsCreated = result.RenewalsCreated,
+                        reminderTasksCreated = result.ReminderTasksCreated,
+                        processedAtUtc = DateTime.UtcNow
+                    },
+                    cancellationToken);
             }
         }
     }
 }
-
