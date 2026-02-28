@@ -10,6 +10,8 @@ namespace CRM.Enterprise.Infrastructure.Auth;
 
 public sealed class LoginLocationService
 {
+    private static readonly TimeSpan ProviderTimeout = TimeSpan.FromSeconds(1);
+
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly HttpClient _httpClient;
     private readonly ILogger<LoginLocationService> _logger;
@@ -34,9 +36,11 @@ public sealed class LoginLocationService
 
         try
         {
+            using var lookupToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            lookupToken.CancelAfter(ProviderTimeout);
             var response = await _httpClient.GetFromJsonAsync<IpWhoIsResponse>(
                 $"https://ipwho.is/{ip}?fields=success,city,region,country",
-                cancellationToken);
+                lookupToken.Token);
 
             var location = BuildLocation(response?.City, response?.Region, response?.Country);
             if (response is not null && response.Success && !string.IsNullOrWhiteSpace(location))
@@ -46,21 +50,23 @@ public sealed class LoginLocationService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Primary geo lookup failed for IP {Ip}", ip);
+            _logger.LogDebug("Primary geo lookup failed for IP {Ip}: {Reason}", ip, ex.Message);
         }
 
         try
         {
+            using var lookupToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            lookupToken.CancelAfter(ProviderTimeout);
             var response = await _httpClient.GetFromJsonAsync<IpApiResponse>(
                 $"https://ipapi.co/{ip}/json/",
-                cancellationToken);
+                lookupToken.Token);
 
             var location = BuildLocation(response?.City, response?.Region, response?.CountryName);
             return (ip, location);
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Fallback geo lookup failed for IP {Ip}", ip);
+            _logger.LogDebug("Fallback geo lookup failed for IP {Ip}: {Reason}", ip, ex.Message);
             return (ip, null);
         }
     }

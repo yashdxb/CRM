@@ -14,6 +14,7 @@ namespace CRM.Enterprise.Infrastructure.Decisions;
 public sealed class DecisionSlaEscalationWorker : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(2);
+    private static readonly string[] ClosedStatuses = ["Approved", "Rejected", "Cancelled", "Expired"];
     private const string EscalationAction = "ApprovalSlaEscalated";
     private const string SalesManagerRoleName = "Sales Manager";
 
@@ -101,7 +102,10 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
         var nowUtc = DateTime.UtcNow;
         var overdueIds = await db.DecisionRequests
             .AsNoTracking()
-            .Where(r => !r.IsDeleted && r.DueAtUtc.HasValue && r.DueAtUtc < nowUtc && !IsClosedStatus(r.Status))
+            .Where(r => !r.IsDeleted
+                        && r.DueAtUtc.HasValue
+                        && r.DueAtUtc < nowUtc
+                        && (r.Status == null || !ClosedStatuses.Contains(r.Status)))
             .Select(r => r.Id)
             .ToListAsync(cancellationToken);
 

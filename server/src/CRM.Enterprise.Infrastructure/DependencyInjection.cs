@@ -72,7 +72,11 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddHttpContextAccessor();
         services.AddSingleton<IPresenceTracker, PresenceTracker>();
-        services.AddHttpClient<LoginLocationService>();
+        services.AddHttpClient<LoginLocationService>(client =>
+        {
+            // Login flow should not block on external geo-IP lookups.
+            client.Timeout = TimeSpan.FromSeconds(2);
+        });
         services.AddScoped<LoginLocationService>();
         services.AddHttpClient<GraphEmailSender>();
         services.AddSingleton<AcsEmailSender>();
