@@ -95,6 +95,13 @@ export interface AttributionSummaryItem {
 
 export type AttributionModel = 'first_touch' | 'last_touch' | 'linear';
 
+export interface ImpactWorklistTelemetryRequest {
+  campaignId: string;
+  campaignName: string;
+  model: AttributionModel;
+  direction: 'positive' | 'negative';
+}
+
 export interface CampaignHealthMetrics {
   influencedOpportunities: number;
   influencedPipelineAmount: number;

@@ -8,6 +8,7 @@ import {
   CampaignDetailResponse,
   CampaignHealthScore,
   CampaignMember,
+  ImpactWorklistTelemetryRequest,
   RecommendationPilotMetrics,
   CampaignRecommendation,
   CampaignSearchResponse,
@@ -91,5 +92,9 @@ export class MarketingDataService {
 
   getRecommendationPilotMetrics() {
     return this.http.get<RecommendationPilotMetrics>(`${this.baseUrl}/api/marketing/recommendations/pilot-metrics`);
+  }
+
+  trackImpactWorklistClick(payload: ImpactWorklistTelemetryRequest) {
+    return this.http.post(`${this.baseUrl}/api/marketing/telemetry/impact-worklist-click`, payload);
   }
 }

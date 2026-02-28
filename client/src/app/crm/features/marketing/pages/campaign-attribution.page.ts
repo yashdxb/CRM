@@ -235,12 +235,22 @@ export class CampaignAttributionPage {
     });
   }
 
-  protected openCampaignImpactWorklist(campaignName: string, direction: 'positive' | 'negative'): void {
-    this.router.navigate(['/app/opportunities'], {
+  protected openCampaignImpactWorklist(campaignId: string, campaignName: string, direction: 'positive' | 'negative'): void {
+    const navigate = () => this.router.navigate(['/app/opportunities'], {
       queryParams: {
         search: campaignName,
         focus: direction === 'positive' ? 'model gain' : 'model loss'
       }
+    });
+
+    this.data.trackImpactWorklistClick({
+      campaignId,
+      campaignName,
+      model: this.selectedModel(),
+      direction
+    }).subscribe({
+      next: () => navigate(),
+      error: () => navigate()
     });
   }
 

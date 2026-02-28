@@ -442,6 +442,51 @@ public sealed class MarketingController : ControllerBase
             result.WindowEndUtc));
     }
 
+    [HttpPost("telemetry/impact-worklist-click")]
+    public async Task<IActionResult> TrackImpactWorklistClick([FromBody] ImpactWorklistTelemetryBody request, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled())
+        {
+            return FeatureDisabled();
+        }
+
+        if (request is null)
+        {
+            return SafeBadRequest("Request body is required.");
+        }
+
+        if (request.CampaignId == Guid.Empty || string.IsNullOrWhiteSpace(request.CampaignName))
+        {
+            return SafeBadRequest("Campaign id and campaign name are required.");
+        }
+
+        var model = request.Model?.Trim().ToLowerInvariant();
+        if (model is not ("first_touch" or "last_touch" or "linear"))
+        {
+            return SafeBadRequest("Model must be first_touch, last_touch, or linear.");
+        }
+
+        var direction = request.Direction?.Trim().ToLowerInvariant();
+        if (direction is not ("positive" or "negative"))
+        {
+            return SafeBadRequest("Direction must be positive or negative.");
+        }
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "MarketingTelemetry",
+                request.CampaignId,
+                "ImpactWorklistOpened",
+                "impact_worklist",
+                null,
+                $"campaign={request.CampaignName};model={model};direction={direction}",
+                GetCurrentUserId(),
+                GetCurrentUserName()),
+            cancellationToken);
+
+        return NoContent();
+    }
+
     private static CampaignListItem ToCampaignItem(CampaignListItemDto dto)
         => new(
             dto.Id,
