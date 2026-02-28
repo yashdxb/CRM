@@ -777,6 +777,35 @@
                 <span>Discount: {{ quoteDiscountAmount() | number: '1.2-2' }}</span>
                 <span>Total: {{ quoteTotal() | number: '1.2-2' }}</span>
               </div>
+              <div class="proposal-preview-card" *ngIf="proposalPreviewUrl() as proposalUrl">
+                <div class="proposal-preview-card__info">
+                  <span class="proposal-preview-card__label">Proposal file ready</span>
+                  <a class="proposal-preview-card__link" [href]="proposalUrl" target="_blank" rel="noopener">
+                    {{ form.proposalLink }}
+                  </a>
+                </div>
+                <div class="proposal-preview-card__actions">
+                  <a
+                    pButton
+                    [href]="proposalUrl"
+                    target="_blank"
+                    rel="noopener"
+                    class="p-button-sm p-button-text"
+                    icon="pi pi-eye"
+                    label="Preview"
+                  ></a>
+                  <a
+                    pButton
+                    [href]="proposalUrl"
+                    target="_blank"
+                    rel="noopener"
+                    download
+                    class="p-button-sm"
+                    icon="pi pi-download"
+                    label="Download"
+                  ></a>
+                </div>
+              </div>
             </div>
             <div class="team-actions">
               <button type="button" class="btn-glass" (click)="addQuoteLine()">

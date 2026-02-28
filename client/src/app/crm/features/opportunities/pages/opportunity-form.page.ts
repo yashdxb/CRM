@@ -41,6 +41,7 @@ import { UserListItem } from '../../settings/models/user-admin.model';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
+import { environment } from '../../../../../environments/environment';
 
 interface Option<T = string> {
   label: string;
@@ -2061,6 +2062,25 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.toastService.show('error', this.resolveApiErrorMessage(error, 'Unable to send proposal.'), 3200);
       }
     });
+  }
+
+  protected proposalPreviewUrl(): string | null {
+    const raw = (this.form.proposalLink ?? '').trim();
+    if (!raw) {
+      return null;
+    }
+
+    if (/^https?:\/\//i.test(raw)) {
+      return raw;
+    }
+
+    const baseUrl = (environment.apiUrl ?? '').trim().replace(/\/+$/, '');
+    if (!baseUrl) {
+      return raw.startsWith('/') ? raw : `/${raw}`;
+    }
+
+    const normalizedPath = raw.startsWith('/') ? raw : `/${raw}`;
+    return `${baseUrl}${normalizedPath}`;
   }
 
   protected addQuoteLine() {
