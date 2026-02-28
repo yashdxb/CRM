@@ -319,6 +319,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected proposalSendRecipient = '';
   protected proposalSendMessage = '';
   protected proposalActivityEvents: OpportunityAuditEvent[] = [];
+  protected recentProposalResendEventId: string | null = null;
+  private proposalResendSourceEventId: string | null = null;
+  private proposalResendChipTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
   private teamDirty = false;
   protected onboardingChecklist: OpportunityOnboardingItem[] = [];
   protected onboardingMilestones: OpportunityOnboardingItem[] = [];
@@ -414,6 +417,10 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.proposalResendChipTimeoutHandle) {
+      clearTimeout(this.proposalResendChipTimeoutHandle);
+      this.proposalResendChipTimeoutHandle = null;
+    }
   }
 
   protected onAccordionPanelsChange(value: string[] | string | number[] | number | null | undefined) {
@@ -2056,7 +2063,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     });
   }
 
-  protected openSendProposalDialog(prefillRecipient?: string | null, prefillMessage?: string | null) {
+  protected openSendProposalDialog(prefillRecipient?: string | null, prefillMessage?: string | null, sourceEventId?: string | null) {
     if (!this.editingId || !this.selectedQuoteId) {
       this.toastService.show('error', 'Save and select a quote first.', 2500);
       return;
@@ -2064,6 +2071,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
     this.proposalSendRecipient = (prefillRecipient ?? '').trim();
     this.proposalSendMessage = (prefillMessage ?? '').trim();
+    this.proposalResendSourceEventId = sourceEventId ?? null;
     this.proposalSendDialogVisible = true;
   }
 
@@ -2084,9 +2092,13 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         if (this.editingId) {
           this.loadProposalActivity(this.editingId);
         }
+        if (this.proposalResendSourceEventId) {
+          this.markProposalResentChip(this.proposalResendSourceEventId);
+        }
         this.proposalSendDialogVisible = false;
         this.proposalSendRecipient = '';
         this.proposalSendMessage = '';
+        this.proposalResendSourceEventId = null;
         this.toastService.show('success', `Proposal sent${result.recipientEmail ? ` to ${result.recipientEmail}` : ''}.`, 2800);
       },
       error: (error) => {
@@ -2135,7 +2147,11 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected resendProposalFromActivity(event: OpportunityAuditEvent) {
     const recipient = event.field === 'ProposalSentTo' ? event.newValue : null;
     const message = this.form.proposalNotes?.trim() ? this.form.proposalNotes : null;
-    this.openSendProposalDialog(recipient, message);
+    this.openSendProposalDialog(recipient, message, event.id);
+  }
+
+  protected isRecentlyResentEvent(event: OpportunityAuditEvent): boolean {
+    return !!this.recentProposalResendEventId && this.recentProposalResendEventId === event.id;
   }
 
   protected addQuoteLine() {
@@ -2511,6 +2527,17 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.proposalActivityEvents = [];
       }
     });
+  }
+
+  private markProposalResentChip(eventId: string) {
+    this.recentProposalResendEventId = eventId;
+    if (this.proposalResendChipTimeoutHandle) {
+      clearTimeout(this.proposalResendChipTimeoutHandle);
+    }
+    this.proposalResendChipTimeoutHandle = setTimeout(() => {
+      this.recentProposalResendEventId = null;
+      this.proposalResendChipTimeoutHandle = null;
+    }, 9000);
   }
 
   private applyQuoteDetail(quote: OpportunityQuoteDetail) {

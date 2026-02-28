@@ -825,6 +825,13 @@
                       label="Resend"
                       (click)="resendProposalFromActivity(event)"
                     ></button>
+                    <span
+                      *ngIf="isRecentlyResentEvent(event)"
+                      class="proposal-resent-chip"
+                    >
+                      <i class="pi pi-check"></i>
+                      Resent just now
+                    </span>
                   </div>
                 </div>
               </div>
