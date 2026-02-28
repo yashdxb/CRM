@@ -306,7 +306,7 @@
 
 .deal-workbench-layout {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -319,6 +319,7 @@
   position: sticky;
   top: calc(var(--shell-topbar-height, 47px) + var(--shell-topbar-strip-height, 4px) + var(--shell-floating-gap, 10px) + 126px);
   z-index: 8;
+  min-width: 0;
   border-radius: 16px;
   border: 1px solid rgba(191, 219, 254, 0.28);
   background:
@@ -344,7 +345,9 @@
   border: 0;
   background: transparent;
   padding: 0;
+  overflow: visible;
   overflow-x: hidden;
+  overflow-y: visible;
   width: 100%;
   max-width: 100%;
 }
@@ -353,6 +356,7 @@
   display: grid;
   gap: 0.5rem;
   overflow-x: hidden;
+  overflow-y: visible;
   min-width: 0;
   width: 100%;
   max-width: 100%;
