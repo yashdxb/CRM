@@ -829,11 +829,63 @@
                 <i class="pi pi-file"></i>
                 {{ proposalGenerating() ? 'Generating...' : 'Generate proposal' }}
               </button>
-              <button type="button" class="btn-glass" [disabled]="proposalSending() || !selectedQuoteId" (click)="markProposalSent()">
+              <button type="button" class="btn-glass" [disabled]="proposalSending() || !selectedQuoteId" (click)="openSendProposalDialog()">
                 <i class="pi pi-send"></i>
                 {{ proposalSending() ? 'Sending...' : 'Send proposal' }}
               </button>
             </div>
+            <p-dialog
+              header="Send Proposal"
+              [(visible)]="proposalSendDialogVisible"
+              [modal]="true"
+              [draggable]="false"
+              [resizable]="false"
+              [style]="{ width: '34rem', maxWidth: '95vw' }"
+            >
+              <div class="proposal-send-dialog">
+                <div class="field">
+                  <label for="proposalSendRecipient">Recipient email (optional)</label>
+                  <input
+                    pInputText
+                    id="proposalSendRecipient"
+                    [(ngModel)]="proposalSendRecipient"
+                    name="proposalSendRecipient"
+                    class="w-full"
+                    placeholder="Leave empty to use primary contact email"
+                  />
+                </div>
+                <div class="field">
+                  <label for="proposalSendMessage">Message (optional)</label>
+                  <textarea
+                    pTextarea
+                    id="proposalSendMessage"
+                    [(ngModel)]="proposalSendMessage"
+                    name="proposalSendMessage"
+                    class="w-full"
+                    rows="4"
+                    placeholder="Add a short custom message"
+                  ></textarea>
+                </div>
+                <div class="proposal-send-dialog__actions">
+                  <button
+                    pButton
+                    type="button"
+                    class="p-button-text"
+                    label="Cancel"
+                    icon="pi pi-times"
+                    (click)="proposalSendDialogVisible = false"
+                  ></button>
+                  <button
+                    pButton
+                    type="button"
+                    label="{{ proposalSending() ? 'Sending...' : 'Send proposal' }}"
+                    icon="pi pi-send"
+                    [disabled]="proposalSending()"
+                    (click)="markProposalSent()"
+                  ></button>
+                </div>
+              </div>
+            </p-dialog>
           </section>
               </p-accordion-content>
             </p-accordion-panel>

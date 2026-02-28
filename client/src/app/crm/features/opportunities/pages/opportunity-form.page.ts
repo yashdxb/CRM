@@ -10,6 +10,7 @@ import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { AccordionModule } from 'primeng/accordion';
 import { TreeModule } from 'primeng/tree';
+import { DialogModule } from 'primeng/dialog';
 import { Subject, map, of, switchMap, takeUntil } from 'rxjs';
 import { TreeNode } from 'primeng/api';
 
@@ -126,6 +127,7 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
     DatePickerModule,
     AccordionModule,
     TreeModule,
+    DialogModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./opportunity-form.page.html",
@@ -312,6 +314,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected quoteApprovalSubmitting = signal(false);
   protected proposalGenerating = signal(false);
   protected proposalSending = signal(false);
+  protected proposalSendDialogVisible = false;
+  protected proposalSendRecipient = '';
+  protected proposalSendMessage = '';
   private teamDirty = false;
   protected onboardingChecklist: OpportunityOnboardingItem[] = [];
   protected onboardingMilestones: OpportunityOnboardingItem[] = [];
@@ -2044,6 +2049,15 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     });
   }
 
+  protected openSendProposalDialog() {
+    if (!this.editingId || !this.selectedQuoteId) {
+      this.toastService.show('error', 'Save and select a quote first.', 2500);
+      return;
+    }
+
+    this.proposalSendDialogVisible = true;
+  }
+
   protected markProposalSent() {
     if (!this.editingId || !this.selectedQuoteId) {
       this.toastService.show('error', 'Save and select a quote first.', 2500);
@@ -2051,10 +2065,16 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     }
 
     this.proposalSending.set(true);
-    this.opportunityData.sendQuoteProposal(this.editingId, this.selectedQuoteId).subscribe({
+    this.opportunityData.sendQuoteProposal(this.editingId, this.selectedQuoteId, {
+      toEmail: this.proposalSendRecipient?.trim() || null,
+      message: this.proposalSendMessage?.trim() || null
+    }).subscribe({
       next: (result) => {
         this.proposalSending.set(false);
         this.applyProposalActionResult(result);
+        this.proposalSendDialogVisible = false;
+        this.proposalSendRecipient = '';
+        this.proposalSendMessage = '';
         this.toastService.show('success', `Proposal sent${result.recipientEmail ? ` to ${result.recipientEmail}` : ''}.`, 2800);
       },
       error: (error) => {
