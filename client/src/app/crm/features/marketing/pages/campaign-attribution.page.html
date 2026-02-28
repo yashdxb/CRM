@@ -53,6 +53,9 @@
           </div>
           <span class="metric-label">Influenced Pipeline</span>
           <strong class="metric-value">{{ formatMoney(totals().pipeline) }}</strong>
+          <span class="metric-delta" [ngClass]="deltaClass(deltaTotals().pipeline)">
+            vs First-touch {{ formatSignedMoney(deltaTotals().pipeline) }}
+          </span>
         </article>
         <article class="metric-card metric-card--won">
           <div class="metric-header">
@@ -61,6 +64,20 @@
           </div>
           <span class="metric-label">Won Revenue</span>
           <strong class="metric-value">{{ formatMoney(totals().won) }}</strong>
+          <span class="metric-delta" [ngClass]="deltaClass(deltaTotals().won)">
+            vs First-touch {{ formatSignedMoney(deltaTotals().won) }}
+          </span>
+        </article>
+        <article class="metric-card metric-card--conversion">
+          <div class="metric-header">
+            <div class="metric-icon secondary"><i class="pi pi-percentage"></i></div>
+            <span class="metric-trend"><i class="pi pi-chart-line"></i> Campaign avg</span>
+          </div>
+          <span class="metric-label">Conversion</span>
+          <strong class="metric-value">{{ totals().avgConversion | number:'1.2-2' }}%</strong>
+          <span class="metric-delta" [ngClass]="deltaClass(deltaTotals().avgConversion)">
+            vs First-touch {{ formatSignedPercent(deltaTotals().avgConversion) }}
+          </span>
         </article>
       </div>
     </section>
@@ -192,6 +209,9 @@
               <th pSortableColumn="influencedPipelineAmount">Influenced Pipeline <p-sortIcon field="influencedPipelineAmount"></p-sortIcon></th>
               <th pSortableColumn="wonRevenue">Won Revenue <p-sortIcon field="wonRevenue"></p-sortIcon></th>
               <th pSortableColumn="conversionRate">Conversion <p-sortIcon field="conversionRate"></p-sortIcon></th>
+              <th>Δ Pipeline</th>
+              <th>Δ Won</th>
+              <th>Δ Conv</th>
               <th>Actions</th>
             </tr>
           </ng-template>
@@ -203,6 +223,15 @@
               <td class="cell-numeric">{{ formatMoney(row.influencedPipelineAmount) }}</td>
               <td class="cell-numeric">{{ formatMoney(row.wonRevenue) }}</td>
               <td class="cell-numeric">{{ row.conversionRate }}%</td>
+              <td class="cell-numeric cell-delta" [ngClass]="deltaClass(rowDelta(row).pipeline)">
+                {{ formatSignedMoney(rowDelta(row).pipeline) }}
+              </td>
+              <td class="cell-numeric cell-delta" [ngClass]="deltaClass(rowDelta(row).won)">
+                {{ formatSignedMoney(rowDelta(row).won) }}
+              </td>
+              <td class="cell-numeric cell-delta" [ngClass]="deltaClass(rowDelta(row).conversion)">
+                {{ formatSignedPercent(rowDelta(row).conversion) }}
+              </td>
               <td>
                 <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-eye" label="Focus" (click)="selectCampaign(row.campaignId)"></button>
                 <button
@@ -219,7 +248,7 @@
           </ng-template>
           <ng-template pTemplate="emptymessage">
             <tr>
-              <td colspan="7" class="empty">No attribution rows yet.</td>
+              <td colspan="10" class="empty">No attribution rows yet.</td>
             </tr>
           </ng-template>
         </p-table>

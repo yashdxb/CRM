@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -30,6 +31,7 @@ import { MarketingDataService } from '../services/marketing-data.service';
 })
 export class CampaignAttributionPage {
   protected readonly items = signal<AttributionSummaryItem[]>([]);
+  protected readonly firstTouchBaseline = signal<AttributionSummaryItem[]>([]);
   protected readonly loading = signal(true);
   protected readonly searchTerm = signal('');
   protected readonly selectedModel = signal<AttributionModel>('first_touch');
@@ -68,7 +70,40 @@ export class CampaignAttributionPage {
       campaigns: rows.length,
       influenced: rows.reduce((sum, row) => sum + row.influencedOpportunities, 0),
       pipeline: rows.reduce((sum, row) => sum + row.influencedPipelineAmount, 0),
-      won: rows.reduce((sum, row) => sum + row.wonRevenue, 0)
+      won: rows.reduce((sum, row) => sum + row.wonRevenue, 0),
+      avgConversion: rows.length ? rows.reduce((sum, row) => sum + row.conversionRate, 0) / rows.length : 0
+    };
+  });
+  protected readonly firstTouchByCampaign = computed(() => {
+    return new Map(this.firstTouchBaseline().map((row) => [row.campaignId, row]));
+  });
+  protected readonly baselineTotals = computed(() => {
+    const rows = this.filteredItems();
+    const baseline = this.firstTouchByCampaign();
+
+    let pipeline = 0;
+    let won = 0;
+    let conversion = 0;
+    for (const row of rows) {
+      const source = baseline.get(row.campaignId);
+      pipeline += source?.influencedPipelineAmount ?? 0;
+      won += source?.wonRevenue ?? 0;
+      conversion += source?.conversionRate ?? 0;
+    }
+
+    return {
+      pipeline,
+      won,
+      avgConversion: rows.length ? conversion / rows.length : 0
+    };
+  });
+  protected readonly deltaTotals = computed(() => {
+    const totals = this.totals();
+    const baseline = this.baselineTotals();
+    return {
+      pipeline: totals.pipeline - baseline.pipeline,
+      won: totals.won - baseline.won,
+      avgConversion: totals.avgConversion - baseline.avgConversion
     };
   });
 
@@ -91,12 +126,16 @@ export class CampaignAttributionPage {
 
   protected load(): void {
     this.loading.set(true);
-    this.data.getAttributionSummary(this.selectedModel()).subscribe({
-      next: (rows) => {
-        this.items.set(rows);
+    forkJoin({
+      selected: this.data.getAttributionSummary(this.selectedModel()),
+      firstTouch: this.data.getAttributionSummary('first_touch')
+    }).subscribe({
+      next: ({ selected, firstTouch }) => {
+        this.items.set(selected);
+        this.firstTouchBaseline.set(firstTouch);
         this.loading.set(false);
 
-        if (!rows.length) {
+        if (!selected.length) {
           this.selectedCampaignId.set(null);
           this.healthScore.set(null);
           this.recommendations.set([]);
@@ -104,9 +143,9 @@ export class CampaignAttributionPage {
         }
 
         const currentSelected = this.selectedCampaignId();
-        const nextSelected = currentSelected && rows.some((r) => r.campaignId === currentSelected)
+        const nextSelected = currentSelected && selected.some((r) => r.campaignId === currentSelected)
           ? currentSelected
-          : rows[0].campaignId;
+          : selected[0].campaignId;
 
         this.selectCampaign(nextSelected);
       },
@@ -248,6 +287,36 @@ export class CampaignAttributionPage {
     if (trend === 'up') return 'success';
     if (trend === 'down') return 'danger';
     return 'info';
+  }
+
+  protected rowDelta(row: AttributionSummaryItem): { pipeline: number; won: number; conversion: number } {
+    const baseline = this.firstTouchByCampaign().get(row.campaignId);
+    return {
+      pipeline: row.influencedPipelineAmount - (baseline?.influencedPipelineAmount ?? 0),
+      won: row.wonRevenue - (baseline?.wonRevenue ?? 0),
+      conversion: row.conversionRate - (baseline?.conversionRate ?? 0)
+    };
+  }
+
+  protected deltaClass(value: number): string {
+    if (value > 0.001) return 'delta-positive';
+    if (value < -0.001) return 'delta-negative';
+    return 'delta-neutral';
+  }
+
+  protected formatSignedMoney(value: number): string {
+    if (value === 0) {
+      return this.formatMoney(0);
+    }
+
+    const sign = value > 0 ? '+' : '-';
+    return `${sign}${this.formatMoney(Math.abs(value))}`;
+  }
+
+  protected formatSignedPercent(value: number): string {
+    const abs = Math.abs(value).toFixed(2);
+    const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+    return `${sign}${abs}%`;
   }
 
   private loadCurrencyContext(): void {

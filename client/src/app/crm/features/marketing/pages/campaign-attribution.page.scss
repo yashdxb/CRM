@@ -9,7 +9,7 @@
   }
 
   .metrics-grid {
-    grid-template-columns: repeat(4, minmax(170px, 1fr));
+    grid-template-columns: repeat(5, minmax(170px, 1fr));
     gap: 0.9rem;
   }
 
@@ -41,6 +41,17 @@
   .metric-card--won::before {
     opacity: 1;
     background: linear-gradient(135deg, #10b981 0%, #22c55e 100%);
+  }
+
+  .metric-card--conversion::before {
+    opacity: 1;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  }
+
+  .metric-delta {
+    margin-top: 0.25rem;
+    font-size: 0.78rem;
+    font-weight: 600;
   }
 
   .insights-grid {
@@ -160,6 +171,22 @@
   .cell-numeric {
     text-align: right;
     font-variant-numeric: tabular-nums;
+  }
+
+  .cell-delta {
+    font-weight: 600;
+  }
+
+  .delta-positive {
+    color: #15803d;
+  }
+
+  .delta-negative {
+    color: #b91c1c;
+  }
+
+  .delta-neutral {
+    color: #475569;
   }
 
   ::ng-deep .crm-table .p-sortable-column .p-sortable-column-icon {
