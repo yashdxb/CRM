@@ -42,7 +42,7 @@ jobs:
         working-directory: client
         run: npx playwright install --with-deps chromium
 
-      - name: Run smoke + marketing e2e specs
+      - name: Run smoke + marketing + CPQ proposal e2e specs
         working-directory: client
         env:
           E2E_BASE_URL: http://127.0.0.1:4201
@@ -52,4 +52,5 @@ jobs:
             e2e/smoke.spec.ts \
             e2e/marketing-mvp.spec.ts \
             e2e/marketing-telemetry-audit.spec.ts \
+            e2e/opportunity-quote-proposal.spec.ts \
             --project=chromium
