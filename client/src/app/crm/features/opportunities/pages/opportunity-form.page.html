@@ -858,11 +858,14 @@
                 <i class="pi pi-file"></i>
                 {{ proposalGenerating() ? 'Generating...' : 'Generate proposal' }}
               </button>
-              <button type="button" class="btn-glass" [disabled]="proposalSending() || !selectedQuoteId" (click)="openSendProposalDialog()">
+              <button type="button" class="btn-glass" [disabled]="proposalSending() || !selectedQuoteId || !proposalPreviewUrl()" (click)="openSendProposalDialog()">
                 <i class="pi pi-send"></i>
                 {{ proposalSending() ? 'Sending...' : 'Send proposal' }}
               </button>
             </div>
+            <p class="proposal-send-hint" *ngIf="selectedQuoteId && !proposalPreviewUrl()">
+              Generate proposal first to enable sending.
+            </p>
             <p-dialog
               header="Send Proposal"
               [(visible)]="proposalSendDialogVisible"

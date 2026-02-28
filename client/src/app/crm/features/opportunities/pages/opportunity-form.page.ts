@@ -2069,6 +2069,11 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       return;
     }
 
+    if (!this.proposalPreviewUrl()) {
+      this.toastService.show('error', 'Generate proposal first.', 2500);
+      return;
+    }
+
     this.proposalSendRecipient = (prefillRecipient ?? '').trim();
     this.proposalSendMessage = (prefillMessage ?? '').trim();
     this.proposalResendSourceEventId = sourceEventId ?? null;
