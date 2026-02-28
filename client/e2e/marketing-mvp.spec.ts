@@ -52,12 +52,50 @@ test('marketing MVP screens and campaign appears in list', async ({ page, reques
       objective: 'Playwright verification campaign'
     }
   });
-  expect(createResp.ok()).toBeTruthy();
+  expect(createResp.ok(), await createResp.text()).toBeTruthy();
+  const createdCampaign = await createResp.json();
+  const campaignId = createdCampaign?.id as string;
+  expect(campaignId).toBeTruthy();
+
+  const recommendationResp = await request.get(`${API_BASE_URL}/api/marketing/campaigns/${campaignId}/recommendations`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  expect(recommendationResp.ok(), await recommendationResp.text()).toBeTruthy();
+  const recommendations = await recommendationResp.json();
+  expect(Array.isArray(recommendations)).toBeTruthy();
+  expect(recommendations.length).toBeGreaterThan(0);
+
+  const recommendationId = recommendations[0]?.id as string;
+  expect(recommendationId).toBeTruthy();
+  const decisionResp = await request.post(`${API_BASE_URL}/api/marketing/recommendations/${recommendationId}/decision`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default',
+      'Content-Type': 'application/json'
+    },
+    data: {
+      decision: 'snooze',
+      reason: 'E2E decision workflow check',
+      applyActions: false
+    }
+  });
+  expect(decisionResp.ok(), await decisionResp.text()).toBeTruthy();
+  const decisionBody = await decisionResp.json();
+  expect(decisionBody?.status).toContain('snooz');
 
   await page.goto('/app/marketing/campaigns');
   await expect(page.getByRole('heading', { name: 'Campaign Management' })).toBeVisible();
   await expect(page.getByText(campaignName)).toBeVisible();
 
+  await page.goto(`/app/marketing/campaigns/${campaignId}`);
+  await expect(page.getByRole('button', { name: 'Action Center' })).toBeVisible();
+  await expect(page.getByText('Campaign Health Score')).toBeVisible();
+
   await page.goto('/app/marketing/attribution');
   await expect(page.getByRole('heading', { name: 'Campaign Attribution' })).toBeVisible();
+  await expect(page.getByText('Decision Cockpit')).toBeVisible();
+  await expect(page.getByText('Next Best Actions')).toBeVisible();
 });
