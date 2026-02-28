@@ -235,6 +235,15 @@ export class CampaignAttributionPage {
     });
   }
 
+  protected openCampaignImpactWorklist(campaignName: string, direction: 'positive' | 'negative'): void {
+    this.router.navigate(['/app/opportunities'], {
+      queryParams: {
+        search: campaignName,
+        focus: direction === 'positive' ? 'model gain' : 'model loss'
+      }
+    });
+  }
+
   protected showExplainability(opportunityId: string): void {
     if (!this.canExplainAttribution()) {
       this.toast.show('success', 'Explainability is available for first-touch model only.');

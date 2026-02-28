@@ -202,6 +202,14 @@
                 <span class="delta-positive">{{ formatSignedMoney(row.won) }}</span>
                 <span class="delta-positive">{{ formatSignedPercent(row.conversion) }}</span>
               </div>
+              <button
+                pButton
+                type="button"
+                class="crm-button crm-button--text impact-action-btn"
+                icon="pi pi-arrow-right"
+                label="Open Worklist"
+                (click)="openCampaignImpactWorklist(row.campaignName, 'positive')"
+              ></button>
             </div>
           </div>
         </article>
@@ -217,6 +225,14 @@
                 <span class="delta-negative">{{ formatSignedMoney(row.won) }}</span>
                 <span class="delta-negative">{{ formatSignedPercent(row.conversion) }}</span>
               </div>
+              <button
+                pButton
+                type="button"
+                class="crm-button crm-button--text impact-action-btn"
+                icon="pi pi-arrow-right"
+                label="Open Worklist"
+                (click)="openCampaignImpactWorklist(row.campaignName, 'negative')"
+              ></button>
             </div>
           </div>
         </article>
