@@ -33,6 +33,8 @@ public class CrmDbContext : DbContext
     public DbSet<CampaignRecommendationDecision> CampaignRecommendationDecisions => Set<CampaignRecommendationDecision>();
     public DbSet<AttributionExplainabilityEvent> AttributionExplainabilityEvents => Set<AttributionExplainabilityEvent>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
+    public DbSet<OpportunityQuote> OpportunityQuotes => Set<OpportunityQuote>();
+    public DbSet<OpportunityQuoteLine> OpportunityQuoteLines => Set<OpportunityQuoteLine>();
     public DbSet<OpportunityStage> OpportunityStages => Set<OpportunityStage>();
     public DbSet<OpportunityStageHistory> OpportunityStageHistories => Set<OpportunityStageHistory>();
     public DbSet<OpportunityReviewChecklistItem> OpportunityReviewChecklistItems => Set<OpportunityReviewChecklistItem>();
@@ -136,6 +138,8 @@ public class CrmDbContext : DbContext
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);
         modelBuilder.Entity<Opportunity>().ToTable("Opportunities", CrmSchema);
+        modelBuilder.Entity<OpportunityQuote>().ToTable("OpportunityQuotes", CrmSchema);
+        modelBuilder.Entity<OpportunityQuoteLine>().ToTable("OpportunityQuoteLines", CrmSchema);
         modelBuilder.Entity<OpportunityStage>().ToTable("OpportunityStages", CrmSchema);
         modelBuilder.Entity<OpportunityStageHistory>().ToTable("OpportunityStageHistories", CrmSchema);
         modelBuilder.Entity<OpportunityStageAutomationRule>().ToTable("OpportunityStageAutomationRules", CrmSchema);

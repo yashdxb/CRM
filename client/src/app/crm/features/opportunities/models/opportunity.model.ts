@@ -105,6 +105,86 @@ export interface OpportunityOnboardingItem {
   notes?: string | null;
 }
 
+export interface OpportunityQuoteSummary {
+  id: string;
+  quoteNumber: string;
+  name: string;
+  status: string;
+  priceListId?: string | null;
+  currency: string;
+  totalAmount: number;
+  createdAtUtc: string;
+  updatedAtUtc?: string | null;
+}
+
+export interface OpportunityQuoteLine {
+  id: string;
+  itemMasterId: string;
+  itemName: string;
+  itemSku: string;
+  description?: string | null;
+  quantity: number;
+  unitPrice: number;
+  discountPercent: number;
+  lineTotal: number;
+}
+
+export interface OpportunityQuoteDetail {
+  id: string;
+  opportunityId: string;
+  quoteNumber: string;
+  name: string;
+  status: string;
+  priceListId?: string | null;
+  currency: string;
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  notes?: string | null;
+  createdAtUtc: string;
+  updatedAtUtc?: string | null;
+  lines: OpportunityQuoteLine[];
+}
+
+export interface OpportunityQuoteLineRequest {
+  itemMasterId: string;
+  description?: string | null;
+  quantity: number;
+  unitPrice: number;
+  discountPercent: number;
+}
+
+export interface OpportunityCreateQuoteRequest {
+  name: string;
+  priceListId?: string | null;
+  currency: string;
+  taxAmount: number;
+  notes?: string | null;
+  lines: OpportunityQuoteLineRequest[];
+}
+
+export interface OpportunityUpdateQuoteRequest extends OpportunityCreateQuoteRequest {
+  status: string;
+}
+
+export interface PriceListListItem {
+  id: string;
+  name: string;
+  currency: string;
+  status: string;
+}
+
+export interface ItemMasterListItem {
+  id: string;
+  sku: string;
+  name: string;
+  description?: string | null;
+  categoryName?: string | null;
+  defaultUom?: string | null;
+  isActive: boolean;
+}
+
 export type OpportunityApprovalStatus = 'Pending' | 'Approved' | 'Rejected';
 
 export interface OpportunityApprovalItem {

@@ -26,7 +26,11 @@ import {
   OpportunityReviewChecklistItem,
   OpportunityReviewThreadItem,
   OpportunityOnboardingItem,
-  OpportunityTeamMember
+  OpportunityTeamMember,
+  OpportunityQuoteDetail,
+  OpportunityQuoteSummary,
+  PriceListListItem,
+  ItemMasterListItem
 } from '../models/opportunity.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext, readUserId, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
@@ -280,6 +284,29 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   ];
   protected teamMemberOptions: Option[] = [];
   protected teamMembers: OpportunityTeamMember[] = [];
+  protected quoteSummaries: OpportunityQuoteSummary[] = [];
+  protected activeQuote: OpportunityQuoteDetail | null = null;
+  protected selectedQuoteId: string | null = null;
+  protected quoteName = '';
+  protected quoteStatus = 'Draft';
+  protected quoteTaxAmount = 0;
+  protected quoteNotes = '';
+  protected quotePriceListId: string | null = null;
+  protected quoteCurrency = '';
+  protected quoteLines: Array<{
+    itemMasterId: string | null;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    discountPercent: number;
+    lineTotal: number;
+  }> = [];
+  protected itemMasterOptions: Option[] = [];
+  protected itemMasterMap = new Map<string, ItemMasterListItem>();
+  protected priceListOptions: Option<string | null>[] = [];
+  protected priceListItems: PriceListListItem[] = [];
+  protected quoteSaving = signal(false);
+  protected quoteLoading = signal(false);
   private teamDirty = false;
   protected onboardingChecklist: OpportunityOnboardingItem[] = [];
   protected onboardingMilestones: OpportunityOnboardingItem[] = [];
@@ -319,6 +346,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.loadCurrencyContext();
     this.loadAccounts();
+    this.loadQuoteCatalogData();
     this.reviewAckDueLocal = this.defaultReviewDueLocal();
 
     this.route.queryParamMap.subscribe((params) => {
@@ -346,6 +374,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.loadSectionsForOpenPanels();
       } else {
         this.form = this.createEmptyForm();
+        this.resetQuoteWorkspace();
         this.selectedStage = this.form.stageName ?? 'Prospecting';
         this.securityChecklist = [];
         this.legalChecklist = [];
@@ -1480,6 +1509,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     this.opportunityData.getById(id).subscribe({
       next: (opp) => {
         this.applyOpportunity(opp);
+        this.loadQuoteWorkspace(id);
         if (!this.accountOptions.length) {
           this.pendingOpportunity = opp;
         }
@@ -1549,6 +1579,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     markLoading();
 
     switch (section) {
+      case 'quote-proposal':
+        this.loadQuoteWorkspace(this.editingId, markDone);
+        break;
       case 'pre-sales-team':
         this.loadTeamMembers(this.editingId, markDone);
         break;
@@ -1998,6 +2031,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     if (!this.form.proposalNotes && this.form.pricingNotes) {
       this.form.proposalNotes = this.form.pricingNotes;
     }
+    if (!this.activeQuote && this.quoteLines.length > 0 && this.editingId) {
+      this.saveQuoteAsDraft();
+    }
     this.toastService.show('success', 'Proposal draft created.', 2500);
   }
 
@@ -2009,6 +2045,145 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     this.form.proposalStatus = 'Sent';
     this.form.proposalSentAtUtc = now;
     this.toastService.show('success', 'Proposal marked as sent.', 2500);
+  }
+
+  protected addQuoteLine() {
+    this.quoteLines = [
+      ...this.quoteLines,
+      {
+        itemMasterId: this.itemMasterOptions[0]?.value ?? null,
+        description: '',
+        quantity: 1,
+        unitPrice: 0,
+        discountPercent: 0,
+        lineTotal: 0
+      }
+    ];
+    this.onQuoteLineChanged();
+  }
+
+  protected removeQuoteLine(index: number) {
+    this.quoteLines = this.quoteLines.filter((_, i) => i !== index);
+    this.onQuoteLineChanged();
+  }
+
+  protected onQuoteItemChanged(index: number) {
+    const line = this.quoteLines[index];
+    if (!line?.itemMasterId) {
+      return;
+    }
+
+    const selected = this.itemMasterMap.get(line.itemMasterId);
+    if (selected && !line.description) {
+      line.description = selected.name;
+    }
+    this.onQuoteLineChanged();
+  }
+
+  protected onQuoteLineChanged() {
+    this.quoteLines = this.quoteLines.map((line) => {
+      const quantity = Math.max(1, Number(line.quantity || 0));
+      const unitPrice = Math.max(0, Number(line.unitPrice || 0));
+      const discountPercent = Math.min(100, Math.max(0, Number(line.discountPercent || 0)));
+      const lineTotal = Number((quantity * unitPrice * (1 - discountPercent / 100)).toFixed(2));
+      return { ...line, quantity, unitPrice, discountPercent, lineTotal };
+    });
+  }
+
+  protected quoteSubtotal(): number {
+    return Number(this.quoteLines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0).toFixed(2));
+  }
+
+  protected quoteDiscountAmount(): number {
+    return Number((this.quoteSubtotal() - this.quoteLines.reduce((sum, line) => sum + line.lineTotal, 0)).toFixed(2));
+  }
+
+  protected quoteTotal(): number {
+    const linesTotal = this.quoteLines.reduce((sum, line) => sum + line.lineTotal, 0);
+    return Number((linesTotal + (this.quoteTaxAmount || 0)).toFixed(2));
+  }
+
+  protected saveQuoteAsDraft() {
+    if (!this.editingId) {
+      this.toastService.show('error', 'Save the opportunity before creating a quote.', 2500);
+      return;
+    }
+
+    if (!this.quoteLines.length) {
+      this.toastService.show('error', 'Add at least one quote line.', 2500);
+      return;
+    }
+
+    const payload = {
+      name: this.quoteName?.trim() || `${this.form.name || 'Opportunity'} Quote`,
+      status: this.quoteStatus || 'Draft',
+      priceListId: this.quotePriceListId,
+      currency: this.resolveCurrency(this.quoteCurrency || this.form.currency),
+      taxAmount: this.quoteTaxAmount || 0,
+      notes: this.quoteNotes || null,
+      lines: this.quoteLines
+        .filter((line) => !!line.itemMasterId)
+        .map((line) => ({
+          itemMasterId: line.itemMasterId as string,
+          description: line.description || null,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          discountPercent: line.discountPercent
+        }))
+    };
+
+    if (!payload.lines.length) {
+      this.toastService.show('error', 'Select at least one product for quote lines.', 2500);
+      return;
+    }
+
+    this.quoteSaving.set(true);
+    const request$ = this.selectedQuoteId
+      ? this.opportunityData.updateQuote(this.editingId, this.selectedQuoteId, payload)
+      : this.opportunityData.createQuote(this.editingId, {
+          name: payload.name,
+          priceListId: payload.priceListId,
+          currency: payload.currency,
+          taxAmount: payload.taxAmount,
+          notes: payload.notes,
+          lines: payload.lines
+        });
+
+    request$.subscribe({
+      next: (quote) => {
+        this.quoteSaving.set(false);
+        this.applyQuoteDetail(quote);
+        this.loadQuoteWorkspace(this.editingId!);
+        this.toastService.show('success', 'Quote saved.', 2400);
+      },
+      error: (error) => {
+        this.quoteSaving.set(false);
+        const message = typeof error?.error === 'string'
+          ? error.error
+          : error?.error?.message || 'Unable to save quote.';
+        this.toastService.show('error', message, 3200);
+      }
+    });
+  }
+
+  protected onQuoteSelectionChange(quoteId: string | null) {
+    this.selectedQuoteId = quoteId;
+    if (!this.editingId || !quoteId) {
+      this.activeQuote = null;
+      return;
+    }
+
+    this.quoteLoading.set(true);
+    this.opportunityData.getQuote(this.editingId, quoteId).subscribe({
+      next: (quote) => {
+        this.quoteLoading.set(false);
+        this.applyQuoteDetail(quote);
+      },
+      error: () => {
+        this.quoteLoading.set(false);
+        this.toastService.show('error', 'Unable to load quote detail.', 3000);
+      }
+    });
   }
 
   protected addChecklistItem(type: 'Security' | 'Legal' | 'Technical') {
@@ -2154,6 +2329,103 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     return this.checklistSavedIds.has(item.id);
   }
 
+  private loadQuoteCatalogData() {
+    this.opportunityData.getItemMaster().subscribe({
+      next: (items) => {
+        const activeItems = items.filter((item) => item.isActive);
+        this.itemMasterMap = new Map(activeItems.map((item) => [item.id, item]));
+        this.itemMasterOptions = activeItems
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((item) => ({
+            label: `${item.name} (${item.sku})`,
+            value: item.id
+          }));
+      },
+      error: () => {
+        this.itemMasterMap.clear();
+        this.itemMasterOptions = [];
+      }
+    });
+
+    this.opportunityData.getPriceLists(1, 100).subscribe({
+      next: (result) => {
+        this.priceListItems = result.items ?? [];
+        this.priceListOptions = [
+          { label: 'No price list', value: null },
+          ...this.priceListItems
+            .filter((item) => item.status === 'Active' || item.status === 'Draft')
+            .map((item) => ({ label: `${item.name} (${item.currency})`, value: item.id }))
+        ];
+      },
+      error: () => {
+        this.priceListItems = [];
+        this.priceListOptions = [{ label: 'No price list', value: null }];
+      }
+    });
+  }
+
+  private loadQuoteWorkspace(opportunityId: string, onSettled?: () => void) {
+    this.quoteLoading.set(true);
+    this.opportunityData.getQuotes(opportunityId).subscribe({
+      next: (quotes) => {
+        this.quoteLoading.set(false);
+        this.quoteSummaries = quotes ?? [];
+
+        if (!this.quoteSummaries.length) {
+          this.resetQuoteWorkspace();
+          this.quoteName = `${this.form.name || 'Opportunity'} Quote`;
+          onSettled?.();
+          return;
+        }
+
+        const nextQuoteId = this.selectedQuoteId && this.quoteSummaries.some((q) => q.id === this.selectedQuoteId)
+          ? this.selectedQuoteId
+          : this.quoteSummaries[0].id;
+        this.onQuoteSelectionChange(nextQuoteId);
+        onSettled?.();
+      },
+      error: () => {
+        this.quoteLoading.set(false);
+        this.quoteSummaries = [];
+        this.resetQuoteWorkspace();
+        onSettled?.();
+      }
+    });
+  }
+
+  private applyQuoteDetail(quote: OpportunityQuoteDetail) {
+    this.activeQuote = quote;
+    this.selectedQuoteId = quote.id;
+    this.quoteName = quote.name;
+    this.quoteStatus = quote.status;
+    this.quoteTaxAmount = quote.taxAmount;
+    this.quoteNotes = quote.notes ?? '';
+    this.quotePriceListId = quote.priceListId ?? null;
+    this.quoteCurrency = quote.currency;
+    this.quoteLines = quote.lines.map((line) => ({
+      itemMasterId: line.itemMasterId,
+      description: line.description ?? '',
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      discountPercent: line.discountPercent,
+      lineTotal: line.lineTotal
+    }));
+    this.onQuoteLineChanged();
+  }
+
+  private resetQuoteWorkspace() {
+    this.activeQuote = null;
+    this.selectedQuoteId = null;
+    this.quoteSummaries = [];
+    this.quoteStatus = 'Draft';
+    this.quoteTaxAmount = 0;
+    this.quoteNotes = '';
+    this.quotePriceListId = null;
+    this.quoteCurrency = this.resolveCurrency(this.form.currency);
+    this.quoteName = '';
+    this.quoteLines = [];
+  }
+
   private applyOpportunity(opp: Opportunity) {
     const accountIdFromName = this.accountOptions.find((opt) => opt.label === opp.account)?.value;
     if (!accountIdFromName && opp.account) {
@@ -2209,6 +2481,10 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       amount: opp.amount ?? this.approvalRequest.amount,
       currency: this.resolveCurrency(opp.currency ?? this.approvalRequest.currency)
     };
+    this.quoteCurrency = this.resolveCurrency(opp.currency);
+    if (!this.quoteName) {
+      this.quoteName = `${opp.name} Quote`;
+    }
     this.approvalAmountLocked = false;
     this.syncApprovalAmount();
     this.enforceAccordionAccess();

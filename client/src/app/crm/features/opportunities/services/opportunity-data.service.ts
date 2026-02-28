@@ -9,7 +9,13 @@ import {
   OpportunitySearchRequest,
   OpportunitySearchResponse,
   OpportunityTeamMember,
-  UpdateOpportunityTeamRequest
+  UpdateOpportunityTeamRequest,
+  OpportunityQuoteSummary,
+  OpportunityQuoteDetail,
+  OpportunityCreateQuoteRequest,
+  OpportunityUpdateQuoteRequest,
+  PriceListListItem,
+  ItemMasterListItem
 } from '../models/opportunity.model';
 
 export interface SaveOpportunityRequest {
@@ -136,5 +142,36 @@ export class OpportunityDataService {
 
   createExpansion(opportunityId: string) {
     return this.http.post<Opportunity>(`${this.baseUrl}/api/opportunities/${opportunityId}/expansion`, {});
+  }
+
+  getQuotes(opportunityId: string) {
+    return this.http.get<OpportunityQuoteSummary[]>(`${this.baseUrl}/api/opportunities/${opportunityId}/quotes`);
+  }
+
+  getQuote(opportunityId: string, quoteId: string) {
+    return this.http.get<OpportunityQuoteDetail>(`${this.baseUrl}/api/opportunities/${opportunityId}/quotes/${quoteId}`);
+  }
+
+  createQuote(opportunityId: string, payload: OpportunityCreateQuoteRequest) {
+    return this.http.post<OpportunityQuoteDetail>(`${this.baseUrl}/api/opportunities/${opportunityId}/quotes`, payload);
+  }
+
+  updateQuote(opportunityId: string, quoteId: string, payload: OpportunityUpdateQuoteRequest) {
+    return this.http.put<OpportunityQuoteDetail>(`${this.baseUrl}/api/opportunities/${opportunityId}/quotes/${quoteId}`, payload);
+  }
+
+  getPriceLists(page = 1, pageSize = 100) {
+    const params = new HttpParams()
+      .set('page', page)
+      .set('pageSize', pageSize);
+
+    return this.http.get<{ items: PriceListListItem[]; total: number }>(
+      `${this.baseUrl}/api/supply-chain/price-lists`,
+      { params }
+    );
+  }
+
+  getItemMaster() {
+    return this.http.get<ItemMasterListItem[]>(`${this.baseUrl}/api/supply-chain/item-master`);
   }
 }

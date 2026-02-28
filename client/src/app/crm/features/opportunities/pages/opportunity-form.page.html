@@ -643,7 +643,150 @@
                 ></textarea>
               </div>
             </div>
+            <div class="quote-workspace">
+              <div class="quote-workspace__header">
+                <h4>Quote Workspace</h4>
+                <span class="field-hint" *ngIf="activeQuote">Quote #{{ activeQuote.quoteNumber }}</span>
+              </div>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="oppQuoteSelect">Quote draft</label>
+                  <p-select
+                    inputId="oppQuoteSelect"
+                    appendTo="body"
+                    [options]="quoteSummaries"
+                    optionLabel="name"
+                    optionValue="id"
+                    [showClear]="true"
+                    [ngModel]="selectedQuoteId"
+                    (ngModelChange)="onQuoteSelectionChange($event)"
+                    placeholder="Select quote"
+                    styleClass="w-full"
+                  ></p-select>
+                </div>
+                <div class="field">
+                  <label for="oppQuoteName">Quote name</label>
+                  <input
+                    pInputText
+                    id="oppQuoteName"
+                    [(ngModel)]="quoteName"
+                    name="quoteName"
+                    class="w-full"
+                    placeholder="Quote name"
+                  />
+                </div>
+                <div class="field">
+                  <label for="oppQuotePriceList">Price list</label>
+                  <p-select
+                    inputId="oppQuotePriceList"
+                    appendTo="body"
+                    [options]="priceListOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [(ngModel)]="quotePriceListId"
+                    name="quotePriceListId"
+                    placeholder="Select price list"
+                    styleClass="w-full"
+                  ></p-select>
+                </div>
+                <div class="field">
+                  <label for="oppQuoteTax">Tax amount</label>
+                  <p-inputNumber
+                    inputId="oppQuoteTax"
+                    [(ngModel)]="quoteTaxAmount"
+                    name="quoteTaxAmount"
+                    mode="currency"
+                    [currency]="resolveCurrency(quoteCurrency || form.currency)"
+                    class="w-full"
+                  ></p-inputNumber>
+                </div>
+              </div>
+
+              <div class="quote-lines" *ngIf="quoteLines.length; else emptyQuoteLines">
+                <div class="quote-line quote-line--header">
+                  <span>Product</span>
+                  <span>Description</span>
+                  <span>Qty</span>
+                  <span>Unit Price</span>
+                  <span>Disc %</span>
+                  <span>Total</span>
+                  <span></span>
+                </div>
+                <div class="quote-line" *ngFor="let line of quoteLines; let i = index">
+                  <p-select
+                    appendTo="body"
+                    [options]="itemMasterOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [(ngModel)]="line.itemMasterId"
+                    name="quoteItem{{ i }}"
+                    placeholder="Item"
+                    (ngModelChange)="onQuoteItemChanged(i)"
+                    styleClass="w-full"
+                  ></p-select>
+                  <input
+                    pInputText
+                    [(ngModel)]="line.description"
+                    name="quoteDescription{{ i }}"
+                    (ngModelChange)="onQuoteLineChanged()"
+                    placeholder="Line description"
+                    class="w-full"
+                  />
+                  <p-inputNumber
+                    [(ngModel)]="line.quantity"
+                    name="quoteQty{{ i }}"
+                    [min]="1"
+                    (ngModelChange)="onQuoteLineChanged()"
+                    class="w-full"
+                  ></p-inputNumber>
+                  <p-inputNumber
+                    [(ngModel)]="line.unitPrice"
+                    name="quoteUnitPrice{{ i }}"
+                    mode="currency"
+                    [currency]="resolveCurrency(quoteCurrency || form.currency)"
+                    (ngModelChange)="onQuoteLineChanged()"
+                    class="w-full"
+                  ></p-inputNumber>
+                  <p-inputNumber
+                    [(ngModel)]="line.discountPercent"
+                    name="quoteDiscount{{ i }}"
+                    suffix="%"
+                    [min]="0"
+                    [max]="100"
+                    (ngModelChange)="onQuoteLineChanged()"
+                    class="w-full"
+                  ></p-inputNumber>
+                  <p-inputNumber
+                    [ngModel]="line.lineTotal"
+                    [disabled]="true"
+                    mode="currency"
+                    [currency]="resolveCurrency(quoteCurrency || form.currency)"
+                    class="w-full"
+                  ></p-inputNumber>
+                  <button type="button" class="btn-glass btn-icon" (click)="removeQuoteLine(i)">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+              </div>
+              <ng-template #emptyQuoteLines>
+                <p class="empty-state">No quote lines yet. Add products to build this quote.</p>
+              </ng-template>
+
+              <div class="quote-summary">
+                <span>Subtotal: {{ quoteSubtotal() | number: '1.2-2' }}</span>
+                <span>Discount: {{ quoteDiscountAmount() | number: '1.2-2' }}</span>
+                <span>Total: {{ quoteTotal() | number: '1.2-2' }}</span>
+              </div>
+            </div>
             <div class="team-actions">
+              <button type="button" class="btn-glass" (click)="addQuoteLine()">
+                <i class="pi pi-plus"></i>
+                Add line
+              </button>
+              <button type="button" class="btn-glass btn-primary" [disabled]="quoteSaving()" (click)="saveQuoteAsDraft()">
+                <i class="pi pi-save"></i>
+                Save quote
+              </button>
               <button type="button" class="btn-glass" (click)="generateProposal()">
                 <i class="pi pi-file"></i>
                 Generate proposal

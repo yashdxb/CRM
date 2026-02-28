@@ -173,6 +173,7 @@ public static class DependencyInjection
         services.AddScoped<IDecisionInboxService, DecisionInboxService>();
         services.AddScoped<IOpportunityReviewChecklistService, OpportunityReviewChecklistService>();
         services.AddScoped<IOpportunityOnboardingService, OpportunityOnboardingService>();
+        services.AddScoped<IOpportunityQuoteService, OpportunityQuoteService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ICustomerImportService, CustomerImportService>();
         services.AddScoped<IContactService, ContactService>();

@@ -1189,6 +1189,57 @@
   margin-top: 0.75rem;
   display: flex;
   justify-content: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.quote-workspace {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.quote-workspace__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+
+  h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: rgba(30, 41, 59, 0.9);
+  }
+}
+
+.quote-lines {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.quote-line {
+  display: grid;
+  grid-template-columns: 1.7fr 1.4fr 0.6fr 0.9fr 0.7fr 0.9fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.quote-line--header {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(71, 85, 105, 0.85);
+}
+
+.quote-summary {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  font-size: 0.84rem;
+  color: rgba(51, 65, 85, 0.9);
 }
 
 .btn-icon {
@@ -1257,6 +1308,14 @@
 
   .team-row {
     grid-template-columns: 1fr;
+  }
+
+  .quote-line {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-line--header {
+    display: none;
   }
 
   .approval-history-header {
