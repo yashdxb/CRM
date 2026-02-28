@@ -196,6 +196,10 @@ export class OpportunityDataService {
   }
 
   getItemMaster() {
-    return this.http.get<ItemMasterListItem[]>(`${this.baseUrl}/api/supply-chain/item-master`);
+    const params = new HttpParams()
+      .set('isActive', true)
+      .set('page', 1)
+      .set('pageSize', 200);
+    return this.http.get<{ items: ItemMasterListItem[]; total: number }>(`${this.baseUrl}/api/supply-chain/item-master`, { params });
   }
 }

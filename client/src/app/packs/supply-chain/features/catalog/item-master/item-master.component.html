@@ -5,48 +5,106 @@
       <div class="hero-content">
         <div class="hero-text">
           <h1 class="page-title gradient-indigo">Item Master</h1>
-          <p class="page-subtitle">Authoritative list of your company’s main items.</p>
+          <p class="page-subtitle">Manage product metadata used by CPQ quotes and price lists.</p>
+        </div>
+        <div class="hero-actions">
+          <button pButton type="button" icon="pi pi-plus" label="Add item" (click)="openCreateDialog()"></button>
         </div>
       </div>
     </section>
+
     <section class="glass-card table-card">
       <div class="card-header">
-        <h2 class="card-title">Master Items</h2>
+        <h2 class="card-title">Catalog Items</h2>
       </div>
       <div class="card-body">
-        <p-table #dt [value]="items" [loading]="loading" [rows]="10" [paginator]="true" [rowsPerPageOptions]="[10, 25, 50]" [globalFilterFields]="['sku', 'name', 'categoryName', 'description']" [tableStyle]="{ 'min-width': '60rem' }" responsiveLayout="scroll">
-          <ng-template pTemplate="caption">
-            <div class="table-header">
-              <div class="search-field">
-                <input pInputText type="text" [(ngModel)]="searchValue" (input)="dt.filterGlobal($any($event.target).value, 'contains')" placeholder="Search items..." />
-              </div>
-            </div>
-          </ng-template>
+        <div class="toolbar-row">
+          <span class="p-input-icon-left search-field">
+            <i class="pi pi-search"></i>
+            <input
+              pInputText
+              type="text"
+              [(ngModel)]="searchValue"
+              placeholder="Search by SKU, name, category, or description"
+              (keyup.enter)="applyFilters()"
+            />
+          </span>
+          <p-select
+            [options]="categoryOptions"
+            [(ngModel)]="categoryFilter"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Category"
+            styleClass="w-14rem"
+          ></p-select>
+          <p-select
+            [options]="statusOptions"
+            [(ngModel)]="statusFilter"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Status"
+            styleClass="w-12rem"
+          ></p-select>
+          <button pButton type="button" icon="pi pi-filter" label="Apply" severity="secondary" (click)="applyFilters()"></button>
+          <button pButton type="button" icon="pi pi-undo" label="Reset" text (click)="clearFilters()"></button>
+        </div>
+
+        <p-table
+          [value]="items"
+          [loading]="loading"
+          [lazy]="true"
+          [paginator]="true"
+          [rows]="rows"
+          [first]="first"
+          [totalRecords]="totalRecords"
+          [rowsPerPageOptions]="[10, 25, 50]"
+          [tableStyle]="{ 'min-width': '78rem' }"
+          responsiveLayout="scroll"
+          (onLazyLoad)="onLazyLoad($event)"
+        >
           <ng-template pTemplate="header">
             <tr>
-              <th pSortableColumn="sku">SKU <p-sortIcon field="sku" /></th>
-              <th pSortableColumn="name">Item Name <p-sortIcon field="name" /></th>
-              <th pSortableColumn="categoryName">Category <p-sortIcon field="categoryName" /></th>
+              <th>SKU</th>
+              <th>Name</th>
+              <th>Category</th>
               <th>UOM</th>
-              <th pSortableColumn="isActive">Status <p-sortIcon field="isActive" /></th>
+              <th>Default Price</th>
+              <th>Status</th>
+              <th class="actions-col">Actions</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-item>
             <tr>
               <td>{{ item.sku }}</td>
               <td>{{ item.name }}</td>
-              <td>{{ item.categoryName }}</td>
-              <td>{{ item.defaultUom }}</td>
+              <td>{{ item.categoryName || '—' }}</td>
+              <td>{{ item.defaultUom || '—' }}</td>
+              <td>{{ formatPrice(item) }}</td>
               <td>
-                <span class="status-pill" [ngClass]="{ 'active': item.isActive, 'inactive': !item.isActive }">
+                <span class="status-pill" [ngClass]="{ active: item.isActive, inactive: !item.isActive }">
                   {{ item.isActive ? 'Active' : 'Inactive' }}
                 </span>
+              </td>
+              <td class="actions-col">
+                <div class="row-actions">
+                  <button pButton type="button" icon="pi pi-pencil" text rounded (click)="openEditDialog(item)"></button>
+                  <button
+                    pButton
+                    type="button"
+                    [icon]="item.isActive ? 'pi pi-ban' : 'pi pi-check'"
+                    text
+                    rounded
+                    severity="secondary"
+                    (click)="toggleActive(item)"
+                  ></button>
+                  <button pButton type="button" icon="pi pi-trash" text rounded severity="danger" (click)="archive(item)"></button>
+                </div>
               </td>
             </tr>
           </ng-template>
           <ng-template pTemplate="emptymessage">
             <tr>
-              <td colspan="5" class="text-center">No master items found.</td>
+              <td colspan="7" class="text-center">No catalog items found.</td>
             </tr>
           </ng-template>
         </p-table>
@@ -54,3 +112,52 @@
     </section>
   </div>
 </div>
+
+<p-dialog
+  [header]="editingId ? 'Edit Item' : 'Create Item'"
+  [(visible)]="dialogVisible"
+  [modal]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: '42rem', maxWidth: '96vw' }"
+>
+  <div class="item-form">
+    <div class="form-grid">
+      <div class="field">
+        <label for="itemSku">SKU</label>
+        <input id="itemSku" pInputText [(ngModel)]="form.sku" name="itemSku" maxlength="60" />
+      </div>
+      <div class="field">
+        <label for="itemName">Name</label>
+        <input id="itemName" pInputText [(ngModel)]="form.name" name="itemName" maxlength="200" />
+      </div>
+      <div class="field">
+        <label for="itemCategory">Category</label>
+        <input id="itemCategory" pInputText [(ngModel)]="form.categoryName" name="itemCategory" maxlength="160" />
+      </div>
+      <div class="field">
+        <label for="itemUom">Default UOM</label>
+        <input id="itemUom" pInputText [(ngModel)]="form.defaultUom" name="itemUom" maxlength="40" />
+      </div>
+      <div class="field field-wide">
+        <label for="itemDescription">Description</label>
+        <input id="itemDescription" pInputText [(ngModel)]="form.description" name="itemDescription" maxlength="800" />
+      </div>
+      <div class="field">
+        <label for="itemStatus">Status</label>
+        <p-select
+          id="itemStatus"
+          [options]="[{ label: 'Active', value: true }, { label: 'Inactive', value: false }]"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="form.isActive"
+          name="itemStatus"
+        ></p-select>
+      </div>
+    </div>
+    <div class="dialog-actions">
+      <button pButton type="button" label="Cancel" text (click)="dialogVisible = false"></button>
+      <button pButton type="button" label="Save" [loading]="dialogSubmitting" (click)="saveDialog()"></button>
+    </div>
+  </div>
+</p-dialog>

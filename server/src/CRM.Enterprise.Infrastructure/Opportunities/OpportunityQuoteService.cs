@@ -129,7 +129,7 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
             Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim()
         };
 
-        await UpsertLinesAsync(quote, request.PriceListId, request.Lines, cancellationToken);
+        await UpsertLinesAsync(quote, request.PriceListId, request.Lines, new HashSet<Guid>(), cancellationToken);
         RecomputeTotals(quote);
 
         _dbContext.OpportunityQuotes.Add(quote);
@@ -447,6 +447,11 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
         quote.TaxAmount = request.TaxAmount;
         quote.Notes = string.IsNullOrWhiteSpace(request.Notes) ? null : request.Notes.Trim();
 
+        var existingLineItemIds = quote.Lines
+            .Where(line => !line.IsDeleted)
+            .Select(line => line.ItemMasterId)
+            .ToHashSet();
+
         foreach (var existing in quote.Lines)
         {
             existing.IsDeleted = true;
@@ -454,7 +459,7 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
             existing.DeletedBy = actor.UserName;
         }
 
-        await UpsertLinesAsync(quote, request.PriceListId, request.Lines, cancellationToken);
+        await UpsertLinesAsync(quote, request.PriceListId, request.Lines, existingLineItemIds, cancellationToken);
         RecomputeTotals(quote);
 
         await _auditEvents.TrackAsync(
@@ -478,17 +483,21 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
         OpportunityQuote quote,
         Guid? priceListId,
         IReadOnlyList<OpportunityQuoteLineRequest> lineRequests,
+        IReadOnlySet<Guid> allowedInactiveItemIds,
         CancellationToken cancellationToken)
     {
         var itemIds = lineRequests.Select(l => l.ItemMasterId).Distinct().ToList();
         var items = await _dbContext.ItemMasters
             .AsNoTracking()
-            .Where(i => itemIds.Contains(i.Id) && i.IsActive && !i.IsDeleted)
+            .Where(i =>
+                itemIds.Contains(i.Id) &&
+                !i.IsDeleted &&
+                (i.IsActive || allowedInactiveItemIds.Contains(i.Id)))
             .ToDictionaryAsync(i => i.Id, cancellationToken);
 
         if (items.Count != itemIds.Count)
         {
-            throw new InvalidOperationException("One or more selected quote items are invalid or inactive.");
+            throw new InvalidOperationException("One or more selected quote items are invalid or inactive for this quote.");
         }
 
         Dictionary<Guid, decimal> priceBookPrices = new();

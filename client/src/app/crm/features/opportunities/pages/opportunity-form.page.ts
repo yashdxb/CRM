@@ -2186,10 +2186,39 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     }
 
     const selected = this.itemMasterMap.get(line.itemMasterId);
+    if (selected && !selected.isActive) {
+      this.toastService.show('error', 'Inactive catalog items cannot be added to new quote lines.', 2800);
+      line.itemMasterId = null;
+      this.onQuoteLineChanged();
+      return;
+    }
     if (selected && !line.description) {
       line.description = selected.name;
     }
     this.onQuoteLineChanged();
+  }
+
+  protected itemOptionsForLine(line: { itemMasterId: string | null }): Option[] {
+    if (!line.itemMasterId) {
+      return this.itemMasterOptions;
+    }
+
+    if (this.itemMasterOptions.some((option) => option.value === line.itemMasterId)) {
+      return this.itemMasterOptions;
+    }
+
+    const selected = this.itemMasterMap.get(line.itemMasterId);
+    if (!selected) {
+      return this.itemMasterOptions;
+    }
+
+    return [
+      ...this.itemMasterOptions,
+      {
+        label: `${selected.name} (${selected.sku}) - Inactive`,
+        value: selected.id
+      }
+    ];
   }
 
   protected onQuoteLineChanged() {
@@ -2461,13 +2490,14 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
   private loadQuoteCatalogData() {
     this.opportunityData.getItemMaster().subscribe({
-      next: (items) => {
+      next: (response) => {
+        const items = response.items ?? [];
         const activeItems = items.filter((item) => item.isActive);
-        this.itemMasterMap = new Map(activeItems.map((item) => [item.id, item]));
+        this.itemMasterMap = new Map(items.map((item) => [item.id, item]));
         this.itemMasterOptions = activeItems
           .sort((a, b) => a.name.localeCompare(b.name))
           .map((item) => ({
-            label: `${item.name} (${item.sku})`,
+            label: `${item.name} (${item.sku})${item.categoryName ? ` · ${item.categoryName}` : ''}`,
             value: item.id
           }));
       },

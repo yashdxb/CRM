@@ -206,6 +206,8 @@ export interface ItemMasterListItem {
   categoryName?: string | null;
   defaultUom?: string | null;
   isActive: boolean;
+  defaultUnitPrice?: number | null;
+  defaultPriceListName?: string | null;
 }
 
 export type OpportunityApprovalStatus = 'Pending' | 'Approved' | 'Rejected';

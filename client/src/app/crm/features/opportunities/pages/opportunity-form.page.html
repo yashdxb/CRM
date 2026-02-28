@@ -715,7 +715,7 @@
                 <div class="quote-line" *ngFor="let line of quoteLines; let i = index">
                   <p-select
                     appendTo="body"
-                    [options]="itemMasterOptions"
+                    [options]="itemOptionsForLine(line)"
                     optionLabel="label"
                     optionValue="value"
                     [(ngModel)]="line.itemMasterId"

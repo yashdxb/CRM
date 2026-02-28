@@ -7,5 +7,7 @@ public sealed record ItemMasterListItem(
     string? Description,
     string? CategoryName,
     string? DefaultUom,
-    bool IsActive
+    bool IsActive,
+    decimal? DefaultUnitPrice,
+    string? DefaultPriceListName
 );
