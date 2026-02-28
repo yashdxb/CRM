@@ -55,6 +55,14 @@
     margin-top: 0.65rem;
     color: #475569;
     font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .pilot-audit-link {
+    margin-left: auto;
   }
 
   .policy-card {
@@ -123,6 +131,10 @@
 
     .scope-grid {
       grid-template-columns: 1fr;
+    }
+
+    .pilot-audit-link {
+      margin-left: 0;
     }
   }
 }

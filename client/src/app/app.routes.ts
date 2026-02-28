@@ -434,7 +434,7 @@ export const routes: Routes = [
             path: 'audit-log',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.auditView, breadcrumb: 'Audit Log' },
-            loadComponent: () => import('./crm/features/settings/pages/settings.page').then((m) => m.SettingsPage)
+            loadComponent: () => import('./crm/features/settings/pages/audit-log.page').then((m) => m.AuditLogPage)
           },
           {
             path: 'tenants/new',

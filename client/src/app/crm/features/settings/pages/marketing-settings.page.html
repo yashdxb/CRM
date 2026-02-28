@@ -107,6 +107,14 @@
         <strong>{{ metrics.acceptedCount }}</strong> accepted,
         <strong>{{ metrics.dismissedCount }}</strong> dismissed,
         <strong>{{ metrics.snoozedCount }}</strong> snoozed.
+        <button
+          pButton
+          type="button"
+          class="crm-button crm-button--text pilot-audit-link"
+          icon="pi pi-external-link"
+          label="View Impact Telemetry Audit"
+          (click)="openImpactTelemetryAudit()"
+        ></button>
       </div>
     </section>
 

@@ -35,6 +35,15 @@ export class MarketingSettingsPage {
     this.router.navigate(['/app/marketing/attribution']);
   }
 
+  protected openImpactTelemetryAudit(): void {
+    this.router.navigate(['/app/settings/audit-log'], {
+      queryParams: {
+        entityType: 'MarketingTelemetry',
+        action: 'ImpactWorklistOpened'
+      }
+    });
+  }
+
   protected loadPilotMetrics(): void {
     this.marketingData.getRecommendationPilotMetrics().subscribe({
       next: (metrics) => this.pilotMetrics.set(metrics),

@@ -1,6 +1,7 @@
 import { DatePipe, NgIf } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
@@ -42,6 +43,7 @@ interface Option<T = string> {
 export class AuditLogPage {
   private readonly auditService = inject(AuditLogService);
   private readonly userService = inject(UserAdminDataService);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly loading = signal(false);
   protected readonly items = signal<AuditEventItem[]>([]);
@@ -62,6 +64,7 @@ export class AuditLogPage {
     { label: 'Activity', value: 'Activity' },
     { label: 'Account', value: 'Account' },
     { label: 'Contact', value: 'Contact' },
+    { label: 'Marketing Telemetry', value: 'MarketingTelemetry' },
     { label: 'RFQ', value: 'Rfq' },
     { label: 'Quote', value: 'Quote' },
     { label: 'Award', value: 'Award' }
@@ -76,14 +79,23 @@ export class AuditLogPage {
     { label: 'Stage Changed', value: 'StageChanged' },
     { label: 'Amount Changed', value: 'AmountChanged' },
     { label: 'Converted', value: 'Converted' },
-    { label: 'Outcome Updated', value: 'OutcomeUpdated' }
+    { label: 'Outcome Updated', value: 'OutcomeUpdated' },
+    { label: 'Impact Worklist Opened', value: 'ImpactWorklistOpened' }
   ];
 
   protected userOptions: Option[] = [{ label: 'All users', value: '' }];
 
   constructor() {
     this.loadUsers();
-    this.loadAudit();
+    this.route.queryParamMap.subscribe((params) => {
+      const entityType = params.get('entityType');
+      const action = params.get('action');
+
+      this.entityType.set(entityType || null);
+      this.action.set(action || null);
+      this.page.set(1);
+      this.loadAudit();
+    });
   }
 
   protected loadAudit() {
