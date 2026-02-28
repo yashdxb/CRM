@@ -106,6 +106,38 @@ export class CampaignAttributionPage {
       avgConversion: totals.avgConversion - baseline.avgConversion
     };
   });
+  protected readonly topPositiveImpact = computed(() => {
+    return this.filteredItems()
+      .map((row) => {
+        const delta = this.rowDelta(row);
+        return {
+          campaignId: row.campaignId,
+          campaignName: row.campaignName,
+          pipeline: delta.pipeline,
+          won: delta.won,
+          conversion: delta.conversion
+        };
+      })
+      .filter((row) => row.pipeline > 0.001 || row.won > 0.001 || row.conversion > 0.001)
+      .sort((a, b) => b.pipeline - a.pipeline)
+      .slice(0, 3);
+  });
+  protected readonly topNegativeImpact = computed(() => {
+    return this.filteredItems()
+      .map((row) => {
+        const delta = this.rowDelta(row);
+        return {
+          campaignId: row.campaignId,
+          campaignName: row.campaignName,
+          pipeline: delta.pipeline,
+          won: delta.won,
+          conversion: delta.conversion
+        };
+      })
+      .filter((row) => row.pipeline < -0.001 || row.won < -0.001 || row.conversion < -0.001)
+      .sort((a, b) => a.pipeline - b.pipeline)
+      .slice(0, 3);
+  });
 
   protected readonly selectedCampaign = computed(() => {
     const selected = this.selectedCampaignId();

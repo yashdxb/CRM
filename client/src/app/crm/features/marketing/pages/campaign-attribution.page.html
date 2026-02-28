@@ -182,6 +182,47 @@
       </article>
     </section>
 
+    <section class="data-card no-hover model-impact-card" *ngIf="selectedModel() !== 'first_touch'">
+      <header class="data-card-header">
+        <div>
+          <h2 class="section-title">Model Impact vs First-touch</h2>
+          <p class="data-card-subtitle">Top campaigns with highest positive and negative pipeline shifts</p>
+        </div>
+      </header>
+      <div class="impact-grid">
+        <article class="impact-column">
+          <h3 class="impact-title positive">Top Positive</h3>
+          <div *ngIf="topPositiveImpact().length; else noPositiveTpl" class="impact-list">
+            <div *ngFor="let row of topPositiveImpact()" class="impact-row">
+              <div>
+                <strong>{{ row.campaignName }}</strong>
+              </div>
+              <div class="impact-metrics">
+                <span class="delta-positive">{{ formatSignedMoney(row.pipeline) }}</span>
+                <span class="delta-positive">{{ formatSignedMoney(row.won) }}</span>
+                <span class="delta-positive">{{ formatSignedPercent(row.conversion) }}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+        <article class="impact-column">
+          <h3 class="impact-title negative">Top Negative</h3>
+          <div *ngIf="topNegativeImpact().length; else noNegativeTpl" class="impact-list">
+            <div *ngFor="let row of topNegativeImpact()" class="impact-row">
+              <div>
+                <strong>{{ row.campaignName }}</strong>
+              </div>
+              <div class="impact-metrics">
+                <span class="delta-negative">{{ formatSignedMoney(row.pipeline) }}</span>
+                <span class="delta-negative">{{ formatSignedMoney(row.won) }}</span>
+                <span class="delta-negative">{{ formatSignedPercent(row.conversion) }}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="data-card no-hover" *ngIf="!loading(); else loadingTpl">
       <header class="data-card-header">
         <div>
@@ -296,4 +337,12 @@
 
 <ng-template #explainEmptyTpl>
   <div class="empty">No explainability details available.</div>
+</ng-template>
+
+<ng-template #noPositiveTpl>
+  <div class="empty">No positive shifts in this view.</div>
+</ng-template>
+
+<ng-template #noNegativeTpl>
+  <div class="empty">No negative shifts in this view.</div>
 </ng-template>
