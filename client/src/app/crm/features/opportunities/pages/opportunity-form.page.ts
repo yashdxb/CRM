@@ -837,15 +837,11 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   }
 
   protected requesterApprovalLocked(): boolean {
-    if (!this.isEditMode() || !this.currentUserId || this.isManager()) {
+    if (!this.isEditMode()) {
       return false;
     }
 
-    return this.approvals.some(
-      (approval) =>
-        (approval.status || '').toLowerCase() === 'pending' &&
-        (approval.requestedByUserId || '').toLowerCase() === this.currentUserId!.toLowerCase()
-    );
+    return this.approvals.some((approval) => (approval.status || '').toLowerCase() === 'pending');
   }
 
   protected currentApprovalStatusLabel(): string {
@@ -882,7 +878,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
   protected approvalPendingSummaryDetail(): string {
     return this.requesterApprovalLocked()
-      ? 'Read-only until approval decision'
+      ? 'Read-only: deal is locked while approval is pending'
       : this.currentApprovalStatusLabel();
   }
 
@@ -934,7 +930,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
   protected onSave() {
     if (this.requesterApprovalLocked()) {
-      this.toastService.show('error', 'This deal is locked while approval is pending.', 3000);
+      this.toastService.show('error', 'This deal is read-only while approval is pending.', 3000);
       return;
     }
     if (this.decisionReviewMode()) {

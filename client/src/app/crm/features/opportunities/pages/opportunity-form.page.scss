@@ -297,6 +297,13 @@
   @include form.form-layout;
 }
 
+.form-lock-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
 .deal-workbench-layout {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -435,6 +442,11 @@
 }
 
 .form-layout--read-only {
+  .form-lock-fieldset {
+    opacity: 0.62;
+    filter: saturate(0.72);
+  }
+
   .opportunity-accordion-card input,
   .opportunity-accordion-card textarea,
   .opportunity-accordion-card .p-inputtext,
@@ -452,7 +464,9 @@
   .opportunity-accordion-card .p-inputtext,
   .opportunity-accordion-card .p-inputnumber .p-inputtext,
   .opportunity-accordion-card .p-select,
-  .opportunity-accordion-card .p-datepicker input {
+  .opportunity-accordion-card .p-datepicker input,
+  .opportunity-accordion-card .p-multiselect,
+  .opportunity-accordion-card .p-inputnumber-input {
     background: rgba(248, 250, 252, 0.72) !important;
     color: rgba(51, 65, 85, 0.85) !important;
   }

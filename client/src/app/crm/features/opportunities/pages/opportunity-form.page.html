@@ -66,8 +66,8 @@
       <section class="decision-review-banner approval-lock-banner" *ngIf="requesterApprovalLocked() && !decisionReviewMode()">
         <i class="pi pi-lock"></i>
         <div>
-          <strong>Record locked for approval</strong>
-          <p>This deal is read-only until the pending approval is approved or rejected.</p>
+          <strong>Approval Pending - Record Locked</strong>
+          <p>This deal is read-only for all users until the pending approval is approved or rejected.</p>
         </div>
       </section>
 
@@ -193,12 +193,17 @@
 
           <div class="deal-workbench-content">
         <form class="form-layout" [class.form-layout--read-only]="decisionReviewMode() || requesterApprovalLocked()" (ngSubmit)="onSave()">
-          <p-accordion
-            class="opportunity-section-accordion"
-            [multiple]="true"
-            [value]="accordionPanels()"
-            (valueChange)="onAccordionPanelsChange($event)"
+          <fieldset
+            class="form-lock-fieldset"
+            [disabled]="decisionReviewMode() || requesterApprovalLocked()"
+            [attr.aria-busy]="decisionReviewMode() || requesterApprovalLocked()"
           >
+            <p-accordion
+              class="opportunity-section-accordion"
+              [multiple]="true"
+              [value]="accordionPanels()"
+              (valueChange)="onAccordionPanelsChange($event)"
+            >
             <p-accordion-panel value="opportunity-details" [disabled]="isSectionLocked('opportunity-details')" [attr.data-deal-section]="'opportunity-details'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
@@ -1512,7 +1517,8 @@
           </ng-template>
               </p-accordion-content>
             </p-accordion-panel>
-          </p-accordion>
+            </p-accordion>
+          </fieldset>
 
           <section class="form-card opportunity-accordion-card decision-review-panel" *ngIf="decisionReviewMode()">
             <h2 class="section-title">Review Action</h2>

@@ -469,14 +469,13 @@ Status source rules for this summary:
 8. `Module: Opportunities | As a Sales Rep, I want to mark deals as Commit only when verified and expected to close.`
 9. `Module: Opportunities | As a Sales Rep, I want renewal tasks created and tracked like any opportunity.`
 10. `Module: Opportunities | As a Sales Rep, I want the system to create onboarding tasks, assign delivery/CS, set renewal date, and lock the deal. (Done)`
-11. `Module: Opportunities | As a requester, I want deal edits locked while my approval request is pending, with clear read-only indicators, so data remains policy-compliant until decision resolution. (Done)`
+11. `Module: Opportunities | As a deal participant, I want deal edits locked while approval is pending, with clear read-only indicators, so data remains policy-compliant until decision resolution. (Done)`
     - Acceptance criteria:
-      - requester pending approval locks deal mutations server-side (`Update`, `Owner`, `Stage`, `Team`, checklist, onboarding, `Delete`).
-      - manager/admin bypass is allowed during requester lock.
-      - UI shows top banner + sticky approval chip: `Approval Pending` with read-only tooltip.
+      - any pending approval on a deal locks deal mutations server-side (`Update`, `Owner`, `Stage`, `Team`, checklist, onboarding, `Delete`) for all deal editors.
+      - UI shows top banner + sticky approval chip: `Approval Pending` with explicit read-only lock tooltip.
       - decision/approval actions remain available for approvers.
       - after approval resolves, requester lock is removed automatically.
-      - lock violation returns a consistent API message: `Deal is locked while your approval request is pending.`
+      - lock violation returns a consistent API message: `Deal is locked while approval is pending.`
 
 ### Epic 5 | Dashboard Command Center, Forecast, and Truth Visibility
 1. `Module: Dashboard | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at-risk deals, and my forecast snapshot so I can prioritize work immediately.` (moved from Leads; dashboard-owned experience)

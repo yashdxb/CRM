@@ -57,13 +57,13 @@ public class OpportunityApprovalLockDeleteTests
         var result = await service.DeleteAsync(opportunity.Id, new ActorContext(requesterId, "Leo Martin"));
 
         Assert.False(result.Success);
-        Assert.Equal("Deal is locked while your approval request is pending.", result.Error);
+        Assert.Equal("Deal is locked while approval is pending.", result.Error);
         var persisted = await dbContext.Opportunities.AsNoTracking().SingleAsync(o => o.Id == opportunity.Id);
         Assert.False(persisted.IsDeleted);
     }
 
     [Fact]
-    public async Task DeleteAsync_AllowsManagerBypass_WhenRequesterHasPendingApproval()
+    public async Task DeleteAsync_ReturnsError_ForManager_WhenAnyPendingApprovalExists()
     {
         using var dbContext = CreateDbContext(out var tenantProvider);
         var tenant = SeedTenant(dbContext, tenantProvider);
@@ -99,29 +99,16 @@ public class OpportunityApprovalLockDeleteTests
             RequestedOn = DateTime.UtcNow
         });
 
-        var managerRole = new Role
-        {
-            TenantId = tenant.Id,
-            Name = "Sales Manager",
-            Description = "Manager override role"
-        };
-        dbContext.Roles.Add(managerRole);
-        dbContext.UserRoles.Add(new UserRole
-        {
-            TenantId = tenant.Id,
-            UserId = managerId,
-            RoleId = managerRole.Id
-        });
-
         await dbContext.SaveChangesAsync();
 
         var service = CreateService(dbContext, tenantProvider);
 
         var result = await service.DeleteAsync(opportunity.Id, new ActorContext(managerId, "Ava Chen"));
 
-        Assert.True(result.Success);
+        Assert.False(result.Success);
+        Assert.Equal("Deal is locked while approval is pending.", result.Error);
         var persisted = await dbContext.Opportunities.AsNoTracking().SingleAsync(o => o.Id == opportunity.Id);
-        Assert.True(persisted.IsDeleted);
+        Assert.False(persisted.IsDeleted);
     }
 
     private static OpportunityService CreateService(CrmDbContext dbContext, TestTenantProvider tenantProvider)
