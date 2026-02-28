@@ -1,0 +1,199 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="campaign-form-page page-container">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero">
+      <h1 class="hero-title">{{ isEditMode() ? 'Edit Campaign' : 'New Campaign' }}</h1>
+      <p class="hero-subtitle">Define campaign setup, ownership, timeline, and budget baseline.</p>
+    </section>
+
+    <section class="metrics-dashboard form-metrics">
+      <div class="metrics-grid">
+        <article class="metric-card metric-card--status">
+          <div class="metric-header">
+            <div class="metric-icon primary"><i class="pi pi-flag"></i></div>
+          </div>
+          <span class="metric-label">Status</span>
+          <strong class="metric-value">{{ form.controls.status.value }}</strong>
+        </article>
+
+        <article class="metric-card metric-card--channel">
+          <div class="metric-header">
+            <div class="metric-icon info"><i class="pi pi-megaphone"></i></div>
+          </div>
+          <span class="metric-label">Channel</span>
+          <strong class="metric-value">{{ form.controls.channel.value }}</strong>
+        </article>
+
+        <article class="metric-card metric-card--planned">
+          <div class="metric-header">
+            <div class="metric-icon success"><i class="pi pi-wallet"></i></div>
+          </div>
+          <span class="metric-label">Planned</span>
+          <strong class="metric-value">{{ formatMoney(form.controls.budgetPlanned.value) }}</strong>
+        </article>
+
+        <article class="metric-card metric-card--actual">
+          <div class="metric-header">
+            <div class="metric-icon warning"><i class="pi pi-money-bill"></i></div>
+          </div>
+          <span class="metric-label">Actual</span>
+          <strong class="metric-value">{{ formatMoney(form.controls.budgetActual.value) }}</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="crm-panel" *ngIf="!loading(); else loadingTpl">
+      <form [formGroup]="form" (ngSubmit)="save()" class="form-grid">
+        <div class="form-section full-width">
+          <div class="section-head">
+            <h2 class="section-title">Campaign Basics</h2>
+            <p class="section-note">Core details for reporting, routing, and ownership.</p>
+          </div>
+          <div class="section-grid">
+            <label>
+              <span>Name</span>
+              <input pInputText type="text" class="crm-input" formControlName="name" />
+            </label>
+
+            <label>
+              <span>Type</span>
+              <p-select
+                appendTo="body"
+                styleClass="crm-input"
+                [options]="typeOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="type"
+              ></p-select>
+            </label>
+
+            <label>
+              <span>Channel</span>
+              <p-select
+                appendTo="body"
+                styleClass="crm-input"
+                [options]="channelOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="channel"
+              ></p-select>
+            </label>
+
+            <label>
+              <span>Status</span>
+              <p-select
+                appendTo="body"
+                styleClass="crm-input"
+                [options]="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="status"
+              ></p-select>
+            </label>
+
+            <label>
+              <span>Owner</span>
+              <p-select
+                appendTo="body"
+                styleClass="crm-input"
+                [options]="ownerOptions()"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Select owner"
+                formControlName="ownerUserId"
+              ></p-select>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-section full-width">
+          <div class="section-head">
+            <h2 class="section-title">Schedule and Budget</h2>
+            <p class="section-note">Set timing and spend targets using {{ resolveCurrencyCode() }}.</p>
+          </div>
+          <div class="section-grid">
+            <label>
+              <span>Start Date</span>
+              <p-datepicker
+                styleClass="crm-input"
+                dateFormat="yy-mm-dd"
+                dataType="string"
+                appendTo="body"
+                formControlName="startDateUtc"
+              ></p-datepicker>
+            </label>
+
+            <label>
+              <span>End Date</span>
+              <p-datepicker
+                styleClass="crm-input"
+                dateFormat="yy-mm-dd"
+                dataType="string"
+                appendTo="body"
+                formControlName="endDateUtc"
+              ></p-datepicker>
+            </label>
+
+            <label>
+              <span>Planned Budget ({{ resolveCurrencyCode() }})</span>
+              <p-inputnumber
+                styleClass="crm-input"
+                mode="decimal"
+                [min]="0"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="2"
+                formControlName="budgetPlanned"
+              ></p-inputnumber>
+            </label>
+
+            <label>
+              <span>Actual Budget ({{ resolveCurrencyCode() }})</span>
+              <p-inputnumber
+                styleClass="crm-input"
+                mode="decimal"
+                [min]="0"
+                [minFractionDigits]="0"
+                [maxFractionDigits]="2"
+                formControlName="budgetActual"
+              ></p-inputnumber>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-section full-width">
+          <div class="section-head">
+            <h2 class="section-title">Objective</h2>
+            <p class="section-note">Capture intent and expected business outcome.</p>
+          </div>
+          <label>
+            <span>Objective</span>
+            <textarea pTextarea rows="4" class="crm-input" formControlName="objective"></textarea>
+          </label>
+        </div>
+
+        <div class="actions full-width">
+          <button pButton type="button" class="crm-button crm-button--ghost" label="Cancel" (click)="cancel()"></button>
+          <button
+            pButton
+            type="submit"
+            class="crm-button crm-button--primary"
+            [label]="saving() ? 'Saving...' : 'Save Campaign'"
+            [disabled]="saving()"
+          ></button>
+        </div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <section class="crm-panel loading">Loading campaign...</section>
+</ng-template>

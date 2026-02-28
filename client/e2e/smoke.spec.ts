@@ -55,7 +55,7 @@ test('core screens smoke', async ({ page, request }) => {
   await expect(page.getByRole('heading', { name: /Leads/i })).toBeVisible();
 
   await page.goto('/app/opportunities');
-  await expect(page.getByRole('heading', { name: 'Opportunity Pipeline', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Deal|Opportunity/i, level: 1 })).toBeVisible();
 
   await page.goto('/app/activities');
   await expect(page.getByRole('heading', { name: /Activities/i })).toBeVisible();

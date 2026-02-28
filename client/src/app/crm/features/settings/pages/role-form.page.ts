@@ -236,6 +236,18 @@ export class RoleFormPage {
       }
     },
     {
+      screenName: 'Marketing',
+      screenKey: 'Marketing',
+      icon: 'pi-megaphone',
+      description: 'Manage campaigns and attribution',
+      permissions: {
+        create: 'Permissions.Marketing.Manage',
+        read: 'Permissions.Marketing.View',
+        update: 'Permissions.Marketing.Manage',
+        delete: 'Permissions.Marketing.Manage'
+      }
+    },
+    {
       screenName: 'Administration',
       screenKey: 'Administration',
       icon: 'pi-cog',

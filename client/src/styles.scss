@@ -836,6 +836,53 @@ p {
   border-radius: 999px;
 }
 
+/* Marketing table filter buttons: keep funnel icon contrast on hover/focus/active. */
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-datatable-column-filter-button.p-button,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-column-filter-menu-button.p-button {
+  --crm-btn-fg: #334155;
+  color: #334155 !important;
+  background: rgba(148, 163, 184, 0.1) !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+}
+
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-datatable-column-filter-button.p-button:enabled:hover,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-datatable-column-filter-button.p-button:hover,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-column-filter-menu-button.p-button:enabled:hover,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-column-filter-menu-button.p-button:hover {
+  --crm-btn-fg: #1d4ed8;
+  color: #1d4ed8 !important;
+  background: rgba(59, 130, 246, 0.16) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15) !important;
+}
+
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-datatable-column-filter-button.p-button:focus-visible,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-column-filter-menu-button.p-button:focus-visible {
+  --crm-btn-fg: #1d4ed8;
+  color: #1d4ed8 !important;
+  background: rgba(59, 130, 246, 0.2) !important;
+  border-color: rgba(59, 130, 246, 0.45) !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22) !important;
+}
+
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-datatable-column-filter-button.p-datatable-column-filter-button-active,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-datatable-column-filter-button.p-column-filter-menu-button-active,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-column-filter-menu-button.p-column-filter-menu-button-active {
+  --crm-btn-fg: #1d4ed8;
+  color: #1d4ed8 !important;
+  background: rgba(59, 130, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
+}
+
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-datatable-column-filter-button .p-button-icon,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-column-filter-menu-button .p-button-icon,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-datatable-column-filter-button svg,
+:root :is(.marketing-campaigns-page, .campaign-attribution-page, .campaign-detail-page, .marketing-settings-page) .crm-table .p-column-filter-menu-button svg {
+  color: currentColor !important;
+  fill: currentColor !important;
+}
+
 /* Shared pill chips */
 .crm-pill {
   border-radius: 999px;

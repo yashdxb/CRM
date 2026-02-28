@@ -157,38 +157,45 @@
         <div class="deal-workbench-layout">
           <aside class="deal-workbench-nav" aria-label="Deal workflow navigation">
             <div class="deal-workbench-nav__title">Deal Workbench</div>
-            <div class="deal-workbench-nav__groups">
-              <section
-                class="deal-workbench-nav__group"
-                *ngFor="let group of dealSectionNavGroups()"
-                [attr.data-group]="group.key"
-              >
-                <div class="deal-workbench-nav__group-label">{{ group.label }}</div>
-                <div class="deal-workbench-nav__items">
-                  <button
-                    type="button"
-                    class="deal-workbench-nav__item"
-                    *ngFor="let item of group.items"
-                    [class.deal-workbench-nav__item--active]="isSectionActive(item.key)"
-                    [class.deal-workbench-nav__item--locked]="isSectionLocked(item.key)"
-                    [disabled]="isSectionLocked(item.key)"
-                    [title]="isSectionLocked(item.key) ? (sectionLockReason(item.key) || '') : ''"
-                    (click)="openDealSection(item.key)"
+            <p-tree
+              class="deal-stage-tree"
+              [value]="dealStageTreeNodes()"
+              selectionMode="single"
+              [(selection)]="selectedDealTreeNode"
+              (onNodeSelect)="onDealTreeNodeSelect($event)"
+            >
+              <ng-template let-node pTemplate="default">
+                <div class="deal-stage-tree__node" *ngIf="node.data?.kind === 'stage'; else sectionNode">
+                  <span class="deal-stage-tree__stage-label">{{ node.label }}</span>
+                  <span
+                    class="opportunity-accordion-badge"
+                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + stageTreeTone(node.label)"
                   >
-                    <span class="deal-workbench-nav__item-main">
-                      <i [class]="item.icon"></i>
-                      <span>{{ item.label }}</span>
+                    {{ stageTreeLabel(node.label) }}
+                  </span>
+                </div>
+                <ng-template #sectionNode>
+                  <div
+                    class="deal-stage-tree__section"
+                    [class.deal-stage-tree__section--active]="node.data?.kind === 'section' && isSectionActive(node.data.section)"
+                    [class.deal-stage-tree__section--locked]="node.data?.kind === 'section' && isSectionLocked(node.data.section)"
+                    [title]="node.data?.kind === 'section' && isSectionLocked(node.data.section) ? (sectionLockReason(node.data.section) || '') : ''"
+                  >
+                    <span class="deal-stage-tree__section-main">
+                      <i [class]="node.data?.kind === 'section' ? sectionIcon(node.data.section) : 'pi pi-circle'"></i>
+                      <span>{{ node.label }}</span>
                     </span>
                     <span
+                      *ngIf="node.data?.kind === 'section'"
                       class="opportunity-accordion-badge"
-                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone(item.key)"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone(node.data.section)"
                     >
-                      {{ sectionStatusLabel(item.key) }}
+                      {{ sectionStatusLabel(node.data.section) }}
                     </span>
-                  </button>
-                </div>
-              </section>
-            </div>
+                  </div>
+                </ng-template>
+              </ng-template>
+            </p-tree>
           </aside>
 
           <div class="deal-workbench-content">

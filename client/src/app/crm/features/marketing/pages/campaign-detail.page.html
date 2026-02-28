@@ -1,0 +1,339 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="campaign-detail-page page-container" *ngIf="campaign() as vm; else loadingTpl">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          <span>Campaign Workspace</span>
+        </div>
+        <h1 class="hero-title">{{ vm.campaign.name }}</h1>
+        <p class="hero-subtitle">{{ vm.campaign.type }} • {{ vm.campaign.channel }} • {{ vm.campaign.status }}</p>
+        <div class="hero-actions">
+          <button pButton type="button" class="crm-button crm-button--ghost" icon="pi pi-arrow-left" label="All Campaigns" (click)="backToCampaigns()"></button>
+          <button pButton type="button" class="crm-button crm-button--ghost" icon="pi pi-percentage" label="Attribution" (click)="goToAttribution()"></button>
+          <button pButton type="button" class="crm-button crm-button--primary" icon="pi pi-pencil" label="Edit Campaign" [disabled]="!canManage()" (click)="editCampaign()"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics-dashboard">
+      <div class="metrics-grid">
+        <article class="metric-card metric-card--members">
+          <div class="metric-header">
+            <div class="metric-icon primary"><i class="pi pi-users"></i></div>
+            <span class="metric-trend"><i class="pi pi-id-card"></i> Audience</span>
+          </div>
+          <span class="metric-label">Members</span>
+          <strong class="metric-value">{{ vm.performance.memberCount }}</strong>
+        </article>
+        <article class="metric-card metric-card--influenced">
+          <div class="metric-header">
+            <div class="metric-icon info"><i class="pi pi-briefcase"></i></div>
+            <span class="metric-trend"><i class="pi pi-bolt"></i> First Touch</span>
+          </div>
+          <span class="metric-label">Influenced Opps</span>
+          <strong class="metric-value">{{ vm.performance.influencedOpportunities }}</strong>
+        </article>
+        <article class="metric-card metric-card--pipeline">
+          <div class="metric-header">
+            <div class="metric-icon warning"><i class="pi pi-dollar"></i></div>
+            <span class="metric-trend"><i class="pi pi-chart-line"></i> Pipeline</span>
+          </div>
+          <span class="metric-label">Pipeline</span>
+          <strong class="metric-value">{{ formatMoney(vm.performance.influencedPipelineAmount) }}</strong>
+        </article>
+        <article class="metric-card metric-card--won">
+          <div class="metric-header">
+            <div class="metric-icon success"><i class="pi pi-check-circle"></i></div>
+            <span class="metric-trend up"><i class="pi pi-trophy"></i> Won</span>
+          </div>
+          <span class="metric-label">Won Revenue</span>
+          <strong class="metric-value">{{ formatMoney(vm.performance.wonRevenue) }}</strong>
+        </article>
+      </div>
+
+      <div class="health-card data-card no-hover" *ngIf="healthScore() as health">
+        <div class="health-card__head">
+          <div>
+            <h2 class="section-title">Campaign Health Score</h2>
+            <p class="data-card-subtitle">Last computed {{ health.computedUtc | date:'short' }} • {{ health.calculationWindowDays }}d window</p>
+          </div>
+          <p-tag [value]="trendLabel(health.trend)" [severity]="health.trend === 'up' ? 'success' : (health.trend === 'down' ? 'danger' : 'info')"></p-tag>
+        </div>
+        <div class="health-card__body">
+          <div class="health-score-pill" [class.down]="health.trend === 'down'" [class.up]="health.trend === 'up'">
+            <i [class]="trendIcon(health.trend)"></i>
+            <strong>{{ health.score }}</strong>
+            <span>/100</span>
+          </div>
+          <div class="health-reasons">
+            <p-tag *ngFor="let reason of health.reasonChips" [value]="reason" severity="secondary"></p-tag>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-bar glass-card no-hover">
+      <div class="tab-actions">
+        <button pButton type="button" class="crm-button crm-button--pill crm-button--sm tab-button" [class.active]="activeTab() === 'overview'" label="Overview" (click)="setTab('overview')"></button>
+        <button pButton type="button" class="crm-button crm-button--pill crm-button--sm tab-button" [class.active]="activeTab() === 'members'" label="Members" (click)="setTab('members')"></button>
+        <button pButton type="button" class="crm-button crm-button--pill crm-button--sm tab-button" [class.active]="activeTab() === 'opportunities'" label="Attributed Opportunities" (click)="setTab('opportunities')"></button>
+        <button pButton type="button" class="crm-button crm-button--pill crm-button--sm tab-button" [class.active]="activeTab() === 'performance'" label="Performance" (click)="setTab('performance')"></button>
+        <button pButton type="button" class="crm-button crm-button--pill crm-button--sm tab-button" [class.active]="activeTab() === 'action-center'" label="Action Center" (click)="setTab('action-center')"></button>
+      </div>
+    </section>
+
+    <section class="data-card no-hover" *ngIf="activeTab() === 'overview'">
+      <h2 class="section-title">Campaign Overview</h2>
+      <dl class="overview-grid">
+        <div><dt>Owner</dt><dd>{{ vm.campaign.ownerName }}</dd></div>
+        <div><dt>Start</dt><dd>{{ vm.campaign.startDateUtc ? (vm.campaign.startDateUtc | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>End</dt><dd>{{ vm.campaign.endDateUtc ? (vm.campaign.endDateUtc | date:'mediumDate') : '—' }}</dd></div>
+        <div><dt>Budget Planned</dt><dd>{{ formatMoney(vm.campaign.budgetPlanned) }}</dd></div>
+        <div><dt>Budget Actual</dt><dd>{{ formatMoney(vm.campaign.budgetActual) }}</dd></div>
+        <div class="objective"><dt>Objective</dt><dd>{{ vm.campaign.objective || '—' }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="data-card no-hover" *ngIf="activeTab() === 'members'">
+      <h2 class="section-title">Members</h2>
+
+      <div class="member-form" *ngIf="canManage()">
+        <p-select
+          appendTo="body"
+          styleClass="crm-input"
+          [options]="entityTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="entityType()"
+          (ngModelChange)="entityType.set($event)"
+        ></p-select>
+
+        <p-select
+          appendTo="body"
+          styleClass="crm-input"
+          [options]="currentOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [placeholder]="'Select ' + entityType()"
+          [ngModel]="selectedEntityId()"
+          (ngModelChange)="selectedEntityId.set($event)"
+        ></p-select>
+
+        <p-select
+          appendTo="body"
+          styleClass="crm-input"
+          [options]="responseStatusOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="responseStatus()"
+          (ngModelChange)="responseStatus.set($event)"
+        ></p-select>
+
+        <button pButton type="button" class="crm-button crm-button--primary" label="Add Member" (click)="addMember()"></button>
+      </div>
+
+      <div class="table-wrap">
+        <p-table [value]="vm.members" styleClass="crm-table" [rowHover]="true">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Entity</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Added</th>
+              <th>Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-member>
+            <tr>
+              <td>{{ member.entityName }}</td>
+              <td>{{ member.entityType }}</td>
+              <td>{{ member.responseStatus }}</td>
+              <td>{{ member.addedUtc | date:'short' }}</td>
+              <td>
+                <div class="row-actions">
+                  <button
+                    pButton
+                    type="button"
+                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
+                    icon="pi pi-trash"
+                    [disabled]="!canManage()"
+                    (click)="removeMember(member)"
+                  ></button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="5" class="empty">No members added yet.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+
+    <section class="data-card no-hover" *ngIf="activeTab() === 'opportunities'">
+      <h2 class="section-title">Attributed Opportunities</h2>
+      <div class="table-wrap">
+        <p-table [value]="vm.performance.opportunities" styleClass="crm-table" [rowHover]="true">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Opportunity</th>
+              <th>Account</th>
+              <th>Stage</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Attributed</th>
+              <th>Explain</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-opp>
+            <tr>
+              <td>{{ opp.opportunityName }}</td>
+              <td>{{ opp.accountName }}</td>
+              <td>{{ opp.stage }}</td>
+              <td>{{ formatMoney(opp.amount) }}</td>
+              <td>{{ opp.isClosed ? (opp.isWon ? 'Won' : 'Closed') : 'Open' }}</td>
+              <td>{{ opp.attributedUtc | date:'short' }}</td>
+              <td>
+                <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-info-circle" label="Why" (click)="showExplainability(opp.opportunityId)"></button>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="7" class="empty">No attributed opportunities yet.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+
+    <section class="data-card no-hover" *ngIf="activeTab() === 'performance'">
+      <h2 class="section-title">Performance</h2>
+      <ul class="performance-list">
+        <li>Members: <strong>{{ vm.performance.memberCount }}</strong></li>
+        <li>Influenced opportunities: <strong>{{ vm.performance.influencedOpportunities }}</strong></li>
+        <li>Influenced pipeline: <strong>{{ formatMoney(vm.performance.influencedPipelineAmount) }}</strong></li>
+        <li>Won revenue: <strong>{{ formatMoney(vm.performance.wonRevenue) }}</strong></li>
+        <li>Conversion rate: <strong>{{ vm.performance.conversionRate }}%</strong></li>
+      </ul>
+    </section>
+
+    <section class="data-card no-hover" *ngIf="activeTab() === 'action-center'">
+      <header class="data-card-header">
+        <div>
+          <h2 class="section-title">Next Best Actions</h2>
+          <p class="data-card-subtitle">Recommendation volume capped at 5 active actions.</p>
+        </div>
+      </header>
+      <div class="recommendation-grid" *ngIf="recommendations().length; else noRecommendationsTpl">
+        <article class="recommendation-card" *ngFor="let recommendation of recommendations()">
+          <div class="recommendation-card__head">
+            <p-tag [value]="recommendation.severity" [severity]="recommendationSeverity(recommendation.severity)"></p-tag>
+            <span class="confidence">Confidence {{ (recommendation.confidence * 100) | number:'1.0-0' }}%</span>
+          </div>
+          <h3 class="recommendation-title">{{ recommendation.title }}</h3>
+          <p class="recommendation-description">{{ recommendation.description }}</p>
+          <p class="recommendation-impact">Estimated impact: <strong>{{ formatMoney(recommendation.impactEstimate) }}</strong></p>
+
+          <ul class="evidence-list">
+            <li *ngFor="let evidence of recommendation.evidence">{{ evidence }}</li>
+          </ul>
+
+          <input
+            pInputText
+            type="text"
+            class="reason-input"
+            [ngModel]="recommendationReason()[recommendation.id] || ''"
+            (ngModelChange)="updateRecommendationReason(recommendation.id, $event)"
+            placeholder="Optional decision reason"
+          />
+
+          <div class="recommendation-actions">
+            <button pButton type="button" class="crm-button crm-button--ghost" icon="pi pi-list" label="Open Worklist" (click)="openOpportunityWorklist(recommendation)"></button>
+            <button pButton type="button" class="crm-button crm-button--primary" icon="pi pi-check" label="Accept" [disabled]="!canManage()" (click)="decideRecommendation(recommendation, 'accept')"></button>
+            <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-times" label="Dismiss" [disabled]="!canManage()" (click)="decideRecommendation(recommendation, 'dismiss')"></button>
+            <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-clock" label="Snooze" [disabled]="!canManage()" (click)="decideRecommendation(recommendation, 'snooze')"></button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+</div>
+
+<p-dialog
+  [visible]="explainabilityOpen()"
+  (visibleChange)="explainabilityOpen.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(860px, 96vw)' }"
+  header="Attribution Explainability"
+  (onHide)="closeExplainability()"
+>
+  <ng-container *ngIf="!loadingExplainability(); else explainLoadingTpl">
+    <div class="explainability" *ngIf="explainability() as expl; else explainEmptyTpl">
+      <p class="explainability-meta">
+        Model: <strong>{{ expl.model }}</strong>
+        <span *ngIf="expl.ruleVersion"> • Rule: {{ expl.ruleVersion }}</span>
+      </p>
+      <p class="explainability-meta" *ngIf="expl.attributedUtc">Attributed: {{ expl.attributedUtc | date:'short' }}</p>
+      <p class="explainability-meta" *ngIf="expl.sourceEntityType">Source: {{ expl.sourceEntityType }} {{ expl.sourceEntityId }}</p>
+
+      <h3 class="section-title">Evidence</h3>
+      <ul class="evidence-list">
+        <li *ngFor="let item of expl.evidence">{{ item }}</li>
+      </ul>
+
+      <h3 class="section-title">Candidate Memberships</h3>
+      <p-table [value]="expl.candidates" styleClass="crm-table" [rowHover]="true">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Campaign</th>
+            <th>Entity</th>
+            <th>Entity Name</th>
+            <th>Member Added</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <td>{{ row.campaignName }}</td>
+            <td>{{ row.entityType }}</td>
+            <td>{{ row.entityName }}</td>
+            <td>{{ row.memberAddedUtc | date:'short' }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </ng-container>
+</p-dialog>
+
+<ng-template #loadingTpl>
+  <div class="page-container campaign-detail-page">
+    <section class="crm-panel loading">Loading campaign...</section>
+  </div>
+</ng-template>
+
+<ng-template #noRecommendationsTpl>
+  <div class="empty">No active recommendations yet. Refresh from attribution to recompute.</div>
+</ng-template>
+
+<ng-template #explainLoadingTpl>
+  <div class="loading">Loading explainability...</div>
+</ng-template>
+
+<ng-template #explainEmptyTpl>
+  <div class="empty">No explainability details found for this opportunity.</div>
+</ng-template>

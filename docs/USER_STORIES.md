@@ -172,6 +172,12 @@ Purpose: Central location for role-based, end-to-end CRM user stories. This docu
 - `PENDING-CU-DEAL-RESP-1` — Module: Opportunities | Deal sticky-summary cards responsive hardening for narrow/laptop widths (`Completed`, pending ClickUp sync)
   - Implemented: summary card grid now uses auto-fit columns to prevent card squeeze/overlap at intermediate viewport widths.
   - Implemented: risk/approval status badges now wrap safely (no clipped text) with mobile fallback to single-column summary layout.
+- `CU-MARKETING-MVP-1` — Module: Marketing | Campaign Management MVP with first-touch campaign-to-opportunity attribution (`Completed`, ClickUp synced under `86e02y3za` subtasks)
+  - Implemented: new Marketing module routes + sidebar nav (`Campaigns`, `Add Campaign`, `Attribution`) with `Permissions.Marketing.View/Manage` gating and role matrix integration.
+  - Implemented: backend `api/marketing` endpoints for campaign CRUD/archive, member add/remove, campaign detail/performance, and attribution summary.
+  - Implemented: new `Campaign`, `CampaignMember`, and `CampaignAttribution` entities/tables with tenant-safe indexing and uniqueness constraints for first-touch attribution.
+  - Implemented: first-touch attribution recomputation hooks on opportunity create/update/delete and campaign member changes.
+  - Implemented: frontend pages for Campaign list, Campaign form, Campaign detail workspace (overview/members/opportunities/performance), and attribution summary view.
 
 ### Competitive Audit Roadmap Sync (ClickUp -> Docs)
 - Sync date: **February 26, 2026**

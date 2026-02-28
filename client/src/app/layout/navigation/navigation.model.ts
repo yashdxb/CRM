@@ -5,6 +5,7 @@ export interface NavLink {
   badge?: string;
   disabled?: boolean;
   permission?: string;
+  featureFlag?: string;
   pack?: 'supply-chain';
   module?: string;
   children?: NavLink[];

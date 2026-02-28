@@ -13,6 +13,8 @@ export const PERMISSION_KEYS = {
   opportunitiesApprovalsOverride: 'Permissions.Opportunities.Approvals.Override',
   activitiesView: 'Permissions.Activities.View',
   activitiesManage: 'Permissions.Activities.Manage',
+  marketingView: 'Permissions.Marketing.View',
+  marketingManage: 'Permissions.Marketing.Manage',
   administrationView: 'Permissions.Administration.View',
   administrationManage: 'Permissions.Administration.Manage',
   auditView: 'Permissions.Audit.View',

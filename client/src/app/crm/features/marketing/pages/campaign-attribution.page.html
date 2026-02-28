@@ -1,0 +1,258 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="campaign-attribution-page page-container">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          <span>Attribution Analytics</span>
+        </div>
+        <h1 class="hero-title">
+          <span class="title-gradient">Campaign</span>
+          <span class="title-light">Attribution</span>
+        </h1>
+        <p class="hero-description">First-touch contribution from campaigns to influenced pipeline and won revenue.</p>
+        <div class="hero-actions">
+          <button pButton type="button" class="crm-button crm-button--ghost" icon="pi pi-list" label="Campaigns" (click)="openCampaigns()"></button>
+          <button pButton type="button" class="crm-button crm-button--ghost" icon="pi pi-cog" label="Settings" (click)="openSettings()"></button>
+          <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-refresh" label="Refresh" (click)="load()"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics-dashboard">
+      <div class="metrics-grid">
+        <article class="metric-card metric-card--campaigns">
+          <div class="metric-header">
+            <div class="metric-icon primary"><i class="pi pi-megaphone"></i></div>
+            <span class="metric-trend"><i class="pi pi-list"></i> Active set</span>
+          </div>
+          <span class="metric-label">Campaigns</span>
+          <strong class="metric-value">{{ totals().campaigns }}</strong>
+        </article>
+        <article class="metric-card metric-card--influenced">
+          <div class="metric-header">
+            <div class="metric-icon info"><i class="pi pi-briefcase"></i></div>
+            <span class="metric-trend"><i class="pi pi-bolt"></i> First-touch</span>
+          </div>
+          <span class="metric-label">Influenced Opps</span>
+          <strong class="metric-value">{{ totals().influenced }}</strong>
+        </article>
+        <article class="metric-card metric-card--pipeline">
+          <div class="metric-header">
+            <div class="metric-icon warning"><i class="pi pi-chart-line"></i></div>
+            <span class="metric-trend"><i class="pi pi-chart-bar"></i> Influenced</span>
+          </div>
+          <span class="metric-label">Influenced Pipeline</span>
+          <strong class="metric-value">{{ formatMoney(totals().pipeline) }}</strong>
+        </article>
+        <article class="metric-card metric-card--won">
+          <div class="metric-header">
+            <div class="metric-icon success"><i class="pi pi-check-circle"></i></div>
+            <span class="metric-trend up"><i class="pi pi-trophy"></i> Closed won</span>
+          </div>
+          <span class="metric-label">Won Revenue</span>
+          <strong class="metric-value">{{ formatMoney(totals().won) }}</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="filter-bar glass-card no-hover">
+      <div class="filter-content">
+        <div class="search-wrapper">
+          <i class="pi pi-search"></i>
+          <input
+            pInputText
+            type="search"
+            [ngModel]="searchTerm()"
+            (ngModelChange)="searchTerm.set($event)"
+            placeholder="Search campaign"
+          />
+        </div>
+      </div>
+    </section>
+
+    <section class="insights-grid" *ngIf="selectedCampaign() as selected">
+      <article class="data-card no-hover campaign-selector-card">
+        <header class="data-card-header">
+          <h2 class="section-title">Decision Cockpit</h2>
+        </header>
+        <label class="selector-label">Campaign</label>
+        <p-select
+          appendTo="body"
+          [options]="items()"
+          optionLabel="campaignName"
+          optionValue="campaignId"
+          [ngModel]="selected.campaignId"
+          (ngModelChange)="selectCampaign($event)"
+        ></p-select>
+      </article>
+
+      <article class="data-card no-hover" *ngIf="healthScore() as health">
+        <header class="data-card-header">
+          <div>
+            <h2 class="section-title">Health Score</h2>
+            <p class="data-card-subtitle">{{ health.calculationWindowDays }} day window</p>
+          </div>
+          <p-tag [value]="health.trend" [severity]="trendSeverity(health.trend)"></p-tag>
+        </header>
+        <div class="health-inline">
+          <div class="health-pill">
+            <i [class]="trendIcon(health.trend)"></i>
+            <strong>{{ health.score }}</strong>
+            <span>/100</span>
+          </div>
+          <div class="health-chips">
+            <p-tag *ngFor="let chip of health.reasonChips" [value]="chip" severity="secondary"></p-tag>
+          </div>
+        </div>
+      </article>
+
+      <article class="data-card no-hover recommendations-card">
+        <header class="data-card-header">
+          <div>
+            <h2 class="section-title">Next Best Actions</h2>
+            <p class="data-card-subtitle">Top {{ recommendations().length }} active recommendations</p>
+          </div>
+        </header>
+        <div class="recommendation-list" *ngIf="recommendations().length; else noRecommendationsTpl">
+          <div class="recommendation-item" *ngFor="let recommendation of recommendations()">
+            <div class="recommendation-item__head">
+              <p-tag [value]="recommendation.severity" [severity]="recommendationSeverity(recommendation.severity)"></p-tag>
+              <span>Confidence {{ (recommendation.confidence * 100) | number:'1.0-0' }}%</span>
+            </div>
+            <h3 class="recommendation-title">{{ recommendation.title }}</h3>
+            <p class="recommendation-description">{{ recommendation.description }}</p>
+            <p class="recommendation-impact">Estimated impact: <strong>{{ formatMoney(recommendation.impactEstimate) }}</strong></p>
+            <ul class="evidence-list">
+              <li *ngFor="let ev of recommendation.evidence">{{ ev }}</li>
+            </ul>
+            <input
+              pInputText
+              type="text"
+              [ngModel]="recommendationReason()[recommendation.id] || ''"
+              (ngModelChange)="updateRecommendationReason(recommendation.id, $event)"
+              placeholder="Optional decision reason"
+            />
+            <div class="recommendation-actions">
+              <button pButton type="button" class="crm-button crm-button--ghost" icon="pi pi-list" label="Open Worklist" (click)="openOpportunityWorklist(recommendation)"></button>
+              <button pButton type="button" class="crm-button crm-button--primary" icon="pi pi-check" label="Accept" (click)="decideRecommendation(recommendation, 'accept')"></button>
+              <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-times" label="Dismiss" (click)="decideRecommendation(recommendation, 'dismiss')"></button>
+              <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-clock" label="Snooze" (click)="decideRecommendation(recommendation, 'snooze')"></button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="data-card no-hover" *ngIf="!loading(); else loadingTpl">
+      <header class="data-card-header">
+        <div>
+          <h2 class="section-title">Attribution Summary</h2>
+          <p class="data-card-subtitle">{{ filteredItems().length }} campaign rows</p>
+        </div>
+      </header>
+      <div class="table-wrap">
+        <p-table
+          [value]="filteredItems()"
+          styleClass="crm-table"
+          [rowHover]="true"
+          [paginator]="true"
+          [rows]="10"
+          [rowsPerPageOptions]="rowsPerPageOptions"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} campaigns"
+          sortMode="multiple"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="campaignName">Campaign <p-sortIcon field="campaignName"></p-sortIcon></th>
+              <th pSortableColumn="status">Status <p-sortIcon field="status"></p-sortIcon></th>
+              <th pSortableColumn="influencedOpportunities">Influenced Opps <p-sortIcon field="influencedOpportunities"></p-sortIcon></th>
+              <th pSortableColumn="influencedPipelineAmount">Influenced Pipeline <p-sortIcon field="influencedPipelineAmount"></p-sortIcon></th>
+              <th pSortableColumn="wonRevenue">Won Revenue <p-sortIcon field="wonRevenue"></p-sortIcon></th>
+              <th pSortableColumn="conversionRate">Conversion <p-sortIcon field="conversionRate"></p-sortIcon></th>
+              <th>Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr>
+              <td>{{ row.campaignName }}</td>
+              <td><p-tag [severity]="statusSeverity(row.status)" [value]="row.status"></p-tag></td>
+              <td class="cell-numeric">{{ row.influencedOpportunities }}</td>
+              <td class="cell-numeric">{{ formatMoney(row.influencedPipelineAmount) }}</td>
+              <td class="cell-numeric">{{ formatMoney(row.wonRevenue) }}</td>
+              <td class="cell-numeric">{{ row.conversionRate }}%</td>
+              <td>
+                <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-eye" label="Focus" (click)="selectCampaign(row.campaignId)"></button>
+                <button
+                  pButton
+                  type="button"
+                  class="crm-button crm-button--text"
+                  icon="pi pi-info-circle"
+                  label="Explain"
+                  [disabled]="!row.sampleOpportunityId"
+                  (click)="row.sampleOpportunityId && showExplainability(row.sampleOpportunityId)"
+                ></button>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="7" class="empty">No attribution rows yet.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<p-dialog
+  [visible]="explainabilityOpen()"
+  (visibleChange)="explainabilityOpen.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [draggable]="false"
+  [resizable]="false"
+  [style]="{ width: 'min(860px, 96vw)' }"
+  header="Attribution Explainability"
+  (onHide)="closeExplainability()"
+>
+  <ng-container *ngIf="!loadingExplainability(); else explainLoadingTpl">
+    <div class="explainability" *ngIf="explainability() as expl; else explainEmptyTpl">
+      <p class="explainability-meta">
+        Model: <strong>{{ expl.model }}</strong>
+        <span *ngIf="expl.ruleVersion"> • Rule: {{ expl.ruleVersion }}</span>
+      </p>
+      <p class="explainability-meta" *ngIf="expl.attributedUtc">Attributed: {{ expl.attributedUtc | date:'short' }}</p>
+      <ul class="evidence-list">
+        <li *ngFor="let ev of expl.evidence">{{ ev }}</li>
+      </ul>
+    </div>
+  </ng-container>
+</p-dialog>
+
+<ng-template #loadingTpl>
+  <section class="crm-panel loading">Loading attribution summary...</section>
+</ng-template>
+
+<ng-template #noRecommendationsTpl>
+  <div class="empty">No active recommendations available for this campaign.</div>
+</ng-template>
+
+<ng-template #explainLoadingTpl>
+  <div class="loading">Loading explainability...</div>
+</ng-template>
+
+<ng-template #explainEmptyTpl>
+  <div class="empty">No explainability details available.</div>
+</ng-template>

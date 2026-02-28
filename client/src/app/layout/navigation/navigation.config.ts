@@ -46,6 +46,19 @@ export const NAV_LINKS: NavLink[] = [
       { label: 'Add Deal', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage }
     ]
   },
+  {
+    label: 'Marketing',
+    icon: 'pi-megaphone',
+    path: '/app/marketing/campaigns',
+    permission: PERMISSION_KEYS.marketingView,
+    featureFlag: 'marketing.campaigns',
+    children: [
+      { label: 'Campaigns', icon: 'pi-list', path: '/app/marketing/campaigns', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' },
+      { label: 'Add Campaign', icon: 'pi-plus', path: '/app/marketing/campaigns/new', permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns' },
+      { label: 'Attribution', icon: 'pi-percentage', path: '/app/marketing/attribution', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' },
+      { label: 'Marketing Settings', icon: 'pi-cog', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' }
+    ]
+  },
   { 
     label: 'Activities', 
     icon: 'pi-calendar', 
@@ -230,6 +243,7 @@ export const NAV_LINKS: NavLink[] = [
         children: [
           { label: 'Approvals', icon: 'pi-check-square', path: '/app/settings/approvals', permission: PERMISSION_KEYS.administrationManage },
           { label: 'Notifications', icon: 'pi-bell', path: '/app/settings/notifications', permission: PERMISSION_KEYS.administrationView },
+          { label: 'Marketing', icon: 'pi-megaphone', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' },
           { label: 'Lead Assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
           { label: 'Qualification Policy', icon: 'pi-shield', path: '/app/settings/qualification-policy', permission: PERMISSION_KEYS.administrationManage },
           { label: 'Qualification Thresholds', icon: 'pi-filter', path: '/app/settings/qualification-thresholds', permission: PERMISSION_KEYS.administrationManage }

@@ -1,0 +1,26 @@
+.module-disabled-page {
+  display: grid;
+  gap: 1rem;
+}
+
+.disabled-card {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.details {
+  color: var(--crm-text-muted, #6b7280);
+}
+
+.details p {
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}

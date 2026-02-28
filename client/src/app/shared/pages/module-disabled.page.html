@@ -1,0 +1,24 @@
+<section class="page-background module-disabled-page">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="glass-card disabled-card">
+    <h1 class="hero-title">{{ moduleName() }} is disabled</h1>
+    <p class="hero-subtitle">
+      This tenant does not currently have access to this module.
+    </p>
+
+    <div class="details">
+      <p><strong>Feature key:</strong> {{ featureKey() }}</p>
+      <p>Ask an administrator to enable this feature for your tenant and restart the API service.</p>
+    </div>
+
+    <div class="actions">
+      <a class="crm-button crm-button--primary" routerLink="/app/dashboard">Back to Dashboard</a>
+      <a class="crm-button crm-button--ghost" routerLink="/app/settings/tenants">Open Tenant Configuration</a>
+    </div>
+  </section>
+</section>

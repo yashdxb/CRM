@@ -1,0 +1,320 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="page-container marketing-campaigns-page">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-section">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          <span>Marketing Workspace</span>
+        </div>
+        <h1 class="hero-title">
+          <span class="title-gradient">Campaign</span>
+          <span class="title-light">Management</span>
+        </h1>
+        <p class="hero-description">
+          Plan campaigns, manage audience members, and track first-touch impact on pipeline.
+        </p>
+
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="stat-value">{{ kpis().total }}</div>
+            <div class="stat-label">Campaigns</div>
+          </div>
+          <div class="hero-stat">
+            <div class="stat-value">{{ kpis().active }}</div>
+            <div class="stat-label">Active</div>
+          </div>
+          <div class="hero-stat">
+            <div class="stat-value">{{ formatMoney(kpis().plannedBudget) }}</div>
+            <div class="stat-label">Planned Budget</div>
+          </div>
+          <div class="hero-stat">
+            <div class="stat-value">{{ formatMoney(kpis().actualBudget) }}</div>
+            <div class="stat-label">Actual Budget</div>
+          </div>
+        </div>
+
+        <div class="hero-actions">
+          <button
+            pButton
+            type="button"
+            class="crm-button crm-button--primary"
+            icon="pi pi-plus"
+            label="New Campaign"
+            [disabled]="!canManage()"
+            (click)="createCampaign()"
+          ></button>
+          <button
+            pButton
+            type="button"
+            class="crm-button crm-button--ghost"
+            icon="pi pi-percentage"
+            label="Attribution"
+            (click)="openAttribution()"
+          ></button>
+          <button
+            pButton
+            type="button"
+            class="crm-button crm-button--ghost"
+            icon="pi pi-cog"
+            label="Settings"
+            (click)="openSettings()"
+          ></button>
+          <button
+            pButton
+            type="button"
+            class="crm-button crm-button--text"
+            icon="pi pi-refresh"
+            label="Refresh"
+            (click)="load()"
+          ></button>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="visual-card visual-card--primary">
+          <div class="card-icon"><i class="pi pi-megaphone"></i></div>
+          <div class="card-content">
+            <span class="card-label">Campaign Records</span>
+            <strong class="card-value">{{ kpis().total }}</strong>
+            <span class="card-trend">Total active + archived</span>
+          </div>
+          <div class="card-glow"></div>
+        </div>
+        <div class="visual-card visual-card--secondary">
+          <div class="card-icon"><i class="pi pi-chart-line"></i></div>
+          <div class="card-content">
+            <span class="card-label">Active Ratio</span>
+            <strong class="card-value">{{ kpis().total ? ((kpis().active / kpis().total) * 100 | number:'1.0-0') : 0 }}%</strong>
+            <span class="card-trend">Currently running</span>
+          </div>
+          <div class="card-glow"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="metrics-dashboard">
+      <div class="metrics-grid">
+        <article class="metric-card metric-card--campaigns">
+          <div class="metric-header">
+            <div class="metric-icon primary"><i class="pi pi-briefcase"></i></div>
+            <span class="metric-trend up"><i class="pi pi-chart-line"></i> Total</span>
+          </div>
+          <span class="metric-label">Campaigns</span>
+          <strong class="metric-value">{{ kpis().total }}</strong>
+        </article>
+        <article class="metric-card metric-card--active">
+          <div class="metric-header">
+            <div class="metric-icon success"><i class="pi pi-play-circle"></i></div>
+            <span class="metric-trend up"><i class="pi pi-bolt"></i> Live</span>
+          </div>
+          <span class="metric-label">Active</span>
+          <strong class="metric-value">{{ kpis().active }}</strong>
+        </article>
+        <article class="metric-card metric-card--planned">
+          <div class="metric-header">
+            <div class="metric-icon info"><i class="pi pi-wallet"></i></div>
+            <span class="metric-trend"><i class="pi pi-calendar"></i> Forecast</span>
+          </div>
+          <span class="metric-label">Planned</span>
+          <strong class="metric-value">{{ formatMoney(kpis().plannedBudget) }}</strong>
+        </article>
+        <article class="metric-card metric-card--actual">
+          <div class="metric-header">
+            <div class="metric-icon warning"><i class="pi pi-money-bill"></i></div>
+            <span class="metric-trend"><i class="pi pi-chart-bar"></i> Spent</span>
+          </div>
+          <span class="metric-label">Actual</span>
+          <strong class="metric-value">{{ formatMoney(kpis().actualBudget) }}</strong>
+        </article>
+      </div>
+    </section>
+
+    <section class="data-card no-hover">
+      <header class="data-card-header">
+        <div>
+          <h2 class="section-title">Campaign Records</h2>
+          <p class="data-card-subtitle">{{ campaigns().length }} records</p>
+        </div>
+      </header>
+
+      <div class="table-wrap" *ngIf="!loading(); else loadingTpl">
+        <p-table
+          [value]="campaigns()"
+          styleClass="crm-table"
+          [rowHover]="true"
+          sortMode="multiple"
+          [paginator]="true"
+          [rows]="10"
+          [rowsPerPageOptions]="rowsPerPageOptions"
+          [showCurrentPageReport]="true"
+          currentPageReportTemplate="Showing {first} to {last} of {totalRecords} campaigns"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="name">
+                Name
+                <p-sortIcon field="name"></p-sortIcon>
+                <p-columnFilter
+                  type="text"
+                  field="name"
+                  display="menu"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [showMatchModes]="false"
+                  [showApplyButton]="false"
+                ></p-columnFilter>
+              </th>
+              <th pSortableColumn="status">
+                Status
+                <p-sortIcon field="status"></p-sortIcon>
+                <p-columnFilter
+                  field="status"
+                  matchMode="equals"
+                  display="menu"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [showMatchModes]="false"
+                  [showApplyButton]="false"
+                >
+                  <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                    <p-select
+                      appendTo="body"
+                      [options]="statusFilterOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="value"
+                      (onChange)="filter($event.value)"
+                      placeholder="All statuses"
+                      [showClear]="true"
+                      styleClass="column-menu-filter"
+                    ></p-select>
+                  </ng-template>
+                </p-columnFilter>
+              </th>
+              <th pSortableColumn="channel">
+                Channel
+                <p-sortIcon field="channel"></p-sortIcon>
+                <p-columnFilter
+                  field="channel"
+                  matchMode="equals"
+                  display="menu"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [showMatchModes]="false"
+                  [showApplyButton]="false"
+                >
+                  <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                    <p-select
+                      appendTo="body"
+                      [options]="channelFilterOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="value"
+                      (onChange)="filter($event.value)"
+                      placeholder="All channels"
+                      [showClear]="true"
+                      styleClass="column-menu-filter"
+                    ></p-select>
+                  </ng-template>
+                </p-columnFilter>
+              </th>
+              <th pSortableColumn="ownerName">
+                Owner
+                <p-sortIcon field="ownerName"></p-sortIcon>
+                <p-columnFilter
+                  field="ownerName"
+                  matchMode="equals"
+                  display="menu"
+                  [showOperator]="false"
+                  [showAddButton]="false"
+                  [showMatchModes]="false"
+                  [showApplyButton]="false"
+                >
+                  <ng-template pTemplate="filter" let-value let-filter="filterCallback">
+                    <p-select
+                      appendTo="body"
+                      [options]="ownerFilterOptions()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [ngModel]="value"
+                      (onChange)="filter($event.value)"
+                      placeholder="All owners"
+                      [showClear]="true"
+                      styleClass="column-menu-filter"
+                    ></p-select>
+                  </ng-template>
+                </p-columnFilter>
+              </th>
+              <th pSortableColumn="budgetPlanned">
+                Planned
+                <p-sortIcon field="budgetPlanned"></p-sortIcon>
+              </th>
+              <th pSortableColumn="budgetActual">
+                Actual
+                <p-sortIcon field="budgetActual"></p-sortIcon>
+              </th>
+              <th>Dates</th>
+              <th>Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-campaign>
+            <tr>
+              <td>{{ campaign.name }}</td>
+              <td>{{ campaign.status }}</td>
+              <td>{{ campaign.channel }}</td>
+              <td>{{ campaign.ownerName }}</td>
+              <td>{{ formatMoney(campaign.budgetPlanned) }}</td>
+              <td>{{ formatMoney(campaign.budgetActual) }}</td>
+              <td>{{ campaign.startDateUtc ? (campaign.startDateUtc | date:'mediumDate') : '—' }} - {{ campaign.endDateUtc ? (campaign.endDateUtc | date:'mediumDate') : '—' }}</td>
+              <td>
+                <div class="row-actions">
+                  <button
+                    pButton
+                    type="button"
+                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
+                    icon="pi pi-eye"
+                    (click)="openCampaign(campaign)"
+                  ></button>
+                  <button
+                    pButton
+                    type="button"
+                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-help"
+                    icon="pi pi-pencil"
+                    [disabled]="!canManage()"
+                    (click)="editCampaign(campaign)"
+                  ></button>
+                  <button
+                    pButton
+                    type="button"
+                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
+                    icon="pi pi-archive"
+                    [disabled]="!canManage() || campaign.status === 'Archived'"
+                    (click)="archiveCampaign(campaign)"
+                  ></button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="8" class="empty">No campaigns found.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<ng-template #loadingTpl>
+  <div class="loading">Loading campaigns...</div>
+</ng-template>

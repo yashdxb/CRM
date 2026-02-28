@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { ShellComponent } from './layout/shell.component';
 import { authGuard } from './core/auth/auth.guard';
 import { roleGuard } from './core/auth/role.guard';
+import { tenantFeatureGuard } from './core/auth/tenant-feature.guard';
 import { PERMISSION_KEYS } from './core/auth/permission.constants';
 
 export const routes: Routes = [
@@ -50,6 +51,13 @@ export const routes: Routes = [
         data: { permission: PERMISSION_KEYS.dashboardView, breadcrumb: 'Dashboard', icon: 'pi-chart-bar' },
         loadComponent: () =>
           import('./crm/features/dashboard/pages/dashboard.page').then((m) => m.DashboardPage)
+      },
+      {
+        path: 'module-disabled',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.dashboardView, breadcrumb: 'Module Disabled', icon: 'pi-ban' },
+        loadComponent: () =>
+          import('./shared/pages/module-disabled.page').then((m) => m.ModuleDisabledPage)
       },
       {
         path: 'decisions',
@@ -232,6 +240,41 @@ export const routes: Routes = [
           import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
       },
       {
+        path: 'marketing/campaigns',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Campaigns', icon: 'pi-megaphone' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaigns.page').then((m) => m.CampaignsPage)
+      },
+      {
+        path: 'marketing/campaigns/new',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns', breadcrumb: 'New Campaign', icon: 'pi-plus' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaign-form.page').then((m) => m.CampaignFormPage)
+      },
+      {
+        path: 'marketing/campaigns/:id/edit',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns', breadcrumb: 'Edit Campaign', icon: 'pi-pencil' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaign-form.page').then((m) => m.CampaignFormPage)
+      },
+      {
+        path: 'marketing/campaigns/:id',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Campaign Detail', icon: 'pi-chart-bar' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaign-detail.page').then((m) => m.CampaignDetailPage)
+      },
+      {
+        path: 'marketing/attribution',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Attribution', icon: 'pi-percentage' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaign-attribution.page').then((m) => m.CampaignAttributionPage)
+      },
+      {
         path: 'activities',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.activitiesView, breadcrumb: 'Activities', icon: 'pi-calendar' },
@@ -283,6 +326,13 @@ export const routes: Routes = [
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Notifications' },
             loadComponent: () =>
               import('./crm/features/settings/pages/notifications.page').then((m) => m.NotificationsPage)
+          },
+          {
+            path: 'marketing',
+            canActivate: [tenantFeatureGuard],
+            data: { permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns', breadcrumb: 'Marketing' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/marketing-settings.page').then((m) => m.MarketingSettingsPage)
           },
           {
             path: 'users/:id/edit',

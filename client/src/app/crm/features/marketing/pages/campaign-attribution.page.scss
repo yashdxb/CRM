@@ -1,0 +1,190 @@
+.campaign-attribution-page {
+  .page-content {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .hero-description {
+    max-width: 760px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(4, minmax(170px, 1fr));
+    gap: 0.9rem;
+  }
+
+  .metric-card {
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    padding: 0.95rem 1rem;
+  }
+
+  .metric-card .metric-value {
+    font-size: clamp(1.1rem, 1.45vw, 1.45rem);
+  }
+
+  .metric-card--campaigns::before {
+    opacity: 1;
+    background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+  }
+
+  .metric-card--influenced::before {
+    opacity: 1;
+    background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+  }
+
+  .metric-card--pipeline::before {
+    opacity: 1;
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+  }
+
+  .metric-card--won::before {
+    opacity: 1;
+    background: linear-gradient(135deg, #10b981 0%, #22c55e 100%);
+  }
+
+  .insights-grid {
+    display: grid;
+    gap: 0.9rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .campaign-selector-card {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .selector-label {
+    font-size: 0.82rem;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  .health-inline {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .health-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    width: fit-content;
+    padding: 0.5rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(59, 130, 246, 0.14);
+    color: #1d4ed8;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+
+  .health-pill strong {
+    font-size: 1.15rem;
+  }
+
+  .health-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .recommendations-card {
+    grid-column: span 3;
+  }
+
+  .recommendation-list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .recommendation-item {
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.88) 0%, rgba(248, 250, 252, 0.76) 100%);
+    padding: 0.8rem;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .recommendation-item__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    color: #64748b;
+    font-size: 0.82rem;
+  }
+
+  .recommendation-title {
+    margin: 0;
+    font-size: 1rem;
+    color: #0f172a;
+  }
+
+  .recommendation-description,
+  .recommendation-impact,
+  .explainability-meta {
+    margin: 0;
+    color: #475569;
+  }
+
+  .evidence-list {
+    margin: 0;
+    padding-left: 1rem;
+    color: #475569;
+    display: grid;
+    gap: 0.18rem;
+  }
+
+  .recommendation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  .cell-numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::ng-deep .crm-table .p-sortable-column .p-sortable-column-icon {
+    margin-left: 0.35rem;
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+
+  ::ng-deep .crm-table .p-paginator {
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.6) 100%);
+  }
+
+  .empty,
+  .loading {
+    text-align: center;
+    color: var(--crm-text-muted, #6b7280);
+    padding: 1rem;
+  }
+
+  @media (max-width: 1100px) {
+    .metrics-grid {
+      grid-template-columns: repeat(2, minmax(170px, 1fr));
+    }
+
+    .insights-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .recommendations-card {
+      grid-column: span 1;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .metrics-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}

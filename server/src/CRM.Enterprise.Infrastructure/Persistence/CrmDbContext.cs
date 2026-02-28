@@ -25,6 +25,13 @@ public class CrmDbContext : DbContext
     public DbSet<LeadStatus> LeadStatuses => Set<LeadStatus>();
     public DbSet<LeadStatusHistory> LeadStatusHistories => Set<LeadStatusHistory>();
     public DbSet<LeadCadenceChannel> LeadCadenceChannels => Set<LeadCadenceChannel>();
+    public DbSet<Campaign> Campaigns => Set<Campaign>();
+    public DbSet<CampaignMember> CampaignMembers => Set<CampaignMember>();
+    public DbSet<CampaignAttribution> CampaignAttributions => Set<CampaignAttribution>();
+    public DbSet<CampaignInsightSnapshot> CampaignInsightSnapshots => Set<CampaignInsightSnapshot>();
+    public DbSet<CampaignRecommendation> CampaignRecommendations => Set<CampaignRecommendation>();
+    public DbSet<CampaignRecommendationDecision> CampaignRecommendationDecisions => Set<CampaignRecommendationDecision>();
+    public DbSet<AttributionExplainabilityEvent> AttributionExplainabilityEvents => Set<AttributionExplainabilityEvent>();
     public DbSet<Opportunity> Opportunities => Set<Opportunity>();
     public DbSet<OpportunityStage> OpportunityStages => Set<OpportunityStage>();
     public DbSet<OpportunityStageHistory> OpportunityStageHistories => Set<OpportunityStageHistory>();
@@ -118,6 +125,13 @@ public class CrmDbContext : DbContext
             .IsUnique();
         modelBuilder.Entity<LeadStatusHistory>().ToTable("LeadStatusHistories", CrmSchema);
         modelBuilder.Entity<LeadCadenceChannel>().ToTable("LeadCadenceChannels", CrmSchema);
+        modelBuilder.Entity<Campaign>().ToTable("Campaigns", CrmSchema);
+        modelBuilder.Entity<CampaignMember>().ToTable("CampaignMembers", CrmSchema);
+        modelBuilder.Entity<CampaignAttribution>().ToTable("CampaignAttributions", CrmSchema);
+        modelBuilder.Entity<CampaignInsightSnapshot>().ToTable("CampaignInsightSnapshots", CrmSchema);
+        modelBuilder.Entity<CampaignRecommendation>().ToTable("CampaignRecommendations", CrmSchema);
+        modelBuilder.Entity<CampaignRecommendationDecision>().ToTable("CampaignRecommendationDecisions", CrmSchema);
+        modelBuilder.Entity<AttributionExplainabilityEvent>().ToTable("AttributionExplainabilityEvents", CrmSchema);
         modelBuilder.Entity<Lead>()
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);

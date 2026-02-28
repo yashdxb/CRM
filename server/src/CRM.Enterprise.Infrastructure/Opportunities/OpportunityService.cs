@@ -1,6 +1,7 @@
 using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Marketing;
 using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
@@ -117,6 +118,16 @@ public sealed class OpportunityService : IOpportunityService
     private readonly IOpportunityApprovalService _approvalService;
     private readonly IActivityService _activityService;
     private readonly ICrmRealtimePublisher _realtimePublisher;
+    private readonly ICampaignAttributionService _campaignAttributionService;
+
+    private sealed class NoOpCampaignAttributionService : ICampaignAttributionService
+    {
+        public Task RecomputeForOpportunityAsync(Guid opportunityId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task RecomputeForEntityAsync(string entityType, Guid entityId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+    }
 
     public OpportunityService(
         CrmDbContext dbContext,
@@ -126,6 +137,27 @@ public sealed class OpportunityService : IOpportunityService
         IOpportunityApprovalService approvalService,
         IActivityService activityService,
         ICrmRealtimePublisher realtimePublisher)
+        : this(
+            dbContext,
+            tenantProvider,
+            auditEvents,
+            mediator,
+            approvalService,
+            activityService,
+            realtimePublisher,
+            new NoOpCampaignAttributionService())
+    {
+    }
+
+    public OpportunityService(
+        CrmDbContext dbContext,
+        ITenantProvider tenantProvider,
+        IAuditEventService auditEvents,
+        IMediator mediator,
+        IOpportunityApprovalService approvalService,
+        IActivityService activityService,
+        ICrmRealtimePublisher realtimePublisher,
+        ICampaignAttributionService campaignAttributionService)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
@@ -134,6 +166,7 @@ public sealed class OpportunityService : IOpportunityService
         _approvalService = approvalService;
         _activityService = activityService;
         _realtimePublisher = realtimePublisher;
+        _campaignAttributionService = campaignAttributionService;
     }
 
     public async Task<OpportunitySearchResultDto> SearchAsync(OpportunitySearchRequest request, CancellationToken cancellationToken = default)
@@ -574,6 +607,7 @@ public sealed class OpportunityService : IOpportunityService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _campaignAttributionService.RecomputeForOpportunityAsync(opp.Id, cancellationToken);
 
         var dto = new OpportunityListItemDto(
             opp.Id,
@@ -950,6 +984,7 @@ public sealed class OpportunityService : IOpportunityService
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _campaignAttributionService.RecomputeForOpportunityAsync(opp.Id, cancellationToken);
         return OpportunityOperationResult<bool>.Ok(true);
     }
 
@@ -977,6 +1012,7 @@ public sealed class OpportunityService : IOpportunityService
             CreateAuditEntry(opp.Id, "Deleted", null, null, null, actor),
             cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _campaignAttributionService.RecomputeForOpportunityAsync(opp.Id, cancellationToken);
         return OpportunityOperationResult<bool>.Ok(true);
     }
 

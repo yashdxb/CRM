@@ -5,4 +5,5 @@ public record TenantContextResponse(
     string Key,
     string Name,
     string? IndustryPreset,
-    IReadOnlyList<string> IndustryModules);
+    IReadOnlyList<string> IndustryModules,
+    IReadOnlyDictionary<string, bool> FeatureFlags);

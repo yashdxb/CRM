@@ -9,7 +9,9 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { AccordionModule } from 'primeng/accordion';
+import { TreeModule } from 'primeng/tree';
 import { Subject, map, of, switchMap, takeUntil } from 'rxjs';
+import { TreeNode } from 'primeng/api';
 
 import { OpportunityDataService, OpportunityReviewOutcomeRequest, SaveOpportunityRequest } from '../services/opportunity-data.service';
 import { OpportunityApprovalService } from '../services/opportunity-approval.service';
@@ -50,10 +52,30 @@ interface DealSectionNavItem {
   key: DealPanelKey;
   label: string;
   icon: string;
+  unlockStageRank: number;
+}
+
+interface DealStageNodeData {
+  kind: 'stage';
+  stage: string;
+  rank: number;
+}
+
+interface DealSectionNodeData {
+  kind: 'section';
+  section: DealPanelKey;
+  icon: string;
+}
+
+type DealTreeNodeData = DealStageNodeData | DealSectionNodeData;
+
+interface DealSectionMeta {
+  label: string;
+  icon: string;
 }
 
 interface DealSectionNavGroup {
-  key: 'core' | 'execution' | 'governance' | 'delivery' | 'audit';
+  key: 'current' | 'next' | 'later';
   label: string;
   items: DealSectionNavItem[];
 }
@@ -97,6 +119,7 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
     SelectModule,
     DatePickerModule,
     AccordionModule,
+    TreeModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./opportunity-form.page.html",
@@ -119,6 +142,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected readonly loadingSectionKeys = signal<Set<DealPanelKey>>(new Set<DealPanelKey>());
   private readonly lockWarningShown = signal<string | null>(null);
   protected readonly activeSectionNav = signal<DealPanelKey>('opportunity-details');
+  protected selectedDealTreeNode: TreeNode<DealTreeNodeData> | null = null;
 
   protected readonly stageOptions: Option[] = [
     { label: 'Prospecting', value: 'Prospecting' },
@@ -485,53 +509,173 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   }
 
   protected dealSectionNavGroups(): DealSectionNavGroup[] {
-    const groups: DealSectionNavGroup[] = [
-      {
-        key: 'core',
-        label: 'Core',
-        items: [
-          { key: 'opportunity-details', label: 'Deal Details', icon: 'pi pi-briefcase' },
-          { key: 'deal-settings', label: 'Deal Settings', icon: 'pi pi-chart-line' },
-          { key: 'pricing-discounts', label: 'Pricing & Discounts', icon: 'pi pi-percentage' }
-        ]
-      },
-      {
-        key: 'execution',
-        label: 'Sales Execution',
-        items: [
-          { key: 'quote-proposal', label: 'Quote / Proposal', icon: 'pi pi-file-edit' },
-          { key: 'pre-sales-team', label: 'Pre-Sales Team', icon: 'pi pi-users' }
-        ]
-      },
-      {
-        key: 'governance',
-        label: 'Governance',
-        items: [
-          { key: 'approval-workflow', label: 'Approval Workflow', icon: 'pi pi-check-circle' },
-          { key: 'security-legal', label: 'Security & Legal', icon: 'pi pi-shield' }
-        ]
-      },
-      {
-        key: 'delivery',
-        label: 'Delivery',
-        items: [
-          { key: 'delivery-handoff', label: 'Delivery & Handoff', icon: 'pi pi-briefcase' },
-          { key: 'onboarding', label: 'Onboarding', icon: 'pi pi-list-check' }
-        ]
-      },
-      {
-        key: 'audit',
-        label: 'Audit',
-        items: [{ key: 'review-thread', label: 'Review / History', icon: 'pi pi-comments' }]
-      }
+    const stage = this.selectedStage || this.form.stageName || 'Prospecting';
+    const currentRank = this.stageRank(stage);
+    const proposalRank = this.stageRank('Proposal');
+    const securityRank = this.stageRank('Security / Legal Review');
+    const commitRank = this.stageRank('Commit');
+    const wonRank = this.stageRank('Closed Won');
+    const qualificationRank = this.stageRank('Qualification');
+
+    const allItems: DealSectionNavItem[] = [
+      { key: 'opportunity-details', label: 'Deal Details', icon: 'pi pi-briefcase', unlockStageRank: 0 },
+      { key: 'deal-settings', label: 'Deal Settings', icon: 'pi pi-chart-line', unlockStageRank: 0 },
+      { key: 'pricing-discounts', label: 'Pricing & Discounts', icon: 'pi pi-percentage', unlockStageRank: 0 },
+      { key: 'quote-proposal', label: 'Quote / Proposal', icon: 'pi pi-file-edit', unlockStageRank: proposalRank },
+      { key: 'pre-sales-team', label: 'Pre-Sales Team', icon: 'pi pi-users', unlockStageRank: proposalRank },
+      { key: 'approval-workflow', label: 'Approval Workflow', icon: 'pi pi-check-circle', unlockStageRank: 0 },
+      { key: 'security-legal', label: 'Security & Legal', icon: 'pi pi-shield', unlockStageRank: securityRank },
+      { key: 'delivery-handoff', label: 'Delivery & Handoff', icon: 'pi pi-briefcase', unlockStageRank: commitRank },
+      { key: 'onboarding', label: 'Onboarding', icon: 'pi pi-list-check', unlockStageRank: wonRank },
+      { key: 'review-thread', label: 'Review / History', icon: 'pi pi-comments', unlockStageRank: qualificationRank }
     ];
 
-    return groups
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((item) => this.isSectionVisible(item.key))
-      }))
-      .filter((group) => group.items.length > 0);
+    const visibleItems = allItems.filter((item) => item.key !== 'approval-workflow' || this.isEditMode());
+    const groupFor = (item: DealSectionNavItem): DealSectionNavGroup['key'] => {
+      if (item.unlockStageRank <= currentRank) {
+        return 'current';
+      }
+      if (item.unlockStageRank === currentRank + 1) {
+        return 'next';
+      }
+      return 'later';
+    };
+
+    const grouped: Record<DealSectionNavGroup['key'], DealSectionNavItem[]> = {
+      current: [],
+      next: [],
+      later: []
+    };
+
+    for (const item of visibleItems) {
+      grouped[groupFor(item)].push(item);
+    }
+
+    const groups: DealSectionNavGroup[] = [
+      { key: 'current', label: 'Current Stage', items: grouped.current },
+      { key: 'next', label: 'Next Stage', items: grouped.next },
+      { key: 'later', label: 'Later Stages', items: grouped.later }
+    ];
+
+    return groups.filter((group) => group.items.length > 0);
+  }
+
+  protected dealStageTreeNodes(): TreeNode<DealTreeNodeData>[] {
+    const stage = this.selectedStage || this.form.stageName || 'Prospecting';
+    const currentRank = this.stageRank(stage);
+
+    return this.stageOptions.map((stageOption) => {
+      const stageName = String(stageOption.value);
+      const rank = this.stageRank(stageName);
+      const isFuture = rank > currentRank;
+      const stageNode: TreeNode<DealTreeNodeData> = {
+        key: `stage:${stageName}`,
+        label: stageName,
+        expanded: !isFuture,
+        selectable: false,
+        styleClass: `deal-stage-tree-node deal-stage-tree-node--${this.stageTreeTone(stageName)}`,
+        data: { kind: 'stage', stage: stageName, rank }
+      };
+
+      if (!isFuture) {
+        const children = this.stageSectionKeys(stageName)
+          .filter((section) => this.isSectionVisible(section))
+          .map((section) => {
+            const meta = this.sectionMeta(section);
+            const child: TreeNode<DealTreeNodeData> = {
+              key: `section:${section}`,
+              label: meta.label,
+              selectable: true,
+              styleClass: this.isSectionLocked(section)
+                ? 'deal-stage-tree-child deal-stage-tree-child--locked'
+                : 'deal-stage-tree-child',
+              data: { kind: 'section', section, icon: meta.icon }
+            };
+            return child;
+          });
+        stageNode.children = children;
+      }
+
+      return stageNode;
+    });
+  }
+
+  protected onDealTreeNodeSelect(event: { node: TreeNode<DealTreeNodeData> }) {
+    const node = event?.node;
+    if (!node?.data || node.data.kind !== 'section') {
+      return;
+    }
+    const section = node.data.section;
+    const reason = this.sectionLockReason(section);
+    if (reason) {
+      this.toastService.show('error', reason, 2600);
+      return;
+    }
+    this.openDealSection(section);
+  }
+
+  protected sectionIcon(section: DealPanelKey): string {
+    return this.sectionMeta(section).icon;
+  }
+
+  protected stageTreeLabel(stageName: string): string {
+    const current = this.selectedStage || this.form.stageName || 'Prospecting';
+    const rank = this.stageRank(stageName);
+    const currentRank = this.stageRank(current);
+    if (rank < currentRank) return 'Complete';
+    if (rank === currentRank) return 'Current';
+    return 'Locked';
+  }
+
+  protected stageTreeTone(stageName: string): 'success' | 'info' | 'warning' {
+    const current = this.selectedStage || this.form.stageName || 'Prospecting';
+    const rank = this.stageRank(stageName);
+    const currentRank = this.stageRank(current);
+    if (rank < currentRank) return 'success';
+    if (rank === currentRank) return 'info';
+    return 'warning';
+  }
+
+  private stageSectionKeys(stageName: string): DealPanelKey[] {
+    const map: Record<string, DealPanelKey[]> = {
+      Prospecting: ['opportunity-details', 'deal-settings', 'pricing-discounts'],
+      Qualification: ['review-thread'],
+      Proposal: ['quote-proposal', 'pre-sales-team'],
+      'Security / Legal Review': ['security-legal'],
+      Negotiation: ['delivery-handoff'],
+      Commit: ['delivery-handoff'],
+      'Closed Won': ['onboarding'],
+      'Closed Lost': []
+    };
+
+    const base = [...(map[stageName] ?? [])];
+    if (
+      (this.shouldShowApprovalWorkflowSection() || this.approvals.length > 0 || this.decisionReviewMode() || this.requesterApprovalLocked()) &&
+      !base.includes('approval-workflow')
+    ) {
+      // Keep Approval Workflow context-visible in whichever stage the user is currently working in.
+      const current = this.selectedStage || this.form.stageName || 'Prospecting';
+      if (stageName === current) {
+        base.push('approval-workflow');
+      }
+    }
+    return base;
+  }
+
+  private sectionMeta(section: DealPanelKey): DealSectionMeta {
+    const sectionMap: Record<DealPanelKey, DealSectionMeta> = {
+      'opportunity-details': { label: 'Deal Details', icon: 'pi pi-briefcase' },
+      'deal-settings': { label: 'Deal Settings', icon: 'pi pi-chart-line' },
+      'pricing-discounts': { label: 'Pricing & Discounts', icon: 'pi pi-percentage' },
+      'quote-proposal': { label: 'Quote / Proposal', icon: 'pi pi-file-edit' },
+      'pre-sales-team': { label: 'Pre-Sales Team', icon: 'pi pi-users' },
+      'approval-workflow': { label: 'Approval Workflow', icon: 'pi pi-check-circle' },
+      'security-legal': { label: 'Security & Legal', icon: 'pi pi-shield' },
+      'delivery-handoff': { label: 'Delivery & Handoff', icon: 'pi pi-truck' },
+      onboarding: { label: 'Onboarding', icon: 'pi pi-list-check' },
+      'review-thread': { label: 'Review / History', icon: 'pi pi-comments' }
+    };
+    return sectionMap[section];
   }
 
   protected sectionStatusLabel(section: DealPanelKey): string {

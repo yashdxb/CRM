@@ -1634,7 +1634,9 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.LeadsView,
                 Permissions.Policies.LeadsManage,
                 Permissions.Policies.ActivitiesView,
-                Permissions.Policies.ActivitiesManage
+                Permissions.Policies.ActivitiesManage,
+                Permissions.Policies.MarketingView,
+                Permissions.Policies.MarketingManage
             }
         ),
         (

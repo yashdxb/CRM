@@ -24,6 +24,8 @@ public static class Permissions
         public const string OpportunitiesApprovalsOverride = "Permissions.Opportunities.Approvals.Override";
         public const string ActivitiesView = "Permissions.Activities.View";
         public const string ActivitiesManage = "Permissions.Activities.Manage";
+        public const string MarketingView = "Permissions.Marketing.View";
+        public const string MarketingManage = "Permissions.Marketing.Manage";
         public const string AdministrationView = "Permissions.Administration.View";
         public const string AdministrationManage = "Permissions.Administration.Manage";
         public const string AuditView = "Permissions.Audit.View";
@@ -69,6 +71,8 @@ public static class Permissions
         new(Policies.OpportunitiesApprovalsOverride, "Approvals (Override)", "Override approvals when policy gates require escalation.", "Approve & Override"),
         new(Policies.ActivitiesView, "Activities (View)", "View calls, meetings, and tasks tied to records.", "View & Analyze"),
         new(Policies.ActivitiesManage, "Activities (Manage)", "Log calls, meetings, and tasks tied to records.", "Create & Manage Records"),
+        new(Policies.MarketingView, "Marketing (View)", "View campaigns, attribution, and performance insights.", "View & Analyze"),
+        new(Policies.MarketingManage, "Marketing (Manage)", "Create and manage campaigns and memberships.", "Create & Manage Records"),
         new(Policies.AdministrationView, "Administration (View)", "View users, roles, and workspace settings.", "Configure System"),
         new(Policies.AdministrationManage, "Administration (Manage)", "Invite users, edit roles, and configure workspace policies.", "Configure System"),
         new(Policies.AuditView, "Audit Log (View)", "View system audit history for records and changes.", "Audit & Compliance"),
@@ -125,7 +129,9 @@ public static class Permissions
             Policies.LeadsView,
             Policies.LeadsManage,
             Policies.ActivitiesView,
-            Policies.ActivitiesManage
+            Policies.ActivitiesManage,
+            Policies.MarketingView,
+            Policies.MarketingManage
         }),
         new RoleIntentDefinition(RoleNames.CustomerSuccess, "Customer Success", "Manages onboarding and renewals.", new[]
         {

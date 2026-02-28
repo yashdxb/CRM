@@ -8,6 +8,7 @@ export interface TenantContext {
   name: string;
   industryPreset?: string | null;
   industryModules?: string[];
+  featureFlags?: Record<string, boolean>;
 }
 
 @Injectable({ providedIn: 'root' })

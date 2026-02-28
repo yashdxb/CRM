@@ -55,6 +55,11 @@ export class NavigationService {
       return tokenHasPermission(context.payload, link.permission);
     };
 
+    const hasFeatureFlag = (link: NavLink) => {
+      if (!link.featureFlag) return true;
+      return this.tenantContext()?.featureFlags?.[link.featureFlag] === true;
+    };
+
     const hasPackAccess = (link: NavLink) => {
       if (!link.pack) return true;
       if (link.pack === 'supply-chain') {
@@ -69,7 +74,7 @@ export class NavigationService {
       items?.reduce<NavLink[]>((acc, item) => {
         const nestedChildren = filterChildren(item.children);
         const hasAnyChildren = (nestedChildren?.length ?? 0) > 0;
-        const allowed = hasPermission(item) && hasPackAccess(item);
+        const allowed = hasPermission(item) && hasFeatureFlag(item) && hasPackAccess(item);
         if (!allowed && !hasAnyChildren) return acc;
         acc.push({ ...item, children: nestedChildren });
         return acc;
@@ -77,7 +82,7 @@ export class NavigationService {
 
     return this.navLinks().reduce<NavLink[]>((acc, link) => {
       const children = filterChildren(link.children);
-      if ((!hasPermission(link) || !hasPackAccess(link)) && children.length === 0) return acc;
+      if ((!hasPermission(link) || !hasFeatureFlag(link) || !hasPackAccess(link)) && children.length === 0) return acc;
       acc.push({ ...link, children });
       return acc;
     }, []);
