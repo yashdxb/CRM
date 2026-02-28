@@ -340,105 +340,130 @@
   margin-bottom: 0.6rem;
 }
 
-.deal-workbench-nav__groups {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.deal-workbench-nav__group {
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  padding: 0.45rem;
-  background: rgba(255, 255, 255, 0.34);
-}
-
-.deal-workbench-nav__group[data-group='core'] {
-  background: linear-gradient(120deg, rgba(59, 130, 246, 0.16), rgba(147, 197, 253, 0.12));
-}
-
-.deal-workbench-nav__group[data-group='execution'] {
-  background: linear-gradient(120deg, rgba(6, 182, 212, 0.16), rgba(45, 212, 191, 0.12));
-}
-
-.deal-workbench-nav__group[data-group='governance'] {
-  background: linear-gradient(120deg, rgba(249, 115, 22, 0.16), rgba(251, 191, 36, 0.12));
-}
-
-.deal-workbench-nav__group[data-group='delivery'] {
-  background: linear-gradient(120deg, rgba(139, 92, 246, 0.16), rgba(99, 102, 241, 0.12));
-}
-
-.deal-workbench-nav__group[data-group='audit'] {
-  background: linear-gradient(120deg, rgba(100, 116, 139, 0.16), rgba(148, 163, 184, 0.12));
-}
-
-.deal-workbench-nav__group-label {
-  font-size: 0.66rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 800;
-  color: rgba(30, 41, 59, 0.78);
-  margin-bottom: 0.35rem;
-  padding-inline: 0.2rem;
-}
-
-.deal-workbench-nav__items {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.deal-workbench-nav__item {
+:host ::ng-deep .deal-stage-tree.p-tree {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  overflow-x: hidden;
   width: 100%;
-  border: 1px solid rgba(191, 219, 254, 0.36);
-  background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.42)),
-    linear-gradient(120deg, rgba(219, 234, 254, 0.36), rgba(224, 242, 254, 0.22));
-  border-radius: 12px;
-  padding: 0.5rem 0.55rem;
+  max-width: 100%;
+}
+
+:host ::ng-deep .deal-stage-tree .p-tree-container {
   display: grid;
-  gap: 0.35rem;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease, background 150ms ease, filter 150ms ease;
+  gap: 0.5rem;
+  overflow-x: hidden;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
 }
 
-.deal-workbench-nav__item:hover {
-  border-color: rgba(37, 99, 235, 0.42);
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
-  transform: translateY(-1px);
-  filter: saturate(1.12);
+:host ::ng-deep .deal-stage-tree .p-treenode-children {
+  min-width: 0;
+  overflow-x: hidden;
 }
 
-.deal-workbench-nav__item--active {
-  border-color: rgba(29, 78, 216, 0.52);
-  background:
-    linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(14, 165, 233, 0.22), rgba(139, 92, 246, 0.22)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(248, 250, 252, 0.46));
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
+:host ::ng-deep .deal-stage-tree .p-treenode {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.38);
+  padding: 0.2rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-.deal-workbench-nav__item--locked {
-  cursor: not-allowed;
+:host ::ng-deep .deal-stage-tree .p-treenode-content {
+  border-radius: 10px;
+  padding: 0.45rem 0.5rem;
+  background: transparent;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
-.deal-workbench-nav__item:disabled {
-  opacity: 0.82;
-  transform: none;
-  box-shadow: none;
+:host ::ng-deep .deal-stage-tree .p-treenode-content.p-treenode-selectable:hover {
+  background: rgba(59, 130, 246, 0.08);
 }
 
-.deal-workbench-nav__item-main {
+:host ::ng-deep .deal-stage-tree .p-tree-toggler {
+  color: #2563eb;
+  margin-right: 0.25rem;
+}
+
+.deal-stage-tree__node,
+.deal-stage-tree__section {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.deal-stage-tree__stage-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: rgba(15, 23, 42, 0.92);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deal-stage-tree__section-main {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 0.82rem;
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 auto;
+  font-size: 0.78rem;
   font-weight: 700;
-  color: rgba(30, 41, 59, 0.92);
+  color: rgba(30, 41, 59, 0.9);
 
   i {
-    color: #2563eb;
     font-size: 0.82rem;
+    color: #2563eb;
   }
+
+  span:last-child {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+:host ::ng-deep .deal-stage-tree .opportunity-accordion-badge {
+  max-width: min(9.25rem, 48%);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: right;
+  flex: 0 1 auto;
+}
+
+.deal-stage-tree__section--active .deal-stage-tree__section-main {
+  color: #1d4ed8;
+}
+
+.deal-stage-tree__section--locked {
+  opacity: 0.82;
+}
+
+:host ::ng-deep .deal-stage-tree .deal-stage-tree-node--warning {
+  background: linear-gradient(120deg, rgba(249, 115, 22, 0.15), rgba(251, 191, 36, 0.1));
+}
+
+:host ::ng-deep .deal-stage-tree .deal-stage-tree-node--info {
+  background: linear-gradient(120deg, rgba(59, 130, 246, 0.16), rgba(14, 165, 233, 0.1));
+}
+
+:host ::ng-deep .deal-stage-tree .deal-stage-tree-node--success {
+  background: linear-gradient(120deg, rgba(16, 185, 129, 0.16), rgba(20, 184, 166, 0.1));
 }
 
 .form-layout--read-only {
