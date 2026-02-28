@@ -208,7 +208,7 @@
                 class="crm-button crm-button--text impact-action-btn"
                 icon="pi pi-arrow-right"
                 label="Open Worklist"
-                (click)="openCampaignImpactWorklist(row.campaignName, 'positive')"
+                (click)="openCampaignImpactWorklist(row.campaignId, row.campaignName, 'positive')"
               ></button>
             </div>
           </div>
@@ -231,7 +231,7 @@
                 class="crm-button crm-button--text impact-action-btn"
                 icon="pi pi-arrow-right"
                 label="Open Worklist"
-                (click)="openCampaignImpactWorklist(row.campaignName, 'negative')"
+                (click)="openCampaignImpactWorklist(row.campaignId, row.campaignName, 'negative')"
               ></button>
             </div>
           </div>
