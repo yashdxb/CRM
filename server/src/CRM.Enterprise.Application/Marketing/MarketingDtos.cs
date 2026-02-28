@@ -123,6 +123,7 @@ public sealed record RecommendationPilotMetricsDto(
     int DismissedCount,
     int SnoozedCount,
     int ActionTasksCreated,
+    int ImpactWorklistClicks,
     decimal AcceptanceRatePct,
     decimal AvgDecisionHours,
     DateTime WindowStartUtc,

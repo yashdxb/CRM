@@ -172,6 +172,7 @@ export interface RecommendationPilotMetrics {
   dismissedCount: number;
   snoozedCount: number;
   actionTasksCreated: number;
+  impactWorklistClicks: number;
   acceptanceRatePct: number;
   avgDecisionHours: number;
   windowStartUtc: string;

@@ -677,9 +677,23 @@ public class MarketingAttributionIntegrationTests
             owner.Id);
         Assert.True(decision.Success);
 
+        dbContext.AuditEvents.Add(new AuditEvent
+        {
+            TenantId = tenant.Id,
+            EntityType = "MarketingTelemetry",
+            EntityId = campaign.Id,
+            Action = "ImpactWorklistOpened",
+            Field = "impact_worklist",
+            NewValue = $"campaign={campaign.Name};model=linear;direction=positive",
+            ChangedByUserId = owner.Id,
+            ChangedByName = owner.FullName
+        });
+        await dbContext.SaveChangesAsync();
+
         var metrics = await service.GetRecommendationPilotMetricsAsync();
         Assert.True(metrics.AcceptedCount >= 1);
         Assert.True(metrics.ActionTasksCreated >= 1);
+        Assert.True(metrics.ImpactWorklistClicks >= 1);
         Assert.True(metrics.WindowEndUtc >= metrics.WindowStartUtc);
     }
 

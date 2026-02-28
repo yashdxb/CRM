@@ -878,6 +878,15 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
                 EF.Functions.Like(a.Subject, "Marketing recommendation follow-up:%"),
                 cancellationToken);
 
+        var impactWorklistClicks = await _dbContext.AuditEvents
+            .AsNoTracking()
+            .CountAsync(a =>
+                !a.IsDeleted &&
+                a.EntityType == "MarketingTelemetry" &&
+                a.Action == "ImpactWorklistOpened" &&
+                a.CreatedAtUtc >= windowStart,
+                cancellationToken);
+
         var decidedTotal = acceptedCount + dismissedCount + snoozedCount;
         var acceptanceRate = decidedTotal == 0 ? 0m : Math.Round((decimal)acceptedCount / decidedTotal * 100m, 2);
 
@@ -887,6 +896,7 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
             dismissedCount,
             snoozedCount,
             actionTasksCreated,
+            impactWorklistClicks,
             acceptanceRate,
             avgDecisionHours,
             windowStart,

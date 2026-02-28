@@ -6,6 +6,7 @@ public sealed record RecommendationPilotMetricsItem(
     int DismissedCount,
     int SnoozedCount,
     int ActionTasksCreated,
+    int ImpactWorklistClicks,
     decimal AcceptanceRatePct,
     decimal AvgDecisionHours,
     DateTime WindowStartUtc,

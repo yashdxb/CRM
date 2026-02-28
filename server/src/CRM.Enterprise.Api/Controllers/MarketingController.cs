@@ -436,6 +436,7 @@ public sealed class MarketingController : ControllerBase
             result.DismissedCount,
             result.SnoozedCount,
             result.ActionTasksCreated,
+            result.ImpactWorklistClicks,
             result.AcceptanceRatePct,
             result.AvgDecisionHours,
             result.WindowStartUtc,
