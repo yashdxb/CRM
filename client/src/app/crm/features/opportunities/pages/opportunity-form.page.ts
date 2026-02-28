@@ -2056,12 +2056,14 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     });
   }
 
-  protected openSendProposalDialog() {
+  protected openSendProposalDialog(prefillRecipient?: string | null, prefillMessage?: string | null) {
     if (!this.editingId || !this.selectedQuoteId) {
       this.toastService.show('error', 'Save and select a quote first.', 2500);
       return;
     }
 
+    this.proposalSendRecipient = (prefillRecipient ?? '').trim();
+    this.proposalSendMessage = (prefillMessage ?? '').trim();
     this.proposalSendDialogVisible = true;
   }
 
@@ -2123,6 +2125,17 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     if (event.action === 'ProposalGenerated') return 'Proposal generated';
     if (event.action === 'ProposalSent') return 'Proposal sent';
     return event.action;
+  }
+
+  protected isLatestProposalSentEvent(event: OpportunityAuditEvent): boolean {
+    const latestSent = this.proposalActivityTimeline().find((item) => item.action === 'ProposalSent');
+    return !!latestSent && latestSent.id === event.id;
+  }
+
+  protected resendProposalFromActivity(event: OpportunityAuditEvent) {
+    const recipient = event.field === 'ProposalSentTo' ? event.newValue : null;
+    const message = this.form.proposalNotes?.trim() ? this.form.proposalNotes : null;
+    this.openSendProposalDialog(recipient, message);
   }
 
   protected addQuoteLine() {

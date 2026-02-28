@@ -816,6 +816,15 @@
                   <div class="proposal-activity-row__meta">
                     <span>{{ event.createdAtUtc | date: 'medium' }}</span>
                     <span *ngIf="event.changedByName">by {{ event.changedByName }}</span>
+                    <button
+                      *ngIf="event.action === 'ProposalSent' && isLatestProposalSentEvent(event)"
+                      pButton
+                      type="button"
+                      class="p-button-sm p-button-text"
+                      icon="pi pi-replay"
+                      label="Resend"
+                      (click)="resendProposalFromActivity(event)"
+                    ></button>
                   </div>
                 </div>
               </div>
