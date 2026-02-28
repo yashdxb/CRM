@@ -787,6 +787,15 @@
                 <i class="pi pi-save"></i>
                 Save quote
               </button>
+              <button
+                type="button"
+                class="btn-glass"
+                [disabled]="quoteApprovalSubmitting() || !selectedQuoteId"
+                (click)="submitQuoteForApproval()"
+              >
+                <i class="pi pi-check-circle"></i>
+                Submit for approval
+              </button>
               <button type="button" class="btn-glass" (click)="generateProposal()">
                 <i class="pi pi-file"></i>
                 Generate proposal

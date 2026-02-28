@@ -116,6 +116,31 @@ public sealed class OpportunityQuotesController : ControllerBase
         return Ok(MapDetail(result));
     }
 
+    [HttpPost("api/opportunities/{opportunityId:guid}/quotes/{quoteId:guid}/submit-approval")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesApprovalsRequest)]
+    public async Task<ActionResult<OpportunityQuoteDetail>> SubmitForApproval(
+        Guid opportunityId,
+        Guid quoteId,
+        CancellationToken cancellationToken)
+    {
+        OpportunityQuoteDetailDto? result;
+        try
+        {
+            result = await _service.SubmitForApprovalAsync(opportunityId, quoteId, GetActor(), cancellationToken);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(MapDetail(result));
+    }
+
     private static CRM.Enterprise.Application.Opportunities.OpportunityQuoteLineRequest MapLineRequest(
         CRM.Enterprise.Api.Contracts.Opportunities.OpportunityQuoteLineRequest request)
         => new(request.ItemMasterId, request.Description, request.Quantity, request.UnitPrice, request.DiscountPercent);

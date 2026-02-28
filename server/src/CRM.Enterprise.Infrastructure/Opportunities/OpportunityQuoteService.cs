@@ -10,14 +10,21 @@ namespace CRM.Enterprise.Infrastructure.Opportunities;
 public sealed class OpportunityQuoteService : IOpportunityQuoteService
 {
     private const string EntityType = "OpportunityQuote";
+    private const decimal DiscountPercentApprovalThreshold = 10m;
+    private const decimal DiscountAmountApprovalThreshold = 1000m;
 
     private readonly CrmDbContext _dbContext;
     private readonly IAuditEventService _auditEvents;
+    private readonly IOpportunityApprovalService _approvalService;
 
-    public OpportunityQuoteService(CrmDbContext dbContext, IAuditEventService auditEvents)
+    public OpportunityQuoteService(
+        CrmDbContext dbContext,
+        IAuditEventService auditEvents,
+        IOpportunityApprovalService approvalService)
     {
         _dbContext = dbContext;
         _auditEvents = auditEvents;
+        _approvalService = approvalService;
     }
 
     public async Task<IReadOnlyList<OpportunityQuoteListItemDto>?> GetByOpportunityAsync(Guid opportunityId, CancellationToken cancellationToken = default)
@@ -59,7 +66,13 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
                 q => q.Id == quoteId && q.OpportunityId == opportunityId && !q.IsDeleted,
                 cancellationToken);
 
-        return quote is null ? null : MapDetail(quote);
+        if (quote is null)
+        {
+            return null;
+        }
+
+        var status = await ResolveApprovalDerivedStatusAsync(quote, cancellationToken);
+        return MapDetail(quote, status);
     }
 
     public async Task<OpportunityQuoteDetailDto?> CreateAsync(
@@ -121,6 +134,86 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        return await GetByIdAsync(opportunityId, quote.Id, cancellationToken);
+    }
+
+    public async Task<OpportunityQuoteDetailDto?> SubmitForApprovalAsync(
+        Guid opportunityId,
+        Guid quoteId,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var quote = await _dbContext.OpportunityQuotes
+            .FirstOrDefaultAsync(
+                q => q.Id == quoteId && q.OpportunityId == opportunityId && !q.IsDeleted,
+                cancellationToken);
+        if (quote is null)
+        {
+            return null;
+        }
+
+        var lockViolation = await OpportunityApprovalLockPolicy.GetLockViolationAsync(
+            _dbContext,
+            opportunityId,
+            actor.UserId,
+            cancellationToken);
+        if (lockViolation is not null)
+        {
+            throw new InvalidOperationException(lockViolation);
+        }
+
+        var approvalRequired = IsApprovalRequired(quote);
+        if (!approvalRequired)
+        {
+            quote.Status = "Approved";
+            quote.UpdatedAtUtc = DateTime.UtcNow;
+
+            await _auditEvents.TrackAsync(
+                new AuditEventEntry(
+                    EntityType,
+                    quote.Id,
+                    "AutoApproved",
+                    "Status",
+                    null,
+                    quote.Status,
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return await GetByIdAsync(opportunityId, quote.Id, cancellationToken);
+        }
+
+        var approvalAmount = quote.DiscountAmount > 0 ? quote.DiscountAmount : quote.TotalAmount;
+        var approvalResult = await _approvalService.RequestAsync(
+            opportunityId,
+            approvalAmount,
+            quote.Currency,
+            "Discount",
+            actor,
+            cancellationToken);
+
+        if (!approvalResult.Success)
+        {
+            throw new InvalidOperationException(approvalResult.Error ?? "Unable to submit quote for approval.");
+        }
+
+        quote.Status = "Pending Approval";
+        quote.UpdatedAtUtc = DateTime.UtcNow;
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                EntityType,
+                quote.Id,
+                "SubmittedForApproval",
+                "Status",
+                null,
+                quote.Status,
+                actor.UserId,
+                actor.UserName),
+            cancellationToken);
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
         return await GetByIdAsync(opportunityId, quote.Id, cancellationToken);
     }
 
@@ -263,7 +356,7 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
         quote.TotalAmount = Math.Round(lineTotal + quote.TaxAmount, 2, MidpointRounding.AwayFromZero);
     }
 
-    private static OpportunityQuoteDetailDto MapDetail(OpportunityQuote quote)
+    private static OpportunityQuoteDetailDto MapDetail(OpportunityQuote quote, string? statusOverride = null)
     {
         var lines = quote.Lines
             .Where(l => !l.IsDeleted)
@@ -285,7 +378,7 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
             quote.OpportunityId,
             quote.QuoteNumber,
             quote.Name,
-            quote.Status,
+            statusOverride ?? quote.Status,
             quote.PriceListId,
             quote.Currency,
             quote.Subtotal,
@@ -296,6 +389,56 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
             quote.CreatedAtUtc,
             quote.UpdatedAtUtc,
             lines);
+    }
+
+    private static bool IsApprovalRequired(OpportunityQuote quote)
+    {
+        if (quote.Subtotal <= 0)
+        {
+            return false;
+        }
+
+        var discountPercent = quote.DiscountAmount <= 0
+            ? 0
+            : (quote.DiscountAmount / quote.Subtotal) * 100m;
+
+        return discountPercent >= DiscountPercentApprovalThreshold
+            || quote.DiscountAmount >= DiscountAmountApprovalThreshold;
+    }
+
+    private async Task<string> ResolveApprovalDerivedStatusAsync(OpportunityQuote quote, CancellationToken cancellationToken)
+    {
+        var approval = await _dbContext.OpportunityApprovals
+            .AsNoTracking()
+            .Where(a =>
+                a.OpportunityId == quote.OpportunityId &&
+                !a.IsDeleted &&
+                a.RequestedOn >= quote.CreatedAtUtc &&
+                a.Purpose == "Discount")
+            .OrderByDescending(a => a.RequestedOn)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (approval is null)
+        {
+            return quote.Status;
+        }
+
+        if (approval.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Approved";
+        }
+
+        if (approval.Status.Equals("Rejected", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Rejected";
+        }
+
+        if (approval.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Pending Approval";
+        }
+
+        return quote.Status;
     }
 
     private static void ValidateRequest(

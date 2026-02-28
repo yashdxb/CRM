@@ -307,6 +307,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected priceListItems: PriceListListItem[] = [];
   protected quoteSaving = signal(false);
   protected quoteLoading = signal(false);
+  protected quoteApprovalSubmitting = signal(false);
   private teamDirty = false;
   protected onboardingChecklist: OpportunityOnboardingItem[] = [];
   protected onboardingMilestones: OpportunityOnboardingItem[] = [];
@@ -2182,6 +2183,30 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       error: () => {
         this.quoteLoading.set(false);
         this.toastService.show('error', 'Unable to load quote detail.', 3000);
+      }
+    });
+  }
+
+  protected submitQuoteForApproval() {
+    if (!this.editingId || !this.selectedQuoteId) {
+      this.toastService.show('error', 'Save and select a quote first.', 2500);
+      return;
+    }
+
+    this.quoteApprovalSubmitting.set(true);
+    this.opportunityData.submitQuoteForApproval(this.editingId, this.selectedQuoteId).subscribe({
+      next: (quote) => {
+        this.quoteApprovalSubmitting.set(false);
+        this.applyQuoteDetail(quote);
+        this.loadApprovals(this.editingId!);
+        this.toastService.show('success', `Quote is now ${quote.status}.`, 2600);
+      },
+      error: (error) => {
+        this.quoteApprovalSubmitting.set(false);
+        const message = typeof error?.error === 'string'
+          ? error.error
+          : error?.error?.message || 'Unable to submit quote for approval.';
+        this.toastService.show('error', message, 3200);
       }
     });
   }

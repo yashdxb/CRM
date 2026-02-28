@@ -8,4 +8,5 @@ public interface IOpportunityQuoteService
     Task<OpportunityQuoteDetailDto?> GetByIdAsync(Guid opportunityId, Guid quoteId, CancellationToken cancellationToken = default);
     Task<OpportunityQuoteDetailDto?> CreateAsync(Guid opportunityId, OpportunityQuoteCreateRequest request, ActorContext actor, CancellationToken cancellationToken = default);
     Task<OpportunityQuoteDetailDto?> UpdateAsync(Guid opportunityId, Guid quoteId, OpportunityQuoteUpdateRequest request, ActorContext actor, CancellationToken cancellationToken = default);
+    Task<OpportunityQuoteDetailDto?> SubmitForApprovalAsync(Guid opportunityId, Guid quoteId, ActorContext actor, CancellationToken cancellationToken = default);
 }

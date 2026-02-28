@@ -160,6 +160,10 @@ export class OpportunityDataService {
     return this.http.put<OpportunityQuoteDetail>(`${this.baseUrl}/api/opportunities/${opportunityId}/quotes/${quoteId}`, payload);
   }
 
+  submitQuoteForApproval(opportunityId: string, quoteId: string) {
+    return this.http.post<OpportunityQuoteDetail>(`${this.baseUrl}/api/opportunities/${opportunityId}/quotes/${quoteId}/submit-approval`, {});
+  }
+
   getPriceLists(page = 1, pageSize = 100) {
     const params = new HttpParams()
       .set('page', page)
