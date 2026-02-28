@@ -52,6 +52,7 @@ export class CrmEventsService {
         next: (context) => {
           this.featureFlags = context.featureFlags ?? {};
           this.featureFlagsLoaded = true;
+          this.flushPendingPresence();
         },
         error: () => {
           this.featureFlags = {};
@@ -93,12 +94,16 @@ export class CrmEventsService {
   }
 
   joinRecordPresence(entityType: string, recordId: string) {
-    if (!this.isFeatureEnabled('realtime.recordPresence')) {
+    const key = `${entityType.toLowerCase()}:${recordId}`;
+    this.pendingPresence.set(key, { entityType, recordId });
+
+    if (!this.featureFlagsLoaded) {
       return;
     }
 
-    const key = `${entityType.toLowerCase()}:${recordId}`;
-    this.pendingPresence.set(key, { entityType, recordId });
+    if (!this.isFeatureEnabled('realtime.recordPresence')) {
+      return;
+    }
 
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       return;
@@ -110,12 +115,16 @@ export class CrmEventsService {
   }
 
   leaveRecordPresence(entityType: string, recordId: string) {
-    if (!this.isFeatureEnabled('realtime.recordPresence')) {
+    const key = `${entityType.toLowerCase()}:${recordId}`;
+    this.pendingPresence.delete(key);
+
+    if (!this.featureFlagsLoaded) {
       return;
     }
 
-    const key = `${entityType.toLowerCase()}:${recordId}`;
-    this.pendingPresence.delete(key);
+    if (!this.isFeatureEnabled('realtime.recordPresence')) {
+      return;
+    }
 
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       return;
@@ -224,6 +233,10 @@ export class CrmEventsService {
   }
 
   private flushPendingPresence() {
+    if (!this.isFeatureEnabled('realtime.recordPresence')) {
+      return;
+    }
+
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       return;
     }
