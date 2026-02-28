@@ -1146,11 +1146,6 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
 
     private async Task ApplyRecommendationActionsAsync(CampaignRecommendation recommendation, CancellationToken cancellationToken)
     {
-        if (!string.Equals(recommendation.Type, "reengage_stalled_opportunities", StringComparison.Ordinal))
-        {
-            return;
-        }
-
         var attributedRows = await _dbContext.CampaignAttributions
             .AsNoTracking()
             .Where(a => a.CampaignId == recommendation.CampaignId && !a.IsDeleted)
@@ -1166,8 +1161,8 @@ public sealed class MarketingService : IMarketingService, ICampaignAttributionSe
         {
             _dbContext.Activities.Add(new Activity
             {
-                Subject = $"Marketing re-engagement: {opp.Name}",
-                Description = "Auto-created from marketing recommendation acceptance. Re-engage this influenced opportunity and update next step.",
+                Subject = $"Marketing recommendation follow-up: {opp.Name}",
+                Description = $"Auto-created from accepted recommendation ({recommendation.Type}). Re-engage this influenced opportunity and update next step.",
                 Type = ActivityType.Task,
                 RelatedEntityType = ActivityRelationType.Opportunity,
                 RelatedEntityId = opp.Id,
