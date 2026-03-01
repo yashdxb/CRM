@@ -1,0 +1,239 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     EMAIL TEMPLATES PAGE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-container">
+  <!-- Animated Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- PrimeNG Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       HERO SECTION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Template Management</span>
+      </div>
+      
+      <h1 class="hero-title">
+        <span class="title-gradient">Email</span>
+        <span class="title-light">Templates</span>
+      </h1>
+      
+      <p class="hero-description">
+        Create and manage reusable email templates with dynamic variables
+      </p>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-primary btn-glow" [disabled]="!canManage()" (click)="openCreateDialog()">
+          <i class="pi pi-plus"></i>
+          <span>New Template</span>
+          <div class="btn-shine"></div>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/emails">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Emails</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-file-edit"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Templates</span>
+          <strong class="card-value">{{ templates().length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-file"></i> Available
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       DATA TABLE
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="data-section">
+    <div class="data-card">
+      <div class="data-header">
+        <h2>Email Templates</h2>
+        <span class="record-count">{{ templates().length }} templates</span>
+      </div>
+
+      <!-- Loading State -->
+      <div class="skeleton-rows" *ngIf="loading()">
+        <div class="skeleton-row" *ngFor="let _ of [1,2,3,4,5]">
+          <p-skeleton width="200px" height="20px"></p-skeleton>
+          <p-skeleton width="300px" height="20px"></p-skeleton>
+          <p-skeleton width="150px" height="20px"></p-skeleton>
+          <p-skeleton width="80px" height="24px" borderRadius="12px"></p-skeleton>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <p-table 
+        [value]="templates()" 
+        styleClass="data-table"
+        *ngIf="!loading()"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Name</th>
+            <th>Subject</th>
+            <th>Variables</th>
+            <th>Usage</th>
+            <th>Updated</th>
+            <th style="width: 120px">Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-template>
+          <tr class="table-row">
+            <td>
+              <div class="template-info">
+                <span class="template-name">{{ template.name }}</span>
+                <p-tag *ngIf="template.isSystem" value="System" severity="info" [rounded]="true"></p-tag>
+              </div>
+            </td>
+            <td>
+              <span class="template-subject" [pTooltip]="template.subject" tooltipPosition="top">
+                {{ template.subject }}
+              </span>
+            </td>
+            <td>
+              <div class="template-variables">
+                <span class="variable-tag" *ngFor="let v of template.variables?.slice(0, 3)">{{ v }}</span>
+                <span class="variable-more" *ngIf="template.variables?.length > 3">+{{ template.variables.length - 3 }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="usage-count">{{ template.usageCount ?? 0 }} emails</span>
+            </td>
+            <td>
+              <span class="template-date">{{ template.updatedAtUtc | date:'mediumDate' }}</span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button pButton type="button" class="icon-btn" pTooltip="Edit" tooltipPosition="top" (click)="openEditDialog(template)" [disabled]="template.isSystem">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button pButton type="button" class="icon-btn icon-btn--danger" pTooltip="Delete" tooltipPosition="top" (click)="deleteTemplate(template)" [disabled]="template.isSystem">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <i class="pi pi-file-edit"></i>
+                <h3>No templates found</h3>
+                <p>Create your first email template to get started</p>
+                <button pButton type="button" class="btn btn-primary" (click)="openCreateDialog()" [disabled]="!canManage()">
+                  <i class="pi pi-plus"></i>
+                  <span>New Template</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </section>
+</div>
+
+<!-- Create Template Dialog -->
+<p-dialog 
+  [(visible)]="showCreateDialog" 
+  header="Create Email Template" 
+  [modal]="true" 
+  [style]="{width: '600px'}"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="template-dialog"
+>
+  <div class="dialog-form">
+    <div class="form-field">
+      <label>Template Name <span class="required">*</span></label>
+      <input pInputText [(ngModel)]="newTemplate.name" placeholder="e.g., Welcome Email" />
+    </div>
+    <div class="form-field">
+      <label>Subject Line <span class="required">*</span></label>
+      <input pInputText [(ngModel)]="newTemplate.subject" placeholder="e.g., Welcome to Your Company" />
+    </div>
+    <div class="form-field">
+      <label>Variables (comma-separated)</label>
+      <input pInputText [(ngModel)]="newTemplate.variables" placeholder="e.g., firstName, companyName, link" />
+      <small class="hint" ngNonBindable>Use {{variableName}} in subject and body to insert dynamic values</small>
+    </div>
+    <div class="form-field">
+      <label>Email Body (HTML)</label>
+      <textarea pInputTextarea [(ngModel)]="newTemplate.bodyHtml" [rows]="10" placeholder="<p>Hello {firstName},</p>..."></textarea>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="dialog-actions">
+      <button pButton type="button" class="btn btn-ghost" (click)="showCreateDialog = false">
+        Cancel
+      </button>
+      <button pButton type="button" class="btn btn-primary" (click)="createTemplate()">
+        <i class="pi pi-check"></i>
+        <span>Create Template</span>
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Edit Template Dialog -->
+<p-dialog 
+  [(visible)]="showEditDialog" 
+  header="Edit Email Template" 
+  [modal]="true" 
+  [style]="{width: '600px'}"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="template-dialog"
+>
+  <div class="dialog-form">
+    <div class="form-field">
+      <label>Template Name <span class="required">*</span></label>
+      <input pInputText [(ngModel)]="newTemplate.name" placeholder="e.g., Welcome Email" />
+    </div>
+    <div class="form-field">
+      <label>Subject Line <span class="required">*</span></label>
+      <input pInputText [(ngModel)]="newTemplate.subject" placeholder="e.g., Welcome to Your Company" />
+    </div>
+    <div class="form-field">
+      <label>Variables (comma-separated)</label>
+      <input pInputText [(ngModel)]="newTemplate.variables" placeholder="e.g., firstName, companyName, link" />
+      <small class="hint" ngNonBindable>Use {{variableName}} in subject and body to insert dynamic values</small>
+    </div>
+    <div class="form-field">
+      <label>Email Body (HTML)</label>
+      <textarea pInputTextarea [(ngModel)]="newTemplate.bodyHtml" [rows]="10" placeholder="<p>Hello {firstName},</p>..."></textarea>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="dialog-actions">
+      <button pButton type="button" class="btn btn-ghost" (click)="showEditDialog = false">
+        Cancel
+      </button>
+      <button pButton type="button" class="btn btn-primary" (click)="updateTemplate()">
+        <i class="pi pi-check"></i>
+        <span>Save Changes</span>
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

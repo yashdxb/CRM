@@ -310,6 +310,20 @@ export const routes: Routes = [
           import('./crm/features/activities/pages/activity-form.page').then((m) => m.ActivityFormPage)
       },
       {
+        path: 'emails',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.emailsView, breadcrumb: 'Emails', icon: 'pi-envelope' },
+        loadComponent: () =>
+          import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
+      },
+      {
+        path: 'emails/templates',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.emailsManage, breadcrumb: 'Email Templates', icon: 'pi-file-edit' },
+        loadComponent: () =>
+          import('./crm/features/emails/pages/email-templates.page').then((m) => m.EmailTemplatesPage)
+      },
+      {
         path: 'settings',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Settings', icon: 'pi-cog' },

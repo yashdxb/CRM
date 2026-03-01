@@ -70,6 +70,16 @@ export const NAV_LINKS: NavLink[] = [
       { label: 'Tasks', icon: 'pi-check-square', path: '/app/activities/tasks', permission: PERMISSION_KEYS.activitiesView }
     ]
   },
+  {
+    label: 'Emails',
+    icon: 'pi-envelope',
+    path: '/app/emails',
+    permission: PERMISSION_KEYS.emailsView,
+    children: [
+      { label: 'All Emails', icon: 'pi-list', path: '/app/emails', permission: PERMISSION_KEYS.emailsView },
+      { label: 'Templates', icon: 'pi-file-edit', path: '/app/emails/templates', permission: PERMISSION_KEYS.emailsManage }
+    ]
+  },
   { 
     label: 'Contacts', 
     icon: 'pi-id-card', 

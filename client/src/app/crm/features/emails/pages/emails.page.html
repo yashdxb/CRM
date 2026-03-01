@@ -1,0 +1,375 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     EMAILS PAGE - FUTURISTIC ENTERPRISE UI
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-container">
+  <!-- Animated Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- PrimeNG Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       HERO SECTION - Command Center Style
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Email Communications Hub</span>
+      </div>
+      
+      <h1 class="hero-title">
+        <span class="title-gradient">Email</span>
+        <span class="title-light">Center</span>
+      </h1>
+      
+      <p class="hero-description">
+        Track, compose, and manage all CRM email communications in one place
+      </p>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().total || 0 }}</div>
+          <div class="stat-label">Total Emails</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().sent }}</div>
+          <div class="stat-label">Sent</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--sent" [style.width.%]="metrics().total ? (metrics().sent / metrics().total) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().opened }}</div>
+          <div class="stat-label">Opened</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--opened" [style.width.%]="metrics().sent ? (metrics().opened / metrics().sent) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().openRate }}%</div>
+          <div class="stat-label">Open Rate</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--success" [style.width.%]="metrics().openRate"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-primary btn-glow" [disabled]="!canManage()" (click)="openComposeDialog()">
+          <i class="pi pi-pencil"></i>
+          <span>Compose Email</span>
+          <div class="btn-shine"></div>
+        </button>
+        <button pButton type="button" class="btn btn-secondary" (click)="loadEmails()">
+          <i class="pi pi-refresh"></i>
+          <span>Refresh</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" routerLink="/app/emails/templates" *ngIf="canManage()">
+          <i class="pi pi-file-edit"></i>
+          <span>Templates</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-send"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Sent</span>
+          <strong class="card-value">{{ metrics().sent }}</strong>
+          <span class="card-trend card-trend--up">
+            <i class="pi pi-check"></i> Delivered
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--secondary">
+        <div class="card-icon">
+          <i class="pi pi-eye"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Engagement</span>
+          <strong class="card-value">{{ metrics().opened }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-chart-line"></i> Opens
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--warning" *ngIf="metrics().failed > 0">
+        <div class="card-icon">
+          <i class="pi pi-exclamation-triangle"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Issues</span>
+          <strong class="card-value">{{ metrics().failed }}</strong>
+          <span class="card-trend card-trend--down">
+            <i class="pi pi-times"></i> Failed
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       METRICS DASHBOARD
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="metrics-section">
+    <div class="metric-card metric-card--total">
+      <div class="metric-icon">
+        <i class="pi pi-envelope"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Total Emails</span>
+        <strong class="metric-value">{{ metrics().total || '—' }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--cyan" [attr.stroke-dasharray]="'100, 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+    
+    <div class="metric-card metric-card--sent">
+      <div class="metric-icon">
+        <i class="pi pi-send"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Sent</span>
+        <strong class="metric-value">{{ metrics().sent }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--green" [attr.stroke-dasharray]="metrics().total ? ((metrics().sent / metrics().total) * 100) + ', 100' : '0, 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--pending">
+      <div class="metric-icon">
+        <i class="pi pi-clock"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Pending</span>
+        <strong class="metric-value">{{ metrics().pending }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--purple" [attr.stroke-dasharray]="metrics().total ? ((metrics().pending / metrics().total) * 100) + ', 100' : '0, 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--opened">
+      <div class="metric-icon">
+        <i class="pi pi-eye"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Opened</span>
+        <strong class="metric-value">{{ metrics().opened }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--cyan" [attr.stroke-dasharray]="metrics().sent ? ((metrics().opened / metrics().sent) * 100) + ', 100' : '0, 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--failed" *ngIf="metrics().failed > 0">
+      <div class="metric-icon">
+        <i class="pi pi-times-circle"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Failed</span>
+        <strong class="metric-value">{{ metrics().failed }}</strong>
+      </div>
+      <div class="metric-badge">
+        <span>!</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       FILTER & SEARCH TOOLBAR
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="toolbar-section">
+    <div class="search-box">
+      <span class="p-inputgroup">
+        <span class="p-inputgroup-addon">
+          <i class="pi pi-search"></i>
+        </span>
+        <input 
+          pInputText 
+          type="text" 
+          placeholder="Search emails by recipient, subject..." 
+          [(ngModel)]="searchTerm"
+          (keyup.enter)="onSearch()"
+        />
+      </span>
+    </div>
+
+    <div class="filter-controls">
+      <p-select
+        [options]="statusOptions"
+        [(ngModel)]="statusFilter"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Filter by status"
+        (onChange)="onStatusFilterChange()"
+        styleClass="filter-select"
+      >
+        <ng-template pTemplate="item" let-option>
+          <div class="select-option">
+            <i class="pi" [ngClass]="option.icon"></i>
+            <span>{{ option.label }}</span>
+          </div>
+        </ng-template>
+        <ng-template pTemplate="value" let-option>
+          <div class="select-option" *ngIf="option">
+            <i class="pi" [ngClass]="option.icon"></i>
+            <span>{{ option.label }}</span>
+          </div>
+          <span *ngIf="!option" class="select-placeholder">Status</span>
+        </ng-template>
+      </p-select>
+
+      <button pButton type="button" class="btn btn-ghost" (click)="onSearch()">
+        <i class="pi pi-filter"></i>
+        <span>Apply</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       DATA TABLE
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="data-section">
+    <div class="data-card">
+      <div class="data-header">
+        <h2>Email History</h2>
+        <span class="record-count">{{ total() }} emails</span>
+      </div>
+
+      <!-- Loading State -->
+      <div class="skeleton-rows" *ngIf="loading()">
+        <div class="skeleton-row" *ngFor="let _ of [1,2,3,4,5]">
+          <p-skeleton width="40px" height="40px" shape="circle"></p-skeleton>
+          <p-skeleton width="200px" height="20px"></p-skeleton>
+          <p-skeleton width="300px" height="20px"></p-skeleton>
+          <p-skeleton width="80px" height="24px" borderRadius="12px"></p-skeleton>
+          <p-skeleton width="100px" height="20px"></p-skeleton>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <p-table 
+        [value]="emails()" 
+        [lazy]="false"
+        styleClass="data-table"
+        *ngIf="!loading()"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th style="width: 50px"></th>
+            <th>Recipient</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>Sent At</th>
+            <th style="width: 100px">Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-email>
+          <tr class="table-row">
+            <td>
+              <div class="email-avatar">
+                {{ getInitials(email.toEmail) }}
+              </div>
+            </td>
+            <td>
+              <div class="email-info">
+                <span class="email-address">{{ email.toEmail }}</span>
+                <span class="email-name" *ngIf="email.toName">{{ email.toName }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="email-subject" [pTooltip]="email.subject" tooltipPosition="top">
+                {{ email.subject }}
+              </span>
+            </td>
+            <td>
+              <p-tag 
+                [value]="email.status" 
+                [severity]="statusSeverity(email.status)"
+                [icon]="'pi ' + statusIcon(email.status)"
+              ></p-tag>
+            </td>
+            <td>
+              <span class="email-date" *ngIf="email.sentAtUtc">{{ email.sentAtUtc | date:'short' }}</span>
+              <span class="email-date email-date--pending" *ngIf="!email.sentAtUtc">Pending</span>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button pButton type="button" class="icon-btn" pTooltip="View Details" tooltipPosition="top">
+                  <i class="pi pi-eye"></i>
+                </button>
+                <button pButton type="button" class="icon-btn" pTooltip="Resend" tooltipPosition="top" *ngIf="email.status === 'Failed' || email.status === 'Bounced'">
+                  <i class="pi pi-refresh"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <i class="pi pi-envelope"></i>
+                <h3>No emails found</h3>
+                <p>Start by composing a new email or adjust your filters</p>
+                <button pButton type="button" class="btn btn-primary" (click)="openComposeDialog()" [disabled]="!canManage()">
+                  <i class="pi pi-pencil"></i>
+                  <span>Compose Email</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <!-- Paginator -->
+      <div class="paginator-wrapper" *ngIf="total() > rows">
+        <p-paginator
+          [rows]="rows"
+          [totalRecords]="total()"
+          [first]="pageIndex * rows"
+          [rowsPerPageOptions]="[10, 25, 50]"
+          (onPageChange)="onPageChange($event)"
+        ></p-paginator>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Compose Email Dialog -->
+<app-email-compose-dialog
+  [visible]="showComposeDialog"
+  (visibleChange)="showComposeDialog = $event"
+  (emailSent)="onEmailSent()"
+></app-email-compose-dialog>
