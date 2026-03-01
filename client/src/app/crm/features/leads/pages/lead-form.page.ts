@@ -345,6 +345,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
   private pendingSaveIsEdit = false;
   private localEditingState = false;
   private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
+  private formSnapshot: string | null = null;
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
@@ -400,6 +401,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
     if (!this.localEditingState) {
       this.localEditingState = true;
       this.crmEvents.setRecordEditingState('lead', this.editingId, true);
+      console.debug('[LeadForm] Broadcasting editing state: true');
     }
 
     this.clearEditingIdleTimer();
@@ -408,9 +410,72 @@ export class LeadFormPage implements OnInit, OnDestroy {
         return;
       }
 
+      // Keep editing state ON if form has uncommitted changes
+      if (this.hasUncommittedChanges()) {
+        console.debug('[LeadForm] Form has uncommitted changes, keeping editing state ON');
+        return;
+      }
+
       this.localEditingState = false;
       this.crmEvents.setRecordEditingState('lead', this.editingId, false);
+      console.debug('[LeadForm] Broadcasting editing state: false (idle timeout)');
     }, 8000);
+  }
+
+  /**
+   * Check if the form has uncommitted changes by comparing current values to the loaded snapshot.
+   */
+  protected hasUncommittedChanges(): boolean {
+    if (!this.formSnapshot || !this.isEditMode()) {
+      return false;
+    }
+    const currentSnapshot = this.createFormSnapshot();
+    return currentSnapshot !== this.formSnapshot;
+  }
+
+  private createFormSnapshot(): string {
+    // Serialize key form fields for comparison
+    const snapshotData = {
+      firstName: this.form.firstName,
+      lastName: this.form.lastName,
+      companyName: this.form.companyName,
+      email: this.form.email,
+      phone: this.form.phone,
+      status: this.form.status,
+      source: this.form.source,
+      jobTitle: this.form.jobTitle,
+      ownerId: this.form.ownerId,
+      territory: this.form.territory,
+      disqualifiedReason: this.form.disqualifiedReason,
+      qualifiedNotes: this.form.qualifiedNotes,
+      budgetAvailability: this.form.budgetAvailability,
+      budgetEvidence: this.form.budgetEvidence,
+      readinessToSpend: this.form.readinessToSpend,
+      readinessEvidence: this.form.readinessEvidence,
+      buyingTimeline: this.form.buyingTimeline,
+      timelineEvidence: this.form.timelineEvidence,
+      problemSeverity: this.form.problemSeverity,
+      problemEvidence: this.form.problemEvidence,
+      economicBuyer: this.form.economicBuyer,
+      economicBuyerEvidence: this.form.economicBuyerEvidence,
+      icpFit: this.form.icpFit,
+      icpFitEvidence: this.form.icpFitEvidence
+    };
+    return JSON.stringify(snapshotData);
+  }
+
+  private captureFormSnapshot(): void {
+    this.formSnapshot = this.createFormSnapshot();
+    console.debug('[LeadForm] Form snapshot captured');
+  }
+
+  private resetEditingState(): void {
+    if (this.editingId && this.localEditingState) {
+      this.localEditingState = false;
+      this.crmEvents.setRecordEditingState('lead', this.editingId, false);
+      console.debug('[LeadForm] Broadcasting editing state: false (after save)');
+    }
+    this.clearEditingIdleTimer();
   }
 
   protected isEditMode() {
@@ -808,6 +873,8 @@ export class LeadFormPage implements OnInit, OnDestroy {
           });
         }
         if (isEdit && this.editingId) {
+          // Reset editing state after save - snapshot will be recaptured in prefillFromLead
+          this.resetEditingState();
           this.reloadLeadDetails(this.editingId);
         }
         this.statusApiError.set(null);
@@ -948,6 +1015,8 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.normalizeEvidence();
     this.updateQualificationFeedback(true);
     this.updateEpistemicSummary(true);
+    // Capture form snapshot after fully populating form for uncommitted changes detection
+    this.captureFormSnapshot();
   }
 
   private loadStatusHistory(leadId: string) {
