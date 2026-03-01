@@ -260,6 +260,15 @@ export const NAV_LINKS: NavLink[] = [
         ]
       },
       {
+        label: 'Integrations',
+        icon: 'pi-link',
+        path: '/app/settings/email-accounts',
+        permission: PERMISSION_KEYS.emailsManage,
+        children: [
+          { label: 'Email Accounts', icon: 'pi-envelope', path: '/app/settings/email-accounts', permission: PERMISSION_KEYS.emailsManage }
+        ]
+      },
+      {
         label: 'Trust & Audit',
         icon: 'pi-clipboard',
         path: '/app/settings/audit-log',

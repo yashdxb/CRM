@@ -79,7 +79,9 @@ public record SendEmailRequest(
     Dictionary<string, string>? TemplateVariables = null,
     EmailRelationType? RelatedEntityType = null,
     Guid? RelatedEntityId = null,
-    bool SendImmediately = true
+    bool SendImmediately = true,
+    string? TrackingBaseUrl = null,
+    bool EnableTracking = true
 );
 
 public record EmailStatsDto(

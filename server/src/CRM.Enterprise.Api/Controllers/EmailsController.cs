@@ -92,6 +92,9 @@ public class EmailsController : ControllerBase
             relatedTypeEnum = parsedRelatedType;
         }
 
+        // Get tracking base URL from request origin or host
+        var trackingBaseUrl = GetTrackingBaseUrl();
+
         var appRequest = new Application.Emails.SendEmailRequest(
             request.ToEmail,
             request.ToName,
@@ -104,7 +107,9 @@ public class EmailsController : ControllerBase
             request.TemplateVariables,
             relatedTypeEnum,
             request.RelatedEntityId,
-            request.SendImmediately
+            request.SendImmediately,
+            trackingBaseUrl,
+            request.EnableTracking ?? true
         );
 
         var email = await _emailService.SendAsync(appRequest, GetActor(), cancellationToken);
@@ -251,6 +256,39 @@ public class EmailsController : ControllerBase
         return Ok();
     }
 
+    // ============ TRACKING ENDPOINTS ============
+
+    /// <summary>
+    /// Tracking pixel endpoint - returns a 1x1 transparent GIF to track email opens
+    /// </summary>
+    [HttpGet("track/open/{id:guid}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> TrackOpen(Guid id, CancellationToken cancellationToken)
+    {
+        await _emailService.TrackOpenAsync(id, cancellationToken);
+        
+        // Return 1x1 transparent GIF
+        var transparentPixel = Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+        return File(transparentPixel, "image/gif");
+    }
+
+    /// <summary>
+    /// Click tracking endpoint - records click and redirects to original URL
+    /// </summary>
+    [HttpGet("track/click/{id:guid}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> TrackClick(Guid id, [FromQuery] string url, CancellationToken cancellationToken)
+    {
+        var originalUrl = await _emailService.TrackClickAsync(id, url, cancellationToken);
+        
+        if (string.IsNullOrWhiteSpace(originalUrl))
+        {
+            return BadRequest("Invalid tracking link");
+        }
+        
+        return Redirect(originalUrl);
+    }
+
     // ============ HELPERS ============
 
     private ActorContext GetActor()
@@ -261,5 +299,15 @@ public class EmailsController : ControllerBase
             Guid.TryParse(userId, out var uid) ? uid : null,
             userName
         );
+    }
+
+    private string GetTrackingBaseUrl()
+    {
+        // Use the API's own base URL for tracking endpoints
+        // In production, this should point to the API host
+        var request = HttpContext.Request;
+        var scheme = request.Scheme;
+        var host = request.Host.ToString();
+        return $"{scheme}://{host}";
     }
 }

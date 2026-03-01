@@ -13,6 +13,7 @@ import { NAV_LINKS, SUPPLY_CHAIN_MODULES } from './navigation.config';
 export class NavigationService {
   private readonly STORAGE_KEY = 'crm_nav_expanded_menus';
   private readonly COLLAPSED_KEY = 'crm_sidebar_collapsed';
+  private readonly TOPBAR_HIDDEN_KEY = 'crm_topbar_hidden';
   
   private readonly router = inject(Router);
   private readonly tenantContextService = inject(TenantContextService);
@@ -22,6 +23,10 @@ export class NavigationService {
   // Sidebar collapsed state
   private readonly _collapsed = signal(this.loadCollapsedState());
   readonly collapsed = this._collapsed.asReadonly();
+
+  // Topbar hidden state
+  private readonly _topbarHidden = signal(this.loadTopbarHiddenState());
+  readonly topbarHidden = this._topbarHidden.asReadonly();
 
   // Tenant context
   readonly tenantContext = signal<TenantContext | null>(null);
@@ -137,6 +142,21 @@ export class NavigationService {
     this._collapsed.update(v => !v);
     try {
       localStorage.setItem(this.COLLAPSED_KEY, String(this._collapsed()));
+    } catch {}
+  }
+
+  private loadTopbarHiddenState(): boolean {
+    try {
+      return localStorage.getItem(this.TOPBAR_HIDDEN_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  toggleTopbar() {
+    this._topbarHidden.update(v => !v);
+    try {
+      localStorage.setItem(this.TOPBAR_HIDDEN_KEY, String(this._topbarHidden()));
     } catch {}
   }
 

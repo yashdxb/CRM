@@ -20,4 +20,8 @@ public interface IEmailService
     
     // Webhook for delivery status updates
     Task UpdateDeliveryStatusAsync(string messageId, string status, string? details = null, CancellationToken cancellationToken = default);
+    
+    // Tracking operations
+    Task<bool> TrackOpenAsync(Guid emailId, CancellationToken cancellationToken = default);
+    Task<string?> TrackClickAsync(Guid emailId, string linkId, CancellationToken cancellationToken = default);
 }

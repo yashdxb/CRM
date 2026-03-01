@@ -58,6 +58,7 @@ export interface SendEmailRequest {
   relatedEntityType?: EmailRelationType;
   relatedEntityId?: string;
   sendImmediately?: boolean;
+  enableTracking?: boolean;
 }
 
 export interface EmailStats {

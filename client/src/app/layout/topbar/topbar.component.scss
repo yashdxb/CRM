@@ -2,29 +2,37 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
-  padding: 6px var(--md-space-6);
-  border-bottom: 1px solid rgba(186, 220, 255, 0.22);
-  backdrop-filter: blur(22px) saturate(1.2);
-  -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  gap: 8px;
+  padding: 4px var(--md-space-4);
+  border-bottom: 1px solid rgba(186, 220, 255, 0.25);
+  backdrop-filter: blur(24px) saturate(1.25);
+  -webkit-backdrop-filter: blur(24px) saturate(1.25);
   background:
-    radial-gradient(30% 210% at 10% -115%, rgba(93, 225, 194, 0.22), transparent 70%),
-    radial-gradient(34% 220% at 78% -135%, rgba(124, 210, 255, 0.24), transparent 72%),
-    radial-gradient(22% 180% at 46% -95%, rgba(29, 155, 240, 0.18), transparent 74%),
-    linear-gradient(180deg, rgba(12, 31, 54, 0.88) 0%, rgba(13, 42, 76, 0.84) 52%, rgba(10, 28, 51, 0.86) 100%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+    radial-gradient(30% 210% at 10% -115%, rgba(93, 225, 194, 0.25), transparent 70%),
+    radial-gradient(34% 220% at 78% -135%, rgba(124, 210, 255, 0.28), transparent 72%),
+    radial-gradient(22% 180% at 46% -95%, rgba(29, 155, 240, 0.22), transparent 74%),
+    linear-gradient(180deg, rgba(12, 31, 54, 0.92) 0%, rgba(13, 42, 76, 0.88) 52%, rgba(10, 28, 51, 0.90) 100%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
   box-shadow:
-    inset 0 1px 0 rgba(218, 235, 255, 0.18),
-    inset 0 -1px 0 rgba(96, 165, 250, 0.16),
-    0 10px 24px rgba(7, 18, 40, 0.28);
+    inset 0 1px 0 rgba(218, 235, 255, 0.22),
+    inset 0 -1px 0 rgba(96, 165, 250, 0.18),
+    0 6px 20px rgba(7, 18, 40, 0.25);
   position: fixed;
-  top: var(--shell-floating-gap, 10px);
-  left: calc(var(--shell-sidebar-width, 256px) + var(--shell-floating-gap, 10px));
-  right: var(--shell-floating-gap, 10px);
+  top: 0;
+  left: var(--shell-sidebar-width, 256px);
+  right: 0;
   z-index: 30;
-  border-radius: 14px;
-  border: 1px solid rgba(186, 220, 255, 0.16);
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid rgba(186, 220, 255, 0.20);
   overflow: visible;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.topbar--hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .topbar__left {
@@ -48,7 +56,7 @@
   height: clamp(24px, 2.4vw, 34px);
   max-width: min(220px, 32vw);
   object-fit: contain;
-  filter: drop-shadow(0 2px 8px rgba(15, 23, 42, 0.32));
+  filter: drop-shadow(0 2px 10px rgba(15, 23, 42, 0.40)) brightness(1.05);
 }
 
 .topbar__title {
@@ -56,14 +64,18 @@
   font-size: 0.86rem;
   letter-spacing: -0.01em;
   line-height: 1.1;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .topbar__subtitle {
-  color: #9bb0c8;
+  color: #c5d8ec;
   font-size: 0.72rem;
+  font-weight: 500;
   margin: 0;
   line-height: 1.15;
   display: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .topbar__actions {
@@ -78,38 +90,49 @@
 .assistant-topbar {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 3px 8px;
+  gap: 0.5rem;
+  padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(173, 247, 255, 0.34);
+  border: 1px solid rgba(173, 247, 255, 0.45);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.05)),
-    linear-gradient(135deg, rgba(45, 212, 191, 0.82), rgba(59, 130, 246, 0.78));
-  color: #f8fbff;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
+    linear-gradient(135deg, rgba(45, 212, 191, 0.88), rgba(59, 130, 246, 0.84));
+  color: #ffffff;
   font-weight: 600;
+  font-size: 0.82rem;
   cursor: pointer;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 6px 14px rgba(8, 15, 31, 0.10),
-    0 0 18px rgba(45, 212, 191, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    0 6px 16px rgba(8, 15, 31, 0.14),
+    0 0 22px rgba(45, 212, 191, 0.22);
   animation: bolt-breathe 2.6s ease-in-out infinite;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .assistant-topbar.is-active {
-  border-color: rgba(173, 247, 255, 0.52);
+  border-color: rgba(173, 247, 255, 0.60);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.04)),
-    linear-gradient(135deg, rgba(45, 212, 191, 0.92), rgba(59, 130, 246, 0.86));
-  color: #f0f7ff;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.10)),
+    linear-gradient(135deg, rgba(45, 212, 191, 0.95), rgba(59, 130, 246, 0.92));
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 6px 18px rgba(8, 15, 31, 0.16),
+    0 0 28px rgba(45, 212, 191, 0.28);
 }
 
 .assistant-topbar-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 6px;
   display: grid;
   place-items: center;
-  background: rgba(236, 254, 255, 0.22);
+  background: rgba(255, 255, 255, 0.28);
+  
+  .pi {
+    font-size: 0.75rem;
+    color: #ffffff;
+  }
 }
 
 @keyframes bolt-breathe {
@@ -127,98 +150,148 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.22) !important;
-  border-radius: 9px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.32) !important;
+  border-radius: 10px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03)),
-    linear-gradient(135deg, rgba(12, 31, 54, 0.80), rgba(16, 40, 70, 0.72)) !important;
-  color: #f8fbff !important;
-  font-size: 0.76rem;
-  transition: all 0.15s ease;
-  min-width: 140px;
-  flex: 0 1 170px;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.08)),
+    linear-gradient(135deg, rgba(15, 35, 60, 0.92), rgba(20, 48, 85, 0.88)) !important;
+  color: #ffffff !important;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 0.18s ease;
+  min-width: 160px;
+  flex: 0 1 200px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 -1px 0 rgba(191, 219, 254, 0.08),
-    0 6px 14px rgba(5, 10, 24, 0.16);
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1px 0 rgba(191, 219, 254, 0.12),
+    0 6px 16px rgba(5, 10, 24, 0.22);
 }
 
 .topbar__command-palette.p-button:hover {
-  border-color: rgba(124, 210, 255, 0.45) !important;
+  border-color: rgba(124, 210, 255, 0.55) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.10)),
+    linear-gradient(135deg, rgba(20, 45, 75, 0.94), rgba(25, 55, 95, 0.90)) !important;
   box-shadow:
-    0 0 0 2px rgba(56, 189, 248, 0.12),
-    0 6px 14px rgba(6, 78, 138, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    0 0 0 3px rgba(56, 189, 248, 0.15),
+    0 8px 18px rgba(6, 78, 138, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .topbar__command-palette .pi-search {
-  color: #f3f7ff !important;
+  color: #ffffff !important;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
 .topbar__command-palette span {
   flex: 1;
   text-align: left;
-  color: #f8fbff !important;
-  opacity: 0.95;
+  color: #ffffff !important;
+  opacity: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .topbar__command-palette kbd {
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.20);
-  font-size: 0.66rem;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-size: 0.70rem;
   font-family: inherit;
+  font-weight: 600;
   color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 :host ::ng-deep .topbar__toggle.p-button,
 :host ::ng-deep app-notification-center .notification-center__button.p-button,
 :host ::ng-deep .topbar__new.p-button,
 :host ::ng-deep app-user-menu .user-menu__trigger.p-button {
-  border-color: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.30);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 4px 10px rgba(7, 13, 25, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 4px 12px rgba(7, 13, 25, 0.12);
 }
 
 :host ::ng-deep .topbar__toggle.p-button,
 :host ::ng-deep app-notification-center .notification-center__button.p-button,
 :host ::ng-deep app-user-menu .user-menu__trigger.p-button {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04)),
-    linear-gradient(135deg, rgba(102, 126, 234, 0.54), rgba(118, 75, 162, 0.58));
-  color: #f8fbff;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.08)),
+    linear-gradient(135deg, rgba(102, 126, 234, 0.65), rgba(118, 75, 162, 0.68));
+  color: #ffffff;
+  
+  .pi {
+    color: #ffffff !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
 }
 
 /* Bell gets a warm complementary accent to contrast with the cool AI button and indigo topbar */
 :host ::ng-deep app-notification-center .notification-center__button.p-button {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.06)),
-    linear-gradient(135deg, rgba(251, 191, 36, 0.90), rgba(249, 115, 22, 0.84));
-  border-color: rgba(254, 240, 138, 0.42);
-  color: #fffaf0;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.10)),
+    linear-gradient(135deg, rgba(251, 191, 36, 0.94), rgba(249, 115, 22, 0.90));
+  border-color: rgba(254, 240, 138, 0.52);
+  color: #ffffff;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 4px 12px rgba(124, 45, 18, 0.14),
-    0 0 18px rgba(251, 191, 36, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 4px 14px rgba(124, 45, 18, 0.18),
+    0 0 22px rgba(251, 191, 36, 0.22);
+  
+  .pi {
+    color: #ffffff !important;
+    font-size: 0.95rem;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  }
 }
 
 :host ::ng-deep app-notification-center .notification-center__button.p-button:hover {
-  border-color: rgba(254, 240, 138, 0.55);
+  border-color: rgba(254, 240, 138, 0.65);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 4px 12px rgba(124, 45, 18, 0.16),
-    0 0 22px rgba(251, 191, 36, 0.22);
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 4px 16px rgba(124, 45, 18, 0.22),
+    0 0 28px rgba(251, 191, 36, 0.28);
 }
 
 :host ::ng-deep .topbar__new.p-button {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.20), rgba(255, 255, 255, 0.06)),
-    linear-gradient(135deg, rgba(79, 172, 254, 0.90), rgba(118, 75, 162, 0.78));
-  color: #fff;
-  border-color: rgba(191, 219, 254, 0.35);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.10)),
+    linear-gradient(135deg, rgba(79, 172, 254, 0.94), rgba(118, 75, 162, 0.85));
+  color: #ffffff;
+  font-weight: 600;
+  border-color: rgba(191, 219, 254, 0.45);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  
+  .pi {
+    color: #ffffff !important;
+  }
+}
+
+:host ::ng-deep .topbar__minimize.p-button {
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+  
+  .pi {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    
+    .pi {
+      color: #ffffff !important;
+    }
+  }
 }
 
 
@@ -378,29 +451,54 @@
 }
 
 :host ::ng-deep app-user-menu .user-menu__trigger.p-button {
-  padding: 2px 6px 2px 2px;
-  border-radius: 10px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.18) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+  }
 }
 
 :host ::ng-deep app-user-menu .user-menu__name {
   font-size: 0.82rem;
-  line-height: 1.1;
-  color: #f8fbff !important;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 10px rgba(191, 219, 254, 0.18);
+  font-weight: 600;
+  line-height: 1.15;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 12px rgba(191, 219, 254, 0.25);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 :host ::ng-deep app-user-menu .user-menu__role {
-  display: none;
-  color: rgba(226, 236, 255, 0.84) !important;
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 500;
+  line-height: 1.1;
+  color: rgba(226, 236, 255, 0.88) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 :host ::ng-deep app-user-menu .user-menu__chevron {
-  font-size: 0.62rem;
-  color: rgba(231, 239, 255, 0.9) !important;
+  font-size: 0.68rem;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.95) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 :host ::ng-deep app-user-menu .user-menu__info {
-  color: #f8fbff;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 :host ::ng-deep app-user-menu .user-menu__trigger.p-button .p-button-label,

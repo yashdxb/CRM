@@ -194,6 +194,11 @@ public static class DependencyInjection
         services.AddScoped<IRfqAwardReadService, RfqAwardReadService>();
         services.AddScoped<IRfqAwardService, RfqAwardService>();
         services.AddScoped<IEmailService, EmailService>();
+        
+        // Email OAuth connection service
+        services.Configure<EmailOAuthOptions>(configuration.GetSection(EmailOAuthOptions.SectionName));
+        services.AddHttpClient<EmailConnectionService>();
+        services.AddScoped<IEmailConnectionService, EmailConnectionService>();
 
         return services;
     }

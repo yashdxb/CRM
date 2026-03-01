@@ -394,6 +394,12 @@ export const routes: Routes = [
             loadComponent: () => import('./crm/features/settings/pages/workspace-settings.page').then((m) => m.WorkspaceSettingsPage)
           },
           {
+            path: 'email-accounts',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.emailsManage, breadcrumb: 'Email Accounts' },
+            loadComponent: () => import('./crm/features/settings/pages/email-accounts.page').then((m) => m.EmailAccountsPage)
+          },
+          {
             path: 'approvals',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Approval Settings' },

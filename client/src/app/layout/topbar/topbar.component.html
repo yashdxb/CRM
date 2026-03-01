@@ -1,5 +1,5 @@
 
-    <header class="topbar">
+    <header class="topbar" [ngClass]="{ 'topbar--hidden': nav.topbarHidden() }">
       <div class="topbar__left">
         <div class="topbar__brand" aria-label="North Edge CRM">
           <img
@@ -9,7 +9,6 @@
             loading="eager"
           />
         </div>
-        <p class="topbar__subtitle">Customer + Activity workspace</p>
       </div>
       <div class="topbar__actions">
         <button
@@ -36,6 +35,7 @@
         </button>
         <app-notification-center></app-notification-center>
         <button pButton type="button" icon="pi pi-bars" class="p-button-text p-button-rounded topbar__toggle" (click)="toggleSidebar.emit()"></button>
+        <button pButton type="button" icon="pi pi-minus" class="p-button-text p-button-rounded topbar__minimize" (click)="nav.toggleTopbar()" pTooltip="Hide topbar"></button>
         <button pButton label="New" icon="pi pi-plus" class="p-button-rounded p-button-sm p-button-primary topbar__new" (click)="openQuickAdd.emit()"></button>
         <app-user-menu></app-user-menu>
       </div>

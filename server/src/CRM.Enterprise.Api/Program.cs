@@ -182,6 +182,10 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.TenantsView));
     options.AddPolicy(Permissions.Policies.TenantsManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.TenantsManage));
+    options.AddPolicy(Permissions.Policies.EmailsView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.EmailsView));
+    options.AddPolicy(Permissions.Policies.EmailsManage, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.EmailsManage));
 
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()

@@ -1,0 +1,216 @@
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     EMAIL ACCOUNTS SETTINGS PAGE - Premium Glass UI
+     Connect Microsoft 365 or Gmail for send-as-user functionality
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="page-container">
+  <!-- Animated Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Breadcrumb -->
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       HERO SECTION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Email Integration</span>
+      </div>
+      
+      <h1 class="hero-title">
+        <span class="title-gradient">Email</span>
+        <span class="title-light">Accounts</span>
+      </h1>
+      
+      <p class="hero-description">
+        Connect your Microsoft 365 or Gmail account to send emails directly from your mailbox within the CRM.
+      </p>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Settings</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" [disabled]="loading()" (click)="loadConnections()">
+          <i class="pi pi-refresh"></i>
+          <span>Reload</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-envelope"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Connected Accounts</span>
+          <strong class="card-value">{{ connections().length }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-link"></i> Email Sources
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       CONNECT NEW ACCOUNT SECTION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="connect-section">
+    <h2 class="section-title">
+      <i class="pi pi-plus-circle"></i>
+      Connect New Account
+    </h2>
+    
+    <div class="provider-cards">
+      <!-- Microsoft 365 Card -->
+      <div class="provider-card provider-card--microsoft" (click)="connectMicrosoft365()">
+        <div class="provider-icon">
+          <i class="pi pi-microsoft"></i>
+        </div>
+        <div class="provider-content">
+          <h3>Microsoft 365</h3>
+          <p>Connect your Outlook.com or Microsoft 365 business account</p>
+        </div>
+        <div class="provider-action">
+          <button pButton 
+            type="button" 
+            [loading]="connecting() === 'Microsoft365'"
+            [disabled]="connecting() !== null"
+            class="btn btn-provider">
+            <i class="pi pi-external-link" *ngIf="connecting() !== 'Microsoft365'"></i>
+            <span>Connect</span>
+          </button>
+        </div>
+        <div class="provider-glow"></div>
+      </div>
+
+      <!-- Gmail Card -->
+      <div class="provider-card provider-card--gmail" (click)="connectGmail()">
+        <div class="provider-icon">
+          <i class="pi pi-google"></i>
+        </div>
+        <div class="provider-content">
+          <h3>Gmail</h3>
+          <p>Connect your Gmail or Google Workspace account</p>
+        </div>
+        <div class="provider-action">
+          <button pButton 
+            type="button" 
+            [loading]="connecting() === 'Gmail'"
+            [disabled]="connecting() !== null"
+            class="btn btn-provider">
+            <i class="pi pi-external-link" *ngIf="connecting() !== 'Gmail'"></i>
+            <span>Connect</span>
+          </button>
+        </div>
+        <div class="provider-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       CONNECTED ACCOUNTS LIST
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="accounts-section">
+    <h2 class="section-title">
+      <i class="pi pi-link"></i>
+      Connected Accounts
+    </h2>
+
+    <!-- Loading State -->
+    <div class="accounts-loading" *ngIf="loading()">
+      <p-skeleton height="80px" styleClass="mb-3"></p-skeleton>
+      <p-skeleton height="80px" styleClass="mb-3"></p-skeleton>
+    </div>
+
+    <!-- Empty State -->
+    <div class="accounts-empty" *ngIf="!loading() && connections().length === 0">
+      <div class="empty-icon">
+        <i class="pi pi-inbox"></i>
+      </div>
+      <h3>No email accounts connected</h3>
+      <p>Connect your Microsoft 365 or Gmail account to start sending emails from your mailbox.</p>
+    </div>
+
+    <!-- Accounts List -->
+    <div class="accounts-list" *ngIf="!loading() && connections().length > 0">
+      <div class="account-card" *ngFor="let connection of connections()">
+        <div class="account-provider">
+          <i class="pi" [ngClass]="{'pi-microsoft': connection.provider === 'Microsoft365', 'pi-google': connection.provider === 'Gmail'}"></i>
+        </div>
+        
+        <div class="account-info">
+          <div class="account-header">
+            <span class="account-email">{{ connection.emailAddress }}</span>
+            <p-tag *ngIf="connection.isPrimary" severity="info" value="Primary"></p-tag>
+            <p-tag [severity]="getStatusSeverity(connection)" [value]="getStatusLabel(connection)"></p-tag>
+          </div>
+          <div class="account-meta">
+            <span class="account-name">{{ connection.displayName }}</span>
+            <span class="account-provider-name">{{ connection.providerName }}</span>
+            <span class="account-date" *ngIf="connection.lastSyncAtUtc">
+              Last sync: {{ connection.lastSyncAtUtc | date:'short' }}
+            </span>
+          </div>
+          <div class="account-error" *ngIf="connection.lastError">
+            <i class="pi pi-exclamation-triangle"></i>
+            {{ connection.lastError }}
+          </div>
+        </div>
+
+        <div class="account-actions">
+          <button pButton 
+            type="button" 
+            class="btn btn-ghost btn-sm"
+            [loading]="testing() === connection.id"
+            [disabled]="testing() !== null"
+            (click)="testConnection(connection); $event.stopPropagation()">
+            <i class="pi pi-check-circle" *ngIf="testing() !== connection.id"></i>
+            <span>Test</span>
+          </button>
+          <button pButton 
+            type="button" 
+            class="btn btn-ghost btn-sm"
+            *ngIf="!connection.isPrimary"
+            (click)="setPrimary(connection); $event.stopPropagation()">
+            <i class="pi pi-star"></i>
+            <span>Set Primary</span>
+          </button>
+          <button pButton 
+            type="button" 
+            class="btn btn-ghost btn-sm btn-danger"
+            (click)="confirmDisconnect(connection); $event.stopPropagation()">
+            <i class="pi pi-times"></i>
+            <span>Disconnect</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Info Message -->
+  <section class="info-section">
+    <p-message severity="info">
+      <ng-template pTemplate="content">
+        <div class="info-content">
+          <i class="pi pi-info-circle"></i>
+          <span>
+            <strong>Privacy Note:</strong> We only request permission to read and send emails on your behalf. 
+            Your credentials are never stored - we use secure OAuth tokens that you can revoke at any time.
+          </span>
+        </div>
+      </ng-template>
+    </p-message>
+  </section>
+</div>
+
+<p-confirmDialog></p-confirmDialog>

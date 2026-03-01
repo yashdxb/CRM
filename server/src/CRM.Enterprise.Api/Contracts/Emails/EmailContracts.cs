@@ -67,7 +67,8 @@ public record SendEmailRequest(
     Dictionary<string, string>? TemplateVariables = null,
     string? RelatedEntityType = null,
     Guid? RelatedEntityId = null,
-    bool SendImmediately = true
+    bool SendImmediately = true,
+    bool? EnableTracking = true
 );
 
 public record EmailStatsResponse(
@@ -138,4 +139,46 @@ public record EmailWebhookPayload(
     string MessageId,
     string Status,
     string? Details = null
+);
+
+// ============ EMAIL CONNECTION CONTRACTS ============
+
+public record EmailConnectionListResponse(
+    IEnumerable<EmailConnectionItem> Items
+);
+
+public record EmailConnectionItem(
+    Guid Id,
+    string Provider,
+    string ProviderName,
+    string EmailAddress,
+    string DisplayName,
+    bool IsPrimary,
+    bool IsActive,
+    DateTime? LastSyncAtUtc,
+    string? LastError,
+    DateTime CreatedAtUtc
+);
+
+public record StartOAuthRequest(
+    string Provider,
+    string RedirectUri
+);
+
+public record StartOAuthResponse(
+    string AuthorizationUrl,
+    string State
+);
+
+public record CompleteOAuthRequest(
+    string Provider,
+    string AuthorizationCode,
+    string RedirectUri,
+    string State
+);
+
+public record ConnectionTestResponse(
+    bool Success,
+    string? ErrorMessage,
+    int? InboxCount
 );

@@ -1,5 +1,5 @@
 
-    <div class="shell" [ngClass]="{ 'shell--collapsed': nav.collapsed() }">
+    <div class="shell" [ngClass]="{ 'shell--collapsed': nav.collapsed(), 'shell--topbar-hidden': nav.topbarHidden() }">
       <app-sidebar (toggleSidebar)="nav.toggleSidebar()" />
 
       <div class="body">
@@ -13,6 +13,18 @@
           (toggleSidebar)="nav.toggleSidebar()" 
           (openQuickAdd)="openQuickAdd()" 
         />
+        
+        <!-- Show topbar button when hidden -->
+        @if (nav.topbarHidden()) {
+          <button 
+            class="show-topbar-btn" 
+            (click)="nav.toggleTopbar()" 
+            title="Show topbar"
+          >
+            <i class="pi pi-chevron-down"></i>
+          </button>
+        }
+        
         <div
           class="app-topbar-activity-strip"
           [class.is-active]="loadingOverlay.visible()"

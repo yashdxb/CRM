@@ -178,6 +178,14 @@ public sealed class EmailService : IEmailService
         _dbContext.EmailLogs.Add(emailLog);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
+        // Inject tracking if enabled and base URL is provided
+        var trackedHtmlBody = htmlBody;
+        if (request.EnableTracking && !string.IsNullOrWhiteSpace(request.TrackingBaseUrl))
+        {
+            trackedHtmlBody = InjectTracking(htmlBody, emailLog.Id, request.TrackingBaseUrl);
+            emailLog.HtmlBody = trackedHtmlBody; // Store the tracked version
+        }
+
         if (request.SendImmediately)
         {
             try
@@ -188,7 +196,7 @@ public sealed class EmailService : IEmailService
                 await _emailSender.SendAsync(
                     request.ToEmail, 
                     subject, 
-                    htmlBody, 
+                    trackedHtmlBody, 
                     textBody, 
                     cancellationToken);
 
@@ -505,6 +513,67 @@ public sealed class EmailService : IEmailService
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
+    // ============ TRACKING OPERATIONS ============
+
+    public async Task<bool> TrackOpenAsync(Guid emailId, CancellationToken cancellationToken = default)
+    {
+        var email = await _dbContext.EmailLogs
+            .FirstOrDefaultAsync(e => e.Id == emailId && !e.IsDeleted, cancellationToken);
+
+        if (email == null) return false;
+
+        // Only track first open (don't overwrite status if already clicked)
+        if (email.OpenedAtUtc == null)
+        {
+            email.OpenedAtUtc = DateTime.UtcNow;
+            if (email.Status < EmailStatus.Opened)
+            {
+                email.Status = EmailStatus.Opened;
+            }
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return true;
+    }
+
+    public async Task<string?> TrackClickAsync(Guid emailId, string linkId, CancellationToken cancellationToken = default)
+    {
+        // Decode the original URL from base64 linkId
+        string originalUrl;
+        try
+        {
+            var decodedBytes = Convert.FromBase64String(linkId);
+            originalUrl = System.Text.Encoding.UTF8.GetString(decodedBytes);
+        }
+        catch
+        {
+            return null;
+        }
+
+        var email = await _dbContext.EmailLogs
+            .FirstOrDefaultAsync(e => e.Id == emailId && !e.IsDeleted, cancellationToken);
+
+        if (email == null) return originalUrl; // Still redirect even if email not found
+
+        // Only track first click (don't overwrite timestamp)
+        if (email.ClickedAtUtc == null)
+        {
+            email.ClickedAtUtc = DateTime.UtcNow;
+            if (email.Status < EmailStatus.Clicked)
+            {
+                email.Status = EmailStatus.Clicked;
+            }
+            // Ensure opened is also set
+            if (email.OpenedAtUtc == null)
+            {
+                email.OpenedAtUtc = DateTime.UtcNow;
+            }
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return originalUrl;
+    }
+
     // ============ HELPERS ============
 
     private static string RenderTemplate(string template, Dictionary<string, string>? variables)
@@ -516,6 +585,48 @@ public sealed class EmailService : IEmailService
         {
             result = result.Replace($"{{{{{key}}}}}", value);
         }
+        return result;
+    }
+
+    private static string InjectTracking(string htmlBody, Guid emailId, string trackingBaseUrl)
+    {
+        var baseUrl = trackingBaseUrl.TrimEnd('/');
+        var result = htmlBody;
+
+        // 1. Wrap all links with click tracking
+        // Match href="..." or href='...' patterns (excluding tracking URLs and anchors)
+        var linkPattern = new System.Text.RegularExpressions.Regex(
+            @"href\s*=\s*[""'](?<url>https?://[^""']+)[""']",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        result = linkPattern.Replace(result, match =>
+        {
+            var originalUrl = match.Groups["url"].Value;
+            // Don't wrap our own tracking URLs
+            if (originalUrl.Contains("/api/emails/track/")) return match.Value;
+            
+            var encodedUrl = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(originalUrl));
+            var trackingUrl = $"{baseUrl}/api/emails/track/click/{emailId}?url={Uri.EscapeDataString(encodedUrl)}";
+            return $"href=\"{trackingUrl}\"";
+        });
+
+        // 2. Inject open tracking pixel before closing </body> or at end
+        var trackingPixel = $"<img src=\"{baseUrl}/api/emails/track/open/{emailId}\" width=\"1\" height=\"1\" style=\"display:none;border:0;\" alt=\"\" />";
+        
+        if (result.Contains("</body>", StringComparison.OrdinalIgnoreCase))
+        {
+            result = System.Text.RegularExpressions.Regex.Replace(
+                result,
+                @"</body>",
+                $"{trackingPixel}</body>",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        }
+        else
+        {
+            // No body tag, append at end
+            result += trackingPixel;
+        }
+
         return result;
     }
 }
