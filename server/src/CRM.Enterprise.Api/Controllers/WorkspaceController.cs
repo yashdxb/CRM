@@ -22,6 +22,16 @@ public class WorkspaceController : ControllerBase
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "marketing.campaigns",
+        "realtime.dashboard",
+        "realtime.pipeline",
+        "realtime.entityCrud",
+        "realtime.importProgress",
+        "realtime.recordPresence",
+        "realtime.assistantStreaming"
+    };
 
     public WorkspaceController(CrmDbContext dbContext, ITenantProvider tenantProvider)
     {
@@ -57,7 +67,8 @@ public class WorkspaceController : ControllerBase
             ResolveQualificationPolicy(tenant),
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
-            ResolveSupportingDocumentPolicy(tenant)));
+            ResolveSupportingDocumentPolicy(tenant),
+            ResolveFeatureFlags(tenant)));
     }
 
     [HttpPut]
@@ -107,6 +118,12 @@ public class WorkspaceController : ControllerBase
                 SupportingDocumentPolicyDefaults.Normalize(request.SupportingDocumentPolicy),
                 JsonOptions);
         }
+        if (request.FeatureFlags is not null)
+        {
+            tenant.FeatureFlagsJson = JsonSerializer.Serialize(
+                NormalizeFeatureFlags(request.FeatureFlags),
+                JsonOptions);
+        }
         tenant.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -126,7 +143,8 @@ public class WorkspaceController : ControllerBase
             ResolveQualificationPolicy(tenant),
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
-            ResolveSupportingDocumentPolicy(tenant)));
+            ResolveSupportingDocumentPolicy(tenant),
+            ResolveFeatureFlags(tenant)));
     }
 
     private static QualificationPolicy ResolveQualificationPolicy(Tenant tenant)
@@ -223,5 +241,44 @@ public class WorkspaceController : ControllerBase
         {
             return SupportingDocumentPolicyDefaults.CreateDefault();
         }
+    }
+
+    private static IReadOnlyDictionary<string, bool>? ResolveFeatureFlags(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.FeatureFlagsJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<Dictionary<string, bool>>(tenant.FeatureFlagsJson, JsonOptions);
+            if (parsed is null || parsed.Count == 0)
+            {
+                return null;
+            }
+
+            return NormalizeFeatureFlags(parsed);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static Dictionary<string, bool> NormalizeFeatureFlags(IReadOnlyDictionary<string, bool> source)
+    {
+        var result = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in source)
+        {
+            if (!SupportedFeatureFlags.Contains(key))
+            {
+                continue;
+            }
+
+            result[key] = value;
+        }
+
+        return result;
     }
 }

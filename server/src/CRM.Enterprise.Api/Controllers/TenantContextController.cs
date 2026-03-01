@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -16,6 +17,17 @@ public class TenantContextController : ControllerBase
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly IConfiguration _configuration;
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "marketing.campaigns",
+        "realtime.dashboard",
+        "realtime.pipeline",
+        "realtime.entityCrud",
+        "realtime.importProgress",
+        "realtime.recordPresence",
+        "realtime.assistantStreaming"
+    };
 
     public TenantContextController(CrmDbContext dbContext, ITenantProvider tenantProvider, IConfiguration configuration)
     {
@@ -70,6 +82,7 @@ public class TenantContextController : ControllerBase
         featureFlags["realtime.importProgress"] = IsRealtimeFlagEnabled("realtime.importProgress", tenant.Key, realtimeTenantEnabled);
         featureFlags["realtime.recordPresence"] = IsRealtimeFlagEnabled("realtime.recordPresence", tenant.Key, realtimeTenantEnabled);
         featureFlags["realtime.assistantStreaming"] = IsRealtimeFlagEnabled("realtime.assistantStreaming", tenant.Key, realtimeTenantEnabled);
+        ApplyTenantFeatureOverrides(featureFlags, tenant.FeatureFlagsJson);
 
         return Ok(new TenantContextResponse(
             tenant.Id,
@@ -105,5 +118,36 @@ public class TenantContextController : ControllerBase
 
         // Default pilot behavior in absence of explicit config.
         return string.Equals(tenantKey, "default", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ApplyTenantFeatureOverrides(IDictionary<string, bool> featureFlags, string? featureFlagsJson)
+    {
+        if (string.IsNullOrWhiteSpace(featureFlagsJson))
+        {
+            return;
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<Dictionary<string, bool>>(featureFlagsJson, JsonOptions);
+            if (parsed is null || parsed.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var (key, value) in parsed)
+            {
+                if (!SupportedFeatureFlags.Contains(key))
+                {
+                    continue;
+                }
+
+                featureFlags[key] = value;
+            }
+        }
+        catch (JsonException)
+        {
+            // Ignore malformed overrides and continue with configuration defaults.
+        }
     }
 }

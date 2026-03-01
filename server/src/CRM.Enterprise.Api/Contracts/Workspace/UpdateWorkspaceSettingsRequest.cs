@@ -19,4 +19,5 @@ public record UpdateWorkspaceSettingsRequest(
     QualificationPolicy? QualificationPolicy,
     AssistantActionScoringPolicy? AssistantActionScoringPolicy,
     DecisionEscalationPolicy? DecisionEscalationPolicy,
-    SupportingDocumentPolicy? SupportingDocumentPolicy);
+    SupportingDocumentPolicy? SupportingDocumentPolicy,
+    IReadOnlyDictionary<string, bool>? FeatureFlags = null);

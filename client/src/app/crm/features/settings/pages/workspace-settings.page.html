@@ -292,6 +292,53 @@
 
           <section class="form-card">
             <h3 class="section-title section-title--info">
+              <i class="pi pi-bolt"></i>
+              Realtime Features
+            </h3>
+            <p class="section-description">Enable or disable tenant-level realtime UX behaviors.</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureRealtimeDashboard" [binary]="true"></p-checkbox>
+                  <span>Dashboard live metrics</span>
+                </label>
+              </div>
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureRealtimePipeline" [binary]="true"></p-checkbox>
+                  <span>Pipeline live updates</span>
+                </label>
+              </div>
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureRealtimeEntityCrud" [binary]="true"></p-checkbox>
+                  <span>Entity CRUD broadcasts</span>
+                </label>
+              </div>
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureRealtimeImportProgress" [binary]="true"></p-checkbox>
+                  <span>Import progress streaming</span>
+                </label>
+              </div>
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureRealtimeRecordPresence" [binary]="true"></p-checkbox>
+                  <span>Record presence indicators</span>
+                </label>
+              </div>
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureRealtimeAssistantStreaming" [binary]="true"></p-checkbox>
+                  <span>Assistant token streaming</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
               <i class="pi pi-briefcase"></i>
               Delivery & Renewal Defaults
             </h3>

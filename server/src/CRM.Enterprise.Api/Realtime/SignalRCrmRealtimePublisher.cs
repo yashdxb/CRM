@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace CRM.Enterprise.Api.Realtime;
 
@@ -32,6 +33,7 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
     private readonly ConcurrentDictionary<Guid, string> _tenantKeyCache = new();
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public SignalRCrmRealtimePublisher(
         IHubContext<CrmEventsHub> hubContext,
@@ -138,6 +140,18 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
             return true;
         }
 
+        var flagName = EventTypeToFlag(eventType);
+        if (string.IsNullOrWhiteSpace(flagName))
+        {
+            return true;
+        }
+
+        var tenantOverride = await ResolveTenantFeatureFlagOverrideAsync(tenantId, flagName, cancellationToken);
+        if (tenantOverride.HasValue)
+        {
+            return tenantOverride.Value;
+        }
+
         var defaultEnabled = _configuration.GetValue<bool?>("Features:Realtime:EnabledByDefault") ?? false;
         if (defaultEnabled)
         {
@@ -165,12 +179,6 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
             return false;
         }
 
-        var flagName = EventTypeToFlag(eventType);
-        if (string.IsNullOrWhiteSpace(flagName))
-        {
-            return true;
-        }
-
         var normalizedFlagName = flagName.Replace("realtime.", string.Empty, StringComparison.OrdinalIgnoreCase);
         var flagDefault = _configuration.GetValue<bool?>($"Features:Realtime:Flags:{normalizedFlagName}:EnabledByDefault") ?? false;
         if (flagDefault)
@@ -188,6 +196,52 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
         }
 
         return flagEnabledTenants.Contains(tenantKey, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task<bool?> ResolveTenantFeatureFlagOverrideAsync(Guid tenantId, string flagName, CancellationToken cancellationToken)
+    {
+        if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(flagName))
+        {
+            return null;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
+        var tenant = await dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == tenantId)
+            .Select(t => new { t.Key, t.FeatureFlagsJson })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (tenant is null)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(tenant.Key))
+        {
+            _tenantKeyCache[tenantId] = tenant.Key;
+        }
+
+        if (string.IsNullOrWhiteSpace(tenant.FeatureFlagsJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<Dictionary<string, bool>>(tenant.FeatureFlagsJson, JsonOptions);
+            if (parsed is null)
+            {
+                return null;
+            }
+
+            return parsed.TryGetValue(flagName, out var enabled) ? enabled : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private async Task<string?> ResolveTenantKeyAsync(Guid tenantId, CancellationToken cancellationToken)

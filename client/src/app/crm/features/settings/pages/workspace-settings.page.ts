@@ -3,6 +3,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
@@ -19,6 +20,7 @@ import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time
 import { UserAdminDataService } from '../services/user-admin-data.service';
 import { RoleSummary } from '../models/user-admin.model';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
+import { TenantContextService } from '../../../../core/tenant/tenant-context.service';
 
 interface Option<T = string> {
   label: string;
@@ -30,6 +32,7 @@ interface Option<T = string> {
   standalone: true,
   imports: [
     ButtonModule,
+    CheckboxModule,
     InputNumberModule,
     InputTextModule,
     SelectModule,
@@ -51,6 +54,7 @@ export class WorkspaceSettingsPage {
   private readonly fb = inject(FormBuilder);
   private readonly timeZoneService = inject(TimeZoneService);
   private readonly referenceData = inject(ReferenceDataService);
+  private readonly tenantContext = inject(TenantContextService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -58,6 +62,8 @@ export class WorkspaceSettingsPage {
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
   protected readonly roles = signal<RoleSummary[]>([]);
+  protected readonly effectiveFeatureFlags = signal<Record<string, boolean>>({});
+  private latestSettings: WorkspaceSettings | null = null;
 
   // Shared time zone catalog keeps labels and flags consistent across settings screens.
   protected timeZoneOptions: TimeZoneOption[] = [];
@@ -82,7 +88,13 @@ export class WorkspaceSettingsPage {
     scoreSoonUrgencyFrom: [50, [Validators.min(1), Validators.max(95)]],
     scoreImmediateUrgencyFrom: [80, [Validators.min(5), Validators.max(99)]],
     supportingDocsMaxPerRecord: [10, [Validators.min(1), Validators.max(100)]],
-    supportingDocsMaxFileSizeMb: [10, [Validators.min(1), Validators.max(100)]]
+    supportingDocsMaxFileSizeMb: [10, [Validators.min(1), Validators.max(100)]],
+    featureRealtimeDashboard: [false],
+    featureRealtimePipeline: [false],
+    featureRealtimeEntityCrud: [false],
+    featureRealtimeImportProgress: [false],
+    featureRealtimeRecordPresence: [false],
+    featureRealtimeAssistantStreaming: [false]
   });
 
   constructor() {
@@ -91,6 +103,7 @@ export class WorkspaceSettingsPage {
     });
     this.loadCurrencies();
     this.loadRoles();
+    this.loadTenantContext();
     this.loadSettings();
   }
 
@@ -142,6 +155,14 @@ export class WorkspaceSettingsPage {
         maxDocumentsPerRecord: Number(payload.supportingDocsMaxPerRecord ?? 10),
         maxFileSizeMb: Number(payload.supportingDocsMaxFileSizeMb ?? 10),
         allowedExtensions: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.png', '.jpg', '.jpeg', '.webp']
+      },
+      featureFlags: {
+        'realtime.dashboard': !!payload.featureRealtimeDashboard,
+        'realtime.pipeline': !!payload.featureRealtimePipeline,
+        'realtime.entityCrud': !!payload.featureRealtimeEntityCrud,
+        'realtime.importProgress': !!payload.featureRealtimeImportProgress,
+        'realtime.recordPresence': !!payload.featureRealtimeRecordPresence,
+        'realtime.assistantStreaming': !!payload.featureRealtimeAssistantStreaming
       }
     };
     this.saving.set(true);
@@ -159,6 +180,7 @@ export class WorkspaceSettingsPage {
   }
 
   private applySettings(settings: WorkspaceSettings) {
+    this.latestSettings = settings;
     this.settingsForm.patchValue({
       name: settings.name,
       timeZone: settings.timeZone,
@@ -176,7 +198,13 @@ export class WorkspaceSettingsPage {
       scoreSoonUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.soonUrgencyFrom ?? 50,
       scoreImmediateUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.immediateUrgencyFrom ?? 80,
       supportingDocsMaxPerRecord: settings.supportingDocumentPolicy?.maxDocumentsPerRecord ?? 10,
-      supportingDocsMaxFileSizeMb: settings.supportingDocumentPolicy?.maxFileSizeMb ?? 10
+      supportingDocsMaxFileSizeMb: settings.supportingDocumentPolicy?.maxFileSizeMb ?? 10,
+      featureRealtimeDashboard: this.resolveFeatureFlag(settings.featureFlags, 'realtime.dashboard'),
+      featureRealtimePipeline: this.resolveFeatureFlag(settings.featureFlags, 'realtime.pipeline'),
+      featureRealtimeEntityCrud: this.resolveFeatureFlag(settings.featureFlags, 'realtime.entityCrud'),
+      featureRealtimeImportProgress: this.resolveFeatureFlag(settings.featureFlags, 'realtime.importProgress'),
+      featureRealtimeRecordPresence: this.resolveFeatureFlag(settings.featureFlags, 'realtime.recordPresence'),
+      featureRealtimeAssistantStreaming: this.resolveFeatureFlag(settings.featureFlags, 'realtime.assistantStreaming')
     });
   }
 
@@ -220,6 +248,26 @@ export class WorkspaceSettingsPage {
 
   private resolveCurrency(value: string | null) {
     return value || this.currencyOptions[0]?.value || '';
+  }
+
+  private loadTenantContext() {
+    this.tenantContext.getTenantContext().subscribe({
+      next: (context) => {
+        this.effectiveFeatureFlags.set(context.featureFlags ?? {});
+        if (this.latestSettings) {
+          this.applySettings(this.latestSettings);
+        }
+      },
+      error: () => this.effectiveFeatureFlags.set({})
+    });
+  }
+
+  private resolveFeatureFlag(overrides: Record<string, boolean> | null | undefined, key: string): boolean {
+    if (typeof overrides?.[key] === 'boolean') {
+      return !!overrides[key];
+    }
+
+    return this.effectiveFeatureFlags()[key] === true;
   }
 
 }

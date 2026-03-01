@@ -21,4 +21,5 @@ public record WorkspaceSettingsResponse(
     QualificationPolicy QualificationPolicy,
     AssistantActionScoringPolicy AssistantActionScoringPolicy,
     DecisionEscalationPolicy DecisionEscalationPolicy,
-    SupportingDocumentPolicy SupportingDocumentPolicy);
+    SupportingDocumentPolicy SupportingDocumentPolicy,
+    IReadOnlyDictionary<string, bool>? FeatureFlags);

@@ -14,6 +14,7 @@ export interface WorkspaceSettings {
   assistantActionScoringPolicy: AssistantActionScoringPolicy;
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
+  featureFlags?: Record<string, boolean> | null;
 }
 
 export interface UpdateWorkspaceSettingsRequest {
@@ -30,6 +31,7 @@ export interface UpdateWorkspaceSettingsRequest {
   assistantActionScoringPolicy?: AssistantActionScoringPolicy | null;
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
+  featureFlags?: Record<string, boolean> | null;
 }
 
 export interface DecisionEscalationPolicy {
