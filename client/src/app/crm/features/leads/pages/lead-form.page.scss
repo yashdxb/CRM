@@ -3636,3 +3636,76 @@
   font-weight: 600;
   box-shadow: 0 8px 18px rgba(251, 146, 60, 0.18), 0 0 0 1px rgba(254, 215, 170, 0.32) inset;
 }
+
+// Read-only mode banner (shown when another user is editing)
+.read-only-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  margin: 0.75rem 0 1rem;
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.95), rgba(253, 230, 138, 0.85));
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15), 0 0 0 1px rgba(253, 230, 138, 0.4) inset;
+
+  > i {
+    font-size: 1.25rem;
+    color: #b45309;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+
+    strong {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #92400e;
+    }
+
+    span {
+      font-size: 0.82rem;
+      color: #a16207;
+      line-height: 1.4;
+    }
+  }
+}
+
+// Fieldset wrapper for read-only mode
+.form-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+
+  &:disabled {
+    opacity: 0.7;
+    pointer-events: none;
+
+    input,
+    textarea,
+    select,
+    button:not(.p-tab),
+    .p-inputtext,
+    .p-select,
+    .p-dropdown,
+    .p-calendar,
+    .p-inputnumber,
+    .p-inputtextarea,
+    .p-checkbox,
+    .p-radiobutton {
+      cursor: not-allowed;
+      background: rgba(229, 231, 235, 0.5);
+    }
+
+    // Keep tabs clickable for navigation
+    .p-tab {
+      pointer-events: auto;
+      opacity: 1;
+    }
+  }
+}

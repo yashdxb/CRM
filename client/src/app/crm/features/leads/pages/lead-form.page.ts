@@ -2799,6 +2799,21 @@ export class LeadFormPage implements OnInit, OnDestroy {
     return this.visiblePresenceUsers().filter((viewer) => viewer.isEditing);
   }
 
+  /**
+   * Returns true if another user has uncommitted changes, putting this form into read-only mode.
+   */
+  protected isReadOnlyDueToEditing(): boolean {
+    return this.activeEditors().length > 0;
+  }
+
+  /**
+   * Returns the name of the user who has the edit lock (first active editor).
+   */
+  protected lockingEditorName(): string | null {
+    const editors = this.activeEditors();
+    return editors.length > 0 ? editors[0].displayName : null;
+  }
+
   protected viewingPresenceSummary(): string {
     const viewers = this.visiblePresenceUsers();
     if (!viewers.length) {

@@ -86,6 +86,15 @@
         </div>
       </header>
 
+      <!-- Read-only mode banner when another user is editing -->
+      <div class="read-only-banner" *ngIf="isEditMode() && isReadOnlyDueToEditing()">
+        <i class="pi pi-lock"></i>
+        <div class="read-only-banner__content">
+          <strong>Read-only mode</strong>
+          <span>{{ lockingEditorName() }} is currently editing this record. You can view but not make changes until they save or leave.</span>
+        </div>
+      </div>
+
       <section class="related-summary" *ngIf="isEditMode()">
         <div class="related-summary-label">Converted to</div>
         <div class="related-summary-links" *ngIf="hasLinkedRecords(); else noLinkedSummary">
@@ -151,6 +160,7 @@
         </div>
 
         <form class="lead-form" (ngSubmit)="onSave()">
+          <fieldset class="form-fieldset" [disabled]="isReadOnlyDueToEditing()">
           <p-tabs class="lead-tabs-shell" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
             <p-tablist class="lead-tabs">
               <p-tab value="overview" [disabled]="isTabDisabled('overview')" [pt]="{ root: { class: 'lead-tab' } }">
@@ -1476,9 +1486,10 @@
               pButton
               [label]="isEditMode() ? 'Update lead' : 'Create lead'"
               class="crm-button crm-button--primary"
-              [disabled]="!form.firstName || !form.lastName || saving()"
+              [disabled]="!form.firstName || !form.lastName || saving() || isReadOnlyDueToEditing()"
             ></button>
           </footer>
+          </fieldset>
         </form>
       </main>
     </div>
