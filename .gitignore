@@ -57,3 +57,4 @@ Thumbs.db
 client/client/.auth/
 client/.auth/
 client/output/
+server/src/CRM.Enterprise.Api/appsettings.Development.json

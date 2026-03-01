@@ -72,10 +72,12 @@ export class CrmEventsService {
       this.zone.run(() => this.handleEvent(envelope));
     });
 
+    console.debug('[CrmEvents] Starting SignalR connection...');
     this.connection.start().then(() => {
+      console.debug('[CrmEvents] SignalR connected successfully');
       this.flushPendingPresence();
-    }).catch(() => {
-      // Realtime is best-effort; UX falls back to explicit refresh actions.
+    }).catch((err) => {
+      console.warn('[CrmEvents] SignalR connection failed:', err);
     });
   }
 
@@ -86,8 +88,13 @@ export class CrmEventsService {
   joinRecordPresence(entityType: string, recordId: string) {
     const key = `${entityType.toLowerCase()}:${recordId}`;
     this.pendingPresence.set(key, { entityType, recordId });
+    console.debug('[CrmEvents] joinRecordPresence called:', { entityType, recordId, key });
 
     void this.ensureFeatureFlagsLoaded(true).then(() => {
+      console.debug('[CrmEvents] Feature flags loaded for presence:', {
+        recordPresenceEnabled: this.isFeatureEnabled('realtime.recordPresence'),
+        allFlags: this.featureFlags
+      });
       this.flushPendingPresence();
     });
   }
@@ -143,6 +150,11 @@ export class CrmEventsService {
   private handleEvent(envelope: CrmEventEnvelope | null | undefined) {
     if (!envelope?.eventType) {
       return;
+    }
+
+    // Log presence events for debugging
+    if (envelope.eventType.startsWith('record.presence')) {
+      console.debug('[CrmEvents] Received presence event:', envelope);
     }
 
     this.eventsSubject.next(envelope);
@@ -229,18 +241,28 @@ export class CrmEventsService {
   }
 
   private flushPendingPresence() {
+    console.debug('[CrmEvents] flushPendingPresence called:', {
+      pendingCount: this.pendingPresence.size,
+      pendingKeys: [...this.pendingPresence.keys()],
+      featureEnabled: this.isFeatureEnabled('realtime.recordPresence'),
+      connectionState: this.connection?.state ?? 'null'
+    });
+
     if (!this.isFeatureEnabled('realtime.recordPresence')) {
+      console.debug('[CrmEvents] flushPendingPresence: feature disabled, returning');
       return;
     }
 
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      console.debug('[CrmEvents] flushPendingPresence: connection not ready, returning');
       return;
     }
 
     for (const registration of this.pendingPresence.values()) {
-      this.connection.invoke('JoinRecordPresence', registration.entityType, registration.recordId).catch(() => {
-        // Presence is best effort.
-      });
+      console.debug('[CrmEvents] Invoking JoinRecordPresence:', registration);
+      this.connection.invoke('JoinRecordPresence', registration.entityType, registration.recordId)
+        .then(() => console.debug('[CrmEvents] JoinRecordPresence succeeded:', registration))
+        .catch((err) => console.warn('[CrmEvents] JoinRecordPresence failed:', registration, err));
     }
   }
 

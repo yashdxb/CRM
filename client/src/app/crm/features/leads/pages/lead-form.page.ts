@@ -2650,6 +2650,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
   }
 
   private initializePresence(recordId: string): void {
+    console.debug('[LeadForm] initializePresence called for recordId:', recordId);
     this.crmEvents.joinRecordPresence('lead', recordId);
     this.crmEvents.events$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -2660,6 +2661,12 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
         const entityType = String(event.payload['entityType'] ?? '').toLowerCase();
         const payloadRecordId = String(event.payload['recordId'] ?? '');
+
+        // Log all presence events for this record
+        if (event.eventType.startsWith('record.presence') && entityType === 'lead' && payloadRecordId === recordId) {
+          console.debug('[LeadForm] Received presence event:', event);
+        }
+
         if (entityType !== 'lead' || payloadRecordId !== recordId) {
           return;
         }
@@ -2676,6 +2683,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
               };
             })
             .filter((item) => !!item.userId);
+          console.debug('[LeadForm] Setting presenceUsers from snapshot:', users);
           this.presenceUsers.set(users);
           return;
         }
@@ -2685,6 +2693,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
           const displayName = String(event.payload['displayName'] ?? 'User');
           const action = String(event.payload['action'] ?? '').toLowerCase();
           const isEditing = !!event.payload['isEditing'];
+          console.debug('[LeadForm] Presence changed:', { userId, displayName, action, isEditing });
           if (!userId) {
             return;
           }

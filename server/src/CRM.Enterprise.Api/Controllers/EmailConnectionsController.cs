@@ -3,8 +3,10 @@ using CRM.Enterprise.Api.Contracts.Emails;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Emails;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Infrastructure.Emails;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 
 namespace CRM.Enterprise.Api.Controllers;
@@ -19,13 +21,42 @@ public class EmailConnectionsController : ControllerBase
 {
     private readonly IEmailConnectionService _connectionService;
     private readonly ILogger<EmailConnectionsController> _logger;
+    private readonly EmailOAuthOptions _oauthOptions;
 
     public EmailConnectionsController(
         IEmailConnectionService connectionService,
-        ILogger<EmailConnectionsController> logger)
+        ILogger<EmailConnectionsController> logger,
+        IOptions<EmailOAuthOptions> oauthOptions)
     {
         _connectionService = connectionService;
         _logger = logger;
+        _oauthOptions = oauthOptions.Value;
+    }
+    
+    /// <summary>
+    /// [DEV ONLY] Check OAuth config status.
+    /// </summary>
+    [HttpGet("diagnostics/config")]
+    [AllowAnonymous]
+    public IActionResult GetConfigDiagnostics()
+    {
+        var msConfig = _oauthOptions.Microsoft;
+        return Ok(new
+        {
+            Microsoft = new
+            {
+                ClientId = msConfig.ClientId,
+                ClientSecretSet = !string.IsNullOrEmpty(msConfig.ClientSecret),
+                ClientSecretLength = msConfig.ClientSecret?.Length ?? 0,
+                TenantId = msConfig.TenantId,
+                Scopes = msConfig.Scopes
+            },
+            Google = new
+            {
+                ClientId = _oauthOptions.Google.ClientId,
+                ClientSecretSet = !string.IsNullOrEmpty(_oauthOptions.Google.ClientSecret)
+            }
+        });
     }
 
     /// <summary>
