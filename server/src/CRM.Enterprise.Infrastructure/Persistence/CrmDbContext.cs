@@ -99,6 +99,8 @@ public class CrmDbContext : DbContext
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<AssistantMessage> AssistantMessages => Set<AssistantMessage>();
     public DbSet<AssistantThread> AssistantThreads => Set<AssistantThread>();
+    public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -134,6 +136,8 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<CampaignRecommendation>().ToTable("CampaignRecommendations", CrmSchema);
         modelBuilder.Entity<CampaignRecommendationDecision>().ToTable("CampaignRecommendationDecisions", CrmSchema);
         modelBuilder.Entity<AttributionExplainabilityEvent>().ToTable("AttributionExplainabilityEvents", CrmSchema);
+        modelBuilder.Entity<EmailLog>().ToTable("EmailLogs", CrmSchema);
+        modelBuilder.Entity<EmailTemplate>().ToTable("EmailTemplates", CrmSchema);
         modelBuilder.Entity<Lead>()
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);

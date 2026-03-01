@@ -3524,6 +3524,81 @@
   flex-wrap: wrap;
 }
 
+.presence-focus {
+  margin-top: 0.55rem;
+  display: inline-flex;
+  position: relative;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 0.75rem;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid rgba(14, 165, 233, 0.22);
+  color: #0c4a6e;
+  background: linear-gradient(135deg, rgba(224, 242, 254, 0.95), rgba(186, 230, 253, 0.92));
+  box-shadow: 0 8px 18px rgba(2, 132, 199, 0.18), 0 0 0 1px rgba(125, 211, 252, 0.28) inset;
+  -webkit-user-select: none;
+  user-select: none;
+  caret-color: transparent;
+  cursor: default;
+
+  &::selection {
+    background: transparent;
+    color: inherit;
+  }
+
+  &::-moz-selection {
+    background: transparent;
+    color: inherit;
+  }
+
+  // Glowing comet that orbits OUTSIDE the chip border
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2rem;
+    height: 2px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 15%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(255, 255, 255, 0.6) 85%,
+      transparent 100%
+    );
+    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 1))
+            drop-shadow(0 0 5px rgba(186, 230, 253, 0.9))
+            drop-shadow(0 0 10px rgba(56, 189, 248, 0.6))
+            drop-shadow(0 0 18px rgba(14, 165, 233, 0.35));
+    offset-path: inset(0px round 0.75rem);
+    offset-distance: 0%;
+    offset-rotate: auto;
+    animation: presence-border-tail 3.5s linear infinite;
+    will-change: offset-distance;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  i {
+    color: #0284c7;
+    font-size: 0.85rem;
+  }
+}
+
+@keyframes presence-border-tail {
+  from { offset-distance: 0%; }
+  to   { offset-distance: 100%; }
+}
+
 .presence-label {
   font-size: 0.75rem;
   color: #64748b;
@@ -3540,4 +3615,24 @@
   color: #0f172a;
   border: 1px solid rgba(14, 165, 233, 0.32);
   background: rgba(224, 242, 254, 0.8);
+}
+
+.presence-chip--editing {
+  border-color: rgba(251, 146, 60, 0.4);
+  background: rgba(255, 237, 213, 0.9);
+}
+
+.presence-editing-note {
+  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(254, 215, 170, 0.85));
+  color: #9a3412;
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(251, 146, 60, 0.18), 0 0 0 1px rgba(254, 215, 170, 0.32) inset;
 }

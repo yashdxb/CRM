@@ -3,7 +3,8 @@
 > **Doc Role**
 > - **Source of truth**: **Yes (Canonical)**
 > - **Canonical scope**: Project contract, architecture/UI rules, operational standards, governance
-> - **Companion canonical doc**: `docs/USER_STORIES.md` (normalized epic-based user stories + ClickUp sync rollups)
+> - **Backlog/story source of truth**: ClickUp (`CRM Backlog` list `901710720381`)
+> - **Companion mirror doc**: `docs/USER_STORIES.md` (generated from ClickUp for in-repo visibility/search)
 > - **Master registry**: `docs/DOCS_INDEX.md`
 
 Single source of truth for the CRM Enterprise codebase. This document consolidates the current project contract, roadmap, style guides, issue fixes, lessons learned, user guide, use cases, test plan, and Azure roadmap. If any conflict exists, the **running codebase** is the source of truth and this document must be updated.
@@ -332,7 +333,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 ---
 
 ## 13) Roadmap & Benchmark (Current)
-Reference: `docs/USER_STORIES.md` → “Strategic Benchmark & Differentiation (Current Plan)”.
+Reference: ClickUp `CRM Backlog` list (`901710720381`) and generated mirror `docs/USER_STORIES.md`.
 
 ### Positioning Goal
 Win on **execution discipline**, **speed to value**, and **AI‑guided next steps** rather than feature parity with enterprise CRMs.
@@ -374,7 +375,7 @@ Win on **execution discipline**, **speed to value**, and **AI‑guided next step
 ---
 
 ## 14) User Stories (Role-Based)
-- Canonical user stories live in `docs/USER_STORIES.md` (all roles, execution-ready).
+- User stories source of truth is ClickUp (`CRM Backlog` list `901710720381`); `docs/USER_STORIES.md` is the generated mirror.
 
 ---
 

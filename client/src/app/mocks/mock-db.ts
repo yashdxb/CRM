@@ -1217,16 +1217,39 @@ export const findRole = (id: string) => {
   return role ? { ...role, permissions: [...role.permissions] } : null;
 };
 
-export const getWorkspaceSettings = () => ({ ...mockWorkspaceSettings });
+export const getWorkspaceSettings = () => clone(mockWorkspaceSettings);
 
 export const updateWorkspaceSettings = (payload: UpdateWorkspaceSettingsRequest) => {
   mockWorkspaceSettings = {
     ...mockWorkspaceSettings,
     name: payload.name,
     timeZone: payload.timeZone,
-    currency: payload.currency
+    currency: payload.currency,
+    leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? mockWorkspaceSettings.leadFirstTouchSlaHours ?? null,
+    defaultContractTermMonths: payload.defaultContractTermMonths ?? mockWorkspaceSettings.defaultContractTermMonths ?? null,
+    defaultDeliveryOwnerRoleId: payload.defaultDeliveryOwnerRoleId ?? mockWorkspaceSettings.defaultDeliveryOwnerRoleId ?? null,
+    approvalAmountThreshold: payload.approvalAmountThreshold ?? mockWorkspaceSettings.approvalAmountThreshold ?? null,
+    approvalApproverRole: payload.approvalApproverRole ?? mockWorkspaceSettings.approvalApproverRole ?? null,
+    approvalWorkflowPolicy: payload.approvalWorkflowPolicy
+      ? clone(payload.approvalWorkflowPolicy)
+      : mockWorkspaceSettings.approvalWorkflowPolicy,
+    qualificationPolicy: payload.qualificationPolicy
+      ? clone(payload.qualificationPolicy)
+      : mockWorkspaceSettings.qualificationPolicy,
+    assistantActionScoringPolicy: payload.assistantActionScoringPolicy
+      ? clone(payload.assistantActionScoringPolicy)
+      : mockWorkspaceSettings.assistantActionScoringPolicy,
+    decisionEscalationPolicy: payload.decisionEscalationPolicy
+      ? clone(payload.decisionEscalationPolicy)
+      : mockWorkspaceSettings.decisionEscalationPolicy,
+    supportingDocumentPolicy: payload.supportingDocumentPolicy
+      ? clone(payload.supportingDocumentPolicy)
+      : mockWorkspaceSettings.supportingDocumentPolicy,
+    featureFlags: payload.featureFlags
+      ? { ...payload.featureFlags }
+      : mockWorkspaceSettings.featureFlags
   };
-  return { ...mockWorkspaceSettings };
+  return clone(mockWorkspaceSettings);
 };
 
 export const createRole = (payload: UpsertRoleRequest): RoleSummary => {

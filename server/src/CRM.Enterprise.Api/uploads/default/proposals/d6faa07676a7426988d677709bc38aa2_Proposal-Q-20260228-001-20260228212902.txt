@@ -1,0 +1,22 @@
+﻿CRM Enterprise Proposal
+Generated UTC: 2026-02-28T21:29:02.4509660Z
+Quote Number: Q-20260228-001
+Quote Name: E2E Quote 1772314142357
+Opportunity: E2E Proposal Opp 1772314142357
+Account: E2E Proposal Account 1772314142357
+Currency: USD
+
+Line Items
+----------
+- Check Item | Qty: 1.000 | Unit: 1000.00 | Discount: 0% | Total: 1000.00
+
+Totals
+------
+Subtotal: 1000.00
+Discount: 0.00
+Tax: 0.00
+Total: 1000.00
+
+Notes
+-----
+E2E proposal note baseline

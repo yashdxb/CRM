@@ -1,5 +1,6 @@
 import { Injectable, NgZone, inject } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { firstValueFrom } from 'rxjs';
 import { Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { readTokenContext } from '../auth/token.utils';
@@ -25,6 +26,7 @@ export class CrmEventsService {
   private readonly eventsSubject = new Subject<CrmEventEnvelope>();
   private featureFlags: Record<string, boolean> = {};
   private featureFlagsLoaded = false;
+  private featureFlagsLoadPromise: Promise<void> | null = null;
   private connection: HubConnection | null = null;
   private pendingPresence = new Map<string, PresenceRegistration>();
 
@@ -47,19 +49,7 @@ export class CrmEventsService {
       return;
     }
 
-    if (!this.featureFlagsLoaded) {
-      this.tenantContext.getTenantContext().subscribe({
-        next: (context) => {
-          this.featureFlags = context.featureFlags ?? {};
-          this.featureFlagsLoaded = true;
-          this.flushPendingPresence();
-        },
-        error: () => {
-          this.featureFlags = {};
-          this.featureFlagsLoaded = true;
-        }
-      });
-    }
+    void this.ensureFeatureFlagsLoaded();
 
     const tenantKey = getTenantKey();
     const hostKey = typeof window !== 'undefined' ? resolveTenantKeyFromHost(window.location.hostname) : null;
@@ -97,20 +87,8 @@ export class CrmEventsService {
     const key = `${entityType.toLowerCase()}:${recordId}`;
     this.pendingPresence.set(key, { entityType, recordId });
 
-    if (!this.featureFlagsLoaded) {
-      return;
-    }
-
-    if (!this.isFeatureEnabled('realtime.recordPresence')) {
-      return;
-    }
-
-    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
-      return;
-    }
-
-    this.connection.invoke('JoinRecordPresence', entityType, recordId).catch(() => {
-      // Presence is best effort.
+    void this.ensureFeatureFlagsLoaded(true).then(() => {
+      this.flushPendingPresence();
     });
   }
 
@@ -131,6 +109,24 @@ export class CrmEventsService {
     }
 
     this.connection.invoke('LeaveRecordPresence', entityType, recordId).catch(() => {
+      // Presence is best effort.
+    });
+  }
+
+  setRecordEditingState(entityType: string, recordId: string, isEditing: boolean) {
+    if (!this.featureFlagsLoaded) {
+      return;
+    }
+
+    if (!this.isFeatureEnabled('realtime.recordPresence')) {
+      return;
+    }
+
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      return;
+    }
+
+    this.connection.invoke('SetRecordEditingState', entityType, recordId, isEditing).catch(() => {
       // Presence is best effort.
     });
   }
@@ -246,5 +242,32 @@ export class CrmEventsService {
         // Presence is best effort.
       });
     }
+  }
+
+  private ensureFeatureFlagsLoaded(force = false): Promise<void> {
+    if (!force && this.featureFlagsLoaded) {
+      return Promise.resolve();
+    }
+
+    if (this.featureFlagsLoadPromise) {
+      return this.featureFlagsLoadPromise;
+    }
+
+    this.featureFlagsLoadPromise = firstValueFrom(this.tenantContext.getTenantContext())
+      .then((context) => {
+        this.featureFlags = context.featureFlags ?? {};
+        this.featureFlagsLoaded = true;
+      })
+      .catch(() => {
+        if (!this.featureFlagsLoaded) {
+          this.featureFlags = {};
+          this.featureFlagsLoaded = true;
+        }
+      })
+      .finally(() => {
+        this.featureFlagsLoadPromise = null;
+      });
+
+    return this.featureFlagsLoadPromise;
   }
 }

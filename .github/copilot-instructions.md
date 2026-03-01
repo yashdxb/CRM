@@ -1,12 +1,60 @@
 # CRM Enterprise – Copilot Guide
 
-## Monorepo basics
+> **Source of truth alignment**: This guide follows `docs/PROJECT_MASTER.md`. If any conflict exists, the **running codebase** is the source of truth.
+
+---
+
+## 1) Stack (Exact Versions)
+
+### Frontend
+- Angular: `~21.0.8`
+- Angular CDK: `^21.0.6`
+- PrimeNG: `~21.0.2`
+- PrimeIcons: `^7.0.0`
+- PrimeNG Themes: `~21.0.2`
+- Chart.js: `^4.5.1`
+- RxJS: `~7.8.0`
+- TypeScript: `~5.9.2`
+- Package manager: `npm@10.9.4`
+
+### Backend
+- .NET: `net10.0`
+- Entity Framework Core: `8.0.7`
+- SQL Server (Azure SQL in production; connection name `SqlServer`)
+- Azure SignalR: `Microsoft.Azure.SignalR 1.32.0`
+- Azure Communication Email: `1.0.2`
+- Azure Service Bus: `7.17.4`
+- SendGrid: removed (no longer used)
+
+---
+
+## 2) Repository Structure Rules
+
+### Frontend (`client/src/app`)
+- `core/`: cross-cutting services, guards, interceptors, notifications, auth helpers.
+- `crm/`: CRM application features and pages.
+- `public/`: public auth pages (login, invite accept, password change).
+- `layout/`: shared shell, nav, and layout scaffolding.
+- `shared/`: shared UI components, styles, utilities, and shared services.
+- `mocks/`, `packs/`: use only for local development and packaged modules as currently structured.
+
+### Backend (`server/src`)
+- `CRM.Enterprise.Api`: API host, controllers, middleware, SignalR hubs.
+- `CRM.Enterprise.Application`: use-case orchestration and application services.
+- `CRM.Enterprise.Domain`: entities, domain rules, security permissions.
+- `CRM.Enterprise.Infrastructure`: EF Core persistence, external services, integrations.
+
+---
+
+## 3) Monorepo Basics
 - Angular 21 UI lives in `client/`; Clean Architecture API/Domain/Infrastructure sit in `server/src`.
 - Run `npm install` + `npm start` from `client/` for the shell; `npm run build` targets Azure Static Web Apps.
 - Backend lives under `server/src/CRM.Enterprise.Api`; use `dotnet build` then `dotnet run --project CRM.Enterprise.Api`.
 - `docker compose up -d sqlserver` starts the local SQL Server declared in the root compose file.
 
--## Frontend workflow
+---
+
+## 4) Frontend Workflow
 
 ### SCSS Partial Import Guidance
 - When importing shared SCSS partials (like _design-tokens.scss) from feature/component stylesheets, always calculate the relative path based on the actual directory depth of the file.
@@ -1323,3 +1371,245 @@ public class SuppliersController : ControllerBase
 - For backend additions, add contracts → controller → domain/infrastructure pieces, then register services in `AddApplication`/`AddInfrastructure` as needed.
 - Whenever endpoints touch the DB, mirror the DTO in Angular (models/service) so shapes stay in sync; rely on the PrimeNG patterns already in `features/*/pages`.
 - Keep tests aligned with existing tooling (`ng test` / Vitest when configured) and prefer integration tests at the API layer once DbContext mappings solidify.
+
+---
+
+## 5) Authentication and Authorization
+- JWT Bearer authentication with issuer/audience validation.
+- Claims-based authorization using `crm:permission`.
+- Policies are defined in `CRM.Enterprise.Security.Permissions` and enforced per controller/action.
+- Authorization fallback policy requires authenticated users.
+
+---
+
+## 6) Tenant and Role Handling
+- Tenant resolution: `X-Tenant-Key` header or host-based mapping.
+- Default tenant key comes from configuration (`Tenant:DefaultKey`) when not resolved.
+- Tenant provider is set per request; EF query filters rely on it.
+- System roles are defined in `CRM.Enterprise.Security.Permissions.RoleNames`.
+- **Security levels are tenant-defined. Do not hard-code role security tiers.**
+
+---
+
+## 7) UI/UX Standards (Current)
+
+### Style Change Control (MANDATORY)
+- Global styles are authoritative: `client/src/styles` and `client/src/app/shared`.
+- **Do not change, alter, or refactor visual styles unless the user explicitly requests a style/UI change in that task.**
+
+### Page Background Baseline (MANDATORY)
+- Use the shared Activity Workspace aurora background as the default CRM background system.
+- For pages with explicit background layers, use `.page-background` + `.animated-orb` + `.grid-pattern` from `client/src/styles/_components.scss`.
+- For pages/forms without explicit background markup, rely on the shell-level fallback background in `client/src/app/layout/shell.component.scss`.
+- Do not create page-local background variants unless explicitly requested.
+
+### Login UI Lock
+- The current login screen visual design is approved/locked. Do not change its styles without explicit approval.
+- **Auth screens parity:** All public auth pages (login, accept-invite, change-password, password reset) must match the login screen's visual system: same background (orbs + grid + noise), glass card treatment, typography, spacing, and button styling.
+- **Auth shell component:** Public auth pages must use the shared `AuthShellComponent` to ensure visual parity and avoid style drift.
+
+### Heading Hierarchy
+- exactly one `h1.hero-title` per page
+- `h2.section-title` for section headers
+- `h3.card-title`/`h3.section-title` for card and subsection headers
+- `page-subtitle`/`hero-subtitle`/`hero-description` for subtitle copy
+
+### Other UI Rules
+- Pages must use the animated orb background and shared layout containers.
+- Premium glass/gradient styling is required; do not create one-off themes.
+- Button styles must use the global CRM button classes.
+- List pages and form pages follow the Component Style Guide templates.
+- UI/API binding rule: dropdown and selection data must come from API contracts (no local fallback datasets for production behavior).
+
+---
+
+## 8) Mobile Responsive (MANDATORY)
+
+### Guiding Principles
+- Mobile responsiveness is a **core product requirement** for CRM pages (not a later polish item).
+- Preserve the premium CRM visual language on mobile: glass, gradients, shadows, and typography hierarchy should **adapt**, not be removed.
+- Default implementation approach: layout/spacing adapt first; information hierarchy stays intact; avoid hiding critical workflow actions/data on mobile.
+
+### Technical Implementation
+- Use shared responsive utilities and breakpoints from `client/src/styles/_design-tokens.scss` (do not create page-local breakpoint systems).
+- Use `DeviceService` (`client/src/app/core/device/device.service.ts`) for reactive device-aware rendering when CSS-only adaptation is not sufficient.
+- For dense tabular UI (especially PrimeNG DataTable), prefer the shared wrapper pattern: `client/src/app/shared/mobile-table-wrapper.component.ts`.
+
+### Touch Interaction Standards
+- minimum touch targets (`44x44px`)
+- readable spacing
+- no hover-only critical actions
+
+### Validation Before Closing UI Work
+- desktop, tablet, and mobile viewport checks
+- verify no horizontal overflow and maintain actionability/readability
+
+### Mobile Documentation (Source of Truth)
+- `docs/MOBILE_IMPLEMENTATION_SUMMARY.md` – implementation status and delivered infrastructure
+- `docs/MOBILE_RESPONSIVE_GUIDE.md` – product/UX + developer guidance, breakpoints, patterns, testing
+- `docs/MOBILE_TECHNICAL_REFERENCE.md` – developer technical reference for mixins, `DeviceService`, patterns
+
+---
+
+## 9) Coding Rules and Boundaries
+- Follow the shared style guides; do not override on a per-page basis.
+- Avoid page-specific tokens; introduce new tokens only in shared global files.
+- Respect existing module boundaries; do not move files across layers without approval.
+- Keep TypeScript strict and Angular template strict rules enabled.
+
+---
+
+## 10) DO NOT Rules (Explicit)
+- Do not add new frameworks, UI libraries, or architectural patterns.
+- Do not refactor or reorganize folders unless explicitly requested.
+- Do not hardcode environment-specific URLs in production builds.
+- Do not bypass tenant isolation or permission checks.
+- Do not hardcode role names or role-based layouts; use hierarchy levels + configured defaults.
+- Do not introduce inline HTML/CSS in components.
+
+---
+
+## 11) AI-Generated Code Rules
+- No guessing: use the current codebase and documentation only.
+- Diff-only changes: smallest viable edits, no sweeping refactors.
+- No modernization or library upgrades.
+- Always preserve existing behavior unless explicitly asked to change it.
+- When unclear, ask for clarification instead of inventing.
+
+---
+
+## 12) Operational Notes (Current Reality)
+- CORS is controlled in `CRM.Enterprise.Api/Program.cs` and App Service CORS settings.
+- Production frontend must target the production API host (do not point to dev API in prod builds).
+- SignalR hubs are mapped to:
+  - `/api/hubs/presence` (online/offline user presence)
+  - `/api/hubs/crm-events` (tenant/user-targeted CRM realtime events: decision, notifications, stage changes, renewals, email delivery)
+  Both use the same CORS policy and JWT query-token handling for websocket connections.
+- **Deployment gate:** before any deploy, verify both client and API builds succeed.
+- **Deployment method:** push to `master` triggers GitHub Actions for both client and API.
+  - Client workflow: `.github/workflows/azure-static-web-apps-jolly-dune-0d9d1fe0f.yml`
+  - API workflow: `.github/workflows/deploy-api.yml`
+- **Mobile app CI/CD:** Flutter mobile ships from a **separate repo** (`https://github.com/yashdxb/crm-enterprise-mobile`).
+- **Daily ops log:** record daily issues and fixes in `docs/DAILY_OPERATIONS_LOG.md`.
+- **Lead AI scoring:** Lead score refresh uses Azure OpenAI when configured, falls back to OpenAI, then rules-based scoring.
+
+---
+
+## 13) Issue Fix Patterns (Current Reality)
+- PrimeNG select edits: insert a temporary option when pre-filling forms so values render before options load.
+- Activity edit/list time: parse API timestamps as UTC (append `Z` when missing) and display in user local time.
+- Lead status resolution: resolve `LeadStatus` entities and attach to `Lead` before save to avoid FK insert order issues.
+- User directory tables must page through API results in production so Azure-hosted builds can see every tenant user.
+- Presence status requires a SignalR connection that includes the tenant header plus the stored JWT even before any user interaction.
+- Tenant keys persisted from login now survive returning to the root host, so the realtime connection always carries the proper `X-Tenant-Key`.
+- Presence service now treats the locally-authenticated user as online immediately so the green dot isn't erased while the hub snapshot finishes.
+
+---
+
+## 14) Test Plan Summary
+
+### Mandatory Execution Rule
+- After every code modification or implementation, Playwright UI execution is required before task closure.
+- Minimum required run: `client/e2e/smoke.spec.ts`.
+- Targeted Playwright spec(s) for the modified module must also run when present.
+- Default execution target is local development. Do not run Playwright against Azure dev unless explicitly requested.
+
+### Current E2E Coverage
+- `client/e2e/lead-lifecycle.spec.ts`
+- `client/e2e/core-flows.spec.ts`
+- `client/e2e/smoke.spec.ts`
+
+---
+
+## 15) Azure Services (Current and Required)
+
+### Current Azure-Native Services Used
+- Azure App Service (API hosting)
+- Azure Static Web Apps (frontend hosting)
+- Azure SQL Database (primary data store)
+- Azure SignalR (presence and realtime features)
+- Azure Communication Email (transactional email)
+- Azure Service Bus (email queue and async processing)
+- (SendGrid: removed / deprecated)
+
+### Operational Rules
+- CORS must be configured in both API code and App Service settings.
+- Always align environment URLs (dev vs prod) across client and API.
+- Health endpoints: `/health` and `/healthz` should remain available.
+
+---
+
+## 16) AI Assistant (Foundry-backed)
+
+### Evidence Paths
+- API: `server/src/CRM.Enterprise.Api/Controllers/AssistantController.cs`
+- Foundry client: `server/src/CRM.Enterprise.Infrastructure/AI/FoundryAgentClient.cs`
+- Chat storage: `server/src/CRM.Enterprise.Domain/Entities/AssistantThread.cs`
+- UI: `client/src/app/core/assistant/assistant-panel.component.ts`
+
+### Knowledge Team Guides (Operational)
+- `docs/AI_ASSISTANT_KNOWLEDGE_QUICK_START.md` (quick onboarding / TL;DR publishing flow)
+- `docs/AI_KNOWLEDGE_FEEDING_GUIDE.md` (end-to-end workflow and validation)
+- `docs/CRM_CAPABILITIES_KNOWLEDGE_MAPPING.md` (CRM capability coverage → knowledge document mapping)
+- `docs/ai/KNOWLEDGE_GROUNDING_GUIDE.md` (runtime/system grounding reference)
+
+### Scripts
+- Knowledge manifest builder: `scripts/build_ai_knowledge_manifest.py`
+- Search index setup: `scripts/setup_ai_knowledge_search_index.py`
+- Search uploader: `scripts/push_ai_knowledge_to_search.py`
+- Azure AI Search (dev): `crmenterprisesearchdevca` / index `crm-ai-knowledge`
+
+---
+
+## 17) ClickUp Automation (Backlog + Governance)
+
+### Backlog Structure (Current)
+- **Epics list** (Product & Planning): `Now`, `Next`, `Later`
+- **User Stories list**: stories are **subtasks** of the appropriate epic.
+- **Modules list**: one task per module (Leads, Opportunities, Dashboard, Settings, etc.).
+- **Linkage**: each story is linked to a module task and prefixed with `Module: <Module> | ...`.
+
+### Tagging Standard
+- Tier tags: `now`, `next`, `later`
+- Module tags: `module:Leads`, `module:Opportunities`, `module:Dashboard`, `module:Settings`, etc.
+- Status tags: `done`, `partial`, `not-started`, `candidate`
+
+### Automation Rules (Operational)
+- **Source of truth** for CRM backlog items: `docs/CRM_BACKLOG.md`.
+- **Source of truth** for mobile app backlog items: `docs/MOBILE_BACKLOG.md`.
+- **Source of truth** for supply-chain backlog items: `docs/SCM_BACKLOG.md`.
+- **Source of truth** for platform/infra backlog items: `docs/PROJECT_BACKLOG.md`.
+- **Do not assume** status beyond documented evidence.
+
+### ClickUp Workspace Map
+- Workspace (team) name: `North Edge System's Workspace`
+- Workspace (team) id: `9017850483`
+- Primary space: `CRM Platform` (id: `90173924925`)
+- Folder `Product & Planning` (id: `90176298145`):
+  - List: `Epics` (id: `901710553489`)
+  - List: `CRM Backlog` (id: `901710720381`)
+  - List: `Project Backlog` (id: `901710720382`)
+  - List: `Mobile Backlog` (id: `901710789774`)
+  - List: `SCM Backlog` (id: `901710734279`)
+
+---
+
+## 18) MediatR/CQRS Decision (Hybrid Approach)
+
+**Default path (required):**
+- Keep CRUD and straightforward module operations in Application services.
+- Controllers call Application services directly.
+
+**Use MediatR when any of these are true:**
+- A workflow spans multiple modules/aggregates in one use case.
+- A command has branching orchestration and policy decisions (e.g., approval and override flows).
+- A flow publishes in-process or integration events with non-trivial handler chains.
+- The operation requires idempotency/retry-safe command handling.
+
+**Eventing path (Azure-aligned):**
+- In-process domain events for local side effects inside the modular monolith.
+- Azure Service Bus integration events for async/decoupled processing.
+
+**Non-goals right now:**
+- No repo-wide MediatR refactor.
+- No microservice extraction tied to this decision.

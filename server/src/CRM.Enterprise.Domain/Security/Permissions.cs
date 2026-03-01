@@ -31,6 +31,8 @@ public static class Permissions
         public const string AuditView = "Permissions.Audit.View";
         public const string TenantsView = "Permissions.Tenants.View";
         public const string TenantsManage = "Permissions.Tenants.Manage";
+        public const string EmailsView = "Permissions.Emails.View";
+        public const string EmailsManage = "Permissions.Emails.Manage";
     }
 
     public static class RoleNames
@@ -77,7 +79,9 @@ public static class Permissions
         new(Policies.AdministrationManage, "Administration (Manage)", "Invite users, edit roles, and configure workspace policies.", "Configure System"),
         new(Policies.AuditView, "Audit Log (View)", "View system audit history for records and changes.", "Audit & Compliance"),
         new(Policies.TenantsView, "Tenants (View)", "View tenant workspaces and status.", "Configure System"),
-        new(Policies.TenantsManage, "Tenants (Manage)", "Provision and manage tenant workspaces.", "Configure System")
+        new(Policies.TenantsManage, "Tenants (Manage)", "Provision and manage tenant workspaces.", "Configure System"),
+        new(Policies.EmailsView, "Emails (View)", "View sent emails and email logs.", "View & Analyze"),
+        new(Policies.EmailsManage, "Emails (Manage)", "Send emails and manage email templates.", "Create & Manage Records")
     };
 
     public static IReadOnlyList<PermissionDefinition> Definitions { get; } = Array.AsReadOnly(DefinitionsSource);
@@ -103,7 +107,9 @@ public static class Permissions
         Policies.OpportunitiesManage,
         Policies.OpportunitiesApprovalsRequest,
         Policies.ActivitiesView,
-        Policies.ActivitiesManage
+        Policies.ActivitiesManage,
+        Policies.EmailsView,
+        Policies.EmailsManage
     };
 
     private static readonly string[] SalesManagerPermissions =

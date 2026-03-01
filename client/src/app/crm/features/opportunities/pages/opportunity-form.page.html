@@ -16,9 +16,9 @@
                 <span class="title-light">Deal</span>
               </h1>
               <p>Capture the deal details, set your stage, and keep the team aligned on next steps.</p>
-              <div class="presence-strip" *ngIf="isEditMode() && presenceUsers().length">
-                <span class="presence-label">Viewing now</span>
-                <span class="presence-chip" *ngFor="let viewer of presenceUsers()">{{ viewer.displayName }}</span>
+              <div class="presence-focus" *ngIf="isEditMode() && visiblePresenceUsers().length">
+                <i class="pi pi-eye"></i>
+                <span>{{ viewingPresenceSummary() }}</span>
               </div>
             </div>
             <div class="header-meta">

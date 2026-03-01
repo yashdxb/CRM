@@ -9,9 +9,14 @@ namespace CRM.Enterprise.Api.Hubs;
 [Authorize]
 public sealed class CrmEventsHub : Hub
 {
-    private sealed record PresenceUser(Guid UserId, string DisplayName);
+    private sealed class PresenceConnectionState
+    {
+        public Guid UserId { get; init; }
+        public string DisplayName { get; init; } = "User";
+        public bool IsEditing { get; set; }
+    }
 
-    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, PresenceUser>> RecordPresenceByGroup = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, ConcurrentDictionary<string, PresenceConnectionState>> RecordPresenceByGroup = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentDictionary<string, HashSet<string>> ConnectionGroups = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ITenantProvider _tenantProvider;
@@ -23,7 +28,7 @@ public sealed class CrmEventsHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var tenantId = _tenantProvider.TenantId;
+        var tenantId = ResolveTenantId();
         if (tenantId != Guid.Empty)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, BuildTenantGroup(tenantId));
@@ -40,7 +45,7 @@ public sealed class CrmEventsHub : Hub
 
     public async Task JoinRecordPresence(string entityType, Guid recordId)
     {
-        var tenantId = _tenantProvider.TenantId;
+        var tenantId = ResolveTenantId();
         if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(entityType) || recordId == Guid.Empty)
         {
             return;
@@ -61,8 +66,13 @@ public sealed class CrmEventsHub : Hub
         var groupName = BuildRecordGroup(tenantId, normalizedEntityType, recordId);
         await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
 
-        var members = RecordPresenceByGroup.GetOrAdd(groupName, _ => new ConcurrentDictionary<string, PresenceUser>(StringComparer.OrdinalIgnoreCase));
-        members[Context.ConnectionId] = new PresenceUser(userId, displayName);
+        var members = RecordPresenceByGroup.GetOrAdd(groupName, _ => new ConcurrentDictionary<string, PresenceConnectionState>(StringComparer.OrdinalIgnoreCase));
+        members[Context.ConnectionId] = new PresenceConnectionState
+        {
+            UserId = userId,
+            DisplayName = displayName,
+            IsEditing = false
+        };
 
         var connectionGroups = ConnectionGroups.GetOrAdd(Context.ConnectionId, _ => []);
         lock (connectionGroups)
@@ -75,7 +85,8 @@ public sealed class CrmEventsHub : Hub
             .Select(group => new
             {
                 userId = group.Key,
-                displayName = group.First().DisplayName
+                displayName = group.First().DisplayName,
+                isEditing = group.Any(item => item.IsEditing)
             })
             .ToList();
 
@@ -107,14 +118,63 @@ public sealed class CrmEventsHub : Hub
                 recordId,
                 action = "joined",
                 userId,
-                displayName
+                displayName,
+                isEditing = false
+            }
+        });
+    }
+
+    public async Task SetRecordEditingState(string entityType, Guid recordId, bool isEditing)
+    {
+        var tenantId = ResolveTenantId();
+        if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(entityType) || recordId == Guid.Empty)
+        {
+            return;
+        }
+
+        var userIdText = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdText, out var userId) || userId == Guid.Empty)
+        {
+            return;
+        }
+
+        var normalizedEntityType = entityType.Trim().ToLowerInvariant();
+        var groupName = BuildRecordGroup(tenantId, normalizedEntityType, recordId);
+        if (!RecordPresenceByGroup.TryGetValue(groupName, out var members) ||
+            !members.TryGetValue(Context.ConnectionId, out var member))
+        {
+            return;
+        }
+
+        if (member.IsEditing == isEditing)
+        {
+            return;
+        }
+
+        member.IsEditing = isEditing;
+        var action = isEditing ? "editing_started" : "editing_stopped";
+        await Clients.Group(groupName).SendAsync("crmEvent", new
+        {
+            eventType = "record.presence.changed",
+            tenantId,
+            occurredAtUtc = DateTime.UtcNow,
+            schemaVersion = 1,
+            correlationId = Guid.NewGuid().ToString("N"),
+            payload = new
+            {
+                entityType = normalizedEntityType,
+                recordId,
+                action,
+                userId,
+                displayName = member.DisplayName,
+                isEditing
             }
         });
     }
 
     public async Task LeaveRecordPresence(string entityType, Guid recordId)
     {
-        var tenantId = _tenantProvider.TenantId;
+        var tenantId = ResolveTenantId();
         if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(entityType) || recordId == Guid.Empty)
         {
             return;
@@ -178,13 +238,39 @@ public sealed class CrmEventsHub : Hub
                 recordId,
                 action = "left",
                 userId = removed.UserId,
-                displayName = removed.DisplayName
+                displayName = removed.DisplayName,
+                isEditing = false
             }
         });
     }
 
     internal static string BuildRecordGroup(Guid tenantId, string entityType, Guid recordId)
         => $"tenant:{tenantId:D}:record:{entityType}:{recordId:D}";
+
+    private Guid ResolveTenantId()
+    {
+        if (_tenantProvider.TenantId != Guid.Empty)
+        {
+            return _tenantProvider.TenantId;
+        }
+
+        var contextTenant = Context.GetHttpContext()?.Items.TryGetValue("TenantId", out var tenantValue) == true
+            ? tenantValue
+            : null;
+        if (contextTenant is Guid tenantId && tenantId != Guid.Empty)
+        {
+            return tenantId;
+        }
+
+        if (contextTenant is string tenantText &&
+            Guid.TryParse(tenantText, out var parsedTenant) &&
+            parsedTenant != Guid.Empty)
+        {
+            return parsedTenant;
+        }
+
+        return Guid.Empty;
+    }
 
     private static bool TryParseRecordGroup(string groupName, out string entityType, out Guid recordId, out Guid tenantId)
     {

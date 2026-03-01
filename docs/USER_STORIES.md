@@ -5,7 +5,7 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-02-28 21:31 UTC**
+- Synced at: **2026-03-01 13:13 UTC**
 - ClickUp list id: `901710720381`
 - Total tasks mirrored: **178**
 - Epics mirrored: **39**
@@ -13,14 +13,14 @@
 
 ## Status Summary
 - All tasks:
-  - `done`: 95
-  - `backlog`: 83
+  - `done`: 102
+  - `backlog`: 76
 - Epics:
-  - `backlog`: 25
-  - `done`: 14
+  - `backlog`: 24
+  - `done`: 15
 - Stories:
-  - `done`: 81
-  - `backlog`: 58
+  - `done`: 87
+  - `backlog`: 52
 
 ## Epic and Story Mirror
 
@@ -180,15 +180,15 @@
   - `86e042906` | `done` | Quote proposal generation and delivery from opportunity workspace | tags: -
 
 ### [NOW] Real-Time SignalR Quick Wins (`86e0422m0`)
-- Status: `backlog`
+- Status: `done`
 - Tags: future, now
 - Stories:
-  - `86e0422m9` | `backlog` | AI assistant token streaming via SignalR | tags: future, now
-  - `86e0422mh` | `backlog` | Dashboard live metrics auto-refresh via SignalR | tags: future, now
-  - `86e042evv` | `backlog` | Entity CRUD broadcast for list auto-refresh | tags: -
-  - `86e042evn` | `backlog` | Import job real-time progress via SignalR | tags: -
-  - `86e0424b9` | `backlog` | Pipeline kanban live updates via SignalR | tags: future, now
-  - `86e042ex6` | `backlog` | Record-level presence indicators | tags: -
+  - `86e0422m9` | `done` | AI assistant token streaming via SignalR | tags: future, now
+  - `86e0422mh` | `done` | Dashboard live metrics auto-refresh via SignalR | tags: future, now
+  - `86e042evv` | `done` | Entity CRUD broadcast for list auto-refresh | tags: -
+  - `86e042evn` | `done` | Import job real-time progress via SignalR | tags: -
+  - `86e0424b9` | `done` | Pipeline kanban live updates via SignalR | tags: future, now
+  - `86e042ex6` | `done` | Record-level presence indicators | tags: -
 
 ### [NOW] Report Builder (`86e041x3y`)
 - Status: `backlog`

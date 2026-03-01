@@ -10,11 +10,12 @@
 
 ## 1) Governance Rules (Mandatory)
 
-1. **Canonical docs** are the source of truth for project rules and backlog/story state.
-2. **Operational guides** explain how to execute work; they are not the source of truth.
-3. **Sync / audit docs** are time-bound snapshots and must not become canonical.
-4. **Reference / mapping docs** support planning and coverage analysis; they do not override code or canonical docs.
-5. Every new doc should declare:
+1. **Canonical docs** are the source of truth for project rules and governance.
+2. **ClickUp** is the source of truth for backlog/story state.
+3. **Operational guides** explain how to execute work; they are not the source of truth.
+4. **Sync / audit docs** are time-bound snapshots and must not become canonical.
+5. **Reference / mapping docs** support planning and coverage analysis; they do not override code or canonical docs.
+6. Every new doc should declare:
    - category
    - source-of-truth status
    - canonical reference
@@ -29,8 +30,10 @@ These are the primary source-of-truth documents for this repo.
 
 1. `docs/PROJECT_MASTER.md`
    - Canonical for project contract, architecture/UI rules, operational standards, and governance.
-2. `docs/USER_STORIES.md`
-   - Canonical for normalized epic-based user stories and ClickUp story sync snapshots (as documented).
+
+Backlog/story source of truth:
+1. ClickUp list `CRM Backlog` (`901710720381`)
+2. `docs/USER_STORIES.md` is a generated mirror/export (not canonical)
 
 Important:
 1. If a non-canonical doc conflicts with these, update the canonical doc or the codebase, then reconcile the non-canonical doc.
@@ -64,18 +67,12 @@ Important:
 | File | Category | Canonical? | Status | Owner | Primary Use |
 |---|---|---|---|---|---|
 | `docs/PROJECT_MASTER.md` | Canonical | Yes | Active | Engineering/Product | Project contract, architecture/UI/ops rules |
-| `docs/USER_STORIES.md` | Canonical | Yes | Active | Product/Engineering | Epic-based user stories + ClickUp sync rollups |
+| `docs/USER_STORIES.md` | Sync / Audit Snapshot | No | Active | Product/Engineering | Generated ClickUp mirror for in-repo visibility/search |
 | `docs/PROJECT_CONTRACT.md` | Reference / Mapping | No | Active | Engineering | Historical/adjacent contract reference |
 | `docs/PROJECT_BACKLOG.md` | Roadmap / Backlog Planning | No | Active | Product/Engineering | Backlog strategy and execution guidance |
-| `docs/PROJECT_PHASES.md` | Roadmap / Backlog Planning | No | Active | Product | Phase planning reference |
 | `docs/PRODUCT_ROADMAP_PUBLIC.md` | Roadmap / Backlog Planning | No | Active | Product | Public-facing roadmap messaging |
 | `docs/CRM_BACKLOG.md` | Roadmap / Backlog Planning | No | Active | Product | CRM backlog reference |
-| `docs/BACKLOG_PHASE2.md` | Roadmap / Backlog Planning | No | Active | Product | Phase backlog slice |
 | `docs/MOBILE_BACKLOG.md` | Roadmap / Backlog Planning | No | Active | Product/Engineering | Mobile backlog planning |
-| `docs/PHASE1.md` | Roadmap / Backlog Planning | No | Reference | Product | Phase plan snapshot |
-| `docs/PHASE2.md` | Roadmap / Backlog Planning | No | Reference | Product | Phase plan snapshot |
-| `docs/PHASE3.md` | Roadmap / Backlog Planning | No | Reference | Product | Phase plan snapshot |
-| `docs/PHASE3_OPTIONS.md` | Roadmap / Backlog Planning | No | Reference | Product | Phase option analysis |
 | `docs/USER_STORIES_LEGACY.md` | Reference / Mapping | No | Reference | Product | Legacy narrative preserved |
 | `docs/SALES_REP_USER_STORIES.md` | Reference / Mapping | No | Reference | Product | Role-specific story subset/reference |
 | `docs/COMPETITIVE_GAP.md` | Reference / Mapping | No | Active | Product | Competitive analysis |

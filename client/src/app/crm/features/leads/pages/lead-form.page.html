@@ -74,9 +74,13 @@
               <span class="title-light">Lead</span>
             </h1>
             <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
-            <div class="presence-strip" *ngIf="isEditMode() && presenceUsers().length">
-              <span class="presence-label">Viewing now</span>
-              <span class="presence-chip" *ngFor="let viewer of presenceUsers()">{{ viewer.displayName }}</span>
+            <div class="presence-focus presence-focus--viewing" *ngIf="isEditMode() && visiblePresenceUsers().length">
+              <i class="pi pi-eye"></i>
+              <span>{{ viewingPresenceSummary() }}</span>
+            </div>
+            <div class="presence-editing-note" *ngIf="isEditMode() && activeEditors().length">
+              <i class="pi pi-pencil"></i>
+              <span>{{ editingPresenceSummary() }}</span>
             </div>
           </div>
         </div>

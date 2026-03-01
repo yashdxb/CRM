@@ -13,9 +13,9 @@
               <span class="title-light">Contact</span>
             </h1>
             <p>{{ isEditMode() ? 'Update stakeholder details' : 'Add a new person to your account team' }}</p>
-            <div class="presence-strip" *ngIf="isEditMode() && presenceUsers().length">
-              <span class="presence-label">Viewing now</span>
-              <span class="presence-chip" *ngFor="let viewer of presenceUsers()">{{ viewer.displayName }}</span>
+            <div class="presence-focus" *ngIf="isEditMode() && visiblePresenceUsers().length">
+              <i class="pi pi-eye"></i>
+              <span>{{ viewingPresenceSummary() }}</span>
             </div>
           </div>
         </div>

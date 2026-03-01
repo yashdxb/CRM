@@ -26,6 +26,7 @@ import { OpportunityDataService } from '../../opportunities/services/opportunity
 import { Opportunity } from '../../opportunities/models/opportunity.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
+import { readUserId } from '../../../../core/auth/token.utils';
 
 interface Option<T = string> {
   label: string;
@@ -94,6 +95,7 @@ export class ContactFormPage implements OnInit, OnDestroy {
   protected readonly router = inject(Router);
   private readonly crmEvents = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly currentUserId = readUserId();
 
   private editingId: string | null = null;
 
@@ -251,6 +253,35 @@ export class ContactFormPage implements OnInit, OnDestroy {
           });
         }
       });
+  }
+
+  protected visiblePresenceUsers(): Array<{ userId: string; displayName: string }> {
+    return this.presenceUsers().filter((viewer) => !this.isCurrentUser(viewer.userId));
+  }
+
+  protected viewingPresenceSummary(): string {
+    const viewers = this.visiblePresenceUsers();
+    if (!viewers.length) {
+      return '';
+    }
+
+    if (viewers.length === 1) {
+      return `${viewers[0].displayName} is viewing this record.`;
+    }
+
+    if (viewers.length === 2) {
+      return `${viewers[0].displayName} and ${viewers[1].displayName} are viewing this record.`;
+    }
+
+    return `${viewers[0].displayName} and ${viewers.length - 1} others are viewing this record.`;
+  }
+
+  private isCurrentUser(userId: string): boolean {
+    if (!this.currentUserId || !userId) {
+      return false;
+    }
+
+    return userId.toLowerCase() === this.currentUserId.toLowerCase();
   }
 
   protected addNote() {

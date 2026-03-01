@@ -1,6 +1,6 @@
 # CRM Test Plan (Now + Next)
 
-Scope: validate acceptance criteria in `docs/PHASE1.md` and `docs/PHASE2.md`.
+Scope: validate acceptance criteria in `docs/CRM_BACKLOG.md` and `docs/USER_STORIES.md`.
 
 ## Test Types
 

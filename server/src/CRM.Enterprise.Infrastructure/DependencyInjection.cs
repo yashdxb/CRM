@@ -25,6 +25,7 @@ using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Decisions;
 using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Marketing;
+using CRM.Enterprise.Application.Emails;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Notifications;
 using CRM.Enterprise.Infrastructure.Leads;
@@ -37,6 +38,7 @@ using CRM.Enterprise.Infrastructure.Marketing;
 using CRM.Enterprise.Infrastructure.Customers;
 using CRM.Enterprise.Infrastructure.Contacts;
 using CRM.Enterprise.Infrastructure.Approvals;
+using CRM.Enterprise.Infrastructure.Emails;
 using MediatR;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Identity;
@@ -191,6 +193,7 @@ public static class DependencyInjection
         services.AddScoped<ISupplierQuoteReadService, SupplierQuoteReadService>();
         services.AddScoped<IRfqAwardReadService, RfqAwardReadService>();
         services.AddScoped<IRfqAwardService, RfqAwardService>();
+        services.AddScoped<IEmailService, EmailService>();
 
         return services;
     }

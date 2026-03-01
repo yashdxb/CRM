@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -280,7 +280,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
     weakestSignal: string | null;
     weakestState: string | null;
   } | null>(null);
-  protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string }>>([]);
+  protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string; isEditing: boolean }>>([]);
   protected serverWeakestSignal = signal<string | null>(null);
   protected serverWeakestState = signal<string | null>(null);
   protected scoreBreakdown = signal<LeadScoreBreakdownItem[]>([]);
@@ -337,11 +337,14 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected readonly router = inject(Router);
   private readonly crmEvents = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly currentUserId = readUserId();
 
   private editingId: string | null = null;
   private leadDataWeights: LeadDataWeight[] = [];
   private pendingSavePayload: SaveLeadRequest | null = null;
   private pendingSaveIsEdit = false;
+  private localEditingState = false;
+  private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
@@ -380,9 +383,34 @@ export class LeadFormPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearEditingIdleTimer();
     if (this.editingId) {
+      this.crmEvents.setRecordEditingState('lead', this.editingId, false);
       this.crmEvents.leaveRecordPresence('lead', this.editingId);
     }
+  }
+
+  @HostListener('input')
+  @HostListener('change')
+  protected onCollaborativeEditingActivity(): void {
+    if (!this.editingId || !this.isEditMode()) {
+      return;
+    }
+
+    if (!this.localEditingState) {
+      this.localEditingState = true;
+      this.crmEvents.setRecordEditingState('lead', this.editingId, true);
+    }
+
+    this.clearEditingIdleTimer();
+    this.editingIdleTimer = setTimeout(() => {
+      if (!this.editingId) {
+        return;
+      }
+
+      this.localEditingState = false;
+      this.crmEvents.setRecordEditingState('lead', this.editingId, false);
+    }, 8000);
   }
 
   protected isEditMode() {
@@ -2643,7 +2671,8 @@ export class LeadFormPage implements OnInit, OnDestroy {
               const value = item as Record<string, unknown>;
               return {
                 userId: String(value['userId'] ?? ''),
-                displayName: String(value['displayName'] ?? 'User')
+                displayName: String(value['displayName'] ?? 'User'),
+                isEditing: !!value['isEditing']
               };
             })
             .filter((item) => !!item.userId);
@@ -2655,6 +2684,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
           const userId = String(event.payload['userId'] ?? '');
           const displayName = String(event.payload['displayName'] ?? 'User');
           const action = String(event.payload['action'] ?? '').toLowerCase();
+          const isEditing = !!event.payload['isEditing'];
           if (!userId) {
             return;
           }
@@ -2662,16 +2692,81 @@ export class LeadFormPage implements OnInit, OnDestroy {
           this.presenceUsers.update((users) => {
             if (action === 'joined') {
               if (users.some((user) => user.userId === userId)) {
-                return users;
+                return users.map((user) => user.userId === userId ? { ...user, displayName, isEditing } : user);
               }
-              return [...users, { userId, displayName }];
+              return [...users, { userId, displayName, isEditing }];
             }
             if (action === 'left') {
               return users.filter((user) => user.userId !== userId);
+            }
+            if (action === 'editing_started' || action === 'editing_stopped') {
+              const nextEditingState = action === 'editing_started' ? true : isEditing;
+              if (users.some((user) => user.userId === userId)) {
+                return users.map((user) => user.userId === userId ? { ...user, displayName, isEditing: nextEditingState } : user);
+              }
+
+              return [...users, { userId, displayName, isEditing: nextEditingState }];
             }
             return users;
           });
         }
       });
+  }
+
+  protected visiblePresenceUsers(): Array<{ userId: string; displayName: string; isEditing: boolean }> {
+    return this.presenceUsers().filter((viewer) => !this.isCurrentUser(viewer.userId));
+  }
+
+  protected activeEditors(): Array<{ userId: string; displayName: string; isEditing: boolean }> {
+    return this.visiblePresenceUsers().filter((viewer) => viewer.isEditing);
+  }
+
+  protected viewingPresenceSummary(): string {
+    const viewers = this.visiblePresenceUsers();
+    if (!viewers.length) {
+      return '';
+    }
+
+    if (viewers.length === 1) {
+      return `${viewers[0].displayName} is viewing this record.`;
+    }
+
+    if (viewers.length === 2) {
+      return `${viewers[0].displayName} and ${viewers[1].displayName} are viewing this record.`;
+    }
+
+    return `${viewers[0].displayName} and ${viewers.length - 1} others are viewing this record.`;
+  }
+
+  protected editingPresenceSummary(): string {
+    const editors = this.activeEditors();
+    if (!editors.length) {
+      return '';
+    }
+
+    if (editors.length === 1) {
+      return `${editors[0].displayName} is editing this record now.`;
+    }
+
+    if (editors.length === 2) {
+      return `${editors[0].displayName} and ${editors[1].displayName} are editing this record now.`;
+    }
+
+    return `${editors[0].displayName} and ${editors.length - 1} others are editing this record now.`;
+  }
+
+  private clearEditingIdleTimer(): void {
+    if (this.editingIdleTimer) {
+      clearTimeout(this.editingIdleTimer);
+      this.editingIdleTimer = null;
+    }
+  }
+
+  private isCurrentUser(userId: string): boolean {
+    if (!this.currentUserId || !userId) {
+      return false;
+    }
+
+    return userId.toLowerCase() === this.currentUserId.toLowerCase();
   }
 }
