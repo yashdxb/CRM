@@ -56,6 +56,10 @@ public class TenantResolutionMiddleware
         var tenantKey = context.Request.Headers[TenantHeader].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(tenantKey))
         {
+            tenantKey = context.Request.Query["tenantKey"].FirstOrDefault();
+        }
+        if (string.IsNullOrWhiteSpace(tenantKey))
+        {
             tenantKey = GetTenantFromHost(host);
         }
 

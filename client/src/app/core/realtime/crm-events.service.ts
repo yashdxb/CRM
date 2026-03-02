@@ -53,13 +53,18 @@ export class CrmEventsService {
 
     const tenantKey = getTenantKey();
     const hostKey = typeof window !== 'undefined' ? resolveTenantKeyFromHost(window.location.hostname) : null;
+    const resolvedTenantKey = tenantKey && !(tenantKey === 'default' && hostKey === null) ? tenantKey : null;
     const headers: Record<string, string> = {};
-    if (tenantKey && !(tenantKey === 'default' && hostKey === null)) {
-      headers['X-Tenant-Key'] = tenantKey;
+    if (resolvedTenantKey) {
+      headers['X-Tenant-Key'] = resolvedTenantKey;
     }
 
+    const hubUrl = resolvedTenantKey
+      ? `${environment.apiUrl}/api/hubs/crm-events?tenantKey=${encodeURIComponent(resolvedTenantKey)}`
+      : `${environment.apiUrl}/api/hubs/crm-events`;
+
     this.connection = new HubConnectionBuilder()
-      .withUrl(`${environment.apiUrl}/api/hubs/crm-events`, {
+      .withUrl(hubUrl, {
         accessTokenFactory: () => readTokenContext()?.token ?? '',
         withCredentials: false,
         headers
