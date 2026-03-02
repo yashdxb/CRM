@@ -96,10 +96,6 @@ export class CrmEventsService {
     console.debug('[CrmEvents] joinRecordPresence called:', { entityType, recordId, key });
 
     void this.ensureFeatureFlagsLoaded(true).then(() => {
-      console.debug('[CrmEvents] Feature flags loaded for presence:', {
-        recordPresenceEnabled: this.isFeatureEnabled('realtime.recordPresence'),
-        allFlags: this.featureFlags
-      });
       this.flushPendingPresence();
     });
   }
@@ -107,14 +103,6 @@ export class CrmEventsService {
   leaveRecordPresence(entityType: string, recordId: string) {
     const key = `${entityType.toLowerCase()}:${recordId}`;
     this.pendingPresence.delete(key);
-
-    if (!this.featureFlagsLoaded) {
-      return;
-    }
-
-    if (!this.isFeatureEnabled('realtime.recordPresence')) {
-      return;
-    }
 
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       return;
@@ -126,14 +114,6 @@ export class CrmEventsService {
   }
 
   setRecordEditingState(entityType: string, recordId: string, isEditing: boolean) {
-    if (!this.featureFlagsLoaded) {
-      return;
-    }
-
-    if (!this.isFeatureEnabled('realtime.recordPresence')) {
-      return;
-    }
-
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       return;
     }
@@ -249,14 +229,8 @@ export class CrmEventsService {
     console.debug('[CrmEvents] flushPendingPresence called:', {
       pendingCount: this.pendingPresence.size,
       pendingKeys: [...this.pendingPresence.keys()],
-      featureEnabled: this.isFeatureEnabled('realtime.recordPresence'),
       connectionState: this.connection?.state ?? 'null'
     });
-
-    if (!this.isFeatureEnabled('realtime.recordPresence')) {
-      console.debug('[CrmEvents] flushPendingPresence: feature disabled, returning');
-      return;
-    }
 
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       console.debug('[CrmEvents] flushPendingPresence: connection not ready, returning');
