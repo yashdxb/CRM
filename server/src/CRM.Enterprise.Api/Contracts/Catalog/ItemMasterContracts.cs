@@ -6,6 +6,7 @@ public sealed record ItemMasterSearchResponse(
 );
 
 public sealed record ItemMasterUpsertRequest(
+    string ItemType,
     string Sku,
     string Name,
     string? Description,

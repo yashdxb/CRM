@@ -1,5 +1,6 @@
 export interface ItemMaster {
   id: string;
+  itemType: 'Product' | 'Service';
   sku: string;
   name: string;
   description?: string | null;
@@ -12,6 +13,7 @@ export interface ItemMaster {
 
 export interface ItemMasterSearchRequest {
   search?: string;
+  itemType?: 'Product' | 'Service';
   category?: string;
   isActive?: boolean;
   page?: number;
@@ -24,6 +26,7 @@ export interface ItemMasterSearchResponse {
 }
 
 export interface ItemMasterUpsertRequest {
+  itemType: 'Product' | 'Service';
   sku: string;
   name: string;
   description?: string | null;

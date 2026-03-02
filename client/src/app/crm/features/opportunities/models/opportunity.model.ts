@@ -200,6 +200,7 @@ export interface PriceListListItem {
 
 export interface ItemMasterListItem {
   id: string;
+  itemType: 'Product' | 'Service';
   sku: string;
   name: string;
   description?: string | null;

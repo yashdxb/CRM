@@ -4,10 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { TableLazyLoadEvent, TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
+import { Router } from '@angular/router';
 import { ItemMasterDataService } from '../../../catalog/services/item-master-data.service';
-import { ItemMaster, ItemMasterUpsertRequest } from '../../../catalog/models/item-master.model';
+import { ItemMaster } from '../../../catalog/models/item-master.model';
 import { BreadcrumbsComponent } from '../../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../../core/app-toast.service';
 
@@ -20,7 +20,6 @@ import { AppToastService } from '../../../../../core/app-toast.service';
     TableModule,
     ButtonModule,
     InputTextModule,
-    DialogModule,
     SelectModule,
     BreadcrumbsComponent
   ],
@@ -30,12 +29,19 @@ import { AppToastService } from '../../../../../core/app-toast.service';
 export class ItemMasterComponent implements OnInit {
   private itemMasterService = inject(ItemMasterDataService);
   private toastService = inject(AppToastService);
+  private router = inject(Router);
   items: ItemMaster[] = [];
   loading = true;
   totalRecords = 0;
   searchValue = '';
+  itemTypeFilter: 'Product' | 'Service' | 'all' = 'all';
   categoryFilter: string | null = null;
   statusFilter: 'active' | 'inactive' | 'all' = 'all';
+  readonly itemTypeOptions = [
+    { label: 'All types', value: 'all' },
+    { label: 'Product', value: 'Product' },
+    { label: 'Service', value: 'Service' }
+  ];
   readonly statusOptions = [
     { label: 'All statuses', value: 'all' },
     { label: 'Active', value: 'active' },
@@ -44,10 +50,14 @@ export class ItemMasterComponent implements OnInit {
   categoryOptions: Array<{ label: string; value: string | null }> = [{ label: 'All categories', value: null }];
   rows = 10;
   first = 0;
-  dialogVisible = false;
-  dialogSubmitting = false;
-  editingId: string | null = null;
-  form: ItemMasterUpsertRequest = this.createEmptyForm();
+
+  get activeCount(): number {
+    return this.items.filter(item => item.isActive).length;
+  }
+
+  get inactiveCount(): number {
+    return this.items.filter(item => !item.isActive).length;
+  }
 
   ngOnInit(): void {
     this.loadCategories();
@@ -69,67 +79,18 @@ export class ItemMasterComponent implements OnInit {
 
   clearFilters() {
     this.searchValue = '';
+    this.itemTypeFilter = 'all';
     this.categoryFilter = null;
     this.statusFilter = 'all';
     this.applyFilters();
   }
 
-  openCreateDialog() {
-    this.editingId = null;
-    this.form = this.createEmptyForm();
-    this.dialogVisible = true;
+  openCreatePage() {
+    this.router.navigate(['/app/catalog/new']);
   }
 
-  openEditDialog(item: ItemMaster) {
-    this.editingId = item.id;
-    this.form = {
-      sku: item.sku,
-      name: item.name,
-      description: item.description ?? '',
-      categoryName: item.categoryName ?? '',
-      defaultUom: item.defaultUom ?? '',
-      isActive: item.isActive
-    };
-    this.dialogVisible = true;
-  }
-
-  saveDialog() {
-    if (!this.form.sku.trim() || !this.form.name.trim()) {
-      this.toastService.show('error', 'SKU and name are required.', 2600);
-      return;
-    }
-
-    this.dialogSubmitting = true;
-    const payload: ItemMasterUpsertRequest = {
-      sku: this.form.sku.trim(),
-      name: this.form.name.trim(),
-      description: this.form.description?.trim() || null,
-      categoryName: this.form.categoryName?.trim() || null,
-      defaultUom: this.form.defaultUom?.trim() || null,
-      isActive: this.form.isActive
-    };
-
-    const request$ = this.editingId
-      ? this.itemMasterService.update(this.editingId, payload)
-      : this.itemMasterService.create(payload);
-
-    request$.subscribe({
-      next: () => {
-        if (!this.editingId) {
-          this.first = 0;
-        }
-        this.dialogSubmitting = false;
-        this.dialogVisible = false;
-        this.toastService.show('success', this.editingId ? 'Item updated.' : 'Item created.', 2200);
-        this.loadCategories();
-        this.loadItems(this.first, this.rows);
-      },
-      error: (error) => {
-        this.dialogSubmitting = false;
-        const message = error?.error?.message || 'Unable to save item.';
-        this.toastService.show('error', message, 3200);
-      }
-    });
+  openEditPage(item: ItemMaster) {
+    this.router.navigate(['/app/catalog', item.id, 'edit']);
   }
 
   toggleActive(item: ItemMaster) {
@@ -145,6 +106,10 @@ export class ItemMasterComponent implements OnInit {
   }
 
   archive(item: ItemMaster) {
+    if (!confirm(`Archive ${item.name}?`)) {
+      return;
+    }
+
     this.itemMasterService.delete(item.id).subscribe({
       next: () => {
         this.toastService.show('success', `${item.name} archived.`, 2200);
@@ -188,11 +153,13 @@ export class ItemMasterComponent implements OnInit {
   private loadItems(first: number, pageSize: number) {
     this.loading = true;
     const page = Math.floor(first / pageSize) + 1;
+    const itemType = this.itemTypeFilter === 'all' ? undefined : this.itemTypeFilter;
     const isActive = this.statusFilter === 'all' ? undefined : this.statusFilter === 'active';
     this.itemMasterService.search({
       page,
       pageSize,
       search: this.searchValue.trim() || undefined,
+      itemType,
       category: this.categoryFilter ?? undefined,
       isActive
     }).subscribe({
@@ -209,14 +176,4 @@ export class ItemMasterComponent implements OnInit {
     });
   }
 
-  private createEmptyForm(): ItemMasterUpsertRequest {
-    return {
-      sku: '',
-      name: '',
-      description: null,
-      categoryName: null,
-      defaultUom: null,
-      isActive: true
-    };
-  }
 }

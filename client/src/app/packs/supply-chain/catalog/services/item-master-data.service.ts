@@ -13,6 +13,7 @@ export class ItemMasterDataService {
   search(request: ItemMasterSearchRequest): Observable<ItemMasterSearchResponse> {
     let params = new HttpParams();
     if (request.search) params = params.set('search', request.search);
+    if (request.itemType) params = params.set('itemType', request.itemType);
     if (request.category) params = params.set('category', request.category);
     if (request.isActive !== undefined) params = params.set('isActive', request.isActive);
     if (request.page) params = params.set('page', request.page);

@@ -2,6 +2,7 @@ namespace CRM.Enterprise.Application.Catalog;
 
 public sealed record ItemMasterDto(
     Guid Id,
+    string ItemType,
     string Sku,
     string Name,
     string? Description,
@@ -14,6 +15,7 @@ public sealed record ItemMasterDto(
 
 public sealed record ItemMasterSearchRequest(
     string? Search,
+    string? ItemType,
     string? Category,
     bool? IsActive,
     int Page,
@@ -26,6 +28,7 @@ public sealed record ItemMasterSearchResponse(
 );
 
 public sealed record ItemMasterUpsertRequest(
+    string ItemType,
     string Sku,
     string Name,
     string? Description,

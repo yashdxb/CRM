@@ -240,6 +240,40 @@ export const routes: Routes = [
           import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
       },
       {
+        path: 'catalog',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Product & Service Catalog', icon: 'pi-tags' },
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/item-master/item-master.component').then((m) => m.ItemMasterComponent)
+          },
+          {
+            path: 'new',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'New Item' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/item-master/item-master-form.page').then((m) => m.ItemMasterFormPage)
+          },
+          {
+            path: ':id/edit',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Edit Item' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/item-master/item-master-form.page').then((m) => m.ItemMasterFormPage)
+          },
+          {
+            path: 'price-books',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Price Books' },
+            loadComponent: () =>
+              import('./packs/supply-chain/features/catalog/pricing/pricing-rates.component').then((m) => m.PricingRatesComponent)
+          }
+        ]
+      },
+      {
         path: 'marketing/campaigns',
         canActivate: [roleGuard, tenantFeatureGuard],
         data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Campaigns', icon: 'pi-megaphone' },

@@ -1334,6 +1334,50 @@
   color: rgba(71, 85, 105, 0.85);
 }
 
+.quote-item-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.quote-item-option__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.quote-item-type-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+
+.quote-item-type-pill.product {
+  color: #1d4ed8;
+  background: #dbeafe;
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.quote-item-type-pill.service {
+  color: #7c3aed;
+  background: #ede9fe;
+  border-color: rgba(168, 85, 247, 0.35);
+}
+
+.quote-item-type-pill.inactive {
+  color: #7f1d1d;
+  background: #fee2e2;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
 .quote-summary {
   margin-top: 0.75rem;
   display: flex;

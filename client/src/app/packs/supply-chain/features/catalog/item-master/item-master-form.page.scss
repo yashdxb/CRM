@@ -1,0 +1,111 @@
+@use '../../../../../shared/form-page-styles' as form;
+@use '../../../../../../styles/design-tokens' as *;
+
+:host {
+  display: block;
+  min-height: 100%;
+}
+
+.item-form-page {
+  @include form.form-page-base;
+}
+
+.form-header {
+  @include form.form-page-header;
+
+  .header-content {
+    display: grid;
+    gap: $space-3;
+  }
+
+  .header-title {
+    @include form.form-header-title;
+  }
+}
+
+.back-link {
+  @include form.form-back-link;
+}
+
+.form-body {
+  padding: $space-4 0;
+}
+
+.item-form {
+  display: grid;
+  gap: $space-4;
+}
+
+.form-section {
+  @include form.form-section;
+}
+
+.section-title {
+  @include form.section-title;
+}
+
+.form-grid {
+  @include form.form-grid;
+}
+
+.field {
+  @include form.form-field;
+
+  label {
+    @include form.form-label;
+
+    .required {
+      color: $danger;
+    }
+  }
+
+  input,
+  textarea,
+  :host ::ng-deep .p-select {
+    @include form.premium-input;
+
+    &:hover {
+      @include form.premium-input-hover;
+    }
+
+    &:focus,
+    &:focus-visible {
+      @include form.premium-input-focus;
+    }
+  }
+}
+
+.select-option {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+}
+
+.select-placeholder {
+  color: $gray-500;
+}
+
+.field-wide {
+  grid-column: 1 / -1;
+}
+
+.loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  color: $gray-500;
+  font-weight: 600;
+}
+
+.form-actions {
+  @include form.form-actions;
+
+  .btn-primary {
+    @include form.button-primary;
+  }
+
+  .btn-ghost {
+    @include form.button-ghost;
+  }
+}

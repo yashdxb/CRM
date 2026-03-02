@@ -727,7 +727,30 @@
                     placeholder="Item"
                     (ngModelChange)="onQuoteItemChanged(i)"
                     styleClass="w-full"
-                  ></p-select>
+                  >
+                    <ng-template pTemplate="item" let-option>
+                      <div class="quote-item-option">
+                        <span>{{ option.label }}</span>
+                        <span class="quote-item-option__badges">
+                          <span class="quote-item-type-pill" [ngClass]="option.itemType === 'Service' ? 'service' : 'product'">
+                            {{ option.itemType || 'Product' }}
+                          </span>
+                          <span class="quote-item-type-pill inactive" *ngIf="option.inactive">Inactive</span>
+                        </span>
+                      </div>
+                    </ng-template>
+                    <ng-template pTemplate="value" let-option>
+                      <div class="quote-item-option" *ngIf="option">
+                        <span>{{ option.label }}</span>
+                        <span class="quote-item-option__badges">
+                          <span class="quote-item-type-pill" [ngClass]="option.itemType === 'Service' ? 'service' : 'product'">
+                            {{ option.itemType || 'Product' }}
+                          </span>
+                        </span>
+                      </div>
+                      <span class="select-placeholder" *ngIf="!option">Item</span>
+                    </ng-template>
+                  </p-select>
                   <input
                     pInputText
                     [(ngModel)]="line.description"

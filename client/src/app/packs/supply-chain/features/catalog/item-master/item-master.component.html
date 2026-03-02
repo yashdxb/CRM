@@ -8,8 +8,23 @@
           <p class="page-subtitle">Manage product metadata used by CPQ quotes and price lists.</p>
         </div>
         <div class="hero-actions">
-          <button pButton type="button" icon="pi pi-plus" label="Add item" (click)="openCreateDialog()"></button>
+          <button pButton type="button" icon="pi pi-plus" label="Add item" (click)="openCreatePage()"></button>
         </div>
+      </div>
+    </section>
+
+    <section class="summary-strip">
+      <div class="summary-pill">
+        <span class="pill-label">Total</span>
+        <strong>{{ totalRecords }}</strong>
+      </div>
+      <div class="summary-pill">
+        <span class="pill-label">Active</span>
+        <strong>{{ activeCount }}</strong>
+      </div>
+      <div class="summary-pill">
+        <span class="pill-label">Inactive</span>
+        <strong>{{ inactiveCount }}</strong>
       </div>
     </section>
 
@@ -29,6 +44,14 @@
               (keyup.enter)="applyFilters()"
             />
           </span>
+          <p-select
+            [options]="itemTypeOptions"
+            [(ngModel)]="itemTypeFilter"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Type"
+            styleClass="w-12rem"
+          ></p-select>
           <p-select
             [options]="categoryOptions"
             [(ngModel)]="categoryFilter"
@@ -64,6 +87,7 @@
         >
           <ng-template pTemplate="header">
             <tr>
+              <th>Type</th>
               <th>SKU</th>
               <th>Name</th>
               <th>Category</th>
@@ -75,6 +99,11 @@
           </ng-template>
           <ng-template pTemplate="body" let-item>
             <tr>
+              <td>
+                <span class="type-pill" [ngClass]="item.itemType === 'Service' ? 'service' : 'product'">
+                  {{ item.itemType }}
+                </span>
+              </td>
               <td>{{ item.sku }}</td>
               <td>{{ item.name }}</td>
               <td>{{ item.categoryName || '—' }}</td>
@@ -87,7 +116,7 @@
               </td>
               <td class="actions-col">
                 <div class="row-actions">
-                  <button pButton type="button" icon="pi pi-pencil" text rounded (click)="openEditDialog(item)"></button>
+                  <button pButton type="button" icon="pi pi-pencil" text rounded (click)="openEditPage(item)"></button>
                   <button
                     pButton
                     type="button"
@@ -104,7 +133,7 @@
           </ng-template>
           <ng-template pTemplate="emptymessage">
             <tr>
-              <td colspan="7" class="text-center">No catalog items found.</td>
+              <td colspan="8" class="text-center">No catalog items found.</td>
             </tr>
           </ng-template>
         </p-table>
@@ -112,52 +141,3 @@
     </section>
   </div>
 </div>
-
-<p-dialog
-  [header]="editingId ? 'Edit Item' : 'Create Item'"
-  [(visible)]="dialogVisible"
-  [modal]="true"
-  [draggable]="false"
-  [resizable]="false"
-  [style]="{ width: '42rem', maxWidth: '96vw' }"
->
-  <div class="item-form">
-    <div class="form-grid">
-      <div class="field">
-        <label for="itemSku">SKU</label>
-        <input id="itemSku" pInputText [(ngModel)]="form.sku" name="itemSku" maxlength="60" />
-      </div>
-      <div class="field">
-        <label for="itemName">Name</label>
-        <input id="itemName" pInputText [(ngModel)]="form.name" name="itemName" maxlength="200" />
-      </div>
-      <div class="field">
-        <label for="itemCategory">Category</label>
-        <input id="itemCategory" pInputText [(ngModel)]="form.categoryName" name="itemCategory" maxlength="160" />
-      </div>
-      <div class="field">
-        <label for="itemUom">Default UOM</label>
-        <input id="itemUom" pInputText [(ngModel)]="form.defaultUom" name="itemUom" maxlength="40" />
-      </div>
-      <div class="field field-wide">
-        <label for="itemDescription">Description</label>
-        <input id="itemDescription" pInputText [(ngModel)]="form.description" name="itemDescription" maxlength="800" />
-      </div>
-      <div class="field">
-        <label for="itemStatus">Status</label>
-        <p-select
-          id="itemStatus"
-          [options]="[{ label: 'Active', value: true }, { label: 'Inactive', value: false }]"
-          optionLabel="label"
-          optionValue="value"
-          [(ngModel)]="form.isActive"
-          name="itemStatus"
-        ></p-select>
-      </div>
-    </div>
-    <div class="dialog-actions">
-      <button pButton type="button" label="Cancel" text (click)="dialogVisible = false"></button>
-      <button pButton type="button" label="Save" [loading]="dialogSubmitting" (click)="saveDialog()"></button>
-    </div>
-  </div>
-</p-dialog>

@@ -34,7 +34,7 @@
             role="menuitem"
           >
             <span class="nav__pill" aria-hidden="true"></span>
-            <i class="pi" [ngClass]="link.icon"></i>
+            <i class="pi" [ngClass]="link.icon" [style.color]="resolveIconColor(link)"></i>
             <div class="nav__text">
               <span class="nav__label">{{ link.label }}</span>
             </div>
@@ -65,7 +65,7 @@
                 role="menuitem"
               >
                 <span class="dot" aria-hidden="true"></span>
-                <i class="pi nav__icon" [ngClass]="child.icon" [style.color]="child.iconColor"></i>
+                <i class="pi nav__icon" [ngClass]="child.icon" [style.color]="resolveIconColor(child)"></i>
                 <div class="nav__text">
                   <span class="nav__label">{{ child.label }}</span>
                 </div>
@@ -97,7 +97,7 @@
                   role="menuitem"
                 >
                   <span class="dot" aria-hidden="true"></span>
-                  <i class="pi nav__icon" [ngClass]="grandChild.icon"></i>
+                  <i class="pi nav__icon" [ngClass]="grandChild.icon" [style.color]="resolveIconColor(grandChild)"></i>
                   <div class="nav__text">
                     <span class="nav__label">{{ grandChild.label }}</span>
                   </div>

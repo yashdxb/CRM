@@ -20,6 +20,7 @@ public sealed class ItemMasterController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<CRM.Enterprise.Api.Contracts.Catalog.ItemMasterSearchResponse>> GetAll(
         [FromQuery] string? search,
+        [FromQuery] string? itemType,
         [FromQuery] string? category,
         [FromQuery] bool? isActive,
         [FromQuery] int page = 1,
@@ -27,7 +28,7 @@ public sealed class ItemMasterController : ControllerBase
         CancellationToken cancellationToken = default)
     {
         var result = await _itemMasterService.SearchAsync(
-            new CRM.Enterprise.Application.Catalog.ItemMasterSearchRequest(search, category, isActive, page, pageSize),
+            new CRM.Enterprise.Application.Catalog.ItemMasterSearchRequest(search, itemType, category, isActive, page, pageSize),
             cancellationToken);
 
         return Ok(new CRM.Enterprise.Api.Contracts.Catalog.ItemMasterSearchResponse(result.Items.Select(MapItem).ToList(), result.Total));
@@ -110,6 +111,7 @@ public sealed class ItemMasterController : ControllerBase
     private static ItemMasterListItem MapItem(CRM.Enterprise.Application.Catalog.ItemMasterDto item)
         => new(
             item.Id,
+            item.ItemType,
             item.Sku,
             item.Name,
             item.Description,
@@ -121,6 +123,7 @@ public sealed class ItemMasterController : ControllerBase
 
     private static CRM.Enterprise.Application.Catalog.ItemMasterUpsertRequest MapRequest(CRM.Enterprise.Api.Contracts.Catalog.ItemMasterUpsertRequest request)
         => new(
+            request.ItemType,
             request.Sku,
             request.Name,
             request.Description,

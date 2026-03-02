@@ -2,6 +2,7 @@ namespace CRM.Enterprise.Api.Contracts.Catalog;
 
 public sealed record ItemMasterListItem(
     Guid Id,
+    string ItemType,
     string Sku,
     string Name,
     string? Description,

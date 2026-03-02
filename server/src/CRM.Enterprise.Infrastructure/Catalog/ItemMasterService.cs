@@ -33,6 +33,12 @@ public sealed class ItemMasterService : IItemMasterService
                 (item.CategoryName != null && item.CategoryName.ToLower().Contains(term)));
         }
 
+        if (!string.IsNullOrWhiteSpace(request.ItemType))
+        {
+            var itemType = request.ItemType.Trim().ToLowerInvariant();
+            query = query.Where(item => item.ItemType.ToLower() == itemType);
+        }
+
         if (!string.IsNullOrWhiteSpace(request.Category))
         {
             var category = request.Category.Trim().ToLowerInvariant();
@@ -49,7 +55,7 @@ public sealed class ItemMasterService : IItemMasterService
             .OrderBy(item => item.Name)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(item => new ItemMasterDto(item.Id, item.Sku, item.Name, item.Description, item.CategoryName, item.DefaultUom, item.IsActive, null, null))
+            .Select(item => new ItemMasterDto(item.Id, item.ItemType, item.Sku, item.Name, item.Description, item.CategoryName, item.DefaultUom, item.IsActive, null, null))
             .ToListAsync(cancellationToken);
 
         await PopulateDefaultPricesAsync(items, cancellationToken);
@@ -61,7 +67,7 @@ public sealed class ItemMasterService : IItemMasterService
         var entity = await _dbContext.ItemMasters
             .AsNoTracking()
             .Where(item => item.Id == id && !item.IsDeleted)
-            .Select(item => new ItemMasterDto(item.Id, item.Sku, item.Name, item.Description, item.CategoryName, item.DefaultUom, item.IsActive, null, null))
+            .Select(item => new ItemMasterDto(item.Id, item.ItemType, item.Sku, item.Name, item.Description, item.CategoryName, item.DefaultUom, item.IsActive, null, null))
             .FirstOrDefaultAsync(cancellationToken);
 
         if (entity is null)
@@ -87,6 +93,7 @@ public sealed class ItemMasterService : IItemMasterService
 
         var entity = new ItemMaster
         {
+            ItemType = NormalizeItemType(request.ItemType),
             Sku = normalizedSku,
             Name = request.Name.Trim(),
             Description = NormalizeOptional(request.Description),
@@ -121,6 +128,7 @@ public sealed class ItemMasterService : IItemMasterService
         }
 
         entity.Sku = normalizedSku;
+        entity.ItemType = NormalizeItemType(request.ItemType);
         entity.Name = request.Name.Trim();
         entity.Description = NormalizeOptional(request.Description);
         entity.CategoryName = NormalizeOptional(request.CategoryName);
@@ -216,6 +224,16 @@ public sealed class ItemMasterService : IItemMasterService
 
     private static void ValidateRequest(ItemMasterUpsertRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.ItemType))
+        {
+            throw new InvalidOperationException("Item type is required.");
+        }
+
+        if (!IsValidItemType(request.ItemType))
+        {
+            throw new InvalidOperationException("Item type must be Product or Service.");
+        }
+
         if (string.IsNullOrWhiteSpace(request.Sku))
         {
             throw new InvalidOperationException("SKU is required.");
@@ -246,4 +264,11 @@ public sealed class ItemMasterService : IItemMasterService
 
         return value.Trim();
     }
+
+    private static bool IsValidItemType(string itemType)
+        => itemType.Trim().Equals("Product", StringComparison.OrdinalIgnoreCase)
+           || itemType.Trim().Equals("Service", StringComparison.OrdinalIgnoreCase);
+
+    private static string NormalizeItemType(string itemType)
+        => itemType.Trim().Equals("Service", StringComparison.OrdinalIgnoreCase) ? "Service" : "Product";
 }

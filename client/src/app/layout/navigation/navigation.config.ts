@@ -47,6 +47,18 @@ export const NAV_LINKS: NavLink[] = [
     ]
   },
   {
+    label: 'Product & Services',
+    icon: 'pi-tags',
+    path: '/app/catalog',
+    iconColor: '#8b5cf6',
+    permission: PERMISSION_KEYS.opportunitiesView,
+    children: [
+      { label: 'Catalog', icon: 'pi-book', path: '/app/catalog', permission: PERMISSION_KEYS.opportunitiesView, iconColor: '#3b82f6' },
+      { label: 'Add Item', icon: 'pi-plus', path: '/app/catalog/new', permission: PERMISSION_KEYS.opportunitiesManage, iconColor: '#22c55e' },
+      { label: 'Price Books', icon: 'pi-receipt', path: '/app/catalog/price-books', permission: PERMISSION_KEYS.opportunitiesView, iconColor: '#f59e0b' }
+    ]
+  },
+  {
     label: 'Marketing',
     icon: 'pi-megaphone',
     path: '/app/marketing/campaigns',

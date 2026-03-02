@@ -11,6 +11,10 @@ public sealed class ItemMasterConfiguration : IEntityTypeConfiguration<ItemMaste
         builder.HasIndex(i => new { i.TenantId, i.Sku, i.IsDeleted })
             .IsUnique();
 
+        builder.Property(i => i.ItemType)
+            .HasMaxLength(24)
+            .IsRequired();
+
         builder.Property(i => i.Sku)
             .HasMaxLength(60)
             .IsRequired();

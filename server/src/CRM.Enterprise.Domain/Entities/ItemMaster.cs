@@ -4,6 +4,7 @@ namespace CRM.Enterprise.Domain.Entities;
 
 public sealed class ItemMaster : AuditableEntity
 {
+    public string ItemType { get; set; } = "Product";
     public string Sku { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }

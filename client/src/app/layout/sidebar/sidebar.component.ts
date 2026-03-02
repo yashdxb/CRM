@@ -24,12 +24,37 @@ import { KeyboardShortcutsService } from '../../core/keyboard-shortcuts';
   styleUrl: './sidebar.component.scss'
 })
 export class SidebarComponent {
+  private static readonly NAV_ICON_PALETTE = [
+    '#3b82f6',
+    '#22c55e',
+    '#f59e0b',
+    '#a855f7',
+    '#06b6d4',
+    '#ef4444',
+    '#f97316',
+    '#6366f1'
+  ];
+
   protected readonly nav = inject(NavigationService);
   protected readonly themeService = inject(ThemeService);
   protected readonly shortcutsService = inject(KeyboardShortcutsService);
   protected readonly environment = environment;
 
   readonly toggleSidebar = output<void>();
+
+  protected resolveIconColor(link: NavLink): string {
+    if (link.iconColor) {
+      return link.iconColor;
+    }
+
+    const key = `${link.label}|${link.path}|${link.icon}`;
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+      hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+    }
+
+    return SidebarComponent.NAV_ICON_PALETTE[hash % SidebarComponent.NAV_ICON_PALETTE.length];
+  }
 
   handleNavClick(event: Event, link: NavLink) {
     if (link.children?.length) {

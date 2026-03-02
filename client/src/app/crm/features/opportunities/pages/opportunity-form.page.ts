@@ -48,6 +48,8 @@ import { environment } from '../../../../../environments/environment';
 interface Option<T = string> {
   label: string;
   value: T;
+  itemType?: 'Product' | 'Service';
+  inactive?: boolean;
 }
 
 interface ApprovalRequirementBadge {
@@ -2310,10 +2312,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
     return [
       ...this.itemMasterOptions,
-      {
-        label: `${selected.name} (${selected.sku}) - Inactive`,
-        value: selected.id
-      }
+      this.toItemOption(selected, true)
     ];
   }
 
@@ -2592,10 +2591,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.itemMasterMap = new Map(items.map((item) => [item.id, item]));
         this.itemMasterOptions = activeItems
           .sort((a, b) => a.name.localeCompare(b.name))
-          .map((item) => ({
-            label: `${item.name} (${item.sku})${item.categoryName ? ` · ${item.categoryName}` : ''}`,
-            value: item.id
-          }));
+          .map((item) => this.toItemOption(item));
       },
       error: () => {
         this.itemMasterMap.clear();
@@ -2618,6 +2614,15 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.priceListOptions = [{ label: 'No price list', value: null }];
       }
     });
+  }
+
+  private toItemOption(item: ItemMasterListItem, inactive = false): Option {
+    return {
+      label: `${item.name} (${item.sku})${item.categoryName ? ` · ${item.categoryName}` : ''}`,
+      value: item.id,
+      itemType: item.itemType,
+      inactive
+    };
   }
 
   private loadQuoteWorkspace(opportunityId: string, onSettled?: () => void) {
