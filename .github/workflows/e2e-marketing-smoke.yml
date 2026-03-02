@@ -46,6 +46,7 @@ jobs:
         working-directory: client
         env:
           E2E_BASE_URL: https://www.northedgesystem.com
+          E2E_API_URL: https://crm-enterprise-api-dev-01122345.azurewebsites.net
           E2E_SKIP_SERVER: 'true'
         run: |
           npx playwright test \
