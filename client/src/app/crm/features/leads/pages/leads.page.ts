@@ -23,7 +23,7 @@ import { BulkAction, BulkActionsBarComponent } from '../../../../shared/componen
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { CsvImportJob, CsvImportJobStatusResponse } from '../../../../shared/models/csv-import.model';
 import { ImportJobService } from '../../../../shared/services/import-job.service';
-import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { readTokenContext, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
@@ -83,6 +83,9 @@ export class LeadsPage {
   private readonly toastService = inject(AppToastService);
   private readonly crmEventsService = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly currentUserId = readUserId();
+  private readonly joinedLeadPresenceIds = new Set<string>();
+  private readonly leadPresenceUsersByRecord = signal<Map<string, Array<{ userId: string; displayName: string; isEditing: boolean }>>>(new Map());
   
   protected readonly statusOptions: StatusOption[] = [
     { label: 'All', value: 'all', icon: 'pi-inbox' },
@@ -230,6 +233,11 @@ export class LeadsPage {
     this.crmEventsService.events$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((event) => {
+        if (event.eventType === 'record.presence.snapshot' || event.eventType === 'record.presence.changed') {
+          this.handleLeadPresenceEvent(event.payload ?? null);
+          return;
+        }
+
         if (event.eventType === 'import.job.progress') {
           this.handleImportProgressEvent(event.payload ?? null);
           return;
@@ -253,6 +261,14 @@ export class LeadsPage {
           this.load();
         }
       });
+
+    this.destroyRef.onDestroy(() => {
+      for (const leadId of this.joinedLeadPresenceIds) {
+        this.crmEventsService.leaveRecordPresence('lead', leadId);
+      }
+      this.joinedLeadPresenceIds.clear();
+      this.leadPresenceUsersByRecord.set(new Map());
+    });
   }
 
   // Get funnel width percentage based on total leads
@@ -287,10 +303,134 @@ export class LeadsPage {
       })
       .subscribe((res) => {
         this.leads.set(res.items);
+        this.syncLeadPresenceSubscriptions(res.items.map((lead) => lead.id));
         this.total.set(res.total);
         this.loading.set(false);
         this.selectedIds.set([]);
       });
+  }
+
+  protected leadPresenceCount(leadId: string): number {
+    const users = this.leadPresenceUsersByRecord().get(leadId) ?? [];
+    return users.filter((user) => user.userId !== this.currentUserId).length;
+  }
+
+  protected leadPresenceEditingCount(leadId: string): number {
+    const users = this.leadPresenceUsersByRecord().get(leadId) ?? [];
+    return users.filter((user) => user.userId !== this.currentUserId && user.isEditing).length;
+  }
+
+  protected leadPresenceTooltip(leadId: string): string {
+    const users = (this.leadPresenceUsersByRecord().get(leadId) ?? []).filter((user) => user.userId !== this.currentUserId);
+    if (!users.length) {
+      return '';
+    }
+
+    return users
+      .map((user) => user.isEditing ? `${user.displayName} (editing)` : user.displayName)
+      .join(', ');
+  }
+
+  private syncLeadPresenceSubscriptions(leadIds: string[]): void {
+    const nextIds = new Set(leadIds);
+
+    for (const currentId of [...this.joinedLeadPresenceIds]) {
+      if (!nextIds.has(currentId)) {
+        this.crmEventsService.leaveRecordPresence('lead', currentId);
+        this.joinedLeadPresenceIds.delete(currentId);
+        this.leadPresenceUsersByRecord.update((map) => {
+          const next = new Map(map);
+          next.delete(currentId);
+          return next;
+        });
+      }
+    }
+
+    for (const leadId of nextIds) {
+      if (this.joinedLeadPresenceIds.has(leadId)) {
+        continue;
+      }
+      this.crmEventsService.joinRecordPresence('lead', leadId);
+      this.joinedLeadPresenceIds.add(leadId);
+    }
+  }
+
+  private handleLeadPresenceEvent(payload: Record<string, unknown> | null): void {
+    if (!payload) {
+      return;
+    }
+
+    const entityType = String(payload['entityType'] ?? '').toLowerCase();
+    if (entityType !== 'lead') {
+      return;
+    }
+
+    const recordId = String(payload['recordId'] ?? '');
+    if (!recordId || !this.joinedLeadPresenceIds.has(recordId)) {
+      return;
+    }
+
+    if (Array.isArray(payload['users'])) {
+      const users = (payload['users'] as unknown[])
+        .map((item) => {
+          const value = item as Record<string, unknown>;
+          return {
+            userId: String(value['userId'] ?? ''),
+            displayName: String(value['displayName'] ?? 'User'),
+            isEditing: !!value['isEditing']
+          };
+        })
+        .filter((item) => !!item.userId);
+
+      this.leadPresenceUsersByRecord.update((map) => {
+        const next = new Map(map);
+        next.set(recordId, users);
+        return next;
+      });
+      return;
+    }
+
+    const userId = String(payload['userId'] ?? '');
+    const displayName = String(payload['displayName'] ?? 'User');
+    const action = String(payload['action'] ?? '').toLowerCase();
+    const isEditing = !!payload['isEditing'];
+    if (!userId || !action) {
+      return;
+    }
+
+    this.leadPresenceUsersByRecord.update((map) => {
+      const next = new Map(map);
+      const current = [...(next.get(recordId) ?? [])];
+
+      if (action === 'joined') {
+        const existingIndex = current.findIndex((item) => item.userId === userId);
+        if (existingIndex >= 0) {
+          current[existingIndex] = { ...current[existingIndex], displayName, isEditing };
+        } else {
+          current.push({ userId, displayName, isEditing });
+        }
+        next.set(recordId, current);
+        return next;
+      }
+
+      if (action === 'left') {
+        next.set(recordId, current.filter((item) => item.userId !== userId));
+        return next;
+      }
+
+      if (action === 'editing_started' || action === 'editing_stopped') {
+        const nextEditing = action === 'editing_started' ? true : isEditing;
+        const existingIndex = current.findIndex((item) => item.userId === userId);
+        if (existingIndex >= 0) {
+          current[existingIndex] = { ...current[existingIndex], displayName, isEditing: nextEditing };
+        } else {
+          current.push({ userId, displayName, isEditing: nextEditing });
+        }
+        next.set(recordId, current);
+      }
+
+      return next;
+    });
   }
 
   protected onCreate() {

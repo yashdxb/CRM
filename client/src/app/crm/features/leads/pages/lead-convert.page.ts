@@ -1,4 +1,5 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -15,6 +16,8 @@ import { LeadDataService } from '../services/lead-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 import { QualificationPolicy } from '../../settings/models/workspace-settings.model';
+import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
+import { readUserId } from '../../../../core/auth/token.utils';
 
 @Component({
   selector: 'app-lead-convert-page',
@@ -35,7 +38,7 @@ import { QualificationPolicy } from '../../settings/models/workspace-settings.mo
   templateUrl: './lead-convert.page.html',
   styleUrl: './lead-convert.page.scss'
 })
-export class LeadConvertPage implements OnInit {
+export class LeadConvertPage implements OnInit, OnDestroy {
   protected readonly lead = signal<Lead | null>(null);
   protected readonly saving = signal(false);
   protected readonly form = signal<LeadConversionRequest>({
@@ -57,6 +60,7 @@ export class LeadConvertPage implements OnInit {
     overrideReason: ''
   });
   protected readonly qualificationPolicy = signal<QualificationPolicy>(LeadConvertPage.defaultPolicy());
+  protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string; isEditing: boolean }>>([]);
   protected readonly qualificationDecision = computed(() => this.evaluateQualification());
   protected readonly canConvert = computed(() => {
     const value = this.form();
@@ -74,11 +78,18 @@ export class LeadConvertPage implements OnInit {
   private readonly router = inject(Router);
   private readonly leadData = inject(LeadDataService);
   private readonly workspaceSettings = inject(WorkspaceSettingsService);
+  private readonly crmEvents = inject(CrmEventsService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly currentUserId = readUserId();
 
   private leadId: string | null = null;
+  private localEditingState = false;
 
   ngOnInit() {
     this.leadId = this.route.snapshot.paramMap.get('id');
+    if (this.leadId) {
+      this.initializePresence(this.leadId);
+    }
     this.workspaceSettings.getSettings().subscribe({
       next: (settings) => {
         if (settings?.qualificationPolicy) {
@@ -103,9 +114,17 @@ export class LeadConvertPage implements OnInit {
     }
   }
 
+  ngOnDestroy(): void {
+    this.resetEditingPresence();
+    if (this.leadId) {
+      this.crmEvents.leaveRecordPresence('lead', this.leadId);
+    }
+  }
+
   protected onConvert() {
     if (!this.leadId) return;
     if (!this.canConvert()) return;
+    this.resetEditingPresence();
     const value = this.form();
     const closeDate = value.expectedCloseDate as unknown;
     const expectedCloseDate = closeDate instanceof Date
@@ -126,11 +145,119 @@ export class LeadConvertPage implements OnInit {
   }
 
   protected onCancel() {
+    this.resetEditingPresence();
     this.router.navigate(['/app/leads']);
   }
 
   protected onFormChange() {
     this.form.set({ ...this.form() });
+    this.markEditingPresence();
+  }
+
+  protected visiblePresenceUsers(): Array<{ userId: string; displayName: string; isEditing: boolean }> {
+    return this.presenceUsers().filter((viewer) => viewer.userId !== this.currentUserId);
+  }
+
+  protected presenceSummaryText(): string {
+    const viewers = this.visiblePresenceUsers();
+    if (!viewers.length) {
+      return '';
+    }
+
+    const editors = viewers.filter((viewer) => viewer.isEditing).length;
+    if (editors > 0) {
+      return `${viewers.length} collaborator${viewers.length > 1 ? 's' : ''} viewing • ${editors} editing`;
+    }
+
+    return `${viewers.length} collaborator${viewers.length > 1 ? 's' : ''} viewing`;
+  }
+
+  private initializePresence(recordId: string): void {
+    this.crmEvents.joinRecordPresence('lead', recordId);
+    this.crmEvents.events$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => {
+        if (!event?.payload) {
+          return;
+        }
+
+        const entityType = String(event.payload['entityType'] ?? '').toLowerCase();
+        const payloadRecordId = String(event.payload['recordId'] ?? '');
+        if (entityType !== 'lead' || payloadRecordId !== recordId) {
+          return;
+        }
+
+        if (event.eventType === 'record.presence.snapshot') {
+          const usersRaw = Array.isArray(event.payload['users']) ? event.payload['users'] : [];
+          const users = usersRaw
+            .map((item) => {
+              const value = item as Record<string, unknown>;
+              return {
+                userId: String(value['userId'] ?? ''),
+                displayName: String(value['displayName'] ?? 'User'),
+                isEditing: !!value['isEditing']
+              };
+            })
+            .filter((item) => !!item.userId);
+          this.presenceUsers.set(users);
+          return;
+        }
+
+        if (event.eventType !== 'record.presence.changed') {
+          return;
+        }
+
+        const userId = String(event.payload['userId'] ?? '');
+        const displayName = String(event.payload['displayName'] ?? 'User');
+        const action = String(event.payload['action'] ?? '').toLowerCase();
+        const isEditing = !!event.payload['isEditing'];
+        if (!userId) {
+          return;
+        }
+
+        this.presenceUsers.update((users) => {
+          if (action === 'joined') {
+            if (users.some((user) => user.userId === userId)) {
+              return users.map((user) => user.userId === userId ? { ...user, displayName, isEditing } : user);
+            }
+            return [...users, { userId, displayName, isEditing }];
+          }
+
+          if (action === 'left') {
+            return users.filter((user) => user.userId !== userId);
+          }
+
+          if (action === 'editing_started' || action === 'editing_stopped') {
+            const nextEditingState = action === 'editing_started' ? true : isEditing;
+            if (users.some((user) => user.userId === userId)) {
+              return users.map((user) =>
+                user.userId === userId ? { ...user, displayName, isEditing: nextEditingState } : user
+              );
+            }
+            return [...users, { userId, displayName, isEditing: nextEditingState }];
+          }
+
+          return users;
+        });
+      });
+  }
+
+  private markEditingPresence(): void {
+    if (!this.leadId || this.localEditingState) {
+      return;
+    }
+
+    this.localEditingState = true;
+    this.crmEvents.setRecordEditingState('lead', this.leadId, true);
+  }
+
+  private resetEditingPresence(): void {
+    if (!this.leadId || !this.localEditingState) {
+      return;
+    }
+
+    this.localEditingState = false;
+    this.crmEvents.setRecordEditingState('lead', this.leadId, false);
   }
 
   private setLead(lead: Lead) {

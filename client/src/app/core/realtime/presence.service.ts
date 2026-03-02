@@ -5,9 +5,12 @@ import { environment } from '../../../environments/environment';
 import { readTokenContext, readUserId } from '../auth/token.utils';
 import { getTenantKey, resolveTenantKeyFromHost } from '../tenant/tenant.utils';
 
+export type PresenceConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
 @Injectable({ providedIn: 'root' })
 export class PresenceService {
   private readonly onlineUsersSubject = new BehaviorSubject<Set<string>>(new Set());
+  private readonly connectionStateSubject = new BehaviorSubject<PresenceConnectionState>('disconnected');
   private connection: HubConnection | null = null;
   private localUserId: string | null = null;
 
@@ -17,10 +20,15 @@ export class PresenceService {
     return this.onlineUsersSubject.asObservable();
   }
 
+  get connectionState$() {
+    return this.connectionStateSubject.asObservable();
+  }
+
   connect() {
     const context = readTokenContext();
     const token = context?.token ?? '';
     if (!token) {
+      this.connectionStateSubject.next('disconnected');
       return;
     }
 
@@ -32,6 +40,7 @@ export class PresenceService {
         this.connection.state === HubConnectionState.Connecting ||
         this.connection.state === HubConnectionState.Reconnecting)
     ) {
+      this.connectionStateSubject.next(this.mapHubState(this.connection.state));
       return;
     }
 
@@ -51,6 +60,24 @@ export class PresenceService {
       .withAutomaticReconnect()
       .configureLogging(LogLevel.Error)
       .build();
+
+    this.connection.onreconnecting(() => {
+      this.zone.run(() => {
+        this.connectionStateSubject.next('reconnecting');
+      });
+    });
+
+    this.connection.onreconnected(() => {
+      this.zone.run(() => {
+        this.connectionStateSubject.next('connected');
+      });
+    });
+
+    this.connection.onclose(() => {
+      this.zone.run(() => {
+        this.connectionStateSubject.next('disconnected');
+      });
+    });
 
     this.connection.on('presenceSnapshot', (users: string[]) => {
       this.zone.run(() => {
@@ -82,9 +109,19 @@ export class PresenceService {
       });
     });
 
-    this.connection.start().catch(() => {
-      // Swallow connection errors; UI falls back to server snapshot.
-    });
+    this.connectionStateSubject.next('connecting');
+    this.connection.start()
+      .then(() => {
+        this.zone.run(() => {
+          this.connectionStateSubject.next('connected');
+        });
+      })
+      .catch(() => {
+        this.zone.run(() => {
+          this.connectionStateSubject.next('disconnected');
+        });
+        // Swallow connection errors; UI falls back to server snapshot.
+      });
   }
 
   disconnect() {
@@ -96,5 +133,19 @@ export class PresenceService {
     }
     this.localUserId = null;
     this.onlineUsersSubject.next(new Set());
+    this.connectionStateSubject.next('disconnected');
+  }
+
+  private mapHubState(state: HubConnectionState): PresenceConnectionState {
+    switch (state) {
+      case HubConnectionState.Connected:
+        return 'connected';
+      case HubConnectionState.Connecting:
+        return 'connecting';
+      case HubConnectionState.Reconnecting:
+        return 'reconnecting';
+      default:
+        return 'disconnected';
+    }
   }
 }

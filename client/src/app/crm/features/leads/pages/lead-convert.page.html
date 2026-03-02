@@ -28,6 +28,11 @@
         <span class="status-pill" [attr.data-status]="leadData.status">{{ leadData.status }}</span>
       </div>
 
+      <div class="presence-banner" *ngIf="visiblePresenceUsers().length">
+        <i class="pi" [ngClass]="visiblePresenceUsers()[0]?.isEditing ? 'pi-pencil' : 'pi-eye'"></i>
+        <span>{{ presenceSummaryText() }}</span>
+      </div>
+
       <form class="convert-form" (ngSubmit)="onConvert()">
         <section class="form-section">
           <h2 class="section-title">

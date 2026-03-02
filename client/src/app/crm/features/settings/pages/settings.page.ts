@@ -1,5 +1,6 @@
 import { NgClass, NgFor, NgIf } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -19,7 +20,7 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { AppToastService } from '../../../../core/app-toast.service';
-import { PresenceService } from '../../../../core/realtime/presence.service';
+import { PresenceConnectionState, PresenceService } from '../../../../core/realtime/presence.service';
 import { RolesPage } from './roles.page';
 import { PermissionsPage } from './permissions.page';
 import { SecurityLevelsPage } from './security-levels.page';
@@ -70,6 +71,7 @@ export class SettingsPage {
 
   private readonly dataService = inject(UserAdminDataService);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly toastService = inject(AppToastService);
   private readonly presenceService = inject(PresenceService);
 
@@ -149,6 +151,8 @@ export class SettingsPage {
   private readonly userLocale = navigator.language || 'en-US';
   private readonly currentUserTimeZone = signal('UTC');
   protected readonly onlineUsers = signal<Set<string>>(new Set());
+  protected readonly presenceConnectionState = signal<PresenceConnectionState>('disconnected');
+  private readonly nowTick = signal(Date.now());
   private readonly avatarTones = [
     'avatar-tone-1',
     'avatar-tone-2',
@@ -161,6 +165,7 @@ export class SettingsPage {
   ];
 
   private searchDebounceId: number | null = null;
+  private onlineDurationIntervalId: number | null = null;
   protected readonly activeView = signal<PeopleView>('users');
   protected readonly activeSubmenuItems = computed<PeopleSubmenuItem[]>(() => [
     { id: 'users-directory', label: 'Users', icon: 'pi pi-users' },
@@ -179,8 +184,24 @@ export class SettingsPage {
     this.loadRoles();
     this.loadUsers();
     this.presenceService.connect();
-    this.presenceService.onlineUsers$.subscribe((users) => {
-      this.onlineUsers.set(users);
+    this.presenceService.onlineUsers$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((users) => {
+        this.onlineUsers.set(users);
+      });
+    this.presenceService.connectionState$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((state) => {
+        this.presenceConnectionState.set(state);
+      });
+    this.onlineDurationIntervalId = window.setInterval(() => {
+      this.nowTick.set(Date.now());
+    }, 60000);
+    this.destroyRef.onDestroy(() => {
+      if (this.onlineDurationIntervalId !== null) {
+        window.clearInterval(this.onlineDurationIntervalId);
+        this.onlineDurationIntervalId = null;
+      }
     });
     this.redirectLegacyPeopleAccessRoutes();
     this.syncViewFromUrl();
@@ -262,11 +283,15 @@ export class SettingsPage {
           this.pageSize.set(requestedPageSize);
           this.persistUsersViewState();
           this.resolveCurrentUserTimeZone(response.items);
-          const merged = new Set(this.onlineUsers());
-          response.items
-            .filter((user) => user.isOnline)
-            .forEach((user) => merged.add(user.id));
-          if (merged.size) {
+          const onlineFromApi = new Set(response.items.filter((user) => user.isOnline).map((user) => user.id));
+          const connectionState = this.presenceConnectionState();
+          const hasLivePresence = connectionState === 'connected' || connectionState === 'reconnecting';
+
+          if (!hasLivePresence) {
+            this.onlineUsers.set(onlineFromApi);
+          } else if (onlineFromApi.size) {
+            const merged = new Set(this.onlineUsers());
+            onlineFromApi.forEach((id) => merged.add(id));
             this.onlineUsers.set(merged);
           }
           this.loadingUsers.set(false);
@@ -413,7 +438,16 @@ export class SettingsPage {
   }
 
   protected isOnline(user: UserListItem): boolean {
-    return this.onlineUsers().has(user.id);
+    if (this.onlineUsers().has(user.id)) {
+      return true;
+    }
+
+    const connectionState = this.presenceConnectionState();
+    if (connectionState === 'connected' || connectionState === 'reconnecting') {
+      return false;
+    }
+
+    return !!user.isOnline;
   }
 
   private redirectLegacyPeopleAccessRoutes() {
@@ -555,7 +589,7 @@ export class SettingsPage {
   }
 
   private formatRelativeFromDate(date: Date, prefix: string): string {
-    const deltaMs = Date.now() - date.getTime();
+    const deltaMs = this.nowTick() - date.getTime();
     if (!Number.isFinite(deltaMs) || deltaMs < 0) {
       return '';
     }
@@ -568,7 +602,7 @@ export class SettingsPage {
   }
 
   private formatElapsedDuration(date: Date): string {
-    const deltaMs = Date.now() - date.getTime();
+    const deltaMs = this.nowTick() - date.getTime();
     if (!Number.isFinite(deltaMs) || deltaMs < 0) {
       return '';
     }

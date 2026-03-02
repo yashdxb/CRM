@@ -159,6 +159,15 @@
               <div class="lead-meta">
                 <span class="lead-name">{{ lead.name }}</span>
                 <span class="lead-company">{{ lead.company }}</span>
+                <span
+                  class="lead-presence-chip"
+                  *ngIf="leadPresenceCount(lead.id) > 0"
+                  [pTooltip]="leadPresenceTooltip(lead.id)"
+                  tooltipPosition="top"
+                >
+                  <i class="pi" [ngClass]="leadPresenceEditingCount(lead.id) > 0 ? 'pi-pencil' : 'pi-eye'"></i>
+                  {{ leadPresenceCount(lead.id) }} viewing
+                </span>
               </div>
               <div class="lead-score" [class.high]="displayScore(lead) >= 70" [class.medium]="displayScore(lead) >= 40 && displayScore(lead) < 70" [class.low]="displayScore(lead) < 40">
                 {{ displayScore(lead) }}
@@ -276,6 +285,15 @@
                       <div class="lead-info">
                         <span class="name">{{ lead.name }}</span>
                         <span class="company">{{ lead.company }}</span>
+                        <span
+                          class="lead-presence-chip"
+                          *ngIf="leadPresenceCount(lead.id) > 0"
+                          [pTooltip]="leadPresenceTooltip(lead.id)"
+                          tooltipPosition="top"
+                        >
+                          <i class="pi" [ngClass]="leadPresenceEditingCount(lead.id) > 0 ? 'pi-pencil' : 'pi-eye'"></i>
+                          {{ leadPresenceCount(lead.id) }} viewing
+                        </span>
                         <div class="lead-epistemic">
                           <span
                             class="epistemic-chip confidence"
