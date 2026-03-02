@@ -170,6 +170,10 @@
 ### [NOW] Product Catalog & CPQ (`86e041x4a`)
 - Status: `done`
 - Tags: future, now
+- Aliases (used in `docs/CRM_BACKLOG.md`):
+  - Product & Services Catalog for CRM CPQ → `86e041x4a`
+  - Product and service ItemType catalog foundation → `86e041x4f`
+  - Quote item Product/Service context in opportunity workspace → `86e042906`
 - Stories:
   - `86e041x4n` | `done` | Configure-Price-Quote (CPQ) workflow | tags: -
   - `86e04290b` | `done` | CPQ proposal end-to-end test and smoke workflow coverage | tags: -

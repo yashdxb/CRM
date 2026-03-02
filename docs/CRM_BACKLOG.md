@@ -10,6 +10,28 @@ Legend:
 - NOT STARTED: no evidence yet
 - UNKNOWN: needs confirmation / no clear evidence found
 
+## Recent Delivery Updates (2026-03-02)
+
+- Product & Services catalog foundation (ItemType Product/Service)  
+  Status: DONE  
+  - Added ItemType across Domain/Application/API/Infrastructure + EF migration.  
+  - Evidence: `server/src/CRM.Enterprise.Domain/Entities/ItemMaster.cs`, `server/src/CRM.Enterprise.Application/Catalog/ItemMasterDto.cs`, `server/src/CRM.Enterprise.Api/Controllers/ItemMasterController.cs`, `server/src/CRM.Enterprise.Infrastructure/Catalog/ItemMasterService.cs`, `server/src/CRM.Enterprise.Infrastructure/Persistence/Migrations/20260302202637_AddItemMasterType.cs`
+
+- CRM Product & Services navigation + routes  
+  Status: DONE  
+  - Added side-nav children and route entries for Catalog, Add Item, and Price Books.  
+  - Evidence: `client/src/app/layout/navigation/navigation.config.ts`, `client/src/app/app.routes.ts`
+
+- Opportunity quote picker Product/Service context badges  
+  Status: DONE  
+  - Quote line item select now renders Product/Service + Inactive badges via item templates.  
+  - Evidence: `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`, `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`, `client/src/app/crm/features/opportunities/pages/opportunity-form.page.scss`
+
+- Main sidebar colorful icons parity (My Mailbox style)  
+  Status: DONE  
+  - Added parent/child/grandchild icon color rendering with deterministic fallback palette.  
+  - Evidence: `client/src/app/layout/sidebar/sidebar.component.ts`, `client/src/app/layout/sidebar/sidebar.component.html`
+
 ---
 
 ## E2E Flow Index (Login → End-to-End)
@@ -815,6 +837,10 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Pricing notes + discount fields persist and can be submitted for approval.
     - Security/legal review status and checklists are tracked and required before Commit.
   - Evidence:
+    - `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
+    - `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+    - `client/src/app/crm/features/opportunities/pages/opportunity-form.page.scss`
+    - Quote item selector now displays Product/Service + Inactive badges for safer item selection.
 - Dashboard | As a Sales Rep, I want to involve pre‑sales and document scope/approach for alignment. (ClickUp: 86dzp8xb6, Status: COMPLETED) Flow: 06M
   - Acceptance criteria:
     - Pre-sales team members can be added with roles on the opportunity.
@@ -1245,3 +1271,52 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
       - `client/e2e/roles-workspace-tabs.spec.ts`
       - `client/e2e/people-access-state.spec.ts`
       - `client/e2e/role-form-permissions-tabs.spec.ts`
+
+- Epic | Product & Services Catalog for CRM CPQ (ClickUp: 86e041x4a, Status: COMPLETED) Flow: 08A
+  - Acceptance criteria:
+    - Catalog supports both physical products and services.
+    - Product & Services navigation is discoverable from CRM side nav.
+    - Quote workspace clearly distinguishes product vs service items during line selection.
+    - Implementation remains aligned with existing CRM route, permission, and design patterns.
+  - Child stories:
+    - Product & Services | As a Sales Rep, I want each catalog item to be typed as Product or Service so quoting matches real offerings. (ClickUp: 86e041x4f, Status: COMPLETED) Flow: 08A1
+      - Acceptance criteria:
+        - Item master persists `ItemType` (`Product`/`Service`) in API + database.
+        - Catalog list/form support item type create/edit/filter.
+        - Validation only allows Product or Service.
+      - Evidence:
+        - `server/src/CRM.Enterprise.Domain/Entities/ItemMaster.cs`
+        - `server/src/CRM.Enterprise.Application/Catalog/ItemMasterDto.cs`
+        - `server/src/CRM.Enterprise.Api/Controllers/ItemMasterController.cs`
+        - `server/src/CRM.Enterprise.Infrastructure/Catalog/ItemMasterService.cs`
+        - `server/src/CRM.Enterprise.Infrastructure/Persistence/Configurations/ItemMasterConfiguration.cs`
+        - `server/src/CRM.Enterprise.Infrastructure/Persistence/Migrations/20260302202637_AddItemMasterType.cs`
+        - `client/src/app/packs/supply-chain/catalog/models/item-master.model.ts`
+        - `client/src/app/packs/supply-chain/catalog/services/item-master-data.service.ts`
+        - `client/src/app/packs/supply-chain/features/catalog/item-master/item-master.component.ts`
+        - `client/src/app/packs/supply-chain/features/catalog/item-master/item-master-form.page.ts`
+    - Product & Services | As a Sales Rep, I want Catalog/Add Item/Price Books in side nav so I can access CPQ data quickly. (ClickUp: TBD, Status: COMPLETED) Flow: 08A2
+      - Acceptance criteria:
+        - Main CRM nav includes Product & Services with Catalog, Add Item, and Price Books children.
+        - Routes exist for list, create/edit item, and price books page.
+      - Evidence:
+        - `client/src/app/layout/navigation/navigation.config.ts`
+        - `client/src/app/app.routes.ts`
+        - `client/src/app/packs/supply-chain/features/catalog/pricing/pricing-rates.component.html`
+    - Opportunities | As a Sales Rep, I want quote item options to show Product/Service context so I avoid wrong line selections. (ClickUp: 86e042906, Status: COMPLETED) Flow: 08A3
+      - Acceptance criteria:
+        - Quote item dropdown shows Product/Service pill in option and selected value templates.
+        - Inactive selected items are clearly marked.
+      - Evidence:
+        - `client/src/app/crm/features/opportunities/models/opportunity.model.ts`
+        - `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`
+        - `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`
+        - `client/src/app/crm/features/opportunities/pages/opportunity-form.page.scss`
+    - Shell UX | As a user, I want colorful side-nav icons across all levels for faster visual scanning. (ClickUp: TBD, Status: COMPLETED) Flow: 08A4
+      - Acceptance criteria:
+        - Parent/child/grandchild nav icons render with colorful palettes.
+        - Explicit icon colors are respected where defined; fallback colors are deterministic.
+      - Evidence:
+        - `client/src/app/layout/sidebar/sidebar.component.ts`
+        - `client/src/app/layout/sidebar/sidebar.component.html`
+        - `client/src/app/layout/navigation/navigation.config.ts`

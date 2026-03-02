@@ -265,11 +265,18 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 ```
 
 ### Automation Rules (Operational)
-- **Source of truth** for CRM backlog items and completion status: `docs/CRM_BACKLOG.md`.
-- **Source of truth** for mobile app backlog items and completion status: `docs/MOBILE_BACKLOG.md`.
-- **Source of truth** for supply-chain backlog items: `docs/SCM_BACKLOG.md`.
-- **Source of truth** for cross-cutting platform/infra backlog items: `docs/PROJECT_BACKLOG.md`.
-- **New backlog items** derived from `docs/CRM_BACKLOG.md`, `docs/MOBILE_BACKLOG.md`, `docs/SCM_BACKLOG.md`, and `docs/PROJECT_BACKLOG.md` (PARTIAL/NOT STARTED/UNKNOWN).
+- **Primary source of truth** for backlog status/prioritization is ClickUp.
+- ClickUp list ownership:
+  - CRM backlog: `901710720381`
+  - Mobile backlog: `901710789774`
+  - SCM backlog: `901710734279`
+  - Project backlog: `901710720382`
+- Repo docs are mirrors/snapshots for in-repo visibility:
+  - `docs/CRM_BACKLOG.md`
+  - `docs/MOBILE_BACKLOG.md`
+  - `docs/SCM_BACKLOG.md`
+  - `docs/PROJECT_BACKLOG.md`
+- **New backlog items** should be created in ClickUp first, then mirrored to docs.
 - **Do not assume** status beyond documented evidence.
 
 ### ClickUp API Integration

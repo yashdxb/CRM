@@ -1575,10 +1575,18 @@ public class SuppliersController : ControllerBase
 - Status tags: `done`, `partial`, `not-started`, `candidate`
 
 ### Automation Rules (Operational)
-- **Source of truth** for CRM backlog items: `docs/CRM_BACKLOG.md`.
-- **Source of truth** for mobile app backlog items: `docs/MOBILE_BACKLOG.md`.
-- **Source of truth** for supply-chain backlog items: `docs/SCM_BACKLOG.md`.
-- **Source of truth** for platform/infra backlog items: `docs/PROJECT_BACKLOG.md`.
+- **Primary source of truth** for backlog status and prioritization is ClickUp.
+- ClickUp list ownership:
+  - CRM: `CRM Backlog` (`901710720381`)
+  - Mobile: `Mobile Backlog` (`901710789774`)
+  - Supply-chain: `SCM Backlog` (`901710734279`)
+  - Platform/Infra: `Project Backlog` (`901710720382`)
+- Repo backlog docs are **mirrors/snapshots** for local visibility and search:
+  - `docs/CRM_BACKLOG.md`
+  - `docs/MOBILE_BACKLOG.md`
+  - `docs/SCM_BACKLOG.md`
+  - `docs/PROJECT_BACKLOG.md`
+- When ClickUp and docs differ, reconcile docs to ClickUp unless code evidence proves newer implementation state.
 - **Do not assume** status beyond documented evidence.
 
 ### ClickUp Workspace Map

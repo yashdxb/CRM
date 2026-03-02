@@ -116,6 +116,38 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ## Log
 
+**Date:** 2026-03-02  
+**Environment:** Dev (Local)  
+**Owner:** Copilot / Yasser
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 19:40 | CRM Catalog / CPQ | Product catalog only modeled physical products; service quoting needed first-class support | High | Yasser |
+| 20:10 | Navigation UX | Product & Services actions were not fully discoverable in main side nav | Medium | Yasser |
+| 22:20 | UI Consistency | Main side nav icon colors needed parity with My Mailbox colorful icon style | Low | Yasser |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Service items unsupported in item master | `ItemMaster` contract/entity/search lacked item type dimension | Added `ItemType` (`Product`/`Service`) end-to-end: domain entity, API contracts/controller query, application DTOs, infrastructure service validation/filtering, EF config, migration, and Angular form/list/filter models | `server/src/CRM.Enterprise.Domain/Entities/ItemMaster.cs`, `server/src/CRM.Enterprise.Application/Catalog/ItemMasterDto.cs`, `server/src/CRM.Enterprise.Api/Controllers/ItemMasterController.cs`, `server/src/CRM.Enterprise.Infrastructure/Catalog/ItemMasterService.cs`, `server/src/CRM.Enterprise.Infrastructure/Persistence/Migrations/20260302202637_AddItemMasterType.cs`, `client/src/app/packs/supply-chain/catalog/**` | Copilot | API build succeeded; client build succeeded |
+| Catalog/price books discoverability in CRM nav | Product & Services routes/children were incomplete for CRM flow | Added CRM catalog child routes (`/app/catalog`, `/new`, `/:id/edit`, `/price-books`) and side-nav children (`Catalog`, `Add Item`, `Price Books`) | `client/src/app/app.routes.ts`, `client/src/app/layout/navigation/navigation.config.ts` | Copilot | Client build succeeded |
+| Quote item picker lacked product/service clarity | Opportunity quote picker options only showed text labels | Added item option metadata + item templates with Product/Service and Inactive badges in quote line item selector | `client/src/app/crm/features/opportunities/pages/opportunity-form.page.ts`, `client/src/app/crm/features/opportunities/pages/opportunity-form.page.html`, `client/src/app/crm/features/opportunities/pages/opportunity-form.page.scss` | Copilot | Playwright smoke passed (`client/e2e/smoke.spec.ts`) |
+| Side nav icon style mismatch vs My Mailbox | Sidebar supported color on some child icons only; no global fallback | Added top-level icon color support and deterministic color resolver for parent/child/grandchild nav icons; applied explicit Product & Services colors | `client/src/app/layout/sidebar/sidebar.component.ts`, `client/src/app/layout/sidebar/sidebar.component.html`, `client/src/app/layout/navigation/navigation.config.ts` | Copilot | Client build succeeded |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Apply migration `20260302202637_AddItemMasterType` in deployed environments | Eng | 2026-03-03 | Ensure DB schema update before enabling service-only catalog workflows in prod |
+| Add targeted E2E for catalog item type + quote picker badges | Eng | 2026-03-04 | Cover Product vs Service selection, inactive-item fallback, and save path |
+| Sync ClickUp statuses for delivered CRM catalog/nav work | Product/Eng | 2026-03-03 | Use update notes in `docs/CLICKUP_CRM_BACKLOG_CLEANUP.md` |
+
+### Summary for Project Master (If Verified)
+- CRM catalog now supports both Product and Service item types across backend + frontend.
+- Product & Services navigation is fully exposed in side nav (Catalog, Add Item, Price Books).
+- Opportunity quote item picker now surfaces Product/Service context with badges for safer quoting.
+- Main sidebar icons now follow colorful My Mailbox-style rendering consistently across all nav levels.
+
 **Date:** 2026-02-17  
 **Environment:** Dev (Landing + Public Demo Request Flow)  
 **Owner:** Yasser / Eng
