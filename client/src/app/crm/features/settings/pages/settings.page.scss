@@ -1,12 +1,19 @@
 @use '../../../../../styles/design-tokens' as *;
 
-// Page Background
+// Host block styling to ensure component takes full width
+:host {
+  display: block;
+  width: 100%;
+}
+
+// Page Background - override global fixed positioning from _components.scss
 .page-background {
-  position: relative;
+  position: relative !important;
+  inset: unset !important;
   min-height: 100vh;
   padding: $space-6;
-  overflow: hidden;
-  pointer-events: auto;
+  overflow: hidden !important;
+  pointer-events: auto !important;
 }
 
 // Animated Orbs

@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
@@ -58,6 +59,7 @@ const LEVEL_TEMPLATE_PREFIX = 'role-level-default:';
     NgIf,
     NgFor,
     FormsModule,
+    DragDropModule,
     ButtonModule,
     SelectModule,
     CheckboxModule,
@@ -282,6 +284,20 @@ export class DashboardPacksPage {
     next[currentIndex] = next[targetIndex];
     next[targetIndex] = swap;
     this.itemOrder.set(next);
+  }
+
+  protected onRowDrop(event: CdkDragDrop<unknown[]>) {
+    const rows = this.tableRows();
+    const checkedRows = rows.filter(r => r.checked);
+    
+    // Only allow reordering within checked rows
+    if (event.previousIndex >= checkedRows.length || event.currentIndex >= checkedRows.length) {
+      return;
+    }
+
+    const order = [...this.buildOrder()];
+    moveItemInArray(order, event.previousIndex, event.currentIndex);
+    this.itemOrder.set(order);
   }
 
   protected savePack() {

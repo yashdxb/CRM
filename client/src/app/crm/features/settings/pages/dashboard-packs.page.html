@@ -137,6 +137,7 @@
         <table class="kpi-table" aria-label="Dashboard cards and widgets order table">
           <thead>
             <tr>
+              <th class="col-drag"></th>
               <th class="col-toggle">Include</th>
               <th class="col-order">Order</th>
               <th class="col-type">Type</th>
@@ -146,8 +147,19 @@
               <th class="col-move">Move</th>
             </tr>
           </thead>
-          <tbody>
-            <tr *ngFor="let row of tableRows()" [class.row-disabled]="!row.checked">
+          <tbody cdkDropList (cdkDropListDropped)="onRowDrop($event)">
+            <tr *ngFor="let row of tableRows()" [class.row-disabled]="!row.checked" cdkDrag [cdkDragDisabled]="!row.checked">
+              <td class="col-drag">
+                <button
+                  type="button"
+                  class="drag-handle"
+                  cdkDragHandle
+                  [disabled]="!row.checked"
+                  aria-label="Drag to reorder"
+                >
+                  <i class="pi pi-bars"></i>
+                </button>
+              </td>
               <td class="col-toggle">
                 <p-checkbox
                   [binary]="true"
