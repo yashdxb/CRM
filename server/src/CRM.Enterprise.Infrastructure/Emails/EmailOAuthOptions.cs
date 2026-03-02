@@ -30,16 +30,9 @@ public class MicrosoftOAuthConfig
     
     /// <summary>
     /// OAuth scopes to request for email access.
+    /// Default scopes are set in appsettings.json to avoid array concatenation issues with .NET config binding.
     /// </summary>
-    public string[] Scopes { get; set; } = new[]
-    {
-        "openid",
-        "profile",
-        "email",
-        "offline_access",
-        "Mail.Read",
-        "Mail.Send"
-    };
+    public string[] Scopes { get; set; } = Array.Empty<string>();
 }
 
 public class GoogleOAuthConfig
@@ -56,13 +49,7 @@ public class GoogleOAuthConfig
     
     /// <summary>
     /// OAuth scopes to request for Gmail access.
+    /// Default scopes are set in appsettings.json to avoid array concatenation issues with .NET config binding.
     /// </summary>
-    public string[] Scopes { get; set; } = new[]
-    {
-        "openid",
-        "email",
-        "profile",
-        "https://www.googleapis.com/auth/gmail.readonly",
-        "https://www.googleapis.com/auth/gmail.send"
-    };
+    public string[] Scopes { get; set; } = Array.Empty<string>();
 }
