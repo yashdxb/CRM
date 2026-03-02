@@ -1,0 +1,7 @@
+[   12282ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://login.microsoftonline.com/favicon.ico:0
+[   28714ms] [ERROR] Failed to load resource: net::ERR_NAME_NOT_RESOLVED @ https://df6.cfp.microsoft.com/probe?session_id=b78c498b479a4c1a9d3e40a62ff2cafd&instanceId=33e01921-4d64-4f8c-a055-5bdaffd5e33d:0
+[  391770ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ https://login.live.com/favicon.ico:0
+[  422022ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://crm-enterprise-api-dev-01122345.azurewebsites.net/api/email-connections/callback:0
+[  422023ms] [ERROR] Failed to complete OAuth: go @ https://www.northedgesystem.com/chunk-MKXEVFM2.js:0
+[  422385ms] [ERROR] Failed to load resource: the server responded with a status of 500 () @ https://crm-enterprise-api-dev-01122345.azurewebsites.net/api/email-connections:0
+[  422385ms] [ERROR] Failed to load email connections: go @ https://www.northedgesystem.com/chunk-MKXEVFM2.js:0
