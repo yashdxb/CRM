@@ -200,6 +200,10 @@ public static class DependencyInjection
         services.AddHttpClient<EmailConnectionService>();
         services.AddScoped<IEmailConnectionService, EmailConnectionService>();
 
+        // Mailbox sync service for connected email accounts
+        services.AddHttpClient<MailboxSyncService>();
+        services.AddScoped<IMailboxSyncService, MailboxSyncService>();
+
         return services;
     }
 }

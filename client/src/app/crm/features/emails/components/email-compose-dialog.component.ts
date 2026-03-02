@@ -10,7 +10,7 @@ import { EditorModule } from 'primeng/editor';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 import { EmailDataService } from '../services/email-data.service';
-import { EmailRelationType, EmailTemplateListItem, SendEmailRequest } from '../models/email.model';
+import { ComposeMode, EmailRelationType, EmailTemplateListItem, MailboxEmail, SendEmailRequest } from '../models/email.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 
 interface RelatedEntityOption {
@@ -46,19 +46,20 @@ interface RelatedEntityOption {
     >
       <ng-template pTemplate="header">
         <div class="dialog-header">
-          <div class="header-icon">
-            <i class="pi pi-envelope"></i>
+          <div class="header-icon" [class]="headerIconClass()">
+            <i class="pi" [ngClass]="headerIcon()"></i>
           </div>
           <div class="header-text">
-            <h2>Compose Email</h2>
-            <span class="header-subtitle">Send a new email message</span>
+            <h2>{{ headerTitle() }}</h2>
+            <span class="header-subtitle">{{ headerSubtitle() }}</span>
           </div>
         </div>
       </ng-template>
       
       <div class="compose-body">
         <form [formGroup]="form" class="compose-form">
-          <!-- Template Selection -->
+          <!-- Template Selection (hide for reply/forward) -->
+          @if (mode === 'new') {
           <div class="form-section template-section">
             <div class="section-header">
               <i class="pi pi-file-edit"></i>
@@ -99,6 +100,7 @@ interface RelatedEntityOption {
               </p-select>
             </div>
           </div>
+          }
 
           <!-- Recipients Section -->
           <div class="form-section recipients-section">
@@ -648,6 +650,8 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
   @Input() defaultSubject = '';
   @Input() defaultRelatedEntityType?: EmailRelationType;
   @Input() defaultRelatedEntityId?: string;
+  @Input() mode: ComposeMode = 'new';
+  @Input() replyToEmail?: MailboxEmail;
 
   @Output() visibleChange = new EventEmitter<boolean>();
   @Output() sent = new EventEmitter<void>();
@@ -655,6 +659,38 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
   protected readonly templates = signal<EmailTemplateListItem[]>([]);
   protected readonly selectedTemplateId = signal<string | null>(null);
   protected readonly sending = signal(false);
+
+  // Computed signals for header based on mode
+  protected headerTitle = (): string => {
+    switch (this.mode) {
+      case 'reply': return 'Reply';
+      case 'replyAll': return 'Reply All';
+      case 'forward': return 'Forward';
+      default: return 'Compose Email';
+    }
+  };
+
+  protected headerSubtitle = (): string => {
+    switch (this.mode) {
+      case 'reply': return 'Reply to this email';
+      case 'replyAll': return 'Reply to all recipients';
+      case 'forward': return 'Forward this email';
+      default: return 'Send a new email message';
+    }
+  };
+
+  protected headerIcon = (): string => {
+    switch (this.mode) {
+      case 'reply': return 'pi-reply';
+      case 'replyAll': return 'pi-reply';
+      case 'forward': return 'pi-arrow-right';
+      default: return 'pi-envelope';
+    }
+  };
+
+  protected headerIconClass = (): string => {
+    return this.mode !== 'new' ? 'header-icon mode-' + this.mode : 'header-icon';
+  };
 
   protected readonly relatedEntityTypes: RelatedEntityOption[] = [
     { label: 'Lead', value: 'Lead', icon: 'pi-user-plus' },
@@ -761,17 +797,78 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
   }
 
   private resetForm(): void {
+    let toEmail = this.defaultToEmail;
+    let toName = this.defaultToName;
+    let ccEmails = '';
+    let subject = this.defaultSubject;
+    let htmlBody = '';
+
+    // Handle reply/forward modes
+    if (this.replyToEmail && this.mode !== 'new') {
+      const email = this.replyToEmail;
+      
+      switch (this.mode) {
+        case 'reply':
+          toEmail = email.from.email;
+          toName = email.from.name ?? '';
+          subject = email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`;
+          htmlBody = this.buildQuotedReply(email);
+          break;
+          
+        case 'replyAll':
+          toEmail = email.from.email;
+          toName = email.from.name ?? '';
+          // Add all original To recipients (except current user) to CC
+          const ccList = email.to
+            .filter(r => r.email !== toEmail)
+            .map(r => r.email)
+            .concat((email.cc ?? []).map(r => r.email));
+          ccEmails = ccList.join(', ');
+          subject = email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`;
+          htmlBody = this.buildQuotedReply(email);
+          break;
+          
+        case 'forward':
+          toEmail = '';
+          toName = '';
+          subject = email.subject.startsWith('Fwd:') ? email.subject : `Fwd: ${email.subject}`;
+          htmlBody = this.buildForwardBody(email);
+          break;
+      }
+    }
+
     this.form.reset({
-      toEmail: this.defaultToEmail,
-      toName: this.defaultToName,
-      ccEmails: '',
+      toEmail,
+      toName,
+      ccEmails,
       bccEmails: '',
-      subject: this.defaultSubject,
-      htmlBody: '',
+      subject,
+      htmlBody,
       relatedEntityType: this.defaultRelatedEntityType ?? null,
       relatedEntityId: this.defaultRelatedEntityId ?? null
     });
     this.selectedTemplateId.set(null);
+  }
+
+  private buildQuotedReply(email: MailboxEmail): string {
+    const fromDisplay = email.from.name ? `${email.from.name} <${email.from.email}>` : email.from.email;
+    const date = new Date(email.receivedAtUtc).toLocaleString();
+    return `<br><br><div style="margin-top: 16px; padding-left: 16px; border-left: 3px solid #ccc; color: #666;">
+      <p style="margin: 0 0 8px 0;">On ${date}, ${fromDisplay} wrote:</p>
+      ${email.htmlBody}
+    </div>`;
+  }
+
+  private buildForwardBody(email: MailboxEmail): string {
+    const fromDisplay = email.from.name ? `${email.from.name} <${email.from.email}>` : email.from.email;
+    const toDisplay = email.to.map(r => r.name ? `${r.name} <${r.email}>` : r.email).join(', ');
+    const date = new Date(email.receivedAtUtc).toLocaleString();
+    return `<br><br>---------- Forwarded message ---------<br>
+      <b>From:</b> ${fromDisplay}<br>
+      <b>Date:</b> ${date}<br>
+      <b>Subject:</b> ${email.subject}<br>
+      <b>To:</b> ${toDisplay}<br><br>
+      ${email.htmlBody}`;
   }
 
   private loadTemplates(): void {

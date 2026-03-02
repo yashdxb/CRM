@@ -8,6 +8,7 @@ export interface NavLink {
   featureFlag?: string;
   pack?: 'supply-chain';
   module?: string;
+  iconColor?: string;
   children?: NavLink[];
 }
 

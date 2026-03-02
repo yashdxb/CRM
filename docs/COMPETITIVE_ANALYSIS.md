@@ -1,401 +1,434 @@
-# CRM Enterprise – Competitive Analysis vs. Top 10 CRM Leaders
+# CRM Enterprise – Competitive Audit & Technology Benchmark
 
-**Date**: February 26, 2026  
-**Last Updated**: February 27, 2026 (SignalR opportunities refresh + implementation status)  
-**Methodology**: Feature-by-feature audit of our codebase (75 entities, 41 pages, 36 API controllers, 44 services) compared against publicly documented capabilities of the top 10 CRM platforms by market share (Gartner Magic Quadrant 2025, G2 Grid 2025, IDC MarketScape 2025).
+**Version**: 2.0  
+**Date**: February 28, 2026  
+**Source**: North_Edge_CRM_Competitive_Audit_Report_version_2.pdf  
+**Methodology**: Deep code-level CRM capability audit (43K+ backend LOC, 41K+ frontend LOC analysed) compared against Top 8 CRM platforms.
 
 > **Doc Role**
-> - **Source of truth**: No (reference / benchmark analysis)
+> - **Source of truth**: PDF document `North_Edge_CRM_Competitive_Audit_Report _version 2.pdf`
 > - **Canonical roadmap execution tracking**: `docs/USER_STORIES.md` (Epic 10 + Competitive Audit Roadmap Sync)
 > - **Use this doc for**: competitive benchmark evidence, gap framing, and roadmap rationale
 
 ---
 
-## Top 10 CRM Leaders (by Market Share / Analyst Ranking)
+## Document Revision History
 
-| Rank | Platform | 2025 Revenue | Primary Segment |
-|------|----------|-------------|-----------------|
-| 1 | **Salesforce Sales Cloud** | ~$26B+ | Enterprise |
-| 2 | **Microsoft Dynamics 365** | ~$16B+ | Enterprise / Mid-Market |
-| 3 | **HubSpot CRM** | ~$2.6B+ | SMB / Mid-Market |
-| 4 | **Oracle CX (Fusion)** | ~$5B+ | Enterprise |
-| 5 | **SAP Sales Cloud** | ~$4B+ | Enterprise |
-| 6 | **Zoho CRM** | ~$1.5B+ | SMB / Mid-Market |
-| 7 | **Pipedrive** | ~$200M+ | SMB |
-| 8 | **Freshsales (Freshworks)** | ~$600M+ | SMB / Mid-Market |
-| 9 | **SugarCRM** | ~$200M+ | Mid-Market |
-| 10 | **Monday Sales CRM** | ~$800M+ | SMB / Mid-Market |
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | February 11, 2026 | Engineering | Initial competitive audit — 35 pages, 160 endpoints, 38 entities, 15 differentiators, 17 gaps |
+| 2.0 | February 28, 2026 | Engineering | Deep code re-audit — corrected to 47 pages, 199 endpoints, 83 entities, 20 differentiators, 15 gaps. Added Marketing & Campaigns (Full), SignalR implementation status, AI deep-dive, Stack Maturity Scorecard |
 
 ---
 
-## Feature Comparison Matrix
+## 1. Executive Summary
 
-### Legend
-- ✅ **Full** — Feature exists with backend + frontend, production-grade
-- 🟡 **Partial** — Feature exists but limited (e.g., fewer options, simpler logic)
-- 🔲 **Planned / Stub** — Route or entity defined but not fully implemented
-- ❌ **Missing** — Not present in codebase
+North Edge CRM is an Angular 21 + .NET Clean Architecture platform with:
+- **47** page components
+- **38** backend API controllers (199 endpoints)
+- **83** domain entities
+- **7** AI/ML service implementations
+- Full **campaign management** system with AI-powered recommendations
 
----
+The system features:
+- Proprietary **CQVS lead scoring framework**
+- **3-tier AI fallback chain** (Azure OpenAI → OpenAI → Rule-based)
+- AI assistant with **RAG knowledge retrieval** (Azure AI Search + Foundry Agent)
+- Full **Decision Engine** with multi-step approval chains and SLA auto-escalation
+- **Campaign attribution** with explainability
+- **Drag-and-drop dashboard** with 18 widget types
 
-### 1. CORE CRM CAPABILITIES
+**Code Volume:**
+- Backend: 43,015 lines of C#
+- Frontend: ~41,218 lines of TypeScript
+- Styling: ~47,847 lines of SCSS
 
-| Feature | Our CRM | SF | Dynamics | HubSpot | Oracle | SAP | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|---------|---------|-------|----------|---------|--------|-----|------|-----------|-------|-------|--------|
-| **Contact Management** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Account/Company Management** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Lead Management** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 |
-| **Lead Pipeline View** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Lead Conversion (to Opp)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 |
-| **Opportunity Management** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Activity Tracking** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 |
-| **Calendar View** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Task Management** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **File Attachments** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **CSV Import** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+**Competitive Position:** **Upper Tier 2** — more advanced than basic CRMs (Pipedrive, Monday, Capsule) with unique AI capabilities that rival Tier 1 features.
 
-**Evidence (Our CRM):**
-- Contacts: `ContactsController` (36 controllers), `Contact` entity, `contacts.page.ts`, `contact-form.page.ts`
-- Accounts: `CustomersController`, `Account` entity, CRUD + search + CSV import
-- Leads: `LeadsController`, `Lead` entity, pipeline view at `/app/leads/pipeline`, conversion at `/app/leads/:id/convert`
-- Opportunities: `OpportunitiesController`, `Opportunity` entity + `OpportunityStage` + `OpportunityStageHistory`
-- Activities: `ActivitiesController`, `Activity` entity, calendar view at `/app/activities/calendar`, task view at `/app/activities/tasks`
-- Attachments: `AttachmentsController` — supports Account, Contact, Opportunity, Lead
-- Import: `ILeadImportService`, `ICustomerImportService`, `IContactImportService` + `ImportJob` tracking
-
-**Our Score: 11/11 — On par with all leaders**
+**Direct Competitors:** SugarCRM, Freshsales, Zoho CRM
 
 ---
 
-### 2. AI & INTELLIGENCE
+## 2. CRM Capability Inventory
 
-| Feature | Our CRM | SF (Einstein) | Dynamics (Copilot) | HubSpot (Breeze) | Oracle | SAP | Zoho (Zia) | Pipedrive | Fresh (Freddy) | Sugar | Monday |
-|---------|---------|---------------|-------------------|-------------------|--------|-----|------------|-----------|----------------|-------|--------|
-| **AI Chat Assistant** | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ❌ | ✅ | ❌ | 🟡 |
-| **AI Lead Scoring** | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | 🟡 | ✅ | ✅ | ❌ |
-| **AI Insights/Recommendations** | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ❌ | ✅ | 🟡 | ❌ |
-| **AI Action Execution** | ✅ | ✅ | ✅ | 🟡 | ❌ | ❌ | 🟡 | ❌ | 🟡 | ❌ | ❌ |
-| **AI Action Undo (60s window)** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **AI Action Review/Approval** | ✅ | 🟡 | 🟡 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Knowledge Base Grounding** | ✅ | ✅ | ✅ | 🟡 | 🟡 | ❌ | 🟡 | ❌ | ❌ | ❌ | ❌ |
-| **External AI Agent API** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **AI-Powered Deal Reviews** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | 🟡 | ❌ | ❌ |
-| **Predictive Forecasting** | 🟡 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | 🟡 | ❌ |
-
-**Evidence (Our CRM):**
-- AI Assistant: `AssistantController` → `AssistantChatService` (1,080 lines) → `FoundryAgentClient` (Azure AI Foundry)
-- Knowledge Base: `AzureSearchKnowledgeClient` → Azure AI Search index
-- AI Lead Scoring: 3-tier strategy — `AzureOpenAiLeadScoringService` → `OpenAiLeadScoringService` → `RuleBasedLeadScoringService`
-- Action Execution: `assistant-chat.service.ts` exposes `executeAction()`, `undoAction()`, `reviewAction()` methods
-- AI Agent API: `AgentToolsController` with `X-Agent-Key` header auth at `/api/agent/*`
-- AI Reviews tab: `/app/decisions/ai-reviews` route with `decisionView: 'ai-reviews'`
-
-**Our Score: 9.5/10 — Ahead of most. Only Salesforce Einstein and Dynamics Copilot match our AI depth. Our AI Action Undo is UNIQUE — no competitor offers this.**
-
----
-
-### 3. SALES AUTOMATION & WORKFLOWS
-
-| Feature | Our CRM | SF | Dynamics | HubSpot | Oracle | SAP | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|---------|---------|-------|----------|---------|--------|-----|------|-----------|-------|-------|--------|
-| **Approval Workflows** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| **Multi-Step Approval Chains** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | 🟡 | 🟡 | ❌ |
-| **Decision Inbox (Approve/Reject)** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | 🟡 | 🟡 | ❌ |
-| **Decision Audit Trail** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | 🟡 | 🟡 | ❌ |
-| **SLA Escalation Automation** | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | 🟡 | ❌ | 🟡 | ❌ | ❌ |
-| **Lead Assignment Rules** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | ❌ |
-| **Stage Automation Rules** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 |
-| **Renewal Automation** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | 🟡 | 🟡 | ❌ |
-| **Qualification Policy Engine** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | 🟡 | 🟡 | ❌ |
-| **Email Sequences** | ❌ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | ✅ | 🟡 | ❌ |
-| **Web Forms / Landing Pages** | ❌ | ✅ | 🟡 | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Visual Workflow Builder** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 🟡 | 🟡 | ❌ |
-
-**Evidence (Our CRM):**
-- Approval Chains: `OpportunityApproval` + `OpportunityApprovalChain` entities, `OpportunityApprovalsController`
-- Decision Center: 5-tab shell at `/app/decisions/*` (Inbox, Approvals, AI Reviews, Policies, History)
-- SLA Escalation: `DecisionSlaEscalationWorker` (BackgroundService, registered as HostedService)
-- Lead Assignment: `LeadAssignmentRule` entity, `LeadAssignmentRulesController`, settings at `/app/settings/lead-assignment`
-- Stage Automation: `OpportunityStageAutomationRule` entity, settings at `/app/settings/opportunity-automation`
-- Renewal: `RenewalAutomationWorker` (BackgroundService, 12h interval), `RunRenewalAutomation` endpoint
-- Qualification: `QualificationPolicy` DTOs, settings at `/app/settings/qualification-policy` + `/qualification-thresholds`
-
-**Our Score: 9/12 — Strong on approval/decision workflows (matches SF/Dynamics). Missing: email sequences, web forms, visual workflow builder.**
+| Dimension | Count | Detail |
+|-----------|-------|--------|
+| Frontend Page Components | 47 | 2,532 LOC dashboard, 2,610 LOC lead form |
+| Routes (lazy-loaded) | 97 | 59 CRM + 38 Supply Chain |
+| Backend API Controllers | 38 | 32 CRM + 6 SCM |
+| API Endpoints | 199 | GET 82, POST 66, PUT 23, DELETE 16, PATCH 12 |
+| Domain Entities | 83 | 56 CRM + 27 SCM |
+| Application Service Interfaces | 26 | Clean Architecture layer |
+| Infrastructure Services | 30+ | Including 3 lead scoring + 3 email senders |
+| Background Workers | 4 | Email, Notifications, Renewals, SLA Escalation |
+| AI/ML Implementations | 7 | Chat/RAG, 3× lead scoring, Foundry, Search, Campaign AI |
+| MediatR Handlers | 6 | 2 query + 4 event handlers |
+| SignalR Hubs | 2 | PresenceHub + CrmEventsHub |
+| Permission Keys (RBAC) | 21 | + 3 visibility scopes (Self/Team/All) |
+| Dashboard Widget Types | 18 | 16 cards + 2 charts |
+| Settings Pages | 20+ | Roles, perms, tenants, policies, automation |
+| EF Core Configurations | 47 | Entity type configs + 168 migrations |
+| Contract DTOs | 149 | In 25 subdirectories |
+| Backend LOC | 43,015 | C# (excl. bin/obj/Migrations) |
+| Frontend TS LOC | ~41,218 | TypeScript (excl. spec) |
+| Frontend SCSS LOC | ~47,847 | 103 SCSS files |
 
 ---
 
-### 4. DASHBOARD & ANALYTICS
+## 3. Feature Maturity Summary
 
-| Feature | Our CRM | SF | Dynamics | HubSpot | Oracle | SAP | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|---------|---------|-------|----------|---------|--------|-----|------|-----------|-------|-------|--------|
-| **Executive Dashboard** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Drag-and-Drop Cards** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 🟡 | 🟡 | ✅ |
-| **17+ Widget Types** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | 🟡 | ✅ |
-| **Pipeline by Stage** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Revenue Charts** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Manager Pipeline Health** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | 🟡 | 🟡 | ❌ |
-| **Confidence-Weighted Forecast** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | 🟡 | 🟡 | ❌ |
-| **Truth Metrics / Risk Register** | ✅ | 🟡 | 🟡 | ❌ | 🟡 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Forecast Scenarios** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | 🟡 | ❌ | ❌ |
-| **Custom Report Builder** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ |
-| **Scheduled Report Delivery** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | 🟡 | ❌ |
-
-**Evidence (Our CRM):**
-- Dashboard: `dashboard.page.ts` (2,524 lines), 17 card types via `dashboard-catalog.ts`
-- Drag-Drop: CDK `CdkDragDrop`, `moveItemInArray` for cards, charts, KPIs — persisted via `IDashboardLayoutService`
-- Manager Health: `ManagerPipelineHealth` DTO with coaching, stuck stages, review queue, truth gaps
-- Truth Metrics: `truth-metrics` card ID in catalog, `truthCoverage`, `costOfNotKnowing` in `DashboardSummary`
-- Forecast: `confidence-forecast`, `forecast-scenarios`, `my-forecast` cards
-
-**Our Score: 9/11 — Exceptional dashboard with unique Truth Metrics / Risk Register (no competitor has this). Missing: custom report builder, scheduled reports.**
+| Feature Area | Pages | Maturity | Key Highlights |
+|--------------|-------|----------|----------------|
+| **Dashboard** | 1 (2,532 LOC) | Full | 18 widgets, DnD, AI orchestration, forecast, coaching, manager health |
+| **Customers** | 2 | Full | CRUD, bulk actions, CSV import, lifecycle/owner filters, metric cards |
+| **Contacts** | 2 | Full | Full CRUD, CSV import, bulk assign/lifecycle, tabbed detail |
+| **Leads** | 3 (2,610 LOC form) | Full | CQVS scoring, 3-tier AI, cadence, conversion, duplicate check, import |
+| **Opportunities** | 7 | Full | Stage mgmt, approvals, onboarding, review checklist, team, expansion |
+| **Activities** | 2 | Full | Table/calendar/tasks views, type/status filters, overdue tracking |
+| **Decision Engine** | 5 | Full | Inbox, multi-step chains, AI draft, SLA escalation, delegation, audit |
+| **Marketing & Campaigns** | 4 + 13 API | Full | CRUD, attribution with explainability, AI recommendations, health scoring |
+| **Settings** | 20+ | Full | Users, roles, perms, tenants, automation, qualification, dashboard packs |
+| **AI Assistant** | Integrated | Full | Chat + RAG (AI Search + Foundry), action exec, undo (60s), risk tiers |
+| **Auth & Security** | 4 public pages | Full | JWT, RBAC (21 perms), invite flow, password reset, visibility scopes |
+| **Multi-Tenancy** | Core infra | Full | Per-tenant policies, provisioning, feature gating, dashboard defaults |
+| **Real-Time** | 2 SignalR hubs | Partial | Presence + CRM events, worker broadcasts, tenant/user scoped |
+| **Automation** | 4 workers | Full | Renewal, SLA escalation, email queue, notification alerts (3 types) |
 
 ---
 
-### 5. SUPPLY CHAIN MANAGEMENT (DIFFERENTIATOR)
+## 4. Unique Differentiators (20)
 
-| Feature | Our CRM | SF | Dynamics | HubSpot | Oracle | SAP | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|---------|---------|-------|----------|---------|--------|-----|------|-----------|-------|-------|--------|
-| **Supplier Management** | ✅ | ❌ | 🟡 | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **RFQ/RFP Lifecycle** | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Quote Comparison** | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Purchase Orders** | 🔲 | ❌ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Supplier Scorecards** | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Supplier Compliance** | ✅ | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Inventory Management** | 🔲 | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Quality / CAPA** | 🔲 | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Logistics/Shipment Tracking** | 🔲 | ❌ | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Spend Analytics** | 🔲 | ❌ | 🟡 | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Supplier Self-Onboarding Portal** | ✅ | ❌ | ❌ | ❌ | 🟡 | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+These are capabilities that most competitors either lack entirely or implement at a basic level:
 
-**Evidence (Our CRM):**
-- Supplier Management: `Supplier` + 8 child entities, `SuppliersController`, Directory + Detail + Edit + Compliance + Scorecards pages
-- RFQ: `Rfq` + `RfqLine` entities, `RfqsController`, full lifecycle pages (Create → Draft → Send → Compare → Award → History)
-- Quote Comparison: `SupplierQuote` + `SupplierQuoteLine` entities, `SupplyChainQuotesController`, comparison page
-- Scorecards: `SupplierScorecard` + `SupplierKpi` + `SupplierPerformanceSnapshot` entities
-- Compliance: `SupplierCertification` entity, compliance page at `/app/supply-chain/suppliers/compliance`
-- Self-Onboarding: Public route `/supplier/onboard/:token`, `supplier-onboarding.page.ts`
-- PO/Inventory/Quality/Logistics: Entities + routes exist, UI likely mock-backed (frontend pages exist, some backend controllers minimal)
-
-**Our Score: UNIQUE DIFFERENTIATOR — No pure CRM competitor (SF, HubSpot, Pipedrive, Fresh, Sugar, Monday) offers integrated SCM. Only Oracle CX + SAP (which are full ERP suites at 10-100x the price) compete here.**
-
----
-
-### 6. PLATFORM & ADMINISTRATION
-
-| Feature | Our CRM | SF | Dynamics | HubSpot | Oracle | SAP | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|---------|---------|-------|----------|---------|--------|-----|------|-----------|-------|-------|--------|
-| **Multi-Tenancy** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | 🟡 | ❌ |
-| **RBAC (Roles + Permissions)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 |
-| **6 Built-in Roles** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 |
-| **20 Permission Keys** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 |
-| **Field-Level Security** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | ❌ | ✅ | ❌ |
-| **Custom Fields** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Audit Trail** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | 🟡 | ✅ | ❌ |
-| **Team Invitations** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Login Location Tracking** | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | 🟡 | ❌ | ❌ | ❌ | ❌ |
-| **Workspace Settings** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Industry Module Toggling** | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | 🟡 | ❌ | ❌ | ❌ | ❌ |
-| **API / Swagger** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-
-**Evidence (Our CRM):**
-- Multi-Tenancy: `Tenant` entity, `TenantProvider` resolves from JWT or `X-Tenant-Key`, `TenantProvisioningService`
-- RBAC: `Role` + `UserRole` + `RolePermission` + `PermissionCatalogEntry` entities, 6 seeded roles, 20 permission keys
-- Field Security: `SecurityLevelDefinition` entity, settings at `/app/settings/security-levels`
-- Custom Fields: `CustomFieldDefinition` + `CustomFieldValue` entities
-- Audit: `AuditEvent` entity, `AuditController`, UI at `/app/settings/audit-log`
-- Login Tracking: `LoginLocationService` → ipwho.is API for IP geolocation
-- Industry Modules: `industryPreset` + `industryModules` on Tenant entity
-
-**Our Score: 12/12 — Full parity with enterprise leaders.**
+| # | Differentiator | Description |
+|---|----------------|-------------|
+| 1 | **CQVS Lead Scoring Framework** | Proprietary 6-factor model (Budget, Readiness, Timeline, Problem Severity, Economic Buyer, ICP Fit) with 21 criteria |
+| 2 | **3-Tier AI Lead Scoring** | Azure OpenAI → OpenAI → Rule-based automatic fallback. No competitor has multi-provider resilience |
+| 3 | **AI Execution Orchestration** | Priority-scored action table with risk/urgency tiers and 60-second undo window on dashboard |
+| 4 | **AI Chat + RAG + Action Execution** | Foundry Agent with Azure AI Search grounding, executes CRM actions with risk gating, review workflow, and undo |
+| 5 | **Cost-of-Not-Knowing Metric** | Risk-weighted intelligence gap trend — unique KPI measuring data quality cost per deal |
+| 6 | **Truth Metrics Widget** | Dashboard widget surfaces data integrity and confidence scoring across the pipeline |
+| 7 | **Confidence-Weighted Pipeline** | Trust-scored deal values — no competitor weights pipeline by data quality confidence |
+| 8 | **Decision Engine + SLA Escalation** | Multi-step approval chains with background worker auto-escalation, delegation, AI assist drafts |
+| 9 | **Expansion Signal Detection** | Automated upsell/cross-sell identification from opportunity patterns with dedicated API |
+| 10 | **Renewal Automation Worker** | Background service auto-creates renewal opportunities before contract expiry, runs every 12h |
+| 11 | **Qualification Policy Engine** | Per-tenant rules with contextual threshold modifiers per deal type × segment × stage |
+| 12 | **DnD Dashboard (18 widgets)** | More widget types than most Tier 2 dashboards with CDK drag-and-drop reordering + chart toggles |
+| 13 | **Manager Pipeline Health View** | Coaching-oriented pipeline view with team performance overlay and truth gap detection |
+| 14 | **Priority Stream** | Unified cross-entity feed combining leads, opportunities, activities in priority order with filtering |
+| 15 | **Lead Cadence Tracking** | Evidence-source tracking with buyer engagement cadence scoring and SLA breach alerts |
+| 16 | **Campaign Attribution + Explainability** | First-touch attribution model with evidence trail, candidate listing, and full explainability UI |
+| 17 | **Campaign AI Recommendations** | Rule-based recommendations with confidence, impact estimates, evidence, accept/dismiss/snooze workflow |
+| 18 | **Campaign Health Scoring** | Composite 0-100 health score with trend tracking, reason chips, and historical snapshots |
+| 19 | **SignalR Real-Time Broadcasting** | All 4 workers publish events via SignalR to tenant + user channels; live presence tracking |
+| 20 | **Tenant Feature Gating** | Per-tenant module toggle (e.g., supply chain, marketing) with route-level guard and disabled page |
 
 ---
 
-### 7. COMMUNICATION & COLLABORATION
+## 5. Competitive Positioning vs. Top Leaders
 
-| Feature | Our CRM | SF | Dynamics | HubSpot | Oracle | SAP | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|---------|---------|-------|----------|---------|--------|-----|------|-----------|-------|-------|--------|
-| **Transactional Email** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Dual Email Provider** | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Queued Email (Service Bus)** | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | 🟡 | ❌ | ❌ | ❌ | ❌ |
-| **In-App Notifications** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Real-Time Presence (SignalR)** | ✅ | ✅ | ✅ | 🟡 | 🟡 | ❌ | 🟡 | ❌ | ❌ | ❌ | ✅ |
-| **Email Tracking (Opens/Clicks)** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Built-in Phone/VoIP** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Live Chat Widget** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Social Media Integration** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
-
-**Evidence (Our CRM):**
-- Email: `AcsEmailSender` (Azure Communication Services) + `GraphEmailSender` (Microsoft Graph) — dual provider
-- Queue: `ServiceBusEmailQueue` → `EmailQueueWorker` (BackgroundService) — async delivery via Azure Service Bus
-- Notifications: `NotificationService` + `NotificationCenterComponent`, `NotificationAlertWorker` for SLA/idle alerts
-- Presence: `PresenceHub` (SignalR), `PresenceTracker`, Azure SignalR Service support
-
-**Our Score: 5/9 — Strong infrastructure but missing email tracking, VoIP, live chat, social media.**
-
-### SignalR Integration Opportunities (Refreshed)
-
-The previous SignalR opportunity notes are now superseded by this refreshed priority matrix (source date: February 26, 2026 report, applied on February 27, 2026).
-
-| Priority | Module | Effort | Impact | How | Current implementation status |
-|---|---|---|---|---|---|
-| 1st | NotificationAlertWorker | Low | High | Worker writes to DB; push `hubContext.SendAsync()` after alert write/send | `Implemented` (`notification.alert` realtime event) |
-| 2nd | Decision Inbox | Low | High | Broadcast on approval request creation for live badges/counts | `Implemented` (`decision.created`/`decision.updated`) |
-| 3rd | AI Assistant Streaming | Medium | High | Switch to `IAsyncEnumerable` + SignalR stream token-by-token | `Planned (Now backlog)` |
-| 4th | Dashboard Live Metrics | Medium | Medium | Entity change detection + broadcast deltas | `Implemented (initial)` (`dashboard.metrics.delta` on stage changes) |
-| 5th | Pipeline Kanban | Medium | Medium | Broadcast opportunity stage changes for live card moves | `Implemented` (`opportunity.stage.changed`) |
-| 6th | DecisionSlaEscalationWorker | Low | Medium | Push escalation alerts directly to approver browser | `Implemented` (`decision.sla.escalated`) |
-| 7th | RenewalAutomationWorker | Low | Medium | Push renewal-created updates to owners/tenant feed | `Implemented (tenant-level summary)` (`renewal.automation.completed`) |
-| 8th | EmailQueueWorker | Low | Low | Push delivery status (`Sent`/`Failed`) back to sender | `Implemented` (`email.delivery.status`, sender-targeted when request context exists) |
-| 9th | Review Threads | Medium | Medium | Live comments as realtime chat on deals | `Planned (Now backlog)` |
-| 10th | Presence Indicators | Medium | Medium | Connection tracking showing who is viewing a record | `Partial` (online presence exists; record-view presence pending) |
+| Capability | North Edge | Salesforce | HubSpot | Dynamics | Zoho | Freshsales | SugarCRM | Pipedrive |
+|------------|------------|------------|---------|----------|------|------------|----------|-----------|
+| Contact/Account Mgmt | Full | Full | Full | Full | Full | Full | Full | Full |
+| Lead Mgmt & Scoring | Full + AI | Full + AI | Full + AI | Full + AI | Full | Full + AI | Full | Basic |
+| Opportunity/Pipeline | Full | Full | Full | Full | Full | Full | Full | Full |
+| AI Lead Scoring | 3-tier fallback | Einstein | Predictive | Copilot | Zia | Freddy | SugarPredict | — |
+| AI Chat Assistant | Full + Actions | Einstein GPT | ChatSpot | Copilot | Zia | Freddy | — | AI assistant |
+| **AI Action Exec + Undo** | **Yes (60s)** | Partial | No | Partial | No | No | No | No |
+| Decision/Approval Engine | Full + SLA | Full | Basic | Full | Partial | No | Full | No |
+| Dashboard Customization | 18 widgets+DnD | Full | Full | Full | Full | Basic | Basic | Basic |
+| RBAC (Granular) | 21 perms | Full | Tiered | Full | Full | Basic | Full | Basic |
+| Multi-Tenancy | Full | Full | No | Full | Full | No | Partial | No |
+| CSV Import/Export | Full | Full | Full | Full | Full | Full | Full | Full |
+| Audit Trail | Full | Full | Partial | Full | Full | Basic | Full | No |
+| Email Integration | Outbound | Full (bi) | Full | Full | Full | Full | Full | Full |
+| Campaign Management | **Full** | Full | Full | Full | Full | Full | Full | Basic |
+| Marketing Automation | Missing | Pardot | Full | Full | Full | Full | Partial | No |
+| Quote/CPQ | Missing | Full | Full | Full | Full | No | Full | Basic |
+| Report Builder | Missing | Full | Full | Full | Full | Basic | Full | Basic |
+| Web-to-Lead Forms | Missing | Full | Full | Full | Full | Full | Full | Full |
+| Mobile Native | Responsive | App | App | App | App | App | App | App |
 
 ---
 
-### 8. UX & DEVELOPER EXPERIENCE
+## 6. Technology Stack Benchmarks
 
-| Feature | Our CRM | SF (Lightning) | Dynamics | HubSpot | Oracle | SAP (Fiori) | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|---------|---------|----------------|----------|---------|--------|-------------|------|-----------|-------|-------|--------|
-| **Modern UI Framework** | ✅ Angular 21 | ✅ LWC | ✅ React | ✅ React | 🟡 | ✅ | ✅ React | ✅ React | ✅ React | 🟡 | ✅ React |
-| **Glassmorphism Design** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Command Palette (Ctrl+K)** | ✅ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| **Keyboard Shortcuts** | ✅ | 🟡 | 🟡 | ✅ | ❌ | ❌ | 🟡 | 🟡 | 🟡 | ❌ | ✅ |
-| **Saved Views** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ |
-| **Recently Viewed** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Responsive Mobile Web** | ✅ | ✅ | ✅ | ✅ | 🟡 | 🟡 | ✅ | ✅ | ✅ | 🟡 | ✅ |
-| **Native Mobile App** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Dark Mode** | ❌ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ | 🟡 | ❌ | ✅ |
-| **Marketplace / App Store** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **REST API** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Webhook Support** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ |
-
-**Evidence (Our CRM):**
-- Framework: Angular 21 + PrimeNG 21);  `ThemeService` with CSS variable injection via `APP_INITIALIZER`
-- Glassmorphism: `backdrop-filter: blur(20px)`, `$glass-bg`, `$glass-shadow` tokens in `_design-tokens.scss`
-- Command Palette: `CommandPaletteComponent` + `CommandPaletteService` (`Ctrl+K`)
-- Shortcuts: `KeyboardShortcutsService` + discoverability modal
-- Saved Views: `saved-views.service.ts` — persists table filter/sort configs
-- Recently Viewed: `recently-viewed.service.ts`
-- Responsive: `DeviceService` with 7 breakpoints, verified at 375/768/1440px
-
-**Our Score: 8/12 — Premium UI (unique glassmorphism) but missing native mobile, dark mode, marketplace, webhooks.**
+| Dimension | North Edge | Salesforce | HubSpot | Dynamics 365 | Zoho | Freshsales | SugarCRM |
+|-----------|------------|------------|---------|--------------|------|------------|----------|
+| Frontend | Angular 21 | Aura/LWC | React | React+Fluent | Proprietary | React | Backbone |
+| UI Library | PrimeNG 21 | Lightning DS | Custom | Fluent UI | Custom | Custom | Custom |
+| State Mgmt | Signals | LDS | Redux | Redux/Zustand | Custom | Redux | Backbone |
+| Backend | C# (.NET) | Java/Apex | Java+Node | C# (.NET) | Java | Ruby+Go | PHP |
+| Architecture | Clean (4-layer) | MVC+Platform | Microservices | CQRS+Micro | Mono→Micro | Mono→Micro | MVC |
+| Database | SQL Server/EF | Oracle+Propr. | MySQL+HBase | SQL+Dataverse | PostgreSQL | PostgreSQL | MySQL |
+| Auth | JWT+RBAC | OAuth+SAML+SSO | OAuth+SSO | AzureAD+RBAC | OAuth+SSO | OAuth+SSO | OAuth+SAML |
+| AI Runtime | AzureOAI+OAI+Rules | Einstein GPT | ChatSpot/OAI | AzureOAI/Copilot | Zia | Freddy AI | SugarPredict |
+| AI Resilience | **3-tier fallback** | Single | Single | Single+fallback | Single | Single | Single |
+| RAG/Knowledge | AI Search+Foundry | Data Cloud | Knowledge Base | Copilot Studio | — | — | — |
+| Background Jobs | 4 Hosted Svc | Batch Apex | Sidekiq+Kafka | AzFunc+SvcBus | Custom | Sidekiq | Cron |
+| Message Bus | Azure Svc Bus | Platform Events | Kafka | Azure Svc Bus | Custom | RabbitMQ | — |
+| Email Service | Graph+ACS | SF Email | SendGrid | Exchange+Graph | Custom SMTP | SendGrid | Custom |
+| Hosting | Azure SWA+AppSvc | SF Cloud | AWS | Azure Cloud | Proprietary DC | AWS | AWS/On-prem |
+| Multi-Tenancy | App-level | Platform-native | Account | Dataverse-native | Account | Account | Instance |
+| API Style | REST (199) | REST+SOAP+GQL | REST+GraphQL | REST+OData+GQL | REST+GraphQL | REST | REST+GQL |
+| Real-time | SignalR (Partial) | Streaming API | WebSockets | SignalR | Long-polling | WebSockets | — |
+| Mobile | Responsive | iOS+Android | iOS+Android | iOS+Android+PWA | iOS+Android | iOS+Android | iOS+Android |
+| Extensibility | Code-level only | Apex+AppExch | WF+Marketplace | PowerPlat+Plugins | Deluge+Market | Marketplace | Logic Hooks |
 
 ---
 
-### 9. MARKETING AUTOMATION
+## 7. Stack Maturity Scorecard
 
-| Feature | Our CRM | SF (Pardot/Marketing Cloud) | Dynamics (Marketing) | HubSpot | Oracle (Eloqua) | SAP | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|---------|---------|----------------------------|---------------------|---------|-----------------|-----|------|-----------|-------|-------|--------|
-| **Email Campaigns** | ❌ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | ✅ | 🟡 | ❌ |
-| **Marketing Automation** | ❌ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | 🟡 | ✅ | 🟡 | ❌ |
-| **Lead Nurture Sequences** | ❌ | ✅ | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ | ✅ | 🟡 | ❌ |
-| **Landing Page Builder** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **Form Builder** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ | 🟡 | ❌ |
-| **A/B Testing** | ❌ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ❌ | 🟡 | ❌ | ❌ |
+| Category | North Edge | Salesforce | HubSpot | Dynamics | Zoho | Freshsales | SugarCRM |
+|----------|------------|------------|---------|----------|------|------------|----------|
+| Frontend Modernity | 9/10 | 7/10 | 9/10 | 8/10 | 6/10 | 8/10 | 4/10 |
+| Backend Architecture | 9/10 | 8/10 | 9/10 | 9/10 | 6/10 | 7/10 | 5/10 |
+| AI Sophistication | 9/10 | 9/10 | 7/10 | 9/10 | 6/10 | 7/10 | 5/10 |
+| **AI Resilience (Fallback)** | **10/10** | 6/10 | 4/10 | 7/10 | 4/10 | 4/10 | 4/10 |
+| Database/ORM | 8/10 | 8/10 | 8/10 | 9/10 | 7/10 | 8/10 | 6/10 |
+| Auth & Security | 7/10 | 10/10 | 8/10 | 10/10 | 8/10 | 7/10 | 7/10 |
+| API Design | 7/10 | 10/10 | 9/10 | 10/10 | 8/10 | 7/10 | 7/10 |
+| Background Processing | 8/10 | 9/10 | 9/10 | 9/10 | 6/10 | 7/10 | 4/10 |
+| Extensibility | 4/10 | 10/10 | 8/10 | 10/10 | 7/10 | 6/10 | 6/10 |
+| Mobile | 4/10 | 9/10 | 9/10 | 9/10 | 9/10 | 9/10 | 7/10 |
+| Real-time Capabilities | 5/10 | 9/10 | 8/10 | 9/10 | 5/10 | 7/10 | 3/10 |
+| **Average Score** | **7.3** | **8.6** | **8.0** | **8.6** | **6.5** | **7.0** | **5.3** |
 
-**Our Score: 0/6 — No marketing automation. This is consciously out-of-scope (CRM + SCM focus).**
+### Stack Strengths
+- **Angular 21 + PrimeNG 21** — Latest framework version. SugarCRM is still on Backbone (legacy)
+- **Clean Architecture (4-layer)** — Architecturally aligned with Dynamics 365. Most Tier 2 use simpler MVC
+- **3-Tier AI Fallback (10/10)** — No other CRM has multi-provider AI resilience
+- **Azure Service Bus** — Same enterprise messaging as Dynamics 365
+- **EF Core + SQL Server** — Production-proven, enterprise-grade data stack
 
----
-
-### 10. CUSTOMER SERVICE
-
-| Feature | Our CRM | SF (Service Cloud) | Dynamics (CS) | HubSpot (Service Hub) | Oracle | SAP | Zoho (Desk) | Pipedrive | Fresh (Desk) | Sugar (Serve) | Monday |
-|---------|---------|-------------------|---------------|----------------------|--------|-----|-------------|-----------|--------------|---------------|--------|
-| **Ticketing System** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| **Knowledge Base Portal** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| **SLA Management** | 🟡 (decisions) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
-| **Customer Portal** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ | 🟡 | ❌ |
-
-**Our Score: 0.5/4 — Not a service desk product. SLA exists for decision workflows.**
-
----
-
-## OVERALL COMPETITIVE POSITIONING
-
-### Aggregate Scorecard (Features Available / Features Possible)
-
-| Category | Our CRM | SF | Dynamics | HubSpot | Oracle | SAP | Zoho | Pipedrive | Fresh | Sugar | Monday |
-|----------|---------|-------|----------|---------|--------|-----|------|-----------|-------|-------|--------|
-| Core CRM (11) | **11** | 11 | 11 | 11 | 11 | 11 | 11 | 11 | 11 | 11 | 10 |
-| AI & Intelligence (10) | **9.5** | 10 | 10 | 7 | 7 | 4 | 7 | 2 | 7 | 3 | 1 |
-| Sales Automation (12) | **9** | 12 | 12 | 9 | 12 | 10 | 9 | 5 | 8 | 7 | 2 |
-| Dashboard & Analytics (11) | **9** | 11 | 11 | 8 | 11 | 10 | 8 | 5 | 7 | 6 | 7 |
-| Supply Chain (11) | **8** | 0 | 3 | 0 | 10 | 11 | 1 | 0 | 0 | 0 | 0 |
-| Platform & Admin (12) | **12** | 12 | 12 | 10 | 12 | 12 | 10 | 6 | 8 | 8 | 7 |
-| Communication (9) | **5** | 9 | 9 | 8 | 8 | 4 | 7 | 5 | 5 | 4 | 4 |
-| UX & DevEx (12) | **8** | 10 | 10 | 10 | 7 | 8 | 9 | 9 | 8 | 6 | 10 |
-| Marketing (6) | **0** | 6 | 6 | 6 | 6 | 2 | 6 | 4 | 5 | 3 | 0 |
-| Customer Service (4) | **0.5** | 4 | 4 | 4 | 4 | 4 | 4 | 0 | 4 | 3 | 0 |
-| **TOTAL (98)** | **72** | **85** | **88** | **73** | **88** | **76** | **72** | **47** | **63** | **51** | **41** |
-
-### Percentage Scores
-
-| Platform | Score | % |  Tier |
-|----------|-------|---|-------|
-| **Microsoft Dynamics 365** | 88/98 | 90% | Tier 1 - Full Suite Enterprise |
-| **Oracle CX** | 88/98 | 90% | Tier 1 - Full Suite Enterprise |
-| **Salesforce** | 85/98 | 87% | Tier 1 - CRM Leader |
-| **SAP Sales Cloud** | 76/98 | 78% | Tier 1 - ERP + CRM |
-| **HubSpot** | 73/98 | 74% | Tier 2 - Growth Platform |
-| **CRM Enterprise (Ours)** | **72/98** | **73%** | **Tier 2 - CRM + SCM Specialist** |
-| **Zoho CRM** | 72/98 | 73% | Tier 2 - Value Leader |
-| **Freshsales** | 63/98 | 64% | Tier 3 - SMB Focus |
-| **SugarCRM** | 51/98 | 52% | Tier 3 - Mid-Market |
-| **Pipedrive** | 47/98 | 48% | Tier 3 - Sales-Only |
-| **Monday CRM** | 41/98 | 42% | Tier 3 - Work OS Hybrid |
+### Stack Gaps
+- **No SSO/SAML/OAuth2 provider** — Blocks enterprise procurement. IT teams require SSO
+- **No GraphQL or OData** — REST-only limits query flexibility for integrators
+- **SignalR partial** — Infrastructure exists (2 hubs, worker broadcasts) but no record-level presence or live updates
+- **No native mobile app** — Responsive web isn't enough for field sales reps
+- **No plugin/extension system** — Can't build marketplace ecosystem
+- **No webhook/event system** — Can't push data to external systems on changes
 
 ---
 
-## WHERE WE STAND — EXECUTIVE SUMMARY
+## 8. Feature Gaps (15)
 
-### Ranking: **#6 out of 11** (tied with Zoho) — **Upper Tier 2**
-
-### Our Strengths (Evidence-Based)
-1. **AI Depth** — 3rd place behind only Salesforce Einstein and Dynamics Copilot. Our AI Action Undo (60s window) and AI Action Review/Approval are **unique features no competitor offers**.
-2. **Supply Chain Integration** — **Only CRM+SCM product in the market** below enterprise ERP price points. Salesforce, HubSpot, Pipedrive, Freshsales, SugarCRM, Monday have zero SCM capability.
-3. **Dashboard Richness** — 17 card types, drag-drop layout persistence, Truth Metrics and Risk Register are **unique to our platform**.
-4. **Platform Maturity** — Full multi-tenancy, RBAC with 20 permissions, field-level security, audit trail, custom fields — matches enterprise leaders.
-5. **Modern UX** — Premium glassmorphism design, command palette, keyboard shortcuts — better visual design than most competitors.
-6. **Decision Workflow Engine** — 5-tab decision center with multi-step approval chains, SLA escalation, AI reviews — exceeds HubSpot, Pipedrive, Monday, SugarCRM.
-
-### Our Gaps (Prioritized by Impact)
-1. **Marketing Automation** (0/6) — No campaigns, sequences, forms, A/B testing. HubSpot's #1 strength.
-2. **Customer Service** (0.5/4) — No ticketing, knowledge base, customer portal.
-3. **Communication** (5/9) — Missing email tracking, VoIP, live chat, social media integration.
-4. **Native Mobile App** — Web-responsive only; all top 8 competitors have native iOS/Android apps.
-5. **Visual Workflow Builder** — Approval chains exist but no drag-drop workflow designer.
-6. **Custom Report Builder** — Rich dashboard but no ad-hoc report creation.
-7. **Marketplace/Ecosystem** — No app store or plugin system.
-8. **Dark Mode** — Not yet implemented.
-9. **Webhooks** — No outbound event notification system.
-
-### Our UNIQUE Advantages (No Competitor Has These)
-| Feature | Evidence |
-|---------|---------|
-| **AI Action Undo (60s)** | `undoAction()` in `assistant-chat.service.ts` |
-| **AI Action Review/Approval** | `reviewAction()` method, `/app/decisions/ai-reviews` route |
-| **CRM + SCM in One Platform** | 30+ SCM entities, 11 SCM feature areas, 34 SCM routes |
-| **Truth Metrics / Cost-of-Not-Knowing** | `truthCoverage`, `costOfNotKnowing` in DashboardSummary DTO |
-| **Glassmorphism Enterprise UI** | `_design-tokens.scss` glass system, `backdrop-filter: blur()` |
-| **Supplier Self-Onboarding Portal** | Public route `/supplier/onboard/:token` |
+| Severity | Feature Gap | Details |
+|----------|-------------|---------|
+| **HIGH** | Marketing Automation (Drip/Nurture) | Campaigns exist, but no automated sequences, drip workflows, or engagement scoring |
+| **MEDIUM** | Custom Field Mgmt UI | Entity exists in backend but no admin UI for self-service |
+| **MEDIUM** | Email Integration (Inbound) | Outbound only via Graph API — no inbound sync or tracking |
+| **MEDIUM** | Product / Price-book | No product catalog — opportunity value is manual entry only |
+| **MEDIUM** | Quote/Proposal Generation | No quote builder, PDF generation, or e-signature integration |
+| **MEDIUM** | Contract Management | Renewal worker exists but no formal contract entity/workflow |
+| **MEDIUM** | Report Builder | No ad-hoc report designer — dashboard only |
+| **MEDIUM** | Web-to-Lead Forms | No embeddable forms — leads are manual entry or CSV import |
+| LOW | Territory Hierarchy | No territory tree structure for regional access control |
+| LOW | Forecasting Targets | Confidence-weighted pipeline exists but no formal forecast periods |
+| LOW | Visual Workflow Builder | 4 workers are hard-coded — no drag-and-drop automation |
+| LOW | Cross-entity Dedup | Lead-level dedup exists — not across contacts/accounts |
+| LOW | Social Media Integration | No social profile enrichment or social listening |
+| LOW | Native Mobile App | Responsive web only — no iOS/Android native app |
+| LOW | Scheduled Reports | No daily/weekly email digests or report subscriptions |
 
 ---
 
-## STRATEGIC RECOMMENDATIONS
+## 9. Functional Roadmap: NOW / NEXT / LATER
 
-### To Reach Tier 1 (85+ score), Focus on:
+### NOW (0–3 months) — Deal-Breakers That Block Sales
 
-| Priority | Feature Gap | Effort | Impact | New Score |
-|----------|------------|--------|--------|-----------|
-| **P0** | Native Mobile App (Flutter planned) | High | +4 pts | 76 |
-| **P1** | Email Sequences + Tracking | Medium | +3 pts | 79 |
-| **P2** | Visual Workflow Builder | High | +2 pts | 81 |
-| **P3** | Custom Report Builder | Medium | +2 pts | 83 |
-| **P4** | Dark Mode | Low | +1 pt | 84 |
-| **P5** | Webhook System | Medium | +1 pt | 85 |
-| **P6** | Live Chat Widget | Medium | +1 pt | 86 |
-| **P7** | Basic Ticketing | Medium | +1 pt | 87 |
+| # | Feature | Why NOW |
+|---|---------|---------|
+| N1 | **Email Integration (Bidirectional)** | Reps can't work from CRM without seeing replies. All competitors have it. |
+| N2 | **Report Builder** | No ad-hoc reporting = no VP/Director adoption. Table-stakes for enterprise. |
+| N3 | **Product & Price Book** | Can't attach products to deals — opportunity value is manual-only. |
+| N4 | **Quote / Proposal Generation** | Reps can't send quotes from CRM — forces external tools. |
+| N5 | **Custom Fields Management UI** | Every competitor lets admins add fields without developers. |
+| N6 | **Web-to-Lead / Web Forms** | No way to capture leads from website — manual entry only. |
+| N7 | **Scheduled Reports & Digests** | Managers expect morning pipeline emails and weekly digests. |
+| N8 | **Webhook / Event System** | Can't integrate with Slack, Teams, Zapier without webhooks. |
 
-### Bottom Line
-We are a **strong Tier 2 CRM** that punches above its weight in AI, supply chain, and dashboard capabilities. The platform architecture (multi-tenant, RBAC, Clean Architecture) is enterprise-grade. The gap to Tier 1 is primarily in **marketing automation** and **communication channels** — areas that can be addressed incrementally without architectural changes.
+### NEXT (3–6 months) — Competitive Parity
 
-**The CRM+SCM combination is our moat.** No competitor below the Oracle/SAP price tier ($100K+/year) offers this. Position the product as a **Sales + Procurement unified platform** for mid-market manufacturers, distributors, and supply chain-dependent businesses.
+| # | Feature | Why NEXT |
+|---|---------|----------|
+| X1 | Marketing Automation (Nurture) | Campaigns exist; add drip sequences, engagement scoring, automated workflows |
+| X2 | Contract Management | Renewal worker exists but no contract entity to renew against |
+| X3 | Territory Management | Enterprise orgs with 50+ reps need territory-based access |
+| X4 | Forecasting Engine | Confidence-weighted pipeline exists but no target-vs-actual tracking |
+| X5 | Cross-Entity Duplicate Detection | Lead-level dedup exists — extend to contacts/accounts |
+| X6 | Notes & Attachments System | No structured notes — reps need to document interactions |
+| X7 | Saved Views / List Views | Every table shows same view — reps need their own saved filters |
+| X8 | Inline Editing (Table) | Reps must open a record to change a single field |
+| X9 | Task/Reminder Automation | Activities exist but aren't auto-generated on stage changes |
+
+### LATER (6–12 months) — Differentiation & Tier 1 Push
+
+| # | Feature | Strategic Value |
+|---|---------|-----------------|
+| L1 | Full Marketing Automation | Eliminates need for HubSpot Marketing alongside CRM |
+| L2 | Visual Workflow Builder | Competes with Salesforce Flow, Dynamics Power Automate |
+| L3 | Customer Portal | Self-service for customers — extends multi-tenancy |
+| L4 | Case / Support Ticketing | Expands from Sales CRM to full CRM (sales + service) |
+| L5 | Plugin / Extension Framework | Marketplace ecosystem for partners and customers |
+| L6 | Advanced Analytics & BI | Cohort analysis, pivot tables, drill-down — Power BI rival |
+| L7 | Social Media Integration | LinkedIn/Twitter enrichment and social listening |
+| L8 | AI Conversation Intelligence | Call transcription, sentiment analysis, coaching insights |
+| L9 | Native Mobile App | iOS + Android via Capacitor/MAUI with offline support |
+| L10 | Multi-Language & Localization | Language packs, RTL, date/currency localization |
+| L11 | Audit & Compliance Suite | GDPR, data retention, field-level change history |
+| L12 | Real-Time Collaboration | SignalR-based live presence, updates, @mentions |
+
+---
+
+## 10. Dependency Chain (Build Order)
+
+```
+→ Email Integration (NOW) → Marketing Automation / Nurture (NEXT) → Full Marketing Automation (LATER)
+→ Product/Price Book (NOW) → Quote Generation (NOW) → Contract Mgmt (NEXT)
+→ Report Builder (NOW) → Scheduled Reports (NOW) → Advanced Analytics (LATER)
+→ Custom Fields UI (NOW) → Saved Views (NEXT) → Visual Workflow Builder (LATER)
+→ Webhooks (NOW) → Plugin Framework (LATER)
+→ Campaigns (EXISTS) → Nurture Sequences (NEXT) → Full Marketing Automation (LATER)
+→ Territory Mgmt (NEXT) → Forecasting Engine (NEXT)
+→ Notes System (NEXT) → Customer Portal (LATER)
+→ Case Ticketing (LATER) → Customer Portal (LATER)
+```
+
+**Critical Path:** Email Integration → Products → Quotes → Report Builder → Webhooks. These 5 features unblock the most downstream work and close the biggest competitive gaps. Campaign management is already built — the marketing gap is now nurture/drip automation only.
+
+---
+
+## 11. Immediate Competitors
+
+| Tier | CRMs | Rationale |
+|------|------|-----------|
+| **Tier 1 (Enterprise)** | Salesforce, Dynamics 365, Oracle CX | Full platform: marketing automation, CPQ, service, analytics, marketplace |
+| **Tier 2 Upper (YOU)** | North Edge CRM, SugarCRM, Freshsales | Strong core CRM + AI + campaigns. Missing marketing automation/CPQ/reports |
+| **Tier 2 Lower** | Zoho, Pipedrive, Monday CRM | Broader ecosystem but weaker on AI/decision engine |
+| **Tier 3 (Basic)** | Insightly, Capsule, Less Annoying CRM | Basic contact/deal management only |
+
+**Direct competitors are SugarCRM, Freshsales, and Zoho CRM.** You now have campaign management with AI recommendations — stronger than SugarCRM and Freshsales on marketing. Your AI and decision-engine capabilities exceed all three. Remaining gaps vs. these competitors: email sync (inbound), quotes, report builder, and full marketing automation.
+
+---
+
+## 12. Real-Time Capabilities Analysis
+
+North Edge CRM now scores **5/10** on real-time capabilities — up from 2/10 in the prior audit. Two SignalR hubs (PresenceHub + CrmEventsHub) are implemented, a SignalRCrmRealtimePublisher broadcasts tenant + user-scoped events, and all 4 background workers publish events via SignalR.
+
+| Capability | Current Status | Detail |
+|------------|----------------|--------|
+| SignalR Hubs | **Implemented (2)** | PresenceHub (join/leave broadcast) + CrmEventsHub (tenant/user groups) |
+| Event Publisher | **Implemented** | SignalRCrmRealtimePublisher — ICrmRealtimePublisher interface, tenant+user scoped |
+| Presence Tracking | **Implemented** | PresenceHub with user join/leave, online status broadcasting |
+| Worker → Browser Push | **Implemented (4)** | All 4 workers call PublishTenantEventAsync/PublishUserEventAsync |
+| Push notifications | **Implemented** | NotificationAlertWorker pushes SLA breaches, idle deals, coaching alerts |
+| Live record updates | Not yet | No record-level change broadcasting to other viewers |
+| Streaming AI chat | Not yet | Full response wait — not streaming tokens via IAsyncEnumerable |
+| Live dashboard | Not yet | Metrics computed on load — no auto-refresh via SignalR deltas |
+| Live pipeline/kanban | Not yet | Stage changes not broadcast to other pipeline viewers |
+
+### Real-Time Competitive Comparison
+
+| CRM | Score | Technology |
+|-----|-------|------------|
+| Salesforce | 9/10 | Streaming API, Platform Events, Pub/Sub API, real-time record locking |
+| Dynamics 365 | 9/10 | SignalR-based real-time updates, Power Automate triggers, live co-authoring |
+| HubSpot | 8/10 | WebSocket-based live updates, real-time activity feed, live chat |
+| Pipedrive | 7/10 | WebSocket live updates on deals/activities, real-time sync |
+| Freshsales | 7/10 | WebSocket updates, real-time lead tracking, live chat |
+| **North Edge CRM** | **5/10** | SignalR (2 hubs, publisher, worker broadcasts); no record co-editing yet |
+| Zoho | 5/10 | Partial real-time via long-polling, Zoho Cliq integration |
+| SugarCRM | 3/10 | Minimal — mostly polling-based |
+
+---
+
+## 13. SignalR Implementation Status
+
+| Status | Component | Detail |
+|--------|-----------|--------|
+| ✅ BUILT | PresenceHub | User join/leave broadcasting, online status tracking via groups |
+| ✅ BUILT | CrmEventsHub | Tenant-scoped and user-scoped event groups, general broadcasting |
+| ✅ BUILT | SignalRCrmRealtimePublisher | ICrmRealtimePublisher impl — PublishTenantEventAsync, PublishUserEventAsync |
+| ✅ BUILT | EmailQueueWorker → SignalR | Pushes email delivery status (sent/failed) to tenant + user channels |
+| ✅ BUILT | NotificationAlertWorker → SignalR | Pushes SLA breach, idle deal, coaching alerts to user channels |
+| ✅ BUILT | DecisionSlaEscalationWorker → SignalR | Pushes escalation events to approver's user channel |
+| ✅ BUILT | RenewalAutomationWorker → SignalR | Pushes renewal creation events to opportunity owner's channel |
+| 🔲 REMAINING | AI Assistant Streaming | Switch to IAsyncEnumerable + SignalR stream for token-by-token UX |
+| 🔲 REMAINING | Dashboard Live Metrics | Entity change detection → broadcast widget deltas to viewers |
+| 🔲 REMAINING | Pipeline Kanban Live | Broadcast opportunity stage changes for live card moves |
+| 🔲 REMAINING | Record-Level Presence | Show who is viewing/editing a specific record in real-time |
+| 🔲 REMAINING | Review Thread Live Chat | Live comment push for deal review threads |
+
+---
+
+## 14. AI Capabilities Deep-Dive
+
+North Edge CRM has **7 distinct AI implementations** — more than most Tier 2 competitors and rivaling Tier 1 platforms in several areas. The AI architecture features multi-provider resilience, RAG grounding, action execution with risk-based review, and campaign intelligence.
+
+| # | Implementation | LOC | Key Capabilities |
+|---|----------------|-----|------------------|
+| 1 | **AssistantChatService** | 1,080 | Foundry Agent with RAG (AI Search), action execution with risk tiering (low=auto, medium/high=review), conversation memory |
+| 2 | **AzureOpenAILeadScoringService** | 126 | Primary AI scorer — structured JSON response with score (0-100), confidence (0-1), reasoning, recommendations |
+| 3 | **OpenAILeadScoringService** | 117 | Secondary fallback — identical prompt/response schema. Auto-activates when Azure OpenAI is unavailable |
+| 4 | **RuleBasedLeadScoringService** | 33 | Tertiary fallback — additive scoring (base 20, max 100), fixed confidence 0.35. Ensures scoring never fails |
+| 5 | **FoundryAgentClient** | 224 | Azure AI Foundry Agents HTTP client with thread-based conversation, polling with rate-limit retry, 20-second timeout |
+| 6 | **AzureSearchKnowledgeClient** | 87 | RAG retrieval layer — configurable top-k, filter expressions, content truncation. Feeds grounding documents to Foundry |
+| 7 | **MarketingService (AI)** | 1,232 | 5 AI recommendation types: pause_low_efficiency, reengage_stalled, increase_budget, reallocate_budget, modify_targeting |
+
+### AI Architecture Highlights
+
+- **3-Tier Scoring Fallback (10/10 Resilience)** — Azure OpenAI → OpenAI → Rule-based. No other CRM has automatic multi-provider AI failover.
+- **Action Risk Tiering** — Low-risk actions auto-execute. Medium/high-risk go to review. Confidence < 0.55 forces review regardless of risk level.
+- **60-Second Undo Window** — Every AI-executed action can be undone within 60 seconds. **Unique in the CRM market.**
+- **RAG Grounding** — Azure AI Search retrieves knowledge documents; Foundry Agent uses them for context-aware responses.
+- **Campaign Intelligence** — 5 recommendation types with confidence scoring, impact estimates, and evidence. Accept/dismiss/snooze workflow with 12-hour cache.
+- **Attribution Explainability** — First-touch attribution with evidence trail showing why each campaign touchpoint was credited.
+
+---
+
+## 15. Recommendations
+
+### Immediate Priorities (This Quarter)
+
+1. **Close the Email Gap** — Bidirectional email integration (MS Graph inbound sync) is the single highest-impact feature. Every lost deal starts with "can my reps see replies in the CRM?"
+
+2. **Ship Report Builder** — VP/Director-level buyers won't adopt without ad-hoc reporting. Even a basic filter + chart + export covers 80% of use cases.
+
+3. **Add Products + Quotes** — These two features are tightly coupled and complete the deal-closure workflow inside the CRM.
+
+4. **Expose Custom Fields UI** — Your backend entity already exists. Building the admin UI is front-end only.
+
+5. **Add Webhooks** — Leverage your existing Azure Service Bus. Publish entity events → outbound webhook delivery. Enables Zapier/Make/N8N integrations.
+
+### Technical Quick Wins
+
+- **Extend SignalR to Dashboard** — Infrastructure is built (2 hubs, publisher). Wire entity change detection → dashboard widget auto-refresh. Score jumps from 5/10 to 7/10.
+- **Add SSO/SAML** — Enterprise deal-blocker. Azure AD B2C or IdentityServer integration.
+- **Add OData or GraphQL layer** — Start with OData on key entities (read-only) for power users and integrators.
+- **Stream AI Chat via SignalR** — Switch AssistantChatService to IAsyncEnumerable + SignalR stream. Token-by-token UX with no extra infrastructure.
+
+### Strategic Positioning
+
+North Edge CRM has distinctive AI advantages (CQVS scoring, 3-tier fallback, action orchestration with undo, campaign AI with attribution explainability) that no Tier 2 competitor can match and that rival Tier 1 platforms. Campaign management with AI recommendations is now built — closing a major gap. SignalR infrastructure provides a real-time foundation.
+
+**The strategy should be:** close the remaining table-stakes gaps (NOW) to stop losing deals on missing features, then lean into your AI differentiators as the competitive moat.
+
+**Position as:** "The AI-first CRM that's actually enterprise-ready" — once email, reports, quotes, and webhooks ship, that claim becomes fully defensible.
+
+### Roadmap Summary
+
+| Phase | Features | Timeline | Outcome |
+|-------|----------|----------|---------|
+| **NOW** | 8 features | 0–3 months | Close deal-blocking gaps. Reps work 100% in CRM |
+| **NEXT** | 9 features | 3–6 months | Full Tier 2 parity. Compete with Freshsales/Zoho/Sugar |
+| **LATER** | 12 features | 6–12 months | Push into Tier 1. Approach HubSpot/Dynamics level |
+| **TOTAL** | **29 features** | 12 months | From Upper Tier 2 → Lower Tier 1 |
+
+---
+
+**End of Report — North Edge CRM Competitive Audit & Technology Benchmark • Version 2.0**
+
+*February 28, 2026 • North Edge System • Toronto, Canada • www.northedgesystem.com*
+
+*Classification: Internal – Engineering & Product • This document supersedes all previous versions.*

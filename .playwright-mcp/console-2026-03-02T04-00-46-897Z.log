@@ -1,0 +1,10 @@
+[     787ms] [ERROR] [2026-03-02T04:00:47.683Z] Error: Failed to complete negotiation with the server: TypeError: Failed to fetch @ https://www.northedgesystem.com/chunk-KWECSUKU.js:0
+[     787ms] [ERROR] [2026-03-02T04:00:47.684Z] Error: Failed to complete negotiation with the server: TypeError: Failed to fetch @ https://www.northedgesystem.com/chunk-KWECSUKU.js:0
+[     788ms] [ERROR] [2026-03-02T04:00:47.684Z] Error: Failed to start the connection: Error: Failed to complete negotiation with the server: TypeError: Failed to fetch @ https://www.northedgesystem.com/chunk-KWECSUKU.js:0
+[     788ms] [ERROR] [2026-03-02T04:00:47.684Z] Error: Failed to start the connection: Error: Failed to complete negotiation with the server: TypeError: Failed to fetch @ https://www.northedgesystem.com/chunk-KWECSUKU.js:0
+[     788ms] [WARNING] [CrmEvents] SignalR connection failed: M: Failed to complete negotiation with the server: TypeError: Failed to fetch
+    at ne._getNegotiationResponse (https://www.northedgesystem.com/chunk-KWECSUKU.js:1:44814)
+    at async ne._startInternal (https://www.northedgesystem.com/chunk-KWECSUKU.js:1:42689)
+    at async ne.start (https://www.northedgesystem.com/chunk-KWECSUKU.js:1:40569)
+    at async r._startInternal (https://www.northedgesystem.com/chunk-KWECSUKU.js:1:11522)
+    at async r._startWithStateTransitions (https://www.northedgesystem.com/chunk-KWECSUKU.js:1:10945) @ https://www.northedgesystem.com/chunk-AJ3XUSHB.js:0

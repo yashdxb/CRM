@@ -1,375 +1,297 @@
 <!-- ═══════════════════════════════════════════════════════════════════════════
-     EMAILS PAGE - FUTURISTIC ENTERPRISE UI
+     MY MAILBOX - OUTLOOK-LIKE 2-PANE EMAIL CLIENT
      ═══════════════════════════════════════════════════════════════════════════ -->
-<div class="page-container">
-  <!-- Animated Background Orbs -->
-  <div class="bg-orbs">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
-
-  <!-- PrimeNG Breadcrumb -->
-  <app-breadcrumbs></app-breadcrumbs>
+<div class="mailbox-container" 
+     [class.reading-pane-off]="readingPanePosition === 'off'"
+     [class.reading-pane-bottom]="readingPanePosition === 'bottom'">
 
   <!-- ═══════════════════════════════════════════════════════════════════════════
-       HERO SECTION - Command Center Style
+       EMAIL LIST PANE (Left)
        ═══════════════════════════════════════════════════════════════════════════ -->
-  <section class="hero-section">
-    <div class="hero-content">
-      <div class="hero-badge">
-        <span class="badge-dot"></span>
-        <span>Email Communications Hub</span>
-      </div>
-      
-      <h1 class="hero-title">
-        <span class="title-gradient">Email</span>
-        <span class="title-light">Center</span>
-      </h1>
-      
-      <p class="hero-description">
-        Track, compose, and manage all CRM email communications in one place
-      </p>
-
-      <div class="hero-stats">
-        <div class="hero-stat">
-          <div class="stat-value">{{ metrics().total || 0 }}</div>
-          <div class="stat-label">Total Emails</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill" style="width: 100%"></div>
-          </div>
-        </div>
-        <div class="hero-stat">
-          <div class="stat-value">{{ metrics().sent }}</div>
-          <div class="stat-label">Sent</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill stat-bar-fill--sent" [style.width.%]="metrics().total ? (metrics().sent / metrics().total) * 100 : 0"></div>
-          </div>
-        </div>
-        <div class="hero-stat">
-          <div class="stat-value">{{ metrics().opened }}</div>
-          <div class="stat-label">Opened</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill stat-bar-fill--opened" [style.width.%]="metrics().sent ? (metrics().opened / metrics().sent) * 100 : 0"></div>
-          </div>
-        </div>
-        <div class="hero-stat">
-          <div class="stat-value">{{ metrics().openRate }}%</div>
-          <div class="stat-label">Open Rate</div>
-          <div class="stat-bar">
-            <div class="stat-bar-fill stat-bar-fill--success" [style.width.%]="metrics().openRate"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="hero-actions">
-        <button pButton type="button" class="btn btn-primary btn-glow" [disabled]="!canManage()" (click)="openComposeDialog()">
-          <i class="pi pi-pencil"></i>
-          <span>Compose Email</span>
-          <div class="btn-shine"></div>
+  <section class="email-list-pane">
+    <header class="list-header">
+      <div class="header-left">
+        <button class="compose-btn" (click)="openCompose()" [disabled]="!canManage()">
+          <i class="pi pi-plus"></i>
+          <span>Compose</span>
         </button>
-        <button pButton type="button" class="btn btn-secondary" (click)="loadEmails()">
-          <i class="pi pi-refresh"></i>
-          <span>Refresh</span>
+        <h2 class="folder-title">
+          <i class="pi" [ngClass]="currentFolderData()?.icon || 'pi-inbox'"></i>
+          {{ currentFolderData()?.name || 'Inbox' }}
+        </h2>
+        <span class="email-count">
+          {{ emails().length }} emails
+          @if (unreadInFolder() > 0) {
+            <span class="unread-count">({{ unreadInFolder() }} unread)</span>
+          }
+        </span>
+      </div>
+      <div class="header-actions">
+        <button class="action-btn" (click)="refreshEmails()" pTooltip="Refresh">
+          <i class="pi pi-refresh" [class.spinning]="loading()"></i>
         </button>
-        <button pButton type="button" class="btn btn-ghost" routerLink="/app/emails/templates" *ngIf="canManage()">
-          <i class="pi pi-file-edit"></i>
-          <span>Templates</span>
-        </button>
-      </div>
-    </div>
-
-    <div class="hero-visual">
-      <div class="visual-card visual-card--primary">
-        <div class="card-icon">
-          <i class="pi pi-send"></i>
+        <div class="view-toggle">
+          <button 
+            class="view-btn" 
+            [class.active]="readingPanePosition === 'right'"
+            (click)="readingPanePosition = 'right'"
+            pTooltip="Reading pane right"
+          >
+            <i class="pi pi-window-maximize"></i>
+          </button>
+          <button 
+            class="view-btn" 
+            [class.active]="readingPanePosition === 'bottom'"
+            (click)="readingPanePosition = 'bottom'"
+            pTooltip="Reading pane bottom"
+          >
+            <i class="pi pi-minus"></i>
+          </button>
+          <button 
+            class="view-btn" 
+            [class.active]="readingPanePosition === 'off'"
+            (click)="readingPanePosition = 'off'"
+            pTooltip="Reading pane off"
+          >
+            <i class="pi pi-times"></i>
+          </button>
         </div>
-        <div class="card-content">
-          <span class="card-label">Sent</span>
-          <strong class="card-value">{{ metrics().sent }}</strong>
-          <span class="card-trend card-trend--up">
-            <i class="pi pi-check"></i> Delivered
-          </span>
-        </div>
-        <div class="card-glow"></div>
       </div>
+    </header>
 
-      <div class="visual-card visual-card--secondary">
-        <div class="card-icon">
-          <i class="pi pi-eye"></i>
-        </div>
-        <div class="card-content">
-          <span class="card-label">Engagement</span>
-          <strong class="card-value">{{ metrics().opened }}</strong>
-          <span class="card-trend">
-            <i class="pi pi-chart-line"></i> Opens
-          </span>
-        </div>
-        <div class="card-glow"></div>
-      </div>
-
-      <div class="visual-card visual-card--warning" *ngIf="metrics().failed > 0">
-        <div class="card-icon">
-          <i class="pi pi-exclamation-triangle"></i>
-        </div>
-        <div class="card-content">
-          <span class="card-label">Issues</span>
-          <strong class="card-value">{{ metrics().failed }}</strong>
-          <span class="card-trend card-trend--down">
-            <i class="pi pi-times"></i> Failed
-          </span>
-        </div>
-        <div class="card-glow"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════════════════
-       METRICS DASHBOARD
-       ═══════════════════════════════════════════════════════════════════════════ -->
-  <section class="metrics-section">
-    <div class="metric-card metric-card--total">
-      <div class="metric-icon">
-        <i class="pi pi-envelope"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Total Emails</span>
-        <strong class="metric-value">{{ metrics().total || '—' }}</strong>
-      </div>
-      <div class="metric-ring">
-        <svg viewBox="0 0 36 36">
-          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-          <path class="ring-fill ring-fill--cyan" [attr.stroke-dasharray]="'100, 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-        </svg>
-      </div>
-    </div>
-    
-    <div class="metric-card metric-card--sent">
-      <div class="metric-icon">
-        <i class="pi pi-send"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Sent</span>
-        <strong class="metric-value">{{ metrics().sent }}</strong>
-      </div>
-      <div class="metric-ring">
-        <svg viewBox="0 0 36 36">
-          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-          <path class="ring-fill ring-fill--green" [attr.stroke-dasharray]="metrics().total ? ((metrics().sent / metrics().total) * 100) + ', 100' : '0, 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-        </svg>
-      </div>
-    </div>
-
-    <div class="metric-card metric-card--pending">
-      <div class="metric-icon">
-        <i class="pi pi-clock"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Pending</span>
-        <strong class="metric-value">{{ metrics().pending }}</strong>
-      </div>
-      <div class="metric-ring">
-        <svg viewBox="0 0 36 36">
-          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-          <path class="ring-fill ring-fill--purple" [attr.stroke-dasharray]="metrics().total ? ((metrics().pending / metrics().total) * 100) + ', 100' : '0, 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-        </svg>
-      </div>
-    </div>
-
-    <div class="metric-card metric-card--opened">
-      <div class="metric-icon">
-        <i class="pi pi-eye"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Opened</span>
-        <strong class="metric-value">{{ metrics().opened }}</strong>
-      </div>
-      <div class="metric-ring">
-        <svg viewBox="0 0 36 36">
-          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-          <path class="ring-fill ring-fill--cyan" [attr.stroke-dasharray]="metrics().sent ? ((metrics().opened / metrics().sent) * 100) + ', 100' : '0, 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
-        </svg>
-      </div>
-    </div>
-
-    <div class="metric-card metric-card--failed" *ngIf="metrics().failed > 0">
-      <div class="metric-icon">
-        <i class="pi pi-times-circle"></i>
-      </div>
-      <div class="metric-content">
-        <span class="metric-label">Failed</span>
-        <strong class="metric-value">{{ metrics().failed }}</strong>
-      </div>
-      <div class="metric-badge">
-        <span>!</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════════════════════════════════════════════════════════════
-       FILTER & SEARCH TOOLBAR
-       ═══════════════════════════════════════════════════════════════════════════ -->
-  <section class="toolbar-section">
-    <div class="search-box">
-      <span class="p-inputgroup">
+    <div class="search-bar">
+      <div class="p-inputgroup search-input">
         <span class="p-inputgroup-addon">
           <i class="pi pi-search"></i>
         </span>
-        <input 
-          pInputText 
-          type="text" 
-          placeholder="Search emails by recipient, subject..." 
+        <input
+          type="text"
+          pInputText
           [(ngModel)]="searchTerm"
+          placeholder="Search emails..."
           (keyup.enter)="onSearch()"
         />
-      </span>
+        @if (searchTerm) {
+          <button class="p-inputgroup-addon clear-btn" (click)="searchTerm = ''; onSearch()">
+            <i class="pi pi-times"></i>
+          </button>
+        }
+      </div>
     </div>
 
-    <div class="filter-controls">
-      <p-select
-        [options]="statusOptions"
-        [(ngModel)]="statusFilter"
-        optionLabel="label"
-        optionValue="value"
-        placeholder="Filter by status"
-        (onChange)="onStatusFilterChange()"
-        styleClass="filter-select"
-      >
-        <ng-template pTemplate="item" let-option>
-          <div class="select-option">
-            <i class="pi" [ngClass]="option.icon"></i>
-            <span>{{ option.label }}</span>
+    <div class="email-list">
+      @if (loading()) {
+        <div class="skeleton-list">
+          @for (i of [1, 2, 3, 4, 5]; track i) {
+            <div class="skeleton-email">
+              <div class="skeleton-avatar"></div>
+              <div class="skeleton-content">
+                <div class="skeleton-line skeleton-name"></div>
+                <div class="skeleton-line skeleton-subject"></div>
+                <div class="skeleton-line skeleton-snippet"></div>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (emails().length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon">
+            <i class="pi pi-inbox"></i>
           </div>
-        </ng-template>
-        <ng-template pTemplate="value" let-option>
-          <div class="select-option" *ngIf="option">
-            <i class="pi" [ngClass]="option.icon"></i>
-            <span>{{ option.label }}</span>
-          </div>
-          <span *ngIf="!option" class="select-placeholder">Status</span>
-        </ng-template>
-      </p-select>
+          <h3>No emails</h3>
+          <p>Your {{ currentFolderData()?.name || 'folder' }} is empty</p>
+        </div>
+      } @else {
+        @for (email of emails(); track email.id) {
+          <div 
+            class="email-item"
+            [class.selected]="email.id === mailbox.selectedEmailId()"
+            [class.unread]="!email.isRead"
+            [class.starred]="email.isStarred"
+            [class.high-priority]="email.priority === 'high'"
+            (click)="selectEmail(email)"
+          >
+            <button class="star-btn" (click)="toggleStar($event, email)">
+              <i class="pi" [ngClass]="email.isStarred ? 'pi-star-fill' : 'pi-star'"></i>
+            </button>
 
-      <button pButton type="button" class="btn btn-ghost" (click)="onSearch()">
-        <i class="pi pi-filter"></i>
-        <span>Apply</span>
-      </button>
+            <div class="email-avatar">
+              @if (email.from.avatarUrl) {
+                <img [src]="email.from.avatarUrl" [alt]="email.from.name || email.from.email" />
+              } @else {
+                {{ mailbox.getInitials(email.from.name || email.from.email) }}
+              }
+            </div>
+
+            <div class="email-content">
+              <div class="email-header">
+                <span class="sender-name">{{ email.from.name || email.from.email }}</span>
+                <span class="email-date">{{ mailbox.formatEmailDate(email.receivedAtUtc) }}</span>
+              </div>
+              <div class="email-subject">
+                @if (email.priority === 'high') {
+                  <i class="pi pi-exclamation-circle priority-icon"></i>
+                }
+                @if (email.hasAttachments) {
+                  <i class="pi pi-paperclip attachment-icon"></i>
+                }
+                {{ email.subject }}
+              </div>
+              <div class="email-snippet">{{ email.snippet }}</div>
+            </div>
+
+            <div class="email-actions">
+              <button class="quick-action" (click)="archiveEmail($event, email)" pTooltip="Archive">
+                <i class="pi pi-inbox"></i>
+              </button>
+              <button class="quick-action" (click)="deleteEmail($event, email)" pTooltip="Delete">
+                <i class="pi pi-trash"></i>
+              </button>
+              <button class="quick-action" (click)="markAsRead($event, email)" [pTooltip]="email.isRead ? 'Mark unread' : 'Mark read'">
+                <i class="pi" [ngClass]="email.isRead ? 'pi-envelope' : 'pi-envelope-open'"></i>
+              </button>
+            </div>
+          </div>
+        }
+      }
     </div>
   </section>
+
+  <!-- Resizable Divider -->
+  @if (readingPanePosition !== 'off') {
+    <div 
+      class="pane-divider" 
+      [class.pane-divider--horizontal]="readingPanePosition === 'bottom'"
+      (mousedown)="startResize($event)"
+    >
+      <div class="divider-handle"></div>
+    </div>
+  }
 
   <!-- ═══════════════════════════════════════════════════════════════════════════
-       DATA TABLE
+       READING PANE (Right/Bottom)
        ═══════════════════════════════════════════════════════════════════════════ -->
-  <section class="data-section">
-    <div class="data-card">
-      <div class="data-header">
-        <h2>Email History</h2>
-        <span class="record-count">{{ total() }} emails</span>
-      </div>
-
-      <!-- Loading State -->
-      <div class="skeleton-rows" *ngIf="loading()">
-        <div class="skeleton-row" *ngFor="let _ of [1,2,3,4,5]">
-          <p-skeleton width="40px" height="40px" shape="circle"></p-skeleton>
-          <p-skeleton width="200px" height="20px"></p-skeleton>
-          <p-skeleton width="300px" height="20px"></p-skeleton>
-          <p-skeleton width="80px" height="24px" borderRadius="12px"></p-skeleton>
-          <p-skeleton width="100px" height="20px"></p-skeleton>
+  @if (readingPanePosition !== 'off') {
+    <section class="reading-pane" [class.reading-pane-empty]="!selectedEmail()">
+      @if (!selectedEmail()) {
+        <div class="empty-reading">
+          <i class="pi pi-envelope"></i>
+          <h3>Select an email</h3>
+          <p>Choose an email from the list to read it here</p>
         </div>
-      </div>
+      } @else {
+        <header class="reading-header">
+          <div class="reading-toolbar">
+            <div class="toolbar-left">
+              <button class="toolbar-btn" (click)="replyToSelected(false)" pTooltip="Reply">
+                <i class="pi pi-reply"></i>
+                <span>Reply</span>
+              </button>
+              <button class="toolbar-btn" (click)="replyToSelected(true)" pTooltip="Reply All">
+                <i class="pi pi-reply"></i>
+                <span>Reply All</span>
+              </button>
+              <button class="toolbar-btn" (click)="forwardSelected()" pTooltip="Forward">
+                <i class="pi pi-arrow-right"></i>
+                <span>Forward</span>
+              </button>
+            </div>
+            <div class="toolbar-right">
+              <button class="toolbar-btn" (click)="archiveSelected()" pTooltip="Archive">
+                <i class="pi pi-inbox"></i>
+              </button>
+              <button class="toolbar-btn" (click)="markSpamSelected()" pTooltip="Mark as Spam">
+                <i class="pi pi-ban"></i>
+              </button>
+              <button class="toolbar-btn delete" (click)="deleteSelected()" pTooltip="Delete">
+                <i class="pi pi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </header>
 
-      <!-- Data Table -->
-      <p-table 
-        [value]="emails()" 
-        [lazy]="false"
-        styleClass="data-table"
-        *ngIf="!loading()"
-      >
-        <ng-template pTemplate="header">
-          <tr>
-            <th style="width: 50px"></th>
-            <th>Recipient</th>
-            <th>Subject</th>
-            <th>Status</th>
-            <th>Sent At</th>
-            <th style="width: 100px">Actions</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-email>
-          <tr class="table-row">
-            <td>
-              <div class="email-avatar">
-                {{ getInitials(email.toEmail) }}
-              </div>
-            </td>
-            <td>
-              <div class="email-info">
-                <span class="email-address">{{ email.toEmail }}</span>
-                <span class="email-name" *ngIf="email.toName">{{ email.toName }}</span>
-              </div>
-            </td>
-            <td>
-              <span class="email-subject" [pTooltip]="email.subject" tooltipPosition="top">
-                {{ email.subject }}
-              </span>
-            </td>
-            <td>
-              <p-tag 
-                [value]="email.status" 
-                [severity]="statusSeverity(email.status)"
-                [icon]="'pi ' + statusIcon(email.status)"
-              ></p-tag>
-            </td>
-            <td>
-              <span class="email-date" *ngIf="email.sentAtUtc">{{ email.sentAtUtc | date:'short' }}</span>
-              <span class="email-date email-date--pending" *ngIf="!email.sentAtUtc">Pending</span>
-            </td>
-            <td>
-              <div class="action-buttons">
-                <button pButton type="button" class="icon-btn" pTooltip="View Details" tooltipPosition="top">
-                  <i class="pi pi-eye"></i>
-                </button>
-                <button pButton type="button" class="icon-btn" pTooltip="Resend" tooltipPosition="top" *ngIf="email.status === 'Failed' || email.status === 'Bounced'">
-                  <i class="pi pi-refresh"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="6">
-              <div class="empty-state">
-                <i class="pi pi-envelope"></i>
-                <h3>No emails found</h3>
-                <p>Start by composing a new email or adjust your filters</p>
-                <button pButton type="button" class="btn btn-primary" (click)="openComposeDialog()" [disabled]="!canManage()">
-                  <i class="pi pi-pencil"></i>
-                  <span>Compose Email</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
+        <div class="reading-content">
+          <div class="email-detail-header">
+            <h2 class="email-subject-title">
+              @if (selectedEmail()?.priority === 'high') {
+                <i class="pi pi-exclamation-circle priority-icon"></i>
+              }
+              {{ selectedEmail()?.subject }}
+            </h2>
 
-      <!-- Paginator -->
-      <div class="paginator-wrapper" *ngIf="total() > rows">
-        <p-paginator
-          [rows]="rows"
-          [totalRecords]="total()"
-          [first]="pageIndex * rows"
-          [rowsPerPageOptions]="[10, 25, 50]"
-          (onPageChange)="onPageChange($event)"
-        ></p-paginator>
-      </div>
-    </div>
-  </section>
+            <div class="sender-section">
+              <div class="sender-avatar">
+                @if (selectedEmail()?.from?.avatarUrl) {
+                  <img [src]="selectedEmail()?.from?.avatarUrl" [alt]="selectedEmail()?.from?.name" />
+                } @else {
+                  {{ mailbox.getInitials(selectedEmail()?.from?.name || selectedEmail()?.from?.email || '') }}
+                }
+              </div>
+              <div class="sender-info">
+                <div class="sender-name-line">
+                  <span class="sender-name">{{ selectedEmail()?.from?.name || selectedEmail()?.from?.email }}</span>
+                  <button class="star-btn-header" (click)="toggleStarSelected()">
+                    <i class="pi" [ngClass]="selectedEmail()?.isStarred ? 'pi-star-fill' : 'pi-star'"></i>
+                  </button>
+                </div>
+                <span class="sender-email">{{ selectedEmail()?.from?.email }}</span>
+              </div>
+              <span class="email-datetime">{{ selectedEmail()?.receivedAtUtc | date:'medium' }}</span>
+            </div>
+
+            <div class="recipients-section">
+              <div class="recipient-line">
+                <span class="label">To:</span>
+                @for (recipient of selectedEmail()?.to; track recipient.email; let isLast = $last) {
+                  {{ recipient.name || recipient.email }}{{ isLast ? '' : ', ' }}
+                }
+              </div>
+              @if (selectedEmail()?.cc && selectedEmail()!.cc!.length > 0) {
+                <div class="recipient-line">
+                  <span class="label">Cc:</span>
+                  @for (recipient of selectedEmail()?.cc; track recipient.email; let isLast = $last) {
+                    {{ recipient.name || recipient.email }}{{ isLast ? '' : ', ' }}
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          @if (selectedEmail()?.hasAttachments && selectedEmail()?.attachments) {
+            <div class="attachments-section">
+              <div class="attachments-header">
+                <i class="pi pi-paperclip"></i>
+                <span>{{ selectedEmail()!.attachments!.length }} Attachment(s)</span>
+              </div>
+              <div class="attachment-list">
+                @for (attachment of selectedEmail()?.attachments; track attachment.id) {
+                  <div class="attachment-item">
+                    <i class="pi pi-file"></i>
+                    <div class="attachment-info">
+                      <span class="attachment-name">{{ attachment.filename }}</span>
+                      <span class="attachment-size">{{ mailbox.formatFileSize(attachment.size) }}</span>
+                    </div>
+                    <button class="download-btn" pTooltip="Download">
+                      <i class="pi pi-download"></i>
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="email-body" [innerHTML]="selectedEmail()?.htmlBody"></div>
+        </div>
+      }
+    </section>
+  }
 </div>
 
 <!-- Compose Email Dialog -->
 <app-email-compose-dialog
   [visible]="showComposeDialog"
+  [mode]="composeMode"
+  [replyToEmail]="replyToEmail!"
   (visibleChange)="showComposeDialog = $event"
-  (emailSent)="onEmailSent()"
+  (sent)="onEmailSent()"
 ></app-email-compose-dialog>

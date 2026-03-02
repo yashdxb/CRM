@@ -102,6 +102,7 @@ public class CrmDbContext : DbContext
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<UserEmailConnection> UserEmailConnections => Set<UserEmailConnection>();
+    public DbSet<UserMailMessage> UserMailMessages => Set<UserMailMessage>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

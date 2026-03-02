@@ -151,3 +151,115 @@ export interface TemplateSearchResponse {
   page: number;
   pageSize: number;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAILBOX MODELS (Outlook-like Inbox Experience)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type MailboxFolderType = 
+  | 'inbox' 
+  | 'sent' 
+  | 'drafts' 
+  | 'archive' 
+  | 'trash' 
+  | 'spam' 
+  | 'starred' 
+  | 'custom';
+
+export type MailboxEmailPriority = 'low' | 'normal' | 'high';
+
+export interface MailboxFolder {
+  id: string;
+  name: string;
+  type: MailboxFolderType;
+  icon: string;
+  unreadCount: number;
+  totalCount: number;
+  color?: string;
+  isSystem: boolean;
+}
+
+export interface MailboxEmailParticipant {
+  email: string;
+  name?: string;
+  avatarUrl?: string;
+}
+
+export interface MailboxAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  url?: string;
+}
+
+export interface MailboxEmail {
+  id: string;
+  threadId?: string;
+  folderId: string;
+  folderType: MailboxFolderType;
+  from: MailboxEmailParticipant;
+  to: MailboxEmailParticipant[];
+  cc?: MailboxEmailParticipant[];
+  bcc?: MailboxEmailParticipant[];
+  subject: string;
+  snippet: string;
+  htmlBody: string;
+  textBody?: string;
+  isRead: boolean;
+  isStarred: boolean;
+  isDraft: boolean;
+  priority: MailboxEmailPriority;
+  hasAttachments: boolean;
+  attachments?: MailboxAttachment[];
+  labels?: string[];
+  receivedAtUtc: string;
+  sentAtUtc?: string;
+  // CRM Integration
+  relatedEntityType?: EmailRelationType;
+  relatedEntityId?: string;
+  relatedEntityName?: string;
+}
+
+export interface EmailThread {
+  id: string;
+  subject: string;
+  participants: MailboxEmailParticipant[];
+  emails: MailboxEmail[];
+  lastEmailAtUtc: string;
+  unreadCount: number;
+  isStarred: boolean;
+}
+
+export interface MailboxSearchRequest {
+  folderId?: string;
+  folderType?: MailboxFolderType;
+  search?: string;
+  isRead?: boolean;
+  isStarred?: boolean;
+  hasAttachments?: boolean;
+  fromDate?: string;
+  toDate?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MailboxSearchResponse {
+  items: MailboxEmail[];
+  total: number;
+  unreadTotal: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface MailboxStats {
+  inboxUnread: number;
+  draftsCount: number;
+  sentToday: number;
+  starredCount: number;
+  spamCount: number;
+  trashCount: number;
+}
+
+// Compose Mode for Reply/Forward
+export type ComposeMode = 'new' | 'reply' | 'replyAll' | 'forward';

@@ -1,0 +1,175 @@
+<section class="page-container">
+  <!-- Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Hero Section -->
+  <header class="hero-section">
+    <div class="hero-content">
+      <app-breadcrumbs></app-breadcrumbs>
+      <span class="hero-badge">
+        <span class="badge-dot"></span>
+        Marketing Hub
+      </span>
+      <h1 class="hero-title">
+        <span class="title-gradient">Campaign</span>
+        <span class="title-light">Emails</span>
+      </h1>
+      <p class="hero-description">Track and analyze bulk email sends from your marketing campaigns</p>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <span class="stat-value">{{ kpis().totalEmails }}</span>
+          <span class="stat-label">Total Emails</span>
+        </div>
+        <div class="hero-stat">
+          <span class="stat-value">{{ kpis().sentEmails }}</span>
+          <span class="stat-label">Sent</span>
+        </div>
+        <div class="hero-stat">
+          <span class="stat-value">{{ formatNumber(kpis().totalRecipients) }}</span>
+          <span class="stat-label">Recipients</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-chart-line"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Avg Open Rate</span>
+          <strong class="card-value">{{ kpis().avgOpenRate }}%</strong>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+      <div class="visual-card visual-card--success">
+        <div class="card-icon">
+          <i class="pi pi-external-link"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Avg Click Rate</span>
+          <strong class="card-value">{{ kpis().avgClickRate }}%</strong>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="p-inputgroup search-group">
+        <span class="p-inputgroup-addon">
+          <i class="pi pi-search"></i>
+        </span>
+        <input
+          pInputText
+          type="text"
+          placeholder="Search by subject or campaign..."
+          [ngModel]="searchText()"
+          (ngModelChange)="searchText.set($event)"
+        />
+      </span>
+      <p-select
+        [options]="statusFilterOptions"
+        [(ngModel)]="statusFilter"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="Filter by status"
+        styleClass="status-filter"
+      ></p-select>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="data-section">
+    <div class="data-card">
+      <div class="data-header">
+        <h2>Email Sends</h2>
+        <span class="record-count">{{ filteredEmails().length }} emails</span>
+      </div>
+
+      <p-table
+        [value]="filteredEmails()"
+        [loading]="loading()"
+        [paginator]="true"
+        [rows]="10"
+        [rowsPerPageOptions]="rowsPerPageOptions"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} emails"
+        styleClass="data-table"
+      >
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Campaign</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th class="text-right">Recipients</th>
+            <th class="text-right">Opens</th>
+            <th class="text-right">Clicks</th>
+            <th>Date</th>
+            <th></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-email>
+          <tr class="table-row">
+            <td>
+              <button class="link-btn" (click)="viewCampaign(email.campaignId)">
+                {{ email.campaignName }}
+              </button>
+            </td>
+            <td>
+              <span class="subject-text">{{ email.subject }}</span>
+            </td>
+            <td>
+              <p-tag [value]="email.status" [severity]="getStatusSeverity(email.status)"></p-tag>
+            </td>
+            <td class="text-right">
+              <span class="metric-value">{{ formatNumber(email.recipientCount) }}</span>
+            </td>
+            <td class="text-right">
+              <div class="metric-with-rate">
+                <span class="metric-value">{{ formatNumber(email.openCount) }}</span>
+                <span class="metric-rate" *ngIf="email.status === 'Sent'">({{ email.openRate }}%)</span>
+              </div>
+            </td>
+            <td class="text-right">
+              <div class="metric-with-rate">
+                <span class="metric-value">{{ formatNumber(email.clickCount) }}</span>
+                <span class="metric-rate" *ngIf="email.status === 'Sent'">({{ email.clickRate }}%)</span>
+              </div>
+            </td>
+            <td>
+              <span class="date-text" *ngIf="email.sentAt">{{ formatDate(email.sentAt) }}</span>
+              <span class="date-text scheduled" *ngIf="email.scheduledAt && !email.sentAt">
+                <i class="pi pi-clock"></i> {{ formatDate(email.scheduledAt) }}
+              </span>
+              <span class="date-text draft" *ngIf="!email.sentAt && !email.scheduledAt">—</span>
+            </td>
+            <td>
+              <button class="icon-btn" pTooltip="View Details" (click)="viewEmail(email.id)">
+                <i class="pi pi-eye"></i>
+              </button>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="8" class="empty-message">
+              <div class="empty-state">
+                <i class="pi pi-send"></i>
+                <p>No campaign emails found</p>
+                <span>Create a campaign and send emails to see them here</span>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </div>
+</section>

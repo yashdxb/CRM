@@ -1,0 +1,286 @@
+<section class="page-container">
+  <!-- Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="page-header">
+    <div class="header-left">
+      <app-breadcrumbs></app-breadcrumbs>
+      <button class="back-link" (click)="goBack()">
+        <i class="pi pi-arrow-left"></i>
+        Back to Emails
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Loading email details...</span>
+    </div>
+  } @else if (email()) {
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="hero-content">
+        <div class="hero-meta">
+          <p-tag [value]="email()!.status" [severity]="getStatusSeverity(email()!.status)"></p-tag>
+          <button class="campaign-link" (click)="viewCampaign()">
+            <i class="pi pi-flag"></i>
+            {{ email()!.campaignName }}
+          </button>
+        </div>
+        <h1 class="hero-title">{{ email()!.subject }}</h1>
+        <p class="hero-preview">{{ email()!.previewText }}</p>
+        <div class="hero-info">
+          <span class="info-item">
+            <i class="pi pi-user"></i>
+            {{ email()!.fromName }} &lt;{{ email()!.fromEmail }}&gt;
+          </span>
+          <span class="info-item">
+            <i class="pi pi-calendar"></i>
+            @if (email()!.sentAt) {
+              Sent {{ formatDate(email()!.sentAt) }}
+            } @else if (email()!.scheduledAt) {
+              Scheduled {{ formatDate(email()!.scheduledAt) }}
+            } @else {
+              Created {{ formatDate(email()!.createdAt) }}
+            }
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics Cards -->
+    <div class="metrics-section">
+      <div class="metric-card metric-card--primary">
+        <div class="metric-icon">
+          <i class="pi pi-users"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Recipients</span>
+          <strong class="metric-value">{{ formatNumber(email()!.recipientCount) }}</strong>
+        </div>
+      </div>
+      <div class="metric-card metric-card--sent">
+        <div class="metric-icon">
+          <i class="pi pi-send"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Delivered</span>
+          <strong class="metric-value">{{ formatNumber(email()!.deliveredCount) }}</strong>
+          <span class="metric-rate">{{ deliveryRate() }}%</span>
+        </div>
+      </div>
+      <div class="metric-card metric-card--opens">
+        <div class="metric-icon">
+          <i class="pi pi-eye"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Unique Opens</span>
+          <strong class="metric-value">{{ formatNumber(email()!.uniqueOpens) }}</strong>
+          <span class="metric-rate">{{ email()!.openRate }}%</span>
+        </div>
+      </div>
+      <div class="metric-card metric-card--clicks">
+        <div class="metric-icon">
+          <i class="pi pi-external-link"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Unique Clicks</span>
+          <strong class="metric-value">{{ formatNumber(email()!.uniqueClicks) }}</strong>
+          <span class="metric-rate">{{ email()!.clickRate }}%</span>
+        </div>
+      </div>
+      <div class="metric-card metric-card--bounce">
+        <div class="metric-icon">
+          <i class="pi pi-times-circle"></i>
+        </div>
+        <div class="metric-content">
+          <span class="metric-label">Bounced</span>
+          <strong class="metric-value">{{ formatNumber(email()!.bounceCount) }}</strong>
+          <span class="metric-rate">{{ email()!.bounceRate }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-section">
+      <div class="tab-buttons">
+        <button 
+          class="tab-btn" 
+          [class.active]="activeTab() === 'overview'"
+          (click)="setTab('overview')"
+        >
+          <i class="pi pi-chart-bar"></i>
+          Overview
+        </button>
+        <button 
+          class="tab-btn" 
+          [class.active]="activeTab() === 'recipients'"
+          (click)="setTab('recipients')"
+        >
+          <i class="pi pi-users"></i>
+          Recipients
+        </button>
+      </div>
+    </div>
+
+    <!-- Overview Tab -->
+    @if (activeTab() === 'overview') {
+      <div class="detail-grid">
+        <!-- Email Performance -->
+        <div class="detail-card">
+          <h3 class="card-title">
+            <i class="pi pi-chart-line"></i>
+            Performance Breakdown
+          </h3>
+          <div class="performance-list">
+            <div class="performance-item">
+              <span class="perf-label">Total Opens</span>
+              <span class="perf-value">{{ formatNumber(email()!.openCount) }}</span>
+              <p-progressBar [value]="email()!.openRate" [showValue]="false" styleClass="perf-bar perf-bar--opens"></p-progressBar>
+            </div>
+            <div class="performance-item">
+              <span class="perf-label">Total Clicks</span>
+              <span class="perf-value">{{ formatNumber(email()!.clickCount) }}</span>
+              <p-progressBar [value]="email()!.clickRate" [showValue]="false" styleClass="perf-bar perf-bar--clicks"></p-progressBar>
+            </div>
+            <div class="performance-item">
+              <span class="perf-label">Unsubscribes</span>
+              <span class="perf-value">{{ formatNumber(email()!.unsubscribeCount) }}</span>
+              <p-progressBar [value]="(email()!.unsubscribeCount / email()!.sentCount) * 100" [showValue]="false" styleClass="perf-bar perf-bar--unsub"></p-progressBar>
+            </div>
+            <div class="performance-item">
+              <span class="perf-label">Spam Reports</span>
+              <span class="perf-value">{{ formatNumber(email()!.spamCount) }}</span>
+              <p-progressBar [value]="(email()!.spamCount / email()!.sentCount) * 100" [showValue]="false" styleClass="perf-bar perf-bar--spam"></p-progressBar>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Details -->
+        <div class="detail-card">
+          <h3 class="card-title">
+            <i class="pi pi-envelope"></i>
+            Email Details
+          </h3>
+          <div class="detail-list">
+            <div class="detail-row">
+              <span class="detail-label">From</span>
+              <span class="detail-value">{{ email()!.fromName }} &lt;{{ email()!.fromEmail }}&gt;</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Reply-To</span>
+              <span class="detail-value">{{ email()!.replyTo }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Subject</span>
+              <span class="detail-value">{{ email()!.subject }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Preview Text</span>
+              <span class="detail-value">{{ email()!.previewText }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Created</span>
+              <span class="detail-value">{{ formatDate(email()!.createdAt) }}</span>
+            </div>
+            @if (email()!.sentAt) {
+              <div class="detail-row">
+                <span class="detail-label">Sent</span>
+                <span class="detail-value">{{ formatDate(email()!.sentAt) }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Delivery Summary -->
+        <div class="detail-card detail-card--full">
+          <h3 class="card-title">
+            <i class="pi pi-check-circle"></i>
+            Delivery Summary
+          </h3>
+          <div class="delivery-grid">
+            <div class="delivery-stat">
+              <span class="stat-number">{{ formatNumber(email()!.sentCount) }}</span>
+              <span class="stat-label">Sent</span>
+            </div>
+            <div class="delivery-stat">
+              <span class="stat-number">{{ formatNumber(email()!.deliveredCount) }}</span>
+              <span class="stat-label">Delivered</span>
+            </div>
+            <div class="delivery-stat">
+              <span class="stat-number">{{ formatNumber(email()!.bounceCount) }}</span>
+              <span class="stat-label">Bounced</span>
+            </div>
+            <div class="delivery-stat">
+              <span class="stat-number">{{ formatNumber(email()!.unsubscribeCount) }}</span>
+              <span class="stat-label">Unsubscribed</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Recipients Tab -->
+    @if (activeTab() === 'recipients') {
+      <div class="data-section">
+        <div class="data-card">
+          <p-table
+            [value]="email()!.recipients"
+            [paginator]="true"
+            [rows]="10"
+            [rowsPerPageOptions]="[10, 25, 50]"
+            [showCurrentPageReport]="true"
+            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} recipients"
+            styleClass="data-table"
+          >
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Recipient</th>
+                <th>Status</th>
+                <th>Opened</th>
+                <th>Clicked</th>
+                <th class="text-right">Click Count</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-recipient>
+              <tr class="table-row">
+                <td>
+                  <div class="recipient-info">
+                    <span class="recipient-name">{{ recipient.name }}</span>
+                    <span class="recipient-email">{{ recipient.email }}</span>
+                  </div>
+                </td>
+                <td>
+                  <p-tag [value]="recipient.status" [severity]="getStatusSeverity(recipient.status)"></p-tag>
+                </td>
+                <td>
+                  @if (recipient.openedAt) {
+                    <span class="date-text">{{ formatDate(recipient.openedAt) }}</span>
+                  } @else {
+                    <span class="date-text muted">—</span>
+                  }
+                </td>
+                <td>
+                  @if (recipient.clickedAt) {
+                    <span class="date-text">{{ formatDate(recipient.clickedAt) }}</span>
+                  } @else {
+                    <span class="date-text muted">—</span>
+                  }
+                </td>
+                <td class="text-right">
+                  <span class="click-count">{{ recipient.clickCount }}</span>
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </div>
+    }
+  }
+</section>

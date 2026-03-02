@@ -1,183 +1,456 @@
-import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { DatePipe, NgClass, NgIf } from '@angular/common';
+import { Component, computed, inject, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
-import { TagModule } from 'primeng/tag';
-import { PaginatorModule, PaginatorState } from 'primeng/paginator';
-import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
+import { SkeletonModule } from 'primeng/skeleton';
+import { BadgeModule } from 'primeng/badge';
+import { DividerModule } from 'primeng/divider';
+import { AvatarModule } from 'primeng/avatar';
+import { MenuModule } from 'primeng/menu';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
-import { EmailListItem, EmailStatus } from '../models/email.model';
-import { EmailDataService } from '../services/email-data.service';
-import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
+import { MailboxFolder, MailboxFolderType, MailboxEmail, ComposeMode } from '../models/email.model';
+import { MailboxService } from '../services/mailbox.service';
+import { UiStateService } from '../../../../core/ui-state/ui-state.service';
+
+interface MailboxLayoutPrefs {
+  listPaneWidth: number;
+  listPaneHeight: number;
+  readingPanePosition: 'right' | 'bottom' | 'off';
+}
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { EmailComposeDialogComponent } from '../components/email-compose-dialog.component';
-
-interface StatusOption {
-  label: string;
-  value: EmailStatus | 'all';
-  icon: string;
-}
 
 @Component({
   selector: 'app-emails-page',
   standalone: true,
   imports: [
     NgIf,
-    NgFor,
     NgClass,
     DatePipe,
     FormsModule,
-    RouterLink,
     ButtonModule,
     InputTextModule,
     SelectModule,
-    TableModule,
-    TagModule,
-    PaginatorModule,
-    SkeletonModule,
     TooltipModule,
-    BreadcrumbsComponent,
+    SkeletonModule,
+    BadgeModule,
+    DividerModule,
+    AvatarModule,
+    MenuModule,
+    ConfirmDialogModule,
     EmailComposeDialogComponent
   ],
   templateUrl: './emails.page.html',
   styleUrl: './emails.page.scss'
 })
-export class EmailsPage implements OnInit {
-  private readonly emailService = inject(EmailDataService);
+export class EmailsPage implements OnInit, OnDestroy {
+  protected readonly mailbox = inject(MailboxService);
   private readonly toastService = inject(AppToastService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly elementRef = inject(ElementRef);
+  private readonly uiState = inject(UiStateService);
+  private routeSub?: Subscription;
 
-  protected readonly statusOptions: StatusOption[] = [
-    { label: 'All', value: 'all', icon: 'pi-list' },
-    { label: 'Pending', value: 'Pending', icon: 'pi-clock' },
-    { label: 'Queued', value: 'Queued', icon: 'pi-hourglass' },
-    { label: 'Sent', value: 'Sent', icon: 'pi-check' },
-    { label: 'Delivered', value: 'Delivered', icon: 'pi-check-circle' },
-    { label: 'Opened', value: 'Opened', icon: 'pi-eye' },
-    { label: 'Clicked', value: 'Clicked', icon: 'pi-external-link' },
-    { label: 'Bounced', value: 'Bounced', icon: 'pi-times-circle' },
-    { label: 'Failed', value: 'Failed', icon: 'pi-exclamation-triangle' }
-  ];
+  // State
+  protected readonly folders = this.mailbox.folders;
+  protected readonly emails = this.mailbox.emails;
+  protected readonly selectedEmail = this.mailbox.selectedEmail;
+  protected readonly loading = this.mailbox.loading;
+  protected readonly currentFolder = this.mailbox.currentFolder;
+  protected readonly stats = this.mailbox.stats;
 
-  protected readonly emails = signal<EmailListItem[]>([]);
-  protected readonly total = signal(0);
-  protected readonly loading = signal(true);
+  protected searchTerm = '';
+  protected showComposeDialog = false;
+  protected composeMode: ComposeMode = 'new';
+  protected replyToEmail: MailboxEmail | null = null;
+  protected readingPanePosition: 'right' | 'bottom' | 'off' = 'right';
 
+  // Resize state
+  protected isResizing = false;
+  private resizeStartX = 0;
+  private resizeStartY = 0;
+  private initialPaneSize = 0;
+
+  // Computed
   protected readonly canManage = computed(() => {
     const context = readTokenContext();
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.emailsManage);
   });
 
-  protected readonly metrics = computed(() => {
-    const rows = this.emails();
-    const sent = rows.filter((e) => e.status === 'Sent' || e.status === 'Delivered' || e.status === 'Opened' || e.status === 'Clicked').length;
-    const pending = rows.filter((e) => e.status === 'Pending' || e.status === 'Queued').length;
-    const opened = rows.filter((e) => e.status === 'Opened' || e.status === 'Clicked').length;
-    const failed = rows.filter((e) => e.status === 'Bounced' || e.status === 'Failed').length;
-
-    return {
-      total: this.total(),
-      sent,
-      pending,
-      opened,
-      failed,
-      openRate: sent > 0 ? Math.round((opened / sent) * 100) : 0
-    };
+  protected readonly currentFolderData = computed(() => {
+    return this.folders().find(f => f.type === this.currentFolder()) || null;
   });
 
-  protected searchTerm = '';
-  protected statusFilter: EmailStatus | 'all' = 'all';
-  protected pageIndex = 0;
-  protected rows = 10;
-  protected showComposeDialog = false;
-  protected readonly Math = Math;
+  protected readonly unreadInFolder = computed(() => {
+    return this.emails().filter(e => !e.isRead).length;
+  });
 
-  ngOnInit(): void {
-    this.loadEmails();
+  // Keyboard shortcut handling
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboard(event: KeyboardEvent): void {
+    // Ignore if typing in input
+    if ((event.target as HTMLElement).tagName === 'INPUT' || 
+        (event.target as HTMLElement).tagName === 'TEXTAREA') {
+      return;
+    }
+
+    const email = this.selectedEmail();
+    
+    switch (event.key) {
+      case 'n':
+        if (event.ctrlKey || event.metaKey) {
+          event.preventDefault();
+          this.openCompose();
+        }
+        break;
+      case 'r':
+        if (email && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          this.replyToSelected(event.shiftKey);
+        }
+        break;
+      case 'Delete':
+      case 'Backspace':
+        if (email && !event.ctrlKey && !event.metaKey) {
+          event.preventDefault();
+          this.deleteSelected();
+        }
+        break;
+      case 'e':
+        if (email) {
+          event.preventDefault();
+          this.archiveSelected();
+        }
+        break;
+      case 's':
+        if (email && !event.ctrlKey && !event.metaKey) {
+          event.preventDefault();
+          this.toggleStarSelected();
+        }
+        break;
+      case 'ArrowUp':
+      case 'ArrowDown':
+        event.preventDefault();
+        this.navigateEmails(event.key === 'ArrowUp' ? -1 : 1);
+        break;
+    }
   }
 
-  protected loadEmails(): void {
-    this.loading.set(true);
-    this.emailService.search({
-      page: this.pageIndex + 1,
-      pageSize: this.rows,
-      search: this.searchTerm || undefined,
-      status: this.statusFilter !== 'all' ? this.statusFilter : undefined
-    }).subscribe({
-      next: (response) => {
-        this.emails.set(response.items);
-        this.total.set(response.total);
-        this.loading.set(false);
-      },
-      error: () => {
-        this.toastService.show('error', 'Failed to load emails');
-        this.loading.set(false);
+  ngOnInit(): void {
+    // Subscribe to route data changes to switch folders
+    this.routeSub = this.route.data.subscribe(data => {
+      const folder = data['folder'] as MailboxFolderType;
+      if (folder && folder !== this.currentFolder()) {
+        this.mailbox.selectFolder(folder);
+      }
+    });
+    this.mailbox.loadEmails();
+
+    // Load saved layout preferences
+    this.uiState.get<MailboxLayoutPrefs>('mailbox-layout').subscribe(prefs => {
+      if (prefs) {
+        this.readingPanePosition = prefs.readingPanePosition;
+        const container = this.elementRef.nativeElement.querySelector('.mailbox-container');
+        if (container) {
+          if (prefs.listPaneWidth) {
+            container.style.setProperty('--list-pane-width', `${prefs.listPaneWidth}px`);
+          }
+          if (prefs.listPaneHeight) {
+            container.style.setProperty('--list-pane-height', `${prefs.listPaneHeight}px`);
+          }
+        }
       }
     });
   }
 
-  protected onPageChange(event: PaginatorState): void {
-    this.pageIndex = event.page ?? 0;
-    this.rows = event.rows ?? 10;
-    this.loadEmails();
+  ngOnDestroy(): void {
+    this.routeSub?.unsubscribe();
   }
 
-  protected onSearch(): void {
-    this.pageIndex = 0;
-    this.loadEmails();
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FOLDER ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  selectFolder(folder: MailboxFolder): void {
+    // Navigate to the folder route instead of just changing state
+    this.router.navigate(['/app/mailbox', folder.type]);
+    this.searchTerm = '';
   }
 
-  protected onStatusFilterChange(): void {
-    this.pageIndex = 0;
-    this.loadEmails();
+  getFolderRoute(folder: MailboxFolder): string[] {
+    return ['/app/mailbox', folder.type];
   }
 
-  protected openComposeDialog(): void {
+  getFolderIcon(folder: MailboxFolder): string {
+    return folder.icon || 'pi-folder';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EMAIL LIST ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  selectEmail(email: MailboxEmail): void {
+    this.mailbox.selectEmail(email.id);
+  }
+
+  toggleStar(event: Event, email: MailboxEmail): void {
+    event.stopPropagation();
+    this.mailbox.toggleStar(email.id);
+  }
+
+  markAsRead(event: Event, email: MailboxEmail): void {
+    event.stopPropagation();
+    this.mailbox.markAsRead(email.id, !email.isRead);
+  }
+
+  deleteEmail(event: Event, email: MailboxEmail): void {
+    event.stopPropagation();
+    this.mailbox.deleteEmail(email.id);
+    this.toastService.show('success', 'Email moved to Trash');
+  }
+
+  archiveEmail(event: Event, email: MailboxEmail): void {
+    event.stopPropagation();
+    this.mailbox.archiveEmail(email.id);
+    this.toastService.show('success', 'Email archived');
+  }
+
+  onSearch(): void {
+    this.mailbox.searchEmails({
+      folderType: this.currentFolder(),
+      search: this.searchTerm
+    }).subscribe(response => {
+      this.mailbox.emails.set(response.items);
+    });
+  }
+
+  refreshEmails(): void {
+    this.mailbox.loadEmails();
+    this.toastService.show('success', 'Mailbox refreshed');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // READING PANE ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  replyToSelected(replyAll = false): void {
+    const email = this.selectedEmail();
+    if (email) {
+      this.composeMode = replyAll ? 'replyAll' : 'reply';
+      this.replyToEmail = email;
+      this.showComposeDialog = true;
+    }
+  }
+
+  forwardSelected(): void {
+    const email = this.selectedEmail();
+    if (email) {
+      this.composeMode = 'forward';
+      this.replyToEmail = email;
+      this.showComposeDialog = true;
+    }
+  }
+
+  deleteSelected(): void {
+    const email = this.selectedEmail();
+    if (email) {
+      this.mailbox.deleteEmail(email.id);
+      this.toastService.show('success', 'Email moved to Trash');
+    }
+  }
+
+  archiveSelected(): void {
+    const email = this.selectedEmail();
+    if (email) {
+      this.mailbox.archiveEmail(email.id);
+      this.toastService.show('success', 'Email archived');
+    }
+  }
+
+  toggleStarSelected(): void {
+    const email = this.selectedEmail();
+    if (email) {
+      this.mailbox.toggleStar(email.id);
+    }
+  }
+
+  markSpamSelected(): void {
+    const email = this.selectedEmail();
+    if (email) {
+      this.mailbox.markAsSpam(email.id);
+      this.toastService.show('success', 'Email marked as spam');
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMPOSE ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  openCompose(): void {
+    this.composeMode = 'new';
+    this.replyToEmail = null;
     this.showComposeDialog = true;
   }
 
-  protected onEmailSent(): void {
+  onEmailSent(): void {
     this.showComposeDialog = false;
-    this.loadEmails();
+    this.replyToEmail = null;
+    this.mailbox.loadEmails();
     this.toastService.show('success', 'Email sent successfully');
   }
 
-  protected statusSeverity(status: EmailStatus): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-    switch (status) {
-      case 'Delivered':
-      case 'Opened':
-      case 'Clicked':
-        return 'success';
-      case 'Sent':
-        return 'info';
-      case 'Pending':
-      case 'Queued':
-        return 'warn';
-      case 'Bounced':
-      case 'Failed':
-        return 'danger';
-      default:
-        return 'secondary';
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NAVIGATION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  navigateEmails(direction: number): void {
+    const emailList = this.emails();
+    const currentId = this.mailbox.selectedEmailId();
+    const currentIndex = emailList.findIndex(e => e.id === currentId);
+    const newIndex = Math.max(0, Math.min(emailList.length - 1, currentIndex + direction));
+    
+    if (emailList[newIndex]) {
+      this.selectEmail(emailList[newIndex]);
     }
   }
 
-  protected statusIcon(status: EmailStatus): string {
-    const option = this.statusOptions.find((o) => o.value === status);
-    return option?.icon ?? 'pi-envelope';
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UI STATE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  setReadingPanePosition(position: 'right' | 'bottom' | 'off'): void {
+    this.readingPanePosition = position;
+    if (position === 'off') {
+      this.mailbox.selectedEmailId.set(null);
+    }
+    // Persist reading pane position preference
+    const container = this.elementRef.nativeElement.querySelector('.mailbox-container');
+    const listPane = container?.querySelector('.email-list-pane');
+    const prefs: MailboxLayoutPrefs = {
+      listPaneWidth: listPane?.offsetWidth || 380,
+      listPaneHeight: listPane?.offsetHeight || 300,
+      readingPanePosition: position
+    };
+    this.uiState.set('mailbox-layout', prefs).subscribe();
   }
 
-  protected getInitials(email: string): string {
-    const parts = email.split('@')[0].split(/[._-]/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
+  closeReadingPane(): void {
+    this.mailbox.selectedEmailId.set(null);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PANE RESIZE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  startResize(event: MouseEvent): void {
+    event.preventDefault();
+    this.isResizing = true;
+    this.resizeStartX = event.clientX;
+    this.resizeStartY = event.clientY;
+
+    const container = this.elementRef.nativeElement.querySelector('.mailbox-container');
+    if (container) {
+      container.classList.add('resizing');
+      
+      if (this.readingPanePosition === 'bottom') {
+        const listPane = container.querySelector('.email-list-pane');
+        this.initialPaneSize = listPane?.offsetHeight || container.offsetHeight * 0.5;
+      } else {
+        const listPane = container.querySelector('.email-list-pane');
+        this.initialPaneSize = listPane?.offsetWidth || 380;
+      }
     }
-    return email.substring(0, 2).toUpperCase();
+
+    // Add global listeners for drag
+    document.addEventListener('mousemove', this.onResize);
+    document.addEventListener('mouseup', this.stopResize);
+  }
+
+  private onResize = (event: MouseEvent): void => {
+    if (!this.isResizing) return;
+
+    const container = this.elementRef.nativeElement.querySelector('.mailbox-container');
+    if (!container) return;
+
+    if (this.readingPanePosition === 'bottom') {
+      // Vertical resize
+      const delta = event.clientY - this.resizeStartY;
+      const newHeight = Math.max(150, Math.min(this.initialPaneSize + delta, container.offsetHeight - 150));
+      container.style.setProperty('--list-pane-height', `${newHeight}px`);
+    } else {
+      // Horizontal resize
+      const delta = event.clientX - this.resizeStartX;
+      const newWidth = Math.max(280, Math.min(this.initialPaneSize + delta, container.offsetWidth - 300));
+      container.style.setProperty('--list-pane-width', `${newWidth}px`);
+    }
+  };
+
+  private stopResize = (): void => {
+    this.isResizing = false;
+    
+    const container = this.elementRef.nativeElement.querySelector('.mailbox-container');
+    if (container) {
+      container.classList.remove('resizing');
+
+      // Save layout preferences to server
+      const listPane = container.querySelector('.email-list-pane');
+      const prefs: MailboxLayoutPrefs = {
+        listPaneWidth: listPane?.offsetWidth || 380,
+        listPaneHeight: listPane?.offsetHeight || 300,
+        readingPanePosition: this.readingPanePosition
+      };
+      this.uiState.set('mailbox-layout', prefs).subscribe();
+    }
+
+    document.removeEventListener('mousemove', this.onResize);
+    document.removeEventListener('mouseup', this.stopResize);
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  getInitials(email: MailboxEmail): string {
+    return this.mailbox.getInitials(email.from.name, email.from.email);
+  }
+
+  formatDate(dateStr: string): string {
+    return this.mailbox.formatEmailDate(dateStr);
+  }
+
+  formatFullDate(dateStr: string): string {
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  }
+
+  formatFileSize(bytes: number): string {
+    return this.mailbox.formatFileSize(bytes);
+  }
+
+  getPriorityIcon(email: MailboxEmail): string {
+    return email.priority === 'high' ? 'pi-exclamation-circle' : '';
+  }
+
+  trackByEmail(index: number, email: MailboxEmail): string {
+    return email.id;
+  }
+
+  trackByFolder(index: number, folder: MailboxFolder): string {
+    return folder.id;
   }
 }

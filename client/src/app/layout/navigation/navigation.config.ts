@@ -55,6 +55,7 @@ export const NAV_LINKS: NavLink[] = [
     children: [
       { label: 'Campaigns', icon: 'pi-list', path: '/app/marketing/campaigns', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' },
       { label: 'Add Campaign', icon: 'pi-plus', path: '/app/marketing/campaigns/new', permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns' },
+      { label: 'Campaign Emails', icon: 'pi-send', path: '/app/marketing/emails', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' },
       { label: 'Attribution', icon: 'pi-percentage', path: '/app/marketing/attribution', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' },
       { label: 'Marketing Settings', icon: 'pi-cog', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' }
     ]
@@ -71,13 +72,19 @@ export const NAV_LINKS: NavLink[] = [
     ]
   },
   {
-    label: 'Emails',
+    label: 'My Mailbox',
     icon: 'pi-envelope',
-    path: '/app/emails',
+    path: '/app/mailbox',
     permission: PERMISSION_KEYS.emailsView,
     children: [
-      { label: 'All Emails', icon: 'pi-list', path: '/app/emails', permission: PERMISSION_KEYS.emailsView },
-      { label: 'Templates', icon: 'pi-file-edit', path: '/app/emails/templates', permission: PERMISSION_KEYS.emailsManage }
+      { label: 'Inbox', icon: 'pi-inbox', path: '/app/mailbox/inbox', permission: PERMISSION_KEYS.emailsView, iconColor: '#3b82f6' },
+      { label: 'Starred', icon: 'pi-star-fill', path: '/app/mailbox/starred', permission: PERMISSION_KEYS.emailsView, iconColor: '#eab308' },
+      { label: 'Sent', icon: 'pi-send', path: '/app/mailbox/sent', permission: PERMISSION_KEYS.emailsView, iconColor: '#22c55e' },
+      { label: 'Drafts', icon: 'pi-file-edit', path: '/app/mailbox/drafts', permission: PERMISSION_KEYS.emailsView, iconColor: '#a855f7' },
+      { label: 'Archive', icon: 'pi-folder', path: '/app/mailbox/archive', permission: PERMISSION_KEYS.emailsView, iconColor: '#f97316' },
+      { label: 'Spam', icon: 'pi-ban', path: '/app/mailbox/spam', permission: PERMISSION_KEYS.emailsView, iconColor: '#ef4444' },
+      { label: 'Trash', icon: 'pi-trash', path: '/app/mailbox/trash', permission: PERMISSION_KEYS.emailsView, iconColor: '#6b7280' },
+      { label: 'Templates', icon: 'pi-copy', path: '/app/mailbox/templates', permission: PERMISSION_KEYS.emailsManage, iconColor: '#06b6d4' }
     ]
   },
   { 

@@ -275,6 +275,20 @@ export const routes: Routes = [
           import('./crm/features/marketing/pages/campaign-attribution.page').then((m) => m.CampaignAttributionPage)
       },
       {
+        path: 'marketing/emails',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Campaign Emails', icon: 'pi-send' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaign-emails.page').then((m) => m.CampaignEmailsPage)
+      },
+      {
+        path: 'marketing/emails/:id',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Email Details', icon: 'pi-send' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaign-email-detail.page').then((m) => m.CampaignEmailDetailPage)
+      },
+      {
         path: 'activities',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.activitiesView, breadcrumb: 'Activities', icon: 'pi-calendar' },
@@ -309,19 +323,65 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./crm/features/activities/pages/activity-form.page').then((m) => m.ActivityFormPage)
       },
+      // ═══════════════════════════════════════════════════════════════════════
+      // MAILBOX (My Mailbox) - Outlook-like email client with folder children
+      // ═══════════════════════════════════════════════════════════════════════
       {
-        path: 'emails',
+        path: 'mailbox',
         canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.emailsView, breadcrumb: 'Emails', icon: 'pi-envelope' },
-        loadComponent: () =>
-          import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
-      },
-      {
-        path: 'emails/templates',
-        canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.emailsManage, breadcrumb: 'Email Templates', icon: 'pi-file-edit' },
-        loadComponent: () =>
-          import('./crm/features/emails/pages/email-templates.page').then((m) => m.EmailTemplatesPage)
+        data: { permission: PERMISSION_KEYS.emailsView, breadcrumb: 'My Mailbox', icon: 'pi-envelope' },
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'inbox' },
+          {
+            path: 'inbox',
+            data: { breadcrumb: 'Inbox', folder: 'inbox' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
+          },
+          {
+            path: 'starred',
+            data: { breadcrumb: 'Starred', folder: 'starred' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
+          },
+          {
+            path: 'sent',
+            data: { breadcrumb: 'Sent', folder: 'sent' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
+          },
+          {
+            path: 'drafts',
+            data: { breadcrumb: 'Drafts', folder: 'drafts' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
+          },
+          {
+            path: 'archive',
+            data: { breadcrumb: 'Archive', folder: 'archive' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
+          },
+          {
+            path: 'spam',
+            data: { breadcrumb: 'Spam', folder: 'spam' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
+          },
+          {
+            path: 'trash',
+            data: { breadcrumb: 'Trash', folder: 'trash' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/emails.page').then((m) => m.EmailsPage)
+          },
+          {
+            path: 'templates',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.emailsManage, breadcrumb: 'Email Templates', icon: 'pi-copy' },
+            loadComponent: () =>
+              import('./crm/features/emails/pages/email-templates.page').then((m) => m.EmailTemplatesPage)
+          }
+        ]
       },
       {
         path: 'settings',
