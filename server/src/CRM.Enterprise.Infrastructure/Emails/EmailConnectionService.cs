@@ -376,9 +376,29 @@ public sealed class EmailConnectionService : IEmailConnectionService
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            _logger.LogError("OAuth token exchange failed. Status: {StatusCode}, Body: {ErrorBody}", 
-                response.StatusCode, errorBody);
-            throw new HttpRequestException($"OAuth token exchange failed: {response.StatusCode} - {errorBody}");
+            _logger.LogError("OAuth token exchange failed. Status: {StatusCode}, Body: {ErrorBody}, RedirectUri: {RedirectUri}", 
+                response.StatusCode, errorBody, redirectUri);
+            
+            // Parse Microsoft/Google error format to extract user-friendly message
+            string userFriendlyError = $"Token exchange failed ({response.StatusCode})";
+            try
+            {
+                var errorJson = JsonDocument.Parse(errorBody);
+                if (errorJson.RootElement.TryGetProperty("error_description", out var desc))
+                {
+                    userFriendlyError = desc.GetString() ?? userFriendlyError;
+                }
+                else if (errorJson.RootElement.TryGetProperty("error", out var err))
+                {
+                    userFriendlyError = err.GetString() ?? userFriendlyError;
+                }
+            }
+            catch
+            {
+                // Keep the default error if parsing fails
+            }
+            
+            throw new HttpRequestException(userFriendlyError);
         }
         
         var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken);
