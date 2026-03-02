@@ -263,3 +263,51 @@ This file tracks recurring UI/data issues and how to fix them quickly.
 - Build successful with zero errors and zero breaking changes.
 - Validation and error handling enhance robustness without changing feature behavior.
 - New authorization module is easily testable and extensible.
+
+## 7) OAuth Email Connection Returns 400 Bad Request
+**Symptoms**
+- Clicking "Connect" for Microsoft 365 email integration completes OAuth consent flow.
+- After redirect back to CRM, POST `/api/email-connections/callback` returns 400 Bad Request.
+- GET `/api/email-connections` returns 500 Internal Server Error.
+
+**Root cause (multi-layered)**
+1. **Scope duplication**: `EmailOAuthOptions.cs` initialized `Scopes` array with default values, causing .NET configuration binding to merge appsettings scopes with defaults (12 scopes instead of 6).
+2. **Missing User.Read scope**: Microsoft Graph `/me` endpoint requires `User.Read` permission. The `profile` and `email` OIDC scopes only provide claims in the ID token—they do NOT grant Graph API access.
+3. **Misleading error**: Azure logs showed "OAuth token exchange failed... 403 Forbidden" but the actual failure was in `GetUserProfileAsync()` calling Graph API, NOT the token exchange itself.
+
+**Fix pattern**
+1) Fix scope duplication by changing default initialization:
+   ```csharp
+   // Before (causes merge)
+   public string[] Scopes { get; set; } = ["openid", "profile", ...];
+   
+   // After (respects config-only)
+   public string[] Scopes { get; set; } = Array.Empty<string>();
+   ```
+
+2) Add `User.Read` scope in appsettings.json:
+   ```json
+   "Scopes": ["openid", "profile", "email", "offline_access", "User.Read", "Mail.Read", "Mail.Send"]
+   ```
+
+3) Ensure Azure AD App Registration has `User.Read` delegated permission added and admin consented.
+
+**Example implementation**
+- File: `server/src/CRM.Enterprise.Infrastructure/Emails/EmailOAuthOptions.cs`
+  - Changed `Scopes` default from hardcoded array to `Array.Empty<string>()`
+- File: `server/src/CRM.Enterprise.Api/appsettings.json`
+  - Added `User.Read` to Microsoft OAuth scopes array
+
+**Verification**
+- ✅ OAuth consent flow completes successfully
+- ✅ Token exchange succeeds (access token obtained)
+- ✅ Graph API `/me` call succeeds (user profile fetched)
+- ✅ Email connection saved and marked Active
+- ✅ Connection test: "Connection verified! Found 5992 messages in inbox."
+- ✅ Zero console errors in browser
+
+**Why this is safe**
+- Configuration-only change; no business logic modified.
+- Backward compatible—existing connections continue working.
+- Scopes are well-documented Microsoft Graph permissions.
+- Azure AD app registration already had User.Read permission configured.

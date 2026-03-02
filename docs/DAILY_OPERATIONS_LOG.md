@@ -224,6 +224,35 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 - Foundry fine-tune pipeline documented; supervised fine-tune started on gpt-4o due to o4-mini reinforcement requirement.
  - Fine-tuned model deployed and assistant updated to use the new deployment.
 
+**Date:** 2026-03-01  
+**Environment:** Prod (Azure App Service)  
+**Owner:** Copilot / Yasser
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 03:30 | Email Integration | OAuth email connection returns 400 Bad Request after Microsoft consent | High | Yasser |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|  
+| OAuth 400 error (1/2) | EmailOAuthOptions.cs initialized Scopes with defaults, causing .NET config binding to merge arrays (12 scopes instead of 6) | Changed default to `Array.Empty<string>()` | `Infrastructure/Emails/EmailOAuthOptions.cs` | Copilot | Scopes now read exclusively from appsettings |
+| OAuth 403 error (2/2) | Missing `User.Read` scope required for Microsoft Graph `/me` endpoint; `profile`/`email` OIDC scopes insufficient | Added `User.Read` to Microsoft OAuth scopes in appsettings.json | `Api/appsettings.json` | Copilot + Browser Test | Connection test: 5992 inbox messages found |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| None | - | - | Issue fully resolved and verified |
+
+### Summary for Project Master (If Verified)
+✅ **OAuth Email Integration Fixed**: Microsoft 365 email connection now works for personal accounts (@live.com, @outlook.com). Root cause was missing `User.Read` scope + configuration binding issue with array defaults.
+
+✅ **Commits**: `a81b491` (scope duplication fix), `1fb987f` (add User.Read scope)
+
+✅ **Verified**: OAuth flow → token exchange → Graph API /me → connection saved → test successful (5992 messages)
+
+---
+
 **Date:** 2026-01-24  
 **Environment:**  
 **Owner:**  

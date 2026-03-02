@@ -44,3 +44,19 @@
   - Eliminates inline duplication and improves maintainability.
   - Centralizes transformation logic for easier modification.
   - Makes mapping logic testable and reusable.
+
+## Microsoft OAuth & Graph API Integration
+- **Always include `User.Read` scope** when calling Microsoft Graph `/me` endpoint.
+  - The `profile` and `email` OIDC scopes are NOT sufficient for Graph API access.
+  - Required scopes for basic email integration: `openid`, `profile`, `email`, `offline_access`, `User.Read`, `Mail.Read`, `Mail.Send`.
+- **Personal Microsoft accounts** (@live.com, @outlook.com) require `signInAudience: AzureADandPersonalMicrosoftAccount` and `TenantId: common`.
+- **Configuration binding pitfall**: When using .NET options binding with arrays, initialize default values as `Array.Empty<T>()` to prevent merging/duplication with appsettings values.
+  - Bad: `public string[] Scopes { get; set; } = ["default1", "default2"];` → results in merged array.
+  - Good: `public string[] Scopes { get; set; } = Array.Empty<string>();` → respects config-only values.
+- **Read logs at the actual failure point**: Token exchange 403 may actually be from a subsequent Graph API call, not the token endpoint.
+  - Check stack traces carefully—error messages may be misleading about the actual failing line.
+- **Azure AD App Registration checklist**:
+  1. API Permissions: Add all required delegated permissions (User.Read, Mail.Read, Mail.Send).
+  2. Redirect URIs: Add both production and development callback URLs.
+  3. Supported account types: Choose between single-tenant, multi-tenant, or personal accounts.
+  4. Client secrets: Rotate periodically and store in Azure Key Vault / App Settings.
