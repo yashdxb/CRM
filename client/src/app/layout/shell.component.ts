@@ -2,6 +2,7 @@ import { Component, computed, DestroyRef, ElementRef, inject, signal, HostListen
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { RouterOutlet } from '@angular/router';
 import { NgClass, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { NotificationContainerComponent } from '../core/notifications';
 import { CommandPaletteComponent, CommandPaletteService, QuickAddType } from '../core/command-palette';
 import { KeyboardShortcutsModalComponent } from '../core/keyboard-shortcuts';
@@ -13,6 +14,7 @@ import { TopbarComponent } from './topbar/topbar.component';
 import { QuickAddModalComponent } from './quick-add/quick-add-modal.component';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { TooltipModule } from 'primeng/tooltip';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { LoadingOverlayService } from '../core/loading/loading-overlay.service';
 import { PresenceConnectionState, PresenceService } from '../core/realtime/presence.service';
 import { CrmEventsService } from '../core/realtime/crm-events.service';
@@ -21,6 +23,7 @@ import { UserLookupItem } from '../crm/features/settings/models/user-admin.model
 import { UserAdminDataService } from '../crm/features/settings/services/user-admin-data.service';
 import { DirectChatMessageItem, DirectChatService, DirectChatThreadItem } from '../core/chat/direct-chat.service';
 import { NotificationService } from '../core/notifications';
+import { firstValueFrom } from 'rxjs';
 
 interface PresencePerson {
   userId: string;
@@ -37,6 +40,14 @@ interface DirectChatMessage {
   recipientUserId: string;
   content: string;
   sentAtUtc: string;
+}
+
+interface DirectChatThreadView {
+  threadId: string;
+  title: string;
+  subtitle: string;
+  lastMessageAtUtc: string | null;
+  unreadCount: number;
 }
 
 const EMOJI_SHORTCUTS: Record<string, string> = {
@@ -59,6 +70,7 @@ const QUICK_EMOJIS = ['😀', '😂', '😍', '👍', '🔥', '🎉', '👏', '�
     RouterOutlet,
     NgClass,
     NgIf,
+    FormsModule,
     NotificationContainerComponent,
     CommandPaletteComponent,
     KeyboardShortcutsModalComponent,
@@ -68,7 +80,8 @@ const QUICK_EMOJIS = ['😀', '😂', '😍', '👍', '🔥', '🎉', '👏', '�
     TopbarComponent,
     QuickAddModalComponent,
     ProgressSpinnerModule,
-    TooltipModule
+    TooltipModule,
+    MultiSelectModule
   ],
   templateUrl: "./shell.component.html",
   styleUrl: './shell.component.scss'
@@ -122,10 +135,23 @@ export class ShellComponent {
   protected readonly chatUnreadTotal = computed(() =>
     [...this.chatUnreadByThread().values()].reduce((total, count) => total + count, 0)
   );
-  protected readonly selectedParticipantToAdd = signal<string | null>(null);
+  protected readonly selectedParticipantsToAdd = signal<string[]>([]);
+  protected readonly chatAddingParticipants = signal(false);
   protected readonly emojiPickerVisible = signal(false);
   protected readonly quickEmojis = QUICK_EMOJIS;
   protected readonly chatMessages = signal<DirectChatMessage[]>([]);
+  protected readonly chatThreads = signal<DirectChatThreadItem[]>([]);
+  protected readonly chatThreadLoading = signal(false);
+  protected readonly typingUsersByThread = signal<Map<string, Map<string, string>>>(new Map());
+  protected readonly activeTypingUsers = computed(() => {
+    const threadId = this.activeChatThreadId();
+    if (!threadId) {
+      return [] as string[];
+    }
+
+    const users = this.typingUsersByThread().get(threadId);
+    return users ? [...users.values()] : [];
+  });
   protected readonly availableParticipantsToAdd = computed(() => {
     const currentIds = new Set(this.activeChatParticipants().map((participant) => participant.userId));
     return this.onlinePeople().filter(
@@ -134,6 +160,12 @@ export class ShellComponent {
         !currentIds.has(person.userId)
     );
   });
+  protected readonly participantAddOptions = computed(() =>
+    this.availableParticipantsToAdd().map((person) => ({
+      label: person.email ? `${person.displayName} (${person.email})` : person.displayName,
+      value: person.userId
+    }))
+  );
   protected readonly currentChatMessages = computed(() => {
     const threadId = this.activeChatThreadId();
     if (!threadId) {
@@ -142,7 +174,52 @@ export class ShellComponent {
 
     return this.chatMessages()
       .filter((message) => message.threadId === threadId)
-      .sort((first, second) => new Date(first.sentAtUtc).getTime() - new Date(second.sentAtUtc).getTime());
+      .sort((first, second) => {
+        const byTime = new Date(first.sentAtUtc).getTime() - new Date(second.sentAtUtc).getTime();
+        return byTime !== 0 ? byTime : first.id.localeCompare(second.id);
+      });
+  });
+  protected readonly chatThreadViews = computed<DirectChatThreadView[]>(() => {
+    const threads = this.chatThreads();
+    const unread = this.chatUnreadByThread();
+    const allMessages = this.chatMessages();
+    const currentUserId = this.currentUserId?.toLowerCase() ?? '';
+
+    return threads
+      .map((thread) => {
+        const otherParticipants = thread.participants.filter(
+          (participant) => participant.userId.toLowerCase() !== currentUserId
+        );
+        const participantNames = otherParticipants.map((participant) => participant.displayName).filter(Boolean);
+        const title = thread.title?.trim()
+          || participantNames.slice(0, 2).join(', ')
+          || 'Direct chat';
+
+        const threadMessages = allMessages
+          .filter((message) => message.threadId === thread.threadId)
+          .sort((a, b) => new Date(b.sentAtUtc).getTime() - new Date(a.sentAtUtc).getTime());
+        const latest = threadMessages[0];
+        const subtitle = latest?.content?.trim()
+          ? this.truncateMessage(latest.content, 48)
+          : (otherParticipants[0]?.email ?? 'No messages yet');
+
+        const lastMessageAtUtc = latest?.sentAtUtc ?? thread.lastMessageAtUtc ?? null;
+        return {
+          threadId: thread.threadId,
+          title,
+          subtitle,
+          lastMessageAtUtc,
+          unreadCount: unread.get(thread.threadId) ?? 0
+        } satisfies DirectChatThreadView;
+      })
+      .sort((a, b) => {
+        const aRawTime = a.lastMessageAtUtc ? new Date(a.lastMessageAtUtc).getTime() : Number.NaN;
+        const bRawTime = b.lastMessageAtUtc ? new Date(b.lastMessageAtUtc).getTime() : Number.NaN;
+        const aTime = Number.isFinite(aRawTime) ? aRawTime : Number.MAX_SAFE_INTEGER;
+        const bTime = Number.isFinite(bRawTime) ? bRawTime : Number.MAX_SAFE_INTEGER;
+        const byTime = aTime - bTime;
+        return byTime !== 0 ? byTime : a.threadId.localeCompare(b.threadId);
+      });
   });
   protected readonly presencePopupBodyMaxHeight = computed(() => {
     const desiredHeight = 84 + this.onlineCount() * 56;
@@ -179,6 +256,11 @@ export class ShellComponent {
 
   protected readonly quickAddVisible = signal(false);
   protected readonly quickAddType = signal<QuickAddType>('lead');
+  private typingIdleTimer: ReturnType<typeof setTimeout> | null = null;
+  private typingExpiryTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private lastTypingThreadId: string | null = null;
+  private typingAnnounced = false;
+  private lastNewConversationSoundAt = 0;
 
   private readonly quickAddEffect = effect(() => {
     const request = this.commandPaletteService.quickAddRequest();
@@ -295,7 +377,9 @@ export class ShellComponent {
         next: (thread) => {
           this.activeChatThreadId.set(thread.threadId);
           this.activeChatParticipants.set(this.mapThreadParticipants(thread));
+          this.chatThreads.update((items) => this.upsertThread(items, thread));
           this.loadThreadMessages(thread.threadId);
+          this.refreshChatThreads(thread.threadId);
         },
         error: () => {
           this.chatLoading.set(false);
@@ -305,6 +389,7 @@ export class ShellComponent {
   }
 
   protected closeChatPanel(): void {
+    this.stopSelfTyping();
     this.chatPanelVisible.set(false);
     this.emojiPickerVisible.set(false);
     this.chatLoading.set(false);
@@ -313,18 +398,18 @@ export class ShellComponent {
 
   protected openChatInbox(): void {
     const unreadThreadId = this.pickMostRecentUnreadThreadId();
-    if (unreadThreadId) {
-      this.openThreadById(unreadThreadId);
+    this.chatPanelVisible.set(true);
+    if (this.activeChatThreadId() && !unreadThreadId) {
       return;
     }
+    this.refreshChatThreads(unreadThreadId ?? undefined);
+  }
 
-    if (this.activeChatThreadId()) {
-      this.chatPanelVisible.set(true);
+  protected selectChatThread(threadId: string): void {
+    if (!threadId || this.activeChatThreadId() === threadId) {
       return;
     }
-
-    this.onlineUsersPopupVisible.set(true);
-    this.ensureUserLookupLoaded();
+    this.openThreadById(threadId);
   }
 
   protected sendChatMessage(): void {
@@ -335,14 +420,24 @@ export class ShellComponent {
       return;
     }
 
+    this.stopSelfTyping(threadId);
     this.chatSaving.set(true);
     this.directChatService.sendMessage(threadId, message)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (sentMessage) => {
           this.chatDraft.set('');
           this.emojiPickerVisible.set(false);
           this.chatSaving.set(false);
+          const mapped = this.mapMessageItem(sentMessage);
+          this.chatMessages.update((messages) => {
+            if (messages.some((item) => item.id === mapped.id)) {
+              return messages;
+            }
+            return [...messages, mapped];
+          });
+          this.markThreadAsRead(threadId);
+          this.refreshChatThreads(threadId);
         },
         error: () => {
           this.chatSaving.set(false);
@@ -378,37 +473,66 @@ export class ShellComponent {
     this.directChatService.archiveThread(threadId, true)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => this.closeChatPanel(),
+        next: () => {
+          this.chatThreads.update((items) => items.filter((thread) => thread.threadId !== threadId));
+          this.closeChatPanel();
+        },
         error: () => {
           this.chatError.set('Unable to archive this chat.');
         }
       });
   }
 
-  protected addParticipantToActiveChat(userId: string | null): void {
+  protected async addParticipantsToActiveChat(): Promise<void> {
     const threadId = this.activeChatThreadId();
-    if (!threadId || !userId) {
+    const selected = [...new Set(this.selectedParticipantsToAdd().filter(Boolean))];
+    if (!threadId || selected.length === 0 || this.chatAddingParticipants()) {
       return;
     }
 
-    this.directChatService.addParticipant(threadId, userId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          const person = this.onlinePeople().find((item) => item.userId === userId);
-          if (person) {
-            this.activeChatParticipants.update((participants) =>
-              participants.some((existing) => existing.userId === person.userId)
-                ? participants
-                : [...participants, person]
-            );
+    this.chatAddingParticipants.set(true);
+    this.chatError.set(null);
+
+    const results = await Promise.allSettled(
+      selected.map(async (userId) => {
+        await firstValueFrom(this.directChatService.addParticipant(threadId, userId));
+        return userId;
+      })
+    );
+
+    const addedUserIds = results
+      .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+      .map((result) => result.value);
+    const failedCount = results.length - addedUserIds.length;
+
+    if (addedUserIds.length > 0) {
+      const onlineById = new Map(this.onlinePeople().map((person) => [person.userId, person]));
+      this.activeChatParticipants.update((participants) => {
+        const next = [...participants];
+        for (const userId of addedUserIds) {
+          const person = onlineById.get(userId);
+          if (!person || next.some((existing) => existing.userId === userId)) {
+            continue;
           }
-          this.selectedParticipantToAdd.set(null);
-        },
-        error: () => {
-          this.chatError.set('Unable to add this participant.');
+          next.push(person);
         }
+        return next;
       });
+      this.refreshChatThreads(threadId);
+    }
+
+    if (failedCount > 0) {
+      this.chatError.set(
+        addedUserIds.length > 0
+          ? `Added ${addedUserIds.length} participant(s). ${failedCount} could not be added.`
+          : 'Unable to add selected participants.'
+      );
+    } else {
+      this.chatError.set(null);
+    }
+
+    this.selectedParticipantsToAdd.set([]);
+    this.chatAddingParticipants.set(false);
   }
 
   protected insertEmoji(emoji: string): void {
@@ -419,8 +543,28 @@ export class ShellComponent {
     this.emojiPickerVisible.update((value) => !value);
   }
 
-  protected selectParticipantToAdd(value: string): void {
-    this.selectedParticipantToAdd.set(value || null);
+  protected onChatInput(value: string): void {
+    this.chatDraft.set(value);
+    const threadId = this.activeChatThreadId();
+    if (!threadId) {
+      return;
+    }
+
+    if (!value.trim()) {
+      this.stopSelfTyping(threadId);
+      return;
+    }
+
+    this.startSelfTyping(threadId);
+
+    if (this.typingIdleTimer) {
+      clearTimeout(this.typingIdleTimer);
+    }
+    this.typingIdleTimer = setTimeout(() => this.stopSelfTyping(threadId), 1500);
+  }
+
+  protected setSelectedParticipantsToAdd(values: string[] | null | undefined): void {
+    this.selectedParticipantsToAdd.set([...(values ?? []).filter(Boolean)]);
   }
 
   protected formatChatTime(value: string): string {
@@ -469,12 +613,17 @@ export class ShellComponent {
   }
 
   private handleRealtimeEvent(event: { eventType: string; payload?: Record<string, unknown> | null }): void {
-    if (event.eventType !== 'chat.direct.message') {
+    const payload = event.payload ?? null;
+    if (!payload) {
       return;
     }
 
-    const payload = event.payload ?? null;
-    if (!payload) {
+    if (event.eventType === 'chat.direct.typing') {
+      this.handleTypingRealtimeEvent(payload);
+      return;
+    }
+
+    if (event.eventType !== 'chat.direct.message') {
       return;
     }
 
@@ -499,6 +648,7 @@ export class ShellComponent {
       content,
       sentAtUtc
     };
+    const threadKnownBeforeEvent = this.chatThreads().some((item) => item.threadId === threadId);
 
     this.chatMessages.update((messages) => {
       if (messages.some((message) => message.id === incoming.id)) {
@@ -506,6 +656,8 @@ export class ShellComponent {
       }
       return [...messages, incoming];
     });
+    this.removeTypingUser(threadId, senderUserId);
+    this.refreshChatThreads(threadId);
 
     if (!this.currentUserId || senderUserId === this.currentUserId) {
       return;
@@ -521,14 +673,29 @@ export class ShellComponent {
     }
 
     this.incrementThreadUnread(threadId);
-    this.notificationService.info(
-      `New message from ${senderDisplayName}`,
-      this.truncateMessage(content),
-      {
-        label: 'Reply',
-        callback: () => this.openThreadById(threadId, senderUserId, senderDisplayName)
-      }
-    );
+    const action = {
+      label: threadKnownBeforeEvent ? 'Reply' : 'Open chat',
+      callback: () => this.openThreadById(threadId, senderUserId, senderDisplayName)
+    };
+
+    if (threadKnownBeforeEvent) {
+      this.notificationService.info(
+        `New message from ${senderDisplayName}`,
+        this.truncateMessage(content),
+        action
+      );
+      return;
+    }
+
+    this.notificationService.show({
+      type: 'warning',
+      title: `New conversation from ${senderDisplayName}`,
+      message: this.truncateMessage(content),
+      action,
+      duration: 9000,
+      dismissible: true
+    });
+    this.playNewConversationSound();
   }
 
   private asString(value: unknown): string | null {
@@ -631,6 +798,7 @@ export class ShellComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (threads) => {
+          this.chatThreads.set(threads);
           const thread = threads.find((item) => item.threadId === threadId);
           if (thread) {
             this.activeChatThreadId.set(thread.threadId);
@@ -665,6 +833,42 @@ export class ShellComponent {
       });
   }
 
+  private refreshChatThreads(preferredThreadId?: string): void {
+    this.chatThreadLoading.set(true);
+    this.directChatService.listThreads()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (threads) => {
+          this.chatThreadLoading.set(false);
+          this.chatThreads.set(threads);
+
+          if (preferredThreadId && !this.activeChatThreadId() && this.chatPanelVisible()) {
+            const preferred = threads.find((thread) => thread.threadId === preferredThreadId);
+            if (preferred) {
+              this.openThreadById(preferredThreadId);
+              return;
+            }
+
+            const recentForThread = this.chatMessages()
+              .filter((message) => message.threadId === preferredThreadId)
+              .sort((first, second) => new Date(second.sentAtUtc).getTime() - new Date(first.sentAtUtc).getTime())[0] ?? null;
+
+            if (recentForThread?.senderUserId && recentForThread.senderUserId !== this.currentUserId) {
+              this.fallbackOpenOneToOne(recentForThread.senderUserId, recentForThread.senderDisplayName);
+              return;
+            }
+          }
+
+          if (!this.activeChatThreadId() && threads.length > 0 && this.chatPanelVisible()) {
+            this.openThreadById(threads[0].threadId);
+          }
+        },
+        error: () => {
+          this.chatThreadLoading.set(false);
+        }
+      });
+  }
+
   private fallbackOpenOneToOne(senderUserId: string, senderDisplayName?: string): void {
     this.directChatService.openThread([senderUserId])
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -673,6 +877,7 @@ export class ShellComponent {
           this.activeChatThreadId.set(thread.threadId);
           const participants = this.mapThreadParticipants(thread);
           this.activeChatParticipants.set(participants);
+          this.chatThreads.update((items) => this.upsertThread(items, thread));
           const focusUser = participants.find((person) => person.userId === senderUserId)
             ?? participants.find((person) => person.userId !== this.currentUserId)
             ?? (senderDisplayName ? {
@@ -699,6 +904,154 @@ export class ShellComponent {
       return message;
     }
     return `${message.slice(0, maxLength - 1)}…`;
+  }
+
+  protected buildAvatarInitials(displayName: string): string {
+    return this.buildInitials(displayName || 'User');
+  }
+
+  private startSelfTyping(threadId: string): void {
+    if (this.lastTypingThreadId && this.lastTypingThreadId !== threadId && this.typingAnnounced) {
+      this.sendTypingStatus(this.lastTypingThreadId, false);
+      this.typingAnnounced = false;
+    }
+
+    if (!this.typingAnnounced || this.lastTypingThreadId !== threadId) {
+      this.sendTypingStatus(threadId, true);
+      this.typingAnnounced = true;
+      this.lastTypingThreadId = threadId;
+    }
+  }
+
+  private stopSelfTyping(threadId?: string): void {
+    if (this.typingIdleTimer) {
+      clearTimeout(this.typingIdleTimer);
+      this.typingIdleTimer = null;
+    }
+
+    const targetThreadId = threadId ?? this.lastTypingThreadId;
+    if (!targetThreadId || !this.typingAnnounced) {
+      if (!threadId) {
+        this.lastTypingThreadId = null;
+      }
+      return;
+    }
+
+    this.sendTypingStatus(targetThreadId, false);
+    this.typingAnnounced = false;
+    if (!threadId || threadId === this.lastTypingThreadId) {
+      this.lastTypingThreadId = null;
+    }
+  }
+
+  private sendTypingStatus(threadId: string, isTyping: boolean): void {
+    this.directChatService.sendTyping(threadId, isTyping)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({ error: () => void 0 });
+  }
+
+  private handleTypingRealtimeEvent(payload: Record<string, unknown>): void {
+    const threadId = this.asString(payload['threadId']);
+    const senderUserId = this.asString(payload['senderUserId']);
+    const senderDisplayName = this.asString(payload['senderDisplayName']) ?? 'User';
+    const isTyping = Boolean(payload['isTyping']);
+
+    if (!threadId || !senderUserId || senderUserId === this.currentUserId) {
+      return;
+    }
+
+    if (!isTyping) {
+      this.removeTypingUser(threadId, senderUserId);
+      return;
+    }
+
+    this.typingUsersByThread.update((current) => {
+      const next = new Map(current);
+      const users = new Map(next.get(threadId) ?? []);
+      users.set(senderUserId, senderDisplayName);
+      next.set(threadId, users);
+      return next;
+    });
+
+    const timerKey = `${threadId}:${senderUserId}`;
+    const previousTimer = this.typingExpiryTimers.get(timerKey);
+    if (previousTimer) {
+      clearTimeout(previousTimer);
+    }
+    this.typingExpiryTimers.set(timerKey, setTimeout(() => {
+      this.removeTypingUser(threadId, senderUserId);
+      this.typingExpiryTimers.delete(timerKey);
+    }, 3500));
+  }
+
+  private removeTypingUser(threadId: string, userId: string): void {
+    this.typingUsersByThread.update((current) => {
+      const users = current.get(threadId);
+      if (!users || !users.has(userId)) {
+        return current;
+      }
+
+      const next = new Map(current);
+      const updatedUsers = new Map(users);
+      updatedUsers.delete(userId);
+      if (updatedUsers.size === 0) {
+        next.delete(threadId);
+      } else {
+        next.set(threadId, updatedUsers);
+      }
+      return next;
+    });
+  }
+
+  private playNewConversationSound(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const now = Date.now();
+    if (now - this.lastNewConversationSoundAt < 2500) {
+      return;
+    }
+    this.lastNewConversationSoundAt = now;
+
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextCtor) {
+      return;
+    }
+
+    try {
+      const context = new AudioContextCtor();
+      const oscillator = context.createOscillator();
+      const gainNode = context.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 740;
+
+      gainNode.gain.setValueAtTime(0.0001, context.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.05, context.currentTime + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.22);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.24);
+
+      oscillator.onended = () => {
+        void context.close();
+      };
+    } catch {
+      // Ignore browser audio-policy failures (e.g., autoplay restrictions).
+    }
+  }
+
+  private upsertThread(current: DirectChatThreadItem[], candidate: DirectChatThreadItem): DirectChatThreadItem[] {
+    const next = [...current];
+    const index = next.findIndex((item) => item.threadId === candidate.threadId);
+    if (index >= 0) {
+      next[index] = candidate;
+      return next;
+    }
+    return [...next, candidate];
   }
 
   private applyEmojiShortcuts(value: string): string {

@@ -49,11 +49,18 @@ public sealed class DirectChatService : IDirectChatService
             .Select(p => new { p.ThreadId, p.UserId })
             .ToListAsync(cancellationToken);
 
-        var threadTitles = await _dbContext.DirectChatThreads
+        var threadMeta = await _dbContext.DirectChatThreads
             .AsNoTracking()
             .Where(t => threadIds.Contains(t.Id) && !t.IsDeleted)
-            .Select(t => new { t.Id, t.Title })
-            .ToDictionaryAsync(t => t.Id, t => t.Title, cancellationToken);
+            .Select(t => new { t.Id, t.Title, t.CreatedAtUtc })
+            .ToDictionaryAsync(
+                t => t.Id,
+                t => new
+                {
+                    t.Title,
+                    t.CreatedAtUtc
+                },
+                cancellationToken);
 
         var threadParticipantMap = threadParticipants
             .GroupBy(p => p.ThreadId)
@@ -68,14 +75,17 @@ public sealed class DirectChatService : IDirectChatService
         var results = participantRows
             .Select(row =>
             {
+                var fallbackCreatedAtUtc = threadMeta.TryGetValue(row.ThreadId, out var meta)
+                    ? meta.CreatedAtUtc
+                    : DateTime.UtcNow;
                 var lastMessageAtUtc = lastMessageByThread.TryGetValue(row.ThreadId, out var lastAt)
                     ? lastAt
-                    : DateTime.MinValue;
+                    : fallbackCreatedAtUtc;
                 var participants = threadParticipantMap.TryGetValue(row.ThreadId, out var values)
                     ? values
                     : [];
-                var title = threadTitles.TryGetValue(row.ThreadId, out var storedTitle)
-                    ? storedTitle
+                var title = threadMeta.TryGetValue(row.ThreadId, out var threadInfo)
+                    ? threadInfo.Title
                     : null;
 
                 return new DirectChatThreadDto(
@@ -86,7 +96,8 @@ public sealed class DirectChatService : IDirectChatService
                     row.LastClearedAtUtc,
                     participants);
             })
-            .OrderByDescending(item => item.LastMessageAtUtc)
+            .OrderBy(item => item.LastMessageAtUtc)
+            .ThenBy(item => item.ThreadId)
             .ToList();
 
         return results;
@@ -383,6 +394,58 @@ public sealed class DirectChatService : IDirectChatService
         });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<bool> PublishTypingAsync(Guid userId, Guid threadId, bool isTyping, CancellationToken cancellationToken = default)
+    {
+        if (threadId == Guid.Empty)
+        {
+            return false;
+        }
+
+        var actorMembership = await _dbContext.DirectChatParticipants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.ThreadId == threadId && p.UserId == userId && !p.IsDeleted, cancellationToken);
+        if (actorMembership is null)
+        {
+            return false;
+        }
+
+        var sender = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId && !u.IsDeleted)
+            .Select(u => new { u.Id, u.FullName, u.TenantId })
+            .FirstOrDefaultAsync(cancellationToken);
+        if (sender is null)
+        {
+            return false;
+        }
+
+        var recipientIds = await _dbContext.DirectChatParticipants
+            .AsNoTracking()
+            .Where(p => p.ThreadId == threadId && !p.IsDeleted && p.UserId != userId)
+            .Select(p => p.UserId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+        if (recipientIds.Count == 0)
+        {
+            return true;
+        }
+
+        await _realtimePublisher.PublishUsersEventAsync(
+            sender.TenantId,
+            recipientIds,
+            "chat.direct.typing",
+            new
+            {
+                threadId,
+                senderUserId = sender.Id,
+                senderDisplayName = sender.FullName,
+                isTyping
+            },
+            cancellationToken);
+
         return true;
     }
 }

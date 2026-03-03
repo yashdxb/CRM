@@ -7,6 +7,7 @@ public sealed record SendDirectChatMessageRequest(string Message);
 public sealed record ArchiveDirectChatThreadRequest(bool Archived);
 
 public sealed record AddDirectChatParticipantRequest(Guid UserId);
+public sealed record DirectChatTypingRequest(bool IsTyping);
 
 public sealed record DirectChatParticipantItem(Guid UserId, string DisplayName, string Email);
 

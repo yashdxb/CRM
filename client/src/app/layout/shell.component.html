@@ -130,83 +130,146 @@
         @if (chatPanelVisible()) {
           @if (activeChatUser(); as activeUser) {
             <section class="direct-chat-panel" role="dialog" aria-label="Direct chat">
-              <header class="direct-chat-header">
-                <div class="direct-chat-header__meta">
-                  <span class="direct-chat-header__avatar" aria-hidden="true">{{ activeUser.initials }}</span>
-                  <div class="direct-chat-header__text">
-                    <strong>
-                      @if (activeChatParticipants().length > 1) {
-                        {{ activeChatParticipants()[0].displayName }} +{{ activeChatParticipants().length - 1 }}
-                      } @else {
-                        {{ activeUser.displayName }}
-                      }
-                    </strong>
-                    <span>{{ activeChatParticipants().length }} participant(s)</span>
-                  </div>
-                </div>
-                <div class="direct-chat-header__actions">
-                  @if (availableParticipantsToAdd().length) {
-                    <select
-                      class="direct-chat-add-select"
-                      [value]="selectedParticipantToAdd() ?? ''"
-                      (change)="selectParticipantToAdd(($any($event.target).value ?? '').toString())"
-                    >
-                      <option value="">Add person</option>
-                      @for (person of availableParticipantsToAdd(); track person.userId) {
-                        <option [value]="person.userId">{{ person.displayName }}</option>
-                      }
-                    </select>
-                    <button type="button" class="direct-chat-mini-btn" [disabled]="!selectedParticipantToAdd()" (click)="addParticipantToActiveChat(selectedParticipantToAdd())">Add</button>
+              <aside class="direct-chat-threads">
+                <header class="direct-chat-threads__header">
+                  <strong>Conversations</strong>
+                  @if (chatThreadLoading()) {
+                    <span>Syncing…</span>
                   }
-                  <button type="button" class="direct-chat-mini-btn" (click)="clearActiveChat()">Clear</button>
-                  <button type="button" class="direct-chat-mini-btn" (click)="archiveActiveChat()">Archive</button>
-                  <button type="button" class="direct-chat-close" (click)="closeChatPanel()">✕</button>
-                </div>
-              </header>
-
-              <div class="direct-chat-messages">
-                @if (chatLoading()) {
-                  <p class="direct-chat-empty">Loading conversation…</p>
-                } @else if (!currentChatMessages().length) {
-                  <p class="direct-chat-empty">No messages yet. Say hello 👋</p>
-                } @else {
-                  @for (message of currentChatMessages(); track message.id) {
-                    <article
-                      class="direct-chat-message"
-                      [class.direct-chat-message--mine]="message.senderUserId === currentUserId"
-                    >
-                      <p>{{ message.content }}</p>
-                      <time>{{ formatChatTime(message.sentAtUtc) }}</time>
-                    </article>
-                  }
-                }
-              </div>
-
-              @if (chatError()) {
-                <p class="direct-chat-error">{{ chatError() }}</p>
-              }
-
-              <footer class="direct-chat-compose">
-                <button type="button" class="direct-chat-emoji-btn" (click)="toggleEmojiPicker()">😊</button>
-                <input
-                  type="text"
-                  [value]="chatDraft()"
-                  (input)="chatDraft.set(($any($event.target).value ?? '').toString())"
-                  (keydown.enter)="sendChatMessage()"
-                  (focus)="emojiPickerVisible.set(false)"
-                  placeholder="Type a message..."
-                />
-                <button type="button" (click)="sendChatMessage()" [disabled]="!chatDraft().trim() || chatSaving()">Send</button>
-
-                @if (emojiPickerVisible()) {
-                  <div class="direct-chat-emoji-picker">
-                    @for (emoji of quickEmojis; track emoji) {
-                      <button type="button" (click)="insertEmoji(emoji)">{{ emoji }}</button>
+                </header>
+                <div class="direct-chat-threads__list">
+                  @if (!chatThreadViews().length) {
+                    <p class="direct-chat-empty">No conversations yet.</p>
+                  } @else {
+                    @for (thread of chatThreadViews(); track thread.threadId) {
+                      <button
+                        type="button"
+                        class="direct-chat-thread-item"
+                        [class.is-active]="thread.threadId === activeChatThreadId()"
+                        (click)="selectChatThread(thread.threadId)"
+                      >
+                        <div class="direct-chat-thread-item__top">
+                          <strong>{{ thread.title }}</strong>
+                          @if (thread.lastMessageAtUtc) {
+                            <time>{{ formatChatTime(thread.lastMessageAtUtc) }}</time>
+                          }
+                        </div>
+                        <div class="direct-chat-thread-item__bottom">
+                          <span>{{ thread.subtitle }}</span>
+                          @if (thread.unreadCount > 0) {
+                            <em>{{ thread.unreadCount }}</em>
+                          }
+                        </div>
+                      </button>
                     }
-                    <span class="direct-chat-emoji-hint">Type shortcuts like :smile: :heart: :thumbsup:</span>
+                  }
+                </div>
+              </aside>
+
+              <div class="direct-chat-main">
+                <header class="direct-chat-header">
+                  <div class="direct-chat-header__meta">
+                    <span class="direct-chat-header__avatar" aria-hidden="true">{{ activeUser.initials }}</span>
+                    <div class="direct-chat-header__text">
+                      <strong>
+                        @if (activeChatParticipants().length > 1) {
+                          {{ activeChatParticipants()[0].displayName }} +{{ activeChatParticipants().length - 1 }}
+                        } @else {
+                          {{ activeUser.displayName }}
+                        }
+                      </strong>
+                      <span>{{ activeChatParticipants().length }} participant(s)</span>
+                    </div>
                   </div>
+                  <div class="direct-chat-header__actions">
+                    @if (availableParticipantsToAdd().length) {
+                      <p-multiSelect
+                        class="direct-chat-add-select"
+                        [options]="participantAddOptions()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [ngModel]="selectedParticipantsToAdd()"
+                        (ngModelChange)="setSelectedParticipantsToAdd($event)"
+                        placeholder="Add participants"
+                        [filter]="true"
+                        [showClear]="true"
+                        display="chip"
+                        appendTo="body"
+                        [maxSelectedLabels]="2"
+                      />
+                      <button
+                        type="button"
+                        class="direct-chat-mini-btn"
+                        [disabled]="!selectedParticipantsToAdd().length || chatAddingParticipants()"
+                        (click)="addParticipantsToActiveChat()"
+                      >
+                        @if (chatAddingParticipants()) {
+                          Adding…
+                        } @else {
+                          Add selected
+                        }
+                      </button>
+                    }
+                    <button type="button" class="direct-chat-mini-btn" (click)="clearActiveChat()">Clear</button>
+                    <button type="button" class="direct-chat-mini-btn" (click)="archiveActiveChat()">Archive</button>
+                    <button type="button" class="direct-chat-close" (click)="closeChatPanel()">✕</button>
+                  </div>
+                </header>
+
+                <div class="direct-chat-messages">
+                  @if (chatLoading()) {
+                    <p class="direct-chat-empty">Loading conversation…</p>
+                  } @else if (!currentChatMessages().length) {
+                    <p class="direct-chat-empty">No messages yet. Say hello 👋</p>
+                  } @else {
+                    @for (message of currentChatMessages(); track message.id) {
+                      <article
+                        class="direct-chat-message"
+                        [class.direct-chat-message--mine]="message.senderUserId === currentUserId"
+                      >
+                        <span class="direct-chat-message__avatar" aria-hidden="true">
+                          {{ buildAvatarInitials(message.senderDisplayName) }}
+                        </span>
+                        <div class="direct-chat-message__content">
+                          <p><strong class="direct-chat-message__sender">{{ message.senderDisplayName }}:</strong> {{ message.content }}</p>
+                          <time>{{ formatChatTime(message.sentAtUtc) }}</time>
+                        </div>
+                      </article>
+                    }
+                  }
+                </div>
+
+                @if (chatError()) {
+                  <p class="direct-chat-error">{{ chatError() }}</p>
                 }
-              </footer>
+
+                <footer class="direct-chat-compose">
+                  @if (activeTypingUsers().length) {
+                    <p class="direct-chat-typing">
+                      {{ activeTypingUsers().join(', ') }} {{ activeTypingUsers().length === 1 ? 'is' : 'are' }} typing...
+                    </p>
+                  }
+                  <button type="button" class="direct-chat-emoji-btn" (click)="toggleEmojiPicker()">😊</button>
+                  <input
+                    type="text"
+                    [value]="chatDraft()"
+                    (input)="onChatInput(($any($event.target).value ?? '').toString())"
+                    (keydown.enter)="sendChatMessage()"
+                    (focus)="emojiPickerVisible.set(false)"
+                    placeholder="Type a message..."
+                  />
+                  <button type="button" (click)="sendChatMessage()" [disabled]="!chatDraft().trim() || chatSaving()">Send</button>
+
+                  @if (emojiPickerVisible()) {
+                    <div class="direct-chat-emoji-picker">
+                      @for (emoji of quickEmojis; track emoji) {
+                        <button type="button" (click)="insertEmoji(emoji)">{{ emoji }}</button>
+                      }
+                      <span class="direct-chat-emoji-hint">Type shortcuts like :smile: :heart: :thumbsup:</span>
+                    </div>
+                  }
+                </footer>
+              </div>
             </section>
           }
         }

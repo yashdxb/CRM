@@ -62,4 +62,8 @@ export class DirectChatService {
   addParticipant(threadId: string, userId: string) {
     return this.http.post<void>(`${this.baseUrl}/api/chat/threads/${threadId}/participants`, { userId });
   }
+
+  sendTyping(threadId: string, isTyping: boolean) {
+    return this.http.post<void>(`${this.baseUrl}/api/chat/threads/${threadId}/typing`, { isTyping });
+  }
 }

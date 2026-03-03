@@ -127,6 +127,22 @@ public sealed class DirectChatController : ControllerBase
         return updated ? NoContent() : BadRequest();
     }
 
+    [HttpPost("threads/{threadId:guid}/typing")]
+    public async Task<ActionResult> Typing(
+        Guid threadId,
+        [FromBody] DirectChatTypingRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null)
+        {
+            return Unauthorized();
+        }
+
+        var published = await _directChatService.PublishTypingAsync(userId.Value, threadId, request.IsTyping, cancellationToken);
+        return published ? NoContent() : BadRequest();
+    }
+
     private Guid? GetCurrentUserId()
     {
         var claimValue = User.FindFirstValue(ClaimTypes.NameIdentifier);

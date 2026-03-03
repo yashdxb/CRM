@@ -9,4 +9,5 @@ public interface IDirectChatService
     Task<bool> ArchiveThreadAsync(Guid userId, Guid threadId, bool archived, CancellationToken cancellationToken = default);
     Task<bool> ClearThreadAsync(Guid userId, Guid threadId, CancellationToken cancellationToken = default);
     Task<bool> AddParticipantAsync(Guid userId, Guid threadId, Guid participantUserId, CancellationToken cancellationToken = default);
+    Task<bool> PublishTypingAsync(Guid userId, Guid threadId, bool isTyping, CancellationToken cancellationToken = default);
 }
