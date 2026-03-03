@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace CRM.Enterprise.Api.Hubs;
 
@@ -24,13 +23,11 @@ public sealed class CrmEventsHub : Hub
 
     private readonly ITenantProvider _tenantProvider;
     private readonly CrmDbContext _dbContext;
-    private readonly ILogger<CrmEventsHub> _logger;
 
-    public CrmEventsHub(ITenantProvider tenantProvider, CrmDbContext dbContext, ILogger<CrmEventsHub> logger)
+    public CrmEventsHub(ITenantProvider tenantProvider, CrmDbContext dbContext)
     {
         _tenantProvider = tenantProvider;
         _dbContext = dbContext;
-        _logger = logger;
     }
 
     public override async Task OnConnectedAsync()
@@ -110,16 +107,12 @@ public sealed class CrmEventsHub : Hub
         var tenantId = await ResolveTenantIdAsync();
         if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(entityType) || recordId == Guid.Empty)
         {
-            _logger.LogWarning("[CrmEventsHub] JoinRecordPresence skipped. tenantId={TenantId}, entityType={EntityType}, recordId={RecordId}, connectionId={ConnectionId}",
-                tenantId, entityType, recordId, Context.ConnectionId);
             return;
         }
 
         var userIdText = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!Guid.TryParse(userIdText, out var userId) || userId == Guid.Empty)
         {
-            _logger.LogWarning("[CrmEventsHub] JoinRecordPresence skipped due to invalid user claim. userIdText={UserIdText}, connectionId={ConnectionId}",
-                userIdText, Context.ConnectionId);
             return;
         }
 
@@ -188,9 +181,6 @@ public sealed class CrmEventsHub : Hub
                 isEditing = false
             }
         });
-
-        _logger.LogInformation("[CrmEventsHub] JoinRecordPresence emitted snapshot/changed. tenantId={TenantId}, entityType={EntityType}, recordId={RecordId}, userId={UserId}, connectionId={ConnectionId}, snapshotCount={SnapshotCount}",
-            tenantId, normalizedEntityType, recordId, userId, Context.ConnectionId, snapshot.Count);
     }
 
     public async Task SetRecordEditingState(string entityType, Guid recordId, bool isEditing)
@@ -320,8 +310,6 @@ public sealed class CrmEventsHub : Hub
     {
         if (_tenantProvider.TenantId != Guid.Empty)
         {
-            _logger.LogDebug("[CrmEventsHub] ResolveTenantId via provider. tenantId={TenantId}, connectionId={ConnectionId}",
-                _tenantProvider.TenantId, Context.ConnectionId);
             return _tenantProvider.TenantId;
         }
 
@@ -330,8 +318,6 @@ public sealed class CrmEventsHub : Hub
             : null;
         if (contextTenant is Guid tenantId && tenantId != Guid.Empty)
         {
-            _logger.LogDebug("[CrmEventsHub] ResolveTenantId via HttpContext.Items Guid. tenantId={TenantId}, connectionId={ConnectionId}",
-                tenantId, Context.ConnectionId);
             return tenantId;
         }
 
@@ -339,8 +325,6 @@ public sealed class CrmEventsHub : Hub
             Guid.TryParse(tenantText, out var parsedTenant) &&
             parsedTenant != Guid.Empty)
         {
-            _logger.LogDebug("[CrmEventsHub] ResolveTenantId via HttpContext.Items string. tenantId={TenantId}, connectionId={ConnectionId}",
-                parsedTenant, Context.ConnectionId);
             return parsedTenant;
         }
 
@@ -364,13 +348,8 @@ public sealed class CrmEventsHub : Hub
         if (resolvedTenantId != Guid.Empty)
         {
             _tenantProvider.SetTenant(resolvedTenantId, tenantKey);
-            _logger.LogInformation("[CrmEventsHub] ResolveTenantId via fallback tenant key. tenantKey={TenantKey}, tenantId={TenantId}, connectionId={ConnectionId}",
-                tenantKey, resolvedTenantId, Context.ConnectionId);
             return resolvedTenantId;
         }
-
-        _logger.LogWarning("[CrmEventsHub] ResolveTenantId failed. tenantKey={TenantKey}, connectionId={ConnectionId}",
-            tenantKey, Context.ConnectionId);
 
         return Guid.Empty;
     }
