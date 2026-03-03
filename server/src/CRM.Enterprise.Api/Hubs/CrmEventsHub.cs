@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
 
 namespace CRM.Enterprise.Api.Hubs;
 
@@ -20,15 +22,17 @@ public sealed class CrmEventsHub : Hub
     private static readonly ConcurrentDictionary<string, HashSet<string>> ConnectionGroups = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ITenantProvider _tenantProvider;
+    private readonly CrmDbContext _dbContext;
 
-    public CrmEventsHub(ITenantProvider tenantProvider)
+    public CrmEventsHub(ITenantProvider tenantProvider, CrmDbContext dbContext)
     {
         _tenantProvider = tenantProvider;
+        _dbContext = dbContext;
     }
 
     public override async Task OnConnectedAsync()
     {
-        var tenantId = ResolveTenantId();
+        var tenantId = await ResolveTenantIdAsync();
         if (tenantId != Guid.Empty)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, BuildTenantGroup(tenantId));
@@ -45,7 +49,7 @@ public sealed class CrmEventsHub : Hub
 
     public async Task SendDirectMessage(Guid recipientUserId, string message)
     {
-        var tenantId = ResolveTenantId();
+        var tenantId = await ResolveTenantIdAsync();
         if (tenantId == Guid.Empty || recipientUserId == Guid.Empty || string.IsNullOrWhiteSpace(message))
         {
             return;
@@ -100,7 +104,7 @@ public sealed class CrmEventsHub : Hub
 
     public async Task JoinRecordPresence(string entityType, Guid recordId)
     {
-        var tenantId = ResolveTenantId();
+        var tenantId = await ResolveTenantIdAsync();
         if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(entityType) || recordId == Guid.Empty)
         {
             return;
@@ -181,7 +185,7 @@ public sealed class CrmEventsHub : Hub
 
     public async Task SetRecordEditingState(string entityType, Guid recordId, bool isEditing)
     {
-        var tenantId = ResolveTenantId();
+        var tenantId = await ResolveTenantIdAsync();
         if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(entityType) || recordId == Guid.Empty)
         {
             return;
@@ -229,7 +233,7 @@ public sealed class CrmEventsHub : Hub
 
     public async Task LeaveRecordPresence(string entityType, Guid recordId)
     {
-        var tenantId = ResolveTenantId();
+        var tenantId = await ResolveTenantIdAsync();
         if (tenantId == Guid.Empty || string.IsNullOrWhiteSpace(entityType) || recordId == Guid.Empty)
         {
             return;
@@ -302,7 +306,7 @@ public sealed class CrmEventsHub : Hub
     internal static string BuildRecordGroup(Guid tenantId, string entityType, Guid recordId)
         => $"tenant:{tenantId:D}:record:{entityType}:{recordId:D}";
 
-    private Guid ResolveTenantId()
+    private async Task<Guid> ResolveTenantIdAsync()
     {
         if (_tenantProvider.TenantId != Guid.Empty)
         {
@@ -322,6 +326,29 @@ public sealed class CrmEventsHub : Hub
             parsedTenant != Guid.Empty)
         {
             return parsedTenant;
+        }
+
+        var httpContext = Context.GetHttpContext();
+        var tenantKey = httpContext?.Request.Query["tenantKey"].FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(tenantKey))
+        {
+            tenantKey = httpContext?.Request.Headers["X-Tenant-Key"].FirstOrDefault();
+        }
+        if (string.IsNullOrWhiteSpace(tenantKey))
+        {
+            tenantKey = "default";
+        }
+
+        var resolvedTenantId = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Key == tenantKey)
+            .Select(t => t.Id)
+            .FirstOrDefaultAsync();
+
+        if (resolvedTenantId != Guid.Empty)
+        {
+            _tenantProvider.SetTenant(resolvedTenantId, tenantKey);
+            return resolvedTenantId;
         }
 
         return Guid.Empty;

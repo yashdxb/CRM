@@ -2723,7 +2723,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
   private initializePresence(recordId: string): void {
     console.debug('[LeadForm] initializePresence called for recordId:', recordId);
-    this.crmEvents.joinRecordPresence('lead', recordId);
+    const normalizedRecordId = recordId.toLowerCase();
     this.crmEvents.events$
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((event) => {
@@ -2732,14 +2732,14 @@ export class LeadFormPage implements OnInit, OnDestroy {
         }
 
         const entityType = String(event.payload['entityType'] ?? '').toLowerCase();
-        const payloadRecordId = String(event.payload['recordId'] ?? '');
+        const payloadRecordId = String(event.payload['recordId'] ?? '').toLowerCase();
 
         // Log all presence events for this record
-        if (event.eventType.startsWith('record.presence') && entityType === 'lead' && payloadRecordId === recordId) {
+        if (event.eventType.startsWith('record.presence') && entityType === 'lead' && payloadRecordId === normalizedRecordId) {
           console.debug('[LeadForm] Received presence event:', event);
         }
 
-        if (entityType !== 'lead' || payloadRecordId !== recordId) {
+        if (entityType !== 'lead' || payloadRecordId !== normalizedRecordId) {
           return;
         }
 
@@ -2792,6 +2792,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
           });
         }
       });
+    this.crmEvents.joinRecordPresence('lead', recordId);
   }
 
   protected visiblePresenceUsers(): Array<{ userId: string; displayName: string; isEditing: boolean }> {

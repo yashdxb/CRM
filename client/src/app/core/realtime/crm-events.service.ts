@@ -95,6 +95,8 @@ export class CrmEventsService {
     this.pendingPresence.set(key, { entityType, recordId });
     console.debug('[CrmEvents] joinRecordPresence called:', { entityType, recordId, key });
 
+    this.flushPendingPresence();
+
     void this.ensureFeatureFlagsLoaded(true).then(() => {
       this.flushPendingPresence();
     });
