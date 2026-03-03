@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -272,7 +272,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected readonly canRequestStageOverride = signal(false);
   protected readonly stageOverrideRequesting = signal(false);
   protected readonly lastStageOverrideDecisionId = signal<string | null>(null);
-  protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string }>>([]);
+  protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string; isEditing: boolean }>>([]);
   protected readonly reviewOutcomeOptions: Option[] = [
     { label: 'Approved', value: 'Approved' },
     { label: 'Needs Work', value: 'Needs Work' },
@@ -340,6 +340,8 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected nextStepDueAtUtc: Date | null = null;
   private originalStage: string | null = null;
   private editingId: string | null = null;
+  private localEditingState = false;
+  private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingOpportunity: Opportunity | null = null;
   private pendingAccountName: string | null = null;
 
@@ -425,7 +427,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.clearEditingIdleTimer();
     if (this.editingId) {
+      this.crmEvents.setRecordEditingState('opportunity', this.editingId, false);
       this.crmEvents.leaveRecordPresence('opportunity', this.editingId);
     }
     this.destroy$.next();
@@ -434,6 +438,29 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       clearTimeout(this.proposalResendChipTimeoutHandle);
       this.proposalResendChipTimeoutHandle = null;
     }
+  }
+
+  @HostListener('input')
+  @HostListener('change')
+  protected onCollaborativeEditingActivity(): void {
+    if (!this.editingId || !this.isEditMode()) {
+      return;
+    }
+
+    if (!this.localEditingState) {
+      this.localEditingState = true;
+      this.crmEvents.setRecordEditingState('opportunity', this.editingId, true);
+    }
+
+    this.clearEditingIdleTimer();
+    this.editingIdleTimer = setTimeout(() => {
+      if (!this.editingId) {
+        return;
+      }
+
+      this.localEditingState = false;
+      this.crmEvents.setRecordEditingState('opportunity', this.editingId, false);
+    }, 8000);
   }
 
   protected onAccordionPanelsChange(value: string[] | string | number[] | number | null | undefined) {
@@ -1783,7 +1810,8 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
           const value = item as Record<string, unknown>;
           return {
             userId: String(value['userId'] ?? ''),
-            displayName: String(value['displayName'] ?? 'User')
+            displayName: String(value['displayName'] ?? 'User'),
+            isEditing: !!value['isEditing']
           };
         })
         .filter((item) => !!item.userId);
@@ -1794,6 +1822,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     const userId = String(payload['userId'] ?? '');
     const displayName = String(payload['displayName'] ?? 'User');
     const action = String(payload['action'] ?? '').toLowerCase();
+    const isEditing = !!payload['isEditing'];
     if (!userId) {
       return;
     }
@@ -1801,19 +1830,34 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     this.presenceUsers.update((users) => {
       if (action === 'joined') {
         if (users.some((user) => user.userId === userId)) {
-          return users;
+          return users.map((user) =>
+            user.userId === userId ? { ...user, displayName, isEditing } : user
+          );
         }
-        return [...users, { userId, displayName }];
+        return [...users, { userId, displayName, isEditing }];
       }
       if (action === 'left') {
         return users.filter((user) => user.userId !== userId);
+      }
+      if (action === 'editing_started' || action === 'editing_stopped') {
+        const nextEditingState = action === 'editing_started' ? true : isEditing;
+        if (users.some((user) => user.userId === userId)) {
+          return users.map((user) =>
+            user.userId === userId ? { ...user, displayName, isEditing: nextEditingState } : user
+          );
+        }
+        return [...users, { userId, displayName, isEditing: nextEditingState }];
       }
       return users;
     });
   }
 
-  protected visiblePresenceUsers(): Array<{ userId: string; displayName: string }> {
+  protected visiblePresenceUsers(): Array<{ userId: string; displayName: string; isEditing: boolean }> {
     return this.presenceUsers().filter((viewer) => !this.isCurrentUser(viewer.userId));
+  }
+
+  protected activeEditors(): Array<{ userId: string; displayName: string; isEditing: boolean }> {
+    return this.visiblePresenceUsers().filter((viewer) => viewer.isEditing);
   }
 
   protected viewingPresenceSummary(): string {
@@ -1839,6 +1883,30 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     }
 
     return userId.toLowerCase() === this.currentUserId.toLowerCase();
+  }
+
+  protected editingPresenceSummary(): string {
+    const editors = this.activeEditors();
+    if (!editors.length) {
+      return '';
+    }
+
+    if (editors.length === 1) {
+      return `${editors[0].displayName} is editing this record now.`;
+    }
+
+    if (editors.length === 2) {
+      return `${editors[0].displayName} and ${editors[1].displayName} are editing this record now.`;
+    }
+
+    return `${editors[0].displayName} and ${editors.length - 1} others are editing this record now.`;
+  }
+
+  private clearEditingIdleTimer(): void {
+    if (this.editingIdleTimer) {
+      clearTimeout(this.editingIdleTimer);
+      this.editingIdleTimer = null;
+    }
   }
 
   private hasApprovalByPurpose(purpose: string): boolean {

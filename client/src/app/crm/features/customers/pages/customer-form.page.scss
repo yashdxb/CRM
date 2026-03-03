@@ -905,3 +905,18 @@
   border: 1px solid rgba(14, 165, 233, 0.32);
   background: rgba(224, 242, 254, 0.8);
 }
+
+.presence-editing-note {
+  margin-top: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  background: linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(254, 215, 170, 0.85));
+  color: #9a3412;
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(251, 146, 60, 0.18), 0 0 0 1px rgba(254, 215, 170, 0.32) inset;
+}
