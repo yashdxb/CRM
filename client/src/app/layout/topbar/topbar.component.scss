@@ -17,10 +17,8 @@
     inset 0 1px 0 rgba(218, 235, 255, 0.22),
     inset 0 -1px 0 rgba(96, 165, 250, 0.18),
     0 6px 20px rgba(7, 18, 40, 0.25);
-  position: fixed;
+  position: sticky;
   top: 0;
-  left: var(--shell-sidebar-width, 256px);
-  right: 0;
   z-index: 30;
   border-radius: 0;
   border: none;
@@ -30,9 +28,7 @@
 }
 
 .topbar--hidden {
-  transform: translateY(-100%);
-  opacity: 0;
-  pointer-events: none;
+  display: none;
 }
 
 .topbar__left {
