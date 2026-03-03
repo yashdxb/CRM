@@ -53,7 +53,7 @@ export class CrmEventsService {
 
     const tenantKey = getTenantKey();
     const hostKey = typeof window !== 'undefined' ? resolveTenantKeyFromHost(window.location.hostname) : null;
-    const resolvedTenantKey = tenantKey && !(tenantKey === 'default' && hostKey === null) ? tenantKey : null;
+    const resolvedTenantKey = (tenantKey && tenantKey.trim()) || hostKey || null;
     const headers: Record<string, string> = {};
     if (resolvedTenantKey) {
       headers['X-Tenant-Key'] = resolvedTenantKey;
