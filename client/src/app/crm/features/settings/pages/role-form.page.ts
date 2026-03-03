@@ -248,6 +248,18 @@ export class RoleFormPage {
       }
     },
     {
+      screenName: 'Help Desk',
+      screenKey: 'HelpDesk',
+      icon: 'pi-headphones',
+      description: 'Manage support cases, queues, and SLA policy',
+      permissions: {
+        create: 'Permissions.HelpDesk.Manage',
+        read: 'Permissions.HelpDesk.View',
+        update: 'Permissions.HelpDesk.Manage',
+        delete: 'Permissions.HelpDesk.Admin'
+      }
+    },
+    {
       screenName: 'Administration',
       screenKey: 'Administration',
       icon: 'pi-cog',

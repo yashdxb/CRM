@@ -6,6 +6,7 @@ import { TenantContextService } from '../tenant/tenant-context.service';
 
 export const tenantFeatureGuard: CanActivateFn = (route) => {
   const featureFlag = route.data?.['featureFlag'] as string | undefined;
+  const moduleName = route.data?.['moduleName'] as string | undefined;
   if (!featureFlag) {
     return true;
   }
@@ -20,7 +21,7 @@ export const tenantFeatureGuard: CanActivateFn = (route) => {
         ? true
         : router.createUrlTree(
             ['/app/module-disabled'],
-            { queryParams: { feature: featureFlag, module: 'Marketing' } }
+            { queryParams: { feature: featureFlag, module: moduleName ?? 'This module' } }
           );
     }),
     catchError(() => of(router.createUrlTree(['/app/module-disabled'], { queryParams: { feature: featureFlag } })))

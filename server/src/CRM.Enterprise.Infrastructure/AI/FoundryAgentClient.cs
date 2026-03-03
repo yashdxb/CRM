@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 
@@ -19,6 +20,106 @@ public sealed class FoundryAgentClient
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_options.Endpoint)
                                 && !string.IsNullOrWhiteSpace(_options.ApiKey)
                                 && !string.IsNullOrWhiteSpace(_options.AgentId);
+
+    /// <summary>
+    /// Streams tokens from the assistant using SSE streaming run.
+    /// Falls back to non-streaming if SSE is not supported.
+    /// </summary>
+    public async IAsyncEnumerable<string> RunAndStreamReplyAsync(
+        string threadId,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var runBody = new { assistant_id = _options.AgentId, stream = true };
+        using var runRequest = new HttpRequestMessage(HttpMethod.Post, $"openai/threads/{threadId}/runs?api-version={_options.ApiVersion}");
+        runRequest.Headers.Add("api-key", _options.ApiKey);
+        runRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        runRequest.Content = new StringContent(JsonSerializer.Serialize(runBody, JsonOptions), Encoding.UTF8, "application/json");
+
+        using var response = await _httpClient.SendAsync(runRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorPayload = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException($"Foundry streaming run failed: {response.StatusCode} {errorPayload}");
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var reader = new StreamReader(stream, Encoding.UTF8);
+
+        while (!reader.EndOfStream && !cancellationToken.IsCancellationRequested)
+        {
+            var line = await reader.ReadLineAsync(cancellationToken);
+            if (string.IsNullOrEmpty(line))
+            {
+                continue;
+            }
+
+            if (!line.StartsWith("data: ", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var json = line.Substring(6).Trim();
+            if (json == "[DONE]")
+            {
+                break;
+            }
+
+            var token = ExtractDeltaToken(json);
+            if (!string.IsNullOrEmpty(token))
+            {
+                yield return token;
+            }
+        }
+    }
+
+    private static string? ExtractDeltaToken(string json)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+
+            // Handle thread.message.delta events
+            if (root.TryGetProperty("object", out var objProp) &&
+                objProp.GetString() == "thread.message.delta")
+            {
+                if (root.TryGetProperty("delta", out var delta) &&
+                    delta.TryGetProperty("content", out var content) &&
+                    content.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in content.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("text", out var text) &&
+                            text.TryGetProperty("value", out var value))
+                        {
+                            return value.GetString();
+                        }
+                    }
+                }
+            }
+
+            // Handle chat.completion.chunk events (alternative format)
+            if (root.TryGetProperty("choices", out var choices) &&
+                choices.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var choice in choices.EnumerateArray())
+                {
+                    if (choice.TryGetProperty("delta", out var choiceDelta) &&
+                        choiceDelta.TryGetProperty("content", out var choiceContent))
+                    {
+                        return choiceContent.GetString();
+                    }
+                }
+            }
+
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     public async Task<string> CreateThreadAsync(CancellationToken cancellationToken)
     {

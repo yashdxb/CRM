@@ -21,6 +21,9 @@ public class TenantContextController : ControllerBase
     private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
     {
         "marketing.campaigns",
+        "helpdesk.cases",
+        "helpdesk.emailIntake",
+        "helpdesk.realtime",
         "realtime.dashboard",
         "realtime.pipeline",
         "realtime.entityCrud",
@@ -63,10 +66,20 @@ public class TenantContextController : ControllerBase
             .Get<string[]>() ?? Array.Empty<string>();
         var marketingEnabled = marketingDefaultEnabled
             || marketingEnabledTenants.Contains(tenant.Key, StringComparer.OrdinalIgnoreCase);
+        var helpDeskDefaultEnabled = _configuration.GetValue<bool?>("Features:HelpDesk:Cases:EnabledByDefault") ?? false;
+        var helpDeskEnabledTenants = _configuration
+            .GetSection("Features:HelpDesk:Cases:EnabledTenants")
+            .Get<string[]>() ?? Array.Empty<string>();
+        var helpDeskEnabled = helpDeskDefaultEnabled
+            || helpDeskEnabledTenants.Contains(tenant.Key, StringComparer.OrdinalIgnoreCase)
+            || string.Equals(tenant.Key, "default", StringComparison.OrdinalIgnoreCase);
 
         var featureFlags = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
         {
-            ["marketing.campaigns"] = marketingEnabled
+            ["marketing.campaigns"] = marketingEnabled,
+            ["helpdesk.cases"] = helpDeskEnabled,
+            ["helpdesk.emailIntake"] = helpDeskEnabled,
+            ["helpdesk.realtime"] = helpDeskEnabled
         };
 
         var realtimeDefaultEnabled = _configuration.GetValue<bool?>("Features:Realtime:EnabledByDefault") ?? false;

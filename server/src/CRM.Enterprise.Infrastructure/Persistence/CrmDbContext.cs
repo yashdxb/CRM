@@ -106,6 +106,13 @@ public class CrmDbContext : DbContext
     public DbSet<DirectChatThread> DirectChatThreads => Set<DirectChatThread>();
     public DbSet<DirectChatParticipant> DirectChatParticipants => Set<DirectChatParticipant>();
     public DbSet<DirectChatMessage> DirectChatMessages => Set<DirectChatMessage>();
+    public DbSet<SupportCase> SupportCases => Set<SupportCase>();
+    public DbSet<SupportCaseComment> SupportCaseComments => Set<SupportCaseComment>();
+    public DbSet<SupportQueue> SupportQueues => Set<SupportQueue>();
+    public DbSet<SupportQueueMember> SupportQueueMembers => Set<SupportQueueMember>();
+    public DbSet<SupportSlaPolicy> SupportSlaPolicies => Set<SupportSlaPolicy>();
+    public DbSet<SupportCaseEscalationEvent> SupportCaseEscalationEvents => Set<SupportCaseEscalationEvent>();
+    public DbSet<SupportEmailBinding> SupportEmailBindings => Set<SupportEmailBinding>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -459,6 +466,121 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<DirectChatThread>().ToTable("DirectChatThreads", CrmSchema);
         modelBuilder.Entity<DirectChatParticipant>().ToTable("DirectChatParticipants", CrmSchema);
         modelBuilder.Entity<DirectChatMessage>().ToTable("DirectChatMessages", CrmSchema);
+        modelBuilder.Entity<SupportCase>().ToTable("SupportCases", CrmSchema);
+        modelBuilder.Entity<SupportCaseComment>().ToTable("SupportCaseComments", CrmSchema);
+        modelBuilder.Entity<SupportQueue>().ToTable("SupportQueues", CrmSchema);
+        modelBuilder.Entity<SupportQueueMember>().ToTable("SupportQueueMembers", CrmSchema);
+        modelBuilder.Entity<SupportSlaPolicy>().ToTable("SupportSlaPolicies", CrmSchema);
+        modelBuilder.Entity<SupportCaseEscalationEvent>().ToTable("SupportCaseEscalationEvents", CrmSchema);
+        modelBuilder.Entity<SupportEmailBinding>().ToTable("SupportEmailBindings", CrmSchema);
+        modelBuilder.Entity<SupportCase>()
+            .HasIndex(c => new { c.TenantId, c.CaseNumber })
+            .IsUnique();
+        modelBuilder.Entity<SupportCase>()
+            .HasIndex(c => new { c.TenantId, c.Status, c.Priority, c.QueueId, c.OwnerUserId, c.UpdatedAtUtc });
+        modelBuilder.Entity<SupportQueue>()
+            .HasIndex(q => new { q.TenantId, q.Name })
+            .IsUnique();
+        modelBuilder.Entity<SupportQueueMember>()
+            .HasIndex(m => new { m.TenantId, m.QueueId, m.UserId })
+            .IsUnique();
+        modelBuilder.Entity<SupportSlaPolicy>()
+            .HasIndex(p => new { p.TenantId, p.Priority, p.Severity, p.IsActive });
+        modelBuilder.Entity<SupportEmailBinding>()
+            .HasIndex(e => new { e.TenantId, e.ExternalThreadKey })
+            .IsUnique();
+        modelBuilder.Entity<SupportCaseComment>()
+            .HasIndex(c => new { c.TenantId, c.CaseId, c.CreatedAtUtc });
+        modelBuilder.Entity<SupportCaseEscalationEvent>()
+            .HasIndex(e => new { e.TenantId, e.CaseId, e.OccurredUtc });
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.CaseNumber).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.Subject).HasMaxLength(240).IsRequired();
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.Status).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.Priority).HasMaxLength(32).IsRequired();
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.Severity).HasMaxLength(16).IsRequired();
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.Category).HasMaxLength(80).IsRequired();
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.Subcategory).HasMaxLength(120);
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.Source).HasMaxLength(32).IsRequired();
+        modelBuilder.Entity<SupportQueue>()
+            .Property(q => q.Name).HasMaxLength(120).IsRequired();
+        modelBuilder.Entity<SupportSlaPolicy>()
+            .Property(p => p.Name).HasMaxLength(120).IsRequired();
+        modelBuilder.Entity<SupportSlaPolicy>()
+            .Property(p => p.Priority).HasMaxLength(32).IsRequired();
+        modelBuilder.Entity<SupportSlaPolicy>()
+            .Property(p => p.Severity).HasMaxLength(16).IsRequired();
+        modelBuilder.Entity<SupportCaseEscalationEvent>()
+            .Property(e => e.Type).HasMaxLength(32).IsRequired();
+        modelBuilder.Entity<SupportEmailBinding>()
+            .Property(e => e.ExternalThreadKey).HasMaxLength(200).IsRequired();
+        modelBuilder.Entity<SupportCase>()
+            .HasOne(c => c.Account)
+            .WithMany()
+            .HasForeignKey(c => c.AccountId)
+            .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<SupportCase>()
+            .HasOne(c => c.Contact)
+            .WithMany()
+            .HasForeignKey(c => c.ContactId)
+            .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<SupportCase>()
+            .HasOne(c => c.Queue)
+            .WithMany(q => q.Cases)
+            .HasForeignKey(c => c.QueueId)
+            .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<SupportCase>()
+            .HasOne(c => c.OwnerUser)
+            .WithMany()
+            .HasForeignKey(c => c.OwnerUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<SupportCase>()
+            .HasOne(c => c.SlaPolicy)
+            .WithMany(p => p.Cases)
+            .HasForeignKey(c => c.SlaPolicyId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<SupportCaseComment>()
+            .HasOne(c => c.Case)
+            .WithMany(x => x.Comments)
+            .HasForeignKey(c => c.CaseId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<SupportCaseComment>()
+            .HasOne(c => c.AuthorUser)
+            .WithMany()
+            .HasForeignKey(c => c.AuthorUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<SupportQueueMember>()
+            .HasOne(m => m.Queue)
+            .WithMany(q => q.Members)
+            .HasForeignKey(m => m.QueueId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<SupportQueueMember>()
+            .HasOne(m => m.User)
+            .WithMany()
+            .HasForeignKey(m => m.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<SupportCaseEscalationEvent>()
+            .HasOne(e => e.Case)
+            .WithMany(c => c.EscalationEvents)
+            .HasForeignKey(e => e.CaseId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<SupportCaseEscalationEvent>()
+            .HasOne(e => e.ActorUser)
+            .WithMany()
+            .HasForeignKey(e => e.ActorUserId)
+            .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<SupportEmailBinding>()
+            .HasOne(e => e.Case)
+            .WithMany(c => c.EmailBindings)
+            .HasForeignKey(e => e.CaseId)
+            .OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<DirectChatThread>()
             .HasMany(thread => thread.Participants)
             .WithOne(participant => participant.Thread)

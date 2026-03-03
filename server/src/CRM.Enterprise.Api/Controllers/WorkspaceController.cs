@@ -25,6 +25,9 @@ public class WorkspaceController : ControllerBase
     private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
     {
         "marketing.campaigns",
+        "helpdesk.cases",
+        "helpdesk.emailIntake",
+        "helpdesk.realtime",
         "realtime.dashboard",
         "realtime.pipeline",
         "realtime.entityCrud",

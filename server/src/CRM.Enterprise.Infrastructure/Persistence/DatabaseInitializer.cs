@@ -1664,7 +1664,9 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.ContactsView,
                 Permissions.Policies.ContactsManage,
                 Permissions.Policies.ActivitiesView,
-                Permissions.Policies.ActivitiesManage
+                Permissions.Policies.ActivitiesManage,
+                Permissions.Policies.HelpDeskView,
+                Permissions.Policies.HelpDeskManage
             }
         ),
         (
@@ -1678,7 +1680,10 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.ContactsView,
                 Permissions.Policies.ContactsManage,
                 Permissions.Policies.ActivitiesView,
-                Permissions.Policies.ActivitiesManage
+                Permissions.Policies.ActivitiesManage,
+                Permissions.Policies.HelpDeskView,
+                Permissions.Policies.HelpDeskManage,
+                Permissions.Policies.HelpDeskAdmin
             }
         )
     };
@@ -2217,6 +2222,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             await SeedLeadAssignmentRulesAsync(cancellationToken);
             await SeedLeadCadenceChannelsAsync(cancellationToken);
             await SeedOpportunityStagesAsync(cancellationToken);
+            await SeedHelpDeskDefaultsAsync(cancellationToken);
             // CRM sample data seeding disabled
             // await SeedSampleDataAsync(cancellationToken);
         }
@@ -2343,6 +2349,61 @@ public class DatabaseInitializer : IDatabaseInitializer
         };
 
         _dbContext.AuditEvents.AddRange(entries);
+    }
+
+    private async Task SeedHelpDeskDefaultsAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        var queueExists = await _dbContext.SupportQueues
+            .AnyAsync(q => q.TenantId == tenantId && q.Name == "General Support" && !q.IsDeleted, cancellationToken);
+        if (!queueExists)
+        {
+            _dbContext.SupportQueues.Add(new SupportQueue
+            {
+                TenantId = tenantId,
+                Name = "General Support",
+                Description = "Default support queue for incoming cases.",
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow,
+                CreatedBy = "system"
+            });
+        }
+
+        if (!await _dbContext.SupportSlaPolicies.AnyAsync(p => p.TenantId == tenantId && !p.IsDeleted, cancellationToken))
+        {
+            var defaults = new[]
+            {
+                ("Urgent S1", "Urgent", "S1", 30, 240, 15),
+                ("High S2", "High", "S2", 60, 480, 30),
+                ("Medium S3", "Medium", "S3", 240, 1440, 60),
+                ("Low S4", "Low", "S4", 480, 2880, 120)
+            };
+
+            foreach (var (name, priority, severity, firstResponse, resolution, escalation) in defaults)
+            {
+                _dbContext.SupportSlaPolicies.Add(new SupportSlaPolicy
+                {
+                    TenantId = tenantId,
+                    Name = name,
+                    Priority = priority,
+                    Severity = severity,
+                    FirstResponseTargetMinutes = firstResponse,
+                    ResolutionTargetMinutes = resolution,
+                    EscalationMinutes = escalation,
+                    BusinessHoursJson = null,
+                    IsActive = true,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    CreatedBy = "system"
+                });
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task BackfillTenantIdsAsync(Guid tenantId, CancellationToken cancellationToken)

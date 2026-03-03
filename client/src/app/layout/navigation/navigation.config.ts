@@ -72,6 +72,18 @@ export const NAV_LINKS: NavLink[] = [
       { label: 'Marketing Settings', icon: 'pi-cog', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' }
     ]
   },
+  {
+    label: 'Help Desk',
+    icon: 'pi-headphones',
+    path: '/app/helpdesk/cases',
+    permission: PERMISSION_KEYS.helpDeskView,
+    featureFlag: 'helpdesk.cases',
+    children: [
+      { label: 'Cases', icon: 'pi-list', path: '/app/helpdesk/cases', permission: PERMISSION_KEYS.helpDeskView, featureFlag: 'helpdesk.cases' },
+      { label: 'Queues', icon: 'pi-sitemap', path: '/app/helpdesk/queues', permission: PERMISSION_KEYS.helpDeskAdmin, featureFlag: 'helpdesk.cases' },
+      { label: 'Help Desk Settings', icon: 'pi-cog', path: '/app/helpdesk/settings', permission: PERMISSION_KEYS.helpDeskAdmin, featureFlag: 'helpdesk.cases' }
+    ]
+  },
   { 
     label: 'Activities', 
     icon: 'pi-calendar', 

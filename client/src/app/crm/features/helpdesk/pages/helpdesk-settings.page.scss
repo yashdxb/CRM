@@ -1,0 +1,9 @@
+.helpdesk-settings-page {
+  .hero-card {
+    margin-bottom: 1rem;
+  }
+
+  :host ::ng-deep .p-inputnumber {
+    width: 8.5rem;
+  }
+}

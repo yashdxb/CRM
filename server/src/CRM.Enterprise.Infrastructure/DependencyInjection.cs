@@ -27,6 +27,7 @@ using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Marketing;
 using CRM.Enterprise.Application.Emails;
 using CRM.Enterprise.Application.DirectChat;
+using CRM.Enterprise.Application.HelpDesk;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Notifications;
 using CRM.Enterprise.Infrastructure.Leads;
@@ -39,6 +40,7 @@ using CRM.Enterprise.Infrastructure.Marketing;
 using CRM.Enterprise.Infrastructure.Customers;
 using CRM.Enterprise.Infrastructure.Contacts;
 using CRM.Enterprise.Infrastructure.DirectChat;
+using CRM.Enterprise.Infrastructure.HelpDesk;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Emails;
 using MediatR;
@@ -102,6 +104,7 @@ public static class DependencyInjection
         }
         services.AddHostedService<RenewalAutomationWorker>();
         services.AddHostedService<DecisionSlaEscalationWorker>();
+        services.AddHostedService<HelpDeskSlaEscalationWorker>();
         services.AddSingleton<IEmailSender>(sp =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AcsEmailOptions>>().Value;
@@ -197,6 +200,11 @@ public static class DependencyInjection
         services.AddScoped<IRfqAwardService, RfqAwardService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IDirectChatService, DirectChatService>();
+        services.AddScoped<ISupportCaseService, HelpDeskService>();
+        services.AddScoped<ISupportQueueService, HelpDeskService>();
+        services.AddScoped<ISupportSlaService, HelpDeskService>();
+        services.AddScoped<ISupportReportService, HelpDeskService>();
+        services.AddScoped<ISupportEmailIntakeService, HelpDeskService>();
         
         // Email OAuth connection service
         services.Configure<EmailOAuthOptions>(configuration.GetSection(EmailOAuthOptions.SectionName));

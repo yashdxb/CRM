@@ -204,6 +204,10 @@ export class DashboardPage implements OnInit {
   private assistantUndoActivityId: string | null = null;
   private assistantUndoActionType: string | null = null;
 
+  // Realtime update tracking
+  protected readonly realtimeUpdating = signal(false);
+  private realtimeUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
+
   protected readonly greeting = this.getGreeting();
   
   // Chart configurations
@@ -682,7 +686,19 @@ export class DashboardPage implements OnInit {
         filter((event) => event.eventType === 'dashboard.metrics.delta' || event.eventType === 'dashboard.metrics.refresh-requested'),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => this.dashboardRealtimeRefresh$.next());
+      .subscribe(() => {
+        // Show realtime update indicator
+        this.realtimeUpdating.set(true);
+        if (this.realtimeUpdateTimeout) {
+          clearTimeout(this.realtimeUpdateTimeout);
+        }
+        this.realtimeUpdateTimeout = setTimeout(() => {
+          this.realtimeUpdating.set(false);
+          this.realtimeUpdateTimeout = null;
+        }, 2000);
+        
+        this.dashboardRealtimeRefresh$.next();
+      });
 
     this.dashboardRealtimeRefresh$
       .pipe(

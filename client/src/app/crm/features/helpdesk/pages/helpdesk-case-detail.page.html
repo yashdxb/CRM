@@ -1,0 +1,123 @@
+<section class="page-background helpdesk-case-page">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="glass-card hero-card">
+    <div>
+      <h1 class="hero-title">{{ isNewCase() ? 'New Support Case' : (caseRecord()?.caseNumber || 'Case Workspace') }}</h1>
+      <p class="hero-subtitle">
+        {{ isNewCase() ? 'Capture customer issue details and set SLA context.' : 'Manage status, conversation, and escalation timeline.' }}
+      </p>
+    </div>
+    <div class="hero-actions">
+      <button pButton type="button" class="crm-button crm-button--ghost" label="Back" routerLink="/app/helpdesk/cases"></button>
+      <button pButton type="button" class="crm-button crm-button--primary" label="Save" [disabled]="saving() || !canManage()" (click)="save()"></button>
+    </div>
+  </section>
+
+  <section class="glass-card workspace-card">
+    <p-tabs [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
+      <p-tablist>
+        <p-tab value="overview">Overview</p-tab>
+        <p-tab value="conversation" [disabled]="isNewCase()">Conversation</p-tab>
+        <p-tab value="timeline" [disabled]="isNewCase()">Timeline</p-tab>
+        <p-tab value="linked" [disabled]="isNewCase()">Linked Records</p-tab>
+      </p-tablist>
+
+      <p-tabpanels>
+        <p-tabpanel value="overview">
+          <form class="form-grid" [formGroup]="form">
+            <label class="field">
+              <span>Subject</span>
+              <input pInputText formControlName="subject" />
+            </label>
+            <label class="field">
+              <span>Category</span>
+              <input pInputText formControlName="category" />
+            </label>
+            <label class="field">
+              <span>Subcategory</span>
+              <input pInputText formControlName="subcategory" />
+            </label>
+            <label class="field">
+              <span>Source</span>
+              <p-select [options]="sourceOptions" optionLabel="label" optionValue="value" formControlName="source"></p-select>
+            </label>
+            <label class="field">
+              <span>Priority</span>
+              <p-select [options]="priorityOptions" optionLabel="label" optionValue="value" formControlName="priority"></p-select>
+            </label>
+            <label class="field">
+              <span>Severity</span>
+              <p-select [options]="severityOptions" optionLabel="label" optionValue="value" formControlName="severity"></p-select>
+            </label>
+            <label class="field">
+              <span>Queue</span>
+              <p-select [options]="queueOptions()" optionLabel="label" optionValue="value" formControlName="queueId" [showClear]="true"></p-select>
+            </label>
+            <label class="field field--wide">
+              <span>Description</span>
+              <textarea pTextarea rows="5" formControlName="description"></textarea>
+            </label>
+          </form>
+
+          <div class="status-actions" *ngIf="caseRecord()">
+            <span>Quick status:</span>
+            <button pButton type="button" class="crm-button crm-button--text" *ngFor="let status of statusOptions" [label]="status.label" [disabled]="!canManage()" (click)="updateStatus(status.value)"></button>
+          </div>
+        </p-tabpanel>
+
+        <p-tabpanel value="conversation">
+          <div class="comment-list">
+            <article class="comment-item" *ngFor="let row of comments()">
+              <header>
+                <strong>{{ row.authorUserName }}</strong>
+                <span>{{ row.createdAtUtc | date: 'medium' }}</span>
+              </header>
+              <p>{{ row.body }}</p>
+            </article>
+          </div>
+
+          <form class="comment-form" [formGroup]="commentForm">
+            <textarea pTextarea rows="3" formControlName="body" placeholder="Add internal note or customer-facing update..."></textarea>
+            <div class="comment-actions">
+              <label>
+                <input type="checkbox" formControlName="isInternal" />
+                Internal comment
+              </label>
+              <button pButton type="button" class="crm-button crm-button--primary" label="Add Comment" [disabled]="!canManage()" (click)="addComment()"></button>
+            </div>
+          </form>
+        </p-tabpanel>
+
+        <p-tabpanel value="timeline">
+          <div class="timeline-list">
+            <article class="timeline-item" *ngFor="let row of escalations()">
+              <strong>{{ row.type }}</strong>
+              <span>{{ row.occurredUtc | date: 'medium' }}</span>
+              <p>{{ row.notes || 'System-generated SLA event.' }}</p>
+            </article>
+            <p *ngIf="!escalations().length">No escalation events yet.</p>
+          </div>
+        </p-tabpanel>
+
+        <p-tabpanel value="linked">
+          <div class="linked-grid">
+            <article class="glass-card">
+              <h3>Account</h3>
+              <p>{{ caseRecord()?.accountName || '-' }}</p>
+            </article>
+            <article class="glass-card">
+              <h3>Contact</h3>
+              <p>{{ caseRecord()?.contactName || '-' }}</p>
+            </article>
+          </div>
+        </p-tabpanel>
+      </p-tabpanels>
+    </p-tabs>
+  </section>
+</section>

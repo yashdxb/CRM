@@ -26,6 +26,9 @@ public static class Permissions
         public const string ActivitiesManage = "Permissions.Activities.Manage";
         public const string MarketingView = "Permissions.Marketing.View";
         public const string MarketingManage = "Permissions.Marketing.Manage";
+        public const string HelpDeskView = "Permissions.HelpDesk.View";
+        public const string HelpDeskManage = "Permissions.HelpDesk.Manage";
+        public const string HelpDeskAdmin = "Permissions.HelpDesk.Admin";
         public const string AdministrationView = "Permissions.Administration.View";
         public const string AdministrationManage = "Permissions.Administration.Manage";
         public const string AuditView = "Permissions.Audit.View";
@@ -75,6 +78,9 @@ public static class Permissions
         new(Policies.ActivitiesManage, "Activities (Manage)", "Log calls, meetings, and tasks tied to records.", "Create & Manage Records"),
         new(Policies.MarketingView, "Marketing (View)", "View campaigns, attribution, and performance insights.", "View & Analyze"),
         new(Policies.MarketingManage, "Marketing (Manage)", "Create and manage campaigns and memberships.", "Create & Manage Records"),
+        new(Policies.HelpDeskView, "Help Desk (View)", "View support cases, queues, and SLA status.", "View & Analyze"),
+        new(Policies.HelpDeskManage, "Help Desk (Manage)", "Create and manage support cases and comments.", "Create & Manage Records"),
+        new(Policies.HelpDeskAdmin, "Help Desk (Admin)", "Configure support queues and SLA policies.", "Configure System"),
         new(Policies.AdministrationView, "Administration (View)", "View users, roles, and workspace settings.", "Configure System"),
         new(Policies.AdministrationManage, "Administration (Manage)", "Invite users, edit roles, and configure workspace policies.", "Configure System"),
         new(Policies.AuditView, "Audit Log (View)", "View system audit history for records and changes.", "Audit & Compliance"),
@@ -136,6 +142,8 @@ public static class Permissions
             Policies.LeadsManage,
             Policies.ActivitiesView,
             Policies.ActivitiesManage,
+            Policies.HelpDeskView,
+            Policies.HelpDeskManage,
             Policies.MarketingView,
             Policies.MarketingManage
         }),
@@ -147,7 +155,9 @@ public static class Permissions
             Policies.ContactsView,
             Policies.ContactsManage,
             Policies.ActivitiesView,
-            Policies.ActivitiesManage
+            Policies.ActivitiesManage,
+            Policies.HelpDeskView,
+            Policies.HelpDeskManage
         }),
         new RoleIntentDefinition(RoleNames.Support, "Support", "Handles escalations and tickets.", new[]
         {
@@ -157,7 +167,10 @@ public static class Permissions
             Policies.ContactsView,
             Policies.ContactsManage,
             Policies.ActivitiesView,
-            Policies.ActivitiesManage
+            Policies.ActivitiesManage,
+            Policies.HelpDeskView,
+            Policies.HelpDeskManage,
+            Policies.HelpDeskAdmin
         })
     });
 

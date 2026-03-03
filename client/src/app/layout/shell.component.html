@@ -145,6 +145,7 @@
                       <button
                         type="button"
                         class="direct-chat-thread-item"
+                        [attr.data-thread-id]="thread.threadId"
                         [class.is-active]="thread.threadId === activeChatThreadId()"
                         (click)="selectChatThread(thread.threadId)"
                       >

@@ -172,6 +172,12 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.MarketingView));
     options.AddPolicy(Permissions.Policies.MarketingManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.MarketingManage));
+    options.AddPolicy(Permissions.Policies.HelpDeskView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.HelpDeskView));
+    options.AddPolicy(Permissions.Policies.HelpDeskManage, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.HelpDeskManage));
+    options.AddPolicy(Permissions.Policies.HelpDeskAdmin, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.HelpDeskAdmin));
     options.AddPolicy(Permissions.Policies.AdministrationView, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.AdministrationView));
     options.AddPolicy(Permissions.Policies.AdministrationManage, policy =>

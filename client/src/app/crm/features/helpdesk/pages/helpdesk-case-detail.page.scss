@@ -1,0 +1,86 @@
+.helpdesk-case-page {
+  .hero-card {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .workspace-card {
+    padding: 1rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .field--wide {
+    grid-column: 1 / -1;
+  }
+
+  .status-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+
+  .comment-list,
+  .timeline-list {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .comment-item,
+  .timeline-item {
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(15, 23, 42, 0.08);
+  }
+
+  .comment-item header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .comment-form {
+    margin-top: 0.75rem;
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .comment-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .linked-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  @media (max-width: 960px) {
+    .form-grid,
+    .linked-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+}

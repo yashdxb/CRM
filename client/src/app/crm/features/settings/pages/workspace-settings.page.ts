@@ -94,7 +94,10 @@ export class WorkspaceSettingsPage {
     featureRealtimeEntityCrud: [false],
     featureRealtimeImportProgress: [false],
     featureRealtimeRecordPresence: [false],
-    featureRealtimeAssistantStreaming: [false]
+    featureRealtimeAssistantStreaming: [false],
+    featureHelpDeskCases: [false],
+    featureHelpDeskEmailIntake: [false],
+    featureHelpDeskRealtime: [false]
   });
 
   constructor() {
@@ -162,7 +165,10 @@ export class WorkspaceSettingsPage {
         'realtime.entityCrud': !!payload.featureRealtimeEntityCrud,
         'realtime.importProgress': !!payload.featureRealtimeImportProgress,
         'realtime.recordPresence': !!payload.featureRealtimeRecordPresence,
-        'realtime.assistantStreaming': !!payload.featureRealtimeAssistantStreaming
+        'realtime.assistantStreaming': !!payload.featureRealtimeAssistantStreaming,
+        'helpdesk.cases': !!payload.featureHelpDeskCases,
+        'helpdesk.emailIntake': !!payload.featureHelpDeskEmailIntake,
+        'helpdesk.realtime': !!payload.featureHelpDeskRealtime
       }
     };
     this.saving.set(true);
@@ -204,7 +210,10 @@ export class WorkspaceSettingsPage {
       featureRealtimeEntityCrud: this.resolveFeatureFlag(settings.featureFlags, 'realtime.entityCrud'),
       featureRealtimeImportProgress: this.resolveFeatureFlag(settings.featureFlags, 'realtime.importProgress'),
       featureRealtimeRecordPresence: this.resolveFeatureFlag(settings.featureFlags, 'realtime.recordPresence'),
-      featureRealtimeAssistantStreaming: this.resolveFeatureFlag(settings.featureFlags, 'realtime.assistantStreaming')
+      featureRealtimeAssistantStreaming: this.resolveFeatureFlag(settings.featureFlags, 'realtime.assistantStreaming'),
+      featureHelpDeskCases: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.cases'),
+      featureHelpDeskEmailIntake: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.emailIntake'),
+      featureHelpDeskRealtime: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.realtime')
     });
   }
 

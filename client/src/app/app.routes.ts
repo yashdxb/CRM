@@ -276,51 +276,86 @@ export const routes: Routes = [
       {
         path: 'marketing/campaigns',
         canActivate: [roleGuard, tenantFeatureGuard],
-        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Campaigns', icon: 'pi-megaphone' },
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Campaigns', icon: 'pi-megaphone' },
         loadComponent: () =>
           import('./crm/features/marketing/pages/campaigns.page').then((m) => m.CampaignsPage)
       },
       {
         path: 'marketing/campaigns/new',
         canActivate: [roleGuard, tenantFeatureGuard],
-        data: { permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns', breadcrumb: 'New Campaign', icon: 'pi-plus' },
+        data: { permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'New Campaign', icon: 'pi-plus' },
         loadComponent: () =>
           import('./crm/features/marketing/pages/campaign-form.page').then((m) => m.CampaignFormPage)
       },
       {
         path: 'marketing/campaigns/:id/edit',
         canActivate: [roleGuard, tenantFeatureGuard],
-        data: { permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns', breadcrumb: 'Edit Campaign', icon: 'pi-pencil' },
+        data: { permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Edit Campaign', icon: 'pi-pencil' },
         loadComponent: () =>
           import('./crm/features/marketing/pages/campaign-form.page').then((m) => m.CampaignFormPage)
       },
       {
         path: 'marketing/campaigns/:id',
         canActivate: [roleGuard, tenantFeatureGuard],
-        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Campaign Detail', icon: 'pi-chart-bar' },
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Campaign Detail', icon: 'pi-chart-bar' },
         loadComponent: () =>
           import('./crm/features/marketing/pages/campaign-detail.page').then((m) => m.CampaignDetailPage)
       },
       {
         path: 'marketing/attribution',
         canActivate: [roleGuard, tenantFeatureGuard],
-        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Attribution', icon: 'pi-percentage' },
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Attribution', icon: 'pi-percentage' },
         loadComponent: () =>
           import('./crm/features/marketing/pages/campaign-attribution.page').then((m) => m.CampaignAttributionPage)
       },
       {
         path: 'marketing/emails',
         canActivate: [roleGuard, tenantFeatureGuard],
-        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Campaign Emails', icon: 'pi-send' },
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Campaign Emails', icon: 'pi-send' },
         loadComponent: () =>
           import('./crm/features/marketing/pages/campaign-emails.page').then((m) => m.CampaignEmailsPage)
       },
       {
         path: 'marketing/emails/:id',
         canActivate: [roleGuard, tenantFeatureGuard],
-        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', breadcrumb: 'Email Details', icon: 'pi-send' },
+        data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Email Details', icon: 'pi-send' },
         loadComponent: () =>
           import('./crm/features/marketing/pages/campaign-email-detail.page').then((m) => m.CampaignEmailDetailPage)
+      },
+      {
+        path: 'helpdesk/cases',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.helpDeskView, featureFlag: 'helpdesk.cases', moduleName: 'Help Desk', breadcrumb: 'Help Desk Cases', icon: 'pi-headphones' },
+        loadComponent: () =>
+          import('./crm/features/helpdesk/pages/helpdesk-cases.page').then((m) => m.HelpDeskCasesPage)
+      },
+      {
+        path: 'helpdesk/cases/new',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.helpDeskManage, featureFlag: 'helpdesk.cases', moduleName: 'Help Desk', breadcrumb: 'New Case', icon: 'pi-plus' },
+        loadComponent: () =>
+          import('./crm/features/helpdesk/pages/helpdesk-case-detail.page').then((m) => m.HelpDeskCaseDetailPage)
+      },
+      {
+        path: 'helpdesk/cases/:id',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.helpDeskView, featureFlag: 'helpdesk.cases', moduleName: 'Help Desk', breadcrumb: 'Case Workspace', icon: 'pi-ticket' },
+        loadComponent: () =>
+          import('./crm/features/helpdesk/pages/helpdesk-case-detail.page').then((m) => m.HelpDeskCaseDetailPage)
+      },
+      {
+        path: 'helpdesk/queues',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.helpDeskAdmin, featureFlag: 'helpdesk.cases', moduleName: 'Help Desk', breadcrumb: 'Help Desk Queues', icon: 'pi-sitemap' },
+        loadComponent: () =>
+          import('./crm/features/helpdesk/pages/helpdesk-queues.page').then((m) => m.HelpDeskQueuesPage)
+      },
+      {
+        path: 'helpdesk/settings',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.helpDeskAdmin, featureFlag: 'helpdesk.cases', moduleName: 'Help Desk', breadcrumb: 'Help Desk Settings', icon: 'pi-cog' },
+        loadComponent: () =>
+          import('./crm/features/helpdesk/pages/helpdesk-settings.page').then((m) => m.HelpDeskSettingsPage)
       },
       {
         path: 'activities',
@@ -438,7 +473,7 @@ export const routes: Routes = [
           {
             path: 'marketing',
             canActivate: [tenantFeatureGuard],
-            data: { permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns', breadcrumb: 'Marketing' },
+            data: { permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Marketing' },
             loadComponent: () =>
               import('./crm/features/settings/pages/marketing-settings.page').then((m) => m.MarketingSettingsPage)
           },

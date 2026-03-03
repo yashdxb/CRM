@@ -25,7 +25,10 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
         "record.presence.changed",
         "assistant.chat.token",
         "assistant.chat.completed",
-        "assistant.chat.failed"
+        "assistant.chat.failed",
+        "helpdesk.case.changed",
+        "helpdesk.case.escalated",
+        "helpdesk.queue.changed"
     };
 
     private readonly IHubContext<CrmEventsHub> _hubContext;
@@ -281,6 +284,7 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
             "import.job.progress" => "realtime.importProgress",
             "record.presence.snapshot" or "record.presence.changed" => "realtime.recordPresence",
             "assistant.chat.token" or "assistant.chat.completed" or "assistant.chat.failed" => "realtime.assistantStreaming",
+            "helpdesk.case.changed" or "helpdesk.case.escalated" or "helpdesk.queue.changed" => "helpdesk.realtime",
             _ => null
         };
 

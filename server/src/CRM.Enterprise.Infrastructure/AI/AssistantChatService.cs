@@ -8,6 +8,7 @@ using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 
@@ -183,6 +184,152 @@ public sealed class AssistantChatService : IAssistantChatService
 
         var history = await GetHistoryAsync(userId, cancellationToken, 50);
         return new AssistantChatResult(reply, history);
+    }
+
+    /// <summary>
+    /// Streams assistant response tokens in real-time as they are generated.
+    /// </summary>
+    public async IAsyncEnumerable<AssistantStreamChunk> SendStreamingAsync(
+        Guid userId,
+        string message,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var normalized = message.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            throw new InvalidOperationException("Message cannot be empty.");
+        }
+
+        var lastMessageAt = await _dbContext.AssistantMessages
+            .AsNoTracking()
+            .Where(m => m.TenantId == tenantId && m.UserId == userId && !m.IsDeleted)
+            .OrderByDescending(m => m.CreatedAtUtc)
+            .Select(m => (DateTime?)m.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (lastMessageAt.HasValue)
+        {
+            var elapsed = DateTime.UtcNow - lastMessageAt.Value;
+            if (elapsed < MinRequestInterval)
+            {
+                var waitSeconds = (int)Math.Ceiling((MinRequestInterval - elapsed).TotalSeconds);
+                throw new AssistantRateLimitException(Math.Max(waitSeconds, 1));
+            }
+        }
+
+        if (!_client.IsConfigured)
+        {
+            if (!_isDevelopment)
+            {
+                throw new InvalidOperationException("Foundry agent is not configured.");
+            }
+
+            // Dev mode: yield a simulated response word-by-word
+            var devReply = "Dev mode: the Foundry agent is not configured, so this is a local response. " +
+                           "Set FoundryAgent settings to enable real replies.";
+            var conversationId = Guid.NewGuid();
+            var messageId = Guid.NewGuid();
+
+            foreach (var word in devReply.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (cancellationToken.IsCancellationRequested) yield break;
+                yield return new AssistantStreamChunk(conversationId, messageId, word + " ");
+                await Task.Delay(50, cancellationToken);
+            }
+
+            // Save dev messages
+            var devUserMessage = new AssistantMessage
+            {
+                TenantId = tenantId,
+                UserId = userId,
+                Role = "user",
+                Content = normalized,
+                CreatedAtUtc = DateTime.UtcNow,
+                CreatedBy = "system"
+            };
+
+            var devAssistantMessage = new AssistantMessage
+            {
+                TenantId = tenantId,
+                UserId = userId,
+                Role = "assistant",
+                Content = devReply,
+                CreatedAtUtc = DateTime.UtcNow,
+                CreatedBy = "system"
+            };
+
+            _dbContext.AssistantMessages.AddRange(devUserMessage, devAssistantMessage);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            yield return new AssistantStreamChunk(conversationId, messageId, string.Empty, true, devReply);
+            yield break;
+        }
+
+        // Get or create thread
+        var thread = await _dbContext.AssistantThreads
+            .FirstOrDefaultAsync(t => t.TenantId == tenantId && t.UserId == userId && !t.IsDeleted, cancellationToken);
+
+        if (thread is null)
+        {
+            thread = new AssistantThread
+            {
+                TenantId = tenantId,
+                UserId = userId,
+                ThreadId = await _client.CreateThreadAsync(cancellationToken),
+                CreatedAtUtc = DateTime.UtcNow,
+                CreatedBy = "system"
+            };
+
+            _dbContext.AssistantThreads.Add(thread);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        // Add the grounded user message to the thread
+        var groundedMessage = await BuildGroundedPromptAsync(userId, normalized, cancellationToken);
+        await _client.AddMessageAsync(thread.ThreadId, "user", groundedMessage, cancellationToken);
+
+        var streamConversationId = Guid.NewGuid();
+        var streamMessageId = Guid.NewGuid();
+        var fullReply = new StringBuilder();
+
+        // Stream tokens as they arrive
+        await foreach (var token in _client.RunAndStreamReplyAsync(thread.ThreadId, cancellationToken))
+        {
+            fullReply.Append(token);
+            yield return new AssistantStreamChunk(streamConversationId, streamMessageId, token);
+        }
+
+        var finalReply = fullReply.ToString();
+
+        // Persist the messages
+        var userMessage = new AssistantMessage
+        {
+            TenantId = tenantId,
+            UserId = userId,
+            Role = "user",
+            Content = normalized,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedBy = "system"
+        };
+
+        var assistantMessage = new AssistantMessage
+        {
+            TenantId = tenantId,
+            UserId = userId,
+            Role = "assistant",
+            Content = finalReply,
+            CreatedAtUtc = DateTime.UtcNow,
+            CreatedBy = "system"
+        };
+
+        _dbContext.AssistantMessages.AddRange(userMessage, assistantMessage);
+        thread.UpdatedAtUtc = DateTime.UtcNow;
+        thread.UpdatedBy = "system";
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Signal completion
+        yield return new AssistantStreamChunk(streamConversationId, streamMessageId, string.Empty, true, finalReply);
     }
 
     public async Task<AssistantInsightsResult> GetInsightsAsync(Guid userId, CancellationToken cancellationToken)

@@ -17,7 +17,13 @@
     <section class="hero-section">
       <div class="hero-content">
         <div class="hero-text">
-          <span class="hero-greeting">{{ greeting }}</span>
+          <div class="hero-greeting-row">
+            <span class="hero-greeting">{{ greeting }}</span>
+            <span class="realtime-indicator" [class.updating]="realtimeUpdating()">
+              <span class="realtime-dot"></span>
+              <span class="realtime-label">Live</span>
+            </span>
+          </div>
           <h1 class="page-title">
             <span class="title-gradient">Command</span>
             <span class="title-light">Center</span>

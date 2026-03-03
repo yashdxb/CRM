@@ -89,6 +89,7 @@ Important:
 | `docs/TEST_PLAN.md` | Operational Guide | No | Active | QA/Engineering | Test plan and validation reference |
 | `docs/REVIEW_FLOWS.md` | Operational Guide | No | Active | Product/Engineering | Review workflow guidance |
 | `docs/MARKETING_CAMPAIGNS_ROLLOUT_RUNBOOK.md` | Operational Guide | No | Active | Engineering/Product | Tenant feature-flag rollout steps for marketing campaigns |
+| `docs/HELPDESK_ROLLOUT_RUNBOOK.md` | Operational Guide | No | Active | Engineering/Product | Tenant feature-flag rollout steps for Help Desk MVP |
 | `docs/SCM_BACKLOG.md` | Roadmap / Backlog Planning | No | Active | Product | SCM backlog planning |
 | `docs/CLICKUP_AI_ASSISTANT_ACTION_EXECUTION_SYNC.md` | Sync / Audit Snapshot | No | Active | Engineering/Product | ClickUp sync snapshot for AI action execution |
 | `docs/CLICKUP_AI_ASSISTANT_KNOWLEDGE_SYNC.md` | Sync / Audit Snapshot | No | Active | Engineering/Product | ClickUp sync snapshot for AI knowledge stories |

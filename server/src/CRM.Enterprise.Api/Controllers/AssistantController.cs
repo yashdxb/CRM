@@ -67,21 +67,24 @@ public class AssistantController : ControllerBase
 
         try
         {
-            var result = await _chatService.SendAsync(userId.Value, request.Message ?? string.Empty, cancellationToken);
             var conversationId = string.IsNullOrWhiteSpace(request.ConversationId)
                 ? Guid.NewGuid().ToString("N")
                 : request.ConversationId!.Trim();
 
             if (request.Stream)
             {
-                await PublishAssistantStreamAsync(userId.Value, conversationId, result.Reply, cancellationToken);
+                // Use true streaming - publish tokens as they arrive from the AI
+                await StreamAssistantResponseAsync(userId.Value, conversationId, request.Message ?? string.Empty, cancellationToken);
+                
+                var history = await _chatService.GetHistoryAsync(userId.Value, cancellationToken, 50);
                 return Ok(new AssistantChatResponse(
                     string.Empty,
-                    result.Messages.Select(MapMessage).ToList(),
+                    history.Select(MapMessage).ToList(),
                     conversationId,
                     Streamed: true));
             }
 
+            var result = await _chatService.SendAsync(userId.Value, request.Message ?? string.Empty, cancellationToken);
             return Ok(new AssistantChatResponse(
                 result.Reply,
                 result.Messages.Select(MapMessage).ToList(),
@@ -330,6 +333,64 @@ public class AssistantController : ControllerBase
         return User.Claims.Any(claim =>
             string.Equals(claim.Type, SecurityPermissions.ClaimType, StringComparison.OrdinalIgnoreCase)
             && string.Equals(claim.Value, permission, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Streams assistant response tokens in real-time via SignalR as they arrive from the AI.
+    /// </summary>
+    private async Task StreamAssistantResponseAsync(
+        Guid userId,
+        string conversationId,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty || userId == Guid.Empty)
+        {
+            return;
+        }
+
+        var sequence = 0;
+        Guid messageId = Guid.Empty;
+        string? fullReply = null;
+
+        await foreach (var chunk in _chatService.SendStreamingAsync(userId, message, cancellationToken))
+        {
+            messageId = chunk.MessageId;
+
+            if (chunk.IsComplete)
+            {
+                fullReply = chunk.FullReply;
+                break;
+            }
+
+            // Publish each token as it arrives
+            await _realtimePublisher.PublishUserEventAsync(
+                tenantId,
+                userId,
+                "assistant.chat.token",
+                new
+                {
+                    conversationId,
+                    sequence,
+                    token = chunk.Token
+                },
+                cancellationToken);
+            sequence++;
+        }
+
+        // Signal completion
+        await _realtimePublisher.PublishUserEventAsync(
+            tenantId,
+            userId,
+            "assistant.chat.completed",
+            new
+            {
+                conversationId,
+                content = fullReply ?? string.Empty,
+                tokenCount = sequence
+            },
+            cancellationToken);
     }
 
     private async Task PublishAssistantStreamAsync(

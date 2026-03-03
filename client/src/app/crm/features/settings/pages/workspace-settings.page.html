@@ -338,6 +338,35 @@
           </section>
 
           <section class="form-card">
+            <h3 class="section-title section-title--warning">
+              <i class="pi pi-headphones"></i>
+              Help Desk Feature Flags
+            </h3>
+            <p class="section-description">Control help desk rollout and intake channels per tenant.</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureHelpDeskCases" [binary]="true"></p-checkbox>
+                  <span>Enable Help Desk module</span>
+                </label>
+              </div>
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureHelpDeskEmailIntake" [binary]="true"></p-checkbox>
+                  <span>Email-to-case intake</span>
+                </label>
+              </div>
+              <div class="field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureHelpDeskRealtime" [binary]="true"></p-checkbox>
+                  <span>Help Desk realtime events</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-briefcase"></i>
               Delivery & Renewal Defaults
