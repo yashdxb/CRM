@@ -123,6 +123,14 @@ export class CrmEventsService {
     });
   }
 
+  sendDirectMessage(recipientUserId: string, message: string): Promise<void> {
+    if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
+      return Promise.reject(new Error('Realtime connection is not ready.'));
+    }
+
+    return this.connection.invoke('SendDirectMessage', recipientUserId, message);
+  }
+
   disconnect() {
     if (this.connection) {
       this.connection.stop().catch(() => {
@@ -185,6 +193,7 @@ export class CrmEventsService {
       case 'assistant.chat.token':
       case 'assistant.chat.completed':
       case 'assistant.chat.failed':
+      case 'chat.direct.message':
         return '';
       default:
         return '';

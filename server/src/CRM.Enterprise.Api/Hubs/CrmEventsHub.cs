@@ -43,6 +43,61 @@ public sealed class CrmEventsHub : Hub
         await base.OnConnectedAsync();
     }
 
+    public async Task SendDirectMessage(Guid recipientUserId, string message)
+    {
+        var tenantId = ResolveTenantId();
+        if (tenantId == Guid.Empty || recipientUserId == Guid.Empty || string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        if (!TryResolveCurrentUser(out var senderUserId, out var senderDisplayName) || senderUserId == Guid.Empty)
+        {
+            return;
+        }
+
+        var trimmed = message.Trim();
+        if (trimmed.Length == 0)
+        {
+            return;
+        }
+
+        if (trimmed.Length > 2000)
+        {
+            trimmed = trimmed[..2000];
+        }
+
+        var messageId = Guid.NewGuid();
+        var occurredAtUtc = DateTime.UtcNow;
+
+        var envelope = new
+        {
+            eventType = "chat.direct.message",
+            tenantId,
+            occurredAtUtc,
+            schemaVersion = 1,
+            correlationId = messageId.ToString("N"),
+            payload = new
+            {
+                messageId,
+                senderUserId,
+                senderDisplayName,
+                recipientUserId,
+                content = trimmed,
+                sentAtUtc = occurredAtUtc
+            }
+        };
+
+        var senderGroup = BuildUserGroup(tenantId, senderUserId);
+        var recipientGroup = BuildUserGroup(tenantId, recipientUserId);
+
+        await Clients.Group(senderGroup).SendAsync("crmEvent", envelope);
+        if (recipientUserId != senderUserId)
+        {
+            await Clients.Group(recipientGroup).SendAsync("crmEvent", envelope);
+        }
+    }
+
     public async Task JoinRecordPresence(string entityType, Guid recordId)
     {
         var tenantId = ResolveTenantId();
@@ -270,6 +325,25 @@ public sealed class CrmEventsHub : Hub
         }
 
         return Guid.Empty;
+    }
+
+    private bool TryResolveCurrentUser(out Guid userId, out string displayName)
+    {
+        userId = Guid.Empty;
+        displayName = "User";
+
+        var userIdText = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdText, out userId) || userId == Guid.Empty)
+        {
+            return false;
+        }
+
+        displayName = Context.User?.FindFirstValue("name")
+                      ?? Context.User?.FindFirstValue(ClaimTypes.Name)
+                      ?? Context.User?.FindFirstValue(ClaimTypes.Email)
+                      ?? "User";
+
+        return true;
     }
 
     private static bool TryParseRecordGroup(string groupName, out string entityType, out Guid recordId, out Guid tenantId)

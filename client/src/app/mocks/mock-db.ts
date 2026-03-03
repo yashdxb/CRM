@@ -13,6 +13,7 @@ import {
   UpsertUserRequest,
   UserDetailResponse,
   UserListItem,
+  UserLookupItem,
   UserSearchRequest,
   UserSearchResponse
 } from '../crm/features/settings/models/user-admin.model';
@@ -1314,6 +1315,27 @@ export const searchUsers = (query: UserSearchRequest): UserSearchResponse => {
   const items = paginateUsers(result, page, pageSize).map(toUserListItem);
 
   return { items, total };
+};
+
+export const lookupActiveUsers = (search?: string, max = 200): UserLookupItem[] => {
+  const searchTerm = (search ?? '').trim().toLowerCase();
+
+  return mockUsers
+    .filter((user) => user.isActive)
+    .filter((user) => {
+      if (!searchTerm) {
+        return true;
+      }
+
+      return [user.fullName, user.email].some((value) => value.toLowerCase().includes(searchTerm));
+    })
+    .sort((first, second) => first.fullName.localeCompare(second.fullName))
+    .slice(0, Math.max(1, max))
+    .map((user) => ({
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email
+    }));
 };
 
 export const findUser = (id: string): UserDetailResponse | null => {

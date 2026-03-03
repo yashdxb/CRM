@@ -182,7 +182,7 @@ export class AuditLogPage {
   }
 
   private loadUsers() {
-    this.userService.search({ page: 1, pageSize: 200, includeInactive: true }).subscribe({
+    this.userService.search({ page: 1, pageSize: 200, includeInactive: false }).subscribe({
       next: (response) => {
         const options = response.items.map((user) => ({
           label: user.fullName || user.email,

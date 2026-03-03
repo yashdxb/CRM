@@ -38,6 +38,10 @@
 
 .form-section {
   @include form.form-section;
+
+  &:hover .section-title {
+    @include form.section-title-hover;
+  }
 }
 
 .section-title {
@@ -46,6 +50,10 @@
 
 .form-grid {
   @include form.form-grid;
+
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .field {
@@ -107,5 +115,15 @@
 
   .btn-ghost {
     @include form.button-ghost;
+  }
+}
+
+@media (max-width: 900px) {
+  .form-body {
+    padding: $space-3 0;
+  }
+
+  .form-section {
+    padding: $space-4;
   }
 }

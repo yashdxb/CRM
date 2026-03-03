@@ -103,6 +103,9 @@ public class CrmDbContext : DbContext
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<UserEmailConnection> UserEmailConnections => Set<UserEmailConnection>();
     public DbSet<UserMailMessage> UserMailMessages => Set<UserMailMessage>();
+    public DbSet<DirectChatThread> DirectChatThreads => Set<DirectChatThread>();
+    public DbSet<DirectChatParticipant> DirectChatParticipants => Set<DirectChatParticipant>();
+    public DbSet<DirectChatMessage> DirectChatMessages => Set<DirectChatMessage>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -451,6 +454,31 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<PermissionCatalogEntry>()
             .Property(entry => entry.Description)
             .HasMaxLength(500)
+            .IsRequired();
+
+        modelBuilder.Entity<DirectChatThread>().ToTable("DirectChatThreads", CrmSchema);
+        modelBuilder.Entity<DirectChatParticipant>().ToTable("DirectChatParticipants", CrmSchema);
+        modelBuilder.Entity<DirectChatMessage>().ToTable("DirectChatMessages", CrmSchema);
+        modelBuilder.Entity<DirectChatThread>()
+            .HasMany(thread => thread.Participants)
+            .WithOne(participant => participant.Thread)
+            .HasForeignKey(participant => participant.ThreadId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<DirectChatThread>()
+            .HasMany(thread => thread.Messages)
+            .WithOne(message => message.Thread)
+            .HasForeignKey(message => message.ThreadId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<DirectChatParticipant>()
+            .HasIndex(participant => new { participant.ThreadId, participant.UserId })
+            .IsUnique();
+        modelBuilder.Entity<DirectChatParticipant>()
+            .HasIndex(participant => new { participant.UserId, participant.IsArchived });
+        modelBuilder.Entity<DirectChatMessage>()
+            .HasIndex(message => new { message.ThreadId, message.CreatedAtUtc });
+        modelBuilder.Entity<DirectChatMessage>()
+            .Property(message => message.Content)
+            .HasMaxLength(4000)
             .IsRequired();
 
         ApplyTenantQueryFilters(modelBuilder);

@@ -117,7 +117,8 @@
     }
 
     .header-content {
-      max-width: 960px;
+      width: 100%;
+      max-width: 1600px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -182,7 +183,8 @@
     .form-container {
       position: relative;
       z-index: 1;
-      max-width: 960px;
+      width: 100%;
+      max-width: 1600px;
       margin: 0 auto;
       padding: 1.5rem;
     }
@@ -360,6 +362,12 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 1.25rem 1.125rem;
+    }
+
+    @media (min-width: 1320px) {
+      .form-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
     }
 
     .full-row {

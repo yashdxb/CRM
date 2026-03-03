@@ -16,6 +16,7 @@ import {
   getWorkspaceSettings,
   updateWorkspaceSettings,
   getPermissionDefinitions,
+  lookupActiveUsers,
   listRoles,
   mockCustomers,
   resetUserPassword,
@@ -185,6 +186,11 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
       pageSize: toNumber(req.params.get('pageSize'), 50)
     });
     return respond(response, 200, 140);
+  }
+
+  if (req.method === 'GET' && path === '/api/users/lookup') {
+    const items = lookupActiveUsers(req.params.get('search') ?? undefined, toNumber(req.params.get('max'), 200));
+    return respond(items, 200, 120);
   }
 
   if (req.method === 'POST' && path === '/api/users') {

@@ -150,11 +150,17 @@ export class CampaignFormPage {
   }
 
   private loadOwners(): void {
-    this.users.search({ page: 1, pageSize: 200 }).subscribe({
+    this.users.lookupActive(undefined, 200).subscribe({
       next: (res) => {
-        this.owners.set(res.items);
-        if (!this.editId() && res.items.length > 0 && !this.form.controls.ownerUserId.value) {
-          this.form.controls.ownerUserId.setValue(res.items[0].id);
+        this.owners.set(
+          res.map((user) => ({
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email
+          }))
+        );
+        if (!this.editId() && res.length > 0 && !this.form.controls.ownerUserId.value) {
+          this.form.controls.ownerUserId.setValue(res[0].id);
         }
       },
       error: () => this.toast.show('error', 'Unable to load owners.')
