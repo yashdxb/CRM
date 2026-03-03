@@ -378,7 +378,7 @@
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-row>
-            <tr class="table-row">
+            <tr class="table-row" (click)="onRowClick(row, $event)">
               <td class="td-select">
                 <p-checkbox
                   [binary]="true"

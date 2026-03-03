@@ -145,6 +145,23 @@ export class NavigationService {
     } catch {}
   }
 
+  applyResponsiveSidebarState(isMobileViewport: boolean) {
+    if (isMobileViewport) {
+      this._collapsed.set(true);
+      return;
+    }
+
+    this._collapsed.set(this.readStoredCollapsedPreference());
+  }
+
+  private readStoredCollapsedPreference(): boolean {
+    try {
+      return localStorage.getItem(this.COLLAPSED_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
   private loadTopbarHiddenState(): boolean {
     try {
       return localStorage.getItem(this.TOPBAR_HIDDEN_KEY) === 'true';

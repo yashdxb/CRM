@@ -8,6 +8,8 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
@@ -28,6 +30,8 @@ import { SaveCampaignRequest } from '../models/marketing.model';
     InputNumberModule,
     DatePickerModule,
     SelectModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     BreadcrumbsComponent
   ],
   templateUrl: './campaign-form.page.html',
@@ -51,27 +55,27 @@ export class CampaignFormPage {
   protected readonly owners = signal<Array<{ id: string; fullName: string; email: string }>>([]);
   protected readonly isEditMode = computed(() => !!this.editId());
   protected readonly typeOptions = [
-    { label: 'General', value: 'General' },
-    { label: 'Demand Gen', value: 'Demand Gen' },
-    { label: 'Event', value: 'Event' },
-    { label: 'Partner', value: 'Partner' },
-    { label: 'ABM', value: 'ABM' }
+    { label: 'General', value: 'General', icon: 'pi-briefcase' },
+    { label: 'Demand Gen', value: 'Demand Gen', icon: 'pi-bullseye' },
+    { label: 'Event', value: 'Event', icon: 'pi-calendar' },
+    { label: 'Partner', value: 'Partner', icon: 'pi-users' },
+    { label: 'ABM', value: 'ABM', icon: 'pi-star' }
   ];
   protected readonly channelOptions = [
-    { label: 'Mixed', value: 'Mixed' },
-    { label: 'Email', value: 'Email' },
-    { label: 'Web', value: 'Web' },
-    { label: 'Events', value: 'Events' },
-    { label: 'Social', value: 'Social' }
+    { label: 'Mixed', value: 'Mixed', icon: 'pi-send' },
+    { label: 'Email', value: 'Email', icon: 'pi-envelope' },
+    { label: 'Web', value: 'Web', icon: 'pi-globe' },
+    { label: 'Events', value: 'Events', icon: 'pi-calendar-plus' },
+    { label: 'Social', value: 'Social', icon: 'pi-share-alt' }
   ];
   protected readonly statusOptions = [
-    { label: 'Draft', value: 'Draft' },
-    { label: 'Planned', value: 'Planned' },
-    { label: 'Active', value: 'Active' },
-    { label: 'Completed', value: 'Completed' }
+    { label: 'Draft', value: 'Draft', icon: 'pi-pencil' },
+    { label: 'Planned', value: 'Planned', icon: 'pi-clock' },
+    { label: 'Active', value: 'Active', icon: 'pi-play-circle' },
+    { label: 'Completed', value: 'Completed', icon: 'pi-check-circle' }
   ];
   protected readonly ownerOptions = computed(() =>
-    this.owners().map((owner) => ({ label: owner.fullName, value: owner.id }))
+    this.owners().map((owner) => ({ label: owner.fullName, value: owner.id, icon: 'pi-user' }))
   );
 
   protected readonly form = this.fb.nonNullable.group({

@@ -279,6 +279,11 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - **New backlog items** should be created in ClickUp first, then mirrored to docs.
 - **Do not assume** status beyond documented evidence.
 
+### Production Seeding Policy (Operational)
+- Do not seed Production with demo/test/sample business records by default.
+- Any production seeding of test/demo data requires explicit owner approval first.
+- Enforce via runtime gate: `Seeding:AllowProductionTestData=true` only for approved, time-bound operations.
+
 ### ClickUp API Integration
 - Personal API token stored in Azure App Service settings: `CLICKUP_API_TOKEN`.
 - Personal ClickUp API token also stored in Azure Key Vault `kv-crm-dev-ca` as secret `clickup-api-token` (RBAC enabled).

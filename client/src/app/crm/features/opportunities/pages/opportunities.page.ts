@@ -148,6 +148,23 @@ export class OpportunitiesPage {
     this.router.navigate(['/app/opportunities', row.id, 'edit']);
   }
 
+  protected onRowClick(row: Opportunity, event: MouseEvent): void {
+    if (!this.canManage() || this.isInteractiveRowTarget(event)) {
+      return;
+    }
+
+    this.onEdit(row);
+  }
+
+  private isInteractiveRowTarget(event: MouseEvent): boolean {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return false;
+    }
+
+    return !!target.closest('button, a, input, textarea, select, .p-button, .p-checkbox, .p-inputswitch, .p-rating, .p-dropdown, .p-select');
+  }
+
   protected onDelete(row: Opportunity) {
     const confirmed = confirm(`Delete deal ${row.name}?`);
     if (!confirmed) return;

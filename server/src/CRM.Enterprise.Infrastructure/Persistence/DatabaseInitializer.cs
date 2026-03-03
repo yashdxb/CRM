@@ -8,6 +8,7 @@ using CRM.Enterprise.Application.Tenants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace CRM.Enterprise.Infrastructure.Persistence;
 
@@ -1554,17 +1555,30 @@ public class DatabaseInitializer : IDatabaseInitializer
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly ITenantProvider _tenantProvider;
     private readonly IConfiguration _configuration;
+    private readonly IHostEnvironment _hostEnvironment;
 
     public DatabaseInitializer(
         CrmDbContext dbContext,
         IPasswordHasher<User> passwordHasher,
         ITenantProvider tenantProvider,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment hostEnvironment)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _tenantProvider = tenantProvider;
         _configuration = configuration;
+        _hostEnvironment = hostEnvironment;
+    }
+
+    private bool ShouldSeedProductionTestData()
+    {
+        if (!_hostEnvironment.IsProduction())
+        {
+            return true;
+        }
+
+        return _configuration.GetValue<bool>("Seeding:AllowProductionTestData", false);
     }
 
     private readonly (string Name, string Email, string TimeZone, string Locale, string[] Roles, string Password)[] _seedUsers =
@@ -1673,6 +1687,8 @@ public class DatabaseInitializer : IDatabaseInitializer
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        var allowTestDataSeed = ShouldSeedProductionTestData();
+
         await _dbContext.Database.MigrateAsync(cancellationToken);
 
         await SeedPermissionCatalogAsync(cancellationToken);
@@ -1681,12 +1697,17 @@ public class DatabaseInitializer : IDatabaseInitializer
         await SeedPhoneTypesAsync(cancellationToken);
 
         var defaultTenant = await EnsureDefaultTenantAsync(cancellationToken);
-        var seedTenants = await EnsureSeedTenantsAsync(defaultTenant.Key, cancellationToken);
+        var seedTenants = allowTestDataSeed
+            ? await EnsureSeedTenantsAsync(defaultTenant.Key, cancellationToken)
+            : Array.Empty<Tenant>();
 
         await BackfillTenantIdsAsync(defaultTenant.Id, cancellationToken);
         await SeedTenantDataAsync(defaultTenant, cancellationToken);
-        await SeedAuditEventsAsync(defaultTenant.Id, cancellationToken);
-        await EnsureDefaultTenantCatalogAsync(defaultTenant.Id, cancellationToken);
+        if (allowTestDataSeed)
+        {
+            await SeedAuditEventsAsync(defaultTenant.Id, cancellationToken);
+            await EnsureDefaultTenantCatalogAsync(defaultTenant.Id, cancellationToken);
+        }
         
         // All sample data seeding disabled
         // await SeedSampleSuppliersAsync(defaultTenant.Id, cancellationToken);
@@ -1883,6 +1904,11 @@ public class DatabaseInitializer : IDatabaseInitializer
 
     private async Task SeedUsersAsync(CancellationToken cancellationToken)
     {
+        if (!ShouldSeedProductionTestData())
+        {
+            return;
+        }
+
         foreach (var (name, email, tz, locale, roles, password) in _seedUsers)
         {
             await EnsureDemoUserAsync(name, email, tz, locale, roles, password, cancellationToken);

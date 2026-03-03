@@ -269,7 +269,7 @@
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-lead let-i="rowIndex">
-                <tr class="table-row" [class.highlight]="i === 0">
+                <tr class="table-row" [class.highlight]="i === 0" (click)="onRowClick(lead, $event)">
                   <td class="td-checkbox">
                     <p-checkbox
                       [binary]="true"
@@ -391,7 +391,7 @@
                   </td>
                   <td class="td-actions">
                     <div class="row-actions">
-                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-info" icon="pi pi-pencil" [disabled]="!canManage()" (click)="onEdit(lead)" title="Edit"></button>
+                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-info" icon="pi pi-pencil" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)" title="Edit"></button>
                       <button
                         *ngIf="showCqvsInLeadList()"
                         pButton
@@ -404,9 +404,9 @@
                         data-testid="lead-coach-open"
                         [attr.data-lead-id]="lead.id"
                       ></button>
-                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-secondary" icon="pi pi-calendar-plus" [disabled]="!canManage()" (click)="onLogActivity(lead)" title="Log activity"></button>
-                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-success" icon="pi pi-bolt" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="onConvert(lead)" title="Convert"></button>
-                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="onDelete(lead)" title="Delete"></button>
+                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-secondary" icon="pi pi-calendar-plus" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)" title="Log activity"></button>
+                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-success" icon="pi pi-bolt" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)" title="Convert"></button>
+                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)" title="Delete"></button>
                     </div>
                   </td>
                 </tr>

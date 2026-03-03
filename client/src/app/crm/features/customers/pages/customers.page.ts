@@ -261,6 +261,13 @@ export class CustomersPage {
     this.router.navigate(['/app/customers', row.id, 'edit']);
   }
 
+  protected onRowClick(row: Customer, event: MouseEvent) {
+    if (!this.canManage() || this.isInteractiveRowTarget(event)) {
+      return;
+    }
+    this.onEdit(row);
+  }
+
   protected onDelete(row: Customer) {
     const confirmed = confirm(`Delete ${row.name}?`);
     if (!confirmed) return;
@@ -532,6 +539,15 @@ export class CustomersPage {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
+  }
+
+  private isInteractiveRowTarget(event: MouseEvent): boolean {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return false;
+    }
+
+    return !!target.closest('button,a,input,textarea,select,label,.p-select,.p-checkbox,.p-button,.inline-select,.row-actions');
   }
 
   private loadOwners() {

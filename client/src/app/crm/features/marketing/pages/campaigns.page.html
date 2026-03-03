@@ -267,7 +267,7 @@
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-campaign>
-            <tr>
+            <tr (click)="onRowClick(campaign, $event)">
               <td>{{ campaign.name }}</td>
               <td>{{ campaign.status }}</td>
               <td>{{ campaign.channel }}</td>
@@ -282,7 +282,7 @@
                     type="button"
                     class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
                     icon="pi pi-eye"
-                    (click)="openCampaign(campaign)"
+                    (click)="$event.stopPropagation(); openCampaign(campaign)"
                   ></button>
                   <button
                     pButton
@@ -290,7 +290,7 @@
                     class="action-btn p-button-text p-button-rounded p-button-sm p-button-help"
                     icon="pi pi-pencil"
                     [disabled]="!canManage()"
-                    (click)="editCampaign(campaign)"
+                    (click)="$event.stopPropagation(); editCampaign(campaign)"
                   ></button>
                   <button
                     pButton
@@ -298,7 +298,7 @@
                     class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
                     icon="pi pi-archive"
                     [disabled]="!canManage() || campaign.status === 'Archived'"
-                    (click)="archiveCampaign(campaign)"
+                    (click)="$event.stopPropagation(); archiveCampaign(campaign)"
                   ></button>
                 </div>
               </td>

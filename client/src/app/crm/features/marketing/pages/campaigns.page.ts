@@ -106,6 +106,23 @@ export class CampaignsPage {
     this.router.navigate(['/app/marketing/campaigns', campaign.id]);
   }
 
+  protected onRowClick(campaign: Campaign, event: MouseEvent): void {
+    if (this.isInteractiveRowTarget(event)) {
+      return;
+    }
+
+    this.openCampaign(campaign);
+  }
+
+  private isInteractiveRowTarget(event: MouseEvent): boolean {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return false;
+    }
+
+    return !!target.closest('button, a, input, textarea, select, .p-button, .p-checkbox, .p-inputswitch, .p-rating, .p-dropdown, .p-select');
+  }
+
   protected editCampaign(campaign: Campaign): void {
     this.router.navigate(['/app/marketing/campaigns', campaign.id, 'edit']);
   }

@@ -234,7 +234,7 @@ export class EmailsPage implements OnInit, OnDestroy {
   }
 
   refreshEmails(): void {
-    this.mailbox.loadEmails();
+    this.mailbox.refreshFromProvider();
     this.toastService.show('success', 'Mailbox refreshed');
   }
 

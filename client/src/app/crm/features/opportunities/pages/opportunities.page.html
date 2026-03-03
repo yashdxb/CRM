@@ -357,7 +357,7 @@
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-row>
-            <tr class="table-row" [class.row-stalled]="isStalled(row)">
+            <tr class="table-row" [class.row-stalled]="isStalled(row)" (click)="onRowClick(row, $event)">
               <td class="td-opportunity">
                 <div class="opportunity-icon">
                   <i class="pi pi-briefcase"></i>

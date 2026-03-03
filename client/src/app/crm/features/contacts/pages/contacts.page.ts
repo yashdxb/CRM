@@ -269,6 +269,14 @@ export class ContactsPage {
     this.router.navigate(['/app/contacts', row.id, 'edit'], { state: { contact: row } });
   }
 
+  protected onRowClick(row: Contact, event: MouseEvent) {
+    if (!this.canManage() || this.isInteractiveRowTarget(event)) {
+      return;
+    }
+
+    this.onEdit(row);
+  }
+
   protected onDelete(row: Contact) {
     if (!confirm(`Delete contact ${row.name}?`)) {
       return;
@@ -350,6 +358,15 @@ export class ContactsPage {
       this.importPoll.unsubscribe();
       this.importPoll = undefined;
     }
+  }
+
+  private isInteractiveRowTarget(event: MouseEvent): boolean {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return false;
+    }
+
+    return !!target.closest('button,a,input,textarea,select,label,.p-select,.p-checkbox,.p-button,.inline-select,.row-actions');
   }
 
   private handleImportProgressEvent(payload: Record<string, unknown> | null) {

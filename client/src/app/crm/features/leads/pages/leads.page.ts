@@ -500,6 +500,23 @@ export class LeadsPage {
     this.router.navigate(['/app/leads', row.id, 'edit'], { state: { lead: row } });
   }
 
+  protected onRowClick(row: Lead, event: MouseEvent): void {
+    if (!this.canManage() || this.isInteractiveRowTarget(event)) {
+      return;
+    }
+
+    this.onEdit(row);
+  }
+
+  private isInteractiveRowTarget(event: MouseEvent): boolean {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return false;
+    }
+
+    return !!target.closest('button, a, input, textarea, select, .p-button, .p-checkbox, .p-inputswitch, .p-rating, .p-dropdown, .p-select');
+  }
+
   protected onLogActivity(row: Lead) {
     const subject = row.name ? `Follow up: ${row.name}` : 'Lead follow-up';
     this.router.navigate(['/app/activities/new'], {

@@ -361,15 +361,11 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.loadLeadDataWeights();
     this.loadSupportingDocumentPolicy();
     this.resolveAssignmentAccess();
-    if (this.editingId && lead) {
+    if (this.editingId) {
       this.initializePresence(this.editingId);
-      this.prefillFromLead(lead);
-      this.loadStatusHistory(this.editingId);
-      this.loadCadenceTouches(this.editingId);
-      this.loadRecentLeadActivities(this.editingId);
-      this.loadSupportingDocuments(this.editingId);
-    } else if (this.editingId) {
-      this.initializePresence(this.editingId);
+      if (lead) {
+        this.prefillFromLead(lead);
+      }
       this.leadData.get(this.editingId).subscribe({
         next: (data) => {
           this.prefillFromLead(data);
@@ -378,7 +374,10 @@ export class LeadFormPage implements OnInit, OnDestroy {
           this.loadRecentLeadActivities(this.editingId!);
           this.loadSupportingDocuments(this.editingId!);
         },
-        error: () => this.router.navigate(['/app/leads'])
+        error: () => {
+          this.raiseToast('error', 'This lead is no longer available.');
+          this.router.navigate(['/app/leads']);
+        }
       });
     }
   }
@@ -1380,10 +1379,14 @@ export class LeadFormPage implements OnInit, OnDestroy {
         this.attachments.set(items);
         this.attachmentsLoading.set(false);
       },
-      error: () => {
+      error: (err) => {
         this.attachments.set([]);
         this.attachmentsLoading.set(false);
-        this.raiseToast('error', 'Unable to load supporting documents.');
+        const httpError = err as HttpErrorResponse | null;
+        if (httpError?.status === 404 || httpError?.status === 400) {
+          return;
+        }
+        this.raiseToast('error', this.extractApiErrorMessage(err, 'Unable to load supporting documents.'));
       }
     });
   }

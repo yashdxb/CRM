@@ -5,6 +5,7 @@ import { environment } from '../../../../../environments/environment';
 import {
   MailboxFolder,
   MailboxFolderType,
+  MailboxEmailPriority,
   MailboxEmail,
   MailboxSearchRequest,
   MailboxSearchResponse,
@@ -13,6 +14,37 @@ import {
   MailboxEmailParticipant,
   MailboxAttachment
 } from '../models/email.model';
+
+interface MailboxApiMessageItem {
+  id: string;
+  connectionId: string;
+  folder: string;
+  subject: string;
+  bodyPreview?: string | null;
+  fromEmail: string;
+  fromName?: string | null;
+  toRecipients: string[];
+  receivedAtUtc: string;
+  isRead: boolean;
+  isStarred: boolean;
+  hasAttachments: boolean;
+  importance: string;
+}
+
+interface MailboxApiMessageDetail extends MailboxApiMessageItem {
+  externalId: string;
+  bodyHtml?: string | null;
+  ccRecipients?: string[] | null;
+  bccRecipients?: string[] | null;
+  syncedAtUtc: string;
+}
+
+interface MailboxApiSearchResponse {
+  items: MailboxApiMessageItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MOCK DATA - Will be replaced with API calls when backend is ready
@@ -156,6 +188,7 @@ export class MailboxService {
   
   // Use environment flag to determine mock vs real API
   private readonly useMockData = environment.useMockApi;
+  private hasAttemptedInitialSync = false;
   
   // State
   readonly currentFolder = signal<MailboxFolderType>('inbox');
@@ -207,7 +240,35 @@ export class MailboxService {
   loadEmails(folderType?: MailboxFolderType): void {
     const folder = folderType || this.currentFolder();
     this.loading.set(true);
-    
+
+    if (!this.useMockData && !this.hasAttemptedInitialSync) {
+      this.hasAttemptedInitialSync = true;
+      this.syncMailbox().subscribe({
+        next: () => this.fetchEmails(folder),
+        error: () => this.fetchEmails(folder)
+      });
+      return;
+    }
+
+    this.fetchEmails(folder);
+  }
+
+  refreshFromProvider(folderType?: MailboxFolderType): void {
+    const folder = folderType || this.currentFolder();
+
+    if (this.useMockData) {
+      this.loadEmails(folder);
+      return;
+    }
+
+    this.loading.set(true);
+    this.syncMailbox().subscribe({
+      next: () => this.fetchEmails(folder),
+      error: () => this.fetchEmails(folder)
+    });
+  }
+
+  private fetchEmails(folder: MailboxFolderType): void {
     this.searchEmails({ folderType: folder }).subscribe({
       next: (response) => {
         this.emails.set(response.items);
@@ -217,6 +278,11 @@ export class MailboxService {
         this.loading.set(false);
       }
     });
+  }
+
+  private syncMailbox(connectionId?: string): Observable<unknown> {
+    const payload = connectionId ? { connectionId } : {};
+    return this.http.post(`${this.baseUrl}/api/mailbox/sync`, payload);
   }
   
   searchEmails(request: MailboxSearchRequest): Observable<MailboxSearchResponse> {
@@ -268,7 +334,18 @@ export class MailboxService {
     if (request.page) params = params.set('page', String(request.page));
     if (request.pageSize) params = params.set('pageSize', String(request.pageSize));
     
-    return this.http.get<MailboxSearchResponse>(`${this.baseUrl}/api/mailbox/messages`, { params });
+    return this.http.get<MailboxApiSearchResponse>(`${this.baseUrl}/api/mailbox/messages`, { params }).pipe(
+      map((response) => {
+        const items = (response.items ?? []).map((item) => this.mapApiMessageToMailboxEmail(item));
+        return {
+          items,
+          total: response.total,
+          unreadTotal: items.filter(e => !e.isRead).length,
+          page: response.page,
+          pageSize: response.pageSize
+        } as MailboxSearchResponse;
+      })
+    );
   }
   
   getEmail(id: string): Observable<MailboxEmail | null> {
@@ -279,7 +356,9 @@ export class MailboxService {
       }
       return of(null);
     }
-    return this.http.get<MailboxEmail>(`${this.baseUrl}/api/mailbox/messages/${id}`);
+    return this.http.get<MailboxApiMessageDetail>(`${this.baseUrl}/api/mailbox/messages/${id}`).pipe(
+      map((item) => this.mapApiDetailToMailboxEmail(item))
+    );
   }
   
   selectEmail(id: string): void {
@@ -434,5 +513,64 @@ export class MailboxService {
     } else {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     }
+  }
+
+  private mapFolderToType(folder: string): MailboxFolderType {
+    switch ((folder || '').toLowerCase()) {
+      case 'inbox': return 'inbox';
+      case 'sent': return 'sent';
+      case 'drafts': return 'drafts';
+      case 'archive': return 'archive';
+      case 'trash': return 'trash';
+      case 'spam': return 'spam';
+      case 'starred': return 'starred';
+      default: return 'inbox';
+    }
+  }
+
+  private mapImportanceToPriority(importance: string): MailboxEmailPriority {
+    const value = (importance || '').toLowerCase();
+    if (value === 'high') return 'high';
+    if (value === 'low') return 'low';
+    return 'normal';
+  }
+
+  private mapRecipients(emails: string[] | undefined | null): MailboxEmailParticipant[] {
+    return (emails ?? []).map((email) => ({ email }));
+  }
+
+  private mapApiMessageToMailboxEmail(item: MailboxApiMessageItem): MailboxEmail {
+    const folderType = this.mapFolderToType(item.folder);
+    return {
+      id: item.id,
+      folderId: folderType,
+      folderType,
+      from: {
+        email: item.fromEmail,
+        name: item.fromName ?? undefined
+      },
+      to: this.mapRecipients(item.toRecipients),
+      subject: item.subject,
+      snippet: item.bodyPreview ?? '',
+      htmlBody: '',
+      textBody: item.bodyPreview ?? '',
+      isRead: item.isRead,
+      isStarred: item.isStarred,
+      isDraft: folderType === 'drafts',
+      priority: this.mapImportanceToPriority(item.importance),
+      hasAttachments: item.hasAttachments,
+      attachments: [],
+      receivedAtUtc: item.receivedAtUtc
+    };
+  }
+
+  private mapApiDetailToMailboxEmail(item: MailboxApiMessageDetail): MailboxEmail {
+    const base = this.mapApiMessageToMailboxEmail(item);
+    return {
+      ...base,
+      htmlBody: item.bodyHtml ?? '',
+      cc: this.mapRecipients(item.ccRecipients),
+      bcc: this.mapRecipients(item.bccRecipients)
+    };
   }
 }

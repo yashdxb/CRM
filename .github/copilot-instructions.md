@@ -1364,6 +1364,8 @@ public class SuppliersController : ControllerBase
 ## Persistence + seeding
 - `CrmDbContext` applies `ApplyConfigurationsFromAssembly` and stamps audit columns in `SaveChanges`; set `CreatedAtUtc/UpdatedAtUtc` via this hook, not manually.
 - `DatabaseInitializer` runs on startup (see `Program.cs` scope) to apply migrations, seed roles, seed the admin user, and add canonical lead/opportunity stages.
+- **Production guard (MANDATORY):** never seed demo/test/sample data in Production by default.
+- Production test-data seeding is allowed only with explicit owner approval and an explicit runtime override (`Seeding:AllowProductionTestData=true`).
 - Update the connection string + JWT secrets in `CRM.Enterprise.Api/appsettings.Development.json`; identical names are required in Azure app settings later.
 
 ## Feature development checklist

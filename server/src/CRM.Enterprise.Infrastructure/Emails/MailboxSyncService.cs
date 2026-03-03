@@ -277,45 +277,44 @@ public sealed class MailboxSyncService : IMailboxSyncService
         {
             var search = request.Search.ToLower();
             query = query.Where(m =>
-                m.Subject.ToLower().Contains(search) ||
-                m.FromEmail.ToLower().Contains(search) ||
-                (m.FromName != null && m.FromName.ToLower().Contains(search)) ||
-                m.BodyPreview.ToLower().Contains(search));
+                (EF.Property<string?>(m, nameof(UserMailMessage.Subject)) ?? string.Empty).ToLower().Contains(search) ||
+                (EF.Property<string?>(m, nameof(UserMailMessage.FromEmail)) ?? string.Empty).ToLower().Contains(search) ||
+                (EF.Property<string?>(m, nameof(UserMailMessage.FromName)) ?? string.Empty).ToLower().Contains(search) ||
+                (EF.Property<string?>(m, nameof(UserMailMessage.BodyPreview)) ?? string.Empty).ToLower().Contains(search));
         }
 
         if (request.FromDate.HasValue)
         {
-            query = query.Where(m => m.ReceivedAtUtc >= request.FromDate.Value);
+            query = query.Where(m => (EF.Property<DateTime?>(m, nameof(UserMailMessage.ReceivedAtUtc)) ?? DateTime.UnixEpoch) >= request.FromDate.Value);
         }
 
         if (request.ToDate.HasValue)
         {
-            query = query.Where(m => m.ReceivedAtUtc <= request.ToDate.Value);
+            query = query.Where(m => (EF.Property<DateTime?>(m, nameof(UserMailMessage.ReceivedAtUtc)) ?? DateTime.UnixEpoch) <= request.ToDate.Value);
         }
 
         var total = await query.CountAsync(cancellationToken);
 
-        var messages = await query
-            .OrderByDescending(m => m.ReceivedAtUtc)
+        var items = await query
+            .OrderByDescending(m => EF.Property<DateTime?>(m, nameof(UserMailMessage.ReceivedAtUtc)) ?? DateTime.UnixEpoch)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
+            .Select(m => new MailMessageSummaryDto(
+                m.Id,
+                m.ConnectionId,
+                EF.Property<string?>(m, nameof(UserMailMessage.FromEmail)) ?? string.Empty,
+                EF.Property<string?>(m, nameof(UserMailMessage.FromName)),
+                EF.Property<string?>(m, nameof(UserMailMessage.Subject)) ?? string.Empty,
+                EF.Property<string?>(m, nameof(UserMailMessage.BodyPreview)) ?? string.Empty,
+                m.Folder,
+                m.IsRead,
+                m.IsStarred,
+                m.HasAttachments,
+                m.Importance,
+                EF.Property<DateTime?>(m, nameof(UserMailMessage.ReceivedAtUtc)) ?? DateTime.UnixEpoch,
+                EF.Property<DateTime?>(m, nameof(UserMailMessage.SentAtUtc))
+            ))
             .ToListAsync(cancellationToken);
-
-        var items = messages.Select(m => new MailMessageSummaryDto(
-            m.Id,
-            m.ConnectionId,
-            m.FromEmail,
-            m.FromName,
-            m.Subject,
-            m.BodyPreview,
-            m.Folder,
-            m.IsRead,
-            m.IsStarred,
-            m.HasAttachments,
-            m.Importance,
-            m.ReceivedAtUtc,
-            m.SentAtUtc
-        ));
 
         return new MailboxSearchResponse(items, total, request.Page, request.PageSize);
     }

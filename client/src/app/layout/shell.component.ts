@@ -51,12 +51,21 @@ export class ShellComponent {
     }
   });
 
+  constructor() {
+    this.syncSidebarForViewport();
+  }
+
   @HostListener('window:crm-quick-add', ['$event'])
   handleQuickAddEvent(event: Event) {
     const type = (event as CustomEvent<QuickAddType>)?.detail;
     if (type) {
       this.openQuickAdd(type);
     }
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.syncSidebarForViewport();
   }
 
   protected openQuickAdd(type?: QuickAddType) {
@@ -68,5 +77,13 @@ export class ShellComponent {
 
   protected onQuickAddCreated() {
     this.nav.refreshNav();
+  }
+
+  private syncSidebarForViewport() {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    this.nav.applyResponsiveSidebarState(window.innerWidth <= 840);
   }
 }
