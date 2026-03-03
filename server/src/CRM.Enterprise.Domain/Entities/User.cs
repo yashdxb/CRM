@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using CRM.Enterprise.Domain.Common;
+using CRM.Enterprise.Domain.Enums;
 
 namespace CRM.Enterprise.Domain.Entities;
 
@@ -21,6 +22,7 @@ public class User : AuditableEntity
     // Forces a password update after invitation or admin reset.
     public bool MustChangePassword { get; set; }
     public bool IsActive { get; set; } = true;
+    public UserAudience Audience { get; set; } = UserAudience.Internal;
     public DateTime? LastLoginAtUtc { get; set; }
     [MaxLength(64)]
     public string? LastLoginIp { get; set; }

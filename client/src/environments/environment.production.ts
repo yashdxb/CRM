@@ -14,5 +14,13 @@ export const environment = {
   useMockApi: false,
   apiUrl: resolveApiUrl(),
   envLabel: 'PROD',
-  theme: 'graphite'
+  theme: 'graphite',
+  auth: {
+    entra: {
+      enabled: false,
+      clientId: '',
+      authority: 'https://login.microsoftonline.com/organizations',
+      redirectUri: typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login'
+    }
+  }
 };

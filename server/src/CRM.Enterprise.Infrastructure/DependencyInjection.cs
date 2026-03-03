@@ -72,10 +72,12 @@ public static class DependencyInjection
         services.AddScoped<IDashboardReadService, DashboardReadService>();
         services.AddScoped<IDashboardLayoutService, DashboardLayoutService>();
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+        services.Configure<EntraIdOptions>(configuration.GetSection(EntraIdOptions.SectionName));
         services.Configure<GraphMailOptions>(configuration.GetSection(GraphMailOptions.SectionName));
         services.Configure<AcsEmailOptions>(configuration.GetSection(AcsEmailOptions.SectionName));
         services.Configure<ApprovalQueueOptions>(configuration.GetSection(ApprovalQueueOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
+        services.AddSingleton<IEntraTokenValidator, EntraTokenValidator>();
         services.AddHttpContextAccessor();
         services.AddSingleton<IPresenceTracker, PresenceTracker>();
         services.AddHttpClient<LoginLocationService>(client =>

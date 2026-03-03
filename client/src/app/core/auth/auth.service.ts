@@ -13,6 +13,10 @@ interface LoginRequest {
   password: string;
 }
 
+interface EntraLoginRequest {
+  idToken: string;
+}
+
 interface LoginResponse {
   accessToken: string;
   expiresAtUtc: string;
@@ -73,6 +77,40 @@ export class AuthService {
         this.crmEventsService.connect();
       })
     );
+  }
+
+  loginWithEntra(payload: EntraLoginRequest) {
+    const url = `${environment.apiUrl}/api/auth/login/entra`;
+    const tenantKey = getTenantKey();
+    return this.http
+      .post<LoginResponse>(url, payload, {
+        headers: tenantKey ? { 'X-Tenant-Key': tenantKey } : undefined
+      })
+      .pipe(
+        retryWhen((errors) =>
+          errors.pipe(
+            mergeMap((err, retryIndex) => {
+              if (retryIndex >= 2 || !this.isTransientAuthFailure(err)) {
+                return throwError(() => err);
+              }
+              const delayMs = 800 * (retryIndex + 1);
+              return timer(delayMs);
+            })
+          )
+        ),
+        tap((res) => {
+          if (!res?.accessToken) {
+            throw new Error('Missing access token.');
+          }
+          this.currentUserSignal.set(res);
+          saveToken(res.accessToken);
+          if (res.tenantKey) {
+            setTenantKey(res.tenantKey);
+          }
+          this.presenceService.connect();
+          this.crmEventsService.connect();
+        })
+      );
   }
 
   private isTransientAuthFailure(error: unknown): boolean {

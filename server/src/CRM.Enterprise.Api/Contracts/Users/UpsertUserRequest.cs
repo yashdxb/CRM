@@ -6,6 +6,7 @@ namespace CRM.Enterprise.Api.Contracts.Users;
 public record UpsertUserRequest(
     string FullName,
     string Email,
+    string? UserAudience,
     string? TimeZone,
     string? Locale,
     decimal? MonthlyQuota,

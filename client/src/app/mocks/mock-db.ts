@@ -1104,6 +1104,7 @@ interface MockUserRecord {
   id: string;
   fullName: string;
   email: string;
+  userAudience: 'Internal' | 'External';
   timeZone?: string | null;
   locale?: string | null;
   isActive: boolean;
@@ -1117,6 +1118,7 @@ let mockUsers: MockUserRecord[] = [
     id: 'user-001',
     fullName: 'Yasser Ahmed',
     email: 'yasser.ahmed@crm-enterprise.io',
+    userAudience: 'Internal',
     timeZone: 'UTC',
     locale: 'en-US',
     isActive: true,
@@ -1128,6 +1130,7 @@ let mockUsers: MockUserRecord[] = [
     id: 'user-002',
     fullName: 'Leah Singh',
     email: 'leah.singh@crm-enterprise.io',
+    userAudience: 'Internal',
     timeZone: 'America/New_York',
     locale: 'en-US',
     isActive: true,
@@ -1139,6 +1142,7 @@ let mockUsers: MockUserRecord[] = [
     id: 'user-003',
     fullName: 'Omar Ali',
     email: 'omar.ali@crm-enterprise.io',
+    userAudience: 'Internal',
     timeZone: 'America/Chicago',
     locale: 'en-US',
     isActive: true,
@@ -1150,6 +1154,7 @@ let mockUsers: MockUserRecord[] = [
     id: 'user-004',
     fullName: 'Mia Khalid',
     email: 'mia.khalid@crm-enterprise.io',
+    userAudience: 'Internal',
     timeZone: 'America/Los_Angeles',
     locale: 'en-US',
     isActive: false,
@@ -1161,6 +1166,7 @@ let mockUsers: MockUserRecord[] = [
     id: 'user-005',
     fullName: 'Jonas Berg',
     email: 'jonas.berg@crm-enterprise.io',
+    userAudience: 'External',
     timeZone: 'Europe/London',
     locale: 'en-GB',
     isActive: true,
@@ -1193,6 +1199,7 @@ const toUserListItem = (record: MockUserRecord): UserListItem => {
     id: detail.id,
     fullName: detail.fullName,
     email: detail.email,
+    userAudience: detail.userAudience,
     roles: detail.roles,
     highestRoleLevel,
     isActive: detail.isActive,
@@ -1348,6 +1355,7 @@ export const createUser = (payload: UpsertUserRequest): UserDetailResponse => {
     id: `user-${Math.random().toString(36).slice(2, 8)}`,
     fullName: payload.fullName,
     email: payload.email,
+    userAudience: payload.userAudience ?? 'Internal',
     timeZone: payload.timeZone ?? 'UTC',
     locale: payload.locale ?? 'en-US',
     isActive: payload.isActive,
@@ -1366,6 +1374,7 @@ export const updateUser = (id: string, payload: UpsertUserRequest): UserDetailRe
   }
   record.fullName = payload.fullName;
   record.email = payload.email;
+  record.userAudience = payload.userAudience ?? record.userAudience ?? 'Internal';
   record.timeZone = payload.timeZone ?? record.timeZone;
   record.locale = payload.locale ?? record.locale;
   record.isActive = payload.isActive;

@@ -68,6 +68,20 @@
         </span>
       </button>
 
+      <button
+        *ngIf="entraEnabled"
+        pButton
+        type="button"
+        class="btn-submit btn-submit--secondary"
+        [disabled]="loading"
+        (click)="signInWithMicrosoft()"
+      >
+        <span>
+          <i class="pi pi-microsoft"></i>
+          Sign In With Microsoft
+        </span>
+      </button>
+
       <div class="error-message" *ngIf="error">
         <i class="pi pi-times-circle"></i>
         <span>{{ error }}</span>

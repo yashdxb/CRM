@@ -5,22 +5,24 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-01 13:13 UTC**
+- Synced at: **2026-03-03 16:29 UTC**
 - ClickUp list id: `901710720381`
-- Total tasks mirrored: **178**
+- Total tasks mirrored: **184**
 - Epics mirrored: **39**
-- Stories mirrored: **139**
+- Stories mirrored: **145**
 
 ## Status Summary
 - All tasks:
-  - `done`: 102
-  - `backlog`: 76
+  - `done`: 109
+  - `backlog`: 74
+  - `in progress`: 1
 - Epics:
-  - `backlog`: 24
+  - `backlog`: 23
   - `done`: 15
+  - `in progress`: 1
 - Stories:
-  - `done`: 87
-  - `backlog`: 52
+  - `done`: 94
+  - `backlog`: 51
 
 ## Epic and Story Mirror
 
@@ -39,11 +41,17 @@
   - `86e042ex8` | `backlog` | Review thread live chat via SignalR | tags: -
 
 ### [LATER] Customer Portal & Case Ticketing (`86e041x9j`)
-- Status: `backlog`
+- Status: `in progress`
 - Tags: future, later
 - Stories:
   - `86e041x9k` | `backlog` | Customer self-service portal | tags: -
-  - `86e041x9m` | `backlog` | Support case tracking | tags: -
+  - `86e05jy7r` | `done` | Help Desk agent console (cases list/detail workspace) implemented | tags: -
+  - `86e05jy95` | `done` | Help Desk email-to-case intake webhook and thread binding implemented | tags: -
+  - `86e05jy9q` | `done` | Help Desk permissions, feature flags, routes and sidebar integration implemented | tags: -
+  - `86e05jy81` | `done` | Help Desk queue management and manual assignment implemented | tags: -
+  - `86e05jya1` | `done` | Help Desk realtime events and summary reporting implemented | tags: -
+  - `86e05jy8t` | `done` | Help Desk SLA policy matrix and escalation worker implemented | tags: -
+  - `86e041x9m` | `done` | Support case tracking | tags: -
 
 ### [LATER] Marketing Automation Suite (`86e041x95`)
 - Status: `backlog`
@@ -170,10 +178,6 @@
 ### [NOW] Product Catalog & CPQ (`86e041x4a`)
 - Status: `done`
 - Tags: future, now
-- Aliases (used in `docs/CRM_BACKLOG.md`):
-  - Product & Services Catalog for CRM CPQ → `86e041x4a`
-  - Product and service ItemType catalog foundation → `86e041x4f`
-  - Quote item Product/Service context in opportunity workspace → `86e042906`
 - Stories:
   - `86e041x4n` | `done` | Configure-Price-Quote (CPQ) workflow | tags: -
   - `86e04290b` | `done` | CPQ proposal end-to-end test and smoke workflow coverage | tags: -

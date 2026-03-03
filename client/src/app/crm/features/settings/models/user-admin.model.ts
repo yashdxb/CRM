@@ -44,6 +44,7 @@ export interface UserListItem {
   id: string;
   fullName: string;
   email: string;
+  userAudience: 'Internal' | 'External';
   roles: string[];
   highestRoleLevel?: number | null;
   isActive: boolean;
@@ -93,6 +94,7 @@ export interface UserDetailResponse {
   id: string;
   fullName: string;
   email: string;
+  userAudience: 'Internal' | 'External';
   timeZone?: string | null;
   locale?: string | null;
   monthlyQuota?: number | null;
@@ -117,6 +119,7 @@ export interface UserSearchRequest {
 export interface UpsertUserRequest {
   fullName: string;
   email: string;
+  userAudience?: 'Internal' | 'External' | null;
   timeZone?: string | null;
   locale?: string | null;
   monthlyQuota?: number | null;

@@ -8,6 +8,7 @@ using System.Threading;
 using CRM.Enterprise.Api.Contracts.Users;
 using CRM.Enterprise.Application.Dashboard;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Application.Auth;
 using CRM.Enterprise.Application.Tenants;
@@ -108,6 +109,7 @@ public class UsersController : ControllerBase
                 u.Id,
                 u.FullName,
                 u.Email,
+                u.Audience,
                 u.IsActive,
                 u.CreatedAtUtc,
                 u.LastLoginAtUtc,
@@ -167,6 +169,7 @@ public class UsersController : ControllerBase
                 u.Id,
                 u.FullName,
                 u.Email,
+                ToAudienceString(u.Audience),
                 rolesByUserId.TryGetValue(u.Id, out var roleNames) ? roleNames : new List<string>(),
                 highestRoleLevel,
                 u.IsActive,
@@ -317,6 +320,11 @@ public class UsersController : ControllerBase
             return BadRequest("At least one role must be assigned.");
         }
 
+        if (!TryParseAudience(request.UserAudience, out var audience))
+        {
+            return BadRequest("User audience must be 'Internal' or 'External'.");
+        }
+
         var normalizedEmail = NormalizeEmail(request.Email);
         if (string.IsNullOrWhiteSpace(normalizedEmail))
         {
@@ -343,6 +351,7 @@ public class UsersController : ControllerBase
             Locale = string.IsNullOrWhiteSpace(request.Locale) ? "en-US" : request.Locale,
             MonthlyQuota = NormalizeQuota(request.MonthlyQuota),
             IsActive = request.IsActive,
+            Audience = audience,
             // Invited users must replace the temporary password on first sign-in.
             MustChangePassword = true,
             CreatedAtUtc = DateTime.UtcNow
@@ -379,6 +388,11 @@ public class UsersController : ControllerBase
             return BadRequest("At least one role must be assigned.");
         }
 
+        if (!TryParseAudience(request.UserAudience, out var audience))
+        {
+            return BadRequest("User audience must be 'Internal' or 'External'.");
+        }
+
         var normalizedEmail = NormalizeEmail(request.Email);
         if (string.IsNullOrWhiteSpace(normalizedEmail))
         {
@@ -410,6 +424,7 @@ public class UsersController : ControllerBase
         user.Locale = request.Locale;
         user.MonthlyQuota = NormalizeQuota(request.MonthlyQuota);
         user.IsActive = request.IsActive;
+        user.Audience = audience;
 
         await AssignRolesAsync(user, roleIds, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -740,6 +755,7 @@ public class UsersController : ControllerBase
                 u.Id,
                 u.FullName,
                 u.Email,
+                u.Audience,
                 u.TimeZone,
                 u.Locale,
                 u.MonthlyQuota,
@@ -792,6 +808,7 @@ public class UsersController : ControllerBase
             row.Id,
             row.FullName,
             row.Email,
+            ToAudienceString(row.Audience),
             row.TimeZone,
             row.Locale,
             row.MonthlyQuota,
@@ -842,6 +859,20 @@ public class UsersController : ControllerBase
 
         return value.Value < 0 ? 0 : value.Value;
     }
+
+    private static bool TryParseAudience(string? raw, out UserAudience audience)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            audience = UserAudience.Internal;
+            return true;
+        }
+
+        return Enum.TryParse(raw.Trim(), ignoreCase: true, out audience);
+    }
+
+    private static string ToAudienceString(UserAudience audience)
+        => audience == UserAudience.External ? "External" : "Internal";
 
     private async Task SendInviteEmailAsync(User user, string temporaryPassword, string inviteToken, CancellationToken cancellationToken)
     {

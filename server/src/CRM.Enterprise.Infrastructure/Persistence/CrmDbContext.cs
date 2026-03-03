@@ -343,6 +343,10 @@ public class CrmDbContext : DbContext
             .Property(u => u.MonthlyQuota)
             .HasPrecision(18, 2);
         modelBuilder.Entity<User>()
+            .Property(u => u.Audience)
+            .HasDefaultValue(UserAudience.Internal)
+            .HasSentinel(UserAudience.Internal);
+        modelBuilder.Entity<User>()
             .HasIndex(u => new { u.TenantId, u.EmailNormalized })
             .HasFilter("[EmailNormalized] IS NOT NULL AND [IsDeleted] = 0")
             .IsUnique();

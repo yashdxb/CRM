@@ -7,6 +7,7 @@ public record UserDetailResponse(
     Guid Id,
     string FullName,
     string Email,
+    string UserAudience,
     string? TimeZone,
     string? Locale,
     decimal? MonthlyQuota,

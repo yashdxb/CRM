@@ -12,6 +12,8 @@ import { AuthShellComponent } from './auth-shell.component';
 import { readTokenContext } from '../../core/auth/token.utils';
 import { HttpErrorResponse } from '@angular/common/http';
 import { finalize, timeout } from 'rxjs';
+import { PublicClientApplication } from '@azure/msal-browser';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-login-page',
@@ -36,6 +38,7 @@ export class LoginPage {
   emailFocused = false;
   passwordFocused = false;
   showErrors = false;
+  readonly entraEnabled = !!environment.auth?.entra?.enabled;
 
   constructor(
     private fb: FormBuilder,
@@ -130,6 +133,85 @@ export class LoginPage {
           });
         }
       });
+  }
+
+  async signInWithMicrosoft(): Promise<void> {
+    if (!this.entraEnabled || this.loading) {
+      return;
+    }
+
+    const entraConfig = environment.auth?.entra;
+    if (!entraConfig?.clientId) {
+      this.showErrors = true;
+      this.error = 'Microsoft sign-in is not configured.';
+      return;
+    }
+
+    this.error = null;
+    this.loading = true;
+
+    try {
+      const client = new PublicClientApplication({
+        auth: {
+          clientId: entraConfig.clientId,
+          authority: entraConfig.authority,
+          redirectUri: entraConfig.redirectUri
+        },
+        cache: {
+          cacheLocation: 'localStorage'
+        }
+      });
+
+      await client.initialize();
+      const result = await client.loginPopup({
+        scopes: ['openid', 'profile', 'email'],
+        prompt: 'select_account'
+      });
+      const idToken = result.idToken;
+      if (!idToken) {
+        throw new Error('No Microsoft ID token was returned.');
+      }
+
+      this.auth
+        .loginWithEntra({ idToken })
+        .pipe(
+          finalize(() => {
+            this.loading = false;
+            this.cdr.detectChanges();
+          })
+        )
+        .subscribe({
+          next: () => {
+            if (!readTokenContext()) {
+              this.error = 'Microsoft sign-in did not start a session.';
+              return;
+            }
+
+            const profile = this.auth.currentUser();
+            if (profile?.mustChangePassword) {
+              this.router.navigate(['/change-password']);
+              return;
+            }
+
+            const redirectTo = this.route.snapshot.queryParamMap.get('redirectTo');
+            const target = redirectTo && redirectTo.startsWith('/') ? redirectTo : '/app/dashboard';
+            this.router.navigateByUrl(target);
+          },
+          error: (err: unknown) => {
+            const httpError = err as HttpErrorResponse | null;
+            const messageBody = httpError?.error?.message || httpError?.error?.error || null;
+            this.showErrors = true;
+            this.error = this.buildErrorText('Microsoft account', messageBody, httpError?.status);
+            this.cdr.detectChanges();
+          }
+        });
+    } catch (err) {
+      const message = (err as { message?: string })?.message ?? 'Microsoft sign-in failed.';
+      this.showErrors = true;
+      this.loading = false;
+      this.error = message;
+      this.cdr.detectChanges();
+    }
   }
 
   private buildErrorText(email: string, serverMessage: string | null, status?: number) {

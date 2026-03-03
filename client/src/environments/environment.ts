@@ -13,7 +13,15 @@ export const environment = {
   useMockApi: false,
   apiUrl: resolveApiUrl(),
   envLabel: 'DEV',
-  theme: 'default'
+  theme: 'default',
+  auth: {
+    entra: {
+      enabled: false,
+      clientId: '',
+      authority: 'https://login.microsoftonline.com/organizations',
+      redirectUri: typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login'
+    }
+  }
 };
 
 // 

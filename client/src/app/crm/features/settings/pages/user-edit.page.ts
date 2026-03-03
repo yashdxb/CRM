@@ -78,10 +78,15 @@ export class UserEditPage implements OnInit {
     { label: 'French', value: 'fr-FR' },
     { label: 'Spanish', value: 'es-ES' }
   ];
+  protected readonly userAudienceOptions = [
+    { label: 'Internal', value: 'Internal' as const },
+    { label: 'External', value: 'External' as const }
+  ];
 
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.maxLength(120)]],
     email: ['', [Validators.required, Validators.email]],
+    userAudience: this.fb.nonNullable.control<'Internal' | 'External'>('Internal', Validators.required),
     timeZone: ['UTC', Validators.required],
     locale: ['en-US', Validators.required],
     roleIds: [[] as string[]],
@@ -118,6 +123,7 @@ export class UserEditPage implements OnInit {
         this.form.patchValue({
           fullName: detail.fullName,
           email: detail.email,
+          userAudience: detail.userAudience ?? 'Internal',
           timeZone: detail.timeZone ?? 'UTC',
           locale: detail.locale ?? 'en-US',
           roleIds: detail.roleIds,
@@ -172,6 +178,7 @@ export class UserEditPage implements OnInit {
     const payload: UpsertUserRequest = {
       fullName: this.form.value.fullName?.trim() ?? '',
       email: this.form.value.email?.trim().toLowerCase() ?? '',
+      userAudience: this.form.value.userAudience ?? 'Internal',
       timeZone: this.form.value.timeZone,
       locale: this.form.value.locale,
       monthlyQuota: this.form.value.monthlyQuota ?? null,

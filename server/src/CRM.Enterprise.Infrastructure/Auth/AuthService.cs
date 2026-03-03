@@ -4,6 +4,7 @@ using System.Text;
 using CRM.Enterprise.Application.Auth;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Identity;
@@ -22,6 +23,7 @@ public class AuthService : IAuthService
     private readonly ITenantProvider _tenantProvider;
     private readonly string _defaultTenantKey;
     private readonly LoginLocationService _loginLocationService;
+    private readonly IEntraTokenValidator _entraTokenValidator;
 
     public AuthService(
         CrmDbContext dbContext,
@@ -29,7 +31,8 @@ public class AuthService : IAuthService
         IOptions<JwtOptions> options,
         ITenantProvider tenantProvider,
         IConfiguration configuration,
-        LoginLocationService loginLocationService)
+        LoginLocationService loginLocationService,
+        IEntraTokenValidator entraTokenValidator)
     {
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
@@ -37,6 +40,7 @@ public class AuthService : IAuthService
         _tenantProvider = tenantProvider;
         _defaultTenantKey = configuration["Tenant:DefaultKey"] ?? "default";
         _loginLocationService = loginLocationService;
+        _entraTokenValidator = entraTokenValidator;
     }
 
     public async Task<AuthResult?> SignInAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -85,6 +89,65 @@ public class AuthService : IAuthService
 
         var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
         if (result == PasswordVerificationResult.Failed)
+        {
+            return null;
+        }
+
+        if (!string.Equals(user.Email, normalizedEmail, StringComparison.Ordinal))
+        {
+            user.Email = normalizedEmail;
+        }
+        if (!string.Equals(user.EmailNormalized, normalizedEmail, StringComparison.Ordinal))
+        {
+            user.EmailNormalized = normalizedEmail;
+        }
+
+        return await BuildAuthResultAsync(user, cancellationToken);
+    }
+
+    public async Task<AuthResult?> SignInWithEntraIdTokenAsync(string idToken, CancellationToken cancellationToken = default)
+    {
+        var identity = await _entraTokenValidator.ValidateIdTokenAsync(idToken, cancellationToken);
+        if (identity is null || string.IsNullOrWhiteSpace(identity.Email))
+        {
+            return null;
+        }
+
+        var normalizedEmail = NormalizeEmail(identity.Email);
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            var resolvedTenant = await ResolveTenantForLoginAsync(normalizedEmail, cancellationToken);
+            tenantId = resolvedTenant.TenantId;
+            if (tenantId == Guid.Empty && resolvedTenant.HasMatches)
+            {
+                return null;
+            }
+
+            if (tenantId == Guid.Empty)
+            {
+                tenantId = await ResolveDefaultTenantIdAsync(cancellationToken);
+                if (tenantId == Guid.Empty)
+                {
+                    return null;
+                }
+
+                _tenantProvider.SetTenant(tenantId, _defaultTenantKey);
+            }
+        }
+
+        var user = await _dbContext.Users
+            .IgnoreQueryFilters()
+            .Where(u =>
+                u.TenantId == tenantId &&
+                u.IsActive &&
+                !u.IsDeleted &&
+                u.Audience != UserAudience.External &&
+                (u.EmailNormalized == normalizedEmail ||
+                 (u.EmailNormalized == null && u.Email.ToLower() == normalizedEmail)))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (user is null)
         {
             return null;
         }

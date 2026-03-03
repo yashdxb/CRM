@@ -44,6 +44,24 @@ public class AuthController : ControllerBase
         return Ok(new LoginResponse(result.AccessToken, result.ExpiresAtUtc, result.Email, result.FullName, result.Roles, result.Permissions, result.TenantKey, result.MustChangePassword));
     }
 
+    [HttpPost("login/entra")]
+    [AllowAnonymous]
+    public async Task<ActionResult<LoginResponse>> LoginWithEntra([FromBody] EntraLoginRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.IdToken))
+        {
+            return BadRequest("IdToken is required.");
+        }
+
+        var result = await _authService.SignInWithEntraIdTokenAsync(request.IdToken, cancellationToken);
+        if (result is null)
+        {
+            return Unauthorized();
+        }
+
+        return Ok(new LoginResponse(result.AccessToken, result.ExpiresAtUtc, result.Email, result.FullName, result.Roles, result.Permissions, result.TenantKey, result.MustChangePassword));
+    }
+
     [HttpPost("logout")]
     [Authorize]
     public IActionResult Logout()

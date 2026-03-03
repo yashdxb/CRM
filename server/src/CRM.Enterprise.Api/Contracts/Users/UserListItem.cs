@@ -7,6 +7,7 @@ public record UserListItem(
     Guid Id,
     string FullName,
     string Email,
+    string UserAudience,
     IReadOnlyList<string> Roles,
     int? HighestRoleLevel,
     bool IsActive,
