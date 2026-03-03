@@ -37,6 +37,10 @@ export class DirectChatService {
     });
   }
 
+  listThreads() {
+    return this.http.get<DirectChatThreadItem[]>(`${this.baseUrl}/api/chat/threads`);
+  }
+
   getMessages(threadId: string, take = 200) {
     return this.http.get<DirectChatMessageItem[]>(`${this.baseUrl}/api/chat/threads/${threadId}/messages`, {
       params: { take: String(take) }

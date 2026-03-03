@@ -60,6 +60,18 @@
               <span class="footer-presence-label">Online</span>
               <strong class="footer-presence-count">{{ onlineCount() }}</strong>
             </button>
+            <button
+              type="button"
+              class="footer-chat"
+              [class.has-unread]="chatUnreadTotal() > 0"
+              (click)="openChatInbox()"
+            >
+              <i class="pi pi-comments" aria-hidden="true"></i>
+              <span class="footer-chat-label">Chat</span>
+              @if (chatUnreadTotal() > 0) {
+                <strong class="footer-chat-badge">{{ chatUnreadTotal() }}</strong>
+              }
+            </button>
 
             @if (onlineUsersPopupVisible()) {
               <div #presencePopup class="online-presence-popup" (click)="$event.stopPropagation()">

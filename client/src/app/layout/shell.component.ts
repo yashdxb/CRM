@@ -20,6 +20,7 @@ import { readUserId } from '../core/auth/token.utils';
 import { UserLookupItem } from '../crm/features/settings/models/user-admin.model';
 import { UserAdminDataService } from '../crm/features/settings/services/user-admin-data.service';
 import { DirectChatMessageItem, DirectChatService, DirectChatThreadItem } from '../core/chat/direct-chat.service';
+import { NotificationService } from '../core/notifications';
 
 interface PresencePerson {
   userId: string;
@@ -81,6 +82,7 @@ export class ShellComponent {
   private readonly crmEventsService = inject(CrmEventsService);
   private readonly userAdminData = inject(UserAdminDataService);
   private readonly directChatService = inject(DirectChatService);
+  private readonly notificationService = inject(NotificationService);
   protected readonly currentUserId = readUserId();
 
   protected readonly onlineUsers = toSignal(this.presenceService.onlineUsers$, { initialValue: new Set<string>() });
@@ -116,6 +118,10 @@ export class ShellComponent {
   protected readonly chatSaving = signal(false);
   protected readonly chatLoading = signal(false);
   protected readonly chatError = signal<string | null>(null);
+  protected readonly chatUnreadByThread = signal<Map<string, number>>(new Map());
+  protected readonly chatUnreadTotal = computed(() =>
+    [...this.chatUnreadByThread().values()].reduce((total, count) => total + count, 0)
+  );
   protected readonly selectedParticipantToAdd = signal<string | null>(null);
   protected readonly emojiPickerVisible = signal(false);
   protected readonly quickEmojis = QUICK_EMOJIS;
@@ -305,6 +311,22 @@ export class ShellComponent {
     this.chatError.set(null);
   }
 
+  protected openChatInbox(): void {
+    const unreadThreadId = this.pickMostRecentUnreadThreadId();
+    if (unreadThreadId) {
+      this.openThreadById(unreadThreadId);
+      return;
+    }
+
+    if (this.activeChatThreadId()) {
+      this.chatPanelVisible.set(true);
+      return;
+    }
+
+    this.onlineUsersPopupVisible.set(true);
+    this.ensureUserLookupLoaded();
+  }
+
   protected sendChatMessage(): void {
     const threadId = this.activeChatThreadId();
     const message = this.applyEmojiShortcuts(this.chatDraft().trim());
@@ -484,6 +506,29 @@ export class ShellComponent {
       }
       return [...messages, incoming];
     });
+
+    if (!this.currentUserId || senderUserId === this.currentUserId) {
+      return;
+    }
+
+    const isActiveThread =
+      this.chatPanelVisible() &&
+      this.activeChatThreadId() === threadId;
+
+    if (isActiveThread) {
+      this.markThreadAsRead(threadId);
+      return;
+    }
+
+    this.incrementThreadUnread(threadId);
+    this.notificationService.info(
+      `New message from ${senderDisplayName}`,
+      this.truncateMessage(content),
+      {
+        label: 'Reply',
+        callback: () => this.openThreadById(threadId, senderUserId, senderDisplayName)
+      }
+    );
   }
 
   private asString(value: unknown): string | null {
@@ -503,6 +548,9 @@ export class ShellComponent {
             return [...withoutThread, ...mapped];
           });
           this.chatLoading.set(false);
+          if (this.activeChatThreadId() === threadId && this.chatPanelVisible()) {
+            this.markThreadAsRead(threadId);
+          }
         },
         error: () => {
           this.chatLoading.set(false);
@@ -530,6 +578,127 @@ export class ShellComponent {
       email: participant.email,
       initials: this.buildInitials(participant.displayName)
     }));
+  }
+
+  private incrementThreadUnread(threadId: string): void {
+    this.chatUnreadByThread.update((current) => {
+      const next = new Map(current);
+      next.set(threadId, (next.get(threadId) ?? 0) + 1);
+      return next;
+    });
+  }
+
+  private markThreadAsRead(threadId: string): void {
+    this.chatUnreadByThread.update((current) => {
+      if (!current.has(threadId)) {
+        return current;
+      }
+
+      const next = new Map(current);
+      next.delete(threadId);
+      return next;
+    });
+  }
+
+  private pickMostRecentUnreadThreadId(): string | null {
+    const unreadIds = [...this.chatUnreadByThread().keys()];
+    if (unreadIds.length === 0) {
+      return null;
+    }
+
+    const messages = this.chatMessages();
+    unreadIds.sort((first, second) => {
+      const firstLast = messages
+        .filter((message) => message.threadId === first)
+        .map((message) => new Date(message.sentAtUtc).getTime())
+        .sort((a, b) => b - a)[0] ?? 0;
+      const secondLast = messages
+        .filter((message) => message.threadId === second)
+        .map((message) => new Date(message.sentAtUtc).getTime())
+        .sort((a, b) => b - a)[0] ?? 0;
+      return secondLast - firstLast;
+    });
+
+    return unreadIds[0] ?? null;
+  }
+
+  private openThreadById(threadId: string, senderUserId?: string, senderDisplayName?: string): void {
+    this.chatPanelVisible.set(true);
+    this.chatLoading.set(true);
+    this.chatError.set(null);
+
+    this.directChatService.listThreads()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (threads) => {
+          const thread = threads.find((item) => item.threadId === threadId);
+          if (thread) {
+            this.activeChatThreadId.set(thread.threadId);
+            const participants = this.mapThreadParticipants(thread);
+            this.activeChatParticipants.set(participants);
+            const focusUser = participants.find((person) => person.userId !== this.currentUserId) ?? participants[0] ?? null;
+            if (focusUser) {
+              this.activeChatUser.set(focusUser);
+            }
+            this.loadThreadMessages(thread.threadId);
+            this.markThreadAsRead(thread.threadId);
+            return;
+          }
+
+          if (senderUserId) {
+            this.fallbackOpenOneToOne(senderUserId, senderDisplayName);
+            return;
+          }
+
+          this.chatLoading.set(false);
+          this.chatError.set('Unable to open this conversation.');
+        },
+        error: () => {
+          if (senderUserId) {
+            this.fallbackOpenOneToOne(senderUserId, senderDisplayName);
+            return;
+          }
+
+          this.chatLoading.set(false);
+          this.chatError.set('Unable to open this conversation.');
+        }
+      });
+  }
+
+  private fallbackOpenOneToOne(senderUserId: string, senderDisplayName?: string): void {
+    this.directChatService.openThread([senderUserId])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (thread) => {
+          this.activeChatThreadId.set(thread.threadId);
+          const participants = this.mapThreadParticipants(thread);
+          this.activeChatParticipants.set(participants);
+          const focusUser = participants.find((person) => person.userId === senderUserId)
+            ?? participants.find((person) => person.userId !== this.currentUserId)
+            ?? (senderDisplayName ? {
+              userId: senderUserId,
+              displayName: senderDisplayName,
+              email: null,
+              initials: this.buildInitials(senderDisplayName)
+            } : null);
+          if (focusUser) {
+            this.activeChatUser.set(focusUser);
+          }
+          this.loadThreadMessages(thread.threadId);
+          this.markThreadAsRead(thread.threadId);
+        },
+        error: () => {
+          this.chatLoading.set(false);
+          this.chatError.set('Unable to open this conversation.');
+        }
+      });
+  }
+
+  private truncateMessage(message: string, maxLength = 120): string {
+    if (message.length <= maxLength) {
+      return message;
+    }
+    return `${message.slice(0, maxLength - 1)}…`;
   }
 
   private applyEmojiShortcuts(value: string): string {
