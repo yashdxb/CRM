@@ -42,7 +42,6 @@ export class InviteUserPage {
   private readonly fieldLabels: Record<string, string> = {
     fullName: 'Full name',
     email: 'Email',
-    userAudience: 'User audience',
     timeZone: 'Time zone',
     locale: 'Locale',
     roleIds: 'Roles'
@@ -91,15 +90,9 @@ export class InviteUserPage {
     { label: 'French', value: 'fr-FR' },
     { label: 'Spanish', value: 'es-ES' }
   ];
-  protected readonly userAudienceOptions = [
-    { label: 'Internal', value: 'Internal' as const },
-    { label: 'External', value: 'External' as const }
-  ];
-
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.maxLength(120)]],
     email: ['', [Validators.required, Validators.email]],
-    userAudience: this.fb.nonNullable.control<'Internal' | 'External'>('Internal', Validators.required),
     timeZone: ['UTC', Validators.required],
     locale: ['en-US', Validators.required],
     roleIds: [[] as string[]],
@@ -160,7 +153,7 @@ export class InviteUserPage {
     const payload: UpsertUserRequest = {
       fullName: this.form.value.fullName?.trim() ?? '',
       email: this.form.value.email?.trim().toLowerCase() ?? '',
-      userAudience: this.form.value.userAudience ?? 'Internal',
+      userAudience: 'Internal',
       timeZone: this.form.value.timeZone,
       locale: this.form.value.locale,
       isActive: !!this.form.value.isActive,
@@ -182,7 +175,6 @@ export class InviteUserPage {
         this.form.reset({
           fullName: '',
           email: '',
-          userAudience: 'Internal',
           timeZone: 'UTC',
           locale: 'en-US',
           roleIds: [],

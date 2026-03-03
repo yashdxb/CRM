@@ -80,7 +80,7 @@ export class SettingsPage {
   protected readonly roles = signal<RoleSummary[]>([]);
   protected readonly searchTerm = signal('');
   protected readonly roleFilter = signal<'all' | string>('all');
-  protected readonly statusFilter = signal<'all' | 'active' | 'inactive'>('all');
+  protected readonly statusFilter = signal<'all' | 'active' | 'inactive'>('active');
   protected readonly includeInactive = signal(false);
   protected readonly loadingUsers = signal(true);
   protected readonly loadingRoles = signal(true);
@@ -95,11 +95,8 @@ export class SettingsPage {
   ];
   protected readonly filteredUsers = computed(() => {
     let rows = [...this.users()];
-    const status = this.statusFilter();
-    if (status === 'active') {
+    if (!this.includeInactive()) {
       rows = rows.filter((user) => user.isActive);
-    } else if (status === 'inactive') {
-      rows = rows.filter((user) => !user.isActive);
     }
 
     if (this.roleFilter() !== 'all') {
@@ -269,7 +266,7 @@ export class SettingsPage {
 
   protected loadUsers(options: { page?: number; pageSize?: number } = {}) {
     this.loadingUsers.set(true);
-    const includeInactive = this.statusFilter() === 'inactive' ? true : this.includeInactive();
+    const includeInactive = this.includeInactive();
     const search = this.searchTerm().trim() || undefined;
     const requestedPage = options.page ?? this.page();
     const requestedPageSize = options.pageSize ?? this.pageSize();

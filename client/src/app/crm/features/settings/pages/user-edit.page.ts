@@ -74,11 +74,23 @@ export class UserEditPage implements OnInit {
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
+  private readonly initialFormState = signal<string | null>(null);
+  private readonly initialDashboardPackKey = signal<string | null>(null);
   protected readonly currencyCode = signal<string>('');
   private currencyFallback = '';
   protected readonly canManageAdmin = signal(
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
+  protected readonly hasPendingChanges = computed(() => {
+    const initial = this.initialFormState();
+    if (!initial) {
+      return false;
+    }
+
+    const current = this.serializeFormState();
+    const packChanged = (this.selectedDashboardPackKey() ?? null) !== (this.initialDashboardPackKey() ?? null);
+    return current !== initial || packChanged;
+  });
   protected readonly selectedRoleRecords = computed(() => {
     const selectedIds = new Set(this.form.controls.roleIds.value ?? []);
     return this.roles().filter((role) => selectedIds.has(role.id));
@@ -317,15 +329,9 @@ export class UserEditPage implements OnInit {
     { label: 'French', value: 'fr-FR' },
     { label: 'Spanish', value: 'es-ES' }
   ];
-  protected readonly userAudienceOptions = [
-    { label: 'Internal', value: 'Internal' as const },
-    { label: 'External', value: 'External' as const }
-  ];
-
   protected readonly form = this.fb.nonNullable.group({
     fullName: ['', [Validators.required, Validators.maxLength(120)]],
     email: ['', [Validators.required, Validators.email]],
-    userAudience: this.fb.nonNullable.control<'Internal' | 'External'>('Internal', Validators.required),
     timeZone: ['UTC', Validators.required],
     locale: ['en-US', Validators.required],
     roleIds: [[] as string[]],
@@ -362,7 +368,6 @@ export class UserEditPage implements OnInit {
         this.form.patchValue({
           fullName: detail.fullName,
           email: detail.email,
-          userAudience: detail.userAudience ?? 'Internal',
           timeZone: detail.timeZone ?? 'UTC',
           locale: detail.locale ?? 'en-US',
           roleIds: detail.roleIds,
@@ -371,6 +376,7 @@ export class UserEditPage implements OnInit {
           temporaryPassword: ''
         });
         this.initializeDashboardPackSelection();
+        this.captureInitialState();
         this.loading.set(false);
       },
       error: () => {
@@ -446,7 +452,7 @@ export class UserEditPage implements OnInit {
     const payload: UpsertUserRequest = {
       fullName: this.form.value.fullName?.trim() ?? '',
       email: this.form.value.email?.trim().toLowerCase() ?? '',
-      userAudience: this.form.value.userAudience ?? 'Internal',
+      userAudience: this.user()?.userAudience ?? 'Internal',
       timeZone: this.form.value.timeZone,
       locale: this.form.value.locale,
       monthlyQuota: this.form.value.monthlyQuota ?? null,
@@ -548,6 +554,29 @@ export class UserEditPage implements OnInit {
     this.selectedDashboardPackKey.set(selected);
   }
 
+  private captureInitialState() {
+    this.initialFormState.set(this.serializeFormState());
+    this.initialDashboardPackKey.set(this.selectedDashboardPackKey() ?? null);
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.generatedPassword.set(null);
+  }
+
+  private serializeFormState(): string {
+    const value = this.form.getRawValue();
+    const normalizedRoleIds = [...(value.roleIds ?? [])].sort();
+    return JSON.stringify({
+      fullName: value.fullName?.trim() ?? '',
+      email: value.email?.trim().toLowerCase() ?? '',
+      timeZone: value.timeZone ?? 'UTC',
+      locale: value.locale ?? 'en-US',
+      monthlyQuota: value.monthlyQuota ?? null,
+      isActive: !!value.isActive,
+      roleIds: normalizedRoleIds,
+      temporaryPassword: value.temporaryPassword?.trim() ?? ''
+    });
+  }
+
   private resolveCurrentRoleLevel(roleIds?: string[]): number {
     const selectedRoleIds = roleIds ?? ((this.form.value.roleIds ?? []) as string[]);
     const levelByRoleId = new Map(
@@ -602,7 +631,6 @@ export class UserEditPage implements OnInit {
         this.form.patchValue({
           fullName: latest.fullName,
           email: latest.email,
-          userAudience: latest.userAudience ?? 'Internal',
           timeZone: latest.timeZone ?? 'UTC',
           locale: latest.locale ?? 'en-US',
           roleIds: latest.roleIds,
@@ -611,14 +639,14 @@ export class UserEditPage implements OnInit {
           temporaryPassword: ''
         });
         this.initializeDashboardPackSelection();
+        this.captureInitialState();
 
         const payloadRoles = [...(payload.roleIds ?? [])].sort();
         const latestRoles = [...(latest.roleIds ?? [])].sort();
-        const audienceMatches = (latest.userAudience ?? 'Internal') === (payload.userAudience ?? 'Internal');
         const rolesMatch = JSON.stringify(payloadRoles) === JSON.stringify(latestRoles);
 
-        if (!audienceMatches || !rolesMatch) {
-          this.raiseToast('error', 'Save was acknowledged, but role/audience changes were not applied.');
+        if (!rolesMatch) {
+          this.raiseToast('error', 'Save was acknowledged, but role changes were not applied.');
           return;
         }
 

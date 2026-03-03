@@ -136,15 +136,6 @@
                   placeholder="All roles"
                   styleClass="filter-select"
                 ></p-select>
-                <p-select appendTo="body"
-                  [options]="statusFilterOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  [ngModel]="statusFilter()"
-                  (ngModelChange)="onStatusFilterChange($event)"
-                  placeholder="All statuses"
-                  styleClass="filter-select"
-                ></p-select>
                 <label class="toggle-wrapper compact">
                   <span>Show inactive</span>
                   <p-toggleSwitch [ngModel]="includeInactive()" (ngModelChange)="toggleIncludeInactive($event)"></p-toggleSwitch>
@@ -168,7 +159,6 @@
                   <tr>
                     <th>Name</th>
                     <th>Email</th>
-                    <th>Audience</th>
                     <th>Role</th>
                     <th>Status</th>
                     <th>Last login</th>
@@ -198,11 +188,6 @@
                     </td>
                     <td>
                       <span class="user-email">{{ user.email }}</span>
-                    </td>
-                    <td>
-                      <span class="role-pill" [ngClass]="user.userAudience === 'External' ? 'muted' : ''">
-                        {{ user.userAudience || 'Internal' }}
-                      </span>
                     </td>
                     <td>
                       <span class="role-pill" *ngIf="user.roles?.length; else unassignedRole">

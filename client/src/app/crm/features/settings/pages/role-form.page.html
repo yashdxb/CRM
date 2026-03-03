@@ -157,22 +157,6 @@
             <span>Manage default dashboard pack for this hierarchy level</span>
             <a routerLink="/app/settings/dashboard-packs">Open dashboard packs</a>
           </div>
-          <div
-            class="audience-compat-banner"
-            [ngClass]="{
-              'audience-compat-banner--warn': selectedAudienceCompatibility() === 'internal-only',
-              'audience-compat-banner--ok': selectedAudienceCompatibility() === 'external-compatible'
-            }"
-          >
-            <i class="pi" [ngClass]="selectedAudienceCompatibility() === 'internal-only' ? 'pi-exclamation-triangle' : 'pi-check-circle'"></i>
-            <span>
-              Audience compatibility:
-              <strong>{{ audienceCompatibilityLabel(selectedAudienceCompatibility()) }}</strong>
-              <ng-container *ngIf="selectedAudienceCompatibility() === 'internal-only'">
-                . External users cannot be assigned this role.
-              </ng-container>
-            </span>
-          </div>
         </section>
 
         <section class="form-section permissions-section" *ngIf="!isEditMode(); else editPermissionsMoved">
@@ -301,15 +285,6 @@
                           <div>
                             <div class="intent-title-row">
                               <strong>{{ pack.label }}</strong>
-                              <span
-                                class="compat-chip"
-                                [ngClass]="{
-                                  'compat-chip--warn': getAudienceCompatibilityForPack(pack) === 'internal-only',
-                                  'compat-chip--ok': getAudienceCompatibilityForPack(pack) === 'external-compatible'
-                                }"
-                              >
-                                {{ audienceCompatibilityLabel(getAudienceCompatibilityForPack(pack)) }}
-                              </span>
                             </div>
                             <p>{{ pack.description }}</p>
                           </div>
@@ -331,15 +306,6 @@
                           <div>
                             <div class="intent-title-row">
                               <strong>{{ pack.label }}</strong>
-                              <span
-                                class="compat-chip"
-                                [ngClass]="{
-                                  'compat-chip--warn': getAudienceCompatibilityForPack(pack) === 'internal-only',
-                                  'compat-chip--ok': getAudienceCompatibilityForPack(pack) === 'external-compatible'
-                                }"
-                              >
-                                {{ audienceCompatibilityLabel(getAudienceCompatibilityForPack(pack)) }}
-                              </span>
                             </div>
                             <p>{{ pack.description }}</p>
                           </div>

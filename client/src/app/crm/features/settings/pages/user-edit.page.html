@@ -69,18 +69,6 @@
             </div>
           </div>
           <div class="field">
-            <label for="userAudience">User audience</label>
-            <p-select
-              inputId="userAudience"
-              formControlName="userAudience"
-              [options]="userAudienceOptions"
-              optionLabel="label"
-              optionValue="value"
-              appendTo="body"
-              styleClass="w-full"
-            ></p-select>
-          </div>
-          <div class="field">
             <label for="userTimeZone">Time zone</label>
             <p-select
               inputId="userTimeZone"
@@ -422,7 +410,7 @@
             label="Save changes"
             icon="pi pi-check"
             class="crm-button--primary"
-            [disabled]="saving() || !canManageAdmin()"
+            [disabled]="saving() || !canManageAdmin() || !hasPendingChanges()"
           ></button>
         </div>
       </form>
