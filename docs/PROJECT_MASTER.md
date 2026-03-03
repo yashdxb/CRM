@@ -74,6 +74,8 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 
 ## 4) Authentication and Authorization
 - JWT Bearer authentication with issuer/audience validation.
+- Primary login path remains email/password (`/api/auth/login`).
+- Optional internal Microsoft Entra sign-in path is available behind config (`/api/auth/login/entra`).
 - Claims-based authorization using `crm:permission`.
 - Policies are defined in `CRM.Enterprise.Security.Permissions` and enforced per controller/action.
 - Authorization fallback policy requires authenticated users.
@@ -85,6 +87,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Default tenant key comes from configuration (`Tenant:DefaultKey`) when not resolved.
 - Tenant provider is set per request; EF query filters rely on it.
 - System roles are defined in `CRM.Enterprise.Security.Permissions.RoleNames`.
+- User audience classification is explicit (`Internal`, `External`) and defaults to `Internal`.
 - **Security levels are tenant-defined. Do not hard-code role security tiers.**
 
 ---
@@ -319,6 +322,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Activity edit/list time: parse API timestamps as UTC (append `Z` when missing) and display in user local time.
 - Lead status resolution: resolve `LeadStatus` entities and attach to `Lead` before save to avoid FK insert order issues.
 - User directory tables must page through API results in production so Azure-hosted builds can see every tenant user; the component now tracks pagination state and forwards `page`/`pageSize` along with `totalUsers`.
+- User edit access workspace uses an accordion-first design with a PrimeNG permissions table: module row-merge, risk tags (`critical|sensitive|standard`), change diff (`added|removed|unchanged`), filters, and conflict warnings for unsafe role combinations.
 - Presence status requires a SignalR connection that includes the tenant header plus the stored JWT even before any user interaction; the root app now starts that connection so online indicators survive refreshes.
 - Tenant keys persisted from login now survive returning to the root host, so the realtime connection always carries the proper `X-Tenant-Key` instead of falling back to `default`.
 - Presence service now treats the locally-authenticated user as online immediately so the green dot isn’t erased while the hub snapshot finishes after a refresh.
@@ -691,7 +695,7 @@ These workflows define how non‑rep roles operate in the same CRM, with clear o
 
 ---
 
-## 17) Entra Migration Roadmap (Next Milestone)
+## 17) Entra Migration Status (Now/Next)
 
 ### Goal
 Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant boundaries and roles.
@@ -699,17 +703,20 @@ Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant 
 ### Current State
 - JWT-based auth issued by the CRM API.
 - Roles and permissions are stored in the CRM database.
+- Entra internal login endpoint is implemented (`POST /api/auth/login/entra`) and feature-configurable.
+- Frontend login page supports optional Microsoft sign-in button when Entra config is enabled.
+- Existing email/password login remains fully supported as fallback.
 
-### Target Architecture (Planned)
+### Target Architecture
 - Entra becomes the identity provider for authentication.
 - CRM continues to enforce `crm:permission` policies but maps users to Entra identities.
 - Tenant resolution stays inside CRM middleware; identity is externalized.
 
-### Required Updates
-- Add Entra app registration and configure OAuth flows.
-- Map Entra user object IDs to CRM users.
-- Update invite and password-reset flows to align with Entra.
-- Ensure tokens include required claims for CRM permissions.
+### Remaining Updates (Next)
+- Add explicit user mapping by Entra object ID (`oid`) persistence (currently email-based matching).
+- Add Entra group/role sync strategy (optional; CRM roles remain source of truth now).
+- Expand rollout from pilot tenants after sign-in telemetry thresholds are met.
+- Align invite/reset flows for Entra-only internal tenants when fallback local login is disabled.
 
 ---
 
@@ -769,9 +776,10 @@ Legend:
 - Evidence:
   - JWT setup: `server/src/CRM.Enterprise.Api/Program.cs`
   - Login/logout endpoints: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`
+  - Entra login endpoint: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs` (`POST /api/auth/login/entra`)
 - Acceptance criteria:
   - Login returns access token + expiry.
-  - Logout returns 204 and requires auth.
+  - Logout returns JSON `200` and requires auth.
 
 3) Accounts (Customers)
 - Status: PARTIAL

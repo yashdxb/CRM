@@ -239,12 +239,16 @@ Result: Full cycle tracked from lead to customer with follow-ups and audit trail
 ## 1) Login and Tenant Context
 
 1. Open the app in your browser.
-2. Log in with your email and password.
-3. Your tenant context is resolved automatically. If you are a super admin, you can switch tenants in the Settings area.
+2. Confirm the correct workspace/tenant context (tenant key or tenant host mapping).
+3. Sign in with either:
+   - Email + password, or
+   - Microsoft sign-in (when Entra is enabled for your environment).
+4. Your tenant context is resolved automatically. If you are a super admin, you can switch tenants in the Settings area.
 
 Notes:
 - If you see data that does not match your company, verify the active tenant.
 - If you are a super admin, tenant data is isolated by tenant key.
+- Internal users are expected to use `Internal` audience access; external/portal users are separate scope.
 
 ## 2) Navigation Overview (What Each Module Means)
 
@@ -360,6 +364,12 @@ Roles control:
 - Which modules are visible.
 - Which actions are allowed.
 
+User access review (Settings -> Users -> Edit User):
+- Permissions are shown in a grouped table by module (merged module cells).
+- Use filters for module, risk, change type, and search.
+- Switch perspective between `After Save` and `Current` to preview access impact before saving.
+- Conflict banner highlights risky combinations (for example, elevated access without view).
+
 If you cannot see a menu:
 - The role does not have view permission.
 
@@ -388,6 +398,7 @@ These settings apply to your tenant.
 
 Login issues:
 - Verify the tenant key and correct credentials.
+- If Microsoft sign-in is enabled, verify Entra client/authority settings are configured for this environment.
 - Confirm API is running and reachable.
 
 AI scoring errors:

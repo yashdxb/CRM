@@ -108,11 +108,12 @@ MoSCoW: Must
 - Evidence:
   - JWT setup: `server/src/CRM.Enterprise.Api/Program.cs`
   - Login/logout endpoints: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`
+  - Entra login endpoint: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs` (`POST /api/auth/login/entra`)
   - Login UI: `client/src/app/public/auth/login.page.html`
   - Login UI logic: `client/src/app/public/auth/login.page.ts`
 - Acceptance criteria:
   - Login returns access token + expiry.
-  - Logout returns 204 and requires auth.
+  - Logout returns JSON `200` and requires auth.
 
 3) Accounts (CRUD, list/search/filter, pagination)
 MoSCoW: Must

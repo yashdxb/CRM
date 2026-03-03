@@ -37,16 +37,36 @@
         <i class="pi pi-shield"></i>
         Access Controls
       </h3>
+      <div class="access-summary">
+        <span class="access-summary__chip">
+          <i class="pi pi-users"></i>
+          {{ selectedRoleCount() }} role{{ selectedRoleCount() === 1 ? '' : 's' }}
+        </span>
+        <span class="access-summary__chip">
+          <i class="pi pi-lock"></i>
+          {{ effectivePermissionCount() }} permissions
+        </span>
+        <span class="access-summary__chip">
+          <i class="pi pi-shield"></i>
+          Security: {{ effectiveSecurityLevel().name }}
+        </span>
+      </div>
 
       <form [formGroup]="form" (ngSubmit)="onSave()" class="form-layout">
         <div class="form-grid">
           <div class="field">
             <label for="userName">Full name</label>
-            <input pInputText id="userName" formControlName="fullName" placeholder="Jordan Patel" class="w-full" />
+            <div class="input-icon-group input-icon-group--blue">
+              <span class="input-icon-group__icon"><i class="pi pi-user"></i></span>
+              <input pInputText id="userName" formControlName="fullName" placeholder="Jordan Patel" class="w-full" />
+            </div>
           </div>
           <div class="field">
             <label for="userEmail">Email</label>
-            <input pInputText id="userEmail" formControlName="email" placeholder="user@example.com" class="w-full" />
+            <div class="input-icon-group input-icon-group--teal">
+              <span class="input-icon-group__icon"><i class="pi pi-envelope"></i></span>
+              <input pInputText id="userEmail" formControlName="email" placeholder="user@example.com" class="w-full" />
+            </div>
           </div>
           <div class="field">
             <label for="userAudience">User audience</label>
@@ -116,16 +136,19 @@
           </div>
           <div class="field">
             <label for="userQuota">Monthly quota ({{ currencyCode() || 'N/A' }})</label>
-            <input
-              pInputText
-              id="userQuota"
-              type="number"
-              min="0"
-              step="0.01"
-              formControlName="monthlyQuota"
-              placeholder="e.g. 75000"
-              class="w-full"
-            />
+            <div class="input-icon-group input-icon-group--amber">
+              <span class="input-icon-group__icon"><i class="pi pi-dollar"></i></span>
+              <input
+                pInputText
+                id="userQuota"
+                type="number"
+                min="0"
+                step="0.01"
+                formControlName="monthlyQuota"
+                placeholder="e.g. 75000"
+                class="w-full"
+              />
+            </div>
           </div>
           <div class="field full">
             <label for="userRoles">Roles</label>
@@ -142,32 +165,19 @@
             ></p-multiSelect>
           </div>
           <div class="field full">
-            <label for="userDashboardPack">Dashboard pack</label>
-            <p-select
-              inputId="userDashboardPack"
-              [options]="dashboardPackOptions()"
-              [ngModel]="selectedDashboardPackKey()"
-              [ngModelOptions]="{ standalone: true }"
-              (ngModelChange)="selectedDashboardPackKey.set($any($event))"
-              optionLabel="label"
-              optionValue="value"
-              [disabled]="!canManageAdmin() || loadingDashboardPackOptions() || updatingDashboardPack()"
-              appendTo="body"
-              styleClass="w-full"
-            ></p-select>
-            <small>Role default is preselected unless a custom pack is set.</small>
-          </div>
-          <div class="field full">
             <label for="userTempPassword">Temporary password</label>
             <div class="password-field">
-              <input
-                pInputText
-                id="userTempPassword"
-                type="text"
-                formControlName="temporaryPassword"
-                placeholder="Optional"
-                class="w-full"
-              />
+              <div class="input-icon-group input-icon-group--violet">
+                <span class="input-icon-group__icon"><i class="pi pi-key"></i></span>
+                <input
+                  pInputText
+                  id="userTempPassword"
+                  type="text"
+                  formControlName="temporaryPassword"
+                  placeholder="Optional"
+                  class="w-full"
+                />
+              </div>
               <button type="button" class="btn-generate" [disabled]="!canManageAdmin()" (click)="generatePassword()">
                 <i class="pi pi-sync"></i>
                 Generate
@@ -191,6 +201,218 @@
             <p-toggleSwitch formControlName="isActive"></p-toggleSwitch>
           </div>
         </div>
+
+        <p-accordion
+          [value]="accessAccordionValue()"
+          [multiple]="true"
+          class="user-access-accordion"
+        >
+          <p-accordion-panel value="permissions">
+            <p-accordion-header>
+              <div class="accordion-title">
+                <i class="pi pi-lock"></i>
+                <span>Permissions</span>
+                <p-tag [value]="effectivePermissionCount() + ' effective'" severity="info"></p-tag>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
+              <p class="accordion-note">Effective permissions are derived from selected roles. Manage individual permissions in Role Management.</p>
+              <div class="permission-conflict-banner" *ngIf="permissionConflictWarnings().length">
+                <div class="permission-conflict-banner__title">
+                  <i class="pi pi-exclamation-triangle"></i>
+                  Potential access conflicts
+                </div>
+                <ul>
+                  <li *ngFor="let warning of permissionConflictWarnings()">{{ warning }}</li>
+                </ul>
+              </div>
+
+              <ng-container *ngIf="permissionTableRows().length; else noPermissions">
+                <div class="permission-controls">
+                  <div class="field">
+                    <label for="permissionsPerspective">Perspective</label>
+                    <p-select
+                      inputId="permissionsPerspective"
+                      [options]="permissionPerspectiveOptions"
+                      [ngModel]="permissionPerspective()"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="permissionPerspective.set($any($event))"
+                      optionLabel="label"
+                      optionValue="value"
+                      appendTo="body"
+                      styleClass="w-full"
+                    ></p-select>
+                  </div>
+                  <div class="field">
+                    <label for="permissionsModuleFilter">Module</label>
+                    <p-select
+                      inputId="permissionsModuleFilter"
+                      [options]="permissionModuleOptions()"
+                      [ngModel]="permissionModuleFilter()"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="permissionModuleFilter.set($any($event))"
+                      optionLabel="label"
+                      optionValue="value"
+                      appendTo="body"
+                      styleClass="w-full"
+                    ></p-select>
+                  </div>
+                  <div class="field">
+                    <label for="permissionsRiskFilter">Risk</label>
+                    <p-select
+                      inputId="permissionsRiskFilter"
+                      [options]="permissionRiskOptions"
+                      [ngModel]="permissionRiskFilter()"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="permissionRiskFilter.set($any($event))"
+                      optionLabel="label"
+                      optionValue="value"
+                      appendTo="body"
+                      styleClass="w-full"
+                    ></p-select>
+                  </div>
+                  <div class="field">
+                    <label for="permissionsChangeFilter">Change</label>
+                    <p-select
+                      inputId="permissionsChangeFilter"
+                      [options]="permissionChangeOptions"
+                      [ngModel]="permissionChangeFilter()"
+                      [ngModelOptions]="{ standalone: true }"
+                      (ngModelChange)="permissionChangeFilter.set($any($event))"
+                      optionLabel="label"
+                      optionValue="value"
+                      appendTo="body"
+                      styleClass="w-full"
+                    ></p-select>
+                  </div>
+                  <div class="field permission-search">
+                    <label for="permissionsSearch">Search</label>
+                    <div class="input-icon-group input-icon-group--blue">
+                      <span class="input-icon-group__icon"><i class="pi pi-search"></i></span>
+                      <input
+                        pInputText
+                        id="permissionsSearch"
+                        [ngModel]="permissionSearch()"
+                        [ngModelOptions]="{ standalone: true }"
+                        (ngModelChange)="permissionSearch.set($any($event) ?? '')"
+                        placeholder="Module, permission, role"
+                        class="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div class="permissions-table-wrap">
+                  <p-table
+                    [value]="permissionTableRows()"
+                    [paginator]="true"
+                    [rows]="10"
+                    [rowsPerPageOptions]="[10, 25, 50]"
+                    rowGroupMode="rowspan"
+                    groupRowsBy="module"
+                    sortField="module"
+                    [sortOrder]="1"
+                    [tableStyle]="{ 'min-width': '100%' }"
+                    styleClass="permissions-table"
+                  >
+                    <ng-template pTemplate="header">
+                      <tr>
+                        <th style="width: 24%">Module</th>
+                        <th style="width: 28%">Permission</th>
+                        <th style="width: 12%">Risk</th>
+                        <th style="width: 12%">Change</th>
+                        <th style="width: 24%">Source Roles</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row let-rowgroup="rowgroup" let-rowspan="rowspan">
+                      <tr [ngClass]="{ 'module-group-start': rowgroup }">
+                        <td *ngIf="rowgroup" [attr.rowspan]="rowspan">
+                          <span class="module-cell">{{ row.module }}</span>
+                        </td>
+                        <td>
+                          <span class="permission-key">{{ row.label }}</span>
+                        </td>
+                        <td>
+                          <span class="risk-chip" [ngClass]="'risk-chip--' + row.risk">{{ formatRiskLabel(row.risk) }}</span>
+                        </td>
+                        <td>
+                          <span class="change-chip" [ngClass]="'change-chip--' + row.changeType">
+                            {{ formatChangeLabel(row.changeType) }}
+                          </span>
+                        </td>
+                        <td>
+                          <div class="permission-item__sources">
+                            <span class="source-chip" *ngFor="let source of row.sources">{{ source }}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                </div>
+              </ng-container>
+              <ng-template #noPermissions>
+                <div class="empty-state">No matching permissions. Change filters or assign at least one role.</div>
+              </ng-template>
+            </p-accordion-content>
+          </p-accordion-panel>
+
+          <p-accordion-panel value="security">
+            <p-accordion-header>
+              <div class="accordion-title">
+                <i class="pi pi-shield"></i>
+                <span>Security Levels</span>
+                <p-tag [value]="effectiveSecurityLevel().name" severity="success"></p-tag>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
+              <p class="accordion-note">Security level is role-derived. Highest hierarchy role is used as the effective level when multiple roles are assigned.</p>
+              <div class="security-card">
+                <div class="security-card__row">
+                  <span class="label">Effective level</span>
+                  <strong>{{ effectiveSecurityLevel().name }}</strong>
+                </div>
+                <div class="security-card__row">
+                  <span class="label">Driving role</span>
+                  <strong>{{ effectiveSecurityLevel().roleName || 'Not available' }}</strong>
+                </div>
+                <div class="security-card__row">
+                  <span class="label">All matched levels</span>
+                  <div class="security-level-list">
+                    <span class="source-chip" *ngFor="let level of effectiveSecurityLevel().sources">{{ level }}</span>
+                    <span class="source-chip muted" *ngIf="!effectiveSecurityLevel().sources.length">None</span>
+                  </div>
+                </div>
+              </div>
+            </p-accordion-content>
+          </p-accordion-panel>
+
+          <p-accordion-panel value="dashboard">
+            <p-accordion-header>
+              <div class="accordion-title">
+                <i class="pi pi-th-large"></i>
+                <span>Dashboard Packs</span>
+                <p-tag [value]="selectedDashboardPackKey() || 'Role default'" severity="warn"></p-tag>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
+              <div class="field">
+                <label for="userDashboardPack">Assigned pack</label>
+                <p-select
+                  inputId="userDashboardPack"
+                  [options]="dashboardPackOptions()"
+                  [ngModel]="selectedDashboardPackKey()"
+                  [ngModelOptions]="{ standalone: true }"
+                  (ngModelChange)="selectedDashboardPackKey.set($any($event))"
+                  optionLabel="label"
+                  optionValue="value"
+                  [disabled]="!canManageAdmin() || loadingDashboardPackOptions() || updatingDashboardPack()"
+                  appendTo="body"
+                  styleClass="w-full"
+                ></p-select>
+                <small>Role default is preselected unless a custom pack is set.</small>
+              </div>
+            </p-accordion-content>
+          </p-accordion-panel>
+        </p-accordion>
 
         <div class="form-actions">
           <button type="button" pButton label="Cancel" class="crm-button--ghost" routerLink="/app/settings/users"></button>

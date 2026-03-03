@@ -1,11 +1,14 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
+import { TagModule } from 'primeng/tag';
+import { TableModule } from 'primeng/table';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -32,10 +35,13 @@ import { ReferenceDataService } from '../../../../core/services/reference-data.s
     FormsModule,
     ReactiveFormsModule,
     RouterLink,
+    AccordionModule,
     ButtonModule,
     InputTextModule,
     MultiSelectModule,
     SelectModule,
+    TagModule,
+    TableModule,
     ToggleSwitchModule,
     BreadcrumbsComponent
   ],
@@ -56,8 +62,14 @@ export class UserEditPage implements OnInit {
   protected readonly roleDefaultDashboardPacks = signal<DashboardPackOption[]>([]);
   protected readonly customDashboardPacks = signal<DashboardPackOption[]>([]);
   protected readonly selectedDashboardPackKey = signal<string | null>(null);
+  protected readonly permissionPerspective = signal<'draft' | 'current'>('draft');
+  protected readonly permissionSearch = signal('');
+  protected readonly permissionModuleFilter = signal<'all' | string>('all');
+  protected readonly permissionRiskFilter = signal<'all' | 'critical' | 'sensitive' | 'standard'>('all');
+  protected readonly permissionChangeFilter = signal<'all' | 'added' | 'removed' | 'unchanged'>('all');
   protected readonly loadingDashboardPackOptions = signal(true);
   protected readonly updatingDashboardPack = signal(false);
+  protected readonly accessAccordionValue = signal<string[]>(['permissions', 'security', 'dashboard']);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly generatedPassword = signal<string | null>(null);
@@ -66,6 +78,232 @@ export class UserEditPage implements OnInit {
   protected readonly canManageAdmin = signal(
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
+  protected readonly selectedRoleRecords = computed(() => {
+    const selectedIds = new Set(this.form.controls.roleIds.value ?? []);
+    return this.roles().filter((role) => selectedIds.has(role.id));
+  });
+  protected readonly selectedRoleCount = computed(() => this.selectedRoleRecords().length);
+  protected readonly effectivePermissionGroups = computed(() => {
+    const permissionSources = new Map<string, Set<string>>();
+    for (const role of this.selectedRoleRecords()) {
+      const roleName = role.name || 'Unnamed role';
+      const allPermissions = new Set<string>([
+        ...(role.permissions ?? []),
+        ...(role.inheritedPermissions ?? []),
+        ...(role.basePermissions ?? [])
+      ]);
+
+      for (const permission of allPermissions) {
+        if (!permission) {
+          continue;
+        }
+
+        if (!permissionSources.has(permission)) {
+          permissionSources.set(permission, new Set<string>());
+        }
+
+        permissionSources.get(permission)?.add(roleName);
+      }
+    }
+
+    const grouped = new Map<string, Array<{ key: string; sources: string[] }>>();
+    for (const [permission, sources] of permissionSources.entries()) {
+      const module = this.resolvePermissionModule(permission);
+      if (!grouped.has(module)) {
+        grouped.set(module, []);
+      }
+
+      grouped.get(module)?.push({
+        key: permission,
+        sources: [...sources].sort((a, b) => a.localeCompare(b))
+      });
+    }
+
+    return [...grouped.entries()]
+      .map(([module, items]) => ({
+        module,
+        count: items.length,
+        items: items.sort((a, b) => a.key.localeCompare(b.key))
+      }))
+      .sort((a, b) => a.module.localeCompare(b.module));
+  });
+  protected readonly effectivePermissionCount = computed(() =>
+    this.effectivePermissionGroups().reduce((total, group) => total + group.count, 0)
+  );
+  protected readonly effectivePermissionRows = computed(() =>
+    this.effectivePermissionGroups().flatMap((group) =>
+      group.items.map((item) => ({
+        module: group.module,
+        key: item.key,
+        label: this.formatPermissionLabel(item.key),
+        risk: this.resolvePermissionRisk(item.key),
+        sources: item.sources
+      }))
+    )
+  );
+  protected readonly currentPermissionRows = computed(() => {
+    const roleIds = this.user()?.roleIds ?? [];
+    const selectedIds = new Set(roleIds);
+    const selectedRoles = this.roles().filter((role) => selectedIds.has(role.id));
+    const permissionSources = new Map<string, Set<string>>();
+
+    for (const role of selectedRoles) {
+      const roleName = role.name || 'Unnamed role';
+      const allPermissions = new Set<string>([
+        ...(role.permissions ?? []),
+        ...(role.inheritedPermissions ?? []),
+        ...(role.basePermissions ?? [])
+      ]);
+
+      for (const permission of allPermissions) {
+        if (!permission) {
+          continue;
+        }
+
+        if (!permissionSources.has(permission)) {
+          permissionSources.set(permission, new Set<string>());
+        }
+
+        permissionSources.get(permission)?.add(roleName);
+      }
+    }
+
+    return [...permissionSources.entries()]
+      .map(([key, sources]) => ({
+        module: this.resolvePermissionModule(key),
+        key,
+        label: this.formatPermissionLabel(key),
+        risk: this.resolvePermissionRisk(key),
+        sources: [...sources].sort((a, b) => a.localeCompare(b))
+      }))
+      .sort((a, b) => (a.module === b.module ? a.label.localeCompare(b.label) : a.module.localeCompare(b.module)));
+  });
+  protected readonly permissionModuleOptions = computed(() => {
+    const modules = new Set<string>([
+      ...this.effectivePermissionRows().map((row) => row.module),
+      ...this.currentPermissionRows().map((row) => row.module)
+    ]);
+
+    return [
+      { label: 'All modules', value: 'all' },
+      ...[...modules].sort((a, b) => a.localeCompare(b)).map((module) => ({ label: module, value: module }))
+    ];
+  });
+  protected readonly permissionPerspectiveOptions = [
+    { label: 'After Save', value: 'draft' as const },
+    { label: 'Current', value: 'current' as const }
+  ];
+  protected readonly permissionRiskOptions = [
+    { label: 'All risks', value: 'all' as const },
+    { label: 'Critical', value: 'critical' as const },
+    { label: 'Sensitive', value: 'sensitive' as const },
+    { label: 'Standard', value: 'standard' as const }
+  ];
+  protected readonly permissionChangeOptions = [
+    { label: 'All changes', value: 'all' as const },
+    { label: 'Added', value: 'added' as const },
+    { label: 'Removed', value: 'removed' as const },
+    { label: 'Unchanged', value: 'unchanged' as const }
+  ];
+  protected readonly permissionTableRows = computed(() => {
+    const baseline = new Map(this.currentPermissionRows().map((row) => [row.key, row]));
+    const draft = new Map(this.effectivePermissionRows().map((row) => [row.key, row]));
+    const perspective = this.permissionPerspective();
+
+    const rows: Array<{
+      module: string;
+      key: string;
+      label: string;
+      risk: 'critical' | 'sensitive' | 'standard';
+      sources: string[];
+      changeType: 'added' | 'removed' | 'unchanged';
+    }> = [];
+
+    if (perspective === 'current') {
+      for (const [key, row] of baseline.entries()) {
+        rows.push({
+          ...row,
+          changeType: draft.has(key) ? 'unchanged' : 'removed'
+        });
+      }
+    } else {
+      for (const [key, row] of draft.entries()) {
+        rows.push({
+          ...row,
+          changeType: baseline.has(key) ? 'unchanged' : 'added'
+        });
+      }
+
+      for (const [key, row] of baseline.entries()) {
+        if (!draft.has(key)) {
+          rows.push({
+            ...row,
+            changeType: 'removed'
+          });
+        }
+      }
+    }
+
+    const moduleFilter = this.permissionModuleFilter();
+    const riskFilter = this.permissionRiskFilter();
+    const changeFilter = this.permissionChangeFilter();
+    const search = this.permissionSearch().trim().toLowerCase();
+
+    return rows
+      .filter((row) => moduleFilter === 'all' || row.module === moduleFilter)
+      .filter((row) => riskFilter === 'all' || row.risk === riskFilter)
+      .filter((row) => changeFilter === 'all' || row.changeType === changeFilter)
+      .filter((row) => {
+        if (!search) {
+          return true;
+        }
+
+        return (
+          row.module.toLowerCase().includes(search)
+          || row.label.toLowerCase().includes(search)
+          || row.sources.some((source) => source.toLowerCase().includes(search))
+        );
+      })
+      .sort((a, b) => (a.module === b.module ? a.label.localeCompare(b.label) : a.module.localeCompare(b.module)));
+  });
+  protected readonly permissionConflictWarnings = computed(() => {
+    const byModule = new Map<string, Set<string>>();
+    for (const row of this.effectivePermissionRows()) {
+      const parts = row.key.split('.');
+      const action = (parts[parts.length - 1] ?? '').toLowerCase();
+      if (!byModule.has(row.module)) {
+        byModule.set(row.module, new Set<string>());
+      }
+      byModule.get(row.module)?.add(action);
+    }
+
+    const warnings: string[] = [];
+    for (const [module, actions] of byModule.entries()) {
+      const hasRead = actions.has('view') || actions.has('read') || actions.has('list');
+      const hasElevated = actions.has('manage') || actions.has('admin') || actions.has('delete');
+      if (hasElevated && !hasRead) {
+        warnings.push(`${module}: elevated access exists without View permission.`);
+      }
+
+      if (actions.has('admin') && !actions.has('manage')) {
+        warnings.push(`${module}: Admin granted without explicit Manage permission.`);
+      }
+    }
+
+    return warnings;
+  });
+  protected readonly effectiveSecurityLevel = computed(() => {
+    const ranked = this.selectedRoleRecords()
+      .filter((role) => !!role.securityLevelName)
+      .sort((a, b) => (b.hierarchyLevel ?? 0) - (a.hierarchyLevel ?? 0));
+
+    const effective = ranked[0] ?? null;
+    return {
+      name: effective?.securityLevelName ?? 'Not set',
+      roleName: effective?.name ?? null,
+      sources: [...new Set(ranked.map((role) => role.securityLevelName).filter(Boolean) as string[])]
+    };
+  });
 
   // Shared time zone catalog keeps labels and flags consistent across settings screens.
   protected timezoneOptions: TimeZoneOption[] = [];
@@ -161,6 +399,35 @@ export class UserEditPage implements OnInit {
       label: option.name,
       value: option.key
     }));
+  }
+
+  protected formatPermissionLabel(permission: string): string {
+    const parts = permission.split('.');
+    return parts.length <= 2 ? permission : parts.slice(2).join(' ');
+  }
+
+  protected formatRiskLabel(risk: 'critical' | 'sensitive' | 'standard'): string {
+    if (risk === 'critical') {
+      return 'Critical';
+    }
+
+    if (risk === 'sensitive') {
+      return 'Sensitive';
+    }
+
+    return 'Standard';
+  }
+
+  protected formatChangeLabel(changeType: 'added' | 'removed' | 'unchanged'): string {
+    if (changeType === 'added') {
+      return 'Added';
+    }
+
+    if (changeType === 'removed') {
+      return 'Removed';
+    }
+
+    return 'Unchanged';
   }
 
   protected generatePassword() {
@@ -321,6 +588,35 @@ export class UserEditPage implements OnInit {
     }
 
     return null;
+  }
+
+  private resolvePermissionModule(permission: string): string {
+    const parts = permission.split('.');
+    return parts.length >= 2 ? parts[1] ?? 'General' : 'General';
+  }
+
+  private resolvePermissionRisk(permission: string): 'critical' | 'sensitive' | 'standard' {
+    const normalized = permission.toLowerCase();
+    if (
+      normalized.endsWith('.admin')
+      || normalized.endsWith('.manage')
+      || normalized.endsWith('.delete')
+      || normalized.includes('.security.')
+      || normalized.includes('.billing.')
+    ) {
+      return 'critical';
+    }
+
+    if (
+      normalized.endsWith('.approve')
+      || normalized.endsWith('.export')
+      || normalized.endsWith('.assign')
+      || normalized.includes('.settings.')
+    ) {
+      return 'sensitive';
+    }
+
+    return 'standard';
   }
 
   private generatePasswordValue() {
