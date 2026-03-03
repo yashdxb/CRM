@@ -18,6 +18,8 @@ interface CrmEventEnvelope {
 }
 
 type PresenceRegistration = { entityType: string; recordId: string };
+const GUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 @Injectable({ providedIn: 'root' })
 export class CrmEventsService {
@@ -91,6 +93,10 @@ export class CrmEventsService {
   }
 
   joinRecordPresence(entityType: string, recordId: string) {
+    if (!this.isValidRecordId(recordId)) {
+      return;
+    }
+
     const key = `${entityType.toLowerCase()}:${recordId}`;
     this.pendingPresence.set(key, { entityType, recordId });
     console.debug('[CrmEvents] joinRecordPresence called:', { entityType, recordId, key });
@@ -103,6 +109,10 @@ export class CrmEventsService {
   }
 
   leaveRecordPresence(entityType: string, recordId: string) {
+    if (!this.isValidRecordId(recordId)) {
+      return;
+    }
+
     const key = `${entityType.toLowerCase()}:${recordId}`;
     this.pendingPresence.delete(key);
 
@@ -116,6 +126,10 @@ export class CrmEventsService {
   }
 
   setRecordEditingState(entityType: string, recordId: string, isEditing: boolean) {
+    if (!this.isValidRecordId(recordId)) {
+      return;
+    }
+
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
       return;
     }
@@ -249,11 +263,19 @@ export class CrmEventsService {
     }
 
     for (const registration of this.pendingPresence.values()) {
+      if (!this.isValidRecordId(registration.recordId)) {
+        continue;
+      }
+
       console.debug('[CrmEvents] Invoking JoinRecordPresence:', registration);
       this.connection.invoke('JoinRecordPresence', registration.entityType, registration.recordId)
         .then(() => console.debug('[CrmEvents] JoinRecordPresence succeeded:', registration))
         .catch((err) => console.warn('[CrmEvents] JoinRecordPresence failed:', registration, err));
     }
+  }
+
+  private isValidRecordId(recordId: string): boolean {
+    return GUID_PATTERN.test(recordId ?? '');
   }
 
   private ensureFeatureFlagsLoaded(force = false): Promise<void> {
