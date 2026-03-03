@@ -33,6 +33,7 @@ interface ScreenPermission {
 
 type PermissionWorkspaceTab = 'all-permissions' | 'presets' | 'drift' | 'effective-access';
 type PermissionActionTab = 'create-manage' | 'view-analyze' | 'governance';
+type AudienceCompatibility = 'internal-only' | 'external-compatible';
 
 @Component({
   selector: 'app-role-form-page',
@@ -150,6 +151,9 @@ export class RoleFormPage {
     Array.from(this.selectedPermissions())
       .map((permission) => this.permissionLabel(permission))
       .sort((a, b) => a.localeCompare(b))
+  );
+  protected readonly selectedAudienceCompatibility = computed<AudienceCompatibility>(() =>
+    this.resolveAudienceCompatibility(this.selectedPermissions())
   );
 
   protected readonly roleForm = this.fb.nonNullable.group({
@@ -649,6 +653,14 @@ export class RoleFormPage {
     return this.permissionCatalog().find((item) => item.key === key)?.label ?? key;
   }
 
+  protected getAudienceCompatibilityForPack(pack: RoleIntentPack | PermissionPackPreset): AudienceCompatibility {
+    return this.resolveAudienceCompatibility(new Set(pack.permissions ?? []));
+  }
+
+  protected audienceCompatibilityLabel(value: AudienceCompatibility): string {
+    return value === 'internal-only' ? 'Internal Only' : 'External Compatible';
+  }
+
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
   }
@@ -674,5 +686,18 @@ export class RoleFormPage {
       return 'governance';
     }
     return 'create-manage';
+  }
+
+  private resolveAudienceCompatibility(permissions: Set<string>): AudienceCompatibility {
+    if (
+      permissions.has('Permissions.Administration.View') ||
+      permissions.has('Permissions.Administration.Manage') ||
+      permissions.has('Permissions.Tenants.View') ||
+      permissions.has('Permissions.Tenants.Manage')
+    ) {
+      return 'internal-only';
+    }
+
+    return 'external-compatible';
   }
 }

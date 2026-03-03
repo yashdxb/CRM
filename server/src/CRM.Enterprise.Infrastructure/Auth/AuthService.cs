@@ -79,6 +79,7 @@ public class AuthService : IAuthService
                 u.TenantId == tenantId &&
                 u.IsActive &&
                 !u.IsDeleted &&
+                u.Audience != UserAudience.External &&
                 (u.EmailNormalized == normalizedEmail ||
                  (u.EmailNormalized == null && u.Email.ToLower() == normalizedEmail)))
             .FirstOrDefaultAsync(cancellationToken);

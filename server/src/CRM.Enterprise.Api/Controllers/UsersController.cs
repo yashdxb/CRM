@@ -325,6 +325,12 @@ public class UsersController : ControllerBase
             return BadRequest("User audience must be 'Internal' or 'External'.");
         }
 
+        var audienceValidationError = await ValidateRoleAudienceCompatibilityAsync(roleIds, audience, cancellationToken);
+        if (audienceValidationError is not null)
+        {
+            return BadRequest(audienceValidationError);
+        }
+
         var normalizedEmail = NormalizeEmail(request.Email);
         if (string.IsNullOrWhiteSpace(normalizedEmail))
         {
@@ -391,6 +397,12 @@ public class UsersController : ControllerBase
         if (!TryParseAudience(request.UserAudience, out var audience))
         {
             return BadRequest("User audience must be 'Internal' or 'External'.");
+        }
+
+        var audienceValidationError = await ValidateRoleAudienceCompatibilityAsync(roleIds, audience, cancellationToken);
+        if (audienceValidationError is not null)
+        {
+            return BadRequest(audienceValidationError);
         }
 
         var normalizedEmail = NormalizeEmail(request.Email);
@@ -571,6 +583,122 @@ public class UsersController : ControllerBase
 
     private static bool IsRoleSelectionValid(IReadOnlyCollection<Guid>? roleIds)
         => roleIds is { Count: > 0 };
+
+    private async Task<string?> ValidateRoleAudienceCompatibilityAsync(
+        IReadOnlyCollection<Guid> roleIds,
+        UserAudience audience,
+        CancellationToken cancellationToken)
+    {
+        if (audience != UserAudience.External || roleIds.Count == 0)
+        {
+            return null;
+        }
+
+        var effectivePermissions = await ResolveEffectiveRolePermissionsAsync(roleIds, cancellationToken);
+        var blocked = effectivePermissions
+            .Where(permission => Permissions.ExternalAudienceRestrictedKeys.Contains(permission))
+            .OrderBy(permission => permission)
+            .ToList();
+
+        if (blocked.Count == 0)
+        {
+            return null;
+        }
+
+        return "Selected roles are not allowed for External audience users.";
+    }
+
+    private async Task<HashSet<string>> ResolveEffectiveRolePermissionsAsync(
+        IReadOnlyCollection<Guid> roleIds,
+        CancellationToken cancellationToken)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var discovered = new Dictionary<Guid, (Guid? ParentRoleId, string? BasePermissionsJson)>();
+        var pending = new HashSet<Guid>(roleIds.Where(id => id != Guid.Empty));
+
+        while (pending.Count > 0)
+        {
+            var batch = pending.ToList();
+            pending.Clear();
+
+            var rows = await _dbContext.Roles
+                .AsNoTracking()
+                .Where(role => batch.Contains(role.Id) && !role.IsDeleted)
+                .Select(role => new { role.Id, role.ParentRoleId, role.BasePermissionsJson })
+                .ToListAsync(cancellationToken);
+
+            foreach (var row in rows)
+            {
+                if (discovered.ContainsKey(row.Id))
+                {
+                    continue;
+                }
+
+                discovered[row.Id] = (row.ParentRoleId, row.BasePermissionsJson);
+                if (row.ParentRoleId.HasValue && !discovered.ContainsKey(row.ParentRoleId.Value))
+                {
+                    pending.Add(row.ParentRoleId.Value);
+                }
+            }
+        }
+
+        if (discovered.Count == 0)
+        {
+            return result;
+        }
+
+        var discoveredIds = discovered.Keys.ToList();
+        var explicitPermissions = await _dbContext.RolePermissions
+            .AsNoTracking()
+            .Where(link => discoveredIds.Contains(link.RoleId) && !link.IsDeleted)
+            .Select(link => link.Permission)
+            .ToListAsync(cancellationToken);
+
+        foreach (var permission in explicitPermissions)
+        {
+            if (!string.IsNullOrWhiteSpace(permission))
+            {
+                result.Add(permission);
+            }
+        }
+
+        foreach (var role in discovered.Values)
+        {
+            foreach (var permission in DeserializePermissions(role.BasePermissionsJson))
+            {
+                result.Add(permission);
+            }
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<string> DeserializePermissions(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return Array.Empty<string>();
+        }
+
+        try
+        {
+            var values = JsonSerializer.Deserialize<List<string>>(json);
+            if (values is null)
+            {
+                return Array.Empty<string>();
+            }
+
+            return values
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<string>();
+        }
+    }
 
     private async Task<int> GetUserHighestRoleLevelAsync(Guid userId, CancellationToken cancellationToken)
     {

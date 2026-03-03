@@ -42,6 +42,8 @@ public static class Permissions
     {
         public const string SuperAdmin = "Super Admin";
         public const string Admin = "Admin";
+        public const string InternalAdmin = "Internal Admin";
+        public const string ExternalAdmin = "External Admin";
         public const string SalesManager = "Sales Manager";
         public const string SalesRep = "Sales Rep";
         public const string MarketingOps = "Marketing Ops";
@@ -100,6 +102,15 @@ public static class Permissions
             .Select(d => d.Key)
             .ToArray());
 
+    public static IReadOnlySet<string> ExternalAudienceRestrictedKeys { get; } =
+        new HashSet<string>(new[]
+        {
+            Policies.AdministrationView,
+            Policies.AdministrationManage,
+            Policies.TenantsView,
+            Policies.TenantsManage
+        }, StringComparer.OrdinalIgnoreCase);
+
     private static readonly string[] SalesRepPermissions =
     {
         Policies.DashboardView,
@@ -130,11 +141,23 @@ public static class Permissions
             Policies.OpportunitiesApprovalsOverride
         }).Distinct().ToArray();
 
+    private static readonly string[] ExternalAdminPermissions =
+    {
+        Policies.DashboardView,
+        Policies.CustomersView,
+        Policies.ContactsView,
+        Policies.ActivitiesView,
+        Policies.HelpDeskView,
+        Policies.HelpDeskManage
+    };
+
     public static IReadOnlyList<RoleIntentDefinition> RoleIntents { get; } = Array.AsReadOnly(new[]
     {
         new RoleIntentDefinition(RoleNames.SalesRep, "Sales Rep", "Owns assigned accounts and opportunities.", SalesRepPermissions),
         new RoleIntentDefinition(RoleNames.SalesManager, "Sales Manager", "Manages team pipeline and forecasts.", SalesManagerPermissions),
         new RoleIntentDefinition(RoleNames.Admin, "Admin", "System administrator with workspace governance.", AdminPermissions),
+        new RoleIntentDefinition(RoleNames.InternalAdmin, "Internal Admin", "Operates workspace governance, users/roles, and admin workflows.", AdminPermissions),
+        new RoleIntentDefinition(RoleNames.ExternalAdmin, "External Admin", "Customer-side support administrator without CRM governance rights.", ExternalAdminPermissions),
         new RoleIntentDefinition(RoleNames.MarketingOps, "Marketing Ops", "Runs campaigns and lead intake.", new[]
         {
             Policies.DashboardView,

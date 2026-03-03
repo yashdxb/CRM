@@ -706,6 +706,8 @@ Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant 
 - Entra internal login endpoint is implemented (`POST /api/auth/login/entra`) and feature-configurable.
 - Frontend login page supports optional Microsoft sign-in button when Entra config is enabled.
 - Existing email/password login remains fully supported as fallback.
+- External audience users are blocked from internal app sign-in paths and should use external-facing channels/portal scope.
+- Role intent packs include `Internal Admin` and `External Admin` templates for audience-safe role design.
 
 ### Target Architecture
 - Entra becomes the identity provider for authentication.

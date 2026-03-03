@@ -363,6 +363,15 @@ Bulk actions:
 Roles control:
 - Which modules are visible.
 - Which actions are allowed.
+- Audience compatibility (Internal vs External).
+
+Admin role templates:
+- **Internal Admin**: Workspace governance (users, roles, settings, audit, admin operations).
+- **External Admin**: Support-focused administration (Help Desk operations) without tenant/workspace governance.
+
+Guardrails:
+- External users cannot be assigned roles that include governance permissions such as Administration/Tenants management.
+- If a role is incompatible with External audience, user save returns a validation error.
 
 User access review (Settings -> Users -> Edit User):
 - Permissions are shown in a grouped table by module (merged module cells).
