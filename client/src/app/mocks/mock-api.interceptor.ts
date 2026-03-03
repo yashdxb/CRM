@@ -18,6 +18,7 @@ import {
   getPermissionDefinitions,
   lookupActiveUsers,
   listRoles,
+  isUserAudienceRoleAssignmentAllowed,
   mockCustomers,
   resetUserPassword,
   searchActivities,
@@ -195,6 +196,9 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (req.method === 'POST' && path === '/api/users') {
     const payload = req.body as UpsertUserRequest;
+    if (!isUserAudienceRoleAssignmentAllowed(payload.userAudience ?? 'Internal', payload.roleIds ?? [])) {
+      return respond({ message: 'Selected roles are not allowed for External audience users.' }, 400, 120);
+    }
     const created = createUser(payload);
     return respond(created, 201, 140);
   }
@@ -211,6 +215,9 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const match = path.match(/^\/api\/users\/([^/]+)$/);
     if (match) {
       const payload = req.body as UpsertUserRequest;
+      if (!isUserAudienceRoleAssignmentAllowed(payload.userAudience ?? 'Internal', payload.roleIds ?? [])) {
+        return respond({ message: 'Selected roles are not allowed for External audience users.' }, 400, 120);
+      }
       const updated = updateUser(match[1], payload);
       return respond(updated ? null : { message: 'Not found' }, updated ? 204 : 404, 140);
     }

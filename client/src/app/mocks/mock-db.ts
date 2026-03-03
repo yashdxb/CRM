@@ -1100,6 +1100,13 @@ let mockRoles: RoleSummary[] = [
   }
 ];
 
+const externalAudienceRestrictedPermissions = new Set<string>([
+  PERMISSION_KEYS.administrationView,
+  PERMISSION_KEYS.administrationManage,
+  PERMISSION_KEYS.tenantsView,
+  PERMISSION_KEYS.tenantsManage
+]);
+
 interface MockUserRecord {
   id: string;
   fullName: string;
@@ -1380,6 +1387,37 @@ export const updateUser = (id: string, payload: UpsertUserRequest): UserDetailRe
   record.isActive = payload.isActive;
   record.roleIds = [...payload.roleIds];
   return toUserDetail(record);
+};
+
+export const isUserAudienceRoleAssignmentAllowed = (
+  audience: 'Internal' | 'External' | null | undefined,
+  roleIds: string[]
+): boolean => {
+  if ((audience ?? 'Internal') !== 'External') {
+    return true;
+  }
+
+  const selected = mockRoles.filter((role) => roleIds.includes(role.id));
+  const effective = new Set<string>();
+  for (const role of selected) {
+    for (const permission of role.permissions ?? []) {
+      effective.add(permission);
+    }
+    for (const permission of role.basePermissions ?? []) {
+      effective.add(permission);
+    }
+    for (const permission of role.inheritedPermissions ?? []) {
+      effective.add(permission);
+    }
+  }
+
+  for (const permission of effective) {
+    if (externalAudienceRestrictedPermissions.has(permission)) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 export const setUserActiveStatus = (id: string, nextStatus: boolean): boolean => {

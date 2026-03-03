@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -469,28 +470,26 @@ export class UserEditPage implements OnInit {
       next: () => {
         const packRequest = this.resolveDashboardPackRequest(this.selectedDashboardPackKey(), payload.roleIds ?? []);
         if (!packRequest) {
-          this.saving.set(false);
-          this.raiseToast('success', 'User updated');
+          this.finalizeSave(selected.id, payload, 'User updated');
           return;
         }
 
         this.updatingDashboardPack.set(true);
         this.dataService.updateDashboardPack(selected.id, packRequest).subscribe({
           next: () => {
-            this.saving.set(false);
             this.updatingDashboardPack.set(false);
-            this.raiseToast('success', 'User and dashboard pack updated');
+            this.finalizeSave(selected.id, payload, 'User and dashboard pack updated');
           },
-          error: () => {
+          error: (error) => {
             this.saving.set(false);
             this.updatingDashboardPack.set(false);
-            this.raiseToast('error', 'User updated, but dashboard pack update failed');
+            this.raiseToast('error', this.extractErrorMessage(error) || 'User updated, but dashboard pack update failed');
           }
         });
       },
-      error: () => {
+      error: (error) => {
         this.saving.set(false);
-        this.raiseToast('error', 'Unable to update user');
+        this.raiseToast('error', this.extractErrorMessage(error) || 'Unable to update user');
       }
     });
   }
@@ -593,6 +592,62 @@ export class UserEditPage implements OnInit {
   private resolvePermissionModule(permission: string): string {
     const parts = permission.split('.');
     return parts.length >= 2 ? parts[1] ?? 'General' : 'General';
+  }
+
+  private finalizeSave(userId: string, payload: UpsertUserRequest, successMessage: string) {
+    this.dataService.getUser(userId).subscribe({
+      next: (latest) => {
+        this.saving.set(false);
+        this.user.set(latest);
+        this.form.patchValue({
+          fullName: latest.fullName,
+          email: latest.email,
+          userAudience: latest.userAudience ?? 'Internal',
+          timeZone: latest.timeZone ?? 'UTC',
+          locale: latest.locale ?? 'en-US',
+          roleIds: latest.roleIds,
+          monthlyQuota: latest.monthlyQuota ?? null,
+          isActive: latest.isActive,
+          temporaryPassword: ''
+        });
+        this.initializeDashboardPackSelection();
+
+        const payloadRoles = [...(payload.roleIds ?? [])].sort();
+        const latestRoles = [...(latest.roleIds ?? [])].sort();
+        const audienceMatches = (latest.userAudience ?? 'Internal') === (payload.userAudience ?? 'Internal');
+        const rolesMatch = JSON.stringify(payloadRoles) === JSON.stringify(latestRoles);
+
+        if (!audienceMatches || !rolesMatch) {
+          this.raiseToast('error', 'Save was acknowledged, but role/audience changes were not applied.');
+          return;
+        }
+
+        this.raiseToast('success', successMessage);
+      },
+      error: () => {
+        this.saving.set(false);
+        this.raiseToast('error', 'Saved, but failed to refresh latest user details.');
+      }
+    });
+  }
+
+  private extractErrorMessage(error: unknown): string | null {
+    if (!(error instanceof HttpErrorResponse)) {
+      return null;
+    }
+
+    if (typeof error.error === 'string' && error.error.trim()) {
+      return error.error.trim();
+    }
+
+    if (error.error && typeof error.error === 'object') {
+      const message = (error.error as { message?: unknown }).message;
+      if (typeof message === 'string' && message.trim()) {
+        return message.trim();
+      }
+    }
+
+    return null;
   }
 
   private resolvePermissionRisk(permission: string): 'critical' | 'sensitive' | 'standard' {
