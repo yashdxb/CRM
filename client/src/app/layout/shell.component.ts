@@ -258,7 +258,15 @@ export class ShellComponent {
   }
 
   protected canChatWith(person: PresencePerson): boolean {
-    return !!person.userId && !!this.currentUserId;
+    if (!person.userId) {
+      return false;
+    }
+
+    if (!this.currentUserId) {
+      return true;
+    }
+
+    return person.userId !== this.currentUserId;
   }
 
   protected engageChat(person: PresencePerson): void {
@@ -266,6 +274,12 @@ export class ShellComponent {
       return;
     }
 
+    this.activeChatUser.set(person);
+    this.activeChatThreadId.set(null);
+    this.activeChatParticipants.set([person]);
+    this.chatPanelVisible.set(true);
+    this.onlineUsersPopupVisible.set(false);
+    this.chatDraft.set('');
     this.chatLoading.set(true);
     this.chatError.set(null);
 
@@ -273,16 +287,13 @@ export class ShellComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (thread) => {
-          this.activeChatUser.set(person);
           this.activeChatThreadId.set(thread.threadId);
           this.activeChatParticipants.set(this.mapThreadParticipants(thread));
-          this.chatPanelVisible.set(true);
-          this.onlineUsersPopupVisible.set(false);
           this.loadThreadMessages(thread.threadId);
         },
         error: () => {
           this.chatLoading.set(false);
-          this.chatError.set('Unable to open chat right now.');
+          this.chatError.set('Unable to open chat right now. Please verify API/auth connectivity and try again.');
         }
       });
   }
@@ -290,6 +301,8 @@ export class ShellComponent {
   protected closeChatPanel(): void {
     this.chatPanelVisible.set(false);
     this.emojiPickerVisible.set(false);
+    this.chatLoading.set(false);
+    this.chatError.set(null);
   }
 
   protected sendChatMessage(): void {
