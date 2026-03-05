@@ -5,24 +5,25 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-03 16:29 UTC**
+- Synced at: **2026-03-05 01:00 UTC**
 - ClickUp list id: `901710720381`
-- Total tasks mirrored: **184**
+- Total tasks mirrored: **195**
 - Epics mirrored: **39**
-- Stories mirrored: **145**
+- Stories mirrored: **156**
 
 ## Status Summary
 - All tasks:
-  - `done`: 109
-  - `backlog`: 74
-  - `in progress`: 1
+  - `done`: 112
+  - `backlog`: 80
+  - `in progress`: 3
 - Epics:
-  - `backlog`: 23
+  - `backlog`: 22
   - `done`: 15
-  - `in progress`: 1
+  - `in progress`: 2
 - Stories:
-  - `done`: 94
-  - `backlog`: 51
+  - `done`: 97
+  - `backlog`: 58
+  - `in progress`: 1
 
 ## Epic and Story Mirror
 
@@ -51,6 +52,14 @@
   - `86e05jy81` | `done` | Help Desk queue management and manual assignment implemented | tags: -
   - `86e05jya1` | `done` | Help Desk realtime events and summary reporting implemented | tags: -
   - `86e05jy8t` | `done` | Help Desk SLA policy matrix and escalation worker implemented | tags: -
+  - `86e06pbr0` | `backlog` | Help Desk | Attachments in case conversation (agent + email intake) | tags: -
+  - `86e06pbrp` | `done` | Help Desk | CSAT capture and closure reason analytics | tags: -
+  - `86e06pbt1` | `backlog` | Help Desk | External portal for customer self-service | tags: -
+  - `86e06pbrv` | `backlog` | Help Desk | Knowledge suggestions in case workspace | tags: -
+  - `86e06pbrb` | `done` | Help Desk | Macros/canned responses for agents | tags: -
+  - `86e06pbt4` | `backlog` | Help Desk | Omnichannel intake and unified queue | tags: -
+  - `86e06pbr3` | `done` | Help Desk | Saved views + bulk actions for case triage | tags: -
+  - `86e06pbr9` | `done` | Help Desk | SLA cockpit and breach prevention UX | tags: -
   - `86e041x9m` | `done` | Support case tracking | tags: -
 
 ### [LATER] Marketing Automation Suite (`86e041x95`)
@@ -214,10 +223,10 @@
   - `86e041x5v` | `backlog` | Webhook configuration for CRM events | tags: -
 
 ### [NOW] SSO & Enterprise Authentication (`86e0422k2`)
-- Status: `backlog`
+- Status: `in progress`
 - Tags: future, now
 - Stories:
-  - `86e0422ke` | `backlog` | OAuth2 external identity provider support | tags: future, now
+  - `86e0422ke` | `in progress` | OAuth2 external identity provider support | tags: future, now
   - `86e0422k7` | `backlog` | SAML/SSO identity provider integration | tags: future, now
 
 ### [NOW] Web-to-Lead Forms (`86e041x5a`)

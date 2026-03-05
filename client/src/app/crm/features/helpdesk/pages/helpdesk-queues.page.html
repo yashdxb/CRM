@@ -21,6 +21,7 @@
           <th>Name</th>
           <th>Description</th>
           <th>Active Members</th>
+          <th>Members</th>
           <th>Status</th>
           <th></th>
         </tr>
@@ -30,9 +31,23 @@
           <td>{{ row.name }}</td>
           <td>{{ row.description || '-' }}</td>
           <td>{{ row.activeMemberCount }}</td>
+          <td>
+            <span class="member-pill" *ngFor="let member of row.members.slice(0, 3)">{{ member.userName }}</span>
+            <span class="member-more" *ngIf="row.members.length > 3">+{{ row.members.length - 3 }} more</span>
+            <span *ngIf="!row.members.length">-</span>
+          </td>
           <td>{{ row.isActive ? 'Active' : 'Inactive' }}</td>
           <td class="actions">
-            <button pButton type="button" class="crm-button crm-button--text" icon="pi pi-pencil" label="Edit" (click)="openEdit(row)"></button>
+            <div class="row-actions">
+              <button
+                pButton
+                type="button"
+                class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
+                icon="pi pi-pencil"
+                title="Edit queue"
+                (click)="openEdit(row)">
+              </button>
+            </div>
           </td>
         </tr>
       </ng-template>
@@ -49,9 +64,21 @@
         <span>Description</span>
         <input pInputText formControlName="description" />
       </label>
+      <label class="field">
+        <span>Members</span>
+        <p-multiSelect
+          formControlName="memberUserIds"
+          [options]="userOptions()"
+          optionLabel="label"
+          optionValue="value"
+          defaultLabel="Select queue members"
+          [filter]="true"
+          selectedItemsLabel="{0} users selected">
+        </p-multiSelect>
+      </label>
       <label class="checkbox">
-        <input type="checkbox" formControlName="isActive" />
-        Active queue
+        <p-checkbox formControlName="isActive" [binary]="true"></p-checkbox>
+        <span>Active queue</span>
       </label>
     </form>
     <ng-template pTemplate="footer">

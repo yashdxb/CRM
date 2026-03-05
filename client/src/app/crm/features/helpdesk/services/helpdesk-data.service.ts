@@ -7,6 +7,7 @@ import {
   HelpDeskQueue,
   HelpDeskSlaPolicy,
   HelpDeskSummary,
+  HelpDeskUserLookup,
   SaveHelpDeskCaseRequest
 } from '../models/helpdesk.model';
 
@@ -59,12 +60,19 @@ export class HelpDeskDataService {
     return this.http.post(`${this.baseUrl}/api/helpdesk/cases/${id}/status`, { status, note });
   }
 
-  addComment(id: string, body: string, isInternal = true) {
-    return this.http.post(`${this.baseUrl}/api/helpdesk/cases/${id}/comments`, { body, isInternal });
+  addComment(id: string, body: string, isInternal = true, attachmentIds: string[] = []) {
+    return this.http.post(`${this.baseUrl}/api/helpdesk/cases/${id}/comments`, { body, isInternal, attachmentIds });
   }
 
   listQueues() {
     return this.http.get<HelpDeskQueue[]>(`${this.baseUrl}/api/helpdesk/queues`);
+  }
+
+  lookupActiveUsers(search?: string, max = 200) {
+    let params = new HttpParams();
+    if (search) params = params.set('search', search);
+    if (max) params = params.set('max', String(max));
+    return this.http.get<HelpDeskUserLookup[]>(`${this.baseUrl}/api/users/lookup`, { params });
   }
 
   createQueue(payload: { name: string; description?: string | null; isActive: boolean; memberUserIds?: string[] }) {

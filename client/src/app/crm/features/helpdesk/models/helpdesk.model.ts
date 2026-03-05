@@ -22,6 +22,9 @@ export interface HelpDeskCase {
   firstRespondedUtc?: string | null;
   resolvedUtc?: string | null;
   closedUtc?: string | null;
+  closureReason?: string | null;
+  csatScore?: number | null;
+  csatFeedback?: string | null;
   createdAtUtc: string;
   updatedAtUtc?: string | null;
 }
@@ -34,6 +37,15 @@ export interface HelpDeskCaseComment {
   body: string;
   isInternal: boolean;
   createdAtUtc: string;
+  attachments: HelpDeskCaseCommentAttachment[];
+}
+
+export interface HelpDeskCaseCommentAttachment {
+  attachmentId: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+  downloadUrl: string;
 }
 
 export interface HelpDeskCaseEscalation {
@@ -63,6 +75,18 @@ export interface HelpDeskQueue {
   description?: string | null;
   isActive: boolean;
   activeMemberCount: number;
+  members: HelpDeskQueueMember[];
+}
+
+export interface HelpDeskQueueMember {
+  userId: string;
+  userName: string;
+}
+
+export interface HelpDeskUserLookup {
+  id: string;
+  fullName: string;
+  email: string;
 }
 
 export interface HelpDeskSlaPolicy {
@@ -82,6 +106,9 @@ export interface HelpDeskSummary {
   atRiskCount: number;
   breachedCount: number;
   resolvedTodayCount: number;
+  averageCsatScore?: number | null;
+  ratedCaseCount?: number;
+  topClosureReasons?: { reason: string; count: number }[];
 }
 
 export interface SaveHelpDeskCaseRequest {
@@ -96,4 +123,7 @@ export interface SaveHelpDeskCaseRequest {
   contactId?: string | null;
   queueId?: string | null;
   ownerUserId?: string | null;
+  closureReason?: string | null;
+  csatScore?: number | null;
+  csatFeedback?: string | null;
 }

@@ -11,7 +11,16 @@
       <h1 class="hero-title">Help Desk Cases</h1>
       <p class="hero-subtitle">Track support workload, SLA risk, and resolution progress in one workspace.</p>
     </div>
-    <button pButton type="button" class="crm-button crm-button--primary" icon="pi pi-plus" label="New Case" (click)="createCase()"></button>
+    <button
+      pButton
+      type="button"
+      class="crm-button crm-button--primary"
+      icon="pi pi-plus"
+      label="New Case"
+      [disabled]="!canManage()"
+      [attr.title]="canManage() ? 'Create a new support case' : 'Requires Help Desk Manage permission'"
+      (click)="createCase()">
+    </button>
   </section>
 
   <section class="kpi-grid">
@@ -31,10 +40,55 @@
       <span class="kpi-label">Resolved Today</span>
       <span class="kpi-value">{{ summary().resolvedTodayCount }}</span>
     </article>
+    <article class="glass-card kpi-card">
+      <span class="kpi-label">Avg CSAT</span>
+      <span class="kpi-value">{{ averageCsat() ?? '-' }}</span>
+    </article>
+    <article class="glass-card kpi-card">
+      <span class="kpi-label">Top Closure Reason</span>
+      <span class="kpi-value kpi-value--compact">{{ topClosureReason() }}</span>
+    </article>
   </section>
 
   <section class="glass-card table-card">
-    <p-table #dt [value]="cases()" dataKey="id" [loading]="loading()" [paginator]="true" [rows]="20" [rowsPerPageOptions]="[10,20,50]" [globalFilterFields]="['caseNumber','subject','accountName','contactName']">
+    <div class="table-toolbar">
+      <div class="quick-views">
+        <button
+          pButton
+          type="button"
+          *ngFor="let view of quickViewOptions"
+          [label]="view.label"
+          class="crm-button crm-button--pill crm-button--sm view-pill"
+          [class.active]="activeView() === view.value"
+          (click)="applyQuickView(view.value)">
+        </button>
+      </div>
+
+      <div class="bulk-actions" *ngIf="selectedCases().length && canManage()">
+        <span>{{ selectedCases().length }} selected</span>
+        <p-select
+          [options]="statusOptions"
+          [ngModel]="bulkStatus()"
+          (ngModelChange)="bulkStatus.set($event)"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Bulk status">
+        </p-select>
+        <button pButton type="button" class="crm-button crm-button--primary crm-button--sm" [disabled]="!bulkStatus() || bulkSaving()" label="Apply Status" (click)="applyBulkStatus()"></button>
+        <p-select
+          [options]="bulkQueueOptions()"
+          [ngModel]="bulkQueueId()"
+          (ngModelChange)="bulkQueueId.set($event)"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Bulk queue">
+        </p-select>
+        <button pButton type="button" class="crm-button crm-button--primary crm-button--sm" [disabled]="!bulkQueueId() || bulkSaving()" label="Assign Queue" (click)="applyBulkAssignQueue()"></button>
+        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" label="Clear" (click)="clearSelection()"></button>
+      </div>
+    </div>
+
+    <p-table #dt [value]="viewCases()" dataKey="id" [selection]="selectedCases()" (selectionChange)="onSelectionChange($event)" [loading]="loading()" [paginator]="true" [rows]="20" [rowsPerPageOptions]="[10,20,50]" [globalFilterFields]="['caseNumber','subject','accountName','contactName']">
       <ng-template pTemplate="caption">
         <div class="table-header">
           <span class="p-input-icon-left">
@@ -46,6 +100,7 @@
 
       <ng-template pTemplate="header" let-columns>
         <tr>
+          <th style="width: 2.5rem"><p-tableHeaderCheckbox></p-tableHeaderCheckbox></th>
           <th pSortableColumn="caseNumber">Case # <p-sortIcon field="caseNumber"></p-sortIcon></th>
           <th pSortableColumn="subject">Subject <p-sortIcon field="subject"></p-sortIcon></th>
           <th pSortableColumn="status">Status <p-sortIcon field="status"></p-sortIcon></th>
@@ -54,9 +109,10 @@
           <th pSortableColumn="queueName">Queue <p-sortIcon field="queueName"></p-sortIcon></th>
           <th pSortableColumn="ownerUserName">Owner <p-sortIcon field="ownerUserName"></p-sortIcon></th>
           <th pSortableColumn="source">Source <p-sortIcon field="source"></p-sortIcon></th>
-          <th pSortableColumn="resolutionDueUtc">Resolution Due <p-sortIcon field="resolutionDueUtc"></p-sortIcon></th>
+          <th pSortableColumn="resolutionDueUtc">SLA <p-sortIcon field="resolutionDueUtc"></p-sortIcon></th>
         </tr>
         <tr>
+          <th></th>
           <th>
             <p-columnFilter field="caseNumber" matchMode="contains" display="menu"></p-columnFilter>
           </th>
@@ -113,6 +169,9 @@
 
       <ng-template pTemplate="body" let-row>
         <tr (click)="openCase(row)">
+          <td (click)="$event.stopPropagation()">
+            <p-tableCheckbox [value]="row"></p-tableCheckbox>
+          </td>
           <td>{{ row.caseNumber }}</td>
           <td>{{ row.subject }}</td>
           <td>{{ row.status }}</td>
@@ -121,12 +180,19 @@
           <td>{{ row.queueName || '-' }}</td>
           <td>{{ row.ownerUserName || '-' }}</td>
           <td>{{ row.source }}</td>
-          <td>{{ row.resolutionDueUtc | date: 'medium' }}</td>
+          <td>
+            <div class="sla-cell">
+              <span class="sla-chip" [class.breached]="getSlaState(row) === 'breached'" [class.at-risk]="getSlaState(row) === 'at-risk'" [class.healthy]="getSlaState(row) === 'healthy'">
+                {{ getSlaState(row) | titlecase }}
+              </span>
+              <small>{{ formatDueIn(row.resolutionDueUtc) }}</small>
+            </div>
+          </td>
         </tr>
       </ng-template>
       <ng-template pTemplate="emptymessage">
         <tr>
-          <td colspan="9">No support cases found.</td>
+          <td colspan="10">No support cases found.</td>
         </tr>
       </ng-template>
     </p-table>

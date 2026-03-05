@@ -8,6 +8,22 @@
 
   .actions {
     text-align: right;
+    width: 84px;
+  }
+
+  .member-pill {
+    display: inline-flex;
+    margin: 0 0.35rem 0.35rem 0;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    background: color-mix(in srgb, var(--brand-primary, #2563eb) 16%, transparent);
+    color: var(--text-primary);
+  }
+
+  .member-more {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
   }
 
   .queue-form {

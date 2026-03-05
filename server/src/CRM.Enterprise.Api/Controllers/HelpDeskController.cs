@@ -93,7 +93,10 @@ public sealed class HelpDeskController : ControllerBase
                 request.AccountId,
                 request.ContactId,
                 request.QueueId,
-                request.OwnerUserId),
+                request.OwnerUserId,
+                request.ClosureReason,
+                request.CsatScore,
+                request.CsatFeedback),
             cancellationToken);
 
         if (!result.Success || result.Value is null)
@@ -138,7 +141,10 @@ public sealed class HelpDeskController : ControllerBase
                 request.AccountId,
                 request.ContactId,
                 request.QueueId,
-                request.OwnerUserId),
+                request.OwnerUserId,
+                request.ClosureReason,
+                request.CsatScore,
+                request.CsatFeedback),
             cancellationToken);
 
         if (result.NotFound)
@@ -248,7 +254,12 @@ public sealed class HelpDeskController : ControllerBase
 
         var result = await _cases.AddCommentAsync(
             id,
-            new SupportCaseCommentCreateRequest(request.Body, request.IsInternal, userId.Value, GetCurrentUserName() ?? "Unknown user"),
+            new SupportCaseCommentCreateRequest(
+                request.Body,
+                request.IsInternal,
+                userId.Value,
+                GetCurrentUserName() ?? "Unknown user",
+                request.AttachmentIds),
             cancellationToken);
 
         if (result.NotFound)
@@ -401,7 +412,14 @@ public sealed class HelpDeskController : ControllerBase
     public async Task<ActionResult<HelpDeskSummaryResponse>> GetSummary(CancellationToken cancellationToken = default)
     {
         var summary = await _reports.GetSummaryAsync(cancellationToken);
-        return Ok(new HelpDeskSummaryResponse(summary.OpenCount, summary.AtRiskCount, summary.BreachedCount, summary.ResolvedTodayCount));
+        return Ok(new HelpDeskSummaryResponse(
+            summary.OpenCount,
+            summary.AtRiskCount,
+            summary.BreachedCount,
+            summary.ResolvedTodayCount,
+            summary.AverageCsatScore,
+            summary.RatedCaseCount,
+            summary.TopClosureReasons.Select(r => new HelpDeskClosureReasonCountItem(r.Reason, r.Count)).ToList()));
     }
 
     [HttpPost("email/intake/webhook")]
@@ -436,6 +454,11 @@ public sealed class HelpDeskController : ControllerBase
         if (request.Subject.Length > 240)
         {
             return BadRequest(new { message = "Subject must be 240 characters or fewer." });
+        }
+
+        if (request.CsatScore.HasValue && (request.CsatScore.Value < 1 || request.CsatScore.Value > 5))
+        {
+            return BadRequest(new { message = "CSAT score must be between 1 and 5." });
         }
 
         return null;
@@ -480,17 +503,41 @@ public sealed class HelpDeskController : ControllerBase
             dto.FirstRespondedUtc,
             dto.ResolvedUtc,
             dto.ClosedUtc,
+            dto.ClosureReason,
+            dto.CsatScore,
+            dto.CsatFeedback,
             dto.CreatedAtUtc,
             dto.UpdatedAtUtc);
 
     private static SupportCaseCommentItem ToCommentItem(SupportCaseCommentDto dto)
-        => new(dto.Id, dto.CaseId, dto.AuthorUserId, dto.AuthorUserName, dto.Body, dto.IsInternal, dto.CreatedAtUtc);
+        => new(
+            dto.Id,
+            dto.CaseId,
+            dto.AuthorUserId,
+            dto.AuthorUserName,
+            dto.Body,
+            dto.IsInternal,
+            dto.CreatedAtUtc,
+            dto.Attachments
+                .Select(a => new SupportCaseCommentAttachmentItem(
+                    a.AttachmentId,
+                    a.FileName,
+                    a.ContentType,
+                    a.Size,
+                    $"/api/attachments/{a.AttachmentId}/download"))
+                .ToList());
 
     private static SupportCaseEscalationItem ToEscalationItem(SupportCaseEscalationEventDto dto)
         => new(dto.Id, dto.CaseId, dto.Type, dto.OccurredUtc, dto.ActorUserId, dto.ActorUserName, dto.Notes);
 
     private static SupportQueueItem ToQueueItem(SupportQueueDto dto)
-        => new(dto.Id, dto.Name, dto.Description, dto.IsActive, dto.ActiveMemberCount);
+        => new(
+            dto.Id,
+            dto.Name,
+            dto.Description,
+            dto.IsActive,
+            dto.ActiveMemberCount,
+            dto.Members.Select(m => new SupportQueueMemberItem(m.UserId, m.UserName)).ToList());
 
     private static SupportSlaPolicyItem ToSlaItem(SupportSlaPolicyDto dto)
         => new(

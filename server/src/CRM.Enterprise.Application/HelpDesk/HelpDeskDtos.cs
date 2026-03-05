@@ -24,6 +24,9 @@ public sealed record SupportCaseListItemDto(
     DateTime? FirstRespondedUtc,
     DateTime? ResolvedUtc,
     DateTime? ClosedUtc,
+    string? ClosureReason,
+    int? CsatScore,
+    string? CsatFeedback,
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc);
 
@@ -38,7 +41,14 @@ public sealed record SupportCaseCommentDto(
     string AuthorUserName,
     string Body,
     bool IsInternal,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    IReadOnlyList<SupportCaseCommentAttachmentDto> Attachments);
+
+public sealed record SupportCaseCommentAttachmentDto(
+    Guid AttachmentId,
+    string FileName,
+    string ContentType,
+    long Size);
 
 public sealed record SupportCaseEscalationEventDto(
     Guid Id,
@@ -59,7 +69,12 @@ public sealed record SupportQueueDto(
     string Name,
     string? Description,
     bool IsActive,
-    int ActiveMemberCount);
+    int ActiveMemberCount,
+    IReadOnlyList<SupportQueueMemberDto> Members);
+
+public sealed record SupportQueueMemberDto(
+    Guid UserId,
+    string UserName);
 
 public sealed record SupportSlaPolicyDto(
     Guid Id,
@@ -76,7 +91,14 @@ public sealed record HelpDeskReportSummaryDto(
     int OpenCount,
     int AtRiskCount,
     int BreachedCount,
-    int ResolvedTodayCount);
+    int ResolvedTodayCount,
+    decimal? AverageCsatScore,
+    int RatedCaseCount,
+    IReadOnlyList<HelpDeskClosureReasonCountDto> TopClosureReasons);
+
+public sealed record HelpDeskClosureReasonCountDto(
+    string Reason,
+    int Count);
 
 public sealed record HelpDeskOperationResult(
     bool Success,

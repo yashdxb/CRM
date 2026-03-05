@@ -403,7 +403,26 @@ Configure:
 
 These settings apply to your tenant.
 
-## 13) Troubleshooting
+## 13) Help Desk (Now)
+
+What is delivered now:
+- Cases list/workspace with quick views and bulk actions.
+- Queue management with member assignment.
+- SLA policy matrix + escalation worker.
+- Email-to-case intake webhook.
+- Realtime case updates and summary KPI cards.
+- CSAT score + closure reason analytics.
+- Agent macros/canned responses.
+
+Agent flow:
+1) Go to `Help Desk -> Cases`.
+2) Open `New Case`.
+3) Set priority/severity/category and save.
+4) Assign queue/owner, then use `Quick status`.
+5) Add conversation comments and track timeline/escalations.
+6) Capture closure reason + CSAT before close.
+
+## 14) Troubleshooting
 
 Login issues:
 - Verify the tenant key and correct credentials.
@@ -414,7 +433,7 @@ AI scoring errors:
 - Ensure OpenAI key is configured for the API.
 - Verify the API is running and the lead has at least two signals.
 
-## 14) Best Practices
+## 15) Best Practices
 
 ---
 
@@ -579,3 +598,41 @@ Daily flow:
 - Update opportunities as soon as stage changes.
 - Log activities immediately to avoid stale data.
 - Save a few custom views for repeat workflows.
+
+---
+
+## Telerik Reporting (Azure Dev Runbook)
+
+Use this when you need Telerik Report Server running and reachable for CRM report viewing.
+
+### Current Dev Deployment (as implemented)
+- Azure resource group: `rg-crm-report-dev-eus2`
+- VM: `vmrptlinux01` (Linux)
+- Public IP: `52.247.69.37`
+- Report Server URLs:
+  - `http://52.247.69.37`
+  - `https://52.247.69.37` (self-signed certificate)
+- Sample report verification URL:
+  - `http://52.247.69.37/Report/View/Samples/Dashboard?ReportYear=2002`
+
+### Security and Networking
+- NSG inbound is restricted to approved source IP only (current: `74.14.155.189/32`) for `22`, `80`, `443`.
+- If your office/public IP changes, update NSG source first or access will fail.
+- Nginx is fronting the app; Report Server app container is loopback-bound (`127.0.0.1`), not publicly exposed directly.
+
+### Key Vault Secrets Used
+Key Vault: `kv-crm-dev-ca`
+
+- `reportserver-admin-username`
+- `reportserver-admin-password`
+- `reportserver-main-private-key-rsk`
+- `reportserver-backup-private-key-rsk`
+- `reportserver-vm-admin-password-eus`
+- `reportserver-sql-admin-password-ca`
+
+Do not store these values in code or repo files. Use Key Vault + managed access only.
+
+### Operational Notes
+1. Expect browser warning on HTTPS until a CA-issued certificate is installed.
+2. Keep Docker containers and Nginx as the source of truth for runtime exposure.
+3. Confirm access with login + sample report view after any infra/network change.

@@ -3,6 +3,7 @@ using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.HelpDesk;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -131,6 +132,27 @@ public sealed class HelpDeskService :
             .Where(c => c.TenantId == _tenantProvider.TenantId && c.CaseId == id && !c.IsDeleted)
             .OrderBy(c => c.CreatedAtUtc)
             .ToListAsync(cancellationToken);
+        var commentIds = comments.Select(c => c.Id).ToList();
+        var commentAttachments = commentIds.Count == 0
+            ? []
+            : await _dbContext.Attachments
+                .AsNoTracking()
+                .Where(a => !a.IsDeleted
+                            && a.RelatedEntityType == ActivityRelationType.SupportCaseComment
+                            && commentIds.Contains(a.RelatedEntityId))
+                .OrderBy(a => a.CreatedAtUtc)
+                .ToListAsync(cancellationToken);
+        var attachmentsByComment = commentAttachments
+            .GroupBy(a => a.RelatedEntityId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<SupportCaseCommentAttachmentDto>)g
+                    .Select(a => new SupportCaseCommentAttachmentDto(
+                        a.Id,
+                        a.FileName,
+                        a.ContentType,
+                        a.Size))
+                    .ToList());
 
         var escalationEvents = await _dbContext.SupportCaseEscalationEvents
             .AsNoTracking()
@@ -157,7 +179,8 @@ public sealed class HelpDeskService :
                 c.AuthorUserId.HasValue ? userNames.GetValueOrDefault(c.AuthorUserId.Value, "Unknown user") : "System",
                 c.Body,
                 c.IsInternal,
-                c.CreatedAtUtc)).ToList(),
+                c.CreatedAtUtc,
+                attachmentsByComment.GetValueOrDefault(c.Id, []))).ToList(),
             escalationEvents.Select(e => new SupportCaseEscalationEventDto(
                 e.Id,
                 e.CaseId,
@@ -178,6 +201,7 @@ public sealed class HelpDeskService :
             request.ContactId,
             request.QueueId,
             request.OwnerUserId,
+            request.CsatScore,
             cancellationToken);
         if (validation is not null)
         {
@@ -207,6 +231,9 @@ public sealed class HelpDeskService :
             ContactId = request.ContactId,
             QueueId = request.QueueId,
             OwnerUserId = request.OwnerUserId,
+            ClosureReason = string.IsNullOrWhiteSpace(request.ClosureReason) ? null : request.ClosureReason.Trim(),
+            CsatScore = request.CsatScore,
+            CsatFeedback = string.IsNullOrWhiteSpace(request.CsatFeedback) ? null : request.CsatFeedback.Trim(),
             SlaPolicyId = policy.Id,
             FirstResponseDueUtc = now.AddMinutes(policy.FirstResponseTargetMinutes),
             ResolutionDueUtc = now.AddMinutes(policy.ResolutionTargetMinutes),
@@ -238,6 +265,7 @@ public sealed class HelpDeskService :
             request.ContactId,
             request.QueueId,
             request.OwnerUserId,
+            request.CsatScore,
             cancellationToken);
         if (validation is not null)
         {
@@ -254,6 +282,9 @@ public sealed class HelpDeskService :
         entity.ContactId = request.ContactId;
         entity.QueueId = request.QueueId;
         entity.OwnerUserId = request.OwnerUserId;
+        entity.ClosureReason = string.IsNullOrWhiteSpace(request.ClosureReason) ? null : request.ClosureReason.Trim();
+        entity.CsatScore = request.CsatScore;
+        entity.CsatFeedback = string.IsNullOrWhiteSpace(request.CsatFeedback) ? null : request.CsatFeedback.Trim();
         entity.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -351,6 +382,11 @@ public sealed class HelpDeskService :
             return new HelpDeskValueResult<SupportCaseCommentDto>(false, null, Error: "Comment body is required.");
         }
 
+        var trimmedAttachmentIds = request.AttachmentIds?
+            .Where(a => a != Guid.Empty)
+            .Distinct()
+            .ToList() ?? [];
+
         var entity = await _dbContext.SupportCases
             .FirstOrDefaultAsync(c => c.TenantId == _tenantProvider.TenantId && c.Id == id && !c.IsDeleted, cancellationToken);
         if (entity is null)
@@ -369,6 +405,35 @@ public sealed class HelpDeskService :
             CreatedAtUtc = now
         };
 
+        var attachmentDtos = new List<SupportCaseCommentAttachmentDto>();
+        if (trimmedAttachmentIds.Count > 0)
+        {
+            var attachments = await _dbContext.Attachments
+                .Where(a =>
+                    !a.IsDeleted
+                    && a.UploadedById == request.AuthorUserId
+                    && a.RelatedEntityType == ActivityRelationType.SupportCase
+                    && a.RelatedEntityId == id
+                    && trimmedAttachmentIds.Contains(a.Id))
+                .ToListAsync(cancellationToken);
+            if (attachments.Count != trimmedAttachmentIds.Count)
+            {
+                return new HelpDeskValueResult<SupportCaseCommentDto>(false, null, Error: "One or more attachments are invalid for this case.");
+            }
+
+            foreach (var attachment in attachments)
+            {
+                attachment.RelatedEntityType = ActivityRelationType.SupportCaseComment;
+                attachment.RelatedEntityId = comment.Id;
+                attachment.UpdatedAtUtc = now;
+                attachmentDtos.Add(new SupportCaseCommentAttachmentDto(
+                    attachment.Id,
+                    attachment.FileName,
+                    attachment.ContentType,
+                    attachment.Size));
+            }
+        }
+
         if (!entity.FirstRespondedUtc.HasValue)
         {
             entity.FirstRespondedUtc = now;
@@ -386,7 +451,8 @@ public sealed class HelpDeskService :
             request.AuthorUserName,
             comment.Body,
             comment.IsInternal,
-            comment.CreatedAtUtc));
+            comment.CreatedAtUtc,
+            attachmentDtos));
     }
 
     public async Task<IReadOnlyList<SupportQueueDto>> ListQueuesAsync(CancellationToken cancellationToken = default)
@@ -397,20 +463,7 @@ public sealed class HelpDeskService :
             .OrderBy(q => q.Name)
             .ToListAsync(cancellationToken);
 
-        var queueIds = rows.Select(q => q.Id).ToList();
-        var counts = await _dbContext.SupportQueueMembers
-            .AsNoTracking()
-            .Where(m => m.TenantId == _tenantProvider.TenantId && queueIds.Contains(m.QueueId) && m.IsActive && !m.IsDeleted)
-            .GroupBy(m => m.QueueId)
-            .Select(g => new { QueueId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(k => k.QueueId, v => v.Count, cancellationToken);
-
-        return rows.Select(q => new SupportQueueDto(
-            q.Id,
-            q.Name,
-            q.Description,
-            q.IsActive,
-            counts.GetValueOrDefault(q.Id))).ToList();
+        return await MapQueueItemsAsync(rows, cancellationToken);
     }
 
     public async Task<HelpDeskValueResult<SupportQueueDto>> CreateQueueAsync(SupportQueueUpsertRequest request, CancellationToken cancellationToken = default)
@@ -440,10 +493,8 @@ public sealed class HelpDeskService :
         await _dbContext.SaveChangesAsync(cancellationToken);
         await SyncQueueMembersAsync(queue.Id, request.MemberUserIds, cancellationToken);
         await PublishQueueChangedAsync(queue.Id, "created", cancellationToken);
-
-        var activeMemberCount = await _dbContext.SupportQueueMembers
-            .CountAsync(m => m.TenantId == _tenantProvider.TenantId && m.QueueId == queue.Id && m.IsActive && !m.IsDeleted, cancellationToken);
-        return new HelpDeskValueResult<SupportQueueDto>(true, new SupportQueueDto(queue.Id, queue.Name, queue.Description, queue.IsActive, activeMemberCount));
+        var mappedQueue = (await MapQueueItemsAsync([queue], cancellationToken)).Single();
+        return new HelpDeskValueResult<SupportQueueDto>(true, mappedQueue);
     }
 
     public async Task<HelpDeskOperationResult> UpdateQueueAsync(Guid id, SupportQueueUpsertRequest request, CancellationToken cancellationToken = default)
@@ -544,15 +595,27 @@ public sealed class HelpDeskService :
         var rows = await _dbContext.SupportCases
             .AsNoTracking()
             .Where(c => c.TenantId == _tenantProvider.TenantId && !c.IsDeleted)
-            .Select(c => new { c.Status, c.ResolutionDueUtc, c.ResolvedUtc })
+            .Select(c => new { c.Status, c.ResolutionDueUtc, c.ResolvedUtc, c.CsatScore, c.ClosureReason })
             .ToListAsync(cancellationToken);
 
         var openCount = rows.Count(r => OpenStatuses.Contains(r.Status));
         var breachedCount = rows.Count(r => OpenStatuses.Contains(r.Status) && r.ResolutionDueUtc < now);
         var atRiskCount = rows.Count(r => OpenStatuses.Contains(r.Status) && r.ResolutionDueUtc >= now && r.ResolutionDueUtc <= now.AddHours(1));
         var resolvedToday = rows.Count(r => r.ResolvedUtc.HasValue && r.ResolvedUtc.Value >= startOfToday);
+        var ratedScores = rows.Where(r => r.CsatScore.HasValue).Select(r => r.CsatScore!.Value).ToList();
+        var averageCsatScore = ratedScores.Count == 0
+            ? (decimal?)null
+            : Math.Round((decimal)ratedScores.Average(), 2, MidpointRounding.AwayFromZero);
+        var topClosureReasons = rows
+            .Where(r => !string.IsNullOrWhiteSpace(r.ClosureReason))
+            .GroupBy(r => r.ClosureReason!.Trim())
+            .OrderByDescending(g => g.Count())
+            .ThenBy(g => g.Key)
+            .Take(3)
+            .Select(g => new HelpDeskClosureReasonCountDto(g.Key, g.Count()))
+            .ToList();
 
-        return new HelpDeskReportSummaryDto(openCount, atRiskCount, breachedCount, resolvedToday);
+        return new HelpDeskReportSummaryDto(openCount, atRiskCount, breachedCount, resolvedToday, averageCsatScore, ratedScores.Count, topClosureReasons);
     }
 
     public async Task<HelpDeskOperationResult> ProcessInboundAsync(HelpDeskEmailIntakeRequest request, CancellationToken cancellationToken = default)
@@ -659,6 +722,7 @@ public sealed class HelpDeskService :
         Guid? contactId,
         Guid? queueId,
         Guid? ownerUserId,
+        int? csatScore,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(subject))
@@ -674,6 +738,11 @@ public sealed class HelpDeskService :
         if (!AllowedSeverities.Contains(severity))
         {
             return "Unsupported severity value.";
+        }
+
+        if (csatScore.HasValue && (csatScore.Value < 1 || csatScore.Value > 5))
+        {
+            return "CSAT score must be between 1 and 5.";
         }
 
         if (accountId.HasValue)
@@ -832,8 +901,54 @@ public sealed class HelpDeskService :
             entity.FirstRespondedUtc,
             entity.ResolvedUtc,
             entity.ClosedUtc,
+            entity.ClosureReason,
+            entity.CsatScore,
+            entity.CsatFeedback,
             entity.CreatedAtUtc,
             entity.UpdatedAtUtc)).ToList();
+    }
+
+    private async Task<List<SupportQueueDto>> MapQueueItemsAsync(IReadOnlyCollection<SupportQueue> rows, CancellationToken cancellationToken)
+    {
+        if (rows.Count == 0)
+        {
+            return [];
+        }
+
+        var queueIds = rows.Select(q => q.Id).ToList();
+        var memberships = await _dbContext.SupportQueueMembers
+            .AsNoTracking()
+            .Where(m => m.TenantId == _tenantProvider.TenantId
+                        && queueIds.Contains(m.QueueId)
+                        && m.IsActive
+                        && !m.IsDeleted)
+            .Select(m => new { m.QueueId, m.UserId })
+            .ToListAsync(cancellationToken);
+        var userIds = memberships.Select(m => m.UserId).Distinct().ToList();
+        var userNames = userIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.TenantId == _tenantProvider.TenantId && userIds.Contains(u.Id) && !u.IsDeleted)
+                .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+        var membersByQueue = memberships
+            .GroupBy(m => m.QueueId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<SupportQueueMemberDto>)g
+                    .Select(m => new SupportQueueMemberDto(
+                        m.UserId,
+                        userNames.GetValueOrDefault(m.UserId, "Unknown user")))
+                    .OrderBy(m => m.UserName)
+                    .ToList());
+
+        return rows.Select(q => new SupportQueueDto(
+            q.Id,
+            q.Name,
+            q.Description,
+            q.IsActive,
+            membersByQueue.GetValueOrDefault(q.Id, []).Count,
+            membersByQueue.GetValueOrDefault(q.Id, []))).ToList();
     }
 
     private static string? TryExtractCaseNumber(string subject)

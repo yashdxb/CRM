@@ -28,6 +28,9 @@ public sealed record SupportCaseItem(
     DateTime? FirstRespondedUtc,
     DateTime? ResolvedUtc,
     DateTime? ClosedUtc,
+    string? ClosureReason,
+    int? CsatScore,
+    string? CsatFeedback,
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc);
 
@@ -38,7 +41,15 @@ public sealed record SupportCaseCommentItem(
     string AuthorUserName,
     string Body,
     bool IsInternal,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    IReadOnlyList<SupportCaseCommentAttachmentItem> Attachments);
+
+public sealed record SupportCaseCommentAttachmentItem(
+    Guid AttachmentId,
+    string FileName,
+    string ContentType,
+    long Size,
+    string DownloadUrl);
 
 public sealed record SupportCaseEscalationItem(
     Guid Id,
@@ -65,20 +76,28 @@ public sealed record SupportCaseUpsertRequest(
     Guid? AccountId,
     Guid? ContactId,
     Guid? QueueId,
-    Guid? OwnerUserId);
+    Guid? OwnerUserId,
+    string? ClosureReason,
+    int? CsatScore,
+    string? CsatFeedback);
 
 public sealed record SupportCaseAssignApiRequest(Guid? QueueId, Guid? OwnerUserId);
 
 public sealed record SupportCaseStatusApiRequest(string Status, string? Note);
 
-public sealed record SupportCaseCommentApiRequest(string Body, bool IsInternal = true);
+public sealed record SupportCaseCommentApiRequest(string Body, bool IsInternal = true, IReadOnlyList<Guid>? AttachmentIds = null);
 
 public sealed record SupportQueueItem(
     Guid Id,
     string Name,
     string? Description,
     bool IsActive,
-    int ActiveMemberCount);
+    int ActiveMemberCount,
+    IReadOnlyList<SupportQueueMemberItem> Members);
+
+public sealed record SupportQueueMemberItem(
+    Guid UserId,
+    string UserName);
 
 public sealed record SupportQueueUpsertApiRequest(
     string Name,
@@ -111,7 +130,14 @@ public sealed record HelpDeskSummaryResponse(
     int OpenCount,
     int AtRiskCount,
     int BreachedCount,
-    int ResolvedTodayCount);
+    int ResolvedTodayCount,
+    decimal? AverageCsatScore,
+    int RatedCaseCount,
+    IReadOnlyList<HelpDeskClosureReasonCountItem> TopClosureReasons);
+
+public sealed record HelpDeskClosureReasonCountItem(
+    string Reason,
+    int Count);
 
 public sealed record HelpDeskEmailWebhookRequest(
     string MessageId,

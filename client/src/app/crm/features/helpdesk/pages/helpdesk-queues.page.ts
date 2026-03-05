@@ -2,8 +2,10 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { TableModule } from 'primeng/table';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
@@ -13,7 +15,7 @@ import { HelpDeskDataService } from '../services/helpdesk-data.service';
 @Component({
   selector: 'app-helpdesk-queues-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, DialogModule, InputTextModule, TableModule, BreadcrumbsComponent],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, CheckboxModule, DialogModule, InputTextModule, MultiSelectModule, TableModule, BreadcrumbsComponent],
   templateUrl: './helpdesk-queues.page.html',
   styleUrl: './helpdesk-queues.page.scss'
 })
@@ -26,14 +28,17 @@ export class HelpDeskQueuesPage {
   protected readonly visible = signal(false);
   protected readonly editing = signal<HelpDeskQueue | null>(null);
   protected readonly rows = signal<HelpDeskQueue[]>([]);
+  protected readonly userOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly form = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     description: [''],
-    isActive: [true]
+    isActive: [true],
+    memberUserIds: [[] as string[]]
   });
 
   constructor() {
     this.load();
+    this.loadUsers();
   }
 
   protected load() {
@@ -50,9 +55,21 @@ export class HelpDeskQueuesPage {
     });
   }
 
+  protected loadUsers() {
+    this.data.lookupActiveUsers(undefined, 300).subscribe({
+      next: (users) => {
+        this.userOptions.set((users ?? []).map((user) => ({
+          label: `${user.fullName} (${user.email})`,
+          value: user.id
+        })));
+      },
+      error: () => this.toast.show('error', 'Unable to load user list for queue assignment.')
+    });
+  }
+
   protected openCreate() {
     this.editing.set(null);
-    this.form.reset({ name: '', description: '', isActive: true });
+    this.form.reset({ name: '', description: '', isActive: true, memberUserIds: [] });
     this.visible.set(true);
   }
 
@@ -61,7 +78,8 @@ export class HelpDeskQueuesPage {
     this.form.patchValue({
       name: row.name,
       description: row.description ?? '',
-      isActive: row.isActive
+      isActive: row.isActive,
+      memberUserIds: row.members.map((member) => member.userId)
     });
     this.visible.set(true);
   }
@@ -76,7 +94,8 @@ export class HelpDeskQueuesPage {
     const safePayload = {
       name: payload.name ?? '',
       description: payload.description ?? null,
-      isActive: payload.isActive ?? true
+      isActive: payload.isActive ?? true,
+      memberUserIds: (payload.memberUserIds ?? []).filter((id): id is string => !!id)
     };
     const request$ = this.editing()
       ? this.data.updateQueue(this.editing()!.id, safePayload)
