@@ -1,4 +1,4 @@
-import { DatePipe, NgClass, NgIf } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, inject, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -32,7 +32,6 @@ import { EmailComposeDialogComponent } from '../components/email-compose-dialog.
   selector: 'app-emails-page',
   standalone: true,
   imports: [
-    NgIf,
     NgClass,
     DatePipe,
     FormsModule,

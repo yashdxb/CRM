@@ -2,6 +2,7 @@
 // DASHBOARD PAGE - Enterprise Glassmorphic Design System
 // ═══════════════════════════════════════════════════════════════════════════════
 @use '../../../../../styles/design-tokens' as *;
+@use 'sass:color';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ANIMATIONS
@@ -224,7 +225,7 @@
   &.updating {
     background: rgba($cyan, 0.15);
     border-color: rgba($cyan, 0.3);
-    color: darken($cyan, 10%);
+    color: color.adjust($cyan, $lightness: -10%);
     transform: scale(1.05);
     box-shadow: 0 0 12px rgba($cyan, 0.3);
     

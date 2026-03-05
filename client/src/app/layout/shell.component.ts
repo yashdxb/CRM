@@ -21,9 +21,11 @@ import { CrmEventsService } from '../core/realtime/crm-events.service';
 import { readUserId } from '../core/auth/token.utils';
 import { UserLookupItem } from '../crm/features/settings/models/user-admin.model';
 import { UserAdminDataService } from '../crm/features/settings/services/user-admin-data.service';
-import { DirectChatMessageItem, DirectChatService, DirectChatThreadItem } from '../core/chat/direct-chat.service';
+import { DirectChatAttachmentItem, DirectChatMessageItem, DirectChatService, DirectChatThreadItem } from '../core/chat/direct-chat.service';
 import { NotificationService } from '../core/notifications';
 import { firstValueFrom } from 'rxjs';
+import { AttachmentDataService, AttachmentItem } from '../shared/services/attachment-data.service';
+import { environment } from '../../environments/environment';
 
 interface PresencePerson {
   userId: string;
@@ -40,6 +42,21 @@ interface DirectChatMessage {
   recipientUserId: string;
   content: string;
   sentAtUtc: string;
+  attachments: DirectChatAttachment[];
+}
+
+interface DirectChatAttachment {
+  attachmentId: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+  downloadUrl: string;
+}
+
+interface PendingChatAttachment {
+  id: string;
+  file: File;
+  size: number;
 }
 
 interface DirectChatThreadView {
@@ -96,6 +113,7 @@ export class ShellComponent {
   private readonly userAdminData = inject(UserAdminDataService);
   private readonly directChatService = inject(DirectChatService);
   private readonly notificationService = inject(NotificationService);
+  private readonly attachmentDataService = inject(AttachmentDataService);
   protected readonly currentUserId = readUserId();
 
   protected readonly onlineUsers = toSignal(this.presenceService.onlineUsers$, { initialValue: new Set<string>() });
@@ -129,6 +147,8 @@ export class ShellComponent {
   protected readonly chatPanelVisible = signal(false);
   protected readonly chatDraft = signal('');
   protected readonly chatSaving = signal(false);
+  protected readonly chatMaximized = signal(false);
+  protected readonly chatAttachmentUploading = signal(false);
   protected readonly chatLoading = signal(false);
   protected readonly chatError = signal<string | null>(null);
   protected readonly chatUnreadByThread = signal<Map<string, number>>(new Map());
@@ -140,6 +160,7 @@ export class ShellComponent {
   protected readonly emojiPickerVisible = signal(false);
   protected readonly quickEmojis = QUICK_EMOJIS;
   protected readonly chatMessages = signal<DirectChatMessage[]>([]);
+  protected readonly pendingChatAttachments = signal<PendingChatAttachment[]>([]);
   protected readonly chatThreads = signal<DirectChatThreadItem[]>([]);
   protected readonly chatThreadLoading = signal(false);
   protected readonly typingUsersByThread = signal<Map<string, Map<string, string>>>(new Map());
@@ -251,6 +272,7 @@ export class ShellComponent {
   });
 
   @ViewChild('quickAddModal') quickAddModal!: QuickAddModalComponent;
+  @ViewChild('chatAttachmentInput') chatAttachmentInput?: ElementRef<HTMLInputElement>;
   @ViewChild('presenceTrigger') presenceTrigger?: ElementRef<HTMLElement>;
   @ViewChild('presencePopup') presencePopup?: ElementRef<HTMLElement>;
 
@@ -391,7 +413,9 @@ export class ShellComponent {
   protected closeChatPanel(): void {
     this.stopSelfTyping();
     this.chatPanelVisible.set(false);
+    this.chatMaximized.set(false);
     this.emojiPickerVisible.set(false);
+    this.pendingChatAttachments.set([]);
     this.chatLoading.set(false);
     this.chatError.set(null);
   }
@@ -412,38 +436,54 @@ export class ShellComponent {
     this.openThreadById(threadId);
   }
 
-  protected sendChatMessage(): void {
+  protected async sendChatMessage(): Promise<void> {
     const threadId = this.activeChatThreadId();
     const message = this.applyEmojiShortcuts(this.chatDraft().trim());
+    const pendingAttachments = this.pendingChatAttachments();
 
-    if (!threadId || !message || this.chatSaving()) {
+    if (!threadId || this.chatSaving() || (!message && pendingAttachments.length === 0)) {
       return;
     }
 
     this.stopSelfTyping(threadId);
     this.chatSaving.set(true);
-    this.directChatService.sendMessage(threadId, message)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (sentMessage) => {
-          this.chatDraft.set('');
-          this.emojiPickerVisible.set(false);
-          this.chatSaving.set(false);
-          const mapped = this.mapMessageItem(sentMessage);
-          this.chatMessages.update((messages) => {
-            if (messages.some((item) => item.id === mapped.id)) {
-              return messages;
-            }
-            return [...messages, mapped];
-          });
-          this.markThreadAsRead(threadId);
-          this.refreshChatThreads(threadId);
-        },
-        error: () => {
-          this.chatSaving.set(false);
-          this.chatError.set('Unable to send message. Please retry.');
+    this.chatError.set(null);
+
+    try {
+      let attachmentIds: string[] = [];
+      if (pendingAttachments.length > 0) {
+        this.chatAttachmentUploading.set(true);
+        const uploaded = await Promise.all(
+          pendingAttachments.map((item) =>
+            firstValueFrom(this.attachmentDataService.upload(item.file, 'DirectChatThread', threadId))
+          )
+        );
+        attachmentIds = uploaded.map((item) => item.id);
+      }
+
+      const sentMessage = await firstValueFrom(this.directChatService.sendMessage(threadId, message, attachmentIds));
+      this.chatDraft.set('');
+      this.emojiPickerVisible.set(false);
+      this.pendingChatAttachments.set([]);
+      if (this.chatAttachmentInput?.nativeElement) {
+        this.chatAttachmentInput.nativeElement.value = '';
+      }
+
+      const mapped = this.mapMessageItem(sentMessage);
+      this.chatMessages.update((messages) => {
+        if (messages.some((item) => item.id === mapped.id)) {
+          return messages;
         }
+        return [...messages, mapped];
       });
+      this.markThreadAsRead(threadId);
+      this.refreshChatThreads(threadId);
+    } catch {
+      this.chatError.set('Unable to send message. Please retry.');
+    } finally {
+      this.chatAttachmentUploading.set(false);
+      this.chatSaving.set(false);
+    }
   }
 
   protected clearActiveChat(): void {
@@ -563,6 +603,72 @@ export class ShellComponent {
     this.typingIdleTimer = setTimeout(() => this.stopSelfTyping(threadId), 1500);
   }
 
+  protected toggleChatMaximize(): void {
+    this.chatMaximized.update((value) => !value);
+  }
+
+  protected onChatAttachmentSelected(fileList: FileList | null): void {
+    if (!fileList || !fileList.length) {
+      return;
+    }
+
+    const existing = this.pendingChatAttachments();
+    const currentSize = existing.reduce((sum, item) => sum + item.size, 0);
+    const files = Array.from(fileList);
+    const maxTotalBytes = 20 * 1024 * 1024;
+
+    const next: PendingChatAttachment[] = [...existing];
+    let accumulatedSize = currentSize;
+
+    for (const file of files) {
+      if (!file || !file.name) {
+        continue;
+      }
+
+      const duplicate = next.some(
+        (item) => item.file.name === file.name && item.file.size === file.size && item.file.lastModified === file.lastModified
+      );
+      if (duplicate) {
+        continue;
+      }
+
+      if (accumulatedSize + file.size > maxTotalBytes) {
+        this.chatError.set('Total attachment size must be under 20 MB.');
+        break;
+      }
+
+      next.push({
+        id: crypto.randomUUID(),
+        file,
+        size: file.size
+      });
+      accumulatedSize += file.size;
+    }
+
+    this.pendingChatAttachments.set(next);
+    if (this.chatAttachmentInput?.nativeElement) {
+      this.chatAttachmentInput.nativeElement.value = '';
+    }
+  }
+
+  protected removePendingChatAttachment(id: string): void {
+    this.pendingChatAttachments.update((current) => current.filter((item) => item.id !== id));
+  }
+
+  protected formatAttachmentSize(bytes: number): string {
+    if (!Number.isFinite(bytes) || bytes <= 0) {
+      return '0 B';
+    }
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let value = bytes;
+    let index = 0;
+    while (value >= 1024 && index < units.length - 1) {
+      value /= 1024;
+      index += 1;
+    }
+    return `${value.toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+  }
+
   protected setSelectedParticipantsToAdd(values: string[] | null | undefined): void {
     this.selectedParticipantsToAdd.set([...(values ?? []).filter(Boolean)]);
   }
@@ -646,7 +752,8 @@ export class ShellComponent {
       senderDisplayName,
       recipientUserId,
       content,
-      sentAtUtc
+      sentAtUtc,
+      attachments: this.normalizeRealtimeAttachments(payload['attachments'])
     };
     const threadKnownBeforeEvent = this.chatThreads().some((item) => item.threadId === threadId);
 
@@ -734,8 +841,59 @@ export class ShellComponent {
       senderDisplayName: item.senderDisplayName,
       recipientUserId: '',
       content: item.content,
-      sentAtUtc: item.sentAtUtc
+      sentAtUtc: item.sentAtUtc,
+      attachments: (item.attachments ?? []).map((attachment) => this.mapAttachmentItem(attachment))
     };
+  }
+
+  private mapAttachmentItem(item: DirectChatAttachmentItem): DirectChatAttachment {
+    const baseUrl = (environment.apiUrl ?? '').replace(/\/+$/, '');
+    const path = item.downloadUrl?.trim() ?? '';
+    const downloadUrl = path.startsWith('http')
+      ? path
+      : `${baseUrl}/${path.replace(/^\/+/, '')}`;
+    return {
+      attachmentId: item.attachmentId,
+      fileName: item.fileName,
+      contentType: item.contentType,
+      size: item.size,
+      downloadUrl
+    };
+  }
+
+  private normalizeRealtimeAttachments(raw: unknown): DirectChatAttachment[] {
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+
+    const baseUrl = (environment.apiUrl ?? '').replace(/\/+$/, '');
+    const attachments: DirectChatAttachment[] = [];
+    for (const item of raw) {
+      if (!item || typeof item !== 'object') {
+        continue;
+      }
+
+      const record = item as Record<string, unknown>;
+      const attachmentId = this.asString(record['attachmentId']);
+      const fileName = this.asString(record['fileName']);
+      const contentType = this.asString(record['contentType']) ?? 'application/octet-stream';
+      const sizeRaw = record['size'];
+      const size = typeof sizeRaw === 'number' ? sizeRaw : Number(sizeRaw ?? 0);
+
+      if (!attachmentId || !fileName) {
+        continue;
+      }
+
+      attachments.push({
+        attachmentId,
+        fileName,
+        contentType,
+        size: Number.isFinite(size) ? size : 0,
+        downloadUrl: `${baseUrl}/api/attachments/${attachmentId}/download`
+      });
+    }
+
+    return attachments;
   }
 
   private mapThreadParticipants(thread: DirectChatThreadItem): PresencePerson[] {

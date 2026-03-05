@@ -19,4 +19,11 @@ public sealed record DirectChatMessageDto(
     Guid SenderUserId,
     string SenderDisplayName,
     string Content,
-    DateTime SentAtUtc);
+    DateTime SentAtUtc,
+    IReadOnlyList<DirectChatAttachmentDto> Attachments);
+
+public sealed record DirectChatAttachmentDto(
+    Guid AttachmentId,
+    string FileName,
+    string ContentType,
+    long Size);

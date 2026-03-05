@@ -633,6 +633,15 @@
   overflow: hidden;
 }
 
+.direct-chat-panel--maximized {
+  right: 12px;
+  left: 12px;
+  top: calc(var(--shell-topbar-height) + 6px);
+  bottom: calc(var(--shell-footer-safe-height) + 10px);
+  width: auto;
+  max-height: none;
+}
+
 .direct-chat-threads {
   width: 260px;
   min-width: 220px;
@@ -903,6 +912,31 @@
     min-width: 0;
   }
 
+  .direct-chat-message__attachments {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    li {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.72rem;
+    }
+
+    a {
+      color: #bfdbfe;
+      text-decoration: underline;
+    }
+
+    span {
+      color: rgba(203, 213, 225, 0.82);
+    }
+  }
+
   p {
     margin: 0;
     color: #f8fafc;
@@ -1006,6 +1040,74 @@
   cursor: pointer;
 }
 
+.direct-chat-attach-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.52);
+  color: #f8fafc;
+  font-size: 0.9rem;
+  width: 36px;
+  height: 34px;
+  cursor: pointer;
+
+  input[type='file'] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+}
+
+.direct-chat-attachments-pending {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.direct-chat-attachments-pending__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 211, 252, 0.36);
+  background: rgba(30, 64, 175, 0.28);
+  color: #dbeafe;
+  padding: 3px 8px;
+  max-width: 100%;
+
+  strong {
+    font-size: 0.7rem;
+    font-weight: 700;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  em {
+    font-style: normal;
+    font-size: 0.66rem;
+    color: rgba(191, 219, 254, 0.9);
+  }
+
+  button {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: #e2e8f0;
+    font-size: 0.72rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+}
+
 .direct-chat-emoji-picker {
   position: absolute;
   bottom: 54px;
@@ -1064,6 +1166,11 @@
     bottom: 76px;
     max-height: 62vh;
     flex-direction: column;
+  }
+
+  .direct-chat-panel--maximized {
+    top: 10px;
+    bottom: 72px;
   }
 
   .direct-chat-threads {

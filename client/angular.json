@@ -25,7 +25,10 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "allowedCommonJsDependencies": [
-              "google-libphonenumber"
+              "google-libphonenumber",
+              "quill-delta",
+              "jquery",
+              "@progress/telerik-jquery-report-viewer"
             ],
             "assets": [
               {
@@ -39,6 +42,8 @@
               }
             ],
               "styles": [
+                "@progress/kendo-theme-default/dist/all.css",
+                "@progress/telerik-jquery-report-viewer/dist/styles/telerikReportViewer.min.css",
                 "src/styles.scss"
               ]
           },
@@ -53,12 +58,12 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "1.5MB",
-                  "maximumError": "2MB"
+                  "maximumWarning": "2.2MB",
+                  "maximumError": "2.5MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "65kB",
+                  "maximumWarning": "66kB",
                   "maximumError": "100kB"
                 }
               ],

@@ -23,6 +23,9 @@ public sealed class SupportCase : AuditableEntity
     public DateTime? FirstRespondedUtc { get; set; }
     public DateTime? ResolvedUtc { get; set; }
     public DateTime? ClosedUtc { get; set; }
+    public string? ClosureReason { get; set; }
+    public int? CsatScore { get; set; }
+    public string? CsatFeedback { get; set; }
 
     public Account? Account { get; set; }
     public Contact? Contact { get; set; }

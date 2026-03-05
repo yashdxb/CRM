@@ -14,7 +14,7 @@ namespace CRM.Enterprise.Infrastructure.Decisions;
 public sealed class DecisionSlaEscalationWorker : BackgroundService
 {
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(2);
-    private static readonly string[] ClosedStatuses = ["Approved", "Rejected", "Cancelled", "Expired"];
+    private static readonly string[] ClosedStatuses = new[] { "Approved", "Rejected", "Cancelled", "Expired" };
     private const string EscalationAction = "ApprovalSlaEscalated";
     private const string SalesManagerRoleName = "Sales Manager";
 
@@ -35,7 +35,14 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Delay slightly to avoid competing with startup migrations and seed routines.
-        await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(15), stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -52,7 +59,14 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
                 _logger.LogWarning(ex, "Decision SLA escalation worker pass failed.");
             }
 
-            await Task.Delay(PollInterval, stoppingToken);
+            try
+            {
+                await Task.Delay(PollInterval, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
     }
 

@@ -1,10 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { CheckboxModule } from 'primeng/checkbox';
+import { FileUploadModule } from 'primeng/fileupload';
 import { InputTextModule } from 'primeng/inputtext';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { TabsModule } from 'primeng/tabs';
 import { TextareaModule } from 'primeng/textarea';
@@ -14,11 +18,12 @@ import { readTokenContext, tokenHasPermission } from '../../../../core/auth/toke
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { HelpDeskCase, HelpDeskCaseComment, HelpDeskCaseEscalation, HelpDeskQueue, SaveHelpDeskCaseRequest } from '../models/helpdesk.model';
 import { HelpDeskDataService } from '../services/helpdesk-data.service';
+import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
 
 @Component({
   selector: 'app-helpdesk-case-detail-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, TextareaModule, SelectModule, TabsModule, RouterLink, BreadcrumbsComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonModule, InputTextModule, TextareaModule, SelectModule, TabsModule, RouterLink, BreadcrumbsComponent, FileUploadModule, CheckboxModule, InputNumberModule],
   templateUrl: './helpdesk-case-detail.page.html',
   styleUrl: './helpdesk-case-detail.page.scss'
 })
@@ -27,6 +32,7 @@ export class HelpDeskCaseDetailPage {
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
   private readonly data = inject(HelpDeskDataService);
+  private readonly attachments = inject(AttachmentDataService);
   private readonly toast = inject(AppToastService);
   private readonly caseId = this.route.snapshot.paramMap.get('id');
 
@@ -37,6 +43,9 @@ export class HelpDeskCaseDetailPage {
   protected readonly escalations = signal<HelpDeskCaseEscalation[]>([]);
   protected readonly queues = signal<HelpDeskQueue[]>([]);
   protected readonly activeTab = signal('overview');
+  protected readonly commentAttachmentUploading = signal(false);
+  protected readonly pendingCommentAttachments = signal<AttachmentItem[]>([]);
+  protected readonly selectedMacro = signal<string | null>(null);
   protected readonly canManage = computed(() =>
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.helpDeskManage)
   );
@@ -68,6 +77,18 @@ export class HelpDeskCaseDetailPage {
   protected readonly queueOptions = computed(() =>
     this.queues().map((q) => ({ label: q.name, value: q.id }))
   );
+  protected readonly closureReasonOptions = [
+    { label: 'Resolved by product guidance', value: 'Resolved by product guidance' },
+    { label: 'Bug fix deployed', value: 'Bug fix deployed' },
+    { label: 'Configuration issue', value: 'Configuration issue' },
+    { label: 'User training required', value: 'User training required' },
+    { label: 'Third-party dependency', value: 'Third-party dependency' }
+  ];
+  protected readonly macroOptions = [
+    { label: 'Request logs', value: 'request-logs', body: 'Please share recent logs, timestamps, and exact reproduction steps so we can isolate the issue quickly.' },
+    { label: 'Request environment details', value: 'request-env', body: 'Please confirm environment, browser version, and tenant key. This helps us validate configuration-specific behavior.' },
+    { label: 'Closure confirmation', value: 'closure-confirm', body: 'The fix has been applied. Please confirm whether the issue is fully resolved on your side.' }
+  ];
   protected readonly commentForm = this.fb.group({
     body: ['', [Validators.required, Validators.maxLength(4000)]],
     isInternal: [true]
@@ -80,7 +101,10 @@ export class HelpDeskCaseDetailPage {
     category: ['General', [Validators.required]],
     subcategory: [''],
     source: ['Manual', [Validators.required]],
-    queueId: [null as string | null]
+    queueId: [null as string | null],
+    closureReason: [null as string | null],
+    csatScore: [null as number | null],
+    csatFeedback: ['']
   });
 
   constructor() {
@@ -113,7 +137,10 @@ export class HelpDeskCaseDetailPage {
       queueId: raw.queueId ?? null,
       accountId: this.caseRecord()?.accountId ?? null,
       contactId: this.caseRecord()?.contactId ?? null,
-      ownerUserId: this.caseRecord()?.ownerUserId ?? null
+      ownerUserId: this.caseRecord()?.ownerUserId ?? null,
+      closureReason: raw.closureReason ?? null,
+      csatScore: raw.csatScore ?? null,
+      csatFeedback: raw.csatFeedback ?? null
     };
 
     const request$ = this.caseId
@@ -167,14 +194,103 @@ export class HelpDeskCaseDetailPage {
     }
 
     const payload = this.commentForm.getRawValue();
-    this.data.addComment(this.caseId, payload.body ?? '', !!payload.isInternal).subscribe({
+    const attachmentIds = this.pendingCommentAttachments().map((item) => item.id);
+    this.data.addComment(this.caseId, payload.body ?? '', !!payload.isInternal, attachmentIds).subscribe({
       next: () => {
         this.commentForm.reset({ body: '', isInternal: true });
+        this.pendingCommentAttachments.set([]);
+        this.selectedMacro.set(null);
         this.toast.show('success', 'Comment added.');
         this.loadCase(this.caseId!);
       },
       error: () => this.toast.show('error', 'Unable to add comment.')
     });
+  }
+
+  protected uploadCommentAttachment(event: { files?: File[] }) {
+    if (!this.caseId || !event.files?.length) {
+      return;
+    }
+
+    const file = event.files[0];
+    this.commentAttachmentUploading.set(true);
+    this.attachments.upload(file, 'SupportCase', this.caseId).subscribe({
+      next: (attachment) => {
+        this.pendingCommentAttachments.set([...this.pendingCommentAttachments(), attachment]);
+        this.commentAttachmentUploading.set(false);
+      },
+      error: (err) => {
+        this.commentAttachmentUploading.set(false);
+        const message = typeof err?.error?.message === 'string' && err.error.message.trim().length > 0
+          ? err.error.message
+          : 'Unable to upload attachment.';
+        this.toast.show('error', message);
+      }
+    });
+  }
+
+  protected removePendingAttachment(attachmentId: string) {
+    this.attachments.delete(attachmentId).subscribe({
+      next: () => this.pendingCommentAttachments.set(this.pendingCommentAttachments().filter((item) => item.id !== attachmentId)),
+      error: () => this.toast.show('error', 'Unable to remove attachment.')
+    });
+  }
+
+  protected formatBytes(size: number) {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  protected applyMacro(macroKey: string | null) {
+    if (!macroKey) {
+      return;
+    }
+
+    const macro = this.macroOptions.find((item) => item.value === macroKey);
+    if (!macro) {
+      return;
+    }
+
+    const current = this.commentForm.controls.body.value ?? '';
+    const next = current.trim().length ? `${current.trim()}\n\n${macro.body}` : macro.body;
+    this.commentForm.controls.body.setValue(next);
+  }
+
+  protected getSlaState() {
+    const row = this.caseRecord();
+    if (!row) {
+      return 'unknown';
+    }
+
+    if (!['New', 'Open', 'Pending Customer', 'Pending Internal'].includes(row.status)) {
+      return 'resolved';
+    }
+
+    const due = new Date(row.resolutionDueUtc).getTime();
+    const now = Date.now();
+    if (due < now) {
+      return 'breached';
+    }
+
+    if (due <= now + 60 * 60 * 1000) {
+      return 'at-risk';
+    }
+
+    return 'healthy';
+  }
+
+  protected formatDueIn(dueUtc?: string | null) {
+    if (!dueUtc) {
+      return '-';
+    }
+
+    const ms = new Date(dueUtc).getTime() - Date.now();
+    const absoluteMinutes = Math.round(Math.abs(ms) / 60000);
+    const hours = Math.floor(absoluteMinutes / 60);
+    const minutes = absoluteMinutes % 60;
+    const token = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+    return ms >= 0 ? `in ${token}` : `${token} overdue`;
   }
 
   private loadCase(id: string) {
@@ -192,7 +308,10 @@ export class HelpDeskCaseDetailPage {
           category: res.case.category,
           subcategory: res.case.subcategory ?? '',
           source: res.case.source,
-          queueId: res.case.queueId ?? null
+          queueId: res.case.queueId ?? null,
+          closureReason: res.case.closureReason ?? null,
+          csatScore: res.case.csatScore ?? null,
+          csatFeedback: res.case.csatFeedback ?? ''
         });
         this.loading.set(false);
       },

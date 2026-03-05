@@ -1,0 +1,39 @@
+<section class="page-container">
+  <header class="page-header">
+    <app-breadcrumbs />
+    <div class="header-row">
+      <div class="header-content">
+        <h1 class="hero-title">
+          <span class="title-gradient">Report</span>
+          <span class="title-light">Designer</span>
+        </h1>
+        <p class="hero-subtitle">Create and edit reports using the visual designer.</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="designer-section">
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="loading()">
+      <i class="pi pi-spin pi-spinner"></i>
+      <span>Loading Report Designer...</span>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" *ngIf="error(); let errorMessage">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ errorMessage }}</span>
+      <button class="btn btn-primary" (click)="retry()">
+        <i class="pi pi-refresh"></i>
+        Retry
+      </button>
+    </div>
+
+    <!-- Designer Container -->
+    <div 
+      #designerContainer 
+      class="designer-container"
+      [class.hidden]="loading() || error()">
+    </div>
+  </div>
+</section>

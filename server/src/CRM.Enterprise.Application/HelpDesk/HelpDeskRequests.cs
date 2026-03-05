@@ -22,7 +22,10 @@ public sealed record SupportCaseCreateRequest(
     Guid? AccountId,
     Guid? ContactId,
     Guid? QueueId,
-    Guid? OwnerUserId);
+    Guid? OwnerUserId,
+    string? ClosureReason,
+    int? CsatScore,
+    string? CsatFeedback);
 
 public sealed record SupportCaseUpdateRequest(
     string Subject,
@@ -34,13 +37,21 @@ public sealed record SupportCaseUpdateRequest(
     Guid? AccountId,
     Guid? ContactId,
     Guid? QueueId,
-    Guid? OwnerUserId);
+    Guid? OwnerUserId,
+    string? ClosureReason,
+    int? CsatScore,
+    string? CsatFeedback);
 
 public sealed record SupportCaseAssignRequest(Guid? QueueId, Guid? OwnerUserId);
 
 public sealed record SupportCaseStatusRequest(string Status, string? Note);
 
-public sealed record SupportCaseCommentCreateRequest(string Body, bool IsInternal, Guid AuthorUserId, string AuthorUserName);
+public sealed record SupportCaseCommentCreateRequest(
+    string Body,
+    bool IsInternal,
+    Guid AuthorUserId,
+    string AuthorUserName,
+    IReadOnlyCollection<Guid>? AttachmentIds);
 
 public sealed record SupportQueueUpsertRequest(string Name, string? Description, bool IsActive, IReadOnlyCollection<Guid>? MemberUserIds);
 

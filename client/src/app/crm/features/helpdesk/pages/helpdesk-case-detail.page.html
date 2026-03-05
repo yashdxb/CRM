@@ -59,15 +59,51 @@
               <span>Queue</span>
               <p-select [options]="queueOptions()" optionLabel="label" optionValue="value" formControlName="queueId" [showClear]="true"></p-select>
             </label>
+            <label class="field">
+              <span>Closure reason</span>
+              <p-select [options]="closureReasonOptions" optionLabel="label" optionValue="value" formControlName="closureReason" [showClear]="true"></p-select>
+            </label>
+            <label class="field">
+              <span>CSAT score (1-5)</span>
+              <p-inputNumber formControlName="csatScore" [min]="1" [max]="5"></p-inputNumber>
+            </label>
+            <label class="field field--wide">
+              <span>CSAT feedback</span>
+              <textarea pTextarea rows="3" formControlName="csatFeedback" placeholder="Optional feedback from customer"></textarea>
+            </label>
             <label class="field field--wide">
               <span>Description</span>
               <textarea pTextarea rows="5" formControlName="description"></textarea>
             </label>
           </form>
 
+          <div class="sla-cockpit" *ngIf="caseRecord() as currentCase">
+            <article class="sla-card glass-card no-hover">
+              <div class="sla-head">
+                <strong>SLA status</strong>
+                <span class="sla-chip" [class.breached]="getSlaState() === 'breached'" [class.at-risk]="getSlaState() === 'at-risk'" [class.healthy]="getSlaState() === 'healthy'">
+                  {{ getSlaState() | titlecase }}
+                </span>
+              </div>
+              <div class="sla-meta">
+                <span>Resolution due: {{ currentCase.resolutionDueUtc | date: 'medium' }}</span>
+                <span>{{ formatDueIn(currentCase.resolutionDueUtc) }}</span>
+              </div>
+            </article>
+          </div>
+
           <div class="status-actions" *ngIf="caseRecord()">
             <span>Quick status:</span>
-            <button pButton type="button" class="crm-button crm-button--text" *ngFor="let status of statusOptions" [label]="status.label" [disabled]="!canManage()" (click)="updateStatus(status.value)"></button>
+            <button
+              pButton
+              type="button"
+              class="crm-button crm-button--pill crm-button--sm status-pill"
+              [class.active]="caseRecord()?.status === status.value"
+              *ngFor="let status of statusOptions"
+              [label]="status.label"
+              [disabled]="!canManage()"
+              (click)="updateStatus(status.value)">
+            </button>
           </div>
         </p-tabpanel>
 
@@ -79,15 +115,59 @@
                 <span>{{ row.createdAtUtc | date: 'medium' }}</span>
               </header>
               <p>{{ row.body }}</p>
+              <ul class="comment-attachment-list" *ngIf="row.attachments.length">
+                <li *ngFor="let attachment of row.attachments">
+                  <a [href]="attachment.downloadUrl" target="_blank" rel="noopener">
+                    <i class="pi pi-paperclip"></i>
+                    <span>{{ attachment.fileName }}</span>
+                    <small>{{ formatBytes(attachment.size) }}</small>
+                  </a>
+                </li>
+              </ul>
             </article>
           </div>
 
           <form class="comment-form" [formGroup]="commentForm">
+            <p-select
+              [options]="macroOptions"
+              [ngModel]="selectedMacro()"
+              (ngModelChange)="selectedMacro.set($event); applyMacro($event)"
+              [ngModelOptions]="{ standalone: true }"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Insert canned response">
+            </p-select>
             <textarea pTextarea rows="3" formControlName="body" placeholder="Add internal note or customer-facing update..."></textarea>
+            <p-fileUpload
+              mode="basic"
+              chooseLabel="Attach file"
+              chooseStyleClass="crm-button crm-button--ghost crm-button--sm"
+              [customUpload]="true"
+              [auto]="true"
+              [multiple]="false"
+              [disabled]="!canManage() || commentAttachmentUploading()"
+              (uploadHandler)="uploadCommentAttachment($event)">
+            </p-fileUpload>
+            <ul class="pending-attachment-list" *ngIf="pendingCommentAttachments().length">
+              <li *ngFor="let attachment of pendingCommentAttachments()">
+                <span>
+                  <i class="pi pi-paperclip"></i>
+                  {{ attachment.fileName }} ({{ formatBytes(attachment.size) }})
+                </span>
+                <button
+                  pButton
+                  type="button"
+                  class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
+                  icon="pi pi-times"
+                  title="Remove attachment"
+                  (click)="removePendingAttachment(attachment.id)">
+                </button>
+              </li>
+            </ul>
             <div class="comment-actions">
-              <label>
-                <input type="checkbox" formControlName="isInternal" />
-                Internal comment
+              <label class="checkbox-field">
+                <p-checkbox formControlName="isInternal" [binary]="true"></p-checkbox>
+                <span>Internal comment</span>
               </label>
               <button pButton type="button" class="crm-button crm-button--primary" label="Add Comment" [disabled]="!canManage()" (click)="addComment()"></button>
             </div>

@@ -71,6 +71,13 @@ export class WorkspaceSettingsPage {
 
   protected currencyOptions: Option[] = [];
 
+  protected readonly reportDesignerPermissionOptions: Option[] = [
+    { label: 'Admins Only (Administration Manage)', value: 'Permissions.Administration.Manage' },
+    { label: 'Reports Design Permission', value: 'Permissions.Reports.Design' },
+    { label: 'Reports Manage Permission', value: 'Permissions.Reports.Manage' },
+    { label: 'Reports View Permission', value: 'Permissions.Reports.View' }
+  ];
+
   protected readonly settingsForm = this.fb.group({
     name: ['', [Validators.required, Validators.maxLength(120)]],
     timeZone: ['UTC', [Validators.required]],
@@ -97,7 +104,8 @@ export class WorkspaceSettingsPage {
     featureRealtimeAssistantStreaming: [false],
     featureHelpDeskCases: [false],
     featureHelpDeskEmailIntake: [false],
-    featureHelpDeskRealtime: [false]
+    featureHelpDeskRealtime: [false],
+    reportDesignerRequiredPermission: ['Permissions.Administration.Manage']
   });
 
   constructor() {
@@ -169,7 +177,8 @@ export class WorkspaceSettingsPage {
         'helpdesk.cases': !!payload.featureHelpDeskCases,
         'helpdesk.emailIntake': !!payload.featureHelpDeskEmailIntake,
         'helpdesk.realtime': !!payload.featureHelpDeskRealtime
-      }
+      },
+      reportDesignerRequiredPermission: payload.reportDesignerRequiredPermission || null
     };
     this.saving.set(true);
     this.settingsService.updateSettings(safePayload).subscribe({
@@ -213,7 +222,8 @@ export class WorkspaceSettingsPage {
       featureRealtimeAssistantStreaming: this.resolveFeatureFlag(settings.featureFlags, 'realtime.assistantStreaming'),
       featureHelpDeskCases: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.cases'),
       featureHelpDeskEmailIntake: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.emailIntake'),
-      featureHelpDeskRealtime: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.realtime')
+      featureHelpDeskRealtime: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.realtime'),
+      reportDesignerRequiredPermission: settings.reportDesignerRequiredPermission || 'Permissions.Administration.Manage'
     });
   }
 

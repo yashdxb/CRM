@@ -2,7 +2,7 @@ namespace CRM.Enterprise.Api.Contracts.DirectChat;
 
 public sealed record OpenDirectChatThreadRequest(IReadOnlyList<Guid> ParticipantUserIds);
 
-public sealed record SendDirectChatMessageRequest(string Message);
+public sealed record SendDirectChatMessageRequest(string Message, IReadOnlyList<Guid>? AttachmentIds);
 
 public sealed record ArchiveDirectChatThreadRequest(bool Archived);
 
@@ -25,4 +25,12 @@ public sealed record DirectChatMessageItem(
     Guid SenderUserId,
     string SenderDisplayName,
     string Content,
-    DateTime SentAtUtc);
+    DateTime SentAtUtc,
+    IReadOnlyList<DirectChatAttachmentItem> Attachments);
+
+public sealed record DirectChatAttachmentItem(
+    Guid AttachmentId,
+    string FileName,
+    string ContentType,
+    long Size,
+    string DownloadUrl);

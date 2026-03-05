@@ -78,7 +78,13 @@ public sealed class DirectChatController : ControllerBase
             return Unauthorized();
         }
 
-        var item = await _directChatService.SendMessageAsync(userId.Value, threadId, request.Message ?? string.Empty, cancellationToken);
+        var attachmentIds = request.AttachmentIds ?? [];
+        var item = await _directChatService.SendMessageAsync(
+            userId.Value,
+            threadId,
+            request.Message ?? string.Empty,
+            attachmentIds,
+            cancellationToken);
         return item is null ? BadRequest() : Ok(MapMessage(item));
     }
 
@@ -165,5 +171,11 @@ public sealed class DirectChatController : ControllerBase
             dto.SenderUserId,
             dto.SenderDisplayName,
             dto.Content,
-            dto.SentAtUtc);
+            dto.SentAtUtc,
+            dto.Attachments.Select(a => new DirectChatAttachmentItem(
+                a.AttachmentId,
+                a.FileName,
+                a.ContentType,
+                a.Size,
+                $"/api/attachments/{a.AttachmentId}/download")).ToList());
 }

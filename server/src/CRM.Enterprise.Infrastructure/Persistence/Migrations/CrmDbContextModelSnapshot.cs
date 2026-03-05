@@ -5886,6 +5886,10 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("ClosedUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ClosureReason")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
                     b.Property<Guid?>("ContactId")
                         .HasColumnType("uniqueidentifier");
 
@@ -5894,6 +5898,13 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("CreatedBy")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CsatFeedback")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("CsatScore")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("DeletedAtUtc")
                         .HasColumnType("datetime2");
@@ -6391,6 +6402,9 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("QualificationPolicyJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReportDesignerRequiredPermission")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SupportingDocumentPolicyJson")

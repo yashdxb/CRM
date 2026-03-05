@@ -24,6 +24,15 @@ export interface DirectChatMessageItem {
   senderDisplayName: string;
   content: string;
   sentAtUtc: string;
+  attachments: DirectChatAttachmentItem[];
+}
+
+export interface DirectChatAttachmentItem {
+  attachmentId: string;
+  fileName: string;
+  contentType: string;
+  size: number;
+  downloadUrl: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -47,8 +56,8 @@ export class DirectChatService {
     });
   }
 
-  sendMessage(threadId: string, message: string) {
-    return this.http.post<DirectChatMessageItem>(`${this.baseUrl}/api/chat/threads/${threadId}/messages`, { message });
+  sendMessage(threadId: string, message: string, attachmentIds: string[] = []) {
+    return this.http.post<DirectChatMessageItem>(`${this.baseUrl}/api/chat/threads/${threadId}/messages`, { message, attachmentIds });
   }
 
   archiveThread(threadId: string, archived: boolean) {

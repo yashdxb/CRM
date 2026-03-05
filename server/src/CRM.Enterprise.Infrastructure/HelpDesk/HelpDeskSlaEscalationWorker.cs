@@ -27,7 +27,14 @@ public sealed class HelpDeskSlaEscalationWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -44,7 +51,14 @@ public sealed class HelpDeskSlaEscalationWorker : BackgroundService
                 _logger.LogWarning(ex, "Help desk SLA escalation pass failed.");
             }
 
-            await Task.Delay(PollInterval, stoppingToken);
+            try
+            {
+                await Task.Delay(PollInterval, stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
     }
 
@@ -71,7 +85,7 @@ public sealed class HelpDeskSlaEscalationWorker : BackgroundService
     private async Task<int> RunTenantPassAsync(CrmDbContext db, Guid tenantId, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
-        var openStatuses = new[] { "New", "Open", "Pending Customer", "Pending Internal" };
+        string[] openStatuses = new[] { "New", "Open", "Pending Customer", "Pending Internal" };
         var openCases = await db.SupportCases
             .AsNoTracking()
             .Where(c => c.TenantId == tenantId && !c.IsDeleted && openStatuses.Contains(c.Status))

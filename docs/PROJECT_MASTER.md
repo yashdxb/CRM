@@ -687,11 +687,21 @@ These workflows define how non‑rep roles operate in the same CRM, with clear o
 - Azure Communication Email (transactional email)
 - Azure Service Bus (email queue and async processing)
  - SendGrid: removed (deprecated in this codebase)
+- Telerik Report Server (dev deployment on Azure VM via Docker, BYOL)
 
 ### Operational Rules
 - CORS must be configured in both API code and App Service settings.
 - Always align environment URLs (dev vs prod) across client and API.
 - Health endpoints: `/health` and `/healthz` should remain available.
+- Telerik Report Server secrets must remain in Azure Key Vault (`kv-crm-dev-ca`) and never in repo or appsettings.
+- Report Server ingress should stay NSG-restricted by source IP and proxied through Nginx.
+
+### Telerik Report Server (Dev State)
+- Resource group: `rg-crm-report-dev-eus2`
+- VM: `vmrptlinux01` (Linux)
+- Public endpoint: `http://52.247.69.37` and `https://52.247.69.37` (self-signed cert)
+- Runtime: Dockerized Report Server + SQL Server, with Nginx reverse proxy
+- Verification path: login succeeds and sample dashboard report renders (`/Report/View/Samples/Dashboard?ReportYear=2002`)
 
 ---
 

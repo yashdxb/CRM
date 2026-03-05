@@ -43,6 +43,7 @@ using CRM.Enterprise.Infrastructure.DirectChat;
 using CRM.Enterprise.Infrastructure.HelpDesk;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Emails;
+using CRM.Enterprise.Infrastructure.Reporting;
 using MediatR;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Identity;
@@ -76,6 +77,7 @@ public static class DependencyInjection
         services.Configure<GraphMailOptions>(configuration.GetSection(GraphMailOptions.SectionName));
         services.Configure<AcsEmailOptions>(configuration.GetSection(AcsEmailOptions.SectionName));
         services.Configure<ApprovalQueueOptions>(configuration.GetSection(ApprovalQueueOptions.SectionName));
+        services.Configure<ReportingOptions>(configuration.GetSection(ReportingOptions.SectionName));
         services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IEntraTokenValidator, EntraTokenValidator>();
         services.AddHttpContextAccessor();

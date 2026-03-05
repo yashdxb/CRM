@@ -469,6 +469,31 @@
             </div>
           </section>
 
+          <!-- Reports Configuration Section -->
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-file-pdf"></i>
+              Reports Configuration
+            </h3>
+            <p class="section-description">Configure access permissions for the report designer</p>
+            
+            <div class="form-grid">
+              <div class="field">
+                <label>Report Designer Access</label>
+                <p-select appendTo="body"
+                  [options]="reportDesignerPermissionOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  formControlName="reportDesignerRequiredPermission"
+                  placeholder="Select permission level"
+                  styleClass="w-full"
+                >
+                </p-select>
+                <small class="field-hint">Users must have this permission to access the web report designer</small>
+              </div>
+            </div>
+          </section>
+
           <div class="form-actions">
             <button type="button" class="btn btn-ghost" (click)="loadSettings()" [disabled]="loading()">
               <i class="pi pi-refresh"></i>

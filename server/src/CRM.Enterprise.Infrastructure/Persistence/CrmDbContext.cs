@@ -513,6 +513,10 @@ public class CrmDbContext : DbContext
             .Property(c => c.Subcategory).HasMaxLength(120);
         modelBuilder.Entity<SupportCase>()
             .Property(c => c.Source).HasMaxLength(32).IsRequired();
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.ClosureReason).HasMaxLength(120);
+        modelBuilder.Entity<SupportCase>()
+            .Property(c => c.CsatFeedback).HasMaxLength(2000);
         modelBuilder.Entity<SupportQueue>()
             .Property(q => q.Name).HasMaxLength(120).IsRequired();
         modelBuilder.Entity<SupportSlaPolicy>()

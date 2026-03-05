@@ -1,5 +1,6 @@
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.DirectChat;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -219,6 +220,24 @@ public sealed class DirectChatService : IDirectChatService
             .Take(take)
             .ToListAsync(cancellationToken);
 
+        var messageIds = rows.Select(m => m.Id).ToList();
+        var attachmentsByMessage = messageIds.Count == 0
+            ? new Dictionary<Guid, IReadOnlyList<DirectChatAttachmentDto>>()
+            : await _dbContext.Attachments
+                .AsNoTracking()
+                .Where(a =>
+                    !a.IsDeleted &&
+                    a.RelatedEntityType == ActivityRelationType.DirectChatMessage &&
+                    messageIds.Contains(a.RelatedEntityId))
+                .OrderBy(a => a.CreatedAtUtc)
+                .GroupBy(a => a.RelatedEntityId)
+                .ToDictionaryAsync(
+                    group => group.Key,
+                    group => (IReadOnlyList<DirectChatAttachmentDto>)group
+                        .Select(a => new DirectChatAttachmentDto(a.Id, a.FileName, a.ContentType, a.Size))
+                        .ToList(),
+                    cancellationToken);
+
         return rows
             .OrderBy(m => m.CreatedAtUtc)
             .Select(m => new DirectChatMessageDto(
@@ -227,13 +246,24 @@ public sealed class DirectChatService : IDirectChatService
                 m.SenderUserId,
                 userNames.TryGetValue(m.SenderUserId, out var displayName) ? displayName : "User",
                 m.Content,
-                m.CreatedAtUtc))
+                m.CreatedAtUtc,
+                attachmentsByMessage.GetValueOrDefault(m.Id, [])))
             .ToList();
     }
 
-    public async Task<DirectChatMessageDto?> SendMessageAsync(Guid userId, Guid threadId, string message, CancellationToken cancellationToken = default)
+    public async Task<DirectChatMessageDto?> SendMessageAsync(
+        Guid userId,
+        Guid threadId,
+        string message,
+        IReadOnlyCollection<Guid>? attachmentIds = null,
+        CancellationToken cancellationToken = default)
     {
-        if (threadId == Guid.Empty || string.IsNullOrWhiteSpace(message))
+        var trimmedAttachmentIds = attachmentIds?
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList() ?? [];
+        var hasMessage = !string.IsNullOrWhiteSpace(message);
+        if (threadId == Guid.Empty || (!hasMessage && trimmedAttachmentIds.Count == 0))
         {
             return null;
         }
@@ -256,7 +286,7 @@ public sealed class DirectChatService : IDirectChatService
             return null;
         }
 
-        var content = message.Trim();
+        var content = (message ?? string.Empty).Trim();
         if (content.Length > 4000)
         {
             content = content[..4000];
@@ -288,6 +318,36 @@ public sealed class DirectChatService : IDirectChatService
             }
         }
 
+        var attachmentDtos = new List<DirectChatAttachmentDto>();
+        if (trimmedAttachmentIds.Count > 0)
+        {
+            var attachments = await _dbContext.Attachments
+                .Where(a =>
+                    !a.IsDeleted &&
+                    a.UploadedById == userId &&
+                    a.RelatedEntityType == ActivityRelationType.DirectChatThread &&
+                    a.RelatedEntityId == threadId &&
+                    trimmedAttachmentIds.Contains(a.Id))
+                .ToListAsync(cancellationToken);
+
+            if (attachments.Count != trimmedAttachmentIds.Count)
+            {
+                return null;
+            }
+
+            foreach (var attachment in attachments)
+            {
+                attachment.RelatedEntityType = ActivityRelationType.DirectChatMessage;
+                attachment.RelatedEntityId = entity.Id;
+                attachment.UpdatedAtUtc = DateTime.UtcNow;
+                attachmentDtos.Add(new DirectChatAttachmentDto(
+                    attachment.Id,
+                    attachment.FileName,
+                    attachment.ContentType,
+                    attachment.Size));
+            }
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var dto = new DirectChatMessageDto(
@@ -296,7 +356,8 @@ public sealed class DirectChatService : IDirectChatService
             userId,
             sender.FullName,
             entity.Content,
-            entity.CreatedAtUtc);
+            entity.CreatedAtUtc,
+            attachmentDtos);
 
         var recipientIds = participants.Select(p => p.UserId).Distinct().ToList();
         await _realtimePublisher.PublishUsersEventAsync(
@@ -310,7 +371,14 @@ public sealed class DirectChatService : IDirectChatService
                 senderUserId = dto.SenderUserId,
                 senderDisplayName = dto.SenderDisplayName,
                 content = dto.Content,
-                sentAtUtc = dto.SentAtUtc
+                sentAtUtc = dto.SentAtUtc,
+                attachments = dto.Attachments.Select(a => new
+                {
+                    attachmentId = a.AttachmentId,
+                    fileName = a.FileName,
+                    contentType = a.ContentType,
+                    size = a.Size
+                }).ToList()
             },
             cancellationToken);
 

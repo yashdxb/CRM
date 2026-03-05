@@ -20,4 +20,5 @@ public record UpdateWorkspaceSettingsRequest(
     AssistantActionScoringPolicy? AssistantActionScoringPolicy,
     DecisionEscalationPolicy? DecisionEscalationPolicy,
     SupportingDocumentPolicy? SupportingDocumentPolicy,
-    IReadOnlyDictionary<string, bool>? FeatureFlags = null);
+    IReadOnlyDictionary<string, bool>? FeatureFlags = null,
+    string? ReportDesignerRequiredPermission = null);

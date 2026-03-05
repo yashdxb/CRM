@@ -311,3 +311,74 @@ This file tracks recurring UI/data issues and how to fix them quickly.
 - Backward compatible—existing connections continue working.
 - Scopes are well-documented Microsoft Graph permissions.
 - Azure AD app registration already had User.Read permission configured.
+
+## 9) Telerik Report Viewer "wrapper" Error – Pages Area Empty
+
+**Symptoms**
+- Report viewer loads toolbar but pages area remains empty
+- Browser console shows: `Cannot read properties of undefined (reading 'wrapper')`
+- Error occurs in `PageNumberInput` constructor at line 8117 of bundled Telerik jQuery Report Viewer
+- Network shows `/api/telerik-reports/formats` succeeds but no `/pages/1` request is made
+
+**Root cause**
+**Kendo UI CSS/JS version mismatch** (3-year gap):
+
+| Component | Version |
+|-----------|---------|
+| Bundled Kendo JS (in `@progress/telerik-jquery-report-viewer`) | **2025.4.1111** |
+| `kendo-ui-core` CSS | **2022.3.1109** |
+
+The `NumericTextBox` widget initialization failed because the old CSS (2022) didn't create the expected `.k-numerictextbox` wrapper structure that the new JS code (2025) relied on. The widget constructor tried to access `this._numeric.wrapper[0]` which was `undefined`.
+
+**Fix pattern**
+1. Update `kendo-ui-core` to match the bundled JS version
+2. Install the new CSS package (kendo-ui-core 2025.x no longer bundles CSS)
+3. Update `angular.json` styles array to use the new CSS package
+
+**Implementation**
+
+```bash
+# Step 1: Update kendo-ui-core (use --legacy-peer-deps due to Telerik's incorrect peer deps)
+npm install kendo-ui-core@2025.4.1111 --save --legacy-peer-deps
+
+# Step 2: Install new CSS package
+npm install @progress/kendo-theme-default --save --legacy-peer-deps
+```
+
+```diff
+# angular.json styles array change
+- "node_modules/kendo-ui-core/css/web/kendo.common.min.css",
+- "node_modules/kendo-ui-core/css/web/kendo.default.min.css",
+- "node_modules/kendo-ui-core/css/web/kendo.default.mobile.min.css"
++ "node_modules/@progress/kendo-theme-default/dist/all.css"
+```
+
+**Files changed**
+- `client/package.json` – dependency versions updated
+- `client/angular.json` – styles array updated
+- `client/e2e/reports-viewer.spec.ts` – Playwright test added (new file)
+
+**Verification**
+```bash
+cd client
+E2E_BASE_URL=http://localhost:4200 API_BASE_URL=http://localhost:5014 \
+  npx playwright test e2e/reports-viewer.spec.ts
+```
+- ✅ No wrapper errors in console
+- ✅ Page number input has proper `k-numerictextbox` and `k-input` classes
+- ✅ Report pages area displays content
+- ✅ Smoke tests pass (no regressions)
+
+**Why this is safe**
+- CSS-only change on client side; no business logic modified
+- Kendo theme package is from same vendor (@progress/kendo-theme-default)
+- Version alignment ensures widget initialization succeeds
+- Backward compatible with existing Telerik Report Viewer components
+
+**Azure deployment note**
+Server-side reports code is currently untracked and needs to be committed:
+- `server/src/CRM.Enterprise.Api/Authorization/TelerikAnonymousRequirement.cs`
+- `server/src/CRM.Enterprise.Api/Controllers/ReportsController.cs`
+- `server/src/CRM.Enterprise.Api/Controllers/TelerikReportsController.cs`
+- `server/src/CRM.Enterprise.Api/Reporting/`
+- `server/src/CRM.Enterprise.Infrastructure/Reporting/`

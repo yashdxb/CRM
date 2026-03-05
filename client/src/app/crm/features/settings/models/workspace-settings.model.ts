@@ -15,6 +15,7 @@ export interface WorkspaceSettings {
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
   featureFlags?: Record<string, boolean> | null;
+  reportDesignerRequiredPermission?: string | null;
 }
 
 export interface UpdateWorkspaceSettingsRequest {
@@ -32,6 +33,7 @@ export interface UpdateWorkspaceSettingsRequest {
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
   featureFlags?: Record<string, boolean> | null;
+  reportDesignerRequiredPermission?: string | null;
 }
 
 export interface DecisionEscalationPolicy {

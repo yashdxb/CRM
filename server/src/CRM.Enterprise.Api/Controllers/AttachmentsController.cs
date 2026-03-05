@@ -223,6 +223,10 @@ public class AttachmentsController : ControllerBase
             ActivityRelationType.Contact => await _dbContext.Contacts.AnyAsync(x => x.Id == relatedEntityId && !x.IsDeleted, cancellationToken),
             ActivityRelationType.Account => await _dbContext.Accounts.AnyAsync(x => x.Id == relatedEntityId && !x.IsDeleted, cancellationToken),
             ActivityRelationType.Opportunity => await _dbContext.Opportunities.AnyAsync(x => x.Id == relatedEntityId && !x.IsDeleted, cancellationToken),
+            ActivityRelationType.DirectChatThread => await _dbContext.DirectChatThreads.AnyAsync(x => x.Id == relatedEntityId && !x.IsDeleted, cancellationToken),
+            ActivityRelationType.DirectChatMessage => await _dbContext.DirectChatMessages.AnyAsync(x => x.Id == relatedEntityId && !x.IsDeleted, cancellationToken),
+            ActivityRelationType.SupportCase => await _dbContext.SupportCases.AnyAsync(x => x.Id == relatedEntityId && !x.IsDeleted, cancellationToken),
+            ActivityRelationType.SupportCaseComment => await _dbContext.SupportCaseComments.AnyAsync(x => x.Id == relatedEntityId && !x.IsDeleted, cancellationToken),
             _ => false
         };
     }

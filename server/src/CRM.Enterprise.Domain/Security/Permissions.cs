@@ -36,6 +36,9 @@ public static class Permissions
         public const string TenantsManage = "Permissions.Tenants.Manage";
         public const string EmailsView = "Permissions.Emails.View";
         public const string EmailsManage = "Permissions.Emails.Manage";
+        public const string ReportsView = "Permissions.Reports.View";
+        public const string ReportsManage = "Permissions.Reports.Manage";
+        public const string ReportsDesign = "Permissions.Reports.Design";
     }
 
     public static class RoleNames
@@ -89,7 +92,10 @@ public static class Permissions
         new(Policies.TenantsView, "Tenants (View)", "View tenant workspaces and status.", "Configure System"),
         new(Policies.TenantsManage, "Tenants (Manage)", "Provision and manage tenant workspaces.", "Configure System"),
         new(Policies.EmailsView, "Emails (View)", "View sent emails and email logs.", "View & Analyze"),
-        new(Policies.EmailsManage, "Emails (Manage)", "Send emails and manage email templates.", "Create & Manage Records")
+        new(Policies.EmailsManage, "Emails (Manage)", "Send emails and manage email templates.", "Create & Manage Records"),
+        new(Policies.ReportsView, "Reports (View)", "View and export reports.", "View & Analyze"),
+        new(Policies.ReportsManage, "Reports (Manage)", "Create and manage report definitions.", "Create & Manage Records"),
+        new(Policies.ReportsDesign, "Reports (Design)", "Access the visual report designer.", "Configure System")
     };
 
     public static IReadOnlyList<PermissionDefinition> Definitions { get; } = Array.AsReadOnly(DefinitionsSource);

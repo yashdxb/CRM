@@ -53,6 +53,20 @@ export const routes: Routes = [
           import('./crm/features/dashboard/pages/dashboard.page').then((m) => m.DashboardPage)
       },
       {
+        path: 'reports',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.dashboardView, breadcrumb: 'Reports', icon: 'pi-chart-pie' },
+        loadComponent: () =>
+          import('./crm/features/reports/pages/reports.page').then((m) => m.ReportsPage)
+      },
+      {
+        path: 'report-designer',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Report Designer', icon: 'pi-palette' },
+        loadComponent: () =>
+          import('./crm/features/reports/pages/report-designer.page').then((m) => m.ReportDesignerPage)
+      },
+      {
         path: 'module-disabled',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.dashboardView, breadcrumb: 'Module Disabled', icon: 'pi-ban' },

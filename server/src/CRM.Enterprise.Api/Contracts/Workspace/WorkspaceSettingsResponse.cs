@@ -22,4 +22,5 @@ public record WorkspaceSettingsResponse(
     AssistantActionScoringPolicy AssistantActionScoringPolicy,
     DecisionEscalationPolicy DecisionEscalationPolicy,
     SupportingDocumentPolicy SupportingDocumentPolicy,
-    IReadOnlyDictionary<string, bool>? FeatureFlags);
+    IReadOnlyDictionary<string, bool>? FeatureFlags,
+    string? ReportDesignerRequiredPermission);

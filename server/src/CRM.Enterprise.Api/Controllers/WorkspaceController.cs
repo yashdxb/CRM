@@ -71,7 +71,8 @@ public class WorkspaceController : ControllerBase
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
-            ResolveFeatureFlags(tenant)));
+            ResolveFeatureFlags(tenant),
+            tenant.ReportDesignerRequiredPermission));
     }
 
     [HttpPut]
@@ -127,6 +128,12 @@ public class WorkspaceController : ControllerBase
                 NormalizeFeatureFlags(request.FeatureFlags),
                 JsonOptions);
         }
+        if (request.ReportDesignerRequiredPermission is not null)
+        {
+            tenant.ReportDesignerRequiredPermission = string.IsNullOrWhiteSpace(request.ReportDesignerRequiredPermission)
+                ? null
+                : request.ReportDesignerRequiredPermission.Trim();
+        }
         tenant.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -147,7 +154,8 @@ public class WorkspaceController : ControllerBase
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
-            ResolveFeatureFlags(tenant)));
+            ResolveFeatureFlags(tenant),
+            tenant.ReportDesignerRequiredPermission));
     }
 
     private static QualificationPolicy ResolveQualificationPolicy(Tenant tenant)

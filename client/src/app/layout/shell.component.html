@@ -129,7 +129,7 @@
 
         @if (chatPanelVisible()) {
           @if (activeChatUser(); as activeUser) {
-            <section class="direct-chat-panel" role="dialog" aria-label="Direct chat">
+            <section class="direct-chat-panel" [class.direct-chat-panel--maximized]="chatMaximized()" role="dialog" aria-label="Direct chat">
               <aside class="direct-chat-threads">
                 <header class="direct-chat-threads__header">
                   <strong>Conversations</strong>
@@ -211,6 +211,9 @@
                         }
                       </button>
                     }
+                    <button type="button" class="direct-chat-mini-btn" (click)="toggleChatMaximize()">
+                      {{ chatMaximized() ? 'Restore' : 'Maximize' }}
+                    </button>
                     <button type="button" class="direct-chat-mini-btn" (click)="clearActiveChat()">Clear</button>
                     <button type="button" class="direct-chat-mini-btn" (click)="archiveActiveChat()">Archive</button>
                     <button type="button" class="direct-chat-close" (click)="closeChatPanel()">✕</button>
@@ -233,6 +236,18 @@
                         </span>
                         <div class="direct-chat-message__content">
                           <p><strong class="direct-chat-message__sender">{{ message.senderDisplayName }}:</strong> {{ message.content }}</p>
+                          @if (message.attachments.length) {
+                            <ul class="direct-chat-message__attachments">
+                              @for (attachment of message.attachments; track attachment.attachmentId) {
+                                <li>
+                                  <a [href]="attachment.downloadUrl" target="_blank" rel="noopener noreferrer">
+                                    {{ attachment.fileName }}
+                                  </a>
+                                  <span>{{ formatAttachmentSize(attachment.size) }}</span>
+                                </li>
+                              }
+                            </ul>
+                          }
                           <time>{{ formatChatTime(message.sentAtUtc) }}</time>
                         </div>
                       </article>
@@ -251,6 +266,15 @@
                     </p>
                   }
                   <button type="button" class="direct-chat-emoji-btn" (click)="toggleEmojiPicker()">😊</button>
+                  <label class="direct-chat-attach-btn">
+                    📎
+                    <input
+                      #chatAttachmentInput
+                      type="file"
+                      multiple
+                      (change)="onChatAttachmentSelected($any($event.target).files ?? null)"
+                    />
+                  </label>
                   <input
                     type="text"
                     [value]="chatDraft()"
@@ -259,7 +283,31 @@
                     (focus)="emojiPickerVisible.set(false)"
                     placeholder="Type a message..."
                   />
-                  <button type="button" (click)="sendChatMessage()" [disabled]="!chatDraft().trim() || chatSaving()">Send</button>
+                  <button
+                    type="button"
+                    (click)="sendChatMessage()"
+                    [disabled]="(!chatDraft().trim() && !pendingChatAttachments().length) || chatSaving() || chatAttachmentUploading()"
+                  >
+                    @if (chatAttachmentUploading()) {
+                      Uploading…
+                    } @else if (chatSaving()) {
+                      Sending…
+                    } @else {
+                      Send
+                    }
+                  </button>
+
+                  @if (pendingChatAttachments().length) {
+                    <div class="direct-chat-attachments-pending">
+                      @for (item of pendingChatAttachments(); track item.id) {
+                        <span class="direct-chat-attachments-pending__chip">
+                          <strong>{{ item.file.name }}</strong>
+                          <em>{{ formatAttachmentSize(item.size) }}</em>
+                          <button type="button" (click)="removePendingChatAttachment(item.id)">✕</button>
+                        </span>
+                      }
+                    </div>
+                  }
 
                   @if (emojiPickerVisible()) {
                     <div class="direct-chat-emoji-picker">

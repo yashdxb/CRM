@@ -3,6 +3,7 @@ import { NavLink } from './navigation.model';
 
 export const NAV_LINKS: NavLink[] = [
   { label: 'Dashboard', icon: 'pi-chart-bar', path: '/app/dashboard', permission: PERMISSION_KEYS.dashboardView },
+  { label: 'Reports', icon: 'pi-chart-pie', path: '/app/reports', permission: PERMISSION_KEYS.dashboardView },
   {
     label: 'Decision Inbox',
     icon: 'pi-inbox',

@@ -9,13 +9,18 @@ using CRM.Enterprise.Api.Hubs;
 using CRM.Enterprise.Api.Realtime;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Data.SqlClient;
 using System.Threading;
+using Telerik.Reporting.Cache.File;
+using Telerik.Reporting.Services;
+using Telerik.Reporting.Services.Engine;
+using Telerik.WebReportDesigner.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -38,6 +43,36 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+builder.Services.TryAddSingleton<IReportServiceConfiguration>(_ =>
+{
+    var reportsPath = Path.Combine(builder.Environment.ContentRootPath, "Reports");
+    var cachePath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "TelerikReportingCache");
+    Directory.CreateDirectory(cachePath);
+
+    return new ReportServiceConfiguration
+    {
+        HostAppId = "CRM.Enterprise.Api",
+        Storage = new FileStorage(cachePath),
+        ReportSourceResolver = new TypeReportSourceResolver()
+            .AddFallbackResolver(new UriReportSourceResolver(reportsPath))
+    };
+});
+
+// Web Report Designer configuration
+builder.Services.TryAddSingleton<IReportDesignerServiceConfiguration>(_ =>
+{
+    var reportsPath = Path.Combine(builder.Environment.ContentRootPath, "Reports");
+    Directory.CreateDirectory(reportsPath);
+
+    return new ReportDesignerServiceConfiguration
+    {
+        DefinitionStorage = new FileDefinitionStorage(reportsPath),
+        ResourceStorage = new ResourceStorage(Path.Combine(reportsPath, "Resources")),
+        SharedDataSourceStorage = new FileSharedDataSourceStorage(Path.Combine(reportsPath, "SharedDataSources")),
+        SettingsStorage = new FileSettingsStorage(Path.Combine(reportsPath, "Settings"))
+    };
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 var signalRConnectionString = builder.Configuration["Azure:SignalR:ConnectionString"];
@@ -130,7 +165,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
                 if (!string.IsNullOrWhiteSpace(accessToken) &&
-                    (path.StartsWithSegments("/api/hubs/presence") || path.StartsWithSegments("/api/hubs/crm-events")))
+                    (path.StartsWithSegments("/api/hubs/presence") || 
+                     path.StartsWithSegments("/api/hubs/crm-events") ||
+                     path.StartsWithSegments("/api/telerik-reports")))
                 {
                     context.Token = accessToken;
                 }
@@ -138,6 +175,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             }
         };
     });
+
+// Register Telerik anonymous handler to allow unauthenticated access to discovery endpoints
+builder.Services.AddSingleton<IAuthorizationHandler, CRM.Enterprise.Api.Authorization.TelerikAnonymousHandler>();
+
+// Register Report Designer authorization handler for configurable permission
+builder.Services.AddSingleton<IAuthorizationHandler, CRM.Enterprise.Api.Authorization.ReportDesignerAuthorizationHandler>();
+
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(Permissions.Policies.DashboardView, policy =>
@@ -192,6 +236,16 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.EmailsView));
     options.AddPolicy(Permissions.Policies.EmailsManage, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.EmailsManage));
+    options.AddPolicy(Permissions.Policies.ReportsView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ReportsView));
+    options.AddPolicy(Permissions.Policies.ReportsManage, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ReportsManage));
+    options.AddPolicy(Permissions.Policies.ReportsDesign, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ReportsDesign));
+
+    // Configurable Report Designer policy - reads required permission from appsettings.json
+    options.AddPolicy("ReportDesigner", policy =>
+        policy.Requirements.Add(new CRM.Enterprise.Api.Authorization.ReportDesignerRequirement()));
 
     options.FallbackPolicy = new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()

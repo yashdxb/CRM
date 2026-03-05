@@ -1,0 +1,137 @@
+@use '../../../../../styles/design-tokens' as *;
+@use 'sass:color';
+
+.page-container {
+  position: relative;
+  min-height: 100vh;
+  padding: $space-5 $space-6;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 50%, #d8dde8 100%);
+  overflow-x: hidden;
+
+  @media (max-width: 768px) {
+    padding: $space-3;
+  }
+}
+
+.page-header {
+  margin-bottom: $space-4;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  flex-wrap: wrap;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.hero-title {
+  font-size: $font-size-4xl;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  margin: 0;
+
+  .title-gradient {
+    background: $primary-gradient;
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradient-shift 4s ease-in-out infinite;
+  }
+
+  .title-light {
+    -webkit-text-fill-color: $gray-700;
+    margin-left: $space-2;
+  }
+}
+
+.hero-subtitle {
+  font-size: $font-size-base;
+  color: $gray-500;
+  font-weight: 400;
+  max-width: 500px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.designer-section {
+  position: relative;
+  background: $glass-bg;
+  backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;
+  border-radius: $radius-2xl;
+  box-shadow: $glass-shadow;
+  min-height: calc(100vh - 200px);
+  overflow: hidden;
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-4;
+  height: 400px;
+  color: $gray-500;
+  font-size: $font-size-lg;
+
+  i {
+    font-size: 3rem;
+  }
+}
+
+.error-state {
+  color: $danger;
+
+  i {
+    color: $danger;
+  }
+}
+
+.designer-container {
+  width: 100%;
+  height: calc(100vh - 200px);
+  min-height: 600px;
+
+  &.hidden {
+    display: none;
+  }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  border: none;
+  border-radius: $radius-md;
+  font-size: $font-size-base;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 250ms;
+}
+
+.btn-primary {
+  background: $primary-gradient;
+  color: white;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.4);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}

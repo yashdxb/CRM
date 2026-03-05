@@ -2,7 +2,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
-export type AttachmentEntityType = 'Account' | 'Contact' | 'Opportunity' | 'Lead';
+export type AttachmentEntityType =
+  | 'Account'
+  | 'Contact'
+  | 'Opportunity'
+  | 'Lead'
+  | 'DirectChatThread'
+  | 'DirectChatMessage'
+  | 'SupportCase'
+  | 'SupportCaseComment';
 
 export interface AttachmentItem {
   id: string;
