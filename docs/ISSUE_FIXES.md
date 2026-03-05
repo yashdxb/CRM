@@ -425,3 +425,29 @@ Server-side reports code is currently untracked and needs to be committed:
 - `server/src/CRM.Enterprise.Api/Controllers/TelerikReportsController.cs`
 - `server/src/CRM.Enterprise.Api/Reporting/`
 - `server/src/CRM.Enterprise.Infrastructure/Reporting/`
+
+## 10) Stop All Notification Emails (Hard Disable)
+
+**Symptoms**
+- Users still received notification emails even when notification settings were turned off.
+- Requirement was to stop all notification emails immediately.
+
+**Fix applied**
+1) Added a hard runtime stop in notification alert worker send path.
+2) Added a hard runtime stop in decision SLA escalation email path.
+
+**Files changed**
+- `server/src/CRM.Enterprise.Infrastructure/Notifications/NotificationAlertWorker.cs`
+- `server/src/CRM.Enterprise.Infrastructure/Decisions/DecisionSlaEscalationWorker.cs`
+
+**Commit**
+- `77aeff3`
+
+**Behavior now**
+- Notification alert emails are not sent.
+- Decision escalation emails are not sent.
+- In-app realtime notifications remain unaffected.
+
+**Deployment note**
+- GitHub Actions API deploy currently fails in CI due to missing Telerik private NuGet feed (`NU1101`).
+- Manual Azure deploy/restart is required until CI feed configuration is fixed.

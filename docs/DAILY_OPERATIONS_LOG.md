@@ -28,6 +28,28 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 ### Summary for Project Master (If Verified)
 - 
 
+**Date:** 2026-03-05  
+**Environment:** Dev (API)  
+**Owner:** Eng
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| 03:00 | Notifications | Email notifications still sent even when user settings were off | High | Product |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Notification emails not respecting expected off behavior | Runtime alert/escalation workers still had active email dispatch paths | Hard-disabled outbound notification email dispatch in both workers | `server/src/CRM.Enterprise.Infrastructure/Notifications/NotificationAlertWorker.cs`, `server/src/CRM.Enterprise.Infrastructure/Decisions/DecisionSlaEscalationWorker.cs` | Eng | Build passed locally; change pushed in `77aeff3` |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Restore API CI deploy pipeline | Eng | 2026-03-06 | Configure Telerik private NuGet source in GitHub Actions (current `NU1101` on Telerik packages) |
+
+### Summary for Project Master (If Verified)
+- Notification and decision escalation emails are globally stopped until policy is re-enabled in code.
+
 ---
 
 **Date:** 2026-03-03  

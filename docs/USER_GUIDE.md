@@ -393,6 +393,10 @@ Notifications include:
 
 Use Settings -> Notifications to opt in or out of email alerts.
 
+Temporary operational override (2026-03-05):
+- Notification emails are globally disabled by backend guardrail.
+- In-app notifications continue to work.
+
 ## 12) Workspace Settings
 
 Configure:
