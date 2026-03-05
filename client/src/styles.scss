@@ -149,7 +149,7 @@ body .app-inline-toast {
   font-size: 0.95rem;
   min-width: 0;
   max-width: none;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .shell--collapsed .app-inline-toast {

@@ -17,7 +17,6 @@
       class="crm-button crm-button--primary"
       icon="pi pi-plus"
       label="New Case"
-      [disabled]="!canManage()"
       [attr.title]="canManage() ? 'Create a new support case' : 'Requires Help Desk Manage permission'"
       (click)="createCase()">
     </button>

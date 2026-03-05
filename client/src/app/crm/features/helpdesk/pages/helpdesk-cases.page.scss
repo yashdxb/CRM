@@ -1,4 +1,22 @@
 .helpdesk-page {
+  position: relative !important;
+  inset: unset !important;
+  min-height: 100vh;
+  padding: var(--md-space-6);
+  overflow: hidden !important;
+  pointer-events: auto !important;
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .animated-orb,
+  .grid-pattern {
+    pointer-events: none;
+    z-index: 0;
+  }
+
   .hero-card {
     display: flex;
     align-items: flex-start;
@@ -103,6 +121,8 @@
   }
 
   @media (max-width: 1024px) {
+    padding: var(--md-space-4);
+
     .kpi-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }

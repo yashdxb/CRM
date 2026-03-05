@@ -1,9 +1,31 @@
 .helpdesk-settings-page {
+  position: relative !important;
+  inset: unset !important;
+  min-height: 100vh;
+  padding: var(--md-space-6);
+  overflow: hidden !important;
+  pointer-events: auto !important;
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .animated-orb,
+  .grid-pattern {
+    pointer-events: none;
+    z-index: 0;
+  }
+
   .hero-card {
     margin-bottom: 1rem;
   }
 
   :host ::ng-deep .p-inputnumber {
     width: 8.5rem;
+  }
+
+  @media (max-width: 1024px) {
+    padding: var(--md-space-4);
   }
 }
