@@ -16,6 +16,8 @@ namespace CRM.Enterprise.Infrastructure.Notifications;
 
 public sealed class NotificationAlertWorker : BackgroundService
 {
+    // Temporary hard stop requested: disable all outbound notification-alert emails.
+    private static readonly bool EmailNotificationsEnabled = false;
     private const string LeadSlaBreachAction = "LeadSlaBreachAlert";
     private const string IdleDealAction = "IdleDealAlert";
     private const string CoachingEscalationAction = "CoachingEscalation";
@@ -460,6 +462,11 @@ public sealed class NotificationAlertWorker : BackgroundService
         string htmlBody,
         CancellationToken cancellationToken)
     {
+        if (!EmailNotificationsEnabled)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(toEmail))
         {
             return;

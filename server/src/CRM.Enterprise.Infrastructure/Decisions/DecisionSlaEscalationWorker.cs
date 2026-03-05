@@ -13,6 +13,8 @@ namespace CRM.Enterprise.Infrastructure.Decisions;
 
 public sealed class DecisionSlaEscalationWorker : BackgroundService
 {
+    // Temporary hard stop requested: disable all outbound decision escalation emails.
+    private static readonly bool EmailNotificationsEnabled = false;
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(2);
     private static readonly string[] ClosedStatuses = new[] { "Approved", "Rejected", "Cancelled", "Expired" };
     private const string EscalationAction = "ApprovalSlaEscalated";
@@ -263,7 +265,7 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
                 }
             }
 
-            if (escalationPolicy.SendEmailNotifications)
+            if (EmailNotificationsEnabled && escalationPolicy.SendEmailNotifications)
             {
                 foreach (var recipient in recipients)
                 {
