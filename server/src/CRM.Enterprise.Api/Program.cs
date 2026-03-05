@@ -167,7 +167,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 if (!string.IsNullOrWhiteSpace(accessToken) &&
                     (path.StartsWithSegments("/api/hubs/presence") || 
                      path.StartsWithSegments("/api/hubs/crm-events") ||
-                     path.StartsWithSegments("/api/telerik-reports")))
+                     path.StartsWithSegments("/api/telerik-reports") ||
+                     path.StartsWithSegments("/api/report-designer")))
                 {
                     context.Token = accessToken;
                 }

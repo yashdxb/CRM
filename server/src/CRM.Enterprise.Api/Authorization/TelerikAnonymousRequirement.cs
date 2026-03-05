@@ -16,7 +16,8 @@ public class TelerikAnonymousHandler : IAuthorizationHandler
             
             // Allow anonymous access to Telerik discovery endpoints
             if (path.StartsWith("/api/telerik-reports/formats", StringComparison.OrdinalIgnoreCase) ||
-                path.StartsWith("/api/telerik-reports/version", StringComparison.OrdinalIgnoreCase))
+                path.StartsWith("/api/telerik-reports/version", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("/api/report-designer/getresource", StringComparison.OrdinalIgnoreCase))
             {
                 // Mark all pending requirements as succeeded for these paths
                 foreach (var requirement in context.PendingRequirements.ToList())

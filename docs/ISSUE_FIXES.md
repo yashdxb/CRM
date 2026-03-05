@@ -218,6 +218,49 @@ This file tracks recurring UI/data issues and how to fix them quickly.
 3) **Implement comprehensive error handling**:
    - Catch generic exceptions in all action endpoints.
    - Log errors with full context (ActionId, UserId, error details).
+
+## 8) Telerik Report Designer plugin not registered on jQuery
+**Symptoms**
+- Report Designer page shows: `Telerik Web Report Designer plugin is not registered on jQuery`.
+- Intermittent follow-up errors appeared during loading, including missing Kendo runtime symbols.
+
+**Root cause**
+- Designer dependency loading was not strict enough and allowed partial success.
+- Required runtime pieces (jQuery/Kendo/Viewer/Designer) were not always loaded in a safe order.
+- Telerik designer resources served from default endpoints were unreliable in this setup.
+
+**Fix pattern**
+1) Serve Telerik designer static assets from API directly:
+   - Add `ReportDesignerAssetsController` to map embedded Telerik resources to stable URLs.
+2) Strengthen frontend loader behavior:
+   - Load required assets in deterministic order.
+   - Fail fast when a required script/style fails.
+   - Reuse existing script/link elements only after confirmed load completion.
+3) Ensure runtime prerequisites before initialization:
+   - Validate `jQuery` availability.
+   - Validate Kendo runtime availability (`kendo.View` check) before creating designer instance.
+4) Keep plugin-name compatibility:
+   - Support both `telerik_WebReportDesigner` and `telerikWebReportDesigner`.
+
+**Example implementation**
+- `client/src/app/crm/features/reports/pages/report-designer.page.ts`
+- `client/angular.json`
+- `server/src/CRM.Enterprise.Api/Controllers/ReportDesignerAssetsController.cs`
+- `server/src/CRM.Enterprise.Api/Authorization/TelerikAnonymousRequirement.cs`
+- `server/src/CRM.Enterprise.Api/Program.cs`
+
+**Verification**
+- `npm run build -- --configuration development` passes.
+- `npx playwright test e2e/smoke.spec.ts` passes.
+- Runtime probe confirms:
+  - `jQuery.fn.telerik_WebReportDesigner` is present.
+  - `window.kendo.View` is available.
+  - no page runtime errors on `/app/report-designer`.
+
+**Why this is safe**
+- Does not alter report business logic.
+- Improves load determinism and error visibility.
+- Keeps existing auth and route contracts while stabilizing asset delivery.
    - Return meaningful client messages while preserving sensitive info in logs.
    - Special handling for rate limits (429) and service unavailability (503).
 
