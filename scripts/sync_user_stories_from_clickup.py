@@ -56,6 +56,7 @@ def normalize_task(task: dict) -> dict:
     return {
         "id": task["id"],
         "name": task.get("name", "").strip(),
+        "description": (task.get("description") or "").strip(),
         "parent": task.get("parent"),
         "status": status,
         "tags": tags,
@@ -129,6 +130,31 @@ def render_markdown(list_id: str, tasks: list[dict]) -> str:
                 f"  - `{story['id']}` | `{story['status']}` | {story['name']} | tags: {story_tags}"
             )
         lines.append("")
+
+    detailed_story_ids = [
+        "86e06pbr0",
+        "86e06pbrp",
+        "86e06pbrb",
+        "86e06pbr3",
+        "86e06pbr9",
+    ]
+    by_id = {task["id"]: task for task in normalized}
+    lines.append("## Detailed Help Desk Stories (Now)")
+    lines.append("")
+    for story_id in detailed_story_ids:
+        story = by_id.get(story_id)
+        if not story:
+            continue
+        lines.append(f"### {story['name']} (`{story['id']}`)")
+        lines.append(f"- Status: `{story['status']}`")
+        description = story.get("description", "").strip()
+        if description:
+            lines.append("")
+            lines.append(description)
+            lines.append("")
+        else:
+            lines.append("- Description: _No description in ClickUp task._")
+            lines.append("")
 
     lines.append("## Maintenance")
     lines.append("- Re-sync command: `python3 scripts/sync_user_stories_from_clickup.py`")

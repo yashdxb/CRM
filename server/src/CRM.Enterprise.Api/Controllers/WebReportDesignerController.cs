@@ -16,7 +16,6 @@ namespace CRM.Enterprise.Api.Controllers;
 /// API endpoints are explicitly protected via [Authorize] attributes on overridden methods.
 /// </summary>
 [AllowAnonymous]  // Required for Resources endpoint (JS/CSS loading via script tags)
-[ApiController]
 [Route("api/report-designer")]
 public sealed class WebReportDesignerController : ReportDesignerControllerBase
 {

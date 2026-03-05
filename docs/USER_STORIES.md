@@ -5,7 +5,7 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-05 01:00 UTC**
+- Synced at: **2026-03-05 02:34 UTC**
 - ClickUp list id: `901710720381`
 - Total tasks mirrored: **195**
 - Epics mirrored: **39**
@@ -13,17 +13,17 @@
 
 ## Status Summary
 - All tasks:
-  - `done`: 112
-  - `backlog`: 80
-  - `in progress`: 3
+  - `done`: 116
+  - `backlog`: 75
+  - `in progress`: 4
 - Epics:
   - `backlog`: 22
   - `done`: 15
   - `in progress`: 2
 - Stories:
-  - `done`: 97
-  - `backlog`: 58
-  - `in progress`: 1
+  - `done`: 101
+  - `backlog`: 53
+  - `in progress`: 2
 
 ## Epic and Story Mirror
 
@@ -52,7 +52,7 @@
   - `86e05jy81` | `done` | Help Desk queue management and manual assignment implemented | tags: -
   - `86e05jya1` | `done` | Help Desk realtime events and summary reporting implemented | tags: -
   - `86e05jy8t` | `done` | Help Desk SLA policy matrix and escalation worker implemented | tags: -
-  - `86e06pbr0` | `backlog` | Help Desk | Attachments in case conversation (agent + email intake) | tags: -
+  - `86e06pbr0` | `in progress` | Help Desk | Attachments in case conversation (agent + email intake) | tags: -
   - `86e06pbrp` | `done` | Help Desk | CSAT capture and closure reason analytics | tags: -
   - `86e06pbt1` | `backlog` | Help Desk | External portal for customer self-service | tags: -
   - `86e06pbrv` | `backlog` | Help Desk | Knowledge suggestions in case workspace | tags: -
@@ -374,6 +374,120 @@
   - `86e041x22` | `done` | User invitation flow | tags: -
   - `86e041x1x` | `done` | User management (list, create, edit, deactivate) | tags: -
   - `86e041x27` | `done` | Workspace settings | tags: -
+
+## Detailed Help Desk Stories (Now)
+
+### Help Desk | Attachments in case conversation (agent + email intake) (`86e06pbr0`)
+- Status: `in progress`
+
+## User Story
+As a **Support Agent**, I want to attach files in case conversation so that evidence and context are preserved directly on the case thread.
+
+## Business Value
+- Better case context
+- Faster resolution through evidence sharing
+- Fewer follow-up loops for missing artifacts
+
+## Scope Status
+- **Implemented now:** agent-side case conversation attachments (upload, link, remove pending, post with comment).
+- **Pending:** email-intake attachment threading/parsing into case conversation.
+
+## Acceptance Criteria
+1. Agent can upload attachment in case conversation and post with comment.
+2. Posted comment displays attachment metadata and download link.
+3. Attachment validation honors workspace policy limits and allowed types.
+4. Invalid attachment associations are rejected safely by API.
+5. Email-intake attachment linking is tracked as remaining scope under this story.
+
+## Notes
+Current status remains **in progress** due to pending email-intake attachment scope.
+
+### Help Desk | CSAT capture and closure reason analytics (`86e06pbrp`)
+- Status: `done`
+
+## User Story
+As a **Help Desk Manager**, I want agents to capture **CSAT score** and **closure reason** on case resolution so that we can measure service quality and identify top closure patterns for continuous improvement.
+
+## Business Value
+- Quality visibility per resolved case
+- Closure trend analytics for process/product decisions
+- Better coaching inputs for support leads
+
+## Acceptance Criteria
+1. Case workspace supports optional `CSAT score` (1-5), `CSAT feedback`, and `Closure reason`.
+2. CSAT score validation enforces range 1..5 on API and UI.
+3. Cases summary/report API returns:
+   - `averageCsatScore`
+   - `ratedCaseCount`
+   - `topClosureReasons`
+4. Cases list shows KPI cards for Avg CSAT and Top Closure Reason.
+5. Tenant isolation is preserved in all aggregates.
+
+## Notes
+Implemented in product; live in Help Desk list/workspace and reports summary endpoint.
+
+### Help Desk | Macros/canned responses for agents (`86e06pbrb`)
+- Status: `done`
+
+## User Story
+As a **Support Agent**, I want reusable **canned responses (macros)** in case conversation so that I can respond faster and keep communication consistent.
+
+## Business Value
+- Faster agent response time
+- Consistent language for common support scenarios
+- Reduced manual typing and errors
+
+## Acceptance Criteria
+1. Conversation tab includes a macro selector with predefined templates.
+2. Selecting a macro inserts text into comment body (append-safe).
+3. Agent can edit inserted text before posting.
+4. Existing internal/public comment behavior remains unchanged.
+5. No regression on comment posting or timeline updates.
+
+## Notes
+Implemented in Help Desk case conversation UI.
+
+### Help Desk | Saved views + bulk actions for case triage (`86e06pbr3`)
+- Status: `done`
+
+## User Story
+As a **Help Desk Supervisor**, I want **saved quick views** and **bulk actions** on the case list so that I can triage large volumes quickly.
+
+## Business Value
+- Faster backlog triage
+- Lower click/time to update many cases
+- Better operational control during spikes
+
+## Acceptance Criteria
+1. Case list provides quick views: `All`, `My Queue`, `Unassigned`, `Breached SLA`.
+2. Multi-select supports bulk status update.
+3. Multi-select supports bulk queue assignment.
+4. Bulk actions are permission-gated (`HelpDesk.Manage`).
+5. Realtime/list refresh keeps selection/state stable after operations.
+
+## Notes
+Implemented in Help Desk case list toolbar and table workflows.
+
+### Help Desk | SLA cockpit and breach prevention UX (`86e06pbr9`)
+- Status: `done`
+
+## User Story
+As a **Support Lead**, I want an **SLA cockpit** with clear risk states so that agents can prevent breaches before they happen.
+
+## Business Value
+- Earlier intervention on at-risk cases
+- Lower SLA breach rate
+- Clear operational signal for workload balancing
+
+## Acceptance Criteria
+1. Case workspace shows SLA state (`healthy`, `at-risk`, `breached`, `resolved`) with due-time countdown.
+2. Case list includes SLA state chip and due/overdue indicator per row.
+3. SLA state logic is consistent between list and workspace.
+4. Breached and at-risk counts are reflected in summary cards/API.
+5. Status transitions continue to work without SLA calculation regressions.
+
+## Notes
+Implemented in Help Desk list + case detail pages.
 
 ## Maintenance
 - Re-sync command: `python3 scripts/sync_user_stories_from_clickup.py`
