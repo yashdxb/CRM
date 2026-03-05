@@ -1,8 +1,7 @@
 .helpdesk-queues-page {
   position: relative !important;
   inset: unset !important;
-  min-height: 100vh;
-  padding: var(--md-space-6);
+  min-height: 0;
   overflow: hidden !important;
   pointer-events: auto !important;
 
@@ -61,7 +60,4 @@
     align-items: center;
   }
 
-  @media (max-width: 1024px) {
-    padding: var(--md-space-4);
-  }
 }

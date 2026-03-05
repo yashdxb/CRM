@@ -1,8 +1,7 @@
 .helpdesk-page {
   position: relative !important;
   inset: unset !important;
-  min-height: 100vh;
-  padding: var(--md-space-6);
+  min-height: 0;
   overflow: hidden !important;
   pointer-events: auto !important;
 
@@ -121,8 +120,6 @@
   }
 
   @media (max-width: 1024px) {
-    padding: var(--md-space-4);
-
     .kpi-grid {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
