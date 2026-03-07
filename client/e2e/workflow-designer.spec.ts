@@ -28,7 +28,7 @@ test('workflow designer shows draggable palette item and supports drop add', asy
   await login(page, request);
   await page.goto('/app/workflows/designer');
 
-  await expect(page.getByRole('heading', { name: 'Workflow Designer' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Approval Workflow Builder' })).toBeVisible();
 
   const expectedNodeLabels = ['Approval Step', 'Condition', 'Email', 'Notification', 'Delay', 'CRM Update', 'Activity'];
   for (const label of expectedNodeLabels) {
@@ -65,4 +65,17 @@ test('workflow designer shows draggable palette item and supports drop add', asy
   const hasRenamedNotification = (definition.nodes ?? []).some((node) => node.type === 'notification' && node.label === 'Finance Alert');
   expect(hasConditionNode).toBeTruthy();
   expect(hasRenamedNotification).toBeTruthy();
+});
+
+test('workflow designer blocks publish when required scope is missing', async ({ page, request }) => {
+  await login(page, request);
+  await page.goto('/app/workflows/designer');
+
+  await expect(page.getByRole('heading', { name: 'Approval Workflow Builder' })).toBeVisible();
+
+  await page.locator('.scope-grid label', { hasText: 'Stage' }).locator('input').fill('');
+  await page.getByRole('button', { name: /^Publish$/i }).click();
+
+  await expect(page.getByRole('heading', { name: 'Validation Issues' })).toBeVisible();
+  await expect(page.locator('li').filter({ hasText: 'Workflow stage is required before publishing.' })).toBeVisible();
 });

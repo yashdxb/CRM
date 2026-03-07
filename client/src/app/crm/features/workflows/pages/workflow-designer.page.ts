@@ -220,12 +220,17 @@ export class WorkflowDesignerPage {
       next: (result) => {
         this.saving.set(false);
         this.updatedAtUtc.set(result.updatedAtUtc ?? null);
+        this.lastValidationErrors.set([]);
+        this.lastValidationAtUtc.set(new Date().toISOString());
         this.workflow.set(definition);
         this.toast.show('success', status === 'published' ? 'Workflow published.' : 'Draft saved.', 3000);
       },
       error: (error: unknown) => {
         this.saving.set(false);
-        this.toast.show('error', (error as { error?: string })?.error ?? 'Unable to save workflow.', 4000);
+        const errors = this.extractErrors(error);
+        this.lastValidationErrors.set(errors);
+        this.lastValidationAtUtc.set(new Date().toISOString());
+        this.toast.show('error', errors.join(' | '), 4000);
       }
     });
   }
@@ -373,12 +378,16 @@ export class WorkflowDesignerPage {
     return {
       enabled: definition.enabled,
       scope: {
-        name: definition.scope?.name?.trim() || 'Deal Approval Workflow',
-        purpose: definition.scope?.purpose?.trim() || 'Control discount and commercial approvals for opportunities.',
-        module: definition.scope?.module?.trim() || 'opportunities',
-        pipeline: definition.scope?.pipeline?.trim() || 'default',
-        stage: definition.scope?.stage?.trim() || 'proposal',
-        trigger: definition.scope?.trigger?.trim() || 'on-stage-change',
+        name: definition.scope?.name === undefined || definition.scope?.name === null ? 'Deal Approval Workflow' : definition.scope.name.trim(),
+        purpose: definition.scope?.purpose === undefined || definition.scope?.purpose === null
+          ? 'Control discount and commercial approvals for opportunities.'
+          : definition.scope.purpose.trim(),
+        module: definition.scope?.module === undefined || definition.scope?.module === null ? 'opportunities' : definition.scope.module.trim(),
+        pipeline: definition.scope?.pipeline === undefined || definition.scope?.pipeline === null ? 'default' : definition.scope.pipeline.trim(),
+        stage: definition.scope?.stage === undefined || definition.scope?.stage === null ? 'proposal' : definition.scope.stage.trim(),
+        trigger: definition.scope?.trigger === undefined || definition.scope?.trigger === null
+          ? 'on-stage-change'
+          : definition.scope.trigger.trim(),
         status: definition.scope?.status === 'published' ? 'published' : 'draft',
         version: Math.max(1, definition.scope?.version ?? 1)
       },
@@ -415,5 +424,48 @@ export class WorkflowDesignerPage {
     if (type === 'crm-update') return 'CRM Update';
     if (type === 'activity') return 'Activity';
     return 'End';
+  }
+
+  private extractErrors(error: unknown) {
+    const payload = (error as {
+      error?: string | string[] | { errors?: string[]; error?: string; text?: string; title?: string };
+      message?: string;
+    })?.error;
+
+    if (Array.isArray(payload)) {
+      return payload.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+    }
+
+    if (typeof payload === 'string') {
+      const parsed = payload.split(';').map((item) => item.trim()).filter(Boolean);
+      if (parsed.length > 0) {
+        return parsed;
+      }
+    }
+
+    if (payload && typeof payload === 'object') {
+      if (Array.isArray(payload.errors) && payload.errors.length > 0) {
+        return payload.errors.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+      }
+
+      if (typeof payload.error === 'string' && payload.error.trim().length > 0) {
+        return payload.error.split(';').map((item) => item.trim()).filter(Boolean);
+      }
+
+      if (typeof payload.text === 'string' && payload.text.trim().length > 0) {
+        return payload.text.split(';').map((item) => item.trim()).filter(Boolean);
+      }
+
+      if (typeof payload.title === 'string' && payload.title.trim().length > 0) {
+        return [payload.title.trim()];
+      }
+    }
+
+    const message = (error as { message?: string })?.message;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return [message.trim()];
+    }
+
+    return ['Unable to save workflow.'];
   }
 }

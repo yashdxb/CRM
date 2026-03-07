@@ -738,3 +738,99 @@ E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwri
 - The external Report Server stays the source of truth for report execution.
 - The browser no longer needs direct access to external Report Server auth/session details.
 - The proxy is narrow and purpose-built for Telerik viewer traffic, not a general open relay.
+
+## 14) Workflow approval builder saved JSON did not drive real CRM approval behavior
+
+**Symptoms**
+- The workflow designer could save a deal approval workflow definition, but opportunity approval behavior still depended on the old threshold-only logic.
+- Closing, discounting, or updating a deal could still trigger approvals from hard-coded legacy rules instead of the saved workflow definition.
+- The approval runtime could not reliably consume the newer workflow-definition JSON shape.
+
+**Root causes**
+- `OpportunityService` was still deciding approval triggers from legacy tenant threshold fields and hard-coded discount thresholds.
+- `OpportunityApprovalService` deserialized `ApprovalWorkflowJson` only as the old `ApprovalWorkflowPolicy` payload and did not translate the newer workflow-definition format.
+- The default workflow designer template used a generic purpose label (`Deal Approval`) that was not treated as a valid runtime match for `Close`, `Discount`, or `Update`.
+
+**Fix pattern**
+1. Parse tenant approval workflow JSON through the shared workflow mapper instead of assuming the legacy policy format.
+2. Convert the stored workflow definition to runtime `ApprovalWorkflowPolicy` before building approval chains.
+3. Replace the close/update/discount trigger checks in `OpportunityService` so they evaluate the saved workflow policy rather than old constants.
+4. Treat `Deal Approval` as a generic workflow purpose so a newly published default approval workflow works without extra hidden configuration.
+
+**Code changes**
+- Workflow runtime now translates stored definition JSON into approval policy:
+  - [OpportunityApprovalService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityApprovalService.cs)
+- Opportunity approval gating now uses workflow steps for:
+  - close approvals
+  - discount approvals
+  - forecast/update approvals
+  - [OpportunityService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs)
+
+**Verified result**
+- Saving a deal approval workflow now affects real opportunity approval routing.
+- The runtime no longer relies on the old `10% / 1000` hard-coded discount approval thresholds.
+- A default published workflow can now trigger approval requests for the relevant opportunity actions.
+- The old `/app/settings/workflow-builder` entry now redirects to the single workflow builder at `/app/workflows/designer`.
+- The legacy settings-only workflow builder files were removed to prevent UI drift.
+
+**Verification commands**
+```bash
+dotnet build server/src/CRM.Enterprise.sln
+
+cd client
+npm run build -- --configuration development
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts --workers=1
+```
+
+**Why this is safe**
+- The approval runtime now uses the same tenant workflow source of truth that the builder edits.
+- Legacy tenant defaults still work as fallback when no workflow JSON exists.
+- The change narrows drift between workflow design, approval execution, and decision inbox behavior.
+
+## 15) Workflow builder publish validation was bypassed by scope normalization
+
+**Symptoms**
+- Clearing required scope fields like `Stage` did not reliably block publish.
+- The builder could repopulate cleared values with defaults before the save request left the page.
+- When publish failed, the UI could collapse the real backend validation message into a generic save error.
+
+**Root causes**
+- Frontend normalization in [workflow-designer.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.ts) replaced blank scope fields with fallback defaults on every edit.
+- Backend normalization in [DealApprovalWorkflowDefinition.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Workflows/DealApprovalWorkflowDefinition.cs) also converted blank scope values back to defaults, which is correct for missing fields but wrong for an explicit user-cleared draft.
+- The workflow save endpoint returned plain text for validation failures, and the page did not parse all Angular `HttpErrorResponse` shapes correctly.
+
+**Fix pattern**
+1. Preserve explicitly blank scope values and only use defaults when a field is actually missing (`null`/`undefined`).
+2. Keep structural validation strict for published workflows:
+   - exactly one `start`
+   - exactly one `end`
+   - at least one `approval`
+   - graph connectivity checks
+   - required scope fields before publish
+3. Return structured validation errors from the save endpoint and surface them in the builder UI.
+
+**Code changes**
+- Scope normalization now preserves explicit blanks:
+  - [DealApprovalWorkflowDefinition.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Workflows/DealApprovalWorkflowDefinition.cs)
+  - [workflow-designer.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.ts)
+- Save endpoint now returns an error array for invalid publish attempts:
+  - [WorkflowDefinitionsController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/WorkflowDefinitionsController.cs)
+- Builder UI now captures backend validation errors into the on-page `Validation Issues` panel:
+  - [workflow-designer.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.ts)
+- Added browser coverage for required-scope publish blocking:
+  - [workflow-designer.spec.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/e2e/workflow-designer.spec.ts)
+
+**Verified result**
+- Clearing `Stage` and clicking `Publish` now keeps the workflow in the builder and shows:
+  - `Workflow stage is required before publishing.`
+- The backend no longer silently restores the missing value during the publish path.
+- The builder now shows the real validation error instead of a generic save failure.
+
+**Verification commands**
+```bash
+dotnet build server/src/CRM.Enterprise.sln
+
+cd client
+npm run build -- --configuration development
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/workflow-designer.spec.ts --workers=1
+```

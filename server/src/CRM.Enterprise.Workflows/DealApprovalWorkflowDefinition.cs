@@ -177,6 +177,25 @@ public static class DealApprovalWorkflowMapper
         var errors = new List<string>();
         var steps = definition.Steps ?? Array.Empty<DealApprovalWorkflowStepDefinition>();
         var nodes = definition.Nodes ?? Array.Empty<DealApprovalWorkflowNodeDefinition>();
+        var connections = definition.Connections ?? Array.Empty<DealApprovalWorkflowConnectionDefinition>();
+        var isPublished = definition.Enabled
+            || string.Equals(definition.Scope.Status, "published", StringComparison.OrdinalIgnoreCase);
+        var normalizedNodes = nodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.Id))
+            .Select(node => new
+            {
+                Id = node.Id.Trim(),
+                Type = NormalizeNodeType(node.Type, node.Id.Trim())
+            })
+            .ToArray();
+        var startNodes = normalizedNodes.Where(node => string.Equals(node.Type, "start", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var endNodes = normalizedNodes.Where(node => string.Equals(node.Type, "end", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var approvalNodes = normalizedNodes.Where(node => string.Equals(node.Type, "approval", StringComparison.OrdinalIgnoreCase)).ToArray();
+        var nodeIds = normalizedNodes.Select(node => node.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var normalizedConnections = connections
+            .Where(connection => !string.IsNullOrWhiteSpace(connection.Source) && !string.IsNullOrWhiteSpace(connection.Target))
+            .Select(connection => new ConnectionEdge(connection.Source.Trim(), connection.Target.Trim()))
+            .ToArray();
 
         foreach (var node in nodes)
         {
@@ -210,9 +229,118 @@ public static class DealApprovalWorkflowMapper
             errors.Add("Each approval step must define an approver role.");
         }
 
+        if (startNodes.Length != 1)
+        {
+            errors.Add("Workflow must define exactly one start node.");
+        }
+
+        if (endNodes.Length != 1)
+        {
+            errors.Add("Workflow must define exactly one end node.");
+        }
+
+        if (approvalNodes.Length == 0)
+        {
+            errors.Add("Workflow must include at least one approval node.");
+        }
+
+        var stepNodeIds = steps
+            .Select(step => step.NodeId)
+            .Where(nodeId => !string.IsNullOrWhiteSpace(nodeId))
+            .Select(nodeId => nodeId!.Trim())
+            .ToArray();
+
+        foreach (var stepNodeId in stepNodeIds.Where(stepNodeId => !nodeIds.Contains(stepNodeId)))
+        {
+            errors.Add($"Approval step node '{stepNodeId}' is missing from the workflow graph.");
+        }
+
+        foreach (var approvalNodeId in approvalNodes.Select(node => node.Id).Where(nodeId => !stepNodeIds.Contains(nodeId, StringComparer.OrdinalIgnoreCase)))
+        {
+            errors.Add($"Approval node '{approvalNodeId}' does not map to an approval step.");
+        }
+
+        foreach (var connection in normalizedConnections)
+        {
+            if (!nodeIds.Contains(connection.Source) || !nodeIds.Contains(connection.Target))
+            {
+                errors.Add($"Connection '{connection.Source} -> {connection.Target}' references an unknown node.");
+            }
+        }
+
+        if (normalizedConnections.Length == 0)
+        {
+            errors.Add("Workflow must define at least one connection.");
+        }
+
+        if (startNodes.Length == 1 && endNodes.Length == 1 && normalizedConnections.Length > 0)
+        {
+            var incoming = normalizedConnections
+                .GroupBy(connection => connection.Target, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+            var outgoing = normalizedConnections
+                .GroupBy(connection => connection.Source, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var node in normalizedNodes)
+            {
+                if (!string.Equals(node.Type, "start", StringComparison.OrdinalIgnoreCase)
+                    && !incoming.ContainsKey(node.Id))
+                {
+                    errors.Add($"Node '{node.Id}' has no incoming connection.");
+                }
+
+                if (!string.Equals(node.Type, "end", StringComparison.OrdinalIgnoreCase)
+                    && !outgoing.ContainsKey(node.Id))
+                {
+                    errors.Add($"Node '{node.Id}' has no outgoing connection.");
+                }
+            }
+
+            var reachableFromStart = Traverse(normalizedConnections, startNodes[0].Id, useSource: true);
+            foreach (var node in normalizedNodes.Where(node => !reachableFromStart.Contains(node.Id)))
+            {
+                errors.Add($"Node '{node.Id}' is not reachable from the start node.");
+            }
+
+            var canReachEnd = Traverse(normalizedConnections, endNodes[0].Id, useSource: false);
+            foreach (var node in normalizedNodes.Where(node => !canReachEnd.Contains(node.Id)))
+            {
+                errors.Add($"Node '{node.Id}' does not lead to the end node.");
+            }
+        }
+
         if (string.IsNullOrWhiteSpace(definition.Scope.Name))
         {
             errors.Add("Workflow name is required.");
+        }
+
+        if (isPublished)
+        {
+            if (string.IsNullOrWhiteSpace(definition.Scope.Purpose))
+            {
+                errors.Add("Workflow purpose is required before publishing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.Scope.Module))
+            {
+                errors.Add("Workflow module is required before publishing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.Scope.Pipeline))
+            {
+                errors.Add("Workflow pipeline is required before publishing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.Scope.Stage))
+            {
+                errors.Add("Workflow stage is required before publishing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.Scope.Trigger))
+            {
+                errors.Add("Workflow trigger is required before publishing.");
+            }
         }
 
         if (definition.Scope.Version < 1)
@@ -220,8 +348,36 @@ public static class DealApprovalWorkflowMapper
             errors.Add("Workflow version must be 1 or greater.");
         }
 
-        return errors;
+        return errors.Distinct(StringComparer.Ordinal).ToArray();
     }
+
+    private static HashSet<string> Traverse(IEnumerable<ConnectionEdge> connections, string startNodeId, bool useSource)
+    {
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { startNodeId };
+        var queue = new Queue<string>();
+        queue.Enqueue(startNodeId);
+
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            foreach (var connection in connections)
+            {
+                var from = useSource ? connection.Source : connection.Target;
+                var to = useSource ? connection.Target : connection.Source;
+                if (!string.Equals(from, current, StringComparison.OrdinalIgnoreCase) || visited.Contains(to))
+                {
+                    continue;
+                }
+
+                visited.Add(to);
+                queue.Enqueue(to);
+            }
+        }
+
+        return visited;
+    }
+
+    private sealed record ConnectionEdge(string Source, string Target);
 
     private static DealApprovalWorkflowScopeDefinition NormalizeScope(DealApprovalWorkflowScopeDefinition? scope)
     {
@@ -238,14 +394,19 @@ public static class DealApprovalWorkflowMapper
         }
 
         return new DealApprovalWorkflowScopeDefinition(
-            string.IsNullOrWhiteSpace(scope.Name) ? fallback.Name : scope.Name.Trim(),
-            string.IsNullOrWhiteSpace(scope.Purpose) ? fallback.Purpose : scope.Purpose.Trim(),
-            string.IsNullOrWhiteSpace(scope.Module) ? fallback.Module : scope.Module.Trim(),
-            string.IsNullOrWhiteSpace(scope.Pipeline) ? fallback.Pipeline : scope.Pipeline.Trim(),
-            string.IsNullOrWhiteSpace(scope.Stage) ? fallback.Stage : scope.Stage.Trim(),
-            string.IsNullOrWhiteSpace(scope.Trigger) ? fallback.Trigger : scope.Trigger.Trim(),
+            NormalizeScopeValue(scope.Name, fallback.Name),
+            NormalizeScopeValue(scope.Purpose, fallback.Purpose),
+            NormalizeScopeValue(scope.Module, fallback.Module),
+            NormalizeScopeValue(scope.Pipeline, fallback.Pipeline),
+            NormalizeScopeValue(scope.Stage, fallback.Stage),
+            NormalizeScopeValue(scope.Trigger, fallback.Trigger),
             status,
             scope.Version <= 0 ? 1 : scope.Version);
+    }
+
+    private static string NormalizeScopeValue(string? value, string fallback)
+    {
+        return value is null ? fallback : value.Trim();
     }
 
     private static IReadOnlyList<DealApprovalWorkflowStepDefinition> NormalizeSteps(IEnumerable<DealApprovalWorkflowStepDefinition> steps)

@@ -54,7 +54,9 @@ public sealed class WorkflowDefinitionsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            var errors = ex.Message
+                .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return BadRequest(errors.Length == 0 ? new[] { "Unable to save workflow." } : errors);
         }
     }
 
