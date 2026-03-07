@@ -1617,7 +1617,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.OpportunitiesApprovalsRequest,
                 Permissions.Policies.OpportunitiesApprovalsApprove,
                 Permissions.Policies.ActivitiesView,
-                Permissions.Policies.ActivitiesManage
+                Permissions.Policies.ActivitiesManage,
+                Permissions.Policies.ReportsView
             }
         ),
         (
@@ -1636,7 +1637,8 @@ public class DatabaseInitializer : IDatabaseInitializer
                 Permissions.Policies.OpportunitiesManage,
                 Permissions.Policies.OpportunitiesApprovalsRequest,
                 Permissions.Policies.ActivitiesView,
-                Permissions.Policies.ActivitiesManage
+                Permissions.Policies.ActivitiesManage,
+                Permissions.Policies.ReportsView
             }
         ),
         (
