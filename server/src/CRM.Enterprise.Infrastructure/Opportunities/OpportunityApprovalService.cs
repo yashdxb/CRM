@@ -6,6 +6,7 @@ using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Persistence;
+using CRM.Enterprise.Workflows;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -1057,8 +1058,11 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
 
         try
         {
-            var parsed = JsonSerializer.Deserialize<ApprovalWorkflowPolicy>(tenant.ApprovalWorkflowJson, JsonOptions);
-            return parsed ?? ApprovalWorkflowPolicyDefaults.FromTenantDefaults(tenant.ApprovalAmountThreshold, tenant.ApprovalApproverRole);
+            var definition = DealApprovalWorkflowMapper.FromStoredJson(
+                tenant.ApprovalWorkflowJson,
+                tenant.ApprovalAmountThreshold,
+                tenant.ApprovalApproverRole);
+            return DealApprovalWorkflowMapper.ToPolicy(definition);
         }
         catch (JsonException)
         {

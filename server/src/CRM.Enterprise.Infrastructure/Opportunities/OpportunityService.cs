@@ -1,5 +1,6 @@
 using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
+using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Marketing;
 using CRM.Enterprise.Application.Opportunities;
@@ -7,6 +8,7 @@ using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
+using CRM.Enterprise.Workflows;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,8 +19,6 @@ public sealed class OpportunityService : IOpportunityService
     private const string OpportunityEntityType = "Opportunity";
     private const int AtRiskDays = 30;
     private const int DefaultContractTermMonthsFallback = 12;
-    private const decimal DiscountPercentApprovalThreshold = 10m;
-    private const decimal DiscountAmountApprovalThreshold = 1000m;
     private const string ReviewSubjectPrefix = "Review:";
     private const string ReviewAcknowledgmentSubjectPrefix = "Review acknowledgment:";
     private const string ReviewOutcomeApproved = "Approved";
@@ -2732,31 +2732,16 @@ public sealed class OpportunityService : IOpportunityService
             return null;
         }
 
-        var threshold = tenant.ApprovalAmountThreshold;
-        if (!threshold.HasValue || threshold.Value <= 0)
+        var workflow = ResolveApprovalWorkflowPolicy(tenant);
+        var matchingSteps = GetMatchingApprovalSteps(workflow, "Close", request.Amount);
+        if (matchingSteps.Count == 0)
         {
             return null;
-        }
-
-        if (request.Amount < threshold.Value)
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(tenant.ApprovalApproverRole))
-        {
-            await TrackPolicyGateAsync(
-                opportunityId,
-                "ApprovalRoleMissing",
-                $"Close>{threshold.Value:0.##} {request.Currency ?? "USD"}",
-                actor,
-                cancellationToken);
-            return $"Approval role must be configured before closing high-value opportunities (>{threshold.Value:0.##} {request.Currency ?? "USD"}).";
         }
 
         if (!opportunityId.HasValue || opportunityId.Value == Guid.Empty)
         {
-            return $"Approval required to close opportunities above {threshold.Value:0.##} {request.Currency ?? "USD"}. Save it first, then request approval.";
+            return $"Approval required to close this opportunity. Save it first, then request approval. {BuildApprovalThresholdSummary(matchingSteps, request.Currency)}";
         }
 
         var approved = await HasApprovedChainAsync(opportunityId.Value, "Close", cancellationToken);
@@ -2782,10 +2767,10 @@ public sealed class OpportunityService : IOpportunityService
         await TrackPolicyGateAsync(
             opportunityId,
             "ApprovalRequiredClose",
-            $"Close>{threshold.Value:0.##} {request.Currency ?? "USD"}",
+            BuildApprovalThresholdSummary(matchingSteps, request.Currency),
             actor,
             cancellationToken);
-        return $"Approval required to close opportunities above {threshold.Value:0.##} {request.Currency ?? "USD"}. Request submitted for review.";
+        return $"Approval required to close this opportunity. Request submitted for review. {BuildApprovalThresholdSummary(matchingSteps, request.Currency)}";
     }
 
     private async Task<string?> ValidateDiscountApprovalAsync(
@@ -2800,16 +2785,35 @@ public sealed class OpportunityService : IOpportunityService
         {
             return "Pricing notes and objections are required when applying discounts.";
         }
-        var requiresApproval = discountPercent >= DiscountPercentApprovalThreshold
-                               || discountAmount >= DiscountAmountApprovalThreshold;
-        if (!requiresApproval)
+
+        if (discountPercent <= 0m && discountAmount <= 0m)
+        {
+            return null;
+        }
+
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return null;
+        }
+
+        var tenant = await _dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+        if (tenant is null)
+        {
+            return null;
+        }
+
+        var approvalAmount = discountAmount > 0 ? discountAmount : request.Amount;
+        var workflow = ResolveApprovalWorkflowPolicy(tenant);
+        var matchingSteps = GetMatchingApprovalSteps(workflow, "Discount", approvalAmount);
+        if (matchingSteps.Count == 0)
         {
             return null;
         }
 
         if (!opportunityId.HasValue || opportunityId.Value == Guid.Empty)
         {
-            return $"Discount approval required (>= {DiscountPercentApprovalThreshold:0.##}% or >= {DiscountAmountApprovalThreshold:0.##} {request.Currency ?? "USD"}). Save the opportunity first to request approval.";
+            return $"Discount approval required by workflow. Save the opportunity first, then request approval. {BuildApprovalThresholdSummary(matchingSteps, request.Currency)}";
         }
 
         var approved = await HasApprovedChainAsync(opportunityId.Value, "Discount", cancellationToken);
@@ -2819,10 +2823,9 @@ public sealed class OpportunityService : IOpportunityService
             return null;
         }
 
-        var amount = discountAmount > 0 ? discountAmount : request.Amount;
         var approvalResult = await _approvalService.RequestAsync(
             opportunityId.Value,
-            amount,
+            approvalAmount,
             request.Currency,
             "Discount",
             actor,
@@ -2836,10 +2839,10 @@ public sealed class OpportunityService : IOpportunityService
         await TrackPolicyGateAsync(
             opportunityId,
             "DiscountApprovalRequired",
-            $">={DiscountPercentApprovalThreshold:0.##}% or >={DiscountAmountApprovalThreshold:0.##} {request.Currency ?? "USD"}",
+            BuildApprovalThresholdSummary(matchingSteps, request.Currency),
             actor,
             cancellationToken);
-        return $"Discount approval required (>= {DiscountPercentApprovalThreshold:0.##}% or >= {DiscountAmountApprovalThreshold:0.##} {request.Currency ?? "USD"}). Request submitted for review.";
+        return $"Discount approval required by workflow. Request submitted for review. {BuildApprovalThresholdSummary(matchingSteps, request.Currency)}";
     }
 
     private async Task<string?> ValidateHighValueUpdateApprovalAsync(
@@ -2860,34 +2863,19 @@ public sealed class OpportunityService : IOpportunityService
             return null;
         }
 
-        var threshold = tenant.ApprovalAmountThreshold;
-        if (!threshold.HasValue || threshold.Value <= 0)
+        var workflow = ResolveApprovalWorkflowPolicy(tenant);
+        var matchingSteps = GetMatchingApprovalSteps(workflow, "Update", request.Amount);
+        if (matchingSteps.Count == 0)
         {
             return null;
         }
 
         var amount = request.Amount;
-        if (amount < threshold.Value)
-        {
-            return null;
-        }
-
         var closeDateChanged = request.ExpectedCloseDate != opportunity.ExpectedCloseDate;
         var probabilityChanged = request.Probability != opportunity.Probability;
         if (!closeDateChanged && !probabilityChanged)
         {
             return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(tenant.ApprovalApproverRole))
-        {
-            await TrackPolicyGateAsync(
-                opportunity.Id,
-                "ApprovalRoleMissing",
-                $"Update>{threshold.Value:0.##} {request.Currency ?? "USD"}",
-                actor,
-                cancellationToken);
-            return $"Approval role must be configured before updating close date or probability on high-value opportunities (>{threshold.Value:0.##} {request.Currency ?? "USD"}).";
         }
 
         var approved = await HasApprovedChainAsync(opportunity.Id, "Update", cancellationToken);
@@ -2913,10 +2901,10 @@ public sealed class OpportunityService : IOpportunityService
         await TrackPolicyGateAsync(
             opportunity.Id,
             "ApprovalRequiredUpdate",
-            $"Update>{threshold.Value:0.##} {request.Currency ?? "USD"}",
+            BuildApprovalThresholdSummary(matchingSteps, request.Currency),
             actor,
             cancellationToken);
-        return $"Approval required to update close date or probability for opportunities above {threshold.Value:0.##} {request.Currency ?? "USD"}. Request submitted for review.";
+        return $"Approval required to update this opportunity forecast. Request submitted for review. {BuildApprovalThresholdSummary(matchingSteps, request.Currency)}";
     }
 
     private async Task TrackPolicyGateAsync(
@@ -2959,6 +2947,48 @@ public sealed class OpportunityService : IOpportunityService
                             && approval.Status == "Approved"
                             && approval.ApprovalChainId == null,
                 cancellationToken);
+    }
+
+    private static ApprovalWorkflowPolicy ResolveApprovalWorkflowPolicy(Tenant tenant)
+    {
+        var definition = DealApprovalWorkflowMapper.FromStoredJson(
+            tenant.ApprovalWorkflowJson,
+            tenant.ApprovalAmountThreshold,
+            tenant.ApprovalApproverRole);
+        return DealApprovalWorkflowMapper.ToPolicy(definition);
+    }
+
+    private static List<ApprovalWorkflowStep> GetMatchingApprovalSteps(ApprovalWorkflowPolicy workflow, string purpose, decimal amount)
+    {
+        if (!workflow.Enabled || workflow.Steps.Count == 0)
+        {
+            return new List<ApprovalWorkflowStep>();
+        }
+
+        return workflow.Steps
+            .Where(step =>
+                (string.IsNullOrWhiteSpace(step.Purpose)
+                 || string.Equals(step.Purpose, purpose, StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(step.Purpose, "Deal Approval", StringComparison.OrdinalIgnoreCase))
+                && (!step.AmountThreshold.HasValue || amount >= step.AmountThreshold.Value))
+            .OrderBy(step => step.Order)
+            .ToList();
+    }
+
+    private static string BuildApprovalThresholdSummary(IReadOnlyCollection<ApprovalWorkflowStep> steps, string? currency)
+    {
+        var minimum = steps
+            .Where(step => step.AmountThreshold.HasValue)
+            .Select(step => step.AmountThreshold!.Value)
+            .DefaultIfEmpty()
+            .Min();
+
+        if (minimum <= 0m)
+        {
+            return string.Empty;
+        }
+
+        return $"Minimum workflow threshold: {minimum:0.##} {currency ?? "USD"}.";
     }
 
     private AuditEventEntry CreateAuditEntry(

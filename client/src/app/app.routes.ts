@@ -577,10 +577,8 @@ export const routes: Routes = [
           },
           {
             path: 'workflow-builder',
-            canActivate: [roleGuard],
-            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Workflow Builder' },
-            loadComponent: () =>
-              import('./crm/features/workflows/pages/workflow-designer.page').then((m) => m.WorkflowDesignerPage)
+            pathMatch: 'full',
+            redirectTo: '/app/workflows/designer'
           },
           {
             path: 'dashboard-packs',
