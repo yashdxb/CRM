@@ -1,0 +1,114 @@
+.workflow-page {
+  padding: 1rem;
+}
+
+.workflow-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.workflow-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(600px, 1fr) 360px;
+  gap: 1rem;
+}
+
+.scope-panel,
+.validation-panel {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.scope-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.scope-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: rgba(15, 23, 42, 0.75);
+}
+
+.scope-grid input {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+  padding: 0.5rem 0.6rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: #0f172a;
+}
+
+.scope-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  color: rgba(15, 23, 42, 0.78);
+}
+
+.validation-panel h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.validation-panel ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.validation-panel li {
+  color: #991b1b;
+  font-size: 0.85rem;
+  margin: 0.25rem 0;
+}
+
+.node-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.node-summary span {
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(255, 255, 255, 0.82);
+  font-size: 0.78rem;
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.canvas-shell {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+@media (max-width: 1400px) {
+  .workflow-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .scope-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .scope-grid {
+    grid-template-columns: 1fr;
+  }
+}

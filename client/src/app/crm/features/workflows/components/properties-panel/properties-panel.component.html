@@ -1,0 +1,62 @@
+<section class="properties-card">
+  <h3>Properties</h3>
+  <p>Update approval step settings.</p>
+
+  <div class="empty" *ngIf="!steps.length">No steps configured.</div>
+
+  <article class="step" *ngFor="let step of steps; let i = index">
+    <div class="step-header">
+      <strong>Step {{ step.order }}</strong>
+      <button pButton type="button" class="btn btn-ghost btn-sm" (click)="removeStep.emit(i)">Remove</button>
+    </div>
+
+    <label>Approver role</label>
+    <input
+      pInputText
+      [ngModel]="step.approverRole"
+      (ngModelChange)="patchStep.emit({ index: i, patch: { approverRole: $event } })"
+    />
+
+    <label>Amount threshold</label>
+    <p-inputNumber
+      [ngModel]="step.amountThreshold"
+      (ngModelChange)="patchStep.emit({ index: i, patch: { amountThreshold: $event } })"
+      [min]="0"
+      styleClass="w-full"
+    ></p-inputNumber>
+
+    <label>Purpose</label>
+    <input
+      pInputText
+      [ngModel]="step.purpose"
+      (ngModelChange)="patchStep.emit({ index: i, patch: { purpose: $event } })"
+    />
+  </article>
+
+  <h4>Node Labels</h4>
+  <p class="sub-copy">Rename dropped nodes (Notification, Email, Condition, etc.).</p>
+  <div class="empty" *ngIf="!editableNodes.length">No custom nodes added yet.</div>
+
+  <article class="step" *ngFor="let node of editableNodes">
+    <div class="step-header">
+      <strong>{{ node.type | titlecase }}</strong>
+      <button
+        pButton
+        type="button"
+        class="btn btn-ghost btn-sm"
+        [disabled]="node.type === 'start' || node.type === 'end'"
+        (click)="removeNode.emit(node.id)"
+      >
+        Remove
+      </button>
+    </div>
+
+    <label>Display name</label>
+    <input
+      pInputText
+      [ngModel]="node.label"
+      (ngModelChange)="patchNode.emit({ nodeId: node.id, patch: { label: $event } })"
+      [placeholder]="node.type | titlecase"
+    />
+  </article>
+</section>

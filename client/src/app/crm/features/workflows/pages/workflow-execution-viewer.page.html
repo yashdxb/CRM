@@ -1,0 +1,35 @@
+<div class="workflow-viewer page-container">
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <header class="viewer-header">
+    <div>
+      <h1 class="hero-title">Workflow Execution Viewer</h1>
+      <p>Real-time status and execution history for Deal Approval workflow.</p>
+    </div>
+    <div class="header-actions">
+      <button pButton type="button" class="btn btn-ghost" (click)="refresh()" [disabled]="loading()">Refresh</button>
+      <button pButton type="button" class="btn btn-secondary" routerLink="/app/workflows/designer">Open Designer</button>
+    </div>
+  </header>
+
+  <section class="kpis" *ngIf="status() as s">
+    <article class="kpi"><span>Pending Approvals</span><strong>{{ s.pendingApprovals }}</strong></article>
+    <article class="kpi"><span>Running Executions</span><strong>{{ s.runningExecutions }}</strong></article>
+    <article class="kpi"><span>Completed Today</span><strong>{{ s.completedToday }}</strong></article>
+  </section>
+
+  <section class="history-card">
+    <h2>History Log</h2>
+    <div class="empty" *ngIf="!history().length">No execution history yet.</div>
+    <div class="history-list" *ngIf="history().length">
+      <article class="history-item" *ngFor="let item of history()">
+        <div class="top">
+          <strong>{{ item.status }}</strong>
+          <span>{{ item.startedAtUtc }}</span>
+        </div>
+        <div>{{ item.summary }}</div>
+        <small>By {{ item.triggeredBy }}</small>
+      </article>
+    </div>
+  </section>
+</div>

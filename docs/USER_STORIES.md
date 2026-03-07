@@ -5,7 +5,7 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-05 02:34 UTC**
+- Synced at: **2026-03-06 19:44 UTC**
 - ClickUp list id: `901710720381`
 - Total tasks mirrored: **195**
 - Epics mirrored: **39**
@@ -14,16 +14,16 @@
 ## Status Summary
 - All tasks:
   - `done`: 116
-  - `backlog`: 75
-  - `in progress`: 4
+  - `backlog`: 74
+  - `in progress`: 5
 - Epics:
   - `backlog`: 22
   - `done`: 15
   - `in progress`: 2
 - Stories:
   - `done`: 101
-  - `backlog`: 53
-  - `in progress`: 2
+  - `backlog`: 52
+  - `in progress`: 3
 
 ## Epic and Story Mirror
 
@@ -93,7 +93,7 @@
 - Status: `backlog`
 - Tags: future, later
 - Stories:
-  - `86e041x9h` | `backlog` | Drag-and-drop workflow designer | tags: -
+  - `86e041x9h` | `in progress` | Drag-and-drop workflow designer | tags: -
 
 ### [NEXT] API Enhancement Layer (`86e0422mu`)
 - Status: `backlog`

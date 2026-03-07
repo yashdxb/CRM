@@ -1,0 +1,45 @@
+<section class="palette-card">
+  <h3>Node Palette</h3>
+  <p>Drag CRM workflow nodes to canvas.</p>
+
+  <span class="p-input-icon-left">
+    <i class="pi pi-search"></i>
+    <input
+      pInputText
+      type="text"
+      [(ngModel)]="search"
+      placeholder="Search nodes"
+      aria-label="Search nodes"
+    />
+  </span>
+
+  <div class="palette-list">
+    <div
+      class="palette-node"
+      draggable="true"
+      *ngFor="let template of filteredTemplates"
+      (dragstart)="onNodeDragStart($event, template.type)"
+      [attr.aria-label]="'Drag ' + template.label + ' node'"
+    >
+      <i [class]="template.icon" aria-hidden="true"></i>
+      <div class="node-copy">
+        <span>{{ template.label }}</span>
+        <small>{{ template.hint }}</small>
+      </div>
+      <button
+        pButton
+        type="button"
+        class="btn btn-ghost btn-sm"
+        (click)="addNode.emit(template.type)"
+        [attr.aria-label]="'Add ' + template.label + ' node'"
+      >
+        Add
+      </button>
+    </div>
+  </div>
+  <button pButton type="button" class="btn btn-secondary" (click)="addApprovalStep.emit()">
+    <i class="pi pi-plus"></i>
+    <span>Quick Add Approval Step</span>
+  </button>
+  <small>{{ filteredTemplates.length }} node types shown. Start and End are always kept by validation.</small>
+</section>

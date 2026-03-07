@@ -1,0 +1,92 @@
+<div class="workflow-page page-container">
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <header class="workflow-header">
+    <div>
+      <h1 class="hero-title">Workflow Designer</h1>
+      <p>Rete.js designer for Deal Approval workflow definitions.</p>
+      <small *ngIf="updatedAtUtc()">Last updated: {{ updatedAtUtc() }}</small>
+    </div>
+    <div class="header-actions">
+      <button pButton type="button" class="btn btn-ghost" (click)="load()" [disabled]="loading()">Reload</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="fitView()" [disabled]="loading()">Fit View</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="autoArrange()" [disabled]="loading()">Auto Arrange</button>
+      <button pButton type="button" class="btn btn-secondary" (click)="validate()" [disabled]="validating()">Validate</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="saveDraft()" [disabled]="saving()">Save Draft</button>
+      <button pButton type="button" class="btn btn-primary" (click)="publish()" [disabled]="saving()">Publish</button>
+    </div>
+  </header>
+
+  <section class="scope-panel" *ngIf="!loading()">
+    <h2 class="section-title">Workflow Scope</h2>
+    <div class="scope-grid">
+      <label>
+        <span>Name</span>
+        <input type="text" [value]="workflow().scope.name" (input)="patchScope('name', $any($event.target).value)" />
+      </label>
+      <label>
+        <span>Purpose</span>
+        <input type="text" [value]="workflow().scope.purpose" (input)="patchScope('purpose', $any($event.target).value)" />
+      </label>
+      <label>
+        <span>Module</span>
+        <input type="text" [value]="workflow().scope.module" (input)="patchScope('module', $any($event.target).value)" />
+      </label>
+      <label>
+        <span>Pipeline</span>
+        <input type="text" [value]="workflow().scope.pipeline" (input)="patchScope('pipeline', $any($event.target).value)" />
+      </label>
+      <label>
+        <span>Stage</span>
+        <input type="text" [value]="workflow().scope.stage" (input)="patchScope('stage', $any($event.target).value)" />
+      </label>
+      <label>
+        <span>Trigger</span>
+        <input type="text" [value]="workflow().scope.trigger" (input)="patchScope('trigger', $any($event.target).value)" />
+      </label>
+    </div>
+    <div class="scope-meta">
+      <span>Status: <strong>{{ workflow().scope.status }}</strong></span>
+      <span>Version: <strong>v{{ workflow().scope.version }}</strong></span>
+      <span *ngIf="lastValidationAtUtc()">Last validation: {{ lastValidationAtUtc() }}</span>
+    </div>
+  </section>
+
+  <section class="validation-panel" *ngIf="lastValidationErrors().length > 0">
+    <h3>Validation Issues</h3>
+    <ul>
+      <li *ngFor="let error of lastValidationErrors()">{{ error }}</li>
+    </ul>
+  </section>
+
+  <section class="node-summary" *ngIf="!loading()">
+    <span>Approvals: {{ nodeCountByType('approval') }}</span>
+    <span>Conditions: {{ nodeCountByType('condition') }}</span>
+    <span>Notifications: {{ nodeCountByType('notification') }}</span>
+    <span>Emails: {{ nodeCountByType('email') }}</span>
+    <span>Activities: {{ nodeCountByType('activity') }}</span>
+  </section>
+
+  <div class="workflow-layout" *ngIf="!loading()">
+    <app-node-palette
+      (addApprovalStep)="addApprovalStep()"
+      (addNode)="addNodeByType($event)"
+    ></app-node-palette>
+
+    <section class="canvas-shell">
+      <app-workflow-canvas
+        [workflow]="workflow()"
+        (workflowChange)="onCanvasChange($event)"
+      ></app-workflow-canvas>
+    </section>
+
+    <app-workflow-properties-panel
+      [steps]="workflow().steps"
+      [nodes]="workflow().nodes"
+      (removeStep)="removeStep($event)"
+      (patchStep)="patchStep($event)"
+      (patchNode)="patchNode($event)"
+      (removeNode)="removeNode($event)"
+    ></app-workflow-properties-panel>
+  </div>
+</div>

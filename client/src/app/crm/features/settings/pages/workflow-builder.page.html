@@ -1,0 +1,116 @@
+<div class="page-container workflow-builder-page">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">
+        <span class="title-gradient">Workflow</span>
+        <span class="title-light">Builder</span>
+      </h1>
+      <p class="hero-description">Visual builder for deal approval routing using Rete.js.</p>
+
+      <div class="hero-actions">
+        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/approvals">
+          <i class="pi pi-arrow-left"></i>
+          <span>Back to Approvals</span>
+        </button>
+        <button pButton type="button" class="btn btn-ghost" [disabled]="loading()" (click)="loadWorkflow()">
+          <i class="pi pi-refresh"></i>
+          <span>Reload</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="builder-layout">
+    <div class="builder-card canvas-card">
+      <div class="card-header">
+        <h2>Deal Approval Flow</h2>
+        <label class="enabled-toggle">
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="workflow().enabled"
+            (ngModelChange)="toggleEnabled($event)"
+            [ngModelOptions]="{ standalone: true }"
+          ></p-checkbox>
+          <span>Enabled</span>
+        </label>
+      </div>
+
+      <div class="canvas-host" #canvasHost></div>
+      <small class="canvas-hint">Drag nodes and reconnect edges. Layout and links are saved with the workflow.</small>
+    </div>
+
+    <div class="builder-card form-card">
+      <div class="card-header">
+        <h2>Approval Steps</h2>
+        <button pButton type="button" class="btn btn-secondary btn-sm" (click)="addStep()">
+          <i class="pi pi-plus"></i>
+          <span>Add Step</span>
+        </button>
+      </div>
+
+      <div class="empty-state" *ngIf="!workflow().steps.length">
+        <p>No steps configured.</p>
+      </div>
+
+      <div class="step-list" *ngIf="workflow().steps.length">
+        <article class="step-item" *ngFor="let step of workflow().steps; let idx = index">
+          <div class="step-header">
+            <h3>Step {{ step.order }}</h3>
+            <button pButton type="button" class="btn btn-ghost btn-sm" (click)="removeStep(idx)">
+              Remove
+            </button>
+          </div>
+
+          <div class="field">
+            <label>Approver role *</label>
+            <input
+              pInputText
+              [ngModel]="step.approverRole"
+              (ngModelChange)="updateStep(idx, { approverRole: $event })"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Sales Manager"
+            />
+          </div>
+
+          <div class="field">
+            <label>Amount threshold</label>
+            <p-inputNumber
+              [ngModel]="step.amountThreshold"
+              (ngModelChange)="updateStep(idx, { amountThreshold: $event })"
+              [ngModelOptions]="{ standalone: true }"
+              [min]="0"
+              placeholder="Optional"
+              styleClass="w-full"
+            ></p-inputNumber>
+          </div>
+
+          <div class="field">
+            <label>Purpose</label>
+            <input
+              pInputText
+              [ngModel]="step.purpose"
+              (ngModelChange)="updateStep(idx, { purpose: $event })"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Deal Approval"
+            />
+          </div>
+        </article>
+      </div>
+
+      <div class="form-actions">
+        <button pButton type="button" class="btn btn-primary" [disabled]="saving()" (click)="saveWorkflow()">
+          <i class="pi pi-save"></i>
+          <span>{{ saving() ? 'Saving…' : 'Save Workflow' }}</span>
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
