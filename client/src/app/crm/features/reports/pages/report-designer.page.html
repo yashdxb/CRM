@@ -7,12 +7,136 @@
           <span class="title-gradient">Report</span>
           <span class="title-light">Designer</span>
         </h1>
-        <p class="hero-subtitle">Create and edit reports using the visual designer.</p>
+        <p class="hero-subtitle" *ngIf="!reportServerConfig()">Create and edit reports using the visual designer.</p>
+        <p class="hero-subtitle" *ngIf="reportServerConfig()">Design and manage reports on Report Server.</p>
       </div>
     </div>
   </header>
 
-  <div class="designer-section">
+  <!-- Report Server Mode: External designer link -->
+  <div class="designer-section" *ngIf="reportServerConfig(); let cfg">
+    <div class="report-server-shell">
+      <section class="report-server-hero">
+        <div class="report-server-copy">
+          <div class="redirect-icon">
+            <i class="pi pi-server"></i>
+          </div>
+          <div>
+            <h2>Report Server Workspace</h2>
+            <p>Use Report Server to design, publish, organize, and reopen reports without changing application code.</p>
+          </div>
+        </div>
+
+        <div class="report-server-actions">
+          <a class="btn btn-primary" [href]="cfg.designerUrl" target="_blank" rel="noopener">
+            <i class="pi pi-palette"></i>
+            Open Designer
+          </a>
+          <button class="btn btn-secondary" type="button" (click)="openReportServerViewer()">
+            <i class="pi pi-folder-open"></i>
+            Open Catalog
+          </button>
+          <a class="btn btn-secondary" routerLink="/app/reports">
+            <i class="pi pi-chart-bar"></i>
+            Back to Reports
+          </a>
+        </div>
+      </section>
+
+      <section class="status-grid">
+        <article class="status-card">
+          <span class="status-label">Mode</span>
+          <strong>Report Server</strong>
+          <p>Viewer and designer are sourced from the external report platform.</p>
+        </article>
+
+        <article class="status-card">
+          <span class="status-label">Server URL</span>
+          <strong>{{ cfg.reportServerUrl }}</strong>
+          <p>Base Report Server address configured for this environment.</p>
+        </article>
+
+        <article class="status-card">
+          <span class="status-label">Catalog</span>
+          <strong>{{ reportServerCatalog().length }}</strong>
+          <p>Published reports currently available from the server catalog.</p>
+        </article>
+
+        <article class="status-card">
+          <span class="status-label">Categories</span>
+          <strong>{{ reportServerCategories().length }}</strong>
+          <p>Report folders/categories returned by the server API.</p>
+        </article>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="workspace-card">
+          <div class="workspace-card__header">
+            <h3>Quick Start</h3>
+            <span class="workspace-pill">Recommended</span>
+          </div>
+          <ol class="workspace-steps">
+            <li>Open the Report Server Designer.</li>
+            <li>Create or import a `.trdp` report.</li>
+            <li>Save and publish the report to the catalog.</li>
+            <li>Return to the Reports page to run it through the viewer.</li>
+          </ol>
+        </article>
+
+        <article class="workspace-card">
+          <div class="workspace-card__header">
+            <h3>Categories</h3>
+            <span class="workspace-count">{{ reportServerCategories().length }}</span>
+          </div>
+          <div class="empty-inline" *ngIf="!reportServerCategories().length && !reportServerLoading()">No categories returned yet.</div>
+          <ul class="chip-list" *ngIf="reportServerCategories().length">
+            <li *ngFor="let category of reportServerCategories()">{{ category.name }}</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="catalog-panel">
+        <div class="catalog-panel__header">
+          <div>
+            <h3>Published Reports</h3>
+            <p>Reports currently available from the Report Server catalog.</p>
+          </div>
+          <a class="inline-link" [href]="cfg.designerUrl" target="_blank" rel="noopener">Manage in Report Server</a>
+        </div>
+
+        <div class="loading-state compact" *ngIf="reportServerLoading()">
+          <i class="pi pi-spin pi-spinner"></i>
+          <span>Loading Report Server workspace...</span>
+        </div>
+
+        <div class="catalog-empty" *ngIf="!reportServerLoading() && !reportServerCatalog().length">
+          <i class="pi pi-folder-open"></i>
+          <div>
+            <strong>No published reports found</strong>
+            <p>Create or publish reports in Report Server, then they will appear here.</p>
+          </div>
+        </div>
+
+        <div class="catalog-table" *ngIf="!reportServerLoading() && reportServerCatalog().length">
+          <div class="catalog-row catalog-row--head">
+            <span>Name</span>
+            <span>Category</span>
+            <span>Format</span>
+            <span>Updated</span>
+          </div>
+          <div class="catalog-row" *ngFor="let report of reportServerCatalog()">
+            <span class="report-name">{{ report.name }}</span>
+            <span>{{ report.categoryName || 'Uncategorized' }}</span>
+            <span>{{ report.extension }}</span>
+            <span>{{ report.modifiedOn | date: 'mediumDate' }}</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Embedded Mode: Local designer -->
+  <div class="designer-section" *ngIf="!reportServerConfig()">
     <!-- Loading State -->
     <div class="loading-state" *ngIf="loading()">
       <i class="pi pi-spin pi-spinner"></i>

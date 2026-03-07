@@ -28,6 +28,7 @@ using CRM.Enterprise.Application.Marketing;
 using CRM.Enterprise.Application.Emails;
 using CRM.Enterprise.Application.DirectChat;
 using CRM.Enterprise.Application.HelpDesk;
+using CRM.Enterprise.Application.Workflows;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Notifications;
 using CRM.Enterprise.Infrastructure.Leads;
@@ -43,7 +44,9 @@ using CRM.Enterprise.Infrastructure.DirectChat;
 using CRM.Enterprise.Infrastructure.HelpDesk;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Emails;
+using CRM.Enterprise.Application.Reporting;
 using CRM.Enterprise.Infrastructure.Reporting;
+using CRM.Enterprise.Infrastructure.Workflows;
 using MediatR;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.Identity;
@@ -51,6 +54,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CRM.Enterprise.Infrastructure;
 
@@ -78,6 +82,11 @@ public static class DependencyInjection
         services.Configure<AcsEmailOptions>(configuration.GetSection(AcsEmailOptions.SectionName));
         services.Configure<ApprovalQueueOptions>(configuration.GetSection(ApprovalQueueOptions.SectionName));
         services.Configure<ReportingOptions>(configuration.GetSection(ReportingOptions.SectionName));
+        services.AddHttpClient<ReportServerClient>()
+            .ConfigurePrimaryHttpMessageHandler(sp => CreateReportServerHttpHandler(sp));
+        services.AddHttpClient("ReportServerProxy")
+            .ConfigurePrimaryHttpMessageHandler(sp => CreateReportServerHttpHandler(sp));
+        services.AddSingleton<IReportServerClient>(sp => sp.GetRequiredService<ReportServerClient>());
         services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IEntraTokenValidator, EntraTokenValidator>();
         services.AddHttpContextAccessor();
@@ -209,6 +218,8 @@ public static class DependencyInjection
         services.AddScoped<ISupportSlaService, HelpDeskService>();
         services.AddScoped<ISupportReportService, HelpDeskService>();
         services.AddScoped<ISupportEmailIntakeService, HelpDeskService>();
+        services.AddScoped<IWorkflowDefinitionService, WorkflowDefinitionService>();
+        services.AddScoped<IWorkflowExecutionService, WorkflowExecutionService>();
         
         // Email OAuth connection service
         services.Configure<EmailOAuthOptions>(configuration.GetSection(EmailOAuthOptions.SectionName));
@@ -220,5 +231,18 @@ public static class DependencyInjection
         services.AddScoped<IMailboxSyncService, MailboxSyncService>();
 
         return services;
+    }
+
+    private static HttpClientHandler CreateReportServerHttpHandler(IServiceProvider sp)
+    {
+        var options = sp.GetRequiredService<IOptions<ReportingOptions>>().Value;
+        var handler = new HttpClientHandler();
+
+        if (options.IgnoreInvalidTlsCertificate)
+        {
+            handler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+        }
+
+        return handler;
     }
 }

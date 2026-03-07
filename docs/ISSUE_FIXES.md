@@ -451,3 +451,290 @@ Server-side reports code is currently untracked and needs to be committed:
 **Deployment note**
 - GitHub Actions API deploy currently fails in CI due to missing Telerik private NuGet feed (`NU1101`).
 - Manual Azure deploy/restart is required until CI feed configuration is fixed.
+
+## 11) Telerik "Pipeline By Stage" Report Runtime Errors and Broken Layout
+
+**Symptoms**
+- Report viewer loaded, but the report body failed with Telerik processing errors.
+- Errors changed across iterations, including:
+  - `Invalid object name` from the report SQL query.
+  - `BarSeries: X value cannot be null or empty when using NumericalScale`.
+  - `Table Body has 2 rows but 1 are expected`.
+  - `Cannot find an overload of the function IsNull() that accepts arguments of type (null)`.
+  - Footer/page counter expression failures involving `PageNumber`.
+- After some fixes, the chart rendered incorrectly as a broken single-point graph or left a large blank area before the table.
+
+**Root cause**
+This was not one issue. It was a chain of report-definition problems in the server-side Telerik report:
+
+1. The SQL source did not match the actual CRM schema.
+2. The graph definition mixed incompatible axis/value bindings during iteration.
+3. The table definition did not fully align body rows with row/column groups.
+4. A defensive `IsNull(...)` expression was introduced in a Telerik context where that overload was not valid.
+5. Footer page-number expressions were not accepted by the Telerik runtime version in this project.
+6. The layout sizing left unnecessary whitespace and pushed content across extra pages.
+
+**Fix pattern**
+1. Correct the SQL data source to use the real CRM tables and join path.
+2. Bind both the chart and table to the same explicit SQL data source.
+3. Use category-on-X and numeric-on-Y graph configuration with `Y = "= Sum(Fields.TotalValue)"`.
+4. Define explicit table row groups and one column group per body column.
+5. Remove the unsupported footer page-number expression instead of leaving a runtime error in production.
+6. Reduce chart/detail heights and move the table up so the report reads as one compact page block.
+
+**Example implementation**
+- File: `server/src/CRM.Enterprise.Api/Reporting/PipelineByStageTelerikReport.cs`
+- Key changes:
+  - SQL fixed to:
+    - `FROM [crm].[Opportunities] o`
+    - `INNER JOIN [crm].[OpportunityStages] s ON o.StageId = s.Id`
+  - Shared SQL data source used by both graph and table
+  - Graph configured with:
+    - category group on `Fields.StageName`
+    - value axis as `NumericalScale`
+    - `BarSeries.Y = "= Sum(Fields.TotalValue)"`
+  - Table fixed with:
+    - one detail row group
+    - explicit column groups for `Stage`, `Deals`, `Value`, `Share`
+  - Layout tightened:
+    - detail height reduced to `12cm`
+    - graph height reduced to `6.8cm`
+    - table moved to `7.8cm`
+    - table height set to `3.2cm`
+  - Legend hidden to remove the stray blue marker
+  - Footer right text box set to blank because the runtime rejected the page counter expressions in this environment
+
+**Files changed**
+- `server/src/CRM.Enterprise.Api/Reporting/PipelineByStageTelerikReport.cs`
+
+**Verification**
+Playwright was used to validate the end result against the running app, not just the code shape.
+
+```bash
+cd client
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 \
+  npx playwright test e2e/telerik-debug.spec.ts --workers=1
+```
+
+- ✅ `/app/reports` renders without Telerik processing errors
+- ✅ The chart displays the expected stage bars:
+  - `Qualification` = `$760,000`
+  - `Prospecting` = `$120,000`
+  - `Proposal` = `$90,200`
+- ✅ The summary table matches the chart data
+- ✅ The stray legend square is gone
+- ✅ The large empty gap between chart and table is removed
+- ✅ The report no longer fails on footer/page-number expressions
+
+**Why this is safe**
+- The fix is isolated to the server-side report definition.
+- No authentication, report routing, or CRM business logic was changed.
+- The graph and table now read from the same dataset, which reduces drift and mismatch risk.
+- The final state favors stable rendering over decorative footer logic that the current Telerik runtime does not support reliably in this setup.
+
+## 12) Telerik Report Server URL confusion (IIS VM vs active Report Server host)
+
+**Symptoms**
+- Report Server integration could not be re-enabled because the URL was unknown.
+- A remembered host `http://20.106.148.159` opened IIS, which made it unclear whether the Report Server deployment was broken or moved.
+- Azure Key Vault contained Report Server credentials, but no explicit URL secret.
+
+**Root cause**
+- There are two Azure report-related resource groups and two VMs:
+  - `rg-crm-report-dev-eus` with `vmrptdev01` (Windows)
+  - `rg-crm-report-dev-eus2` with `vmrptlinux01` (Linux)
+- The Windows VM looks plausible from naming, but it currently serves only the default IIS landing page from `C:\inetpub\wwwroot`.
+- The actual Telerik Report Server is running on the Linux VM behind nginx, which proxies traffic to a local upstream on `127.0.0.1:82`.
+
+**Fix pattern**
+1. Use Azure CLI to enumerate report-related resource groups and VMs.
+2. Probe the public endpoints instead of assuming the Windows VM is the report host.
+3. Inspect VM web-server configuration directly:
+   - IIS on `vmrptdev01`
+   - nginx on `vmrptlinux01`
+4. Confirm the actual Telerik login page before updating application config.
+
+**Verified result**
+- Active Telerik Report Server URL:
+  - `https://52.247.69.37`
+  - `http://52.247.69.37`
+- Azure host:
+  - resource group: `rg-crm-report-dev-eus2`
+  - VM: `vmrptlinux01`
+- nginx config confirms:
+  - public ingress on `80` and `443`
+  - proxy target `127.0.0.1:82`
+- `http://20.106.148.159` is not the report server. It is the Windows VM `vmrptdev01` serving default IIS only.
+
+**Useful commands**
+```bash
+az vm list -d --query "[].{name:name,resourceGroup:resourceGroup,privateIps:privateIps,publicIps:publicIps}" -o table
+
+az vm run-command invoke -g rg-crm-report-dev-eus2 -n vmrptlinux01 \
+  --command-id RunShellScript \
+  --scripts "sudo sed -n '1,240p' /etc/nginx/sites-enabled/reportserver"
+
+curl -k -L https://52.247.69.37 | head
+```
+
+**Why this matters**
+- App config should point to the Linux/nginx endpoint, not the Windows IIS VM.
+- Future Report Server troubleshooting should start with Azure resource-group separation and live endpoint verification, not memory of an older local/IP setup.
+
+## 14) Report Server hostname masking (`reports.northedgesystem.com`)
+
+**Symptoms**
+- The Report Server designer/viewer was exposed with the raw public IP `52.247.69.37`.
+- That worked technically, but it was the wrong public URL shape and exposed infrastructure details.
+
+**Root cause**
+- The VM already had a public IP and nginx reverse proxy, but there was no DNS hostname bound to the service.
+- nginx was configured as a catch-all with `server_name _;`.
+
+**Fix pattern**
+1. Create a public DNS `A` record:
+   - `reports.northedgesystem.com -> 52.247.69.37`
+2. Update nginx on `vmrptlinux01` to bind:
+   - `server_name reports.northedgesystem.com;`
+3. Reissue the current certificate with:
+   - `CN=reports.northedgesystem.com`
+   - `SAN=DNS:reports.northedgesystem.com`
+4. Update application configuration to use:
+   - `Reporting__ReportServerUrl=https://reports.northedgesystem.com`
+
+**Verified result**
+- DNS resolves correctly:
+  - `reports.northedgesystem.com -> 52.247.69.37`
+- nginx now serves the hostname directly.
+- Local CRM API `/api/report-server/config` returns:
+  - `reportServerUrl: https://reports.northedgesystem.com`
+  - `designerUrl: https://reports.northedgesystem.com`
+- Opening a Report Server report from `/app/reports` still succeeds after the hostname switch with no visible Telerik error pane in the automated browser run.
+
+**Final SSL fix**
+- A temporary public inbound `80` rule was added on the VM NSG for ACME validation.
+- `certbot` + `python3-certbot-nginx` were installed on `vmrptlinux01`.
+- A trusted Let's Encrypt certificate was issued for `reports.northedgesystem.com`.
+- nginx was updated automatically to use:
+  - `/etc/letsencrypt/live/reports.northedgesystem.com/fullchain.pem`
+  - `/etc/letsencrypt/live/reports.northedgesystem.com/privkey.pem`
+- The temporary ACME NSG rule was then removed.
+- The CRM API App Service outbound IP set was explicitly allowed on inbound `443` so the proxy path can work from Azure.
+
+**Why this is safe**
+- The change is limited to ingress/DNS/config identity and does not change the upstream Report Server application itself.
+- The CRM app now references the hostname instead of the raw IP, which is the correct public integration shape.
+
+**Verified result**
+- Browser TLS for `https://reports.northedgesystem.com` now chains to Let's Encrypt.
+- CRM local API works with:
+  - `Reporting__ReportServerUrl=https://reports.northedgesystem.com`
+  - `Reporting__IgnoreInvalidTlsCertificate=false`
+- `/api/report-server/config` returns the hostname URL.
+- `/api/report-server/catalog` loads successfully.
+- `/app/reports` opens a Report Server catalog report with no visible Telerik error pane in the automated browser run.
+
+## 15) Report Server designer SQL connection failure (`127.0.0.1` was wrong)
+
+**Symptoms**
+- Creating a report in Telerik Report Server failed at the SQL data source step.
+- Testing the connection with the repo's local development connection string returned:
+  - `provider: TCP Provider, error: 35`
+  - `The server was not found or was not accessible`
+
+**Root cause**
+- Report Server is running on `vmrptlinux01`.
+- Using `Server=127.0.0.1,1433` inside the Report Server designer points to the Report Server VM itself, not the CRM database.
+- The CRM application actually uses Azure SQL, not a local SQL Server instance on the Report Server host.
+
+**Fix pattern**
+1. Read the live app connection string from Azure App Service settings.
+2. Extract the real SQL host and database:
+   - SQL host: `crm-sql-dev-01130044.database.windows.net`
+   - Database: `crm-enterprise-dev`
+3. Verify the Report Server VM can reach Azure SQL on `1433`.
+4. Use the Azure SQL connection string in the Report Server designer instead of `127.0.0.1`.
+
+**Verified result**
+- Azure App Service connection string confirmed:
+  - `Server=tcp:crm-sql-dev-01130044.database.windows.net,1433`
+  - `Initial Catalog=crm-enterprise-dev`
+- Database exists on Azure SQL server `crm-sql-dev-01130044`.
+- Connectivity from `vmrptlinux01` to Azure SQL port `1433` succeeded:
+  - `TCP_OK`
+
+**Operational note**
+- Do not use local repo `appsettings.Development.json` SQL values inside hosted Report Server.
+- For Report Server-authored reports, always use the database endpoint reachable from the Report Server host.
+
+## 13) CRM application integration with Telerik Report Server
+
+**Symptoms**
+- The repo had Report Server catalog/token code, but the application still rendered reports through the embedded Telerik REST service by default.
+- Direct browser calls to the Report Server created practical issues:
+  - self-signed TLS warnings on the dev host
+  - mixed-origin viewer/resource requests
+  - inconsistent auth expectations between CRM JWT and Report Server bearer tokens
+- Catalog cards could load, but opening a report failed on parameter or resource requests.
+
+**Root causes**
+- The app was returning the external Report Server URL directly instead of a same-origin CRM proxy.
+- `ReportServerClient` was deserializing token payload fields with the wrong naming convention.
+- Report catalog items did not reliably include `CategoryName`, but the Telerik viewer needs `Category/ReportName` when opening a Report Server report.
+- Viewer asset requests under `/resources/` were being blocked because the proxy treated them like authenticated API calls instead of static viewer resources.
+
+**Fix pattern**
+1. Enable Report Server mode through the `Reporting` options:
+   - `ReportServerUrl`
+   - `ReportServerUsername`
+   - `ReportServerPassword`
+   - `IgnoreInvalidTlsCertificate` for the current dev server only
+2. Route the frontend viewer through the CRM API proxy:
+   - `/api/report-server/proxy/api/reports`
+3. Authenticate the proxy upstream with the Report Server bearer token while keeping the browser on CRM-origin URLs.
+4. Resolve report categories from the Report Server catalog API and open reports as `CategoryName/ReportName`.
+5. Allow anonymous GET access only for safe Telerik viewer resource/configuration endpoints so static assets can load without breaking CRM auth.
+
+**Code changes**
+- API config endpoint now returns the CRM proxy path instead of the external Report Server service URL:
+  - [ReportServerController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/ReportServerController.cs:30)
+- Reports embed config now switches the viewer to Report Server provider mode when configured:
+  - [ReportsController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/ReportsController.cs:29)
+- Added same-origin upstream proxy for Telerik Report Server:
+  - [ReportServerProxyController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/ReportServerProxyController.cs:10)
+- Fixed Report Server token/catalog deserialization and category resolution:
+  - [ReportServerClient.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Reporting/ReportServerClient.cs:37)
+- Added opt-in dev TLS bypass for the self-signed Report Server cert:
+  - [ReportingOptions.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Reporting/ReportingOptions.cs:3)
+  - [DependencyInjection.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/DependencyInjection.cs:84)
+- Frontend now resolves the proxy URL and opens reports with `Category/Report`:
+  - [reports.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/reports/pages/reports.page.ts:52)
+
+**Verified result**
+- `GET /api/report-server/config` returns:
+  - `enabled: true`
+  - `reportServiceUrl: /api/report-server/proxy/api/reports`
+- `GET /api/report-server/catalog` returns live Report Server items.
+- Opening a report from `/app/reports` now completes the expected Telerik sequence:
+  - `configuration` 200
+  - `clients` 200
+  - `parameters` 200
+  - `instances` 201
+  - `documents` 202
+  - `pages/1` 200
+  - `resources/*` 200
+- The remaining browser result is functional report rendering through Report Server with no visible Telerik error pane in the automated run.
+
+**Verification commands**
+```bash
+curl -H "Authorization: Bearer <crm-jwt>" http://localhost:5014/api/report-server/config
+curl -H "Authorization: Bearer <crm-jwt>" http://localhost:5014/api/report-server/catalog
+
+cd client
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts --workers=1
+```
+
+**Why this is safe**
+- The external Report Server stays the source of truth for report execution.
+- The browser no longer needs direct access to external Report Server auth/session details.
+- The proxy is narrow and purpose-built for Telerik viewer traffic, not a general open relay.

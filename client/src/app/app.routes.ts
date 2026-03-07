@@ -55,7 +55,7 @@ export const routes: Routes = [
       {
         path: 'reports',
         canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.dashboardView, breadcrumb: 'Reports', icon: 'pi-chart-pie' },
+        data: { permission: PERMISSION_KEYS.reportsView, breadcrumb: 'Reports', icon: 'pi-chart-pie' },
         loadComponent: () =>
           import('./crm/features/reports/pages/reports.page').then((m) => m.ReportsPage)
       },
@@ -576,6 +576,13 @@ export const routes: Routes = [
               import('./crm/features/settings/pages/opportunity-automation.page').then((m) => m.OpportunityAutomationPage)
           },
           {
+            path: 'workflow-builder',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Workflow Builder' },
+            loadComponent: () =>
+              import('./crm/features/workflows/pages/workflow-designer.page').then((m) => m.WorkflowDesignerPage)
+          },
+          {
             path: 'dashboard-packs',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Dashboard Packs' },
@@ -610,6 +617,28 @@ export const routes: Routes = [
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.tenantsView, breadcrumb: 'Tenant Configuration' },
             loadComponent: () => import('./crm/features/settings/pages/tenants.page').then((m) => m.TenantsPage)
+          }
+        ]
+      },
+      {
+        path: 'workflows',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Workflows', icon: 'pi-share-alt' },
+        children: [
+          { path: '', pathMatch: 'full', redirectTo: 'designer' },
+          {
+            path: 'designer',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Workflow Designer' },
+            loadComponent: () =>
+              import('./crm/features/workflows/pages/workflow-designer.page').then((m) => m.WorkflowDesignerPage)
+          },
+          {
+            path: 'executions',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationView, breadcrumb: 'Workflow Executions' },
+            loadComponent: () =>
+              import('./crm/features/workflows/pages/workflow-execution-viewer.page').then((m) => m.WorkflowExecutionViewerPage)
           }
         ]
       },

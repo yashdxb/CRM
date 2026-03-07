@@ -3,7 +3,16 @@ import { NavLink } from './navigation.model';
 
 export const NAV_LINKS: NavLink[] = [
   { label: 'Dashboard', icon: 'pi-chart-bar', path: '/app/dashboard', permission: PERMISSION_KEYS.dashboardView },
-  { label: 'Reports', icon: 'pi-chart-pie', path: '/app/reports', permission: PERMISSION_KEYS.dashboardView },
+  {
+    label: 'Reports',
+    icon: 'pi-chart-pie',
+    path: '/app/reports',
+    permission: PERMISSION_KEYS.reportsView,
+    children: [
+      { label: 'View Reports', icon: 'pi-eye', path: '/app/reports', permission: PERMISSION_KEYS.reportsView },
+      { label: 'Report Designer', icon: 'pi-palette', path: '/app/report-designer', permission: PERMISSION_KEYS.administrationManage }
+    ]
+  },
   {
     label: 'Decision Inbox',
     icon: 'pi-inbox',
@@ -272,6 +281,8 @@ export const NAV_LINKS: NavLink[] = [
         permission: PERMISSION_KEYS.administrationManage,
         children: [
           { label: 'Approvals', icon: 'pi-check-square', path: '/app/settings/approvals', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Workflow Builder', icon: 'pi-share-alt', path: '/app/workflows/designer', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Workflow Executions', icon: 'pi-history', path: '/app/workflows/executions', permission: PERMISSION_KEYS.administrationView },
           { label: 'Notifications', icon: 'pi-bell', path: '/app/settings/notifications', permission: PERMISSION_KEYS.administrationView },
           { label: 'Marketing', icon: 'pi-megaphone', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' },
           { label: 'Lead Assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },

@@ -699,9 +699,23 @@ These workflows define how non‑rep roles operate in the same CRM, with clear o
 ### Telerik Report Server (Dev State)
 - Resource group: `rg-crm-report-dev-eus2`
 - VM: `vmrptlinux01` (Linux)
-- Public endpoint: `http://52.247.69.37` and `https://52.247.69.37` (self-signed cert)
+- Preferred public hostname: `https://reports.northedgesystem.com`
+- Underlying VM endpoints: `http://52.247.69.37` and `https://52.247.69.37`
 - Runtime: Dockerized Report Server + SQL Server, with Nginx reverse proxy
+- Ingress detail: Nginx listens on `80/443` and proxies `/` to `127.0.0.1:82`
 - Verification path: login succeeds and sample dashboard report renders (`/Report/View/Samples/Dashboard?ReportYear=2002`)
+- Non-active host to ignore: `vmrptdev01` in `rg-crm-report-dev-eus` (`20.106.148.159`) is a Windows VM that currently exposes only the default IIS landing page and is not the Telerik Report Server endpoint
+- Report Server login credentials are stored in Azure Key Vault `kv-crm-dev-ca` under:
+  - `reportserver-admin-username`
+  - `reportserver-admin-password`
+- CRM application integration rules:
+  - when `Reporting__ReportServerUrl` is set, the application must use Report Server mode instead of the embedded Telerik REST service
+  - the frontend viewer/service URL must stay on the CRM API origin via `/api/report-server/proxy/api/reports`
+  - do not point browser code directly to the external Report Server `/api/reports` endpoint
+  - `reports.northedgesystem.com` now uses a trusted Let's Encrypt certificate, so `Reporting__IgnoreInvalidTlsCertificate` should stay `false`
+  - published Report Server items should be opened as `CategoryName/ReportName`, not just bare report name, to avoid parameter/load failures
+  - NSG must allow inbound `443` from the CRM API App Service outbound IP set, or the proxy path will fail in Azure even if local development works
+  - Report Designer access is admin-only by default and should remain gated by `Permissions.Administration.Manage` unless there is an explicit workspace-level decision to widen it
 
 ---
 

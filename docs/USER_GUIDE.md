@@ -613,11 +613,24 @@ Use this when you need Telerik Report Server running and reachable for CRM repor
 - Azure resource group: `rg-crm-report-dev-eus2`
 - VM: `vmrptlinux01` (Linux)
 - Public IP: `52.247.69.37`
-- Report Server URLs:
+- Preferred Report Server hostname:
+  - `https://reports.northedgesystem.com`
+- Underlying VM endpoints:
   - `http://52.247.69.37`
-  - `https://52.247.69.37` (self-signed certificate)
+  - `https://52.247.69.37`
 - Sample report verification URL:
   - `http://52.247.69.37/Report/View/Samples/Dashboard?ReportYear=2002`
+- Runtime ingress:
+  - nginx listens on `80` and `443`
+  - nginx proxies `/` to the local Report Server process on `127.0.0.1:82`
+
+### Important Host Distinction
+- Do not use the Windows VM at `20.106.148.159` as the Report Server URL.
+- Azure resource group `rg-crm-report-dev-eus` contains `vmrptdev01` (Windows), but that host currently serves only the default IIS page from `C:\\inetpub\\wwwroot`.
+- The actual Telerik Report Server login page is hosted on the Linux VM in `rg-crm-report-dev-eus2` and is reachable at:
+  - `https://reports.northedgesystem.com`
+  - `https://52.247.69.37`
+  - `http://52.247.69.37`
 
 ### Security and Networking
 - NSG inbound is restricted to approved source IP only (current: `74.14.155.189/32`) for `22`, `80`, `443`.
@@ -636,7 +649,42 @@ Key Vault: `kv-crm-dev-ca`
 
 Do not store these values in code or repo files. Use Key Vault + managed access only.
 
+Retrieve the current Report Server login credentials with:
+```bash
+az keyvault secret show --vault-name kv-crm-dev-ca --name reportserver-admin-username --query value -o tsv
+az keyvault secret show --vault-name kv-crm-dev-ca --name reportserver-admin-password --query value -o tsv
+```
+
+### CRM Application Integration
+- The CRM app should use Report Server through the API proxy, not by pointing the browser directly at the external `/api/reports` endpoint.
+- Current viewer proxy path:
+  - `/api/report-server/proxy/api/reports`
+- Current CRM config endpoint:
+  - `/api/report-server/config`
+- Current catalog endpoint:
+  - `/api/report-server/catalog`
+
+Required API settings:
+```json
+"Reporting": {
+  "ReportServerUrl": "https://reports.northedgesystem.com",
+  "ReportServerUsername": "<from-key-vault>",
+  "ReportServerPassword": "<from-key-vault>",
+  "IgnoreInvalidTlsCertificate": false
+}
+```
+
+Notes:
+- `reports.northedgesystem.com` now uses a trusted Let's Encrypt certificate.
+- `IgnoreInvalidTlsCertificate` should remain `false` unless the certificate is broken and you are doing temporary recovery work.
+- The current nginx host binding is `reports.northedgesystem.com`.
+- Frontend report cards open Report Server reports by category-qualified path (`CategoryName/ReportName`).
+- If Report Server mode is enabled, `/api/reports/embed-config` should return provider `report-server` and service URL `/api/report-server/proxy/api/reports`.
+- Report viewing is available through CRM report permissions, but Report Designer / direct Report Server access should remain admin-only (`Permissions.Administration.Manage`).
+- When designing reports inside Report Server, do not use the repo's local `127.0.0.1` SQL string. Use the real CRM Azure SQL endpoint reachable from the Report Server VM.
+
 ### Operational Notes
 1. Expect browser warning on HTTPS until a CA-issued certificate is installed.
 2. Keep Docker containers and Nginx as the source of truth for runtime exposure.
 3. Confirm access with login + sample report view after any infra/network change.
+4. If someone remembers an old local IP or IIS host, verify against Azure CLI before changing app config. The active dev endpoint is the Linux VM above, not the Windows IIS VM.

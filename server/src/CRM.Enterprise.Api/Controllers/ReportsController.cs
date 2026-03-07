@@ -10,7 +10,7 @@ using System.Security.Claims;
 
 namespace CRM.Enterprise.Api.Controllers;
 
-[Authorize(Policy = Permissions.Policies.DashboardView)]
+[Authorize(Policy = Permissions.Policies.ReportsView)]
 [ApiController]
 [Route("api/reports")]
 public class ReportsController : ControllerBase
@@ -29,6 +29,16 @@ public class ReportsController : ControllerBase
     [HttpGet("embed-config")]
     public ActionResult<ReportsEmbedConfigResponse> GetEmbedConfig()
     {
+        // When Report Server is configured, point the viewer there
+        if (_reportingOptions.UseReportServer)
+        {
+            return Ok(new ReportsEmbedConfigResponse(
+                true,
+                "report-server",
+                "/api/report-server/proxy/api/reports",
+                null));
+        }
+
         var serviceUrl = "/api/telerik-reports";
         var pipelineByStageReportSource = "CRM.Enterprise.Api.Reporting.PipelineByStageTelerikReport, CRM.Enterprise.Api";
         var enabled = _reportingOptions.EnableEmbeddedViewer;

@@ -1,0 +1,17 @@
+{
+  "simpleDataProviders": [
+    {
+      "name": "SqlDataSource",
+      "displayName": "CRM Database",
+      "isDefault": true
+    }
+  ],
+  "connectionStrings": [
+    {
+      "name": "SqlServer",
+      "description": "CRM Enterprise Database (tenant-scoped)",
+      "isDefault": true
+    }
+  ],
+  "allowNewConnections": false
+}

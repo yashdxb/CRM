@@ -14,38 +14,41 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext } from '../../../../core/auth/token.utils';
 import { environment } from '../../../../../environments/environment';
+import { ReportsDataService } from '../services/reports-data.service';
+import { ReportServerConfig, ReportCatalogItem, ReportCategory } from '../models/report.model';
+import { RouterLink } from '@angular/router';
 
 declare const jQuery: any;
 
 @Component({
   selector: 'app-report-designer-page',
   standalone: true,
-  imports: [CommonModule, BreadcrumbsComponent],
+  imports: [CommonModule, BreadcrumbsComponent, RouterLink],
   templateUrl: './report-designer.page.html',
   styleUrl: './report-designer.page.scss'
 })
 export class ReportDesignerPage implements AfterViewInit, OnDestroy {
   private readonly toast = inject(AppToastService);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly reportsData = inject(ReportsDataService);
 
   @ViewChild('designerContainer', { static: false }) designerContainer?: ElementRef<HTMLDivElement>;
 
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
+  protected readonly reportServerConfig = signal<ReportServerConfig | null>(null);
+  protected readonly reportServerCatalog = signal<ReportCatalogItem[]>([]);
+  protected readonly reportServerCategories = signal<ReportCategory[]>([]);
+  protected readonly reportServerLoading = signal(false);
   private designerInstance: any = null;
+  private readonly apiBaseUrl = environment.apiUrl.replace(/\/+$/, '');
 
   private get serviceUrl(): string {
-    const basePath = '/api/report-designer';
-    return environment.production
-      ? `${environment.apiUrl.replace(/\/+$/, '')}${basePath}`
-      : basePath;
+    return `${this.apiBaseUrl}/api/report-designer`;
   }
 
   private get assetsUrl(): string {
-    const basePath = '/api/report-designer-assets';
-    return environment.production
-      ? `${environment.apiUrl.replace(/\/+$/, '')}${basePath}`
-      : basePath;
+    return `${this.apiBaseUrl}/api/report-designer-assets`;
   }
 
   private get authToken(): string {
@@ -54,12 +57,27 @@ export class ReportDesignerPage implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     if (isPlatformBrowser(this.platformId)) {
-      this.loadDesignerAssets();
+      this.checkReportServerMode();
     }
   }
 
   ngOnDestroy(): void {
     this.destroyDesigner();
+  }
+
+  private checkReportServerMode(): void {
+    this.reportsData.getReportServerConfig().subscribe({
+      next: (cfg) => {
+        if (cfg.enabled && cfg.designerUrl) {
+          this.reportServerConfig.set(cfg);
+          this.loadReportServerWorkspace();
+          this.loading.set(false);
+        } else {
+          this.loadDesignerAssets();
+        }
+      },
+      error: () => this.loadDesignerAssets()
+    });
   }
 
   private async loadDesignerAssets(): Promise<void> {
@@ -246,5 +264,34 @@ export class ReportDesignerPage implements AfterViewInit, OnDestroy {
     this.error.set(null);
     this.loading.set(true);
     this.loadDesignerAssets();
+  }
+
+  protected openReportServerViewer(): void {
+    const config = this.reportServerConfig();
+    if (!config?.reportServerUrl) {
+      return;
+    }
+
+    window.open(`${config.reportServerUrl}/Report`, '_blank', 'noopener');
+  }
+
+  private loadReportServerWorkspace(): void {
+    this.reportServerLoading.set(true);
+
+    this.reportsData.getReportCatalog().subscribe({
+      next: (items) => {
+        this.reportServerCatalog.set(items);
+        this.reportServerLoading.set(false);
+      },
+      error: () => {
+        this.reportServerCatalog.set([]);
+        this.reportServerLoading.set(false);
+      }
+    });
+
+    this.reportsData.getReportCategories().subscribe({
+      next: (items) => this.reportServerCategories.set(items),
+      error: () => this.reportServerCategories.set([])
+    });
   }
 }

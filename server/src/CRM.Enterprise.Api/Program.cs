@@ -21,6 +21,7 @@ using Telerik.Reporting.Cache.File;
 using Telerik.Reporting.Services;
 using Telerik.Reporting.Services.Engine;
 using Telerik.WebReportDesigner.Services;
+using CRM.Enterprise.Api.Reporting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,18 +44,24 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
-builder.Services.TryAddSingleton<IReportServiceConfiguration>(_ =>
+
+builder.Services.AddScoped<TenantConnectionStringHandler>();
+
+builder.Services.TryAddSingleton<IReportServiceConfiguration>(sp =>
 {
     var reportsPath = Path.Combine(builder.Environment.ContentRootPath, "Reports");
     var cachePath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "TelerikReportingCache");
     Directory.CreateDirectory(cachePath);
 
+    var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
+    var innerResolver = new TypeReportSourceResolver()
+        .AddFallbackResolver(new UriReportSourceResolver(reportsPath));
+
     return new ReportServiceConfiguration
     {
         HostAppId = "CRM.Enterprise.Api",
         Storage = new FileStorage(cachePath),
-        ReportSourceResolver = new TypeReportSourceResolver()
-            .AddFallbackResolver(new UriReportSourceResolver(reportsPath))
+        ReportSourceResolver = new TenantReportResolver(innerResolver, httpContextAccessor)
     };
 });
 

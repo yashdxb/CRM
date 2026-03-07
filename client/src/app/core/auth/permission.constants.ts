@@ -22,6 +22,9 @@ export const PERMISSION_KEYS = {
   helpDeskAdmin: 'Permissions.HelpDesk.Admin',
   administrationView: 'Permissions.Administration.View',
   administrationManage: 'Permissions.Administration.Manage',
+  reportsView: 'Permissions.Reports.View',
+  reportsManage: 'Permissions.Reports.Manage',
+  reportsDesign: 'Permissions.Reports.Design',
   auditView: 'Permissions.Audit.View',
   tenantsView: 'Permissions.Tenants.View',
   tenantsManage: 'Permissions.Tenants.Manage'

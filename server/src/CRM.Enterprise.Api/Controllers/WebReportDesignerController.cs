@@ -9,7 +9,7 @@ namespace CRM.Enterprise.Api.Controllers;
 /// <summary>
 /// Controller for the Telerik Web Report Designer.
 /// Permission is configurable via Reporting:DesignerRequiredPermission in appsettings.json.
-/// Default: Permissions.Reports.Design
+/// Default: Permissions.Administration.Manage
 /// 
 /// [AllowAnonymous] is at class level to allow the base class Resources method to serve
 /// static JS/CSS files without authentication (script tags cannot include auth headers).

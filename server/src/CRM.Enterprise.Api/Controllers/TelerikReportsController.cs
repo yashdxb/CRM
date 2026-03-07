@@ -6,7 +6,7 @@ using Telerik.Reporting.Services.AspNetCore;
 
 namespace CRM.Enterprise.Api.Controllers;
 
-[Authorize(Policy = Permissions.Policies.DashboardView)]
+[Authorize(Policy = Permissions.Policies.ReportsView)]
 [ApiController]
 [Route("api/telerik-reports")]
 public sealed class TelerikReportsController : ReportsControllerBase

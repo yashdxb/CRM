@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CRM.Enterprise.Application\CRM.Enterprise.Application.csproj" />
     <ProjectReference Include="..\CRM.Enterprise.Domain\CRM.Enterprise.Domain.csproj" />
+    <ProjectReference Include="..\CRM.Enterprise.Workflows\CRM.Enterprise.Workflows.csproj" />
   </ItemGroup>
 
   <ItemGroup>
