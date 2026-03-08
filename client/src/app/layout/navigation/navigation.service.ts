@@ -210,8 +210,23 @@ export class NavigationService {
 
   toggleSubmenu(label: string) {
     const isOpen = this.expandedMenus().has(label);
-    this.expandedMenus.set(isOpen ? new Set() : new Set([label]));
-    this.expandedChildMenus.set(new Set());
+    if (isOpen) {
+      this.expandedMenus.set(new Set());
+      this.saveExpandedState();
+      return;
+    }
+
+    this.expandedMenus.set(new Set([label]));
+    this.expandedChildMenus.update((menus) => {
+      const next = new Set<string>();
+      const parentPrefix = `${label}::`;
+      for (const existing of menus) {
+        if (existing.startsWith(parentPrefix)) {
+          next.add(existing);
+        }
+      }
+      return next;
+    });
     this.saveExpandedState();
   }
 
@@ -219,13 +234,12 @@ export class NavigationService {
     const key = this.childKey(parentLabel, childLabel);
     this.expandedChildMenus.update((menus) => {
       const next = new Set(menus);
+      const isOpen = next.has(key);
       const parentPrefix = `${parentLabel}::`;
       for (const existing of Array.from(next)) {
         if (existing.startsWith(parentPrefix)) next.delete(existing);
       }
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
+      if (!isOpen) {
         next.add(key);
       }
       return next;

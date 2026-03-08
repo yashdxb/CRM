@@ -8,7 +8,10 @@
           <p class="page-subtitle">Manage product metadata used by CPQ quotes and price lists.</p>
         </div>
         <div class="hero-actions">
-          <button pButton type="button" icon="pi pi-plus" label="Add item" (click)="openCreatePage()"></button>
+          <button type="button" class="action-btn action-btn--add" (click)="openCreatePage()">
+            <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+            <span>Add Item</span>
+          </button>
         </div>
       </div>
     </section>
@@ -68,8 +71,14 @@
             placeholder="Status"
             styleClass="w-12rem"
           ></p-select>
-          <button pButton type="button" icon="pi pi-filter" label="Apply" severity="secondary" (click)="applyFilters()"></button>
-          <button pButton type="button" icon="pi pi-undo" label="Reset" text (click)="clearFilters()"></button>
+          <button type="button" class="action-btn action-btn--settings" (click)="applyFilters()">
+            <span class="action-btn__icon"><i class="pi pi-filter"></i></span>
+            <span>Apply</span>
+          </button>
+          <button type="button" class="action-btn action-btn--refresh" (click)="clearFilters()">
+            <span class="action-btn__icon"><i class="pi pi-undo"></i></span>
+            <span>Reset</span>
+          </button>
         </div>
 
         <p-table
@@ -116,17 +125,15 @@
               </td>
               <td class="actions-col">
                 <div class="row-actions">
-                  <button pButton type="button" icon="pi pi-pencil" text rounded (click)="openEditPage(item)"></button>
-                  <button
-                    pButton
-                    type="button"
-                    [icon]="item.isActive ? 'pi pi-ban' : 'pi pi-check'"
-                    text
-                    rounded
-                    severity="secondary"
-                    (click)="toggleActive(item)"
-                  ></button>
-                  <button pButton type="button" icon="pi pi-trash" text rounded severity="danger" (click)="archive(item)"></button>
+                  <button type="button" class="row-action-btn row-action-btn--edit" title="Edit" (click)="openEditPage(item)">
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button type="button" class="row-action-btn row-action-btn--view" title="Toggle Active" (click)="toggleActive(item)">
+                    <i class="pi" [ngClass]="item.isActive ? 'pi-ban' : 'pi-check'"></i>
+                  </button>
+                  <button type="button" class="row-action-btn row-action-btn--delete" title="Archive" (click)="archive(item)">
+                    <i class="pi pi-trash"></i>
+                  </button>
                 </div>
               </td>
             </tr>

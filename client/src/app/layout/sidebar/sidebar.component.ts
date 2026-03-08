@@ -1,4 +1,4 @@
-import { Component, inject, output } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, inject, OnDestroy, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { NgClass, NgFor, NgIf } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
@@ -23,7 +23,7 @@ import { KeyboardShortcutsService } from '../../core/keyboard-shortcuts';
   templateUrl: "./sidebar.component.html",
   styleUrl: './sidebar.component.scss'
 })
-export class SidebarComponent {
+export class SidebarComponent implements AfterViewInit, OnDestroy {
   private static readonly NAV_ICON_PALETTE = [
     '#3b82f6',
     '#22c55e',
@@ -39,8 +39,28 @@ export class SidebarComponent {
   protected readonly themeService = inject(ThemeService);
   protected readonly shortcutsService = inject(KeyboardShortcutsService);
   protected readonly environment = environment;
+  private readonly host = inject(ElementRef<HTMLElement>);
+  private resizeObserver?: ResizeObserver;
 
   readonly toggleSidebar = output<void>();
+
+  ngAfterViewInit() {
+    const sidebar = this.sidebarElement();
+    if (!sidebar) {
+      return;
+    }
+
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => this.syncShellSidebarWidth());
+      this.resizeObserver.observe(sidebar);
+    }
+
+    requestAnimationFrame(() => this.syncShellSidebarWidth());
+  }
+
+  ngOnDestroy() {
+    this.resizeObserver?.disconnect();
+  }
 
   protected resolveIconColor(link: NavLink): string {
     if (link.iconColor) {
@@ -177,5 +197,20 @@ export class SidebarComponent {
     const submenu = groups[parentIndex]?.querySelector('.nav__submenu');
     const children = submenu?.querySelectorAll('.nav__item--child');
     (children?.[childIndex] as HTMLElement)?.focus();
+  }
+
+  private syncShellSidebarWidth() {
+    const sidebar = this.sidebarElement();
+    const shell = this.host.nativeElement.closest('.shell') as HTMLElement | null;
+    if (!sidebar || !shell) {
+      return;
+    }
+
+    const width = Math.ceil(sidebar.getBoundingClientRect().width);
+    shell.style.setProperty('--shell-sidebar-width', `${width}px`);
+  }
+
+  private sidebarElement(): HTMLElement | null {
+    return this.host.nativeElement.querySelector('.sidebar');
   }
 }
