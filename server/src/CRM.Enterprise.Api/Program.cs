@@ -25,6 +25,14 @@ using CRM.Enterprise.Api.Reporting;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var appPort = Environment.GetEnvironmentVariable("PORT")
+    ?? Environment.GetEnvironmentVariable("WEBSITES_PORT");
+if (!string.IsNullOrWhiteSpace(appPort) &&
+    string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{appPort}");
+}
+
 if (builder.Environment.IsDevelopment())
 {
     var sqlConnectionString = builder.Configuration.GetConnectionString("SqlServer")
