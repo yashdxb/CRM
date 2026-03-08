@@ -22,6 +22,8 @@ async function login(page, request) {
     localStorage.setItem('auth_token', token as string);
     localStorage.setItem('tenant_key', 'default');
   }, payload.accessToken);
+
+  return payload.accessToken as string;
 }
 
 test('workflow designer shows draggable palette item and supports drop add', async ({ page, request }) => {
@@ -29,6 +31,8 @@ test('workflow designer shows draggable palette item and supports drop add', asy
   await page.goto('/app/workflows/designer');
 
   await expect(page.getByRole('heading', { name: 'Approval Workflow Builder' })).toBeVisible();
+  await expect(page.getByText('Template', { exact: true })).toBeVisible();
+  await expect(page.getByText('Trigger', { exact: true })).toBeVisible();
 
   const expectedNodeLabels = ['Approval Step', 'Condition', 'Email', 'Notification', 'Delay', 'CRM Update', 'Activity'];
   for (const label of expectedNodeLabels) {
@@ -68,15 +72,74 @@ test('workflow designer shows draggable palette item and supports drop add', asy
   expect(hasRenamedNotification).toBeTruthy();
 });
 
-test('workflow designer blocks publish when required scope is missing', async ({ page, request }) => {
+test('workflow designer applies template and uses controlled scope options', async ({ page, request }) => {
   await login(page, request);
+  await page.goto('/app/workflows/designer');
+
+  await page.locator('.template-bar .p-select').click();
+  await page.getByRole('option', { name: 'Discount Approval' }).click();
+
+  await expect(page.locator('.scope-grid input').first()).toHaveValue('Discount Approval Workflow');
+  await expect(page.locator('.properties-card .step-header strong', { hasText: 'Step 1' })).toBeVisible();
+  await expect(page.locator('.properties-card .step-header strong', { hasText: 'Step 2' })).toBeVisible();
+
+  const publishRequest = page.waitForRequest((candidate) =>
+    candidate.method() === 'PUT' && candidate.url().includes('/api/workflows/definitions/deal-approval')
+  );
+  await page.getByRole('button', { name: /^Publish$/i }).click();
+  const publishHttpRequest = await publishRequest;
+  const payload = publishHttpRequest.postDataJSON() as { definitionJson?: string; operation?: string };
+  expect(payload.operation).toBe('publish');
+
+  const definition = JSON.parse(payload.definitionJson as string) as {
+    scope?: { trigger?: string; stage?: string; pipeline?: string };
+  };
+  expect(definition.scope?.trigger).toBe('on-discount-threshold');
+  expect(definition.scope?.stage).toBe('Proposal');
+  expect(definition.scope?.pipeline).toBe('default');
+});
+
+test('workflow publish validation rejects invalid controlled stage values', async ({ page, request }) => {
+  const accessToken = await login(page, request);
   await page.goto('/app/workflows/designer');
 
   await expect(page.getByRole('heading', { name: 'Approval Workflow Builder' })).toBeVisible();
 
-  await page.locator('.scope-grid label', { hasText: 'Stage' }).locator('input').fill('');
-  await page.getByRole('button', { name: /^Publish$/i }).click();
+  const currentDefinitionResponse = await request.get(`${API_BASE_URL}/api/workflows/definitions/deal-approval`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  expect(currentDefinitionResponse.ok()).toBeTruthy();
+  const currentDefinitionPayload = await currentDefinitionResponse.json() as { definitionJson: string };
+  const definition = JSON.parse(currentDefinitionPayload.definitionJson) as {
+    enabled: boolean;
+    scope: { stage: string; status: string };
+  };
 
-  await expect(page.getByRole('heading', { name: 'Validation Issues' })).toBeVisible();
-  await expect(page.locator('li').filter({ hasText: 'Workflow stage is required before publishing.' })).toBeVisible();
+  definition.enabled = true;
+  definition.scope = {
+    ...definition.scope,
+    stage: 'Invalid Stage',
+    status: 'published'
+  };
+
+  const publishResponse = await request.put(`${API_BASE_URL}/api/workflows/definitions/deal-approval`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-Tenant-Key': 'default',
+      'Content-Type': 'application/json'
+    },
+    data: {
+      definitionJson: JSON.stringify(definition),
+      isActive: true,
+      operation: 'publish'
+    }
+  });
+
+  expect(publishResponse.status()).toBe(400);
+  const errorPayload = await publishResponse.json() as string[] | { errors?: string[] };
+  const errors = Array.isArray(errorPayload) ? errorPayload : (errorPayload.errors ?? []);
+  expect(errors).toContain('Workflow stage must be one of: prospecting, qualification, proposal, negotiation, security / legal review, commit, closed won, closed lost, all.');
 });

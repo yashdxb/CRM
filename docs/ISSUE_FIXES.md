@@ -965,3 +965,46 @@ cd client
 npm run build -- --configuration development
 E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
 ```
+
+## 18) Workflow builder templates and controlled scope selectors
+
+**Symptoms**
+- Admins were still building approval workflows from a mostly blank canvas.
+- Workflow scope fields (`module`, `pipeline`, `stage`, `trigger`) were still effectively free-form, which made bad saved configurations possible.
+- The workflow-designer browser coverage was still asserting the old free-text panel behavior instead of the new select-based controls.
+
+**Fix pattern**
+1. Add built-in approval workflow templates for the main CRM approval cases.
+2. Replace free-text scope editing with controlled PrimeNG selects for module, pipeline, stage, and trigger.
+3. Tighten backend validation so published workflows reject unsupported scope values explicitly.
+4. Update Playwright coverage to assert control values and the current API validation payload shape.
+
+**Code changes**
+- Added controlled scope options and reusable workflow templates in the workflow designer:
+  - [workflow-designer.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.ts)
+- Replaced free-text scope inputs with select-based controls and added a template picker:
+  - [workflow-designer.page.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.html)
+  - [workflow-designer.page.scss](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.scss)
+- Added backend validation for allowed workflow scope values on published definitions:
+  - [DealApprovalWorkflowDefinition.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Workflows/DealApprovalWorkflowDefinition.cs)
+- Updated browser coverage for template application and invalid controlled stage values:
+  - [workflow-designer.spec.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/e2e/workflow-designer.spec.ts)
+
+**Verified result**
+- Admins can start from built-in templates:
+  - `Deal Approval`
+  - `Discount Approval`
+  - `Large Deal Escalation`
+  - `Stage Gate Exception`
+- Workflow scope now uses controlled selectors instead of ad hoc text entry.
+- Publishing with an invalid stage now returns a clear validation error instead of silently accepting unsupported values.
+- The workflow-designer E2E coverage now matches the current select-based UI and backend error payload.
+
+**Verification commands**
+```bash
+dotnet build server/src/CRM.Enterprise.sln
+
+cd client
+npm run build -- --configuration development
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
+```

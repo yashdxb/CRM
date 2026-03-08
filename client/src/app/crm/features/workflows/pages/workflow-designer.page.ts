@@ -1,6 +1,8 @@
 import { NgFor, NgIf } from '@angular/common';
 import { Component, ViewChild, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
 
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -16,7 +18,9 @@ import { WorkflowDefinitionService } from '../services/workflow-definition.servi
   imports: [
     NgIf,
     NgFor,
+    FormsModule,
     ButtonModule,
+    SelectModule,
     BreadcrumbsComponent,
     WorkflowCanvasComponent,
     NodePaletteComponent,
@@ -26,6 +30,35 @@ import { WorkflowDefinitionService } from '../services/workflow-definition.servi
   styleUrl: './workflow-designer.page.scss'
 })
 export class WorkflowDesignerPage {
+  protected readonly moduleOptions = [{ label: 'Opportunities', value: 'opportunities' }];
+  protected readonly pipelineOptions = [
+    { label: 'Default Pipeline', value: 'default' },
+    { label: 'All Pipelines', value: 'all' }
+  ];
+  protected readonly stageOptions = [
+    { label: 'Prospecting', value: 'Prospecting' },
+    { label: 'Qualification', value: 'Qualification' },
+    { label: 'Proposal', value: 'Proposal' },
+    { label: 'Negotiation', value: 'Negotiation' },
+    { label: 'Security / Legal Review', value: 'Security / Legal Review' },
+    { label: 'Commit', value: 'Commit' },
+    { label: 'Closed Won', value: 'Closed Won' },
+    { label: 'Closed Lost', value: 'Closed Lost' },
+    { label: 'All Stages', value: 'All' }
+  ];
+  protected readonly triggerOptions = [
+    { label: 'Manual Request', value: 'manual-request' },
+    { label: 'Stage Change', value: 'on-stage-change' },
+    { label: 'Amount Threshold', value: 'on-amount-threshold' },
+    { label: 'Discount Threshold', value: 'on-discount-threshold' }
+  ];
+  protected readonly templateOptions = [
+    { label: 'Deal Approval', value: 'deal-approval' },
+    { label: 'Discount Approval', value: 'discount-approval' },
+    { label: 'Large Deal Escalation', value: 'large-deal-escalation' },
+    { label: 'Stage Gate Exception', value: 'stage-gate-exception' }
+  ];
+
   private readonly supportedNodeTypes = new Set<DealApprovalWorkflowDefinition['nodes'][number]['type']>([
     'start',
     'approval',
@@ -47,6 +80,7 @@ export class WorkflowDesignerPage {
   protected readonly updatedAtUtc = signal<string | null>(null);
   protected readonly publishedAtUtc = signal<string | null>(null);
   protected readonly publishedBy = signal<string | null>(null);
+  protected readonly selectedTemplate = signal('deal-approval');
   protected readonly lastValidationErrors = signal<string[]>([]);
   protected readonly lastValidationAtUtc = signal<string | null>(null);
   protected readonly roleOptions = signal<Array<{ label: string; value: string }>>([]);
@@ -231,6 +265,14 @@ export class WorkflowDesignerPage {
     this.workflow.set(this.normalize({ ...current, scope }));
   }
 
+  protected applyTemplate(templateKey: string) {
+    this.selectedTemplate.set(templateKey);
+    this.workflow.set(this.normalize(this.createTemplate(templateKey)));
+    this.lastValidationErrors.set([]);
+    this.lastValidationAtUtc.set(null);
+    this.toast.show('success', 'Workflow template applied.', 2500);
+  }
+
   private persistWorkflow(
     operation: 'save-draft' | 'publish' | 'unpublish',
     status: 'draft' | 'published'
@@ -313,29 +355,130 @@ export class WorkflowDesignerPage {
   }
 
   private defaultWorkflow(): DealApprovalWorkflowDefinition {
-    return {
-      enabled: true,
-      scope: {
-        name: 'Deal Approval Workflow',
-        purpose: 'Control discount and commercial approvals for opportunities.',
-        module: 'opportunities',
-        pipeline: 'default',
-        stage: 'proposal',
-        trigger: 'on-stage-change',
-        status: 'draft',
-        version: 1
-      },
-      steps: [{ order: 1, approverRoleId: null, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }],
-      nodes: [
-        { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
-        { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Step 1' },
-        { id: 'end', type: 'end', x: 560, y: 180, label: 'End' }
-      ],
-      connections: [
-        { source: 'start', target: 'approval-step-1' },
-        { source: 'approval-step-1', target: 'end' }
-      ]
-    };
+    return this.createTemplate('deal-approval');
+  }
+
+  private createTemplate(templateKey: string): DealApprovalWorkflowDefinition {
+    const salesManagerRoleId = this.resolveRoleId('Sales Manager');
+    const financeManagerRoleId = this.resolveRoleId('Finance Manager') ?? salesManagerRoleId;
+    const legalRoleId = this.resolveRoleId('Legal Approver') ?? financeManagerRoleId;
+
+    switch (templateKey) {
+      case 'discount-approval':
+        return {
+          enabled: true,
+          scope: {
+            name: 'Discount Approval Workflow',
+            purpose: 'Route discounted deals for commercial review before update or close.',
+            module: 'opportunities',
+            pipeline: 'default',
+            stage: 'Proposal',
+            trigger: 'on-discount-threshold',
+            status: 'draft',
+            version: 1
+          },
+          steps: [
+            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Discount', nodeId: 'approval-step-1' },
+            { order: 2, approverRoleId: financeManagerRoleId, approverRole: 'Finance Manager', amountThreshold: 25000, purpose: 'Discount', nodeId: 'approval-step-2' }
+          ],
+          nodes: [
+            { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
+            { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Commercial Review' },
+            { id: 'approval-step-2', type: 'approval', x: 560, y: 180, label: 'Finance Sign-Off' },
+            { id: 'end', type: 'end', x: 820, y: 180, label: 'End' }
+          ],
+          connections: [
+            { source: 'start', target: 'approval-step-1' },
+            { source: 'approval-step-1', target: 'approval-step-2' },
+            { source: 'approval-step-2', target: 'end' }
+          ]
+        };
+      case 'large-deal-escalation':
+        return {
+          enabled: true,
+          scope: {
+            name: 'Large Deal Escalation Workflow',
+            purpose: 'Escalate high-value opportunities through commercial leadership.',
+            module: 'opportunities',
+            pipeline: 'default',
+            stage: 'Commit',
+            trigger: 'on-amount-threshold',
+            status: 'draft',
+            version: 1
+          },
+          steps: [
+            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', amountThreshold: 50000, purpose: 'Close', nodeId: 'approval-step-1' },
+            { order: 2, approverRoleId: financeManagerRoleId, approverRole: 'Finance Manager', amountThreshold: 100000, purpose: 'Close', nodeId: 'approval-step-2' }
+          ],
+          nodes: [
+            { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
+            { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Sales Approval' },
+            { id: 'approval-step-2', type: 'approval', x: 560, y: 180, label: 'Executive Escalation' },
+            { id: 'notification-1', type: 'notification', x: 560, y: 360, label: 'Notify Revenue Ops' },
+            { id: 'end', type: 'end', x: 820, y: 180, label: 'End' }
+          ],
+          connections: [
+            { source: 'start', target: 'approval-step-1' },
+            { source: 'approval-step-1', target: 'approval-step-2' },
+            { source: 'approval-step-2', target: 'notification-1' },
+            { source: 'notification-1', target: 'end' }
+          ]
+        };
+      case 'stage-gate-exception':
+        return {
+          enabled: true,
+          scope: {
+            name: 'Stage Gate Exception Workflow',
+            purpose: 'Require approval before bypassing a stage gate into later opportunity stages.',
+            module: 'opportunities',
+            pipeline: 'default',
+            stage: 'Qualification',
+            trigger: 'on-stage-change',
+            status: 'draft',
+            version: 1
+          },
+          steps: [
+            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Update', nodeId: 'approval-step-1' },
+            { order: 2, approverRoleId: legalRoleId, approverRole: 'Legal Approver', amountThreshold: null, purpose: 'Update', nodeId: 'approval-step-2' }
+          ],
+          nodes: [
+            { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
+            { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Stage Override Review' },
+            { id: 'approval-step-2', type: 'approval', x: 560, y: 180, label: 'Risk Review' },
+            { id: 'end', type: 'end', x: 820, y: 180, label: 'End' }
+          ],
+          connections: [
+            { source: 'start', target: 'approval-step-1' },
+            { source: 'approval-step-1', target: 'approval-step-2' },
+            { source: 'approval-step-2', target: 'end' }
+          ]
+        };
+      case 'deal-approval':
+      default:
+        return {
+          enabled: true,
+          scope: {
+            name: 'Deal Approval Workflow',
+            purpose: 'Control discount and commercial approvals for opportunities.',
+            module: 'opportunities',
+            pipeline: 'default',
+            stage: 'Proposal',
+            trigger: 'on-stage-change',
+            status: 'draft',
+            version: 1
+          },
+          steps: [{ order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }],
+          nodes: [
+            { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
+            { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Step 1' },
+            { id: 'end', type: 'end', x: 560, y: 180, label: 'End' }
+          ],
+          connections: [
+            { source: 'start', target: 'approval-step-1' },
+            { source: 'approval-step-1', target: 'end' }
+          ]
+        };
+    }
   }
 
   private createLinearConnections(steps: WorkflowStep[]) {
@@ -426,7 +569,7 @@ export class WorkflowDesignerPage {
           : definition.scope.purpose.trim(),
         module: definition.scope?.module === undefined || definition.scope?.module === null ? 'opportunities' : definition.scope.module.trim(),
         pipeline: definition.scope?.pipeline === undefined || definition.scope?.pipeline === null ? 'default' : definition.scope.pipeline.trim(),
-        stage: definition.scope?.stage === undefined || definition.scope?.stage === null ? 'proposal' : definition.scope.stage.trim(),
+        stage: definition.scope?.stage === undefined || definition.scope?.stage === null ? 'Proposal' : definition.scope.stage.trim(),
         trigger: definition.scope?.trigger === undefined || definition.scope?.trigger === null
           ? 'on-stage-change'
           : definition.scope.trigger.trim(),
@@ -450,6 +593,10 @@ export class WorkflowDesignerPage {
         this.roleOptions.set([]);
       }
     });
+  }
+
+  private resolveRoleId(roleName: string) {
+    return this.roleOptions().find((role) => role.label === roleName)?.value ?? null;
   }
 
   private normalizeNodeType(node: DealApprovalWorkflowDefinition['nodes'][number]) {

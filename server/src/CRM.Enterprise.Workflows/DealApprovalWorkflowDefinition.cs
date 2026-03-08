@@ -78,6 +78,10 @@ public sealed record DealApprovalWorkflowConnectionDefinition(
 
 public static class DealApprovalWorkflowMapper
 {
+    private static readonly string[] AllowedModules = ["opportunities"];
+    private static readonly string[] AllowedPipelines = ["default", "all"];
+    private static readonly string[] AllowedStages = ["prospecting", "qualification", "proposal", "negotiation", "security / legal review", "commit", "closed won", "closed lost", "all"];
+    private static readonly string[] AllowedTriggers = ["manual-request", "on-stage-change", "on-amount-threshold", "on-discount-threshold"];
     private static readonly HashSet<string> SupportedNodeTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "start",
@@ -328,20 +332,36 @@ public static class DealApprovalWorkflowMapper
             {
                 errors.Add("Workflow module is required before publishing.");
             }
+            else if (!AllowedModules.Contains(definition.Scope.Module.Trim(), StringComparer.OrdinalIgnoreCase))
+            {
+                errors.Add($"Workflow module must be one of: {string.Join(", ", AllowedModules)}.");
+            }
 
             if (string.IsNullOrWhiteSpace(definition.Scope.Pipeline))
             {
                 errors.Add("Workflow pipeline is required before publishing.");
+            }
+            else if (!AllowedPipelines.Contains(definition.Scope.Pipeline.Trim(), StringComparer.OrdinalIgnoreCase))
+            {
+                errors.Add($"Workflow pipeline must be one of: {string.Join(", ", AllowedPipelines)}.");
             }
 
             if (string.IsNullOrWhiteSpace(definition.Scope.Stage))
             {
                 errors.Add("Workflow stage is required before publishing.");
             }
+            else if (!AllowedStages.Contains(definition.Scope.Stage.Trim(), StringComparer.OrdinalIgnoreCase))
+            {
+                errors.Add($"Workflow stage must be one of: {string.Join(", ", AllowedStages)}.");
+            }
 
             if (string.IsNullOrWhiteSpace(definition.Scope.Trigger))
             {
                 errors.Add("Workflow trigger is required before publishing.");
+            }
+            else if (!AllowedTriggers.Contains(definition.Scope.Trigger.Trim(), StringComparer.OrdinalIgnoreCase))
+            {
+                errors.Add($"Workflow trigger must be one of: {string.Join(", ", AllowedTriggers)}.");
             }
         }
 

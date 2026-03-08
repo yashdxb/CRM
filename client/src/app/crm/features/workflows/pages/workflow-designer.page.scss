@@ -31,6 +31,19 @@
   gap: 0.75rem;
 }
 
+.template-bar {
+  margin-bottom: 0.85rem;
+}
+
+.template-bar label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: rgba(15, 23, 42, 0.75);
+  max-width: 320px;
+}
+
 .scope-grid label {
   display: flex;
   flex-direction: column;

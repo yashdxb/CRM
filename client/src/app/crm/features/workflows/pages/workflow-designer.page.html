@@ -21,6 +21,20 @@
 
   <section class="scope-panel" *ngIf="!loading()">
     <h2 class="section-title">Workflow Scope</h2>
+    <div class="template-bar">
+      <label>
+        <span>Template</span>
+        <p-select
+          appendTo="body"
+          [options]="templateOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedTemplate()"
+          (ngModelChange)="applyTemplate($event)"
+          styleClass="w-full"
+        ></p-select>
+      </label>
+    </div>
     <div class="scope-grid">
       <label>
         <span>Name</span>
@@ -32,19 +46,51 @@
       </label>
       <label>
         <span>Module</span>
-        <input type="text" [value]="workflow().scope.module" (input)="patchScope('module', $any($event.target).value)" />
+        <p-select
+          appendTo="body"
+          [options]="moduleOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="workflow().scope.module"
+          (ngModelChange)="patchScope('module', $event)"
+          styleClass="w-full"
+        ></p-select>
       </label>
       <label>
         <span>Pipeline</span>
-        <input type="text" [value]="workflow().scope.pipeline" (input)="patchScope('pipeline', $any($event.target).value)" />
+        <p-select
+          appendTo="body"
+          [options]="pipelineOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="workflow().scope.pipeline"
+          (ngModelChange)="patchScope('pipeline', $event)"
+          styleClass="w-full"
+        ></p-select>
       </label>
       <label>
         <span>Stage</span>
-        <input type="text" [value]="workflow().scope.stage" (input)="patchScope('stage', $any($event.target).value)" />
+        <p-select
+          appendTo="body"
+          [options]="stageOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="workflow().scope.stage"
+          (ngModelChange)="patchScope('stage', $event)"
+          styleClass="w-full"
+        ></p-select>
       </label>
       <label>
         <span>Trigger</span>
-        <input type="text" [value]="workflow().scope.trigger" (input)="patchScope('trigger', $any($event.target).value)" />
+        <p-select
+          appendTo="body"
+          [options]="triggerOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="workflow().scope.trigger"
+          (ngModelChange)="patchScope('trigger', $event)"
+          styleClass="w-full"
+        ></p-select>
       </label>
     </div>
     <div class="scope-meta">
