@@ -59,6 +59,7 @@ export class ReportsPage implements AfterViewInit {
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
   protected readonly filterValues = signal<Record<string, string>>({});
+  protected readonly dateFilterValues = signal<Record<string, Date | null>>({});
   protected readonly dynamicFilterOptions = signal<Record<string, ReportParameterOption[]>>({});
   protected readonly filterOptionsLoading = signal(false);
 
@@ -108,7 +109,7 @@ export class ReportsPage implements AfterViewInit {
   }
 
   protected openReport(item: ReportLibraryItem) {
-    this.selectedReport.set(item);
+    this.selectedReport.set(this.normalizeReportLibraryItem(item));
     this.viewerReady.set(false);
     this.telerikEnabled.set(false);
     this.telerikReportSource.set(null);
@@ -128,6 +129,7 @@ export class ReportsPage implements AfterViewInit {
     this.telerikEnabled.set(false);
     this.telerikReportSource.set(null);
     this.filterValues.set({});
+    this.dateFilterValues.set({});
     this.dynamicFilterOptions.set({});
     this.filterOptionsLoading.set(false);
     this.viewerReady.set(false);
@@ -198,30 +200,17 @@ export class ReportsPage implements AfterViewInit {
   }
 
   protected getFilterOptions(filter: ReportLibraryFilter): ReportParameterOption[] {
-    const source = filter.optionSource === 'report-parameter'
+    return filter.optionSource === 'report-parameter'
       ? this.dynamicFilterOptions()[filter.key] ?? []
       : filter.options ?? [];
-
-    const seen = new Set<string>();
-    return source.filter((option) => {
-      const key = `${option.value}::${option.label}`;
-      if (seen.has(key)) {
-        return false;
-      }
-
-      seen.add(key);
-      return true;
-    });
   }
 
   protected getDateFilterValue(parameterName?: string | null): Date | null {
-    const value = this.getFilterValue(parameterName);
-    if (!value) {
+    if (!parameterName) {
       return null;
     }
 
-    const parsed = new Date(`${value}T00:00:00`);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+    return this.dateFilterValues()[parameterName] ?? null;
   }
 
   protected setDateFilterValue(parameterName: string | null | undefined, value: Date | Date[] | null | undefined) {
@@ -229,10 +218,18 @@ export class ReportsPage implements AfterViewInit {
       return;
     }
 
-    const nextValue = value instanceof Date
-      ? this.formatDateForParameter(value)
+    const nextDate = value instanceof Date && !Number.isNaN(value.getTime())
+      ? new Date(value.getFullYear(), value.getMonth(), value.getDate())
+      : null;
+
+    const nextValue = nextDate
+      ? this.formatDateForParameter(nextDate)
       : '';
 
+    this.dateFilterValues.update((current) => ({
+      ...current,
+      [parameterName]: nextDate
+    }));
     this.setFilterValue(parameterName, nextValue);
   }
 
@@ -242,15 +239,18 @@ export class ReportsPage implements AfterViewInit {
 
   private initializeFilterValues(report: ReportLibraryItem) {
     const nextValues: Record<string, string> = {};
+    const nextDateValues: Record<string, Date | null> = {};
 
     for (const filter of report.filters) {
       if (filter.kind === 'dateRange') {
         if (filter.parameterName) {
           nextValues[filter.parameterName] = filter.defaultValue ?? '';
+          nextDateValues[filter.parameterName] = this.parseDateParameter(filter.defaultValue);
         }
 
         if (filter.parameterNameTo) {
           nextValues[filter.parameterNameTo] = filter.defaultValueTo ?? '';
+          nextDateValues[filter.parameterNameTo] = this.parseDateParameter(filter.defaultValueTo);
         }
 
         continue;
@@ -262,6 +262,7 @@ export class ReportsPage implements AfterViewInit {
     }
 
     this.filterValues.set(nextValues);
+    this.dateFilterValues.set(nextDateValues);
     this.dynamicFilterOptions.set({});
   }
 
@@ -286,7 +287,11 @@ export class ReportsPage implements AfterViewInit {
 
     forkJoin(requests).subscribe({
       next: (result) => {
-        this.dynamicFilterOptions.set(result);
+        this.dynamicFilterOptions.set(
+          Object.fromEntries(
+            Object.entries(result).map(([key, options]) => [key, this.normalizeOptions(options)])
+          )
+        );
         this.filterOptionsLoading.set(false);
       },
       error: () => {
@@ -302,6 +307,17 @@ export class ReportsPage implements AfterViewInit {
     const month = `${value.getMonth() + 1}`.padStart(2, '0');
     const day = `${value.getDate()}`.padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private parseDateParameter(value?: string | null): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime())
+      ? null
+      : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
   }
 
   private loadReportServerConfig() {
@@ -328,7 +344,7 @@ export class ReportsPage implements AfterViewInit {
     this.catalogLoading.set(true);
     this.data.getReportLibrary().subscribe({
       next: (items) => {
-        this.reportCatalog.set(items);
+        this.reportCatalog.set(items.map((item) => this.normalizeReportLibraryItem(item)));
         this.catalogLoading.set(false);
       },
       error: () => {
@@ -375,5 +391,34 @@ export class ReportsPage implements AfterViewInit {
       errorPane.style.removeProperty('visibility');
       errorPane.style.removeProperty('opacity');
     }
+  }
+
+  private normalizeReportLibraryItem(item: ReportLibraryItem): ReportLibraryItem {
+    return {
+      ...item,
+      filters: item.filters.map((filter) => ({
+        ...filter,
+        options: this.normalizeOptions(filter.options ?? [])
+      }))
+    };
+  }
+
+  private normalizeOptions(options: ReportParameterOption[]): ReportParameterOption[] {
+    const seen = new Set<string>();
+    const normalized: ReportParameterOption[] = [];
+
+    for (const option of options) {
+      const value = option?.value ?? '';
+      const label = option?.label ?? '';
+      const key = `${value}::${label}`;
+      if (seen.has(key)) {
+        continue;
+      }
+
+      seen.add(key);
+      normalized.push({ value, label });
+    }
+
+    return normalized;
   }
 }

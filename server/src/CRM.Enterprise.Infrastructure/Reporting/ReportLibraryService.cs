@@ -135,11 +135,19 @@ public sealed class ReportLibraryService : IReportLibraryService
 
     private async Task<IReadOnlyList<ReportParameterOptionDto>> BuildStageOptionsAsync(CancellationToken ct)
     {
-        var options = await _dbContext.OpportunityStages
+        var stageRows = await _dbContext.OpportunityStages
             .AsNoTracking()
             .OrderBy(stage => stage.Order)
-            .Select(stage => new ReportParameterOptionDto(stage.Name, stage.Name))
+            .Select(stage => new { stage.Name, stage.Order })
             .ToListAsync(ct);
+
+        var options = stageRows
+            .Where(stage => !string.IsNullOrWhiteSpace(stage.Name))
+            .GroupBy(stage => stage.Name.Trim(), StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group.Min(stage => stage.Order))
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new ReportParameterOptionDto(group.Key, group.Key))
+            .ToList();
 
         return [new ReportParameterOptionDto(string.Empty, "All stages"), .. options];
     }
