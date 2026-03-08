@@ -131,20 +131,48 @@
   @include form.form-grid;
 }
 
-.field {
-  @include form.form-field;
+.form-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.45rem 0.45rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 
-  label {
-    @include form.form-label;
+  > label {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    font-size: 0.8125rem; font-weight: 600; color: #475569;
+    letter-spacing: 0.01em; white-space: nowrap; min-width: 110px;
+    flex-shrink: 0; text-align: right; transition: color 0.2s ease;
   }
 
-  &.full {
+  > p-inputgroup, > p-select, > p-inputnumber, > p-datepicker, > input, > textarea { flex: 1; min-width: 0; }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(148, 163, 184, 0.16);
+    > label { color: #334155; }
+  }
+
+  &:focus-within {
+    background: rgba(255, 255, 255, 0.72);
+    border-color: rgba(var(--apple-blue), 0.22);
+    box-shadow: 0 4px 14px rgba(var(--apple-blue), 0.07);
+    > label { color: #4f46e5; }
+  }
+
+  &.full-row {
     grid-column: 1 / -1;
+    flex-direction: column; align-items: stretch;
+    > label { text-align: left; min-width: unset; }
   }
 }
 
-:host ::ng-deep .supplier-edit-page .field.full .p-inputgroup,
-:host ::ng-deep .supplier-edit-page .field.full .p-inputgroup textarea {
+:host ::ng-deep .supplier-edit-page .form-field.full-row .p-inputgroup,
+:host ::ng-deep .supplier-edit-page .form-field.full-row .p-inputgroup textarea {
   width: 100%;
 }
 
@@ -153,6 +181,13 @@
   box-shadow:
     0 0 0 4px rgba(var(--apple-blue), 0.15),
     0 4px 12px rgba(var(--apple-blue), 0.1);
+}
+
+:host ::ng-deep .supplier-edit-page .p-inputtext,
+:host ::ng-deep .supplier-edit-page .p-select .p-select-label,
+:host ::ng-deep .supplier-edit-page .p-textarea {
+  color: #1e293b !important;
+  font-weight: 500 !important;
 }
 
 :host ::ng-deep .supplier-edit-page .p-inputgroup:focus-within .p-inputgroup-addon {

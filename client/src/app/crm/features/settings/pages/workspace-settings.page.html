@@ -175,9 +175,14 @@
             <p class="section-description">Basic workspace identity settings</p>
             
             <div class="form-grid">
-              <div class="field">
-                <label>Company Name <span class="required">*</span></label>
-                <input pInputText formControlName="name" placeholder="Acme CRM Workspace" class="w-full" />
+              <div class="form-field">
+                <label for="ws-name">Company Name <span class="required">*</span></label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--name">
+                    <i class="pi pi-tag"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="ws-name" formControlName="name" placeholder="Acme CRM Workspace" class="w-full" />
+                </p-inputgroup>
                 <small class="field-hint">The display name for your workspace</small>
               </div>
             </div>
@@ -191,17 +196,14 @@
             <p class="section-description">Define how quickly new leads must be contacted</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>First-touch SLA (hours)</label>
-                <input
-                  pInputText
-                  type="number"
-                  min="1"
-                  max="168"
-                  formControlName="leadFirstTouchSlaHours"
-                  placeholder="24"
-                  class="w-full"
-                />
+              <div class="form-field">
+                <label for="ws-leadFirstTouchSlaHours">First-touch SLA (hours)</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--warning">
+                    <i class="pi pi-stopwatch"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="ws-leadFirstTouchSlaHours" type="number" min="1" max="168" formControlName="leadFirstTouchSlaHours" placeholder="24" class="w-full" />
+                </p-inputgroup>
                 <small class="field-hint">Default is 24 hours. Used to create first-touch tasks and SLA alerts.</small>
               </div>
             </div>
@@ -215,44 +217,44 @@
             <p class="section-description">Configure orchestration score weights and risk/urgency thresholds</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>SLA breaches weight</label>
-                <p-inputNumber formControlName="scoreWeightSlaBreaches" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreWeightSlaBreaches">SLA breaches weight</label>
+                <p-inputNumber inputId="ws-scoreWeightSlaBreaches" formControlName="scoreWeightSlaBreaches" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
               </div>
-              <div class="field">
-                <label>Stale opportunities weight</label>
-                <p-inputNumber formControlName="scoreWeightStaleOpportunities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreWeightStaleOpportunities">Stale opportunities weight</label>
+                <p-inputNumber inputId="ws-scoreWeightStaleOpportunities" formControlName="scoreWeightStaleOpportunities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
               </div>
-              <div class="field">
-                <label>Pending approvals weight</label>
-                <p-inputNumber formControlName="scoreWeightPendingApprovals" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreWeightPendingApprovals">Pending approvals weight</label>
+                <p-inputNumber inputId="ws-scoreWeightPendingApprovals" formControlName="scoreWeightPendingApprovals" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
               </div>
-              <div class="field">
-                <label>Low-confidence leads weight</label>
-                <p-inputNumber formControlName="scoreWeightLowConfidenceLeads" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreWeightLowConfidenceLeads">Low-confidence leads weight</label>
+                <p-inputNumber inputId="ws-scoreWeightLowConfidenceLeads" formControlName="scoreWeightLowConfidenceLeads" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
               </div>
-              <div class="field">
-                <label>Overdue activities weight</label>
-                <p-inputNumber formControlName="scoreWeightOverdueActivities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreWeightOverdueActivities">Overdue activities weight</label>
+                <p-inputNumber inputId="ws-scoreWeightOverdueActivities" formControlName="scoreWeightOverdueActivities" [min]="0" [max]="100" styleClass="w-full"></p-inputNumber>
               </div>
             </div>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Medium risk from (score)</label>
-                <p-inputNumber formControlName="scoreMediumRiskFrom" [min]="1" [max]="95" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreMediumRiskFrom">Medium risk from (score)</label>
+                <p-inputNumber inputId="ws-scoreMediumRiskFrom" formControlName="scoreMediumRiskFrom" [min]="1" [max]="95" styleClass="w-full"></p-inputNumber>
               </div>
-              <div class="field">
-                <label>High risk from (score)</label>
-                <p-inputNumber formControlName="scoreHighRiskFrom" [min]="5" [max]="99" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreHighRiskFrom">High risk from (score)</label>
+                <p-inputNumber inputId="ws-scoreHighRiskFrom" formControlName="scoreHighRiskFrom" [min]="5" [max]="99" styleClass="w-full"></p-inputNumber>
               </div>
-              <div class="field">
-                <label>Soon urgency from (score)</label>
-                <p-inputNumber formControlName="scoreSoonUrgencyFrom" [min]="1" [max]="95" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreSoonUrgencyFrom">Soon urgency from (score)</label>
+                <p-inputNumber inputId="ws-scoreSoonUrgencyFrom" formControlName="scoreSoonUrgencyFrom" [min]="1" [max]="95" styleClass="w-full"></p-inputNumber>
               </div>
-              <div class="field">
-                <label>Immediate urgency from (score)</label>
-                <p-inputNumber formControlName="scoreImmediateUrgencyFrom" [min]="5" [max]="99" styleClass="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="ws-scoreImmediateUrgencyFrom">Immediate urgency from (score)</label>
+                <p-inputNumber inputId="ws-scoreImmediateUrgencyFrom" formControlName="scoreImmediateUrgencyFrom" [min]="5" [max]="99" styleClass="w-full"></p-inputNumber>
                 <small class="field-hint">Example: 80 means scores 80+ are marked Immediate.</small>
               </div>
             </div>
@@ -266,9 +268,10 @@
             <p class="section-description">Global document limits for CRM records (lead-first rollout)</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Max documents per record</label>
+              <div class="form-field">
+                <label for="ws-supportingDocsMaxPerRecord">Max documents per record</label>
                 <p-inputNumber
+                  inputId="ws-supportingDocsMaxPerRecord"
                   formControlName="supportingDocsMaxPerRecord"
                   [min]="1"
                   [max]="100"
@@ -277,9 +280,10 @@
                 <small class="field-hint">Default is 10. Applies when uploading supporting documents to CRM records.</small>
               </div>
 
-              <div class="field">
-                <label>Max file size (MB)</label>
+              <div class="form-field">
+                <label for="ws-supportingDocsMaxFileSizeMb">Max file size (MB)</label>
                 <p-inputNumber
+                  inputId="ws-supportingDocsMaxFileSizeMb"
                   formControlName="supportingDocsMaxFileSizeMb"
                   [min]="1"
                   [max]="100"
@@ -298,37 +302,37 @@
             <p class="section-description">Enable or disable tenant-level realtime UX behaviors.</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureRealtimeDashboard" [binary]="true"></p-checkbox>
                   <span>Dashboard live metrics</span>
                 </label>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureRealtimePipeline" [binary]="true"></p-checkbox>
                   <span>Pipeline live updates</span>
                 </label>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureRealtimeEntityCrud" [binary]="true"></p-checkbox>
                   <span>Entity CRUD broadcasts</span>
                 </label>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureRealtimeImportProgress" [binary]="true"></p-checkbox>
                   <span>Import progress streaming</span>
                 </label>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureRealtimeRecordPresence" [binary]="true"></p-checkbox>
                   <span>Record presence indicators</span>
                 </label>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureRealtimeAssistantStreaming" [binary]="true"></p-checkbox>
                   <span>Assistant token streaming</span>
@@ -345,19 +349,19 @@
             <p class="section-description">Control help desk rollout and intake channels per tenant.</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureHelpDeskCases" [binary]="true"></p-checkbox>
                   <span>Enable Help Desk module</span>
                 </label>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureHelpDeskEmailIntake" [binary]="true"></p-checkbox>
                   <span>Email-to-case intake</span>
                 </label>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label class="checkbox-field">
                   <p-checkbox formControlName="featureHelpDeskRealtime" [binary]="true"></p-checkbox>
                   <span>Help Desk realtime events</span>
@@ -374,9 +378,10 @@
             <p class="section-description">Defaults applied when a deal is closed won</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Default contract term (months)</label>
+              <div class="form-field">
+                <label for="ws-defaultContractTermMonths">Default contract term (months)</label>
                 <p-inputNumber
+                  inputId="ws-defaultContractTermMonths"
                   formControlName="defaultContractTermMonths"
                   [min]="1"
                   [max]="120"
@@ -386,9 +391,10 @@
                 <small class="field-hint">Used to set renewal date if contract end is missing.</small>
               </div>
 
-              <div class="field">
-                <label>Default delivery owner role</label>
+              <div class="form-field">
+                <label for="ws-defaultDeliveryOwnerRoleId">Default delivery owner role</label>
                 <p-select
+                  inputId="ws-defaultDeliveryOwnerRoleId"
                   appendTo="body"
                   [options]="roleOptions()"
                   optionLabel="label"
@@ -411,9 +417,9 @@
             <p class="section-description">Time zone and currency preferences</p>
             
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Time Zone <span class="required">*</span></label>
-                <p-select appendTo="body"
+              <div class="form-field">
+                <label for="ws-timeZone">Time Zone <span class="required">*</span></label>
+                <p-select inputId="ws-timeZone" appendTo="body"
                   [options]="timeZoneOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -454,9 +460,9 @@
                 <small class="field-hint">Used for date/time display across the system</small>
               </div>
 
-              <div class="field">
-                <label>Currency <span class="required">*</span></label>
-                <p-select appendTo="body"
+              <div class="form-field">
+                <label for="ws-currency">Currency <span class="required">*</span></label>
+                <p-select inputId="ws-currency" appendTo="body"
                   [options]="currencyOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -496,9 +502,9 @@
             <p class="section-description">Configure access permissions for the report designer</p>
             
             <div class="form-grid">
-              <div class="field">
-                <label>Report Designer Access</label>
-                <p-select appendTo="body"
+              <div class="form-field">
+                <label for="ws-reportDesignerRequiredPermission">Report Designer Access</label>
+                <p-select inputId="ws-reportDesignerRequiredPermission" appendTo="body"
                   [options]="reportDesignerPermissionOptions"
                   optionLabel="label"
                   optionValue="value"

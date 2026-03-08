@@ -55,26 +55,38 @@
 
   <p-dialog [header]="editing() ? 'Edit Queue' : 'Create Queue'" [visible]="visible()" [modal]="true" [style]="{ width: '34rem' }" (onHide)="visible.set(false)">
     <form class="queue-form" [formGroup]="form">
-      <label class="field">
-        <span>Name</span>
-        <input pInputText formControlName="name" />
-      </label>
-      <label class="field">
-        <span>Description</span>
-        <input pInputText formControlName="description" />
-      </label>
-      <label class="field">
-        <span>Members</span>
+      <div class="form-field">
+        <label for="queue-name">Name</label>
+        <p-inputgroup>
+          <p-inputgroup-addon class="icon-addon icon-addon--name">
+            <i class="pi pi-tag"></i>
+          </p-inputgroup-addon>
+          <input pInputText id="queue-name" formControlName="name" placeholder="Queue name" />
+        </p-inputgroup>
+      </div>
+      <div class="form-field">
+        <label for="queue-description">Description</label>
+        <p-inputgroup>
+          <p-inputgroup-addon class="icon-addon icon-addon--info">
+            <i class="pi pi-info-circle"></i>
+          </p-inputgroup-addon>
+          <input pInputText id="queue-description" formControlName="description" placeholder="Optional description" />
+        </p-inputgroup>
+      </div>
+      <div class="form-field">
+        <label for="queue-members">Members</label>
         <p-multiSelect
+          id="queue-members"
           formControlName="memberUserIds"
           [options]="userOptions()"
           optionLabel="label"
           optionValue="value"
           defaultLabel="Select queue members"
           [filter]="true"
+          appendTo="body"
           selectedItemsLabel="{0} users selected">
         </p-multiSelect>
-      </label>
+      </div>
       <label class="checkbox">
         <p-checkbox formControlName="isActive" [binary]="true"></p-checkbox>
         <span>Active queue</span>

@@ -31,50 +31,62 @@
       <p-tabpanels>
         <p-tabpanel value="overview">
           <form class="form-grid" [formGroup]="form">
-            <label class="field">
-              <span>Subject</span>
-              <input pInputText formControlName="subject" />
-            </label>
-            <label class="field">
-              <span>Category</span>
-              <input pInputText formControlName="category" />
-            </label>
-            <label class="field">
-              <span>Subcategory</span>
-              <input pInputText formControlName="subcategory" />
-            </label>
-            <label class="field">
-              <span>Source</span>
-              <p-select [options]="sourceOptions" optionLabel="label" optionValue="value" formControlName="source"></p-select>
-            </label>
-            <label class="field">
-              <span>Priority</span>
-              <p-select [options]="priorityOptions" optionLabel="label" optionValue="value" formControlName="priority"></p-select>
-            </label>
-            <label class="field">
-              <span>Severity</span>
-              <p-select [options]="severityOptions" optionLabel="label" optionValue="value" formControlName="severity"></p-select>
-            </label>
-            <label class="field">
-              <span>Queue</span>
-              <p-select [options]="queueOptions()" optionLabel="label" optionValue="value" formControlName="queueId" [showClear]="true"></p-select>
-            </label>
-            <label class="field">
-              <span>Closure reason</span>
-              <p-select [options]="closureReasonOptions" optionLabel="label" optionValue="value" formControlName="closureReason" [showClear]="true"></p-select>
-            </label>
-            <label class="field">
-              <span>CSAT score (1-5)</span>
-              <p-inputNumber formControlName="csatScore" [min]="1" [max]="5"></p-inputNumber>
-            </label>
-            <label class="field field--wide">
-              <span>CSAT feedback</span>
-              <textarea pTextarea rows="3" formControlName="csatFeedback" placeholder="Optional feedback from customer"></textarea>
-            </label>
-            <label class="field field--wide">
-              <span>Description</span>
-              <textarea pTextarea rows="5" formControlName="description"></textarea>
-            </label>
+            <div class="form-field">
+              <label for="hd-subject">Subject</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--name"><i class="pi pi-tag"></i></p-inputgroup-addon>
+                <input pInputText id="hd-subject" formControlName="subject" placeholder="Enter subject" />
+              </p-inputgroup>
+            </div>
+            <div class="form-field">
+              <label for="hd-category">Category</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--industry"><i class="pi pi-briefcase"></i></p-inputgroup-addon>
+                <input pInputText id="hd-category" formControlName="category" placeholder="Enter category" />
+              </p-inputgroup>
+            </div>
+            <div class="form-field">
+              <label for="hd-subcategory">Subcategory</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--industry"><i class="pi pi-briefcase"></i></p-inputgroup-addon>
+                <input pInputText id="hd-subcategory" formControlName="subcategory" placeholder="Enter subcategory" />
+              </p-inputgroup>
+            </div>
+            <div class="form-field">
+              <label for="hd-source">Source</label>
+              <p-select id="hd-source" [options]="sourceOptions" optionLabel="label" optionValue="value" formControlName="source" placeholder="Select source" class="w-full" appendTo="body"></p-select>
+            </div>
+            <div class="form-field">
+              <label for="hd-priority">Priority</label>
+              <p-select id="hd-priority" [options]="priorityOptions" optionLabel="label" optionValue="value" formControlName="priority" placeholder="Select priority" class="w-full" appendTo="body"></p-select>
+            </div>
+            <div class="form-field">
+              <label for="hd-severity">Severity</label>
+              <p-select id="hd-severity" [options]="severityOptions" optionLabel="label" optionValue="value" formControlName="severity" placeholder="Select severity" class="w-full" appendTo="body"></p-select>
+            </div>
+            <div class="form-field">
+              <label for="hd-queueId">Queue</label>
+              <p-select id="hd-queueId" [options]="queueOptions()" optionLabel="label" optionValue="value" formControlName="queueId" [showClear]="true" placeholder="Select queue" class="w-full" appendTo="body"></p-select>
+            </div>
+            <div class="form-field">
+              <label for="hd-closureReason">Closure reason</label>
+              <p-select id="hd-closureReason" [options]="closureReasonOptions" optionLabel="label" optionValue="value" formControlName="closureReason" [showClear]="true" placeholder="Select reason" class="w-full" appendTo="body"></p-select>
+            </div>
+            <div class="form-field">
+              <label for="hd-csatScore">CSAT score (1-5)</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--info"><i class="pi pi-star"></i></p-inputgroup-addon>
+                <p-inputNumber id="hd-csatScore" formControlName="csatScore" [min]="1" [max]="5"></p-inputNumber>
+              </p-inputgroup>
+            </div>
+            <div class="form-field full-row">
+              <label for="hd-csatFeedback">CSAT feedback</label>
+              <textarea pTextarea id="hd-csatFeedback" rows="3" formControlName="csatFeedback" placeholder="Optional feedback from customer"></textarea>
+            </div>
+            <div class="form-field full-row">
+              <label for="hd-description">Description</label>
+              <textarea pTextarea id="hd-description" rows="5" formControlName="description" placeholder="Enter description"></textarea>
+            </div>
           </form>
 
           <div class="sla-cockpit" *ngIf="caseRecord() as currentCase">

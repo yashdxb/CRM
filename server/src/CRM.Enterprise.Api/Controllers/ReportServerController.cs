@@ -14,13 +14,16 @@ namespace CRM.Enterprise.Api.Controllers;
 public class ReportServerController : ControllerBase
 {
     private readonly IReportServerClient _client;
+    private readonly IReportLibraryService _libraryService;
     private readonly ReportingOptions _options;
 
     public ReportServerController(
         IReportServerClient client,
+        IReportLibraryService libraryService,
         IOptions<ReportingOptions> options)
     {
         _client = client;
+        _libraryService = libraryService;
         _options = options.Value;
     }
 
@@ -79,6 +82,38 @@ public class ReportServerController : ControllerBase
             i.Id, i.Name, i.Description,
             i.CategoryId, i.CategoryName, i.Extension,
             i.CreatedOn, i.ModifiedOn)).ToList());
+    }
+
+    [HttpGet("library")]
+    public async Task<ActionResult<IReadOnlyList<ReportLibraryItemResponse>>> GetLibrary(CancellationToken ct)
+    {
+        if (!_client.IsConfigured)
+            return Ok(Array.Empty<ReportLibraryItemResponse>());
+
+        var items = await _libraryService.GetLibraryAsync(ct);
+        return Ok(items.Select(item => new ReportLibraryItemResponse(
+            item.Id,
+            item.Name,
+            item.Description,
+            item.CategoryId,
+            item.CategoryName,
+            item.Extension,
+            item.CreatedOn,
+            item.ModifiedOn,
+            item.SortOrder,
+            item.Filters.Select(filter => new ReportLibraryFilterResponse(
+                filter.Key,
+                filter.Label,
+                filter.Kind,
+                filter.Required,
+                filter.ParameterName,
+                filter.ParameterNameTo,
+                filter.OptionSource,
+                filter.Placeholder,
+                filter.DefaultValue,
+                filter.DefaultValueTo,
+                filter.Options.Select(option => new ReportParameterOptionResponse(option.Value, option.Label)).ToList()))
+                .ToList())).ToList());
     }
 
     /// <summary>

@@ -48,10 +48,59 @@
     gap: 0.75rem;
   }
 
-  .field {
+  .form-field {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.35rem 0.45rem 0.45rem;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.35);
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
+    > label {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      min-width: 110px;
+      flex-shrink: 0;
+      text-align: right;
+      transition: color 0.2s ease;
+    }
+
+    > p-inputgroup,
+    > p-select,
+    > p-inputnumber,
+    > p-multiselect,
+    > input,
+    > textarea,
+    > .form-field__input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.5);
+      border-color: rgba(148, 163, 184, 0.16);
+      > label { color: #334155; }
+    }
+
+    &:focus-within {
+      background: rgba(255, 255, 255, 0.72);
+      border-color: rgba(var(--apple-blue), 0.22);
+      box-shadow: 0 4px 14px rgba(var(--apple-blue), 0.07);
+      > label { color: #4f46e5; }
+    }
+
+    &.full-row {
+      flex-direction: column;
+      align-items: stretch;
+      > label { text-align: left; min-width: unset; }
+    }
   }
 
   .checkbox {

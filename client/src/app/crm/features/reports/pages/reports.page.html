@@ -33,7 +33,7 @@
         <button pButton type="button" class="crm-button crm-button--secondary" icon="pi pi-arrow-left" label="Back to Catalog" (click)="backToCatalog()"></button>
         <h2 class="section-title">{{ selectedReport()!.name }}</h2>
       </div>
-      <section class="report-filter-card glass-card" *ngIf="requiresOwnerFilter(selectedReport())">
+      <section class="report-filter-card glass-card" *ngIf="getFilters().length">
         <div class="report-filter-header">
           <div>
             <h3 class="card-title">Filters</h3>
@@ -46,23 +46,50 @@
             icon="pi pi-play"
             label="Run Report"
             (click)="applySelectedReportFilters()"
-            [disabled]="ownerOptionsLoading()">
+            [disabled]="filterOptionsLoading()">
           </button>
         </div>
         <div class="filter-form-grid">
-          <label class="filter-field">
-            <span class="filter-label">Owner</span>
-            <p-select
-              [options]="ownerOptions()"
-              [ngModel]="selectedOwnerUserId()"
-              (ngModelChange)="selectedOwnerUserId.set($event ?? '')"
-              optionLabel="label"
-              optionValue="value"
-              appendTo="body"
-              placeholder="Select owner"
-              [loading]="ownerOptionsLoading()">
-            </p-select>
-          </label>
+          <ng-container *ngFor="let filter of getFilters(); trackBy: trackFilter">
+            <label class="filter-field filter-field--date-range" *ngIf="filter.kind === 'dateRange'; else selectFilter">
+              <span class="filter-label">{{ filter.label }}</span>
+              <div class="filter-date-range">
+                <p-datepicker
+                  [ngModel]="getDateFilterValue(filter.parameterName)"
+                  (ngModelChange)="setDateFilterValue(filter.parameterName, $event)"
+                  [showIcon]="true"
+                  [inputStyleClass]="'filter-date-picker-input'"
+                  appendTo="body"
+                  dateFormat="yy-mm-dd"
+                  placeholder="Start date">
+                </p-datepicker>
+                <p-datepicker
+                  [ngModel]="getDateFilterValue(filter.parameterNameTo)"
+                  (ngModelChange)="setDateFilterValue(filter.parameterNameTo, $event)"
+                  [showIcon]="true"
+                  [inputStyleClass]="'filter-date-picker-input'"
+                  appendTo="body"
+                  dateFormat="yy-mm-dd"
+                  placeholder="End date">
+                </p-datepicker>
+              </div>
+            </label>
+            <ng-template #selectFilter>
+              <label class="filter-field">
+                <span class="filter-label">{{ filter.label }}</span>
+                <p-select
+                  [options]="getFilterOptions(filter)"
+                  [ngModel]="getFilterValue(filter.parameterName)"
+                  (ngModelChange)="setFilterValue(filter.parameterName, $event)"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                  [placeholder]="filter.placeholder || 'Select option'"
+                  [loading]="filterOptionsLoading() && filter.optionSource === 'report-parameter'">
+                </p-select>
+              </label>
+            </ng-template>
+          </ng-container>
         </div>
       </section>
       <div class="embed-shell">
@@ -76,7 +103,7 @@
           [error]="onTelerikError"
           [containerStyle]="{ height: '820px', width: '100%' }">
         </tr-viewer>
-        <div class="empty-state report-filter-prompt" *ngIf="requiresOwnerFilter(selectedReport()) && !telerikEnabled()">
+        <div class="empty-state report-filter-prompt" *ngIf="getFilters().length && !telerikEnabled()">
           <i class="pi pi-sliders-h"></i>
           <p>Pick filter values above, then run the report.</p>
         </div>

@@ -75,35 +75,61 @@
       </div>
 
       <form class="rule-form" (ngSubmit)="saveRule()">
-        <div class="field">
-          <label>Rule name *</label>
-          <input pInputText [(ngModel)]="form.name" name="name" placeholder="Discovery follow-up" />
+        <div class="form-field">
+          <label for="oa-name">Rule name <span class="required">*</span></label>
+          <p-inputgroup>
+            <p-inputgroup-addon class="icon-addon icon-addon--name">
+              <i class="pi pi-tag"></i>
+            </p-inputgroup-addon>
+            <input pInputText id="oa-name" [(ngModel)]="form.name" name="name" placeholder="Discovery follow-up" />
+          </p-inputgroup>
         </div>
 
-        <div class="field">
-          <label>Stage name *</label>
-          <input pInputText [(ngModel)]="form.stageName" name="stageName" placeholder="Discovery (or Any)" />
+        <div class="form-field">
+          <label for="oa-stageName">Stage name <span class="required">*</span></label>
+          <p-inputgroup>
+            <p-inputgroup-addon class="icon-addon icon-addon--company">
+              <i class="pi pi-flag"></i>
+            </p-inputgroup-addon>
+            <input pInputText id="oa-stageName" [(ngModel)]="form.stageName" name="stageName" placeholder="Discovery (or Any)" />
+          </p-inputgroup>
         </div>
 
-        <div class="field">
-          <label>Task subject *</label>
-          <input pInputText [(ngModel)]="form.taskSubject" name="taskSubject" placeholder="Schedule discovery recap" />
+        <div class="form-field">
+          <label for="oa-taskSubject">Task subject <span class="required">*</span></label>
+          <p-inputgroup>
+            <p-inputgroup-addon class="icon-addon icon-addon--info">
+              <i class="pi pi-file-edit"></i>
+            </p-inputgroup-addon>
+            <input pInputText id="oa-taskSubject" [(ngModel)]="form.taskSubject" name="taskSubject" placeholder="Schedule discovery recap" />
+          </p-inputgroup>
           <small>Use {{ '{' }}Opportunity{{ '}' }} to include the deal name.</small>
         </div>
 
-        <div class="field">
-          <label>Task description</label>
-          <input pInputText [(ngModel)]="form.taskDescription" name="taskDescription" placeholder="Notes sent within 24h." />
+        <div class="form-field">
+          <label for="oa-taskDescription">Task description</label>
+          <p-inputgroup>
+            <p-inputgroup-addon class="icon-addon icon-addon--info">
+              <i class="pi pi-info-circle"></i>
+            </p-inputgroup-addon>
+            <input pInputText id="oa-taskDescription" [(ngModel)]="form.taskDescription" name="taskDescription" placeholder="Notes sent within 24h." />
+          </p-inputgroup>
         </div>
 
         <div class="field-row">
-          <div class="field">
-            <label>Due in days</label>
-            <input pInputText type="number" min="0" [(ngModel)]="form.dueInDays" name="dueInDays" />
+          <div class="form-field">
+            <label for="oa-dueInDays">Due in days</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--info">
+                <i class="pi pi-clock"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="oa-dueInDays" type="number" min="0" [(ngModel)]="form.dueInDays" name="dueInDays" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label>Priority</label>
+          <div class="form-field">
+            <label for="oa-priority">Priority</label>
             <p-select
+              id="oa-priority"
               appendTo="body"
               [options]="priorityOptions"
               optionLabel="label"

@@ -117,7 +117,7 @@
     }
 
     .header-content {
-      max-width: 960px;
+      max-width: 1200px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
@@ -182,7 +182,7 @@
     .form-container {
       position: relative;
       z-index: 1;
-      max-width: 960px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 1.5rem;
     }
@@ -224,7 +224,6 @@
         0 4px 12px rgba(0, 0, 0, 0.03),
         0 16px 32px rgba(0, 0, 0, 0.04);
       transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      overflow: hidden;
     }
 
     /* Gradient border glow on hover */
@@ -328,6 +327,68 @@
       box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
     }
 
+    /* ── Section color variants ── */
+
+    /* Basic Information — Indigo */
+    .section--basic .section-title {
+      color: #4338ca;
+      border-bottom-color: rgba(99, 102, 241, 0.2);
+    }
+    .section--basic .section-title i {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(79, 70, 229, 0.1) 100%);
+      color: #6366f1;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+    }
+    .section--basic:hover .section-title {
+      color: #4338ca;
+      border-bottom-color: rgba(99, 102, 241, 0.35);
+    }
+    .section--basic:hover .section-title i {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.22) 0%, rgba(79, 70, 229, 0.16) 100%);
+      color: #4f46e5;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    }
+
+    /* Contact Information — Emerald */
+    .section--contact .section-title {
+      color: #047857;
+      border-bottom-color: rgba(16, 185, 129, 0.2);
+    }
+    .section--contact .section-title i {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+      color: #10b981;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+    }
+    .section--contact:hover .section-title {
+      color: #047857;
+      border-bottom-color: rgba(16, 185, 129, 0.35);
+    }
+    .section--contact:hover .section-title i {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.22) 0%, rgba(5, 150, 105, 0.16) 100%);
+      color: #059669;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+
+    /* Additional Information — Amber */
+    .section--additional .section-title {
+      color: #b45309;
+      border-bottom-color: rgba(245, 158, 11, 0.2);
+    }
+    .section--additional .section-title i {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%);
+      color: #f59e0b;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+    }
+    .section--additional:hover .section-title {
+      color: #b45309;
+      border-bottom-color: rgba(245, 158, 11, 0.35);
+    }
+    .section--additional:hover .section-title i {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.16) 100%);
+      color: #d97706;
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    }
+
     /* ═══════════════════════════════════════════════════════════════════════════
        SECTION HEADERS - Premium Typography with Teal Accent
        ═══════════════════════════════════════════════════════════════════════════ */
@@ -377,33 +438,138 @@
       grid-column: 1 / -1;
     }
 
-    .field {
+    .field,
+    .form-field {
       display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.75rem;
     }
 
-    .field label {
+    .field > label,
+    .form-field > label {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
       font-size: 0.8125rem;
-      font-weight: 500;
-      color: rgba(var(--apple-secondary), 0.65);
-      letter-spacing: -0.01em;
-      padding-left: 0.25rem;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      min-width: 110px;
+      flex-shrink: 0;
+      text-align: right;
       transition: color 0.2s ease;
     }
 
-    .form-section:hover .field label {
-      color: rgba(var(--apple-secondary), 0.8);
+    /* Input/select/inputgroup fills remaining space */
+    .form-field > p-inputgroup,
+    .form-field > p-select,
+    .form-field > textarea {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .form-section:hover .field > label,
+    .form-section:hover .form-field > label {
+      color: #334155;
+    }
+
+    .form-field:focus-within > label {
+      color: #4f46e5;
     }
 
     .required {
-      color: rgba(var(--apple-pink), 1);
+      color: #ef4444 !important;
       font-weight: 600;
     }
 
     .w-full {
       width: 100%;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       INPUTGROUP INTEGRATION
+       ═══════════════════════════════════════════════════════════════════════════ */
+
+    /* Icon addon styling within the glass UI */
+    :host ::ng-deep p-inputgroup-addon.icon-addon {
+      background: rgba(var(--apple-gray-6), 0.6);
+      border: 1px solid rgba(var(--apple-gray-4), 0.4);
+      border-right: none;
+      border-radius: 12px 0 0 12px;
+      padding: 0.5rem 0.65rem;
+      min-width: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    :host ::ng-deep p-inputgroup-addon.icon-addon i {
+      font-size: 1rem;
+    }
+
+    /* When input is focused, enhance the addon */
+    :host ::ng-deep p-inputgroup:focus-within p-inputgroup-addon.icon-addon {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(var(--apple-blue), 0.5);
+      transform: scale(1.03);
+    }
+
+    /* InputGroup input should not double-border on left side */
+    :host ::ng-deep .p-inputgroup .p-inputtext {
+      border-radius: 0 12px 12px 0 !important;
+      border-left: none !important;
+    }
+
+    /* Icon addon color variants — each field gets a unique color */
+    :host ::ng-deep p-inputgroup-addon.icon-addon--name {
+      background: rgba(99, 102, 241, 0.14) !important;
+      border-color: rgba(99, 102, 241, 0.3) !important;
+      i { color: #6366f1 !important; }
+    }
+
+    :host ::ng-deep p-inputgroup-addon.icon-addon--industry {
+      background: rgba(168, 85, 247, 0.14) !important;
+      border-color: rgba(168, 85, 247, 0.3) !important;
+      i { color: #a855f7 !important; }
+    }
+
+    :host ::ng-deep p-inputgroup-addon.icon-addon--company {
+      background: rgba(59, 130, 246, 0.14) !important;
+      border-color: rgba(59, 130, 246, 0.3) !important;
+      i { color: #3b82f6 !important; }
+    }
+
+    :host ::ng-deep p-inputgroup-addon.icon-addon--email {
+      background: rgba(236, 72, 153, 0.14) !important;
+      border-color: rgba(236, 72, 153, 0.3) !important;
+      i { color: #ec4899 !important; }
+    }
+
+    :host ::ng-deep p-inputgroup-addon.icon-addon--phone {
+      background: rgba(34, 197, 94, 0.14) !important;
+      border-color: rgba(34, 197, 94, 0.3) !important;
+      i { color: #22c55e !important; }
+    }
+
+    :host ::ng-deep p-inputgroup-addon.icon-addon--website {
+      background: rgba(79, 70, 229, 0.14) !important;
+      border-color: rgba(79, 70, 229, 0.3) !important;
+      i { color: #4f46e5 !important; }
+    }
+
+    :host ::ng-deep p-inputgroup-addon.icon-addon--address {
+      background: rgba(245, 158, 11, 0.14) !important;
+      border-color: rgba(245, 158, 11, 0.3) !important;
+      i { color: #f59e0b !important; }
+    }
+
+    /* User input text stays dark for contrast */
+    :host ::ng-deep .p-inputtext,
+    :host ::ng-deep .p-select .p-select-label,
+    :host ::ng-deep .p-textarea {
+      color: #1e293b !important;
+      font-weight: 500 !important;
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════
@@ -425,6 +591,8 @@
         inset 0 1px 2px rgba(0, 0, 0, 0.02),
         0 1px 2px rgba(255, 255, 255, 0.5) !important;
     }
+
+
 
     :host ::ng-deep .p-inputtext:hover,
     :host ::ng-deep .p-select:hover,
@@ -743,21 +911,32 @@
 
     @media (max-width: 768px) {
       .page-header {
-        padding: 1rem;
+        padding: 0.75rem;
       }
 
       .form-container {
-        padding: 1rem;
+        padding: 0.75rem;
       }
 
       .form-section {
-        padding: 1.5rem;
+        padding: 1.25rem;
         border-radius: 16px;
       }
 
       .form-grid {
         grid-template-columns: 1fr;
         gap: 1rem;
+      }
+
+      .field,
+      .form-field {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .field > label,
+      .form-field > label {
+        min-width: unset;
       }
 
       .form-actions {
@@ -767,6 +946,45 @@
       .form-actions button {
         width: 100%;
         min-width: auto;
+      }
+
+      .header-title h1 {
+        font-size: 1.5rem;
+      }
+
+      .section-title {
+        font-size: 0.9rem;
+        gap: 0.75rem;
+      }
+
+      .section-title i {
+        width: 36px;
+        height: 36px;
+        font-size: 1.1rem;
+      }
+
+      .summary-chip {
+        padding: 0.65rem 0.75rem;
+      }
+
+      .timeline-item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .page-header {
+        padding: 0.5rem;
+      }
+
+      .form-container {
+        padding: 0.5rem;
+      }
+
+      .form-section {
+        padding: 1rem;
+        border-radius: 14px;
       }
     }
 

@@ -54,24 +54,28 @@
 
       <form [formGroup]="form" (ngSubmit)="onSave()" class="form-layout">
         <div class="form-grid">
-          <div class="field">
-            <label for="userName">Full name</label>
-            <div class="input-icon-group input-icon-group--blue">
-              <span class="input-icon-group__icon"><i class="pi pi-user"></i></span>
-              <input pInputText id="userName" formControlName="fullName" placeholder="Jordan Patel" class="w-full" />
-            </div>
+          <div class="form-field">
+            <label for="user-fullName">Full name</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--name">
+                <i class="pi pi-user"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="user-fullName" formControlName="fullName" placeholder="Jordan Patel" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label for="userEmail">Email</label>
-            <div class="input-icon-group input-icon-group--teal">
-              <span class="input-icon-group__icon"><i class="pi pi-envelope"></i></span>
-              <input pInputText id="userEmail" formControlName="email" placeholder="user@example.com" class="w-full" />
-            </div>
+          <div class="form-field">
+            <label for="user-email">Email</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--email">
+                <i class="pi pi-envelope"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="user-email" formControlName="email" placeholder="user@example.com" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label for="userTimeZone">Time zone</label>
+          <div class="form-field">
+            <label for="user-timeZone">Time zone</label>
             <p-select
-              inputId="userTimeZone"
+              inputId="user-timeZone"
               formControlName="timeZone"
               [options]="timezoneOptions"
               optionLabel="label"
@@ -110,10 +114,10 @@
               </ng-template>
             </p-select>
           </div>
-          <div class="field">
-            <label for="userLocale">Locale</label>
+          <div class="form-field">
+            <label for="user-locale">Locale</label>
             <p-select
-              inputId="userLocale"
+              inputId="user-locale"
               formControlName="locale"
               [options]="localeOptions"
               optionLabel="label"
@@ -122,26 +126,27 @@
               styleClass="w-full"
             ></p-select>
           </div>
-          <div class="field">
-            <label for="userQuota">Monthly quota ({{ currencyCode() || 'N/A' }})</label>
-            <div class="input-icon-group input-icon-group--amber">
-              <span class="input-icon-group__icon"><i class="pi pi-dollar"></i></span>
+          <div class="form-field">
+            <label for="user-monthlyQuota">Monthly quota ({{ currencyCode() || 'N/A' }})</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--warning">
+                <i class="pi pi-dollar"></i>
+              </p-inputgroup-addon>
               <input
                 pInputText
-                id="userQuota"
+                id="user-monthlyQuota"
                 type="number"
                 min="0"
                 step="0.01"
                 formControlName="monthlyQuota"
                 placeholder="e.g. 75000"
-                class="w-full"
               />
-            </div>
+            </p-inputgroup>
           </div>
-          <div class="field full">
-            <label for="userRoles">Roles</label>
+          <div class="form-field full-row">
+            <label for="user-roleIds">Roles</label>
             <p-multiSelect
-              inputId="userRoles"
+              inputId="user-roleIds"
               formControlName="roleIds"
               [options]="rolesAsOptions()"
               optionLabel="label"
@@ -152,20 +157,21 @@
               styleClass="w-full"
             ></p-multiSelect>
           </div>
-          <div class="field full">
-            <label for="userTempPassword">Temporary password</label>
+          <div class="form-field full-row">
+            <label for="user-temporaryPassword">Temporary password</label>
             <div class="password-field">
-              <div class="input-icon-group input-icon-group--violet">
-                <span class="input-icon-group__icon"><i class="pi pi-key"></i></span>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--industry">
+                  <i class="pi pi-key"></i>
+                </p-inputgroup-addon>
                 <input
                   pInputText
-                  id="userTempPassword"
+                  id="user-temporaryPassword"
                   type="text"
                   formControlName="temporaryPassword"
                   placeholder="Optional"
-                  class="w-full"
                 />
-              </div>
+              </p-inputgroup>
               <button type="button" class="btn-generate" [disabled]="!canManageAdmin()" (click)="generatePassword()">
                 <i class="pi pi-sync"></i>
                 Generate
@@ -217,7 +223,7 @@
 
               <ng-container *ngIf="permissionTableRows().length; else noPermissions">
                 <div class="permission-controls">
-                  <div class="field">
+                  <div class="form-field">
                     <label for="permissionsPerspective">Perspective</label>
                     <p-select
                       inputId="permissionsPerspective"
@@ -231,7 +237,7 @@
                       styleClass="w-full"
                     ></p-select>
                   </div>
-                  <div class="field">
+                  <div class="form-field">
                     <label for="permissionsModuleFilter">Module</label>
                     <p-select
                       inputId="permissionsModuleFilter"
@@ -245,7 +251,7 @@
                       styleClass="w-full"
                     ></p-select>
                   </div>
-                  <div class="field">
+                  <div class="form-field">
                     <label for="permissionsRiskFilter">Risk</label>
                     <p-select
                       inputId="permissionsRiskFilter"
@@ -259,7 +265,7 @@
                       styleClass="w-full"
                     ></p-select>
                   </div>
-                  <div class="field">
+                  <div class="form-field">
                     <label for="permissionsChangeFilter">Change</label>
                     <p-select
                       inputId="permissionsChangeFilter"
@@ -273,10 +279,12 @@
                       styleClass="w-full"
                     ></p-select>
                   </div>
-                  <div class="field permission-search">
+                  <div class="form-field permission-search">
                     <label for="permissionsSearch">Search</label>
-                    <div class="input-icon-group input-icon-group--blue">
-                      <span class="input-icon-group__icon"><i class="pi pi-search"></i></span>
+                    <p-inputgroup>
+                      <p-inputgroup-addon class="icon-addon icon-addon--info">
+                        <i class="pi pi-search"></i>
+                      </p-inputgroup-addon>
                       <input
                         pInputText
                         id="permissionsSearch"
@@ -284,9 +292,8 @@
                         [ngModelOptions]="{ standalone: true }"
                         (ngModelChange)="permissionSearch.set($any($event) ?? '')"
                         placeholder="Module, permission, role"
-                        class="w-full"
                       />
-                    </div>
+                    </p-inputgroup>
                   </div>
                 </div>
                 <div class="permissions-table-wrap">
@@ -382,10 +389,10 @@
               </div>
             </p-accordion-header>
             <p-accordion-content>
-              <div class="field">
-                <label for="userDashboardPack">Assigned pack</label>
+              <div class="form-field">
+                <label for="user-dashboardPack">Assigned pack</label>
                 <p-select
-                  inputId="userDashboardPack"
+                  inputId="user-dashboardPack"
                   [options]="dashboardPackOptions()"
                   [ngModel]="selectedDashboardPackKey()"
                   [ngModelOptions]="{ standalone: true }"

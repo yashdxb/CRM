@@ -8,6 +8,8 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 
@@ -30,6 +32,8 @@ import { readUserId } from '../../../../core/auth/token.utils';
     CheckboxModule,
     DatePickerModule,
     InputNumberModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     InputTextModule,
     TextareaModule,
     SelectModule,

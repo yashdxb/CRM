@@ -240,19 +240,23 @@
               <p-accordion-content>
           <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
-              <div class="field">
+              <div class="form-field">
                 <label for="oppName">Deal name <span class="required">*</span></label>
-                <input
-                  pInputText
-                  id="oppName"
-                  name="name"
-                  [(ngModel)]="form.name"
-                  required
-                  placeholder="ACME rollout"
-                  class="w-full"
-                />
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--name">
+                    <i class="pi pi-tag"></i>
+                  </p-inputgroup-addon>
+                  <input
+                    pInputText
+                    id="oppName"
+                    name="name"
+                    [(ngModel)]="form.name"
+                    required
+                    placeholder="ACME rollout"
+                  />
+                </p-inputgroup>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppAccount">Account</label>
                 <p-select
                   inputId="oppAccount"
@@ -266,7 +270,7 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppStage">Stage *</label>
                 <p-select
                   inputId="oppStage"
@@ -285,7 +289,7 @@
                 <small class="field-hint" *ngIf="decisionMakerGuidance() as decisionGuidance">{{ decisionGuidance }}</small>
                 <small class="field-hint" *ngIf="selectedStage === 'Commit'">Commit requires an expected close date and verified checklist items.</small>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppClose">Expected close</label>
                 <p-datePicker
                   inputId="oppClose"
@@ -327,7 +331,7 @@
               <p-accordion-content>
           <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
-              <div class="field">
+              <div class="form-field">
                 <div class="field-label-row">
                   <label for="oppAmount">Amount</label>
                   <span
@@ -350,7 +354,7 @@
                 ></p-inputNumber>
                 <small class="field-hint" *ngIf="amountApprovalBadge().detail">{{ amountApprovalBadge().detail }}</small>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppCurrency">Currency</label>
                 <p-select
                   inputId="oppCurrency"
@@ -365,7 +369,7 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppProbability">Probability (%)</label>
                 <p-inputNumber
                   inputId="oppProbability"
@@ -377,7 +381,7 @@
                   class="w-full"
                 ></p-inputNumber>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppForecast">Forecast category</label>
                 <p-select
                   inputId="oppForecast"
@@ -393,7 +397,7 @@
                 ></p-select>
                 <small class="field-hint" *ngIf="forecastGuidance() as guidance">{{ guidance }}</small>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppType">Deal type</label>
                 <p-select
                   inputId="oppType"
@@ -407,7 +411,7 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppContractStart">Contract start</label>
                 <p-datePicker
                   inputId="oppContractStart"
@@ -418,7 +422,7 @@
                   styleClass="w-full"
                 ></p-datePicker>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppContractEnd">Contract end</label>
                 <p-datePicker
                   inputId="oppContractEnd"
@@ -429,18 +433,22 @@
                   styleClass="w-full"
                 ></p-datePicker>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppReason">Win/Loss reason</label>
-                <input
-                  pInputText
-                  id="oppReason"
-                  name="reason"
-                  [(ngModel)]="form.winLossReason"
-                  placeholder="Optional"
-                  class="w-full"
-                />
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--info">
+                    <i class="pi pi-info-circle"></i>
+                  </p-inputgroup-addon>
+                  <input
+                    pInputText
+                    id="oppReason"
+                    name="reason"
+                    [(ngModel)]="form.winLossReason"
+                    placeholder="Optional"
+                  />
+                </p-inputgroup>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="oppSummary">Summary</label>
                 <textarea
                   pTextarea
@@ -453,7 +461,7 @@
                 ></textarea>
                 <small class="field-hint" *ngIf="isPainConfirmationRequired()">Required before moving to Qualification or later stages.</small>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label>Requirements <span class="required" *ngIf="isQualificationFitRequired()">*</span></label>
                 <textarea
                   pTextarea
@@ -464,7 +472,7 @@
                   class="w-full"
                 ></textarea>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label>Buying process <span class="required" *ngIf="isQualificationFitRequired()">*</span></label>
                 <textarea
                   pTextarea
@@ -475,7 +483,7 @@
                   class="w-full"
                 ></textarea>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label>Success criteria <span class="required" *ngIf="isQualificationFitRequired()">*</span></label>
                 <textarea
                   pTextarea
@@ -517,7 +525,7 @@
               <p-accordion-content>
           <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
-              <div class="field">
+              <div class="form-field">
                 <div class="field-label-row">
                   <label for="oppDiscountPercent">Discount (%)</label>
                   <span
@@ -539,7 +547,7 @@
                 ></p-inputNumber>
                 <small class="field-hint" *ngIf="discountApprovalBadge().detail">{{ discountApprovalBadge().detail }}</small>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppDiscountAmount">Discount Amount</label>
                 <p-inputNumber
                   inputId="oppDiscountAmount"
@@ -552,7 +560,7 @@
                   class="w-full"
                 ></p-inputNumber>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="oppPricingNotes">Pricing notes & objections</label>
                 <textarea
                   pTextarea
@@ -591,7 +599,7 @@
           <section class="form-card opportunity-accordion-card">
             <p class="section-subtitle">Generate and track the proposal before sending to the customer.</p>
             <div class="form-grid">
-              <div class="field">
+              <div class="form-field">
                 <label for="oppProposalStatus">Proposal status</label>
                 <p-select
                   inputId="oppProposalStatus"
@@ -605,18 +613,22 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppProposalLink">Proposal link</label>
-                <input
-                  pInputText
-                  id="oppProposalLink"
-                  name="proposalLink"
-                  [(ngModel)]="form.proposalLink"
-                  placeholder="Paste proposal URL"
-                  class="w-full"
-                />
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--website">
+                    <i class="pi pi-link"></i>
+                  </p-inputgroup-addon>
+                  <input
+                    pInputText
+                    id="oppProposalLink"
+                    name="proposalLink"
+                    [(ngModel)]="form.proposalLink"
+                    placeholder="Paste proposal URL"
+                  />
+                </p-inputgroup>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppProposalGenerated">Generated on</label>
                 <p-datePicker
                   inputId="oppProposalGenerated"
@@ -627,7 +639,7 @@
                   class="w-full"
                 ></p-datePicker>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppProposalSent">Sent on</label>
                 <p-datePicker
                   inputId="oppProposalSent"
@@ -638,7 +650,7 @@
                   class="w-full"
                 ></p-datePicker>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="oppProposalNotes">Proposal summary</label>
                 <textarea
                   pTextarea
@@ -657,7 +669,7 @@
                 <span class="field-hint" *ngIf="activeQuote">Quote #{{ activeQuote.quoteNumber }}</span>
               </div>
               <div class="form-grid">
-                <div class="field">
+                <div class="form-field">
                   <label for="oppQuoteSelect">Quote draft</label>
                   <p-select
                     inputId="oppQuoteSelect"
@@ -672,18 +684,22 @@
                     styleClass="w-full"
                   ></p-select>
                 </div>
-                <div class="field">
+                <div class="form-field">
                   <label for="oppQuoteName">Quote name</label>
-                  <input
-                    pInputText
-                    id="oppQuoteName"
-                    [(ngModel)]="quoteName"
-                    name="quoteName"
-                    class="w-full"
-                    placeholder="Quote name"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--name">
+                      <i class="pi pi-tag"></i>
+                    </p-inputgroup-addon>
+                    <input
+                      pInputText
+                      id="oppQuoteName"
+                      [(ngModel)]="quoteName"
+                      name="quoteName"
+                      placeholder="Quote name"
+                    />
+                  </p-inputgroup>
                 </div>
-                <div class="field">
+                <div class="form-field">
                   <label for="oppQuotePriceList">Price list</label>
                   <p-select
                     inputId="oppQuotePriceList"
@@ -697,7 +713,7 @@
                     styleClass="w-full"
                   ></p-select>
                 </div>
-                <div class="field">
+                <div class="form-field">
                   <label for="oppQuoteTax">Tax amount</label>
                   <p-inputNumber
                     inputId="oppQuoteTax"
@@ -906,18 +922,22 @@
               [style]="{ width: '34rem', maxWidth: '95vw' }"
             >
               <div class="proposal-send-dialog">
-                <div class="field">
+                <div class="form-field">
                   <label for="proposalSendRecipient">Recipient email (optional)</label>
-                  <input
-                    pInputText
-                    id="proposalSendRecipient"
-                    [(ngModel)]="proposalSendRecipient"
-                    name="proposalSendRecipient"
-                    class="w-full"
-                    placeholder="Leave empty to use primary contact email"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--email">
+                      <i class="pi pi-envelope"></i>
+                    </p-inputgroup-addon>
+                    <input
+                      pInputText
+                      id="proposalSendRecipient"
+                      [(ngModel)]="proposalSendRecipient"
+                      name="proposalSendRecipient"
+                      placeholder="Leave empty to use primary contact email"
+                    />
+                  </p-inputgroup>
                 </div>
-                <div class="field">
+                <div class="form-field">
                   <label for="proposalSendMessage">Message (optional)</label>
                   <textarea
                     pTextarea
@@ -1014,7 +1034,7 @@
               </button>
             </div>
             <div class="form-grid">
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="oppPreSalesScope">Scope summary</label>
                 <textarea
                   pTextarea
@@ -1026,7 +1046,7 @@
                   class="w-full"
                 ></textarea>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="oppPreSalesApproach">Approach / solution outline</label>
                 <textarea
                   pTextarea
@@ -1087,7 +1107,7 @@
 
             <div class="approval-request">
               <div class="approval-request-row">
-                <div class="field">
+                <div class="form-field">
                   <label>Purpose</label>
                   <p-select
                     appendTo="body"
@@ -1101,7 +1121,7 @@
                     styleClass="w-full"
                   ></p-select>
                 </div>
-                <div class="field">
+                <div class="form-field">
                   <label>Amount</label>
                   <p-inputNumber
                     [(ngModel)]="approvalRequest.amount"
@@ -1112,7 +1132,7 @@
                     (ngModelChange)="onApprovalAmountEdited()"
                   ></p-inputNumber>
                 </div>
-                <div class="field">
+                <div class="form-field">
                   <label>Currency</label>
                   <p-select
                     appendTo="body"
@@ -1125,7 +1145,7 @@
                     styleClass="w-full"
                   ></p-select>
                 </div>
-                <div class="field approval-action">
+                <div class="form-field approval-action">
                   <label>&nbsp;</label>
                   <button
                     pButton
@@ -1212,7 +1232,7 @@
           <ng-container *ngIf="!isEditMode() || isSectionLoaded('security-legal'); else securityLoading">
           <section class="form-card opportunity-accordion-card">
             <div class="form-grid">
-              <div class="field">
+              <div class="form-field">
                 <label for="oppSecurityStatus">Security status</label>
                 <p-select
                   inputId="oppSecurityStatus"
@@ -1226,7 +1246,7 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppLegalStatus">Legal status</label>
                 <p-select
                   inputId="oppLegalStatus"
@@ -1240,7 +1260,7 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field full review-checklist">
+              <div class="form-field full-row review-checklist">
                 <div class="checklist-header">
                   <h4>Security checklist</h4>
                   <div class="checklist-add">
@@ -1300,7 +1320,7 @@
                 </ng-template>
               </div>
 
-              <div class="field full review-checklist">
+              <div class="form-field full-row review-checklist">
                 <div class="checklist-header">
                   <h4>Legal checklist</h4>
                   <div class="checklist-add">
@@ -1360,7 +1380,7 @@
                 </ng-template>
               </div>
 
-              <div class="field full review-checklist">
+              <div class="form-field full-row review-checklist">
                 <div class="checklist-header">
                   <h4>Technical risk checklist</h4>
                   <div class="checklist-add">
@@ -1452,7 +1472,7 @@
           <section class="form-card opportunity-accordion-card">
             <p class="section-subtitle">Capture scope, risks, and delivery ownership before kickoff.</p>
             <div class="form-grid">
-              <div class="field">
+              <div class="form-field">
                 <label for="oppDeliveryOwner">Delivery owner</label>
                 <p-select
                   inputId="oppDeliveryOwner"
@@ -1466,7 +1486,7 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field">
+              <div class="form-field">
                 <label for="oppDeliveryStatus">Delivery status</label>
                 <p-select
                   inputId="oppDeliveryStatus"
@@ -1480,7 +1500,7 @@
                   styleClass="w-full"
                 ></p-select>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="oppDeliveryScope">Scope</label>
                 <textarea
                   pTextarea
@@ -1492,7 +1512,7 @@
                   class="w-full"
                 ></textarea>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="oppDeliveryRisks">Risks</label>
                 <textarea
                   pTextarea
@@ -1504,7 +1524,7 @@
                   class="w-full"
                 ></textarea>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="oppDeliveryTimeline">Timeline</label>
                 <textarea
                   pTextarea
@@ -1516,7 +1536,7 @@
                   class="w-full"
                 ></textarea>
               </div>
-              <div class="field full">
+              <div class="form-field full-row">
                 <button
                   pButton
                   type="button"
@@ -1713,7 +1733,7 @@
 
             <div class="review-thread-controls" *ngIf="isManager(); else repAckBlock">
               <div class="form-grid">
-                <div class="field">
+                <div class="form-field">
                   <label for="reviewOutcome">Review outcome</label>
                   <p-select
                     inputId="reviewOutcome"
@@ -1726,7 +1746,7 @@
                     styleClass="w-full"
                   ></p-select>
                 </div>
-                <div class="field" *ngIf="reviewOutcome !== 'Approved'">
+                <div class="form-field" *ngIf="reviewOutcome !== 'Approved'">
                   <label for="reviewDue">Acknowledgment due</label>
                   <input
                     id="reviewDue"
@@ -1736,7 +1756,7 @@
                     name="reviewAckDueLocal"
                   />
                 </div>
-                <div class="field full">
+                <div class="form-field full-row">
                   <label for="reviewComment">Manager comment</label>
                   <textarea
                     id="reviewComment"
@@ -1855,7 +1875,7 @@
               </div>
             </div>
             <div class="form-grid">
-              <div class="field full">
+              <div class="form-field full-row">
                 <label for="decisionReviewComment">Comment for reviewer / requester</label>
                 <textarea
                   id="decisionReviewComment"

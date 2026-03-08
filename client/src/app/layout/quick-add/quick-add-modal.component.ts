@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { DatePickerModule } from 'primeng/datepicker';
 import { QuickAddType } from '../../core/command-palette';
@@ -25,6 +28,9 @@ import { Option } from '../navigation';
     ButtonModule,
     DialogModule,
     InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
+    TextareaModule,
     SelectModule,
     DatePickerModule
   ],

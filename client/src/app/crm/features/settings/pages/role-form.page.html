@@ -53,39 +53,52 @@
             </div>
           </div>
           <div class="form-grid">
-            <div class="field">
+            <div class="form-field">
               <label for="roleName">Role Name <span class="required">*</span></label>
-              <input
-                pInputText
-                id="roleName"
-                formControlName="name"
-                placeholder="e.g. Sales Manager"
-                [readonly]="isSystemRole()"
-                class="w-full"
-              />
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--name">
+                  <i class="pi pi-tag"></i>
+                </p-inputgroup-addon>
+                <input
+                  pInputText
+                  id="roleName"
+                  formControlName="name"
+                  placeholder="e.g. Sales Manager"
+                  [readonly]="isSystemRole()"
+                />
+              </p-inputgroup>
               <small class="field-hint field-hint--guidance" *ngIf="isSystemRole()">System roles cannot be renamed.</small>
             </div>
-            <div class="field">
+            <div class="form-field">
               <label for="roleDesc">Description</label>
-              <input
-                pInputText
-                id="roleDesc"
-                formControlName="description"
-                placeholder="Brief description of this role's purpose"
-                class="w-full"
-              />
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--info">
+                  <i class="pi pi-align-left"></i>
+                </p-inputgroup-addon>
+                <input
+                  pInputText
+                  id="roleDesc"
+                  formControlName="description"
+                  placeholder="Brief description of this role's purpose"
+                />
+              </p-inputgroup>
             </div>
-            <div class="field">
-              <label>Hierarchy Level (computed)</label>
-              <input
-                pInputText
-                [value]="hierarchyPreviewLabel()"
-                readonly
-                class="w-full"
-              />
+            <div class="form-field">
+              <label for="role-hierarchyLevel">Hierarchy Level (computed)</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--info">
+                  <i class="pi pi-info-circle"></i>
+                </p-inputgroup-addon>
+                <input
+                  pInputText
+                  id="role-hierarchyLevel"
+                  [value]="hierarchyPreviewLabel()"
+                  readonly
+                />
+              </p-inputgroup>
               <small class="field-hint field-hint--guidance">Derived from parent role (no manual level input).</small>
             </div>
-            <div class="field">
+            <div class="form-field">
               <label for="visibilityScope">Visibility Scope</label>
               <p-select
                 inputId="visibilityScope"
@@ -105,7 +118,7 @@
               </p-select>
               <small class="field-hint field-hint--guidance">Controls reporting rollups and default visibility for this role.</small>
             </div>
-            <div class="field">
+            <div class="form-field">
               <label for="securityLevel">Security Level</label>
               <p-select
                 inputId="securityLevel"
@@ -130,7 +143,7 @@
                 <a routerLink="/app/settings/security-levels">People &amp; Access › Security Level</a>.
               </small>
             </div>
-            <div class="field">
+            <div class="form-field">
               <label for="roleParent">Parent Role</label>
               <p-select
                 inputId="roleParent"

@@ -301,15 +301,42 @@
   @include form.form-grid;
 }
 
-.field {
-  @include form.form-field;
+.form-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
 
-  label {
-    @include form.form-label;
+  > label {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    min-width: 110px;
+    flex-shrink: 0;
+    text-align: right;
+    transition: color 0.2s ease;
 
     .required {
       @include form.form-required;
     }
+  }
+
+  > p-inputgroup,
+  > p-select,
+  > textarea {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &:hover > label {
+    color: #334155;
+  }
+
+  &:focus-within > label {
+    color: #4f46e5;
   }
 }
 

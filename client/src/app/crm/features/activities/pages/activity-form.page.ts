@@ -7,6 +7,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { map } from 'rxjs';
 
 import { Activity, ActivityType, UpsertActivityRequest } from '../models/activity.model';
@@ -51,6 +53,8 @@ interface ActivityTemplate {
     SelectModule,
     TextareaModule,
     DatePickerModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./activity-form.page.html",

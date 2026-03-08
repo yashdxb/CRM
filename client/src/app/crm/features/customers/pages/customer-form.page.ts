@@ -12,6 +12,8 @@ import { TabsModule } from 'primeng/tabs';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { FileUploadModule } from 'primeng/fileupload';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 
 import { CustomerStatus } from '../models/customer.model';
 import { CustomerDataService, SaveCustomerRequest } from '../services/customer-data.service';
@@ -48,6 +50,8 @@ interface StatusOption {
     TableModule,
     TagModule,
     FileUploadModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./customer-form.page.html",

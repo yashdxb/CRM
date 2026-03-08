@@ -8,6 +8,8 @@ import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { FileUploadModule } from 'primeng/fileupload';
 import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { TabsModule } from 'primeng/tabs';
@@ -23,7 +25,7 @@ import { AttachmentDataService, AttachmentItem } from '../../../../shared/servic
 @Component({
   selector: 'app-helpdesk-case-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonModule, InputTextModule, TextareaModule, SelectModule, TabsModule, RouterLink, BreadcrumbsComponent, FileUploadModule, CheckboxModule, InputNumberModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonModule, InputTextModule, InputGroupModule, InputGroupAddonModule, TextareaModule, SelectModule, TabsModule, RouterLink, BreadcrumbsComponent, FileUploadModule, CheckboxModule, InputNumberModule],
   templateUrl: './helpdesk-case-detail.page.html',
   styleUrl: './helpdesk-case-detail.page.scss'
 })

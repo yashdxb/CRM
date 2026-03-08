@@ -173,7 +173,7 @@ label {
 
 label > span {
   font-weight: 600;
-  color: #334155;
+  color: #475569;
   font-size: 0.83rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -249,6 +249,8 @@ label > span {
 :host ::ng-deep .p-inputnumber-input,
 :host ::ng-deep .p-datepicker-input,
 :host ::ng-deep textarea.p-textarea {
+  color: #1e293b;
+  font-weight: 500;
   border-color: rgba(148, 163, 184, 0.28);
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }

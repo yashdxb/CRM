@@ -8,6 +8,7 @@ import {
   ReportServerConfig,
   ReportServerToken,
   ReportCatalogItem,
+  ReportLibraryItem,
   ReportCategory,
   ReportParameterOption
 } from '../models/report.model';
@@ -54,6 +55,11 @@ export class ReportsDataService {
   getReportCatalog() {
     const url = `${environment.apiUrl}/api/report-server/catalog`;
     return this.http.get<ReportCatalogItem[]>(url).pipe(catchError(() => of([])));
+  }
+
+  getReportLibrary() {
+    const url = `${environment.apiUrl}/api/report-server/library`;
+    return this.http.get<ReportLibraryItem[]>(url).pipe(catchError(() => of([])));
   }
 
   getReportCategories() {

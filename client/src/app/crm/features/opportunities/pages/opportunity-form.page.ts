@@ -11,6 +11,8 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { AccordionModule } from 'primeng/accordion';
 import { TreeModule } from 'primeng/tree';
 import { DialogModule } from 'primeng/dialog';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { Subject, map, of, switchMap, takeUntil } from 'rxjs';
 import { TreeNode } from 'primeng/api';
 
@@ -131,6 +133,8 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
     AccordionModule,
     TreeModule,
     DialogModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./opportunity-form.page.html",

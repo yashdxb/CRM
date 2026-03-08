@@ -5,6 +5,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { TextareaModule } from 'primeng/textarea';
 
 import { BreadcrumbsComponent } from '../../../../../core/breadcrumbs';
@@ -20,6 +22,8 @@ import { ItemMasterDataService } from '../../../catalog/services/item-master-dat
     FormsModule,
     RouterLink,
     ButtonModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     InputTextModule,
     SelectModule,
     TextareaModule,

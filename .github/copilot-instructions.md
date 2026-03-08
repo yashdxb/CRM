@@ -1091,20 +1091,15 @@ Use for: `role-form.page`, `customer-form.page`, `lead-form.page`, `workspace-se
           Section Name
         </h3>
         <div class="form-grid">
-          <!-- Text input: IftaLabel + InputGroup + icon addon -->
+          <!-- Text input: Horizontal label + InputGroup + colorful icon addon -->
           <div class="form-field">
-            <p-iftalabel>
-              <p-inputgroup>
-                <p-inputgroup-addon class="icon-addon icon-addon--name">
-                  <i class="pi pi-user"></i>
-                </p-inputgroup-addon>
-                <input pInputText id="field-name" formControlName="name" placeholder="Enter name" />
-              </p-inputgroup>
-              <label for="field-name">Name <span class="required">*</span></label>
-            </p-iftalabel>
-            @if (form.get('name')?.invalid && form.get('name')?.touched) {
-              <small class="error-message">Name is required.</small>
-            }
+            <label for="field-name">Name <span class="required">*</span></label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--name">
+                <i class="pi pi-user"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="field-name" formControlName="name" placeholder="Enter name" />
+            </p-inputgroup>
           </div>
         </div>
       </section>
@@ -1115,83 +1110,125 @@ Use for: `role-form.page`, `customer-form.page`, `lead-form.page`, `workspace-se
 
 ### Form Input Field Standard (MANDATORY)
 
-All form input fields across the CRM **MUST** use PrimeNG `<p-iftalabel>` (floating label) and `<p-inputgroup>` (icon addon) components. Plain `<input pInputText>` inside a `<div class="field"><label>` is **not allowed**.
+All form input fields across the CRM **MUST** use **horizontal labels** (label beside field, right-aligned) with colorful `<p-inputgroup>` icon addons. The label sits to the left of the input, right-aligned with a fixed `min-width: 110px`.
 
 #### Required Imports
 ```typescript
-import { IftaLabelModule } from 'primeng/iftalabel';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 // Add to component imports array
 ```
 
+#### Form Field Layout (Horizontal Labels — Gold Standard)
+```scss
+// .form-field uses horizontal layout: label left, input right
+.form-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.form-field > label {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-size: 0.8125rem;    // 13px
+  font-weight: 600;
+  color: #475569;          // Slate-600 (gold standard)
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  min-width: 110px;        // Fixed label width
+  flex-shrink: 0;
+  text-align: right;       // Right-aligned labels
+  transition: color 0.2s ease;
+}
+
+// InputGroup fills remaining space
+.form-field > p-inputgroup,
+.form-field > p-select,
+.form-field > textarea {
+  flex: 1;
+  min-width: 0;
+}
+```
+
 #### Text / Email / Number Inputs
 ```html
 <div class="form-field">
-  <p-iftalabel>
-    <p-inputgroup>
-      <p-inputgroup-addon class="icon-addon icon-addon--email">
-        <i class="pi pi-envelope"></i>
-      </p-inputgroup-addon>
-      <input pInputText id="field-email" type="email" formControlName="email" placeholder="Enter email" />
-    </p-inputgroup>
-    <label for="field-email">Email <span class="required">*</span></label>
-  </p-iftalabel>
-  @if (form.get('email')?.invalid && form.get('email')?.touched) {
-    <small class="error-message">Valid email is required.</small>
-  }
+  <label for="field-email">Email <span class="required">*</span></label>
+  <p-inputgroup>
+    <p-inputgroup-addon class="icon-addon icon-addon--email">
+      <i class="pi pi-envelope"></i>
+    </p-inputgroup-addon>
+    <input pInputText id="field-email" type="email" formControlName="email" placeholder="Enter email" />
+  </p-inputgroup>
 </div>
 ```
 
 #### Textarea Inputs
 ```html
 <div class="form-field">
-  <p-iftalabel>
-    <textarea pTextarea id="field-notes" formControlName="notes" rows="4" placeholder="Enter notes"></textarea>
-    <label for="field-notes">Notes</label>
-  </p-iftalabel>
+  <label for="field-notes">Notes</label>
+  <textarea pTextarea id="field-notes" formControlName="notes" rows="4" placeholder="Enter notes"></textarea>
 </div>
 ```
 
-#### Select Dropdowns (with IftaLabel)
+#### Select Dropdowns
 ```html
 <div class="form-field">
-  <p-iftalabel>
-    <p-select id="field-status" [options]="statusOptions()" optionLabel="label" optionValue="value"
-              formControlName="status" placeholder="Select status" class="w-full">
-      <ng-template pTemplate="item" let-option>
-        <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
-      </ng-template>
-      <ng-template pTemplate="value" let-option>
-        <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
-        <span *ngIf="!option" class="select-placeholder">Select status</span>
-      </ng-template>
-    </p-select>
-    <label for="field-status">Status <span class="required">*</span></label>
-  </p-iftalabel>
+  <label for="field-status">Status <span class="required">*</span></label>
+  <p-select id="field-status" [options]="statusOptions()" optionLabel="label" optionValue="value"
+            formControlName="status" placeholder="Select status" class="w-full" appendTo="body">
+    <ng-template pTemplate="item" let-option>
+      <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+    </ng-template>
+    <ng-template pTemplate="value" let-option>
+      <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+      <span *ngIf="!option" class="select-placeholder">Select status</span>
+    </ng-template>
+  </p-select>
 </div>
 ```
 
-#### Icon Addon Variants
-Use `icon-addon` + a specific `icon-addon--*` class for per-field colors (global rules in `client/src/styles/_components.scss`):
+#### Icon Addon Variants (Colorful — MANDATORY)
+Every `<p-inputgroup-addon>` **MUST** use a colorful `icon-addon--*` variant class. Generic gray icons are not allowed. Use `icon-addon` + a specific `icon-addon--*` class (global rules in `client/src/styles/_components.scss`):
 
-| Class | Color | Common Use |
-|-------|-------|------------|
-| `icon-addon--name` | Purple | Name fields |
-| `icon-addon--email` | Blue | Email fields |
-| `icon-addon--phone` | Green | Phone/contact |
-| `icon-addon--info` | Blue | General info |
-| `icon-addon--success` | Green | Success/positive |
-| `icon-addon--warning` | Orange | Warning/caution |
-| `icon-addon--danger` | Red | Danger/critical |
+| Class | Icon Color (Hex) | Background | Common Use |
+|-------|-----------------|------------|------------|
+| `icon-addon--name` | `#6366f1` (Indigo) | `rgba(99, 102, 241, 0.14)` | Name fields |
+| `icon-addon--industry` | `#a855f7` (Purple) | `rgba(168, 85, 247, 0.14)` | Industry/category |
+| `icon-addon--company` | `#3b82f6` (Blue) | `rgba(59, 130, 246, 0.14)` | Company/org |
+| `icon-addon--email` | `#ec4899` (Pink) | `rgba(236, 72, 153, 0.14)` | Email fields |
+| `icon-addon--phone` | `#22c55e` (Green) | `rgba(34, 197, 94, 0.14)` | Phone/contact |
+| `icon-addon--website` | `#4f46e5` (Deep Indigo) | `rgba(79, 70, 229, 0.14)` | Website/URL |
+| `icon-addon--address` | `#f59e0b` (Amber) | `rgba(245, 158, 11, 0.14)` | Address/location |
+| `icon-addon--info` | `#3b82f6` (Blue) | `rgba(59, 130, 246, 0.14)` | General info |
+| `icon-addon--success` | `#22c55e` (Green) | `rgba(34, 197, 94, 0.14)` | Success/positive |
+| `icon-addon--warning` | `#f59e0b` (Amber) | `rgba(245, 158, 11, 0.14)` | Warning/caution |
+| `icon-addon--danger` | `#ef4444` (Red) | `rgba(239, 68, 68, 0.14)` | Danger/critical |
+
+#### InputGroup Focus Enhancement
+When an input is focused, the icon addon gets a visual boost:
+```scss
+:host ::ng-deep p-inputgroup:focus-within p-inputgroup-addon.icon-addon {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(var(--apple-blue), 0.5);
+  transform: scale(1.03);
+}
+```
 
 #### Key Rules
-- **Always** use `<p-iftalabel>` to wrap inputs — the floating label pattern is mandatory.
-- **Always** use `<p-inputgroup>` + `<p-inputgroup-addon>` with a contextual icon for text/email/number/tel inputs.
-- Textareas and selects use `<p-iftalabel>` but do NOT need `<p-inputgroup>` wrapping.
-- Error messages go **outside** `<p-iftalabel>`, inside the `.form-field` container.
+- **Always** use horizontal label layout — label to the left of the field, right-aligned with `min-width: 110px`.
+- **Always** use `<p-inputgroup>` + `<p-inputgroup-addon>` with a **colorful** `icon-addon--*` variant for text/email/number/tel inputs.
+- **Every icon addon MUST have a unique color** — no generic gray addons.
+- **Focus-within label color (MANDATORY):** When any input inside a `.form-field` receives focus, the field label MUST change color to `#4f46e5` (Indigo-600). This provides clear visual feedback for the active field. Implement via `.form-field:focus-within > label { color: #4f46e5; }`. This rule applies to ALL form pages — no exceptions.
+- **Container class (MANDATORY):** Every form field container MUST use `class="form-field"`. The old `class="field"` pattern is **deprecated and prohibited**. When encountering `class="field"`, `class="field full"`, `class="field full-row"`, or any `field`-prefixed variant, migrate it to `class="form-field"` (or `class="form-field full-row"` for full-width fields that need vertical stacking).
+- **Complex fields with multiple child controls** (e.g., phone grid, score with meta) MUST wrap children in a flex container div (e.g., `.phone-grid`, `.score-content`) and add that class to the `.form-field` flex-child selector in SCSS.
+- Selects and textareas use the same horizontal label layout but do NOT need `<p-inputgroup>` wrapping.
+- `<p-select>` elements MUST use `appendTo="body"` to prevent overlay clipping.
+- Error messages go after the input/inputgroup, inside the `.form-field` container.
 - Each input must have a unique `id` and matching `for` on the `<label>`.
 - Dialogs follow the same standard — no exemptions for dialog forms.
+- **SCSS `.form-field` block is required per page.** Every form page SCSS must define the `.form-field` horizontal layout block with: `display: flex; flex-direction: row; align-items: center; gap: 0.75rem;` plus the label styles (`min-width: 110px; text-align: right; color: #475569;`), hover state (`color: #334155;`), and focus-within state (`color: #4f46e5;`). Pages using shared `_form-page-styles.scss` mixins get this automatically; standalone pages must add it explicitly.
 
 ### Mandatory Select Rules
 - **Every `<p-select>` MUST render icons for each option.**
@@ -1218,6 +1255,59 @@ Example pattern:
 </p-select>
 ```
 
+### Form Field Color Gold Standard (MANDATORY)
+
+All form pages **MUST** use these exact color values for labels, inputs, and placeholders. These are the authoritative, approved values for the CRM.
+
+#### Input Text Color
+| Property | Value | Token |
+|----------|-------|-------|
+| Color | `#1e293b` | Slate-800 |
+| Font Weight | `500` | Medium |
+
+Applied via `@include form.premium-input` mixin (includes `color: #1e293b !important; font-weight: 500 !important;`). Pages with inline input styles must add this explicitly.
+
+#### Label Color
+| State | Value | Token |
+|-------|-------|-------|
+| Default | `#475569` | Slate-600 |
+| Hover | `#334155` | Slate-700 |
+| Focus-within | `#4f46e5` | Indigo-600 |
+| Font Weight | `600` | Semi-bold |
+| Font Size | `0.8125rem` | 13px |
+
+Applied via `@include form.form-label` mixin. Pages with inline label styles must match these values.
+
+#### Placeholder
+| Property | Value |
+|----------|-------|
+| Color | `rgba(var(--apple-gray-1), 0.6)` |
+| Font Weight | `400` |
+
+#### Section Header Colors (Default)
+Default section headers use **teal/cyan**:
+- Title color: `#0e7490` (cyan-700)
+- Icon color: `#06b6d4` (cyan-500)
+- Icon background: `rgba(6, 182, 212, 0.15)`
+
+#### Per-Section Color Identity (Optional)
+Pages with multiple form sections MAY apply per-section color identity using CSS variant classes. The canonical example is `customer-form.page`:
+
+| Section | Class | Title Color | Icon Color | Icon BG |
+|---------|-------|-------------|------------|---------|
+| Basic Info | `section--basic` | `#4338ca` (Indigo-700) | `#6366f1` (Indigo-500) | `rgba(99, 102, 241, 0.15)` |
+| Contact Info | `section--contact` | `#047857` (Emerald-700) | `#10b981` (Emerald-500) | `rgba(16, 185, 129, 0.15)` |
+| Additional Info | `section--additional` | `#b45309` (Amber-700) | `#f59e0b` (Amber-500) | `rgba(245, 158, 11, 0.15)` |
+| Workspace | `section--workspace` | `#6d28d9` (Violet-700) | `#8b5cf6` (Violet-500) | `rgba(139, 92, 246, 0.15)` |
+
+#### Key Rules
+- **Never** use teal `#0891b2` for form field labels — only for section-title hover accents
+- **Always** ensure WCAG AA contrast (minimum 4.5:1) for label text
+- Inline form pages that do NOT use the shared mixins must manually set these values
+- `<p-select>` elements on form pages must use `appendTo="body"` to prevent overlay clipping
+
+---
+
 ### Available Mixins (`_form-page-styles.scss`)
 
 | Mixin | Purpose |
@@ -1231,8 +1321,8 @@ Example pattern:
 | `form.section-title-hover` | Title animation on card hover |
 | `form.form-grid` | 2-column responsive grid |
 | `form.form-field` | Field container with gap |
-| `form.form-label` | Label styling |
-| `form.premium-input` | Glass input base styling |
+| `form.form-label` | Label styling (`#475569` Slate-600, 600 weight) |
+| `form.premium-input` | Glass input with text color (`#1e293b` Slate-800, 500 weight) |
 | `form.premium-input-hover` | Input hover state |
 | `form.premium-input-focus` | **Blue focus ring + glow** |
 | `form.button-primary` | Gradient primary button |
@@ -1257,6 +1347,13 @@ Example pattern:
 - **Primary gradient**: `#667eea → #764ba2` (purple-violet)
 - **Title gradient**: Same as primary, with `animation: gradient-shift 4s`
 
+### Form Field Colors (Gold Standard)
+- **Input text**: `#1e293b` (Slate-800) — weight 500
+- **Label default**: `#475569` (Slate-600) — weight 600
+- **Label hover**: `#334155` (Slate-700)
+- **Label focus-within**: `#4f46e5` (Indigo-600)
+- **Placeholder**: `rgba(var(--apple-gray-1), 0.6)` — weight 400
+
 ### Section Headers (Form Pages)
 - **Icon background**: `rgba(6, 182, 212, 0.15)` (teal)
 - **Icon color**: `#06b6d4` (cyan-500)
@@ -1266,6 +1363,8 @@ Example pattern:
 ### Focus States
 - **Input focus ring**: `rgba(0, 122, 255, 0.15)` (Apple blue)
 - **Card focus glow**: `rgba(0, 122, 255, 0.08)` 80px spread
+- **Label focus-within color**: `#4f46e5` (Indigo-600) — label turns indigo when its sibling input is focused. MANDATORY on all form pages.
+- **Field background on focus**: `rgba(255, 255, 255, 0.72)` with border `rgba(var(--apple-blue), 0.22)` and shadow `0 4px 14px rgba(var(--apple-blue), 0.07)`
 
 ### Status Colors
 - **Success**: `#22c55e` / `#10b981`

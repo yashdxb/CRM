@@ -2,6 +2,8 @@ import { Component, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
@@ -20,7 +22,7 @@ interface NotificationPreferenceOption {
 @Component({
   selector: 'app-notifications-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ToggleSwitchModule, ButtonModule, InputTextModule, BreadcrumbsComponent],
+  imports: [CommonModule, FormsModule, InputGroupModule, InputGroupAddonModule, ToggleSwitchModule, ButtonModule, InputTextModule, BreadcrumbsComponent],
   templateUrl: './notifications.page.html',
   styleUrl: './notifications.page.scss'
 })

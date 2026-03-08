@@ -1,31 +1,36 @@
 import { CommonModule } from '@angular/common';
-import { Component, ViewChild, inject, signal, AfterViewInit, ChangeDetectorRef, ElementRef } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
+import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { TelerikReportingModule, TelerikReportViewerComponent } from '@progress/telerik-angular-report-viewer';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
-import { PipelineByStageReport, ReportCatalogItem, ReportParameterOption, ReportServerConfig } from '../models/report.model';
+import {
+  PipelineByStageReport,
+  ReportLibraryFilter,
+  ReportLibraryItem,
+  ReportParameterOption,
+  ReportServerConfig
+} from '../models/report.model';
 import { ReportsDataService } from '../services/reports-data.service';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-reports-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonModule, SelectModule, BreadcrumbsComponent, TelerikReportingModule],
+  imports: [CommonModule, FormsModule, ButtonModule, DatePickerModule, SelectModule, BreadcrumbsComponent, TelerikReportingModule],
   templateUrl: './reports.page.html',
   styleUrl: './reports.page.scss'
 })
 export class ReportsPage implements AfterViewInit {
-  private static readonly crmCategoryName = 'CRM';
-  private static readonly ownerFilteredReportName = 'Open Opportunities by Owner';
-  private static readonly ownerFilterParameterName = 'OwnerUserId';
   private readonly data = inject(ReportsDataService);
   private readonly toast = inject(AppToastService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly apiBaseUrl = environment.apiUrl.replace(/\/+$/, '');
 
@@ -43,22 +48,19 @@ export class ReportsPage implements AfterViewInit {
   protected readonly telerikServiceUrl = signal('');
   protected readonly telerikReportSource = signal<Record<string, unknown> | null>(null);
 
-  // Report Server state
   protected readonly reportServerEnabled = signal(false);
   protected readonly reportServerConfig = signal<ReportServerConfig | null>(null);
-  protected readonly reportCatalog = signal<ReportCatalogItem[]>([]);
+  protected readonly reportCatalog = signal<ReportLibraryItem[]>([]);
   protected readonly catalogLoading = signal(false);
-  protected readonly selectedReport = signal<ReportCatalogItem | null>(null);
+  protected readonly selectedReport = signal<ReportLibraryItem | null>(null);
   protected readonly reportServerToken = signal('');
   protected readonly viewerReady = signal(false);
   protected readonly canOpenReportDesigner = signal(
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
-  protected readonly ownerOptions = signal<Array<{ label: string; value: string }>>([
-    { label: 'All owners', value: '' }
-  ]);
-  protected readonly ownerOptionsLoading = signal(false);
-  protected readonly selectedOwnerUserId = signal('');
+  protected readonly filterValues = signal<Record<string, string>>({});
+  protected readonly dynamicFilterOptions = signal<Record<string, ReportParameterOption[]>>({});
+  protected readonly filterOptionsLoading = signal(false);
 
   protected get telerikAuthToken(): string {
     const serviceUrl = this.telerikServiceUrl();
@@ -83,13 +85,11 @@ export class ReportsPage implements AfterViewInit {
   }
 
   protected onTelerikReady = (): void => {
-    console.log('[Telerik] Viewer ready');
     this.viewerReady.set(true);
     this.normalizeTelerikViewerState();
   };
 
-  protected onTelerikError = (e: unknown, args: unknown): void => {
-    console.error('[Telerik] Error:', e, args);
+  protected onTelerikError = (): void => {
     setTimeout(() => this.normalizeTelerikViewerState(), 300);
   };
 
@@ -107,35 +107,38 @@ export class ReportsPage implements AfterViewInit {
     });
   }
 
-  protected openReport(item: ReportCatalogItem) {
+  protected openReport(item: ReportLibraryItem) {
     this.selectedReport.set(item);
     this.viewerReady.set(false);
+    this.telerikEnabled.set(false);
+    this.telerikReportSource.set(null);
 
-    if (this.requiresOwnerFilter(item)) {
-      this.selectedOwnerUserId.set('');
-      this.telerikEnabled.set(false);
-      this.telerikReportSource.set(null);
-      this.loadOwnerOptions();
+    this.initializeFilterValues(item);
+
+    if (item.filters.length === 0) {
+      this.applySelectedReportFilters();
       return;
     }
 
-    this.applySelectedReportFilters();
+    this.loadDynamicFilterOptions(item);
   }
 
   protected backToCatalog() {
     this.selectedReport.set(null);
     this.telerikEnabled.set(false);
     this.telerikReportSource.set(null);
-    this.selectedOwnerUserId.set('');
-    this.ownerOptions.set([{ label: 'All owners', value: '' }]);
-    this.ownerOptionsLoading.set(false);
+    this.filterValues.set({});
+    this.dynamicFilterOptions.set({});
+    this.filterOptionsLoading.set(false);
     this.viewerReady.set(false);
   }
 
   protected applySelectedReportFilters() {
     const selected = this.selectedReport();
     const config = this.reportServerConfig();
-    if (!selected || !config?.reportServiceUrl) return;
+    if (!selected || !config?.reportServiceUrl) {
+      return;
+    }
 
     this.viewerReady.set(false);
     this.telerikServiceUrl.set(this.resolveServiceUrl(config.reportServiceUrl));
@@ -144,15 +147,161 @@ export class ReportsPage implements AfterViewInit {
       : selected.name;
 
     const reportSource: Record<string, unknown> = { report: reportPath };
+    const parameters: Record<string, string> = {};
+    const values = this.filterValues();
 
-    if (this.requiresOwnerFilter(selected)) {
-      reportSource['parameters'] = {
-        [ReportsPage.ownerFilterParameterName]: this.selectedOwnerUserId() || ''
-      };
+    for (const filter of selected.filters) {
+      if (filter.kind === 'dateRange') {
+        if (filter.parameterName) {
+          parameters[filter.parameterName] = values[filter.parameterName] ?? '';
+        }
+        if (filter.parameterNameTo) {
+          parameters[filter.parameterNameTo] = values[filter.parameterNameTo] ?? '';
+        }
+        continue;
+      }
+
+      if (filter.parameterName) {
+        parameters[filter.parameterName] = values[filter.parameterName] ?? '';
+      }
+    }
+
+    if (Object.keys(parameters).length > 0) {
+      reportSource['parameters'] = parameters;
     }
 
     this.telerikReportSource.set(reportSource);
     this.telerikEnabled.set(true);
+  }
+
+  protected getFilters(): ReportLibraryFilter[] {
+    return this.selectedReport()?.filters ?? [];
+  }
+
+  protected getFilterValue(parameterName?: string | null): string {
+    if (!parameterName) {
+      return '';
+    }
+
+    return this.filterValues()[parameterName] ?? '';
+  }
+
+  protected setFilterValue(parameterName: string | null | undefined, value: string | null | undefined) {
+    if (!parameterName) {
+      return;
+    }
+
+    this.filterValues.update((current) => ({
+      ...current,
+      [parameterName]: value ?? ''
+    }));
+  }
+
+  protected getFilterOptions(filter: ReportLibraryFilter): ReportParameterOption[] {
+    const source = filter.optionSource === 'report-parameter'
+      ? this.dynamicFilterOptions()[filter.key] ?? []
+      : filter.options ?? [];
+
+    const seen = new Set<string>();
+    return source.filter((option) => {
+      const key = `${option.value}::${option.label}`;
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+    });
+  }
+
+  protected getDateFilterValue(parameterName?: string | null): Date | null {
+    const value = this.getFilterValue(parameterName);
+    if (!value) {
+      return null;
+    }
+
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  protected setDateFilterValue(parameterName: string | null | undefined, value: Date | Date[] | null | undefined) {
+    if (!parameterName) {
+      return;
+    }
+
+    const nextValue = value instanceof Date
+      ? this.formatDateForParameter(value)
+      : '';
+
+    this.setFilterValue(parameterName, nextValue);
+  }
+
+  protected trackFilter(_index: number, filter: ReportLibraryFilter) {
+    return filter.key;
+  }
+
+  private initializeFilterValues(report: ReportLibraryItem) {
+    const nextValues: Record<string, string> = {};
+
+    for (const filter of report.filters) {
+      if (filter.kind === 'dateRange') {
+        if (filter.parameterName) {
+          nextValues[filter.parameterName] = filter.defaultValue ?? '';
+        }
+
+        if (filter.parameterNameTo) {
+          nextValues[filter.parameterNameTo] = filter.defaultValueTo ?? '';
+        }
+
+        continue;
+      }
+
+      if (filter.parameterName) {
+        nextValues[filter.parameterName] = filter.defaultValue ?? '';
+      }
+    }
+
+    this.filterValues.set(nextValues);
+    this.dynamicFilterOptions.set({});
+  }
+
+  private loadDynamicFilterOptions(report: ReportLibraryItem) {
+    const dynamicFilters = report.filters.filter(
+      (filter) => filter.optionSource === 'report-parameter' && !!filter.parameterName
+    );
+
+    if (dynamicFilters.length === 0) {
+      this.filterOptionsLoading.set(false);
+      return;
+    }
+
+    this.filterOptionsLoading.set(true);
+
+    const requests = Object.fromEntries(
+      dynamicFilters.map((filter) => [
+        filter.key,
+        this.data.getReportParameterOptions(report.id, filter.parameterName!).pipe(catchError(() => of([])))
+      ])
+    );
+
+    forkJoin(requests).subscribe({
+      next: (result) => {
+        this.dynamicFilterOptions.set(result);
+        this.filterOptionsLoading.set(false);
+      },
+      error: () => {
+        this.dynamicFilterOptions.set({});
+        this.filterOptionsLoading.set(false);
+        this.toast.show('error', 'Unable to load report filter options.');
+      }
+    });
+  }
+
+  private formatDateForParameter(value: Date): string {
+    const year = value.getFullYear();
+    const month = `${value.getMonth() + 1}`.padStart(2, '0');
+    const day = `${value.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private loadReportServerConfig() {
@@ -162,7 +311,7 @@ export class ReportsPage implements AfterViewInit {
         this.reportServerEnabled.set(config.enabled);
         if (config.enabled) {
           this.loadReportServerToken();
-          this.loadCatalog();
+          this.loadLibrary();
         }
       }
     });
@@ -175,13 +324,11 @@ export class ReportsPage implements AfterViewInit {
     });
   }
 
-  private loadCatalog() {
+  private loadLibrary() {
     this.catalogLoading.set(true);
-    this.data.getReportCatalog().subscribe({
+    this.data.getReportLibrary().subscribe({
       next: (items) => {
-        this.reportCatalog.set(
-          items.filter((item) => (item.categoryName ?? '').trim().toLowerCase() === ReportsPage.crmCategoryName.toLowerCase())
-        );
+        this.reportCatalog.set(items);
         this.catalogLoading.set(false);
       },
       error: () => {
@@ -204,36 +351,6 @@ export class ReportsPage implements AfterViewInit {
     }
 
     return `${this.apiBaseUrl}/${servicePath.replace(/^\/+/, '')}`;
-  }
-
-  protected requiresOwnerFilter(item: ReportCatalogItem | null): boolean {
-    return (item?.name ?? '').trim().toLowerCase() === ReportsPage.ownerFilteredReportName.toLowerCase();
-  }
-
-  private loadOwnerOptions() {
-    const selected = this.selectedReport();
-    if (!selected) {
-      this.ownerOptions.set([{ label: 'All owners', value: '' }]);
-      return;
-    }
-
-    this.ownerOptionsLoading.set(true);
-    this.data.getReportParameterOptions(selected.id, ReportsPage.ownerFilterParameterName).subscribe({
-      next: (items) => {
-        this.ownerOptions.set([
-          ...items.map((item: ReportParameterOption) => ({
-            label: item.label,
-            value: item.value
-          }))
-        ]);
-        this.ownerOptionsLoading.set(false);
-      },
-      error: () => {
-        this.ownerOptions.set([{ label: 'All owners', value: '' }]);
-        this.ownerOptionsLoading.set(false);
-        this.toast.show('error', 'Unable to load report filter options.');
-      }
-    });
   }
 
   private normalizeTelerikViewerState(): void {

@@ -107,19 +107,25 @@
             <p class="section-description">Set the baseline rule for when approvals are required</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Approval Threshold</label>
-                <p-inputNumber
-                  formControlName="approvalAmountThreshold"
-                  [min]="0"
-                  placeholder="Leave empty to disable"
-                  styleClass="w-full"
-                ></p-inputNumber>
+              <div class="form-field">
+                <label for="as-approvalAmountThreshold">Approval Threshold</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--success">
+                    <i class="pi pi-dollar"></i>
+                  </p-inputgroup-addon>
+                  <p-inputNumber
+                    id="as-approvalAmountThreshold"
+                    formControlName="approvalAmountThreshold"
+                    [min]="0"
+                    placeholder="Leave empty to disable"
+                    styleClass="w-full"
+                  ></p-inputNumber>
+                </p-inputgroup>
                 <small class="field-hint">Require approval when closing above this amount</small>
               </div>
 
-              <div class="field">
-                <label>
+              <div class="form-field">
+                <label for="as-approvalApproverRole">
                   Approver Role
                   <i
                     class="pi pi-info-circle info-icon"
@@ -128,6 +134,7 @@
                   ></i>
                 </label>
                 <p-select
+                  id="as-approvalApproverRole"
                   appendTo="body"
                   [options]="roleOptions()"
                   optionLabel="label"
@@ -149,11 +156,12 @@
             <p class="section-description">Configure multi-step approval chains for complex deals</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Multi-step approvals</label>
+              <div class="form-field">
+                <label for="as-multiStepApprovals">Multi-step approvals</label>
                 <div class="toggle-row">
                   <label class="checkbox-field">
                     <p-checkbox
+                      id="as-multiStepApprovals"
                       [binary]="true"
                       [ngModel]="approvalWorkflowPolicy().enabled"
                       (ngModelChange)="setApprovalWorkflowEnabled($event)"
@@ -183,8 +191,8 @@
                   </button>
                 </div>
                 <div class="form-grid form-grid--2col">
-                  <div class="field">
-                    <label>
+                  <div class="form-field">
+                    <label [for]="'as-stepRole-' + idx">
                       Approver Role
                       <i
                         class="pi pi-info-circle info-icon"
@@ -193,6 +201,7 @@
                       ></i>
                     </label>
                     <p-select
+                      [id]="'as-stepRole-' + idx"
                       appendTo="body"
                       [options]="roleOptions()"
                       optionLabel="label"
@@ -204,27 +213,39 @@
                       styleClass="w-full"
                     ></p-select>
                   </div>
-                  <div class="field">
-                    <label>Amount Threshold</label>
-                    <p-inputNumber
-                      [ngModel]="step.amountThreshold"
-                      (ngModelChange)="updateApprovalStep(idx, { amountThreshold: $event })"
-                      [ngModelOptions]="{ standalone: true }"
-                      [min]="0"
-                      placeholder="Leave empty for all"
-                      styleClass="w-full"
-                    ></p-inputNumber>
+                  <div class="form-field">
+                    <label [for]="'as-stepThreshold-' + idx">Amount Threshold</label>
+                    <p-inputgroup>
+                      <p-inputgroup-addon class="icon-addon icon-addon--success">
+                        <i class="pi pi-dollar"></i>
+                      </p-inputgroup-addon>
+                      <p-inputNumber
+                        [id]="'as-stepThreshold-' + idx"
+                        [ngModel]="step.amountThreshold"
+                        (ngModelChange)="updateApprovalStep(idx, { amountThreshold: $event })"
+                        [ngModelOptions]="{ standalone: true }"
+                        [min]="0"
+                        placeholder="Leave empty for all"
+                        styleClass="w-full"
+                      ></p-inputNumber>
+                    </p-inputgroup>
                   </div>
-                  <div class="field">
-                    <label>Purpose</label>
-                    <input
-                      pInputText
-                      [ngModel]="step.purpose"
-                      (ngModelChange)="updateApprovalStep(idx, { purpose: $event })"
-                      [ngModelOptions]="{ standalone: true }"
-                      placeholder="Close / Discount / Update"
-                      class="w-full"
-                    />
+                  <div class="form-field">
+                    <label [for]="'as-stepPurpose-' + idx">Purpose</label>
+                    <p-inputgroup>
+                      <p-inputgroup-addon class="icon-addon icon-addon--name">
+                        <i class="pi pi-tag"></i>
+                      </p-inputgroup-addon>
+                      <input
+                        pInputText
+                        [id]="'as-stepPurpose-' + idx"
+                        [ngModel]="step.purpose"
+                        (ngModelChange)="updateApprovalStep(idx, { purpose: $event })"
+                        [ngModelOptions]="{ standalone: true }"
+                        placeholder="Close / Discount / Update"
+                        class="w-full"
+                      />
+                    </p-inputgroup>
                   </div>
                 </div>
               </div>

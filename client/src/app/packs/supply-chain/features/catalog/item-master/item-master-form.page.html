@@ -27,10 +27,10 @@
         </h3>
 
         <div class="form-grid">
-          <div class="field">
-            <label for="itemType">Type <span class="required">*</span></label>
+          <div class="form-field">
+            <label for="im-itemType">Type <span class="required">*</span></label>
             <p-select
-              inputId="itemType"
+              inputId="im-itemType"
               [options]="itemTypeOptions"
               optionLabel="label"
               optionValue="value"
@@ -56,66 +56,78 @@
             </p-select>
           </div>
 
-          <div class="field">
-            <label for="sku">SKU <span class="required">*</span></label>
-            <input
-              id="sku"
-              pInputText
-              [ngModel]="form().sku"
-              (ngModelChange)="onFieldChange('sku', $event)"
-              name="sku"
-              maxlength="60"
-              placeholder="e.g. PROD-1001"
-              class="w-full"
-            />
+          <div class="form-field">
+            <label for="im-sku">SKU <span class="required">*</span></label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--name"><i class="pi pi-tag"></i></p-inputgroup-addon>
+              <input
+                id="im-sku"
+                pInputText
+                [ngModel]="form().sku"
+                (ngModelChange)="onFieldChange('sku', $event)"
+                name="sku"
+                maxlength="60"
+                placeholder="e.g. PROD-1001"
+                class="w-full"
+              />
+            </p-inputgroup>
           </div>
 
-          <div class="field">
-            <label for="name">Name <span class="required">*</span></label>
-            <input
-              id="name"
-              pInputText
-              [ngModel]="form().name"
-              (ngModelChange)="onFieldChange('name', $event)"
-              name="name"
-              maxlength="200"
-              placeholder="Display name"
-              class="w-full"
-            />
+          <div class="form-field">
+            <label for="im-name">Name <span class="required">*</span></label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--name"><i class="pi pi-tag"></i></p-inputgroup-addon>
+              <input
+                id="im-name"
+                pInputText
+                [ngModel]="form().name"
+                (ngModelChange)="onFieldChange('name', $event)"
+                name="name"
+                maxlength="200"
+                placeholder="Display name"
+                class="w-full"
+              />
+            </p-inputgroup>
           </div>
 
-          <div class="field">
-            <label for="category">Category</label>
-            <input
-              id="category"
-              pInputText
-              [ngModel]="form().categoryName"
-              (ngModelChange)="onFieldChange('categoryName', $event)"
-              name="category"
-              maxlength="160"
-              placeholder="e.g. Software, Consulting"
-              class="w-full"
-            />
+          <div class="form-field">
+            <label for="im-category">Category</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--industry"><i class="pi pi-briefcase"></i></p-inputgroup-addon>
+              <input
+                id="im-category"
+                pInputText
+                [ngModel]="form().categoryName"
+                (ngModelChange)="onFieldChange('categoryName', $event)"
+                name="category"
+                maxlength="160"
+                placeholder="e.g. Software, Consulting"
+                class="w-full"
+              />
+            </p-inputgroup>
           </div>
 
-          <div class="field">
-            <label for="uom">Default UOM</label>
-            <input
-              id="uom"
-              pInputText
-              [ngModel]="form().defaultUom"
-              (ngModelChange)="onFieldChange('defaultUom', $event)"
-              name="uom"
-              maxlength="40"
-              placeholder="e.g. Each, Hour"
-              class="w-full"
-            />
+          <div class="form-field">
+            <label for="im-uom">Default UOM</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--info"><i class="pi pi-info-circle"></i></p-inputgroup-addon>
+              <input
+                id="im-uom"
+                pInputText
+                [ngModel]="form().defaultUom"
+                (ngModelChange)="onFieldChange('defaultUom', $event)"
+                name="uom"
+                maxlength="40"
+                placeholder="e.g. Each, Hour"
+                class="w-full"
+              />
+            </p-inputgroup>
           </div>
 
-          <div class="field field-wide">
-            <label for="description">Description</label>
+          <div class="form-field full-row">
+            <label for="im-description">Description</label>
             <textarea
-              id="description"
+              id="im-description"
               pTextarea
               [ngModel]="form().description"
               (ngModelChange)="onFieldChange('description', $event)"
@@ -127,10 +139,10 @@
             ></textarea>
           </div>
 
-          <div class="field">
-            <label for="status">Status</label>
+          <div class="form-field">
+            <label for="im-status">Status</label>
             <p-select
-              inputId="status"
+              inputId="im-status"
               [options]="statusOptions"
               optionLabel="label"
               optionValue="value"

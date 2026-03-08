@@ -6,6 +6,8 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { SkeletonModule } from 'primeng/skeleton';
 import { CheckboxModule } from 'primeng/checkbox';
 import { TabsModule } from 'primeng/tabs';
@@ -42,6 +44,8 @@ type PermissionActionTab = 'create-manage' | 'view-analyze' | 'governance';
     InputTextModule,
     TextareaModule,
     SelectModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     CheckboxModule,
     TabsModule,
     TooltipModule,

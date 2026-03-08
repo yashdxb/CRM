@@ -46,35 +46,41 @@
           <h2 class="card-title">Filter alerts</h2>
         </div>
         <div class="card-body">
-          <div class="p-fluid p-formgrid grid">
-            <div class="field col-12">
-              <label>Status</label>
+          <div class="filter-fields">
+            <div class="form-field">
+              <label for="filter-status">Status</label>
               <p-select
+                id="filter-status"
                 [(ngModel)]="selectedStatus"
                 [options]="statusOptions"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="All statuses"
+                appendTo="body"
               ></p-select>
             </div>
-            <div class="field col-12">
-              <label>Category</label>
+            <div class="form-field">
+              <label for="filter-category">Category</label>
               <p-select
+                id="filter-category"
                 [(ngModel)]="selectedCategory"
                 [options]="categoryOptions"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="All categories"
+                appendTo="body"
               ></p-select>
             </div>
-            <div class="field col-12">
-              <label>Location</label>
+            <div class="form-field">
+              <label for="filter-location">Location</label>
               <p-select
+                id="filter-location"
                 [(ngModel)]="selectedLocation"
                 [options]="locationOptions"
                 optionLabel="label"
                 optionValue="value"
                 placeholder="All locations"
+                appendTo="body"
               ></p-select>
             </div>
           </div>

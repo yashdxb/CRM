@@ -137,7 +137,7 @@
   label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: #374151;
+    color: #475569;
     display: flex;
     align-items: center;
     gap: 0.25rem;
@@ -430,6 +430,8 @@
       padding: 0.75rem;
       transition: all 0.2s ease;
       font-size: 0.95rem;
+      color: #1e293b;
+      font-weight: 500;
 
       &:hover {
         border-color: #7dd3fc;

@@ -38,8 +38,8 @@
               Activity details
             </h3>
             <div class="form-grid">
-              <div class="field">
-                <label>Template</label>
+              <div class="form-field">
+                <label for="act-template">Template</label>
                 <p-select
                   appendTo="body"
                   [options]="templateOptions"
@@ -69,12 +69,17 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field full">
-                <label>Subject <span class="required">*</span></label>
-                <input pInputText name="subject" [(ngModel)]="form.subject" required placeholder="Enter activity subject" class="w-full" [readonly]="systemLocked()" />
+              <div class="form-field full-row">
+                <label for="act-subject">Subject <span class="required">*</span></label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--name">
+                    <i class="pi pi-tag"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="act-subject" name="subject" [(ngModel)]="form.subject" required placeholder="Enter activity subject" class="w-full" [readonly]="systemLocked()" />
+                </p-inputgroup>
               </div>
-              <div class="field">
-                <label>Type</label>
+              <div class="form-field">
+                <label for="act-type">Type</label>
                 <p-select
                   appendTo="body"
                   [options]="typeOptions"
@@ -103,8 +108,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Priority</label>
+              <div class="form-field">
+                <label for="act-priority">Priority</label>
                 <p-select
                   appendTo="body"
                   [options]="priorityOptions"
@@ -133,8 +138,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Status</label>
+              <div class="form-field">
+                <label for="act-status">Status</label>
                 <p-select
                   appendTo="body"
                   [options]="statusOptions"
@@ -163,8 +168,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Owner</label>
+              <div class="form-field">
+                <label for="act-ownerId">Owner</label>
                 <p-select
                   appendTo="body"
                   [options]="ownerOptions"
@@ -193,39 +198,41 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Due date</label>
-                <p-datePicker
-                  name="dueDateUtc"
-                  appendTo="body"
-                  [(ngModel)]="form.dueDateUtc"
-                  (ngModelChange)="onDueDateChange($event)"
-                  [disabled]="systemLocked()"
-                  [showIcon]="true"
-                  [showTime]="true"
-                  hourFormat="12"
-                  styleClass="w-full"
-                ></p-datePicker>
-                <div class="due-date-meta" *ngIf="hasLeadSlaDueDate()">
-                  <span class="due-date-hint" *ngIf="dueDateDefaultedFromLeadSla()">
-                    Defaulted from Lead SLA ({{ leadSlaDueLabel() }})
-                  </span>
-                  <span class="due-date-hint" *ngIf="!dueDateDefaultedFromLeadSla()">
-                    Lead SLA due: {{ leadSlaDueLabel() }}
-                  </span>
-                  <button
-                    *ngIf="canSyncDueDateToLeadSla()"
-                    pButton
-                    type="button"
-                    label="Sync to SLA"
-                    icon="pi pi-refresh"
-                    class="crm-button crm-button--ghost due-date-sync"
-                    (click)="syncDueDateToLeadSla()"
-                  ></button>
+              <div class="form-field">
+                <label for="act-dueDateUtc">Due date</label>
+                <div class="due-date-content">
+                  <p-datePicker
+                    name="dueDateUtc"
+                    appendTo="body"
+                    [(ngModel)]="form.dueDateUtc"
+                    (ngModelChange)="onDueDateChange($event)"
+                    [disabled]="systemLocked()"
+                    [showIcon]="true"
+                    [showTime]="true"
+                    hourFormat="12"
+                    styleClass="w-full"
+                  ></p-datePicker>
+                  <div class="due-date-meta" *ngIf="hasLeadSlaDueDate()">
+                    <span class="due-date-hint" *ngIf="dueDateDefaultedFromLeadSla()">
+                      Defaulted from Lead SLA ({{ leadSlaDueLabel() }})
+                    </span>
+                    <span class="due-date-hint" *ngIf="!dueDateDefaultedFromLeadSla()">
+                      Lead SLA due: {{ leadSlaDueLabel() }}
+                    </span>
+                    <button
+                      *ngIf="canSyncDueDateToLeadSla()"
+                      pButton
+                      type="button"
+                      label="Sync to SLA"
+                      icon="pi pi-refresh"
+                      class="crm-button crm-button--ghost due-date-sync"
+                      (click)="syncDueDateToLeadSla()"
+                    ></button>
+                  </div>
                 </div>
               </div>
-              <div class="field" *ngIf="activityStatus === 'Completed'">
-                <label>Completed at</label>
+              <div class="form-field" *ngIf="activityStatus === 'Completed'">
+                <label for="act-completedDateUtc">Completed at</label>
                 <p-datePicker
                   name="completedDateUtc"
                   appendTo="body"
@@ -236,8 +243,8 @@
                   styleClass="w-full"
                 ></p-datePicker>
               </div>
-              <div class="field">
-                <label>Related to</label>
+              <div class="form-field">
+                <label for="act-relatedEntityType">Related to</label>
                 <p-select
                   appendTo="body"
                   [options]="relationOptions"
@@ -267,8 +274,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field" *ngIf="form.relatedEntityType === 'Account'">
-                <label>Account</label>
+              <div class="form-field" *ngIf="form.relatedEntityType === 'Account'">
+                <label for="act-account">Account</label>
                 <p-select
                   appendTo="body"
                   [options]="customerOptions"
@@ -298,8 +305,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field" *ngIf="form.relatedEntityType === 'Contact'">
-                <label>Contact</label>
+              <div class="form-field" *ngIf="form.relatedEntityType === 'Contact'">
+                <label for="act-contact">Contact</label>
                 <p-select
                   appendTo="body"
                   [options]="contactOptions"
@@ -329,8 +336,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field" *ngIf="form.relatedEntityType === 'Opportunity'">
-                <label>Opportunity</label>
+              <div class="form-field" *ngIf="form.relatedEntityType === 'Opportunity'">
+                <label for="act-opportunity">Opportunity</label>
                 <p-select
                   appendTo="body"
                   [options]="opportunityOptions"
@@ -360,8 +367,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field" *ngIf="form.relatedEntityType === 'Lead'">
-                <label>Lead</label>
+              <div class="form-field" *ngIf="form.relatedEntityType === 'Lead'">
+                <label for="act-lead">Lead</label>
                 <p-select
                   appendTo="body"
                   [options]="leadOptions"
@@ -391,26 +398,32 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field full">
-                <label>Notes / Agenda</label>
-                <textarea pTextarea name="description" [(ngModel)]="form.description" rows="3" placeholder="Add agenda notes"></textarea>
+              <div class="form-field full-row">
+                <label for="act-description">Notes / Agenda</label>
+                <textarea pTextarea id="act-description" name="description" [(ngModel)]="form.description" rows="3" placeholder="Add agenda notes"></textarea>
               </div>
-              <div class="field full">
-                <label>Outcome <span class="required">*</span></label>
-                <textarea pTextarea name="outcome" [(ngModel)]="form.outcome" rows="3" placeholder="Capture outcome and key takeaways"></textarea>
+              <div class="form-field full-row">
+                <label for="act-outcome">Outcome <span class="required">*</span></label>
+                <textarea pTextarea id="act-outcome" name="outcome" [(ngModel)]="form.outcome" rows="3" placeholder="Capture outcome and key takeaways"></textarea>
               </div>
-              <div class="field full" *ngIf="activityStatus !== 'Completed'">
-                <label>Next step subject <span class="required">*</span></label>
-                <input
-                  pInputText
-                  name="nextStepSubject"
-                  [(ngModel)]="form.nextStepSubject"
-                  placeholder="e.g., Follow-up call with procurement"
-                  class="w-full"
-                />
+              <div class="form-field full-row" *ngIf="activityStatus !== 'Completed'">
+                <label for="act-nextStepSubject">Next step subject <span class="required">*</span></label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--name">
+                    <i class="pi pi-tag"></i>
+                  </p-inputgroup-addon>
+                  <input
+                    pInputText
+                    id="act-nextStepSubject"
+                    name="nextStepSubject"
+                    [(ngModel)]="form.nextStepSubject"
+                    placeholder="e.g., Follow-up call with procurement"
+                    class="w-full"
+                  />
+                </p-inputgroup>
               </div>
-              <div class="field" *ngIf="activityStatus !== 'Completed'">
-                <label>Next step due date <span class="required">*</span></label>
+              <div class="form-field" *ngIf="activityStatus !== 'Completed'">
+                <label for="act-nextStepDueDateUtc">Next step due date <span class="required">*</span></label>
                 <p-datePicker
                   name="nextStepDueDateUtc"
                   appendTo="body"

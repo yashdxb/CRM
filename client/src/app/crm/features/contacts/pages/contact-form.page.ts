@@ -7,6 +7,8 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { TextareaModule } from 'primeng/textarea';
 import { TabsModule } from 'primeng/tabs';
 import { TableModule } from 'primeng/table';
@@ -44,6 +46,8 @@ interface Option<T = string> {
     InputTextModule,
     SelectModule,
     InputNumberModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     TextareaModule,
     TabsModule,
     TableModule,

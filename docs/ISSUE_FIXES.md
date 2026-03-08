@@ -1164,3 +1164,47 @@ Verification:
 - `dotnet build server/src/CRM.Enterprise.sln`
 - `cd client && npm run build -- --configuration development`
 - `cd client && E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/users-environment-column.spec.ts --workers=1`
+
+## 16) Core CRM Report Library Pack
+
+Problem:
+- The CRM report page was still treating library behavior as a one-off case, with hardcoded handling for a single owner-filtered report.
+- Report Server already contained CRM reports, but the CRM UI had no metadata layer to define which reports are approved for the library, what order they should appear in, or which CRM-side filters should be shown before the viewer loads.
+- Publishing new CRM reports was not reproducible from the repo.
+
+Fix:
+- Added a metadata-driven CRM report library service that composes over the Report Server catalog and only returns curated `CRM` category reports plus their filter schemas.
+- Added a new API endpoint:
+  - `GET /api/report-server/library`
+- Standardized CRM-side report filters with reusable filter kinds:
+  - `dateRange`
+  - `owner`
+  - `stage`
+  - `status`
+  - `approvalStatus`
+  - `leadSource`
+- Reworked the Reports page to render filter forms dynamically from metadata instead of hardcoding report-name-specific behavior.
+- Added a reproducible Telerik report-pack generator under:
+  - [tools/report-library-pack/Program.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/tools/report-library-pack/Program.cs)
+  - [report-library-pack.csproj](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/tools/report-library-pack/report-library-pack.csproj)
+- Added a publishing script for Report Server:
+  - [publish_core_report_library.sh](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/scripts/publish_core_report_library.sh)
+- Published the first six essential CRM reports to the `CRM` Report Server category:
+  - `Pipeline by Stage`
+  - `Open Opportunities by Owner`
+  - `Pending Deal Approval`
+  - `Lead Conversion Summary`
+  - `Sales Activities by Owner`
+  - `Forecast Summary`
+
+Verification:
+- `dotnet build server/src/CRM.Enterprise.sln`
+- `dotnet build tools/report-library-pack/report-library-pack.csproj`
+- `cd client && npm run build -- --configuration development`
+- `cd client && E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/reports-viewer.spec.ts --workers=1`
+- `GET /api/report-server/library` now returns the six curated CRM reports with the expected filter metadata.
+
+Result:
+- The CRM Report Library is now metadata-driven and limited to the curated `CRM` report pack.
+- CRM-side filters are shown before the Telerik viewer loads, rather than relying on raw Report Server parameter UI as the primary experience.
+- The six core sales reports can be regenerated and republished from the repo instead of being a one-off manual artifact.

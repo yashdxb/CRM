@@ -120,83 +120,111 @@
             <p class="section-description">Define base conversion thresholds and approval guardrails</p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Default Threshold</label>
-                <p-inputNumber
-                  [ngModel]="qualificationPolicy().defaultThreshold"
-                  (ngModelChange)="setPolicyField('defaultThreshold', $event)"
-                  [min]="0"
-                  [max]="100"
-                  [ngModelOptions]="{ standalone: true }"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <small class="field-hint">Baseline score required to convert</small>
-              </div>
-
-              <div class="field">
-                <label>Manager Approval Below</label>
-                <p-inputNumber
-                  [ngModel]="qualificationPolicy().managerApprovalBelow"
-                  (ngModelChange)="setPolicyField('managerApprovalBelow', $event)"
-                  [min]="0"
-                  [max]="100"
-                  [ngModelOptions]="{ standalone: true }"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <small class="field-hint">Require manager approval under this score</small>
-              </div>
-
-              <div class="field">
-                <label>Block Below</label>
-                <p-inputNumber
-                  [ngModel]="qualificationPolicy().blockBelow"
-                  (ngModelChange)="setPolicyField('blockBelow', $event)"
-                  [min]="0"
-                  [max]="100"
-                  [ngModelOptions]="{ standalone: true }"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <small class="field-hint">Hard stop unless overrides are enabled</small>
-              </div>
-
-              <div class="field">
-                <label>Overrides</label>
-                <div class="toggle-row">
-                  <label class="checkbox-field">
-                    <p-checkbox
-                      [binary]="true"
-                      [ngModel]="qualificationPolicy().allowOverrides"
-                      (ngModelChange)="setPolicyField('allowOverrides', $event)"
+              <div class="form-field">
+                <label for="qp-defaultThreshold">Default Threshold</label>
+                <div class="form-field__input">
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-chart-bar"></i>
+                    </p-inputgroup-addon>
+                    <p-inputNumber
+                      inputId="qp-defaultThreshold"
+                      [ngModel]="qualificationPolicy().defaultThreshold"
+                      (ngModelChange)="setPolicyField('defaultThreshold', $event)"
+                      [min]="0"
+                      [max]="100"
                       [ngModelOptions]="{ standalone: true }"
-                    ></p-checkbox>
-                    <span>Allow overrides</span>
-                  </label>
-                  <label class="checkbox-field">
-                    <p-checkbox
-                      [binary]="true"
-                      [ngModel]="qualificationPolicy().requireOverrideReason"
-                      (ngModelChange)="setPolicyField('requireOverrideReason', $event)"
-                      [ngModelOptions]="{ standalone: true }"
-                    ></p-checkbox>
-                    <span>Require override reason</span>
-                  </label>
+                      styleClass="w-full"
+                    ></p-inputNumber>
+                  </p-inputgroup>
+                  <small class="field-hint">Baseline score required to convert</small>
                 </div>
               </div>
 
-              <div class="field">
-                <label>Lead List Display</label>
-                <div class="toggle-row">
-                  <label class="checkbox-field">
-                    <p-checkbox
-                      [binary]="true"
-                      [ngModel]="qualificationPolicy().showCqvsInLeadList"
-                      (ngModelChange)="setPolicyField('showCqvsInLeadList', $event)"
+              <div class="form-field">
+                <label for="qp-managerApprovalBelow">Manager Approval Below</label>
+                <div class="form-field__input">
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-chart-bar"></i>
+                    </p-inputgroup-addon>
+                    <p-inputNumber
+                      inputId="qp-managerApprovalBelow"
+                      [ngModel]="qualificationPolicy().managerApprovalBelow"
+                      (ngModelChange)="setPolicyField('managerApprovalBelow', $event)"
+                      [min]="0"
+                      [max]="100"
                       [ngModelOptions]="{ standalone: true }"
-                    ></p-checkbox>
-                    <span>Enable CQVS coach panel in Leads list</span>
-                  </label>
+                      styleClass="w-full"
+                    ></p-inputNumber>
+                  </p-inputgroup>
+                  <small class="field-hint">Require manager approval under this score</small>
                 </div>
-                <small class="field-hint">Adds a compact “Coach” inspector for CQVS breakdown, weakest factor, and next evidence.</small>
+              </div>
+
+              <div class="form-field">
+                <label for="qp-blockBelow">Block Below</label>
+                <div class="form-field__input">
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-chart-bar"></i>
+                    </p-inputgroup-addon>
+                    <p-inputNumber
+                      inputId="qp-blockBelow"
+                      [ngModel]="qualificationPolicy().blockBelow"
+                      (ngModelChange)="setPolicyField('blockBelow', $event)"
+                      [min]="0"
+                      [max]="100"
+                      [ngModelOptions]="{ standalone: true }"
+                      styleClass="w-full"
+                    ></p-inputNumber>
+                  </p-inputgroup>
+                  <small class="field-hint">Hard stop unless overrides are enabled</small>
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="qp-overrides">Overrides</label>
+                <div class="form-field__input">
+                  <div class="toggle-row">
+                    <label class="checkbox-field">
+                      <p-checkbox
+                        [binary]="true"
+                        [ngModel]="qualificationPolicy().allowOverrides"
+                        (ngModelChange)="setPolicyField('allowOverrides', $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                      ></p-checkbox>
+                      <span>Allow overrides</span>
+                    </label>
+                    <label class="checkbox-field">
+                      <p-checkbox
+                        [binary]="true"
+                        [ngModel]="qualificationPolicy().requireOverrideReason"
+                        (ngModelChange)="setPolicyField('requireOverrideReason', $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                      ></p-checkbox>
+                      <span>Require override reason</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-field">
+                <label for="qp-leadListDisplay">Lead List Display</label>
+                <div class="form-field__input">
+                  <div class="toggle-row">
+                    <label class="checkbox-field">
+                      <p-checkbox
+                        [binary]="true"
+                        [ngModel]="qualificationPolicy().showCqvsInLeadList"
+                        (ngModelChange)="setPolicyField('showCqvsInLeadList', $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                      ></p-checkbox>
+                      <span>Enable CQVS coach panel in Leads list</span>
+                    </label>
+                  </div>
+                  <small class="field-hint">Adds a compact "Coach" inspector for CQVS breakdown, weakest factor, and next evidence.</small>
+                </div>
               </div>
             </div>
           </section>
@@ -226,36 +254,46 @@
             </p>
 
             <div class="form-grid form-grid--2col">
-              <div class="field">
-                <label>Qualification evidence gate</label>
-                <div class="toggle-row">
-                  <label class="checkbox-field">
-                    <p-checkbox
-                      [binary]="true"
-                      [ngModel]="qualificationPolicy().requireEvidenceBeforeQualified"
-                      (ngModelChange)="setPolicyField('requireEvidenceBeforeQualified', $event)"
-                      [ngModelOptions]="{ standalone: true }"
-                    ></p-checkbox>
-                    <span>Require evidence before setting lead to Qualified</span>
-                  </label>
+              <div class="form-field">
+                <label for="qp-evidenceGate">Qualification evidence gate</label>
+                <div class="form-field__input">
+                  <div class="toggle-row">
+                    <label class="checkbox-field">
+                      <p-checkbox
+                        [binary]="true"
+                        [ngModel]="qualificationPolicy().requireEvidenceBeforeQualified"
+                        (ngModelChange)="setPolicyField('requireEvidenceBeforeQualified', $event)"
+                        [ngModelOptions]="{ standalone: true }"
+                      ></p-checkbox>
+                      <span>Require evidence before setting lead to Qualified</span>
+                    </label>
+                  </div>
+                  <small class="field-hint">Uses truth/evidence coverage, not factor selections alone.</small>
                 </div>
-                <small class="field-hint">Uses truth/evidence coverage, not factor selections alone.</small>
               </div>
 
-              <div class="field">
-                <label>Minimum evidence coverage (%)</label>
-                <p-inputNumber
-                  [ngModel]="qualificationPolicy().minimumEvidenceCoveragePercent"
-                  (ngModelChange)="setPolicyField('minimumEvidenceCoveragePercent', $event)"
-                  [min]="0"
-                  [max]="100"
-                  [ngModelOptions]="{ standalone: true }"
-                  [disabled]="!qualificationPolicy().requireEvidenceBeforeQualified"
-                  styleClass="w-full"
-                ></p-inputNumber>
-                <small class="field-hint">
-                  Recommended: 50% (roughly 3 of 6 evidence fields) before qualification.
-                </small>
+              <div class="form-field">
+                <label for="qp-minEvidenceCoverage">Minimum evidence coverage (%)</label>
+                <div class="form-field__input">
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-chart-bar"></i>
+                    </p-inputgroup-addon>
+                    <p-inputNumber
+                      inputId="qp-minEvidenceCoverage"
+                      [ngModel]="qualificationPolicy().minimumEvidenceCoveragePercent"
+                      (ngModelChange)="setPolicyField('minimumEvidenceCoveragePercent', $event)"
+                      [min]="0"
+                      [max]="100"
+                      [ngModelOptions]="{ standalone: true }"
+                      [disabled]="!qualificationPolicy().requireEvidenceBeforeQualified"
+                      styleClass="w-full"
+                    ></p-inputNumber>
+                  </p-inputgroup>
+                  <small class="field-hint">
+                    Recommended: 50% (roughly 3 of 6 evidence fields) before qualification.
+                  </small>
+                </div>
               </div>
             </div>
           </section>

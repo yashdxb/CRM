@@ -4,6 +4,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { DialogModule } from 'primeng/dialog';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { TableModule } from 'primeng/table';
@@ -15,7 +17,7 @@ import { HelpDeskDataService } from '../services/helpdesk-data.service';
 @Component({
   selector: 'app-helpdesk-queues-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, CheckboxModule, DialogModule, InputTextModule, MultiSelectModule, TableModule, BreadcrumbsComponent],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, CheckboxModule, DialogModule, InputGroupModule, InputGroupAddonModule, InputTextModule, MultiSelectModule, TableModule, BreadcrumbsComponent],
   templateUrl: './helpdesk-queues.page.html',
   styleUrl: './helpdesk-queues.page.scss'
 })

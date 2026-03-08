@@ -3,6 +3,8 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -21,7 +23,7 @@ interface Option<T = string> {
 @Component({
   selector: 'app-opportunity-automation-page',
   standalone: true,
-  imports: [NgIf, NgFor, FormsModule, ButtonModule, InputTextModule, SelectModule, RouterLink, BreadcrumbsComponent],
+  imports: [NgIf, NgFor, FormsModule, ButtonModule, InputGroupModule, InputGroupAddonModule, InputTextModule, SelectModule, RouterLink, BreadcrumbsComponent],
   templateUrl: './opportunity-automation.page.html',
   styleUrl: './opportunity-automation.page.scss'
 })

@@ -125,54 +125,49 @@
   @include form.form-grid;
 }
 
-.field {
-  @include form.form-field;
+.form-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
 
-  label {
-    @include form.form-label;
+  > label {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475569;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    min-width: 110px;
+    flex-shrink: 0;
+    text-align: right;
+    transition: color 0.2s ease;
   }
 
-  &.full {
+  &:hover > label {
+    color: #334155;
+  }
+
+  &:focus-within > label {
+    color: #4f46e5;
+  }
+
+  > p-inputgroup,
+  > p-select,
+  > p-multiselect,
+  > textarea,
+  > .password-field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &.full-row {
     grid-column: 1 / -1;
   }
-}
 
-.input-icon-group {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-.input-icon-group__icon {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  flex-shrink: 0;
-  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.12);
-}
-
-.input-icon-group--blue .input-icon-group__icon {
-  background: linear-gradient(135deg, #2563eb, #38bdf8);
-}
-
-.input-icon-group--teal .input-icon-group__icon {
-  background: linear-gradient(135deg, #0d9488, #2dd4bf);
-}
-
-.input-icon-group--amber .input-icon-group__icon {
-  background: linear-gradient(135deg, #d97706, #f59e0b);
-}
-
-.input-icon-group--violet .input-icon-group__icon {
-  background: linear-gradient(135deg, #7c3aed, #a78bfa);
-}
-
-.input-icon-group .w-full {
-  flex: 1;
+  &.permission-search {
+    min-width: 220px;
+  }
 }
 
 .password-field {
@@ -180,7 +175,7 @@
   gap: 0.75rem;
   align-items: center;
 
-  .input-icon-group {
+  p-inputgroup {
     flex: 1;
   }
 }
@@ -376,10 +371,6 @@
   gap: 0.65rem;
   margin-bottom: 0.8rem;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.permission-search {
-  min-width: 220px;
 }
 
 .permissions-table-wrap {

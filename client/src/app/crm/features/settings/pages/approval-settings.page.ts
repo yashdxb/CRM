@@ -5,6 +5,8 @@ import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
@@ -30,6 +32,8 @@ import {
   imports: [
     ButtonModule,
     CheckboxModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     InputTextModule,
     InputNumberModule,
     SelectModule,

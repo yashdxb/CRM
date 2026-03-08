@@ -201,19 +201,34 @@
                 <section class="form-section form-section--overview form-section--accordion-body">
                   <div class="section-block">
                     <div class="form-grid qualification-grid">
-                <div class="field">
-                  <label>First name <span class="required">*</span></label>
-                  <input pInputText name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" class="w-full" />
+                <div class="form-field">
+                  <label for="lead-firstName">First name <span class="required">*</span></label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--name">
+                      <i class="pi pi-user"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="lead-firstName" name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" class="w-full" />
+                  </p-inputgroup>
                 </div>
-                <div class="field">
-                  <label>Last name <span class="required">*</span></label>
-                  <input pInputText name="lastName" [(ngModel)]="form.lastName" required placeholder="Last name" class="w-full" />
+                <div class="form-field">
+                  <label for="lead-lastName">Last name <span class="required">*</span></label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--name">
+                      <i class="pi pi-user"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="lead-lastName" name="lastName" [(ngModel)]="form.lastName" required placeholder="Last name" class="w-full" />
+                  </p-inputgroup>
                 </div>
-                <div class="field">
-                  <label>Company</label>
-                  <input pInputText name="companyName" [(ngModel)]="form.companyName" placeholder="Company" class="w-full" />
+                <div class="form-field">
+                  <label for="lead-companyName">Company</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--company">
+                      <i class="pi pi-building"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="lead-companyName" name="companyName" [(ngModel)]="form.companyName" placeholder="Company" class="w-full" />
+                  </p-inputgroup>
                 </div>
-                <div class="field">
+                <div class="form-field">
                   <label>Status</label>
                   <p-select
                     [options]="statusOptionsForView()"
@@ -246,7 +261,7 @@
                   </div>
                   <p class="status-note" *ngIf="statusPolicyHint() as hint">{{ hint }}</p>
                 </div>
-                <div class="field">
+                <div class="form-field">
                   <label>Assignment</label>
                   <p-select
                     [options]="assignmentOptions"
@@ -264,9 +279,15 @@
                         {{ option.label }}
                       </div>
                     </ng-template>
+                    <ng-template pTemplate="value" let-option>
+                      <div class="option-row" *ngIf="option" [attr.data-testid]="'lead-assignment-selected'">
+                        {{ option.label }}
+                      </div>
+                      <span *ngIf="!option" class="select-placeholder">Select assignment</span>
+                    </ng-template>
                   </p-select>
                 </div>
-                <div class="field" *ngIf="form.assignmentStrategy === 'Manual'">
+                <div class="form-field" *ngIf="form.assignmentStrategy === 'Manual'">
                   <label>Owner</label>
                   <p-select
                     [options]="ownerOptions()"
@@ -284,6 +305,12 @@
                       <div class="option-row" [attr.data-testid]="'lead-owner-option-' + option.value">
                         {{ option.label }}
                       </div>
+                    </ng-template>
+                    <ng-template pTemplate="value" let-option>
+                      <div class="option-row" *ngIf="option">
+                        {{ option.label }}
+                      </div>
+                      <span *ngIf="!option" class="select-placeholder">Select owner</span>
                     </ng-template>
                     </p-select>
                   </div>
@@ -304,21 +331,27 @@
                 <section class="form-section form-section--overview form-section--accordion-body">
                   <div class="section-block">
                     <div class="form-grid">
-                <div class="field full-row">
-                  <label>Email</label>
-                  <input
-                    pInputText
-                    name="email"
-                    [ngModel]="form.email"
-                    (ngModelChange)="onEmailChange($event)"
-                    type="email"
-                    placeholder="name@company.com"
-                    class="w-full"
-                  />
+                <div class="form-field">
+                  <label for="lead-email">Email</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--email">
+                      <i class="pi pi-envelope"></i>
+                    </p-inputgroup-addon>
+                    <input
+                      pInputText
+                      id="lead-email"
+                      name="email"
+                      [ngModel]="form.email"
+                      (ngModelChange)="onEmailChange($event)"
+                      type="email"
+                      placeholder="name@company.com"
+                      class="w-full"
+                    />
+                  </p-inputgroup>
                   <p class="field-error" *ngIf="emailError()">{{ emailError() }}</p>
                 </div>
-                <div class="field full-row">
-                  <label>Phone</label>
+                <div class="form-field">
+                  <label for="lead-phoneType">Phone</label>
                   <div class="phone-grid">
                     <p-select
                       [options]="phoneTypeOptions"
@@ -382,23 +415,39 @@
                   </div>
                   <p class="field-error" *ngIf="phoneError()">{{ phoneError() }}</p>
                 </div>
-                <div class="field">
-                  <label>Job title</label>
-                  <input pInputText name="jobTitle" [(ngModel)]="form.jobTitle" placeholder="Role or title" class="w-full" />
+                <div class="form-field">
+                  <label for="lead-jobTitle">Job title</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-id-card"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="lead-jobTitle" name="jobTitle" [(ngModel)]="form.jobTitle" placeholder="Role or title" class="w-full" />
+                  </p-inputgroup>
                 </div>
-                <div class="field">
-                  <label>Source</label>
-                  <input pInputText name="source" [(ngModel)]="form.source" placeholder="Web, Referral, Event" class="w-full" />
+                <div class="form-field">
+                  <label for="lead-source">Source</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--industry">
+                      <i class="pi pi-compass"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="lead-source" name="source" [(ngModel)]="form.source" placeholder="Web, Referral, Event" class="w-full" />
+                  </p-inputgroup>
                 </div>
-                <div class="field" *ngIf="routingReason()">
-                  <label>Routing reason</label>
-                  <input
-                    pInputText
-                    [ngModel]="routingReason()"
-                    [ngModelOptions]="{ standalone: true }"
-                    class="w-full"
-                    [disabled]="true"
-                  />
+                <div class="form-field" *ngIf="routingReason()">
+                  <label for="lead-routingReason">Routing reason</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-directions"></i>
+                    </p-inputgroup-addon>
+                    <input
+                      pInputText
+                      id="lead-routingReason"
+                      [ngModel]="routingReason()"
+                      [ngModelOptions]="{ standalone: true }"
+                      class="w-full"
+                      [disabled]="true"
+                    />
+                  </p-inputgroup>
                 </div>
                     </div>
                   </div>
@@ -432,45 +481,53 @@
                     mode="indeterminate"
                   ></p-progressBar>
                   <div class="form-grid">
-              <div class="field score-field">
-                <label>Score</label>
-                <p-inputNumber
-                  name="score"
-                  [(ngModel)]="form.score"
-                  [min]="0"
-                  [max]="100"
-                  placeholder="0-100"
-                  class="w-full"
-                  [disabled]="true"
-                ></p-inputNumber>
-                <div class="score-meta">
-                  <p class="hint-text">
-                    Primary prioritization score, calculated from lead signals and qualification factors.
-                    Manual entry is disabled.
-                    <span *ngIf="form.autoScore"> Preview: {{ computeAutoScore() }}.</span>
-                  </p>
-                  <p-tag *ngIf="aiScoreConfidenceLabel()" [value]="aiScoreConfidenceLabel()!" severity="info"></p-tag>
-                  <p-tag *ngIf="scoreSourceBadge()" [value]="scoreSourceBadge()!" severity="secondary"></p-tag>
-                </div>
-                <div class="ai-score-row" *ngIf="isEditMode()">
-                  <button
-                    pButton
-                    type="button"
-                    label="Refresh score"
-                    icon="pi pi-sync"
-                    class="crm-button crm-button--primary ai-score-button"
-                    (click)="onAiScore()"
-                    [disabled]="aiScoring() || !canRefreshScore()"
-                  ></button>
-                  <div class="ai-score-inline" *ngIf="aiScoreNote() && !aiScoring()" [ngClass]="aiScoreClass()">
-                    <i class="pi" [ngClass]="aiScoreIcon()"></i>
-                    <span>{{ aiScoreNote() }}</span>
+              <div class="form-field score-field">
+                <label for="lead-score">Score</label>
+                <div class="score-content">
+                  <p-inputNumber
+                    id="lead-score"
+                    name="score"
+                    [(ngModel)]="form.score"
+                    [min]="0"
+                    [max]="100"
+                    placeholder="0-100"
+                    class="w-full"
+                    [disabled]="true"
+                  ></p-inputNumber>
+                  <div class="score-meta">
+                    <p class="hint-text">
+                      Primary prioritization score, calculated from lead signals and qualification factors.
+                      Manual entry is disabled.
+                      <span *ngIf="form.autoScore"> Preview: {{ computeAutoScore() }}.</span>
+                    </p>
+                    <p-tag *ngIf="aiScoreConfidenceLabel()" [value]="aiScoreConfidenceLabel()!" severity="info"></p-tag>
+                    <p-tag *ngIf="scoreSourceBadge()" [value]="scoreSourceBadge()!" severity="secondary"></p-tag>
+                  </div>
+                  <div class="ai-score-row" *ngIf="isEditMode()">
+                    <button
+                      pButton
+                      type="button"
+                      label="Refresh score"
+                      icon="pi pi-sync"
+                      class="crm-button crm-button--primary ai-score-button"
+                      (click)="onAiScore()"
+                      [disabled]="aiScoring() || !canRefreshScore()"
+                    ></button>
+                    <div class="ai-score-inline" *ngIf="aiScoreNote() && !aiScoring()" [ngClass]="aiScoreClass()">
+                      <i class="pi" [ngClass]="aiScoreIcon()"></i>
+                      <span>{{ aiScoreNote() }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div class="field">
-                <label>Territory</label>
-                <input pInputText name="territory" [(ngModel)]="form.territory" placeholder="West, EMEA, APAC" class="w-full" />
+              <div class="form-field">
+                <label for="lead-territory">Territory</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--address">
+                    <i class="pi pi-map"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="lead-territory" name="territory" [(ngModel)]="form.territory" placeholder="West, EMEA, APAC" class="w-full" />
+                </p-inputgroup>
               </div>
                   </div>
                 </section>
@@ -615,7 +672,7 @@
               <p-accordion-content>
                 <section class="form-section form-section--qualification form-section--accordion-body">
                   <div class="form-grid">
-              <div class="field full-row">
+              <div class="form-field full-row">
                 <div class="qualification-header">
                   <div>
                     <h3>Qualification factors</h3>
@@ -631,9 +688,10 @@
                   </div>
                 </div>
               </div>
-              <div class="field">
-                <label>Budget availability</label>
+              <div class="form-field">
+                <label for="lead-budgetAvailability">Budget availability</label>
                 <p-select
+                  id="lead-budgetAvailability"
                   name="budgetAvailability"
                   [options]="budgetOptions"
                   optionLabel="label"
@@ -641,6 +699,7 @@
                   [(ngModel)]="form.budgetAvailability"
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Unknown / not yet discussed"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -657,9 +716,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Evidence source</label>
+              <div class="form-field">
+                <label for="lead-budgetEvidence">Evidence source</label>
                 <p-select
+                  id="lead-budgetEvidence"
                   name="budgetEvidence"
                   [options]="evidenceOptionsForFactor('budget')"
                   optionLabel="label"
@@ -667,6 +727,7 @@
                   [(ngModel)]="form.budgetEvidence"
                   [disabled]="isEvidenceDisabled(form.budgetAvailability)"
                   placeholder="Select evidence"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -683,9 +744,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Readiness to spend</label>
+              <div class="form-field">
+                <label for="lead-readinessToSpend">Readiness to spend</label>
                 <p-select
+                  id="lead-readinessToSpend"
                   name="readinessToSpend"
                   [options]="readinessOptions"
                   optionLabel="label"
@@ -693,6 +755,7 @@
                   [(ngModel)]="form.readinessToSpend"
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Unknown / not yet discussed"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -709,9 +772,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Evidence source</label>
+              <div class="form-field">
+                <label for="lead-readinessEvidence">Evidence source</label>
                 <p-select
+                  id="lead-readinessEvidence"
                   name="readinessEvidence"
                   [options]="evidenceOptionsForFactor('readiness')"
                   optionLabel="label"
@@ -719,6 +783,7 @@
                   [(ngModel)]="form.readinessEvidence"
                   [disabled]="isEvidenceDisabled(form.readinessToSpend)"
                   placeholder="Select evidence"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -735,9 +800,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Buying timeline</label>
+              <div class="form-field">
+                <label for="lead-buyingTimeline">Buying timeline</label>
                 <p-select
+                  id="lead-buyingTimeline"
                   name="buyingTimeline"
                   [options]="timelineOptions"
                   optionLabel="label"
@@ -745,6 +811,7 @@
                   [(ngModel)]="form.buyingTimeline"
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Unknown / not yet discussed"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -761,9 +828,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Evidence source</label>
+              <div class="form-field">
+                <label for="lead-timelineEvidence">Evidence source</label>
                 <p-select
+                  id="lead-timelineEvidence"
                   name="timelineEvidence"
                   [options]="evidenceOptionsForFactor('timeline')"
                   optionLabel="label"
@@ -771,6 +839,7 @@
                   [(ngModel)]="form.timelineEvidence"
                   [disabled]="isEvidenceDisabled(form.buyingTimeline)"
                   placeholder="Select evidence"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -787,9 +856,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Problem severity</label>
+              <div class="form-field">
+                <label for="lead-problemSeverity">Problem severity</label>
                 <p-select
+                  id="lead-problemSeverity"
                   name="problemSeverity"
                   [options]="problemOptions"
                   optionLabel="label"
@@ -797,6 +867,7 @@
                   [(ngModel)]="form.problemSeverity"
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Unknown / not yet discussed"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -813,9 +884,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Evidence source</label>
+              <div class="form-field">
+                <label for="lead-problemEvidence">Evidence source</label>
                 <p-select
+                  id="lead-problemEvidence"
                   name="problemEvidence"
                   [options]="evidenceOptionsForFactor('problem')"
                   optionLabel="label"
@@ -823,6 +895,7 @@
                   [(ngModel)]="form.problemEvidence"
                   [disabled]="isEvidenceDisabled(form.problemSeverity)"
                   placeholder="Select evidence"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -839,9 +912,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Economic buyer</label>
+              <div class="form-field">
+                <label for="lead-economicBuyer">Economic buyer</label>
                 <p-select
+                  id="lead-economicBuyer"
                   name="economicBuyer"
                   [options]="economicBuyerOptions"
                   optionLabel="label"
@@ -849,6 +923,7 @@
                   [(ngModel)]="form.economicBuyer"
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Unknown / not yet discussed"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -865,9 +940,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Evidence source</label>
+              <div class="form-field">
+                <label for="lead-economicBuyerEvidence">Evidence source</label>
                 <p-select
+                  id="lead-economicBuyerEvidence"
                   name="economicBuyerEvidence"
                   [options]="evidenceOptionsForFactor('economicBuyer')"
                   optionLabel="label"
@@ -875,6 +951,7 @@
                   [(ngModel)]="form.economicBuyerEvidence"
                   [disabled]="isEvidenceDisabled(form.economicBuyer)"
                   placeholder="Select evidence"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -891,8 +968,8 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>
+              <div class="form-field">
+                <label for="lead-icpFit">
                   ICP fit
                   <i
                     class="pi pi-info-circle info-icon"
@@ -901,6 +978,7 @@
                   ></i>
                 </label>
                 <p-select
+                  id="lead-icpFit"
                   name="icpFit"
                   [options]="icpFitOptions"
                   optionLabel="label"
@@ -908,6 +986,7 @@
                   [(ngModel)]="form.icpFit"
                   (ngModelChange)="onQualificationFactorChange()"
                   placeholder="Unknown / not yet discussed"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -924,9 +1003,10 @@
                   </ng-template>
                 </p-select>
               </div>
-              <div class="field">
-                <label>Evidence source</label>
+              <div class="form-field">
+                <label for="lead-icpFitEvidence">Evidence source</label>
                 <p-select
+                  id="lead-icpFitEvidence"
                   name="icpFitEvidence"
                   [options]="evidenceOptionsForFactor('icpFit')"
                   optionLabel="label"
@@ -934,6 +1014,7 @@
                   [(ngModel)]="form.icpFitEvidence"
                   [disabled]="isEvidenceDisabled(form.icpFit)"
                   placeholder="Select evidence"
+                  appendTo="body"
                   class="w-full"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
@@ -973,7 +1054,7 @@
               <p-accordion-content>
                 <section class="form-section form-section--qualification form-section--accordion-body">
                   <div class="form-grid">
-              <div class="field full-row" *ngIf="isEditMode()">
+              <div class="form-field full-row" *ngIf="isEditMode()">
                 <div class="score-breakdown">
                   <div class="score-breakdown__header">
                     <div class="score-breakdown__title">
@@ -1084,11 +1165,12 @@
               <p-accordion-content>
                 <section class="form-section form-section--qualification form-section--accordion-body">
                   <div class="form-grid">
-              <div class="field full-row">
-                <label>Context &amp; supporting notes <span class="required" *ngIf="form.status === 'Qualified'">*</span></label>
+              <div class="form-field full-row">
+                <label for="lead-qualifiedNotes">Context &amp; supporting notes <span class="required" *ngIf="form.status === 'Qualified'">*</span></label>
                 <p class="hint-text compact">Context only. Does not change Score.</p>
                 <textarea
                   pTextarea
+                  id="lead-qualifiedNotes"
                   name="qualifiedNotes"
                   rows="5"
                   placeholder="Key context, objections, and next steps (non-scoring)"
@@ -1116,19 +1198,21 @@
               <p-accordion-content>
                 <section class="form-section form-section--qualification form-section--accordion-body">
                   <div class="form-grid">
-              <div class="field" *ngIf="form.status === 'Nurture'">
-                <label>Nurture follow-up date <span class="required">*</span></label>
+              <div class="form-field" *ngIf="form.status === 'Nurture'">
+                <label for="lead-nurtureFollowUp">Nurture follow-up date <span class="required">*</span></label>
                 <p-datepicker
+                  id="lead-nurtureFollowUp"
                   name="nurtureFollowUpAtUtc"
                   [(ngModel)]="form.nurtureFollowUpAtUtc"
                   appendTo="body"
                   styleClass="w-full"
                 ></p-datepicker>
               </div>
-              <div class="field full-row" *ngIf="form.status === 'Disqualified'">
-                <label>Disqualified reason <span class="required">*</span></label>
+              <div class="form-field full-row" *ngIf="form.status === 'Disqualified'">
+                <label for="lead-disqualifiedReason">Disqualified reason <span class="required">*</span></label>
                 <textarea
                   pTextarea
+                  id="lead-disqualifiedReason"
                   name="disqualifiedReason"
                   rows="4"
                   placeholder="Reason for disqualification"
@@ -1136,10 +1220,11 @@
                   [(ngModel)]="form.disqualifiedReason"
                 ></textarea>
               </div>
-              <div class="field full-row" *ngIf="form.status === 'Lost'">
-                <label>Loss reason <span class="required">*</span></label>
+              <div class="form-field full-row" *ngIf="form.status === 'Lost'">
+                <label for="lead-lossReason">Loss reason <span class="required">*</span></label>
                 <textarea
                   pTextarea
+                  id="lead-lossReason"
                   name="lossReason"
                   rows="3"
                   placeholder="Primary reason the lead was lost"
@@ -1147,20 +1232,27 @@
                   [(ngModel)]="form.lossReason"
                 ></textarea>
               </div>
-              <div class="field" *ngIf="form.status === 'Lost'">
-                <label>Competitor <span class="required">*</span></label>
-                <input
-                  pInputText
-                  name="lossCompetitor"
-                  placeholder="Competitor name"
-                  class="w-full"
-                  [(ngModel)]="form.lossCompetitor"
-                />
+              <div class="form-field" *ngIf="form.status === 'Lost'">
+                <label for="lead-competitor">Competitor <span class="required">*</span></label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--danger">
+                    <i class="pi pi-shield"></i>
+                  </p-inputgroup-addon>
+                  <input
+                    pInputText
+                    id="lead-competitor"
+                    name="lossCompetitor"
+                    placeholder="Competitor name"
+                    class="w-full"
+                    [(ngModel)]="form.lossCompetitor"
+                  />
+                </p-inputgroup>
               </div>
-              <div class="field full-row" *ngIf="form.status === 'Lost'">
-                <label>Loss notes <span class="required">*</span></label>
+              <div class="form-field full-row" *ngIf="form.status === 'Lost'">
+                <label for="lead-lossNotes">Loss notes <span class="required">*</span></label>
                 <textarea
                   pTextarea
+                  id="lead-lossNotes"
                   name="lossNotes"
                   rows="4"
                   placeholder="Context and details about the loss"
@@ -1194,9 +1286,10 @@
                 <section class="form-section cadence-section form-section--accordion-body">
                   <p class="hint-text compact" *ngIf="followUpHint()">{{ followUpHint() }}</p>
                   <div class="cadence-grid">
-              <div class="field">
-                <label>Channel</label>
+              <div class="form-field">
+                <label for="lead-cadenceChannel">Channel</label>
                 <p-select
+                  id="lead-cadenceChannel"
                   [options]="cadenceChannelOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -1207,9 +1300,10 @@
                   styleClass="w-full cadence-input"
                 ></p-select>
               </div>
-              <div class="field">
-                <label>Next step due date</label>
+              <div class="form-field">
+                <label for="lead-cadenceNextStep">Next step due date</label>
                 <p-datepicker
+                  id="lead-cadenceNextStep"
                   name="cadenceNextStepLocal"
                   [(ngModel)]="cadenceNextStepLocal"
                   [showTime]="true"
@@ -1219,15 +1313,21 @@
                   [disabled]="cadenceSubmitting()"
                 ></p-datepicker>
               </div>
-              <div class="field full-row">
-                <label>Outcome</label>
-                <input
-                  pInputText
-                  class="cadence-input"
-                  name="cadenceOutcome"
-                  [(ngModel)]="cadenceOutcome"
-                  placeholder="Connected, voicemail, no response, meeting booked..."
-                />
+              <div class="form-field full-row">
+                <label for="lead-outcome">Outcome</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--success">
+                    <i class="pi pi-check-circle"></i>
+                  </p-inputgroup-addon>
+                  <input
+                    pInputText
+                    id="lead-outcome"
+                    class="cadence-input"
+                    name="cadenceOutcome"
+                    [(ngModel)]="cadenceOutcome"
+                    placeholder="Connected, voicemail, no response, meeting booked..."
+                  />
+                </p-inputgroup>
               </div>
                   </div>
                   <div class="cadence-actions">

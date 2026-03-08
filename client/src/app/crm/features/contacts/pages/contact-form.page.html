@@ -57,25 +57,46 @@
               Contact details
             </h2>
             <div class="form-grid">
-              <div class="field">
-                <label>First name <span class="required">*</span></label>
-                <input pInputText name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" class="w-full" />
+              <div class="form-field">
+                <label for="contact-firstName">First name <span class="required">*</span></label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--name">
+                    <i class="pi pi-user"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-firstName" name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" />
+                </p-inputgroup>
               </div>
-              <div class="field">
-                <label>Last name <span class="required">*</span></label>
-                <input pInputText name="lastName" [(ngModel)]="form.lastName" required placeholder="Last name" class="w-full" />
+              <div class="form-field">
+                <label for="contact-lastName">Last name <span class="required">*</span></label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--name">
+                    <i class="pi pi-user"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-lastName" name="lastName" [(ngModel)]="form.lastName" required placeholder="Last name" />
+                </p-inputgroup>
               </div>
-              <div class="field">
-                <label>Email</label>
-                <input pInputText name="email" [(ngModel)]="form.email" type="email" placeholder="name@company.com" class="w-full" />
+              <div class="form-field">
+                <label for="contact-email">Email</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--email">
+                    <i class="pi pi-envelope"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-email" name="email" [(ngModel)]="form.email" type="email" placeholder="name@company.com" />
+                </p-inputgroup>
               </div>
-              <div class="field">
-                <label>Job title</label>
-                <input pInputText name="jobTitle" [(ngModel)]="form.jobTitle" placeholder="Role or title" class="w-full" />
+              <div class="form-field">
+                <label for="contact-jobTitle">Job title</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--info">
+                    <i class="pi pi-id-card"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-jobTitle" name="jobTitle" [(ngModel)]="form.jobTitle" placeholder="Role or title" />
+                </p-inputgroup>
               </div>
-              <div class="field">
-                <label>Buying role</label>
+              <div class="form-field">
+                <label for="contact-buyingRole">Buying role</label>
                 <p-select
+                  id="contact-buyingRole"
                   [options]="buyingRoleOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -83,15 +104,26 @@
                   [(ngModel)]="form.buyingRole"
                   placeholder="Select buying role"
                   styleClass="w-full"
+                  appendTo="body"
                 ></p-select>
               </div>
-              <div class="field">
-                <label>Phone</label>
-                <input pInputText name="phone" [(ngModel)]="form.phone" placeholder="+1 555-0101" class="w-full" />
+              <div class="form-field">
+                <label for="contact-phone">Phone</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--phone">
+                    <i class="pi pi-phone"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-phone" name="phone" [(ngModel)]="form.phone" placeholder="+1 555-0101" />
+                </p-inputgroup>
               </div>
-              <div class="field">
-                <label>Mobile</label>
-                <input pInputText name="mobile" [(ngModel)]="form.mobile" placeholder="+1 555-0102" class="w-full" />
+              <div class="form-field">
+                <label for="contact-mobile">Mobile</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--phone">
+                    <i class="pi pi-phone"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-mobile" name="mobile" [(ngModel)]="form.mobile" placeholder="+1 555-0102" />
+                </p-inputgroup>
               </div>
             </div>
           </section>
@@ -102,9 +134,10 @@
               Account context
             </h2>
             <div class="form-grid">
-              <div class="field">
-                <label>Account</label>
+              <div class="form-field">
+                <label for="contact-accountId">Account</label>
                 <p-select
+                  id="contact-accountId"
                   [options]="accountOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -112,11 +145,13 @@
                   [(ngModel)]="form.accountId"
                   placeholder="Link to account"
                   styleClass="w-full"
+                  appendTo="body"
                 ></p-select>
               </div>
-              <div class="field">
-                <label>Lifecycle</label>
+              <div class="form-field">
+                <label for="contact-lifecycleStage">Lifecycle</label>
                 <p-select
+                  id="contact-lifecycleStage"
                   [options]="lifecycleOptions"
                   optionLabel="label"
                   optionValue="value"
@@ -124,15 +159,21 @@
                   [(ngModel)]="form.lifecycleStage"
                   placeholder="Select lifecycle"
                   styleClass="w-full"
+                  appendTo="body"
                 ></p-select>
               </div>
-              <div class="field">
-                <label>Activity score</label>
-                <p-inputNumber name="activityScore" [(ngModel)]="form.activityScore" [min]="0" [max]="100" class="w-full"></p-inputNumber>
+              <div class="form-field">
+                <label for="contact-activityScore">Activity score</label>
+                <p-inputNumber id="contact-activityScore" name="activityScore" [(ngModel)]="form.activityScore" [min]="0" [max]="100" class="w-full"></p-inputNumber>
               </div>
-              <div class="field">
-                <label>LinkedIn</label>
-                <input pInputText name="linkedInProfile" [(ngModel)]="form.linkedInProfile" placeholder="https://linkedin.com/in/..." class="w-full" />
+              <div class="form-field">
+                <label for="contact-linkedInProfile">LinkedIn</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--website">
+                    <i class="pi pi-link"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-linkedInProfile" name="linkedInProfile" [(ngModel)]="form.linkedInProfile" placeholder="https://linkedin.com/in/..." />
+                </p-inputgroup>
               </div>
             </div>
           </section>

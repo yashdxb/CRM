@@ -180,48 +180,54 @@
     <form class="dialog-form" [formGroup]="securityForm" (ngSubmit)="saveSecurityLevel()">
       <div class="dialog-body">
         <div class="form-grid">
-          <div class="form-row">
-            <label>Name <span class="required">*</span></label>
-            <p-inputGroup>
-              <p-inputGroupAddon>
-                <i class="pi pi-shield"></i>
-              </p-inputGroupAddon>
-              <input pInputText formControlName="name" placeholder="e.g. High Risk Approval" />
-            </p-inputGroup>
-            <small class="field-hint">Shown in role configuration dropdowns.</small>
+          <div class="form-field">
+            <label for="security-name">Name <span class="required">*</span></label>
+            <div class="form-field__input">
+              <p-inputGroup>
+                <p-inputGroupAddon class="icon-addon icon-addon--name">
+                  <i class="pi pi-shield"></i>
+                </p-inputGroupAddon>
+                <input pInputText id="security-name" formControlName="name" placeholder="e.g. High Risk Approval" />
+              </p-inputGroup>
+              <small class="field-hint">Shown in role configuration dropdowns.</small>
+            </div>
           </div>
-          <div class="form-row">
-            <label>Rank</label>
-            <p-inputGroup>
-              <p-inputGroupAddon>
-                <i class="pi pi-sort-numeric-up"></i>
-              </p-inputGroupAddon>
-              <p-inputNumber
-                formControlName="rank"
-                [min]="0"
-                [showButtons]="true"
-                styleClass="w-full"
-                inputStyleClass="w-full"
-              ></p-inputNumber>
-            </p-inputGroup>
-            <small class="field-hint">Lower rank = lower clearance. Used for comparisons.</small>
+          <div class="form-field">
+            <label for="security-rank">Rank</label>
+            <div class="form-field__input">
+              <p-inputGroup>
+                <p-inputGroupAddon class="icon-addon icon-addon--info">
+                  <i class="pi pi-sort-numeric-up"></i>
+                </p-inputGroupAddon>
+                <p-inputNumber
+                  id="security-rank"
+                  formControlName="rank"
+                  [min]="0"
+                  [showButtons]="true"
+                  styleClass="w-full"
+                  inputStyleClass="w-full"
+                ></p-inputNumber>
+              </p-inputGroup>
+              <small class="field-hint">Lower rank = lower clearance. Used for comparisons.</small>
+            </div>
           </div>
         </div>
-        <div class="form-row">
-          <label>Description</label>
+        <div class="form-field full-row">
+          <label for="security-description">Description</label>
           <p-inputGroup>
-            <p-inputGroupAddon>
+            <p-inputGroupAddon class="icon-addon icon-addon--info">
               <i class="pi pi-align-left"></i>
             </p-inputGroupAddon>
             <textarea
               pInputText
+              id="security-description"
               formControlName="description"
               rows="3"
               placeholder="Optional description of this level"
             ></textarea>
           </p-inputGroup>
         </div>
-        <div class="form-row checkbox-row">
+        <div class="form-field checkbox-row">
           <p-checkbox formControlName="isDefault" [binary]="true"></p-checkbox>
           <div class="checkbox-copy">
             <span>Set as default for new roles</span>

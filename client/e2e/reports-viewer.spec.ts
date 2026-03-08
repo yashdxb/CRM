@@ -17,7 +17,8 @@ async function login(page, request) {
     throw new Error('Unable to authenticate against the API for UI test.');
   }
 
-  await page.addInitScript((token) => {
+  await page.goto('/');
+  await page.evaluate((token) => {
     localStorage.setItem('auth_token', token as string);
     localStorage.setItem('tenant_key', 'default');
   }, payload.accessToken);
@@ -37,11 +38,9 @@ test.describe('Reports Experience', () => {
     await page.goto('/app/reports');
 
     await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();
-
-    const hasReportServer = await page.locator('text=Report Library').first().isVisible().catch(() => false);
-    const hasUnavailable = await page.locator('text=Report Server is not configured for this environment').first().isVisible().catch(() => false);
-
-    expect(hasReportServer || hasUnavailable).toBeTruthy();
+    await expect(page.getByRole('heading', { name: 'Report Library' })).toBeVisible();
+    await expect(page.locator('.catalog-card')).toHaveCount(6);
+    await expect(page.locator('text=Report Server is not configured for this environment')).toHaveCount(0);
 
     const legacyErrors = consoleErrors.filter((e) =>
       e.includes("reading 'wrapper'") ||
@@ -74,19 +73,41 @@ test.describe('Reports Experience', () => {
     await expect(page.locator('text=Loading legacy report designer')).toHaveCount(0);
   });
 
-  test('owner-filtered reports show a CRM filter form before rendering', async ({ page, request }) => {
+  test('crm library exposes the six essential reports and their filter forms', async ({ page, request }) => {
     await login(page, request);
     await page.goto('/app/reports');
 
-    const reportCard = page.getByRole('heading', { name: 'Open Opportunities by Owner' }).first();
-    await expect(reportCard).toBeVisible();
-    await reportCard.click();
+    const expectedReports = [
+      'Pipeline by Stage',
+      'Open Opportunities by Owner',
+      'Pending Deal Approval',
+      'Lead Conversion Summary',
+      'Sales Activities by Owner',
+      'Forecast Summary'
+    ];
 
+    for (const reportName of expectedReports) {
+      await expect(page.locator('.catalog-card-title', { hasText: reportName })).toBeVisible();
+    }
+
+    await page.locator('.catalog-card', { hasText: 'Open Opportunities by Owner' }).click();
     await expect(page.getByRole('heading', { name: 'Filters' })).toBeVisible();
-    await expect(page.getByText('Choose filter values before loading the report.')).toBeVisible();
-    await expect(page.getByText('Pick filter values above, then run the report.')).toBeVisible();
-
+    await expect(page.locator('label', { hasText: 'Owner' })).toBeVisible();
+    await expect(page.locator('label', { hasText: 'Stage' })).toBeVisible();
+    await expect(page.locator('label', { hasText: 'Date range' })).toBeVisible();
     await page.getByRole('button', { name: 'Run Report' }).click();
     await expect(page.locator('tr-viewer')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Back to Catalog' }).click();
+    await page.locator('.catalog-card', { hasText: 'Pending Deal Approval' }).click();
+    await expect(page.locator('label', { hasText: 'Owner' })).toBeVisible();
+    await expect(page.locator('label', { hasText: 'Approval status' })).toBeVisible();
+    await expect(page.locator('label', { hasText: 'Requested date' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Back to Catalog' }).click();
+    await page.locator('.catalog-card', { hasText: 'Pipeline by Stage' }).click();
+    await expect(page.locator('label', { hasText: 'Date range' })).toBeVisible();
+    await expect(page.locator('label', { hasText: 'Owner' })).toBeVisible();
+    await expect(page.locator('label', { hasText: 'Stage' })).toBeVisible();
   });
 });

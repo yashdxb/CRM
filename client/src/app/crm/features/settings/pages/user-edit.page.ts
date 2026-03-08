@@ -6,6 +6,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
@@ -39,6 +41,8 @@ import { ReferenceDataService } from '../../../../core/services/reference-data.s
     AccordionModule,
     ButtonModule,
     InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     MultiSelectModule,
     SelectModule,
     TagModule,

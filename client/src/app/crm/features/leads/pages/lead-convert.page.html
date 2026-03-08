@@ -44,9 +44,12 @@
               <p-checkbox [(ngModel)]="form().createAccount" name="createAccount" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
               <span>Create new account</span>
             </label>
-            <div class="field" *ngIf="form().createAccount">
-              <label>Account name</label>
-              <input pInputText name="accountName" [(ngModel)]="form().accountName" class="w-full" />
+            <div class="form-field" *ngIf="form().createAccount">
+              <label for="lc-accountName">Account name</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--company"><i class="pi pi-building"></i></p-inputgroup-addon>
+                <input pInputText id="lc-accountName" name="accountName" [(ngModel)]="form().accountName" placeholder="Account name" />
+              </p-inputgroup>
             </div>
           </div>
         </section>
@@ -61,8 +64,8 @@
               <p-checkbox [(ngModel)]="form().createContact" name="createContact" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
               <span>Create contact from lead details</span>
             </label>
-            <div class="field">
-              <label>Contact</label>
+            <div class="form-field">
+              <label for="lc-contact">Contact</label>
               <div class="value-pill">
                 {{ leadData.name }} • {{ leadData.email || 'No email' }}
               </div>
@@ -80,17 +83,20 @@
               <p-checkbox [(ngModel)]="form().createOpportunity" name="createOpportunity" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
               <span>Create opportunity</span>
             </label>
-            <div class="field" *ngIf="form().createOpportunity">
-              <label>Opportunity name</label>
-              <input pInputText name="opportunityName" [(ngModel)]="form().opportunityName" class="w-full" />
+            <div class="form-field" *ngIf="form().createOpportunity">
+              <label for="lc-opportunityName">Opportunity name</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--name"><i class="pi pi-user"></i></p-inputgroup-addon>
+                <input pInputText id="lc-opportunityName" name="opportunityName" [(ngModel)]="form().opportunityName" placeholder="Opportunity name" />
+              </p-inputgroup>
             </div>
-            <div class="field" *ngIf="form().createOpportunity">
-              <label>Amount</label>
-              <p-inputNumber name="amount" [(ngModel)]="form().amount" [min]="0" class="w-full"></p-inputNumber>
+            <div class="form-field" *ngIf="form().createOpportunity">
+              <label for="lc-amount">Amount</label>
+              <p-inputNumber id="lc-amount" name="amount" [(ngModel)]="form().amount" [min]="0" class="w-full"></p-inputNumber>
             </div>
-            <div class="field" *ngIf="form().createOpportunity">
-              <label>Expected close date</label>
-              <p-datePicker name="expectedCloseDate" [(ngModel)]="form().expectedCloseDate" [showIcon]="true" styleClass="w-full"></p-datePicker>
+            <div class="form-field" *ngIf="form().createOpportunity">
+              <label for="lc-expectedCloseDate">Expected close date</label>
+              <p-datePicker id="lc-expectedCloseDate" name="expectedCloseDate" [(ngModel)]="form().expectedCloseDate" [showIcon]="true" styleClass="w-full"></p-datePicker>
             </div>
           </div>
           <p class="hint" *ngIf="form().createOpportunity && !form().createAccount">
@@ -122,9 +128,10 @@
           </div>
 
           <div class="form-grid form-grid--2col">
-            <div class="field">
-              <label>Deal type</label>
+            <div class="form-field">
+              <label for="lc-dealType">Deal type</label>
               <p-select
+                id="lc-dealType"
                 appendTo="body"
                 [options]="dealTypeOptions"
                 optionLabel="label"
@@ -135,9 +142,10 @@
                 styleClass="w-full"
               ></p-select>
             </div>
-            <div class="field">
-              <label>Segment</label>
+            <div class="form-field">
+              <label for="lc-segment">Segment</label>
               <p-select
+                id="lc-segment"
                 appendTo="body"
                 [options]="segmentOptions"
                 optionLabel="label"
@@ -148,9 +156,10 @@
                 styleClass="w-full"
               ></p-select>
             </div>
-            <div class="field">
-              <label>Stage</label>
+            <div class="form-field">
+              <label for="lc-stage">Stage</label>
               <p-select
+                id="lc-stage"
                 appendTo="body"
                 [options]="stageOptions"
                 optionLabel="label"
@@ -161,9 +170,10 @@
                 styleClass="w-full"
               ></p-select>
             </div>
-            <div class="field">
-              <label>Velocity</label>
+            <div class="form-field">
+              <label for="lc-velocity">Velocity</label>
               <p-select
+                id="lc-velocity"
                 appendTo="body"
                 [options]="velocityOptions"
                 optionLabel="label"
@@ -196,10 +206,11 @@
               <p-checkbox [(ngModel)]="form().managerApproved" name="managerApproved" binary="true" (ngModelChange)="onFormChange()"></p-checkbox>
               <span>Manager approved</span>
             </label>
-            <div class="field" *ngIf="qualificationDecision().requiresOverrideReason">
-              <label>Override reason</label>
+            <div class="form-field full-row" *ngIf="qualificationDecision().requiresOverrideReason">
+              <label for="lc-overrideReason">Override reason</label>
               <textarea
                 pTextarea
+                id="lc-overrideReason"
                 name="overrideReason"
                 [(ngModel)]="form().overrideReason"
                 (ngModelChange)="onFormChange()"

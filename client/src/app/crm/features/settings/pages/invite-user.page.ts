@@ -4,6 +4,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
@@ -25,6 +27,8 @@ import { TimeZoneOption, getTimeZoneFlagUrl } from '../../../../core/models/time
     RouterLink,
     ButtonModule,
     InputTextModule,
+    InputGroupModule,
+    InputGroupAddonModule,
     SelectModule,
     MultiSelectModule,
     ToggleSwitchModule,
@@ -225,7 +229,7 @@ export class InviteUserPage {
   }
 
   private syncDomFormValues() {
-    const fullNameInput = this.document.getElementById('fullName') as HTMLInputElement | null;
+    const fullNameInput = this.document.getElementById('iu-fullName') as HTMLInputElement | null;
     if (fullNameInput) {
       const normalized = fullNameInput.value.trim();
       if (normalized !== this.form.controls.fullName.value) {
@@ -233,7 +237,7 @@ export class InviteUserPage {
       }
     }
 
-    const emailInput = this.document.getElementById('email') as HTMLInputElement | null;
+    const emailInput = this.document.getElementById('iu-email') as HTMLInputElement | null;
     if (emailInput) {
       const normalized = emailInput.value.trim().toLowerCase();
       if (normalized !== this.form.controls.email.value) {
@@ -241,7 +245,7 @@ export class InviteUserPage {
       }
     }
 
-    const temporaryPasswordInput = this.document.getElementById('temporaryPassword') as HTMLInputElement | null;
+    const temporaryPasswordInput = this.document.getElementById('iu-temporaryPassword') as HTMLInputElement | null;
     if (temporaryPasswordInput) {
       const normalized = temporaryPasswordInput.value.trim();
       if (normalized !== this.form.controls.temporaryPassword.value) {

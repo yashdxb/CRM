@@ -46,27 +46,24 @@
             </div>
           </section>
           <fieldset class="form-fieldset" [disabled]="loading()">
-            <section class="form-section">
+            <section class="form-section section--basic">
               <h2 class="section-title">
                 <i class="pi pi-user"></i>
                 Basic information
               </h2>
               
               <div class="form-grid">
-                <div class="field">
+                <div class="form-field">
                   <label for="customerName">Customer Name <span class="required">*</span></label>
-                  <input 
-                    pInputText 
-                    id="customerName"
-                    name="name" 
-                    [(ngModel)]="form.name" 
-                    required 
-                    placeholder="Enter customer name"
-                    class="w-full"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--name">
+                      <i class="pi pi-user"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="customerName" name="name" [(ngModel)]="form.name" required placeholder="Enter customer name" />
+                  </p-inputgroup>
                 </div>
                 
-                <div class="field">
+                <div class="form-field">
                   <label for="customerStatus">Lifecycle Stage</label>
                   <p-select
                     id="customerStatus"
@@ -76,12 +73,13 @@
                     name="status"
                     [(ngModel)]="form.lifecycleStage"
                     placeholder="Select status"
+                    appendTo="body"
                     styleClass="w-full"
                   ></p-select>
                 </div>
                 
-                <div class="field">
-                  <label for="parentAccountId">Parent account</label>
+                <div class="form-field">
+                  <label for="parentAccountId">Parent Account</label>
                   <p-select
                     id="parentAccountId"
                     [options]="parentAccountOptions()"
@@ -90,101 +88,89 @@
                     name="parentAccountId"
                     [(ngModel)]="form.parentAccountId"
                     placeholder="Select parent account"
+                    appendTo="body"
                     styleClass="w-full"
                   ></p-select>
                 </div>
 
-                <div class="field">
+                <div class="form-field">
                   <label for="customerIndustry">Industry</label>
-                  <input 
-                    pInputText 
-                    id="customerIndustry"
-                    name="industry" 
-                    [(ngModel)]="form.industry" 
-                    placeholder="e.g., Technology, Healthcare"
-                    class="w-full"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--industry">
+                      <i class="pi pi-building"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="customerIndustry" name="industry" [(ngModel)]="form.industry" placeholder="e.g., Technology, Healthcare" />
+                  </p-inputgroup>
                 </div>
 
-                <div class="field">
+                <div class="form-field">
                   <label for="customerCompany">Company</label>
-                  <input 
-                    pInputText 
-                    id="customerCompany"
-                    name="company" 
-                    [(ngModel)]="form.company" 
-                    placeholder="Company name"
-                    class="w-full"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--company">
+                      <i class="pi pi-briefcase"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="customerCompany" name="company" [(ngModel)]="form.company" placeholder="Company name" />
+                  </p-inputgroup>
                 </div>
               </div>
             </section>
 
-            <section class="form-section">
+            <section class="form-section section--contact">
               <h2 class="section-title">
                 <i class="pi pi-phone"></i>
                 Contact information
               </h2>
               
               <div class="form-grid">
-                <div class="field">
+                <div class="form-field">
                   <label for="customerEmail">Email Address</label>
-                  <input 
-                    pInputText 
-                    id="customerEmail"
-                    name="email" 
-                    type="email"
-                    [(ngModel)]="form.email" 
-                    placeholder="customer@example.com"
-                    class="w-full"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--email">
+                      <i class="pi pi-envelope"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="customerEmail" name="email" type="email" [(ngModel)]="form.email" placeholder="customer@example.com" />
+                  </p-inputgroup>
                 </div>
 
-                <div class="field">
+                <div class="form-field">
                   <label for="customerPhone">Phone Number</label>
-                  <input 
-                    pInputText 
-                    id="customerPhone"
-                    name="phone" 
-                    [(ngModel)]="form.phone" 
-                    placeholder="+1 (555) 000-0000"
-                    class="w-full"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--phone">
+                      <i class="pi pi-phone"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="customerPhone" name="phone" [(ngModel)]="form.phone" placeholder="+1 (555) 000-0000" />
+                  </p-inputgroup>
                 </div>
                 
-                <div class="field">
+                <div class="form-field">
                   <label for="customerWebsite">Website</label>
-                  <input 
-                    pInputText 
-                    id="customerWebsite"
-                    name="website" 
-                    [(ngModel)]="form.website" 
-                    placeholder="https://example.com"
-                    class="w-full"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--website">
+                      <i class="pi pi-globe"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="customerWebsite" name="website" [(ngModel)]="form.website" placeholder="https://example.com" />
+                  </p-inputgroup>
                 </div>
 
-                <div class="field">
+                <div class="form-field">
                   <label for="customerAddress">Address</label>
-                  <input 
-                    pInputText 
-                    id="customerAddress"
-                    name="address" 
-                    [(ngModel)]="form.address" 
-                    placeholder="Street address, City, Country"
-                    class="w-full"
-                  />
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--address">
+                      <i class="pi pi-map-marker"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="customerAddress" name="address" [(ngModel)]="form.address" placeholder="Street address, City, Country" />
+                  </p-inputgroup>
                 </div>
               </div>
             </section>
 
-            <section class="form-section">
+            <section class="form-section section--additional">
               <h2 class="section-title">
                 <i class="pi pi-file-edit"></i>
                 Additional information
               </h2>
               
-              <div class="field full-width">
+              <div class="form-field full-width">
                 <label for="customerDescription">Notes</label>
                 <textarea 
                   pTextarea 
@@ -219,7 +205,7 @@
       </main>
 
       <section class="form-container detail-container" *ngIf="isEditMode()">
-        <section class="form-section">
+        <section class="form-section section--workspace">
           <h2 class="section-title">
             <i class="pi pi-briefcase"></i>
             Customer workspace

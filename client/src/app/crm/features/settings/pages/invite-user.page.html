@@ -40,18 +40,28 @@
 
       <form [formGroup]="form" (ngSubmit)="handleSubmit()" class="form-layout">
         <div class="form-grid">
-          <div class="field">
-            <label for="fullName">Full name</label>
-            <input pInputText id="fullName" formControlName="fullName" placeholder="Jordan Patel" class="w-full" />
+          <div class="form-field">
+            <label for="iu-fullName">Full name <span class="required">*</span></label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--name">
+                <i class="pi pi-user"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="iu-fullName" formControlName="fullName" placeholder="Jordan Patel" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label for="email">Email</label>
-            <input pInputText id="email" formControlName="email" placeholder="user@example.com" class="w-full" />
+          <div class="form-field">
+            <label for="iu-email">Email <span class="required">*</span></label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--email">
+                <i class="pi pi-envelope"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="iu-email" formControlName="email" placeholder="user@example.com" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label for="timeZone">Time zone</label>
+          <div class="form-field">
+            <label for="iu-timeZone">Time zone <span class="required">*</span></label>
             <p-select
-              inputId="timeZone"
+              inputId="iu-timeZone"
               formControlName="timeZone"
               [options]="timezoneOptions"
               optionLabel="label"
@@ -90,10 +100,10 @@
               </ng-template>
             </p-select>
           </div>
-          <div class="field">
-            <label for="locale">Locale</label>
+          <div class="form-field">
+            <label for="iu-locale">Locale <span class="required">*</span></label>
             <p-select
-              inputId="locale"
+              inputId="iu-locale"
               formControlName="locale"
               [options]="localeOptions"
               optionLabel="label"
@@ -102,10 +112,10 @@
               styleClass="w-full"
             ></p-select>
           </div>
-          <div class="field full">
-            <label for="roles">Roles</label>
+          <div class="form-field full-row">
+            <label for="iu-roles">Roles</label>
             <p-multiSelect
-              inputId="roles"
+              inputId="iu-roles"
               formControlName="roleIds"
               [options]="rolesAsOptions()"
               optionLabel="label"
@@ -116,17 +126,21 @@
               styleClass="w-full"
             ></p-multiSelect>
           </div>
-          <div class="field full">
-            <label for="temporaryPassword">Temporary password</label>
+          <div class="form-field full-row">
+            <label for="iu-temporaryPassword">Temporary password</label>
             <div class="password-field">
-              <input
-                pInputText
-                id="temporaryPassword"
-                type="text"
-                formControlName="temporaryPassword"
-                placeholder="Optional"
-                class="w-full"
-              />
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--warning">
+                  <i class="pi pi-lock"></i>
+                </p-inputgroup-addon>
+                <input
+                  pInputText
+                  id="iu-temporaryPassword"
+                  type="text"
+                  formControlName="temporaryPassword"
+                  placeholder="Optional"
+                />
+              </p-inputgroup>
               <button type="button" class="btn-generate" [disabled]="!canManageAdmin()" (click)="generatePassword()">
                 <i class="pi pi-sync"></i>
                 Generate

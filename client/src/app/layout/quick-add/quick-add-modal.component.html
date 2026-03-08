@@ -10,151 +10,213 @@
       (onHide)="close.emit()"
     >
       <div class="quick-add">
-        <div class="quick-add__type">
-          <label>Record type</label>
+        <div class="form-field">
+          <label for="qa-recordType">Record type</label>
           <p-select
+            id="qa-recordType"
             [options]="quickAddTypes"
             optionLabel="label"
             optionValue="value"
             [(ngModel)]="quickAddType"
             [ngModelOptions]="{ standalone: true }"
+            appendTo="body"
           ></p-select>
         </div>
 
         <div *ngIf="quickAddType === 'lead'" class="quick-add__grid">
-          <div class="field">
-            <label>Name</label>
-            <input pInputText [(ngModel)]="quickAddLeadName" [ngModelOptions]="{ standalone: true }" placeholder="Lead name" />
+          <div class="form-field">
+            <label for="qa-leadName">Name</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--name">
+                <i class="pi pi-user"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-leadName" [(ngModel)]="quickAddLeadName" [ngModelOptions]="{ standalone: true }" placeholder="Lead name" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label>Company</label>
-            <input pInputText [(ngModel)]="quickAddLeadCompany" [ngModelOptions]="{ standalone: true }" placeholder="Company" />
+          <div class="form-field">
+            <label for="qa-leadCompany">Company</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--company">
+                <i class="pi pi-building"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-leadCompany" [(ngModel)]="quickAddLeadCompany" [ngModelOptions]="{ standalone: true }" placeholder="Company" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label>Email</label>
-            <input pInputText [(ngModel)]="quickAddLeadEmail" [ngModelOptions]="{ standalone: true }" placeholder="name@company.com" />
+          <div class="form-field">
+            <label for="qa-leadEmail">Email</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--email">
+                <i class="pi pi-envelope"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-leadEmail" [(ngModel)]="quickAddLeadEmail" [ngModelOptions]="{ standalone: true }" placeholder="name@company.com" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label>Phone</label>
-            <input pInputText [(ngModel)]="quickAddLeadPhone" [ngModelOptions]="{ standalone: true }" placeholder="+1 555 000 0000" />
+          <div class="form-field">
+            <label for="qa-leadPhone">Phone</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--phone">
+                <i class="pi pi-phone"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-leadPhone" [(ngModel)]="quickAddLeadPhone" [ngModelOptions]="{ standalone: true }" placeholder="+1 555 000 0000" />
+            </p-inputgroup>
           </div>
         </div>
 
         <div *ngIf="quickAddType === 'contact'" class="quick-add__grid">
-          <div class="field">
-            <label>Name</label>
-            <input pInputText [(ngModel)]="quickAddContactName" [ngModelOptions]="{ standalone: true }" placeholder="Contact name" />
+          <div class="form-field">
+            <label for="qa-contactName">Name</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--name">
+                <i class="pi pi-user"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-contactName" [(ngModel)]="quickAddContactName" [ngModelOptions]="{ standalone: true }" placeholder="Contact name" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label>Account</label>
+          <div class="form-field">
+            <label for="qa-contactAccount">Account</label>
             <p-select
+              id="qa-contactAccount"
               [options]="accountOptions()"
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddContactAccountId"
               [ngModelOptions]="{ standalone: true }"
               placeholder="Select account"
+              appendTo="body"
             ></p-select>
           </div>
-          <div class="field">
-            <label>Email</label>
-            <input pInputText [(ngModel)]="quickAddContactEmail" [ngModelOptions]="{ standalone: true }" placeholder="name@company.com" />
+          <div class="form-field">
+            <label for="qa-contactEmail">Email</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--email">
+                <i class="pi pi-envelope"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-contactEmail" [(ngModel)]="quickAddContactEmail" [ngModelOptions]="{ standalone: true }" placeholder="name@company.com" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label>Phone</label>
-            <input pInputText [(ngModel)]="quickAddContactPhone" [ngModelOptions]="{ standalone: true }" placeholder="+1 555 000 0000" />
+          <div class="form-field">
+            <label for="qa-contactPhone">Phone</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--phone">
+                <i class="pi pi-phone"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-contactPhone" [(ngModel)]="quickAddContactPhone" [ngModelOptions]="{ standalone: true }" placeholder="+1 555 000 0000" />
+            </p-inputgroup>
           </div>
         </div>
 
         <div *ngIf="quickAddType === 'activity'" class="quick-add__grid">
-          <div class="field">
-            <label>Subject</label>
-            <input pInputText [(ngModel)]="quickAddActivitySubject" [ngModelOptions]="{ standalone: true }" placeholder="Follow up call" />
+          <div class="form-field">
+            <label for="qa-activitySubject">Subject</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--name">
+                <i class="pi pi-tag"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-activitySubject" [(ngModel)]="quickAddActivitySubject" [ngModelOptions]="{ standalone: true }" placeholder="Follow up call" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label>Type</label>
+          <div class="form-field">
+            <label for="qa-activityType">Type</label>
             <p-select
+              id="qa-activityType"
               [options]="activityTypeOptions"
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityType"
               [ngModelOptions]="{ standalone: true }"
+              appendTo="body"
             ></p-select>
           </div>
-          <div class="field">
-            <label>Priority</label>
+          <div class="form-field">
+            <label for="qa-activityPriority">Priority</label>
             <p-select
+              id="qa-activityPriority"
               [options]="activityPriorityOptions"
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityPriority"
               [ngModelOptions]="{ standalone: true }"
+              appendTo="body"
             ></p-select>
           </div>
-          <div class="field">
-            <label>Due date</label>
-            <p-datePicker [(ngModel)]="quickAddActivityDueDate" [ngModelOptions]="{ standalone: true }"></p-datePicker>
+          <div class="form-field">
+            <label for="qa-activityDueDate">Due date</label>
+            <p-datePicker id="qa-activityDueDate" [(ngModel)]="quickAddActivityDueDate" [ngModelOptions]="{ standalone: true }" appendTo="body"></p-datePicker>
           </div>
-          <div class="field full">
-            <label>Outcome</label>
+          <div class="form-field full-row">
+            <label for="qa-activityOutcome">Outcome</label>
             <textarea
               pTextarea
+              id="qa-activityOutcome"
               [(ngModel)]="quickAddActivityOutcome"
               [ngModelOptions]="{ standalone: true }"
               rows="2"
               placeholder="Capture outcome and key takeaways"
             ></textarea>
           </div>
-          <div class="field">
-            <label>Next step subject</label>
-            <input pInputText [(ngModel)]="quickAddActivityNextStepSubject" [ngModelOptions]="{ standalone: true }" placeholder="Follow-up task" />
+          <div class="form-field">
+            <label for="qa-activityNextStepSubject">Next step subject</label>
+            <p-inputgroup>
+              <p-inputgroup-addon class="icon-addon icon-addon--info">
+                <i class="pi pi-info-circle"></i>
+              </p-inputgroup-addon>
+              <input pInputText id="qa-activityNextStepSubject" [(ngModel)]="quickAddActivityNextStepSubject" [ngModelOptions]="{ standalone: true }" placeholder="Follow-up task" />
+            </p-inputgroup>
           </div>
-          <div class="field">
-            <label>Next step due date</label>
-            <p-datePicker [(ngModel)]="quickAddActivityNextStepDueDate" [ngModelOptions]="{ standalone: true }"></p-datePicker>
+          <div class="form-field">
+            <label for="qa-activityNextStepDueDate">Next step due</label>
+            <p-datePicker id="qa-activityNextStepDueDate" [(ngModel)]="quickAddActivityNextStepDueDate" [ngModelOptions]="{ standalone: true }" appendTo="body"></p-datePicker>
           </div>
-          <div class="field">
-            <label>Related to</label>
+          <div class="form-field">
+            <label for="qa-activityRelatedTo">Related to</label>
             <p-select
+              id="qa-activityRelatedTo"
               [options]="activityRelationOptions"
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationType"
               (ngModelChange)="onQuickAddRelationTypeChange($event)"
               [ngModelOptions]="{ standalone: true }"
+              appendTo="body"
             ></p-select>
           </div>
-          <div class="field" *ngIf="quickAddActivityRelationType === 'Account'">
-            <label>Account</label>
+          <div class="form-field" *ngIf="quickAddActivityRelationType === 'Account'">
+            <label for="qa-activityAccount">Account</label>
             <p-select
+              id="qa-activityAccount"
               [options]="accountOptions()"
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationId"
               [ngModelOptions]="{ standalone: true }"
               placeholder="Select account"
+              appendTo="body"
             ></p-select>
           </div>
-          <div class="field" *ngIf="quickAddActivityRelationType === 'Contact'">
-            <label>Contact</label>
+          <div class="form-field" *ngIf="quickAddActivityRelationType === 'Contact'">
+            <label for="qa-activityContact">Contact</label>
             <p-select
+              id="qa-activityContact"
               [options]="contactOptions()"
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationId"
               [ngModelOptions]="{ standalone: true }"
               placeholder="Select contact"
+              appendTo="body"
             ></p-select>
           </div>
-          <div class="field" *ngIf="quickAddActivityRelationType === 'Opportunity'">
-            <label>Opportunity</label>
+          <div class="form-field" *ngIf="quickAddActivityRelationType === 'Opportunity'">
+            <label for="qa-activityOpportunity">Opportunity</label>
             <p-select
+              id="qa-activityOpportunity"
               [options]="opportunityOptions()"
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationId"
               [ngModelOptions]="{ standalone: true }"
               placeholder="Select opportunity"
+              appendTo="body"
             ></p-select>
           </div>
         </div>

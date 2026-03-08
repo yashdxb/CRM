@@ -205,13 +205,37 @@
 
   .filter-form-grid {
     display: grid;
-    grid-template-columns: minmax(240px, 340px);
+    grid-template-columns: repeat(auto-fit, minmax(240px, 340px));
     gap: 1rem;
   }
 
   .filter-field {
     display: grid;
     gap: 0.45rem;
+  }
+
+  .filter-field--date-range {
+    grid-column: span 2;
+  }
+
+  .filter-date-range {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .filter-date-input {
+    min-height: 42px;
+    border-radius: 12px;
+    border: 1px solid color-mix(in srgb, var(--crm-border, #cbd5e1) 70%, transparent);
+    background: #fff;
+    padding: 0.7rem 0.9rem;
+    color: var(--crm-text-strong, #0f172a);
+    font: inherit;
+  }
+
+  .filter-date-picker-input {
+    min-height: 42px;
   }
 
   .filter-label {
@@ -269,6 +293,14 @@
     }
 
     .filter-form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .filter-field--date-range {
+      grid-column: auto;
+    }
+
+    .filter-date-range {
       grid-template-columns: 1fr;
     }
   }

@@ -87,6 +87,7 @@ public static class DependencyInjection
         services.AddHttpClient("ReportServerProxy")
             .ConfigurePrimaryHttpMessageHandler(sp => CreateReportServerHttpHandler(sp));
         services.AddSingleton<IReportServerClient>(sp => sp.GetRequiredService<ReportServerClient>());
+        services.AddScoped<IReportLibraryService, ReportLibraryService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddSingleton<IEntraTokenValidator, EntraTokenValidator>();
         services.AddHttpContextAccessor();

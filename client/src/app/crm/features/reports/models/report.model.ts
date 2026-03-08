@@ -43,6 +43,34 @@ export interface ReportCatalogItem {
   modifiedOn: string;
 }
 
+export type ReportLibraryFilterKind =
+  | 'dateRange'
+  | 'owner'
+  | 'stage'
+  | 'status'
+  | 'pipeline'
+  | 'approvalStatus'
+  | 'leadSource';
+
+export interface ReportLibraryFilter {
+  key: string;
+  label: string;
+  kind: ReportLibraryFilterKind;
+  required: boolean;
+  parameterName?: string | null;
+  parameterNameTo?: string | null;
+  optionSource?: string | null;
+  placeholder?: string | null;
+  defaultValue?: string | null;
+  defaultValueTo?: string | null;
+  options: ReportParameterOption[];
+}
+
+export interface ReportLibraryItem extends ReportCatalogItem {
+  sortOrder: number;
+  filters: ReportLibraryFilter[];
+}
+
 export interface ReportCategory {
   id: string;
   name: string;
