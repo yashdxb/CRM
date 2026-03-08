@@ -1008,3 +1008,49 @@ cd client
 npm run build -- --configuration development
 E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
 ```
+
+## 19) Workflow builder tenant-backed stage selector
+
+**Symptoms**
+- The workflow builder still used a static stage list even though opportunity stages already exist in the tenant database.
+- Publishing a workflow for a tenant-customized stage would fail against the hardcoded stage validation list.
+- The builder could drift from the actual CRM opportunity stages used by the tenant.
+
+**Fix pattern**
+1. Add a workflow metadata API that returns scope options for the current tenant.
+2. Populate stage options from tenant `OpportunityStages` instead of a hardcoded frontend list.
+3. Keep pipeline options aligned with the current tenant model:
+   - `default`
+   - `all`
+   because the repo does not yet have a separate pipeline entity.
+4. Move allowed-value validation for module/pipeline/stage/trigger into the service layer so published validation uses tenant metadata instead of fixed code constants.
+
+**Code changes**
+- Added workflow metadata DTOs and endpoint:
+  - [IWorkflowDefinitionService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Application/Workflows/IWorkflowDefinitionService.cs)
+  - [WorkflowDefinitionDtos.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Application/Workflows/WorkflowDefinitionDtos.cs)
+  - [WorkflowDefinitionContracts.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Contracts/Workflows/WorkflowDefinitionContracts.cs)
+  - [WorkflowDefinitionsController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/WorkflowDefinitionsController.cs)
+- Implemented tenant-backed scope metadata and validation:
+  - [WorkflowDefinitionService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Workflows/WorkflowDefinitionService.cs)
+  - [DealApprovalWorkflowDefinition.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Workflows/DealApprovalWorkflowDefinition.cs)
+- Updated the builder to load scope metadata from the API and normalize templates/current definitions against those tenant options:
+  - [workflow-definition.model.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/models/workflow-definition.model.ts)
+  - [workflow-definition.service.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/services/workflow-definition.service.ts)
+  - [workflow-designer.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.ts)
+  - [workflow-designer.page.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.html)
+
+**Verified result**
+- Stage selection in the workflow builder now comes from tenant opportunity stages stored in the database.
+- A tenant with customized stage names no longer depends on the static fallback stage list for publish validation.
+- Templates reconcile their preferred stage to the nearest available tenant stage instead of forcing a nonexistent value.
+- Pipeline options remain controlled and tenant-aware within the current product model, without inventing a new pipeline entity.
+
+**Verification commands**
+```bash
+dotnet build server/src/CRM.Enterprise.sln
+
+cd client
+npm run build -- --configuration development
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
+```

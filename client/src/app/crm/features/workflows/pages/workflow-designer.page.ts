@@ -9,7 +9,7 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { WorkflowCanvasComponent } from '../components/workflow-canvas/workflow-canvas.component';
 import { NodePaletteComponent } from '../components/node-palette/node-palette.component';
 import { PropertiesPanelComponent } from '../components/properties-panel/properties-panel.component';
-import { DealApprovalWorkflowDefinition, WorkflowNode, WorkflowStep } from '../models/workflow-definition.model';
+import { DealApprovalWorkflowDefinition, WorkflowNode, WorkflowScopeOption, WorkflowStep } from '../models/workflow-definition.model';
 import { WorkflowDefinitionService } from '../services/workflow-definition.service';
 
 @Component({
@@ -30,12 +30,12 @@ import { WorkflowDefinitionService } from '../services/workflow-definition.servi
   styleUrl: './workflow-designer.page.scss'
 })
 export class WorkflowDesignerPage {
-  protected readonly moduleOptions = [{ label: 'Opportunities', value: 'opportunities' }];
-  protected readonly pipelineOptions = [
+  private static readonly fallbackModuleOptions: WorkflowScopeOption[] = [{ label: 'Opportunities', value: 'opportunities' }];
+  private static readonly fallbackPipelineOptions: WorkflowScopeOption[] = [
     { label: 'Default Pipeline', value: 'default' },
     { label: 'All Pipelines', value: 'all' }
   ];
-  protected readonly stageOptions = [
+  private static readonly fallbackStageOptions: WorkflowScopeOption[] = [
     { label: 'Prospecting', value: 'Prospecting' },
     { label: 'Qualification', value: 'Qualification' },
     { label: 'Proposal', value: 'Proposal' },
@@ -46,7 +46,7 @@ export class WorkflowDesignerPage {
     { label: 'Closed Lost', value: 'Closed Lost' },
     { label: 'All Stages', value: 'All' }
   ];
-  protected readonly triggerOptions = [
+  private static readonly fallbackTriggerOptions: WorkflowScopeOption[] = [
     { label: 'Manual Request', value: 'manual-request' },
     { label: 'Stage Change', value: 'on-stage-change' },
     { label: 'Amount Threshold', value: 'on-amount-threshold' },
@@ -84,6 +84,10 @@ export class WorkflowDesignerPage {
   protected readonly lastValidationErrors = signal<string[]>([]);
   protected readonly lastValidationAtUtc = signal<string | null>(null);
   protected readonly roleOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly moduleOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackModuleOptions);
+  protected readonly pipelineOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackPipelineOptions);
+  protected readonly stageOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackStageOptions);
+  protected readonly triggerOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackTriggerOptions);
   protected readonly workflow = signal<DealApprovalWorkflowDefinition>(this.defaultWorkflow());
 
   @ViewChild(WorkflowCanvasComponent)
@@ -91,6 +95,7 @@ export class WorkflowDesignerPage {
 
   constructor() {
     this.loadRoleOptions();
+    this.loadScopeMetadata();
     this.load();
   }
 
@@ -100,7 +105,7 @@ export class WorkflowDesignerPage {
     this.lastValidationAtUtc.set(null);
     this.workflowService.getDealApprovalDefinition().subscribe({
       next: (result) => {
-        this.workflow.set(this.normalize(result.definition));
+        this.workflow.set(this.normalizeAgainstMetadata(this.normalize(result.definition)));
         this.updatedAtUtc.set(result.updatedAtUtc ?? null);
         this.publishedAtUtc.set(result.publishedAtUtc ?? null);
         this.publishedBy.set(result.publishedBy ?? null);
@@ -108,14 +113,14 @@ export class WorkflowDesignerPage {
       },
       error: () => {
         this.loading.set(false);
-        this.workflow.set(this.defaultWorkflow());
+        this.workflow.set(this.normalizeAgainstMetadata(this.defaultWorkflow()));
         this.toast.show('error', 'Unable to load workflow definition.', 3000);
       }
     });
   }
 
   protected onCanvasChange(next: DealApprovalWorkflowDefinition) {
-    this.workflow.set(this.normalize(next));
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize(next)));
   }
 
   protected addApprovalStep() {
@@ -130,12 +135,12 @@ export class WorkflowDesignerPage {
       { id: 'end', type: 'end' as const, x: 40 + (nextOrder + 1) * 260, y: 180, label: 'End' }
     ];
 
-    this.workflow.set(this.normalize({
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({
       ...current,
       steps,
       nodes,
       connections: this.createLinearConnections(steps)
-    }));
+    })));
   }
 
   protected addNodeByType(type: WorkflowNode['type']) {
@@ -158,10 +163,10 @@ export class WorkflowDesignerPage {
       label: this.defaultNodeLabel(type)
     };
 
-    this.workflow.set(this.normalize({
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({
       ...current,
       nodes: [...current.nodes, nextNode]
-    }));
+    })));
   }
 
   protected removeStep(index: number) {
@@ -171,24 +176,24 @@ export class WorkflowDesignerPage {
       .filter((_, idx) => idx !== index)
       .map((step, idx) => ({ ...step, order: idx + 1 }));
 
-    this.workflow.set(this.normalize({
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({
       ...current,
       steps,
       nodes: current.nodes.filter((node) => node.id !== removedNodeId),
       connections: current.connections.filter((edge) => edge.source !== removedNodeId && edge.target !== removedNodeId)
-    }));
+    })));
   }
 
   protected patchStep({ index, patch }: { index: number; patch: Partial<WorkflowStep> }) {
     const current = this.normalize(this.workflow());
     const steps = current.steps.map((step, idx) => (idx === index ? { ...step, ...patch } : step));
-    this.workflow.set(this.normalize({ ...current, steps }));
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({ ...current, steps })));
   }
 
   protected patchNode({ nodeId, patch }: { nodeId: string; patch: Partial<WorkflowNode> }) {
     const current = this.normalize(this.workflow());
     const nodes = current.nodes.map((node) => (node.id === nodeId ? { ...node, ...patch } : node));
-    this.workflow.set(this.normalize({ ...current, nodes }));
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({ ...current, nodes })));
   }
 
   protected removeNode(nodeId: string) {
@@ -199,7 +204,7 @@ export class WorkflowDesignerPage {
 
     const nodes = current.nodes.filter((node) => node.id !== nodeId);
     const connections = current.connections.filter((edge) => edge.source !== nodeId && edge.target !== nodeId);
-    this.workflow.set(this.normalize({ ...current, nodes, connections }));
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({ ...current, nodes, connections })));
   }
 
   protected validate() {
@@ -243,7 +248,7 @@ export class WorkflowDesignerPage {
     this.workflowService.saveDealApprovalDefinition(current, false, 'revert-draft').subscribe({
       next: (result) => {
         this.saving.set(false);
-        this.workflow.set(this.normalize(JSON.parse(result.definitionJson) as DealApprovalWorkflowDefinition));
+        this.workflow.set(this.normalizeAgainstMetadata(this.normalize(JSON.parse(result.definitionJson) as DealApprovalWorkflowDefinition)));
         this.updatedAtUtc.set(result.updatedAtUtc ?? null);
         this.publishedAtUtc.set(result.publishedAtUtc ?? null);
         this.publishedBy.set(result.publishedBy ?? null);
@@ -262,12 +267,12 @@ export class WorkflowDesignerPage {
   protected patchScope(field: keyof DealApprovalWorkflowDefinition['scope'], value: string | number) {
     const current = this.normalize(this.workflow());
     const scope = { ...current.scope, [field]: value };
-    this.workflow.set(this.normalize({ ...current, scope }));
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({ ...current, scope })));
   }
 
   protected applyTemplate(templateKey: string) {
     this.selectedTemplate.set(templateKey);
-    this.workflow.set(this.normalize(this.createTemplate(templateKey)));
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize(this.createTemplate(templateKey))));
     this.lastValidationErrors.set([]);
     this.lastValidationAtUtc.set(null);
     this.toast.show('success', 'Workflow template applied.', 2500);
@@ -301,7 +306,7 @@ export class WorkflowDesignerPage {
         this.publishedBy.set(result.publishedBy ?? null);
         this.lastValidationErrors.set([]);
         this.lastValidationAtUtc.set(new Date().toISOString());
-        this.workflow.set(this.normalize(JSON.parse(result.definitionJson) as DealApprovalWorkflowDefinition));
+        this.workflow.set(this.normalizeAgainstMetadata(this.normalize(JSON.parse(result.definitionJson) as DealApprovalWorkflowDefinition)));
         this.toast.show('success',
           operation === 'publish' ? 'Workflow published.'
             : operation === 'unpublish' ? 'Workflow unpublished.'
@@ -347,7 +352,7 @@ export class WorkflowDesignerPage {
       return arranged;
     });
 
-    this.workflow.set({ ...current, nodes });
+    this.workflow.set(this.normalizeAgainstMetadata({ ...current, nodes }));
   }
 
   protected async fitView() {
@@ -356,6 +361,24 @@ export class WorkflowDesignerPage {
 
   private defaultWorkflow(): DealApprovalWorkflowDefinition {
     return this.createTemplate('deal-approval');
+  }
+
+  private loadScopeMetadata() {
+    this.workflowService.getScopeMetadata().subscribe({
+      next: (metadata) => {
+        this.moduleOptions.set(metadata.modules?.length ? metadata.modules : WorkflowDesignerPage.fallbackModuleOptions);
+        this.pipelineOptions.set(metadata.pipelines?.length ? metadata.pipelines : WorkflowDesignerPage.fallbackPipelineOptions);
+        this.stageOptions.set(metadata.stages?.length ? metadata.stages : WorkflowDesignerPage.fallbackStageOptions);
+        this.triggerOptions.set(metadata.triggers?.length ? metadata.triggers : WorkflowDesignerPage.fallbackTriggerOptions);
+        this.workflow.update((current) => this.normalizeAgainstMetadata(this.normalize(current)));
+      },
+      error: () => {
+        this.moduleOptions.set(WorkflowDesignerPage.fallbackModuleOptions);
+        this.pipelineOptions.set(WorkflowDesignerPage.fallbackPipelineOptions);
+        this.stageOptions.set(WorkflowDesignerPage.fallbackStageOptions);
+        this.triggerOptions.set(WorkflowDesignerPage.fallbackTriggerOptions);
+      }
+    });
   }
 
   private createTemplate(templateKey: string): DealApprovalWorkflowDefinition {
@@ -372,7 +395,7 @@ export class WorkflowDesignerPage {
             purpose: 'Route discounted deals for commercial review before update or close.',
             module: 'opportunities',
             pipeline: 'default',
-            stage: 'Proposal',
+            stage: this.resolveStageValue('Proposal'),
             trigger: 'on-discount-threshold',
             status: 'draft',
             version: 1
@@ -401,7 +424,7 @@ export class WorkflowDesignerPage {
             purpose: 'Escalate high-value opportunities through commercial leadership.',
             module: 'opportunities',
             pipeline: 'default',
-            stage: 'Commit',
+            stage: this.resolveStageValue('Commit'),
             trigger: 'on-amount-threshold',
             status: 'draft',
             version: 1
@@ -432,7 +455,7 @@ export class WorkflowDesignerPage {
             purpose: 'Require approval before bypassing a stage gate into later opportunity stages.',
             module: 'opportunities',
             pipeline: 'default',
-            stage: 'Qualification',
+            stage: this.resolveStageValue('Qualification'),
             trigger: 'on-stage-change',
             status: 'draft',
             version: 1
@@ -462,7 +485,7 @@ export class WorkflowDesignerPage {
             purpose: 'Control discount and commercial approvals for opportunities.',
             module: 'opportunities',
             pipeline: 'default',
-            stage: 'Proposal',
+            stage: this.resolveStageValue('Proposal'),
             trigger: 'on-stage-change',
             status: 'draft',
             version: 1
@@ -569,7 +592,7 @@ export class WorkflowDesignerPage {
           : definition.scope.purpose.trim(),
         module: definition.scope?.module === undefined || definition.scope?.module === null ? 'opportunities' : definition.scope.module.trim(),
         pipeline: definition.scope?.pipeline === undefined || definition.scope?.pipeline === null ? 'default' : definition.scope.pipeline.trim(),
-        stage: definition.scope?.stage === undefined || definition.scope?.stage === null ? 'Proposal' : definition.scope.stage.trim(),
+        stage: definition.scope?.stage === undefined || definition.scope?.stage === null ? this.resolveStageValue('Proposal') : definition.scope.stage.trim(),
         trigger: definition.scope?.trigger === undefined || definition.scope?.trigger === null
           ? 'on-stage-change'
           : definition.scope.trigger.trim(),
@@ -597,6 +620,39 @@ export class WorkflowDesignerPage {
 
   private resolveRoleId(roleName: string) {
     return this.roleOptions().find((role) => role.label === roleName)?.value ?? null;
+  }
+
+  private normalizeAgainstMetadata(definition: DealApprovalWorkflowDefinition): DealApprovalWorkflowDefinition {
+    return {
+      ...definition,
+      scope: {
+        ...definition.scope,
+        module: this.normalizeOptionValue(definition.scope.module, this.moduleOptions(), this.moduleOptions()[0]?.value ?? 'opportunities'),
+        pipeline: this.normalizeOptionValue(definition.scope.pipeline, this.pipelineOptions(), this.pipelineOptions()[0]?.value ?? 'default'),
+        stage: this.normalizeOptionValue(definition.scope.stage, this.stageOptions(), this.resolveStageValue('Proposal')),
+        trigger: this.normalizeOptionValue(definition.scope.trigger, this.triggerOptions(), this.triggerOptions()[0]?.value ?? 'manual-request')
+      }
+    };
+  }
+
+  private normalizeOptionValue(value: string | null | undefined, options: WorkflowScopeOption[], fallback: string) {
+    const normalized = value?.trim();
+    if (!normalized) {
+      return fallback;
+    }
+
+    const match = options.find((option) => option.value.toLowerCase() === normalized.toLowerCase());
+    return match?.value ?? fallback;
+  }
+
+  private resolveStageValue(preferredStage: string) {
+    const exact = this.stageOptions().find((option) => option.value.toLowerCase() === preferredStage.toLowerCase());
+    if (exact) {
+      return exact.value;
+    }
+
+    const firstTenantStage = this.stageOptions().find((option) => option.value.toLowerCase() !== 'all');
+    return firstTenantStage?.value ?? preferredStage;
   }
 
   private normalizeNodeType(node: DealApprovalWorkflowDefinition['nodes'][number]) {

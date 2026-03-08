@@ -15,6 +15,14 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
     private const string PublishOperation = "publish";
     private const string UnpublishOperation = "unpublish";
     private const string RevertDraftOperation = "revert-draft";
+    private static readonly WorkflowScopeOptionDto[] ModuleOptions = [new("Opportunities", "opportunities")];
+    private static readonly WorkflowScopeOptionDto[] TriggerOptions =
+    [
+        new("Manual Request", "manual-request"),
+        new("Stage Change", "on-stage-change"),
+        new("Amount Threshold", "on-amount-threshold"),
+        new("Discount Threshold", "on-discount-threshold")
+    ];
 
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
@@ -51,6 +59,37 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
             publishedDefinition.Enabled ? JsonSerializer.Serialize(publishedDefinition, JsonOptions) : null,
             tenant.ApprovalWorkflowPublishedAtUtc,
             tenant.ApprovalWorkflowPublishedBy);
+    }
+
+    public async Task<WorkflowScopeMetadataDto?> GetMetadataAsync(string key, CancellationToken cancellationToken = default)
+    {
+        if (!IsSupportedKey(key))
+        {
+            return null;
+        }
+
+        var stages = await _dbContext.OpportunityStages
+            .OrderBy(stage => stage.Order)
+            .ThenBy(stage => stage.Name)
+            .Select(stage => stage.Name)
+            .ToListAsync(cancellationToken);
+
+        var stageOptions = stages
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(name => new WorkflowScopeOptionDto(name.Trim(), name.Trim()))
+            .ToList();
+
+        stageOptions.Add(new WorkflowScopeOptionDto("All Stages", "All"));
+
+        return new WorkflowScopeMetadataDto(
+            ModuleOptions,
+            [
+                new WorkflowScopeOptionDto("Default Pipeline", "default"),
+                new WorkflowScopeOptionDto("All Pipelines", "all")
+            ],
+            stageOptions,
+            TriggerOptions);
     }
 
     public async Task<WorkflowDefinitionDto> SaveAsync(
@@ -155,16 +194,16 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
         return response;
     }
 
-    public Task<WorkflowValidationResultDto> ValidateAsync(string key, string definitionJson, CancellationToken cancellationToken = default)
+    public async Task<WorkflowValidationResultDto> ValidateAsync(string key, string definitionJson, CancellationToken cancellationToken = default)
     {
         if (!IsSupportedKey(key))
         {
-            return Task.FromResult(new WorkflowValidationResultDto(false, new[] { $"Unsupported workflow key '{key}'." }));
+            return new WorkflowValidationResultDto(false, [$"Unsupported workflow key '{key}'."]);
         }
 
         if (string.IsNullOrWhiteSpace(definitionJson))
         {
-            return Task.FromResult(new WorkflowValidationResultDto(false, new[] { "Workflow JSON is required." }));
+            return new WorkflowValidationResultDto(false, ["Workflow JSON is required."]);
         }
 
         try
@@ -172,11 +211,13 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
             var parsed = JsonSerializer.Deserialize<DealApprovalWorkflowDefinition>(definitionJson, JsonOptions);
             if (parsed is null)
             {
-                return Task.FromResult(new WorkflowValidationResultDto(false, new[] { "Invalid workflow JSON payload." }));
+                return new WorkflowValidationResultDto(false, ["Invalid workflow JSON payload."]);
             }
 
             var errors = DealApprovalWorkflowMapper.ValidateStructure(parsed).ToList();
             var normalized = DealApprovalWorkflowMapper.Normalize(parsed);
+            var isPublished = normalized.Enabled
+                || string.Equals(normalized.Scope.Status, "published", StringComparison.OrdinalIgnoreCase);
 
             if (normalized.Enabled && normalized.Steps.Count == 0)
             {
@@ -188,12 +229,52 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
                 errors.Add("At least one connection is required.");
             }
 
-            return Task.FromResult(new WorkflowValidationResultDto(errors.Count == 0, errors));
+            if (isPublished)
+            {
+                var metadata = await GetMetadataAsync(key, cancellationToken);
+                if (metadata is not null)
+                {
+                    ValidateScopeAgainstMetadata(normalized, metadata, errors);
+                }
+            }
+
+            return new WorkflowValidationResultDto(errors.Count == 0, errors.Distinct(StringComparer.Ordinal).ToArray());
         }
         catch (JsonException ex)
         {
-            return Task.FromResult(new WorkflowValidationResultDto(false, new[] { $"Invalid workflow JSON: {ex.Message}" }));
+            return new WorkflowValidationResultDto(false, [$"Invalid workflow JSON: {ex.Message}"]);
         }
+    }
+
+    private static void ValidateScopeAgainstMetadata(
+        DealApprovalWorkflowDefinition definition,
+        WorkflowScopeMetadataDto metadata,
+        ICollection<string> errors)
+    {
+        if (!ContainsOption(metadata.Modules, definition.Scope.Module))
+        {
+            errors.Add($"Workflow module must be one of: {string.Join(", ", metadata.Modules.Select(option => option.Value))}.");
+        }
+
+        if (!ContainsOption(metadata.Pipelines, definition.Scope.Pipeline))
+        {
+            errors.Add($"Workflow pipeline must be one of: {string.Join(", ", metadata.Pipelines.Select(option => option.Value))}.");
+        }
+
+        if (!ContainsOption(metadata.Stages, definition.Scope.Stage))
+        {
+            errors.Add($"Workflow stage must be one of: {string.Join(", ", metadata.Stages.Select(option => option.Value))}.");
+        }
+
+        if (!ContainsOption(metadata.Triggers, definition.Scope.Trigger))
+        {
+            errors.Add($"Workflow trigger must be one of: {string.Join(", ", metadata.Triggers.Select(option => option.Value))}.");
+        }
+    }
+
+    private static bool ContainsOption(IEnumerable<WorkflowScopeOptionDto> options, string value)
+    {
+        return options.Any(option => string.Equals(option.Value, value?.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsSupportedKey(string key)

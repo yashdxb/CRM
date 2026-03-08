@@ -10,6 +10,16 @@ public sealed record WorkflowDefinitionDto(
     DateTime? PublishedAtUtc,
     string? PublishedBy);
 
+public sealed record WorkflowScopeOptionDto(
+    string Label,
+    string Value);
+
+public sealed record WorkflowScopeMetadataDto(
+    IReadOnlyList<WorkflowScopeOptionDto> Modules,
+    IReadOnlyList<WorkflowScopeOptionDto> Pipelines,
+    IReadOnlyList<WorkflowScopeOptionDto> Stages,
+    IReadOnlyList<WorkflowScopeOptionDto> Triggers);
+
 public sealed record WorkflowValidationResultDto(
     bool IsValid,
     IReadOnlyList<string> Errors);

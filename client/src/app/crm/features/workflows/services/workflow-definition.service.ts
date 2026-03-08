@@ -6,6 +6,7 @@ import { environment } from '../../../../../environments/environment';
 import {
   DealApprovalWorkflowDefinition,
   WorkflowDefinitionResponse,
+  WorkflowScopeMetadataResponse,
   WorkflowValidationResponse
 } from '../models/workflow-definition.model';
 
@@ -18,6 +19,10 @@ export class WorkflowDefinitionService {
 
   getRoleOptions() {
     return this.http.get<Array<{ id: string; name: string }>>(`${this.baseUrl}/api/roles`);
+  }
+
+  getScopeMetadata() {
+    return this.http.get<WorkflowScopeMetadataResponse>(`${this.baseUrl}/api/workflows/definitions/${this.workflowKey}/metadata`);
   }
 
   getDealApprovalDefinition() {

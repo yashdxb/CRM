@@ -50,6 +50,18 @@ export interface WorkflowDefinitionResponse {
   publishedBy?: string | null;
 }
 
+export interface WorkflowScopeOption {
+  label: string;
+  value: string;
+}
+
+export interface WorkflowScopeMetadataResponse {
+  modules: WorkflowScopeOption[];
+  pipelines: WorkflowScopeOption[];
+  stages: WorkflowScopeOption[];
+  triggers: WorkflowScopeOption[];
+}
+
 export interface WorkflowValidationResponse {
   isValid: boolean;
   errors: string[];

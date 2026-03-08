@@ -39,6 +39,22 @@ public sealed class WorkflowDefinitionsController : ControllerBase
             definition.PublishedBy));
     }
 
+    [HttpGet("{key}/metadata")]
+    public async Task<ActionResult<WorkflowScopeMetadataResponse>> GetMetadata(string key, CancellationToken cancellationToken)
+    {
+        var metadata = await _service.GetMetadataAsync(key, cancellationToken);
+        if (metadata is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new WorkflowScopeMetadataResponse(
+            metadata.Modules.Select(option => new WorkflowScopeOptionResponse(option.Label, option.Value)).ToArray(),
+            metadata.Pipelines.Select(option => new WorkflowScopeOptionResponse(option.Label, option.Value)).ToArray(),
+            metadata.Stages.Select(option => new WorkflowScopeOptionResponse(option.Label, option.Value)).ToArray(),
+            metadata.Triggers.Select(option => new WorkflowScopeOptionResponse(option.Label, option.Value)).ToArray()));
+    }
+
     [HttpPut("{key}")]
     [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<ActionResult<WorkflowDefinitionResponse>> Save(

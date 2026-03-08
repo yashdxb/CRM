@@ -48,7 +48,7 @@
         <span>Module</span>
         <p-select
           appendTo="body"
-          [options]="moduleOptions"
+          [options]="moduleOptions()"
           optionLabel="label"
           optionValue="value"
           [ngModel]="workflow().scope.module"
@@ -60,7 +60,7 @@
         <span>Pipeline</span>
         <p-select
           appendTo="body"
-          [options]="pipelineOptions"
+          [options]="pipelineOptions()"
           optionLabel="label"
           optionValue="value"
           [ngModel]="workflow().scope.pipeline"
@@ -72,7 +72,7 @@
         <span>Stage</span>
         <p-select
           appendTo="body"
-          [options]="stageOptions"
+          [options]="stageOptions()"
           optionLabel="label"
           optionValue="value"
           [ngModel]="workflow().scope.stage"
@@ -84,7 +84,7 @@
         <span>Trigger</span>
         <p-select
           appendTo="body"
-          [options]="triggerOptions"
+          [options]="triggerOptions()"
           optionLabel="label"
           optionValue="value"
           [ngModel]="workflow().scope.trigger"
