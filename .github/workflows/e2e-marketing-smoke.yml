@@ -1,31 +1,88 @@
 name: E2E Marketing Smoke
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      - 'client/**'
-      - 'server/src/CRM.Enterprise.Api/**'
-      - 'server/src/CRM.Enterprise.Infrastructure/**'
-      - '.github/workflows/e2e-marketing-smoke.yml'
-  pull_request:
-    branches:
-      - master
-    paths:
-      - 'client/**'
-      - 'server/src/CRM.Enterprise.Api/**'
-      - 'server/src/CRM.Enterprise.Infrastructure/**'
-      - '.github/workflows/e2e-marketing-smoke.yml'
+  workflow_run:
+    workflows:
+      - Azure Static Web Apps CI/CD
+      - Deploy .NET API to Azure App Service
+    types:
+      - completed
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: marketing-smoke-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
 jobs:
+  evaluate-deploy-state:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      run_tests: ${{ steps.gate.outputs.run_tests }}
+      head_sha: ${{ steps.gate.outputs.head_sha }}
+    steps:
+      - name: Determine whether deployed smoke should run
+        id: gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const sha = context.eventName === 'workflow_dispatch'
+              ? context.sha
+              : context.payload.workflow_run.head_sha;
+            const workflows = [
+              'Azure Static Web Apps CI/CD',
+              'Deploy .NET API to Azure App Service'
+            ];
+
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head_sha: sha,
+              per_page: 100
+            });
+
+            const latestByName = new Map();
+            for (const run of runs) {
+              if (!workflows.includes(run.name) || run.head_sha !== sha) continue;
+              const existing = latestByName.get(run.name);
+              if (!existing || new Date(run.created_at) > new Date(existing.created_at)) {
+                latestByName.set(run.name, run);
+              }
+            }
+
+            const missing = workflows.filter((name) => !latestByName.has(name));
+            const incomplete = workflows.filter((name) => {
+              const run = latestByName.get(name);
+              return run && run.status !== 'completed';
+            });
+            const failed = workflows.filter((name) => {
+              const run = latestByName.get(name);
+              return run && run.conclusion !== 'success';
+            });
+
+            const runTests = missing.length === 0 && incomplete.length === 0 && failed.length === 0;
+
+            core.info(`sha=${sha}`);
+            core.info(`missing=${missing.join(', ') || 'none'}`);
+            core.info(`incomplete=${incomplete.join(', ') || 'none'}`);
+            core.info(`failed=${failed.join(', ') || 'none'}`);
+            core.setOutput('head_sha', sha);
+            core.setOutput('run_tests', String(runTests));
+
   playwright-marketing-smoke:
+    needs: evaluate-deploy-state
+    if: needs.evaluate-deploy-state.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.evaluate-deploy-state.outputs.head_sha }}
 
       - name: Use Node.js 22.12
         uses: actions/setup-node@v4

@@ -91,8 +91,17 @@ test('marketing MVP screens and campaign appears in list', async ({ page, reques
   await expect(page.getByText(campaignName)).toBeVisible();
 
   await page.goto(`/app/marketing/campaigns/${campaignId}`);
-  await expect(page.getByRole('button', { name: 'Action Center' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: campaignName })).toBeVisible();
   await expect(page.getByText('Campaign Health Score')).toBeVisible();
+  const actionCenterTab = page.getByRole('button', { name: /Action Center/i }).first();
+  if (await actionCenterTab.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await actionCenterTab.click();
+  } else {
+    const actionCenterFallback = page.locator('.tab-actions').getByText('Action Center', { exact: true }).first();
+    await expect(actionCenterFallback).toBeVisible();
+    await actionCenterFallback.click();
+  }
+  await expect(page.getByText('Next Best Actions')).toBeVisible();
 
   await page.goto('/app/marketing/attribution');
   await expect(page.getByRole('heading', { name: 'Campaign Attribution' })).toBeVisible();
