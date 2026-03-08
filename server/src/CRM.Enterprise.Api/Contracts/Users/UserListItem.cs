@@ -16,6 +16,8 @@ public record UserListItem(
     DateTime? LastInviteSentAtUtc,
     string? TimeZone,
     string? LastLoginLocation,
+    string? LastLoginDeviceType,
+    string? LastLoginPlatform,
     string? LastLoginIp,
     string DashboardPackKey,
     string DashboardPackName,

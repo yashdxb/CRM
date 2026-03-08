@@ -52,6 +52,8 @@ export interface UserListItem {
   lastLoginAtUtc?: string | null;
   lastInviteSentAtUtc?: string | null;
   lastLoginLocation?: string | null;
+  lastLoginDeviceType?: string | null;
+  lastLoginPlatform?: string | null;
   lastLoginIp?: string | null;
   timeZone?: string | null;
   dashboardPackKey: string;

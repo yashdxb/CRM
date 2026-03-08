@@ -570,6 +570,22 @@ export class SettingsPage {
     return duration ? duration : '-';
   }
 
+  protected formatUserEnvironment(user: UserListItem): string {
+    const primary = [user.lastLoginDeviceType, user.lastLoginPlatform]
+      .filter((part): part is string => !!part && part.trim().length > 0)
+      .join(' / ');
+
+    if (primary) {
+      return primary;
+    }
+
+    return user.lastLoginLocation?.trim() || '-';
+  }
+
+  protected formatUserEnvironmentDetail(user: UserListItem): string {
+    return user.lastLoginLocation?.trim() || user.lastLoginIp?.trim() || '';
+  }
+
   protected formatInviteSentTime(user: UserListItem): string {
     if (!user.lastInviteSentAtUtc) {
       return '';

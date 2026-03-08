@@ -115,6 +115,8 @@ public class UsersController : ControllerBase
                 u.LastLoginAtUtc,
                 u.LastInviteSentAtUtc,
                 u.LastLoginLocation,
+                u.LastLoginDeviceType,
+                u.LastLoginPlatform,
                 u.LastLoginIp,
                 u.CommandCenterLayoutJson,
                 u.TimeZone
@@ -178,6 +180,8 @@ public class UsersController : ControllerBase
                 u.LastInviteSentAtUtc,
                 u.TimeZone,
                 u.LastLoginLocation,
+                u.LastLoginDeviceType,
+                u.LastLoginPlatform,
                 u.LastLoginIp,
                 pack.Key,
                 pack.Name,

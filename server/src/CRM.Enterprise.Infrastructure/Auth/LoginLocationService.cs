@@ -26,12 +26,14 @@ public sealed class LoginLocationService
         _logger = logger;
     }
 
-    public async Task<(string? Ip, string? Location)> ResolveAsync(CancellationToken cancellationToken)
+    public async Task<LoginContextInfo> ResolveAsync(CancellationToken cancellationToken)
     {
         var ip = GetClientIp();
+        var userAgent = GetUserAgent();
+        var (deviceType, platform) = ClassifyClient(userAgent);
         if (string.IsNullOrWhiteSpace(ip) || IsPrivateIp(ip))
         {
-            return (ip, null);
+            return new LoginContextInfo(ip, null, deviceType, platform);
         }
 
         try
@@ -45,7 +47,7 @@ public sealed class LoginLocationService
             var location = BuildLocation(response?.City, response?.Region, response?.Country);
             if (response is not null && response.Success && !string.IsNullOrWhiteSpace(location))
             {
-                return (ip, location);
+                return new LoginContextInfo(ip, location, deviceType, platform);
             }
         }
         catch (Exception ex)
@@ -62,13 +64,18 @@ public sealed class LoginLocationService
                 lookupToken.Token);
 
             var location = BuildLocation(response?.City, response?.Region, response?.CountryName);
-            return (ip, location);
+            return new LoginContextInfo(ip, location, deviceType, platform);
         }
         catch (Exception ex)
         {
             _logger.LogDebug("Fallback geo lookup failed for IP {Ip}: {Reason}", ip, ex.Message);
-            return (ip, null);
+            return new LoginContextInfo(ip, null, deviceType, platform);
         }
+    }
+
+    private string? GetUserAgent()
+    {
+        return _httpContextAccessor.HttpContext?.Request.Headers.UserAgent.FirstOrDefault();
     }
 
     private string? GetClientIp()
@@ -246,4 +253,42 @@ public sealed class LoginLocationService
 
         return parts.Count > 0 ? string.Join(", ", parts) : null;
     }
+
+    private static (string? DeviceType, string? Platform) ClassifyClient(string? userAgent)
+    {
+        if (string.IsNullOrWhiteSpace(userAgent))
+        {
+            return (null, null);
+        }
+
+        var lower = userAgent.Trim().ToLowerInvariant();
+
+        string? platform = lower switch
+        {
+            var v when v.Contains("iphone") || v.Contains("ipad") || v.Contains("cpu os") || v.Contains("ios") => "iOS",
+            var v when v.Contains("android") => "Android",
+            var v when v.Contains("windows") => "Windows",
+            var v when v.Contains("mac os x") || v.Contains("macintosh") => "macOS",
+            var v when v.Contains("cros") || v.Contains("chromebook") => "ChromeOS",
+            var v when v.Contains("linux") => "Linux",
+            _ => null
+        };
+
+        string? deviceType = lower switch
+        {
+            var v when v.Contains("ipad") || v.Contains("tablet") || v.Contains("kindle") || v.Contains("silk/") => "Tablet",
+            var v when v.Contains("android") && !v.Contains("mobile") => "Tablet",
+            var v when v.Contains("iphone") || v.Contains("mobile") || v.Contains("phone") => "Mobile",
+            var v when v.Contains("windows") || v.Contains("macintosh") || v.Contains("linux") || v.Contains("cros") => "Desktop",
+            _ => "Desktop"
+        };
+
+        return (deviceType, platform);
+    }
 }
+
+public sealed record LoginContextInfo(
+    string? Ip,
+    string? Location,
+    string? DeviceType,
+    string? Platform);

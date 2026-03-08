@@ -556,6 +556,8 @@ public class AuthService : IAuthService
         user.LastLoginAtUtc = DateTime.UtcNow;
         user.LastLoginIp = loginInfo.Ip;
         user.LastLoginLocation = loginInfo.Location;
+        user.LastLoginDeviceType = loginInfo.DeviceType;
+        user.LastLoginPlatform = loginInfo.Platform;
         await _auditEventService.TrackAsync(
             new AuditEventEntry(
                 nameof(User),

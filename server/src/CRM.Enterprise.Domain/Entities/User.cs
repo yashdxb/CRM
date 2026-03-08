@@ -31,6 +31,10 @@ public class User : AuditableEntity
     public string? LastLoginIp { get; set; }
     [MaxLength(256)]
     public string? LastLoginLocation { get; set; }
+    [MaxLength(32)]
+    public string? LastLoginDeviceType { get; set; }
+    [MaxLength(64)]
+    public string? LastLoginPlatform { get; set; }
 
     public ICollection<UserRole> Roles { get; set; } = new List<UserRole>();
 }

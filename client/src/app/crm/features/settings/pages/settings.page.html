@@ -50,9 +50,8 @@
         </div>
         <div class="header-actions">
           <button
-            pButton
             type="button"
-            class="btn-gradient"
+            class="action-btn action-btn--add"
             [disabled]="!canManageAdmin()"
             [routerLink]="
               canManageAdmin()
@@ -68,7 +67,7 @@
                 : null
             "
           >
-            <i [class]="activeView() === 'users' ? 'pi pi-user-plus' : activeView() === 'roles' ? 'pi pi-plus-circle' : activeView() === 'permissions' ? 'pi pi-lock' : activeView() === 'security-level' ? 'pi pi-shield' : 'pi pi-th-large'"></i>
+            <span class="action-btn__icon"><i [class]="activeView() === 'users' ? 'pi pi-user-plus' : activeView() === 'roles' ? 'pi pi-plus-circle' : activeView() === 'permissions' ? 'pi pi-lock' : activeView() === 'security-level' ? 'pi pi-shield' : 'pi pi-th-large'"></i></span>
             <span>{{ activeView() === 'users' ? 'Invite user' : activeView() === 'roles' ? 'New role' : activeView() === 'permissions' ? 'Manage sets' : activeView() === 'security-level' ? 'Manage levels' : 'Manage packs' }}</span>
           </button>
         </div>
@@ -90,8 +89,8 @@
           </span>
         </div>
         <div class="command-actions">
-          <button pButton type="button" class="btn-glass small" (click)="activeView() === 'users' ? loadUsers() : activeView() === 'roles' ? loadRoles() : null">
-            <i class="pi pi-refresh"></i>
+          <button type="button" class="action-btn action-btn--refresh" (click)="activeView() === 'users' ? loadUsers() : activeView() === 'roles' ? loadRoles() : null">
+            <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
             <span>Refresh</span>
           </button>
         </div>
@@ -162,7 +161,7 @@
                     <th>Role</th>
                     <th>Status</th>
                     <th>Last login</th>
-                    <th>Online time</th>
+                    <th>Environment</th>
                     <th class="text-right">Actions</th>
                   </tr>
                 </ng-template>
@@ -226,26 +225,32 @@
                       </ng-template>
                     </td>
                     <td>
-                      <span class="login-duration">
-                        {{ formatOnlineHours(user, isOnline(user)) }}
-                      </span>
+                      <ng-container *ngIf="user.lastLoginAtUtc; else noEnvironment">
+                        <span class="login-date">
+                          {{ formatUserEnvironment(user) }}
+                        </span>
+                        <span class="login-duration" *ngIf="formatUserEnvironmentDetail(user) as environmentDetail">
+                          {{ environmentDetail }}
+                        </span>
+                      </ng-container>
+                      <ng-template #noEnvironment>
+                        <span class="login-never">-</span>
+                      </ng-template>
                     </td>
                     <td class="text-right">
-                      <div class="action-buttons">
-                        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-pencil" title="Edit user" aria-label="Edit user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); startEdit(user)"></button>
-                        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" [icon]="user.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'" [title]="user.isActive ? 'Deactivate' : 'Activate'" [attr.aria-label]="user.isActive ? 'Deactivate user' : 'Activate user'" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); toggleUserStatus(user)"></button>
+                      <div class="row-actions">
+                        <button type="button" class="row-action-btn row-action-btn--edit" title="Edit user" aria-label="Edit user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); startEdit(user)"><i class="pi pi-pencil"></i></button>
+                        <button type="button" class="row-action-btn row-action-btn--view" [title]="user.isActive ? 'Deactivate' : 'Activate'" [attr.aria-label]="user.isActive ? 'Deactivate user' : 'Activate user'" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); toggleUserStatus(user)"><i class="pi" [ngClass]="user.isActive ? 'pi-eye-slash' : 'pi-eye'"></i></button>
                         <button
-                          pButton
                           type="button"
-                          class="crm-button crm-button--ghost crm-button--sm"
-                          icon="pi pi-send"
+                          class="row-action-btn row-action-btn--activity"
                           title="Resend invite"
                           aria-label="Resend invite"
                           [disabled]="!canManageAdmin() || !canResendInvite(user)"
                           (click)="$event.stopPropagation(); resendInvite(user)"
-                        ></button>
-                        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-key" title="Reset password" aria-label="Reset password" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); resetPassword(user)"></button>
-                        <button pButton type="button" class="crm-button crm-button--ghost crm-button--sm" icon="pi pi-trash" title="Remove user" aria-label="Remove user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); deleteUser(user)"></button>
+                        ><i class="pi pi-send"></i></button>
+                        <button type="button" class="row-action-btn row-action-btn--convert" title="Reset password" aria-label="Reset password" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); resetPassword(user)"><i class="pi pi-key"></i></button>
+                        <button type="button" class="row-action-btn row-action-btn--delete" title="Remove user" aria-label="Remove user" [disabled]="!canManageAdmin()" (click)="$event.stopPropagation(); deleteUser(user)"><i class="pi pi-trash"></i></button>
                       </div>
                     </td>
                   </tr>

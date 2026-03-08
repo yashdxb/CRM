@@ -366,6 +366,12 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<User>()
             .Property(u => u.EntraUpn)
             .HasMaxLength(320);
+        modelBuilder.Entity<User>()
+            .Property(u => u.LastLoginDeviceType)
+            .HasMaxLength(32);
+        modelBuilder.Entity<User>()
+            .Property(u => u.LastLoginPlatform)
+            .HasMaxLength(64);
         // Keep the change-password flag explicit for predictable onboarding.
         modelBuilder.Entity<User>()
             .Property(u => u.MustChangePassword)

@@ -1139,3 +1139,28 @@ Verification:
 Result:
 - Entra-first enterprise auth is complete for the CRM internal app.
 - Generic SAML and non-Entra OIDC remain intentionally deferred.
+
+## 15) Users Page Environment Column
+
+Problem:
+- The People & Access users grid only showed last login time and online duration.
+- Admins wanted one practical environment column that combines:
+  - device type
+  - platform
+  - last login location
+
+Fix:
+- Added server-side last-login environment capture on successful auth:
+  - `LastLoginDeviceType`
+  - `LastLoginPlatform`
+- Derived device/platform from the login request `User-Agent`.
+- Exposed those fields on the users list API.
+- Replaced the low-value `Online time` column in the users grid with `Environment`.
+- The UI now renders:
+  - primary line: `Device / Platform`
+  - secondary line: `Location` (or IP fallback when location is unavailable)
+
+Verification:
+- `dotnet build server/src/CRM.Enterprise.sln`
+- `cd client && npm run build -- --configuration development`
+- `cd client && E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/users-environment-column.spec.ts --workers=1`
