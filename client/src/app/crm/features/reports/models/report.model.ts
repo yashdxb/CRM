@@ -47,3 +47,14 @@ export interface ReportCategory {
   id: string;
   name: string;
 }
+
+export interface UserLookupItem {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
+export interface ReportParameterOption {
+  value: string;
+  label: string;
+}

@@ -22,3 +22,5 @@ public sealed record ReportCatalogItemResponse(
     DateTimeOffset ModifiedOn);
 
 public sealed record ReportCategoryResponse(string Id, string Name);
+
+public sealed record ReportParameterOptionResponse(string Value, string Label);

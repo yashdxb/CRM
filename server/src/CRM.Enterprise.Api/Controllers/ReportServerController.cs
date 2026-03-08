@@ -93,4 +93,17 @@ public class ReportServerController : ControllerBase
         var categories = await _client.GetCategoriesAsync(ct);
         return Ok(categories.Select(c => new ReportCategoryResponse(c.Id, c.Name)).ToList());
     }
+
+    [HttpGet("reports/{reportId}/parameters/{parameterName}/options")]
+    public async Task<ActionResult<IReadOnlyList<ReportParameterOptionResponse>>> GetParameterOptions(
+        string reportId,
+        string parameterName,
+        CancellationToken ct)
+    {
+        if (!_client.IsConfigured)
+            return Ok(Array.Empty<ReportParameterOptionResponse>());
+
+        var options = await _client.GetParameterOptionsAsync(reportId, parameterName, ct);
+        return Ok(options.Select(o => new ReportParameterOptionResponse(o.Value, o.Label)).ToList());
+    }
 }

@@ -8,7 +8,8 @@ import {
   ReportServerConfig,
   ReportServerToken,
   ReportCatalogItem,
-  ReportCategory
+  ReportCategory,
+  ReportParameterOption
 } from '../models/report.model';
 
 @Injectable({ providedIn: 'root' })
@@ -58,5 +59,12 @@ export class ReportsDataService {
   getReportCategories() {
     const url = `${environment.apiUrl}/api/report-server/categories`;
     return this.http.get<ReportCategory[]>(url).pipe(catchError(() => of([])));
+  }
+
+  getReportParameterOptions(reportId: string, parameterName: string) {
+    const encodedReportId = encodeURIComponent(reportId);
+    const encodedParameterName = encodeURIComponent(parameterName);
+    const url = `${environment.apiUrl}/api/report-server/reports/${encodedReportId}/parameters/${encodedParameterName}/options`;
+    return this.http.get<ReportParameterOption[]>(url).pipe(catchError(() => of([])));
   }
 }

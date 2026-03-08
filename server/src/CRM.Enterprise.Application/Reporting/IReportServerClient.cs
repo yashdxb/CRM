@@ -6,6 +6,7 @@ public interface IReportServerClient
     Task<ReportServerTokenResult?> AuthenticateAsync(CancellationToken ct = default);
     Task<IReadOnlyList<ReportCatalogItem>> GetCatalogAsync(CancellationToken ct = default);
     Task<IReadOnlyList<ReportCategoryDto>> GetCategoriesAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<ReportParameterOptionDto>> GetParameterOptionsAsync(string reportId, string parameterName, CancellationToken ct = default);
 }
 
 public sealed record ReportServerTokenResult(string AccessToken, string TokenType, int ExpiresIn);
@@ -21,3 +22,5 @@ public sealed record ReportCatalogItem(
     DateTimeOffset ModifiedOn);
 
 public sealed record ReportCategoryDto(string Id, string Name);
+
+public sealed record ReportParameterOptionDto(string Value, string Label);

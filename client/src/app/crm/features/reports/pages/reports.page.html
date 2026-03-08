@@ -33,8 +33,41 @@
         <button pButton type="button" class="crm-button crm-button--secondary" icon="pi pi-arrow-left" label="Back to Catalog" (click)="backToCatalog()"></button>
         <h2 class="section-title">{{ selectedReport()!.name }}</h2>
       </div>
+      <section class="report-filter-card glass-card" *ngIf="requiresOwnerFilter(selectedReport())">
+        <div class="report-filter-header">
+          <div>
+            <h3 class="card-title">Filters</h3>
+            <p class="filter-note">Choose filter values before loading the report.</p>
+          </div>
+          <button
+            pButton
+            type="button"
+            class="crm-button crm-button--primary"
+            icon="pi pi-play"
+            label="Run Report"
+            (click)="applySelectedReportFilters()"
+            [disabled]="ownerOptionsLoading()">
+          </button>
+        </div>
+        <div class="filter-form-grid">
+          <label class="filter-field">
+            <span class="filter-label">Owner</span>
+            <p-select
+              [options]="ownerOptions()"
+              [ngModel]="selectedOwnerUserId()"
+              (ngModelChange)="selectedOwnerUserId.set($event ?? '')"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              placeholder="Select owner"
+              [loading]="ownerOptionsLoading()">
+            </p-select>
+          </label>
+        </div>
+      </section>
       <div class="embed-shell">
         <tr-viewer
+          *ngIf="telerikEnabled() && telerikReportSource()"
           #telerikViewer
           [serviceUrl]="telerikServiceUrl()"
           [reportSource]="telerikReportSource()"
@@ -43,6 +76,10 @@
           [error]="onTelerikError"
           [containerStyle]="{ height: '820px', width: '100%' }">
         </tr-viewer>
+        <div class="empty-state report-filter-prompt" *ngIf="requiresOwnerFilter(selectedReport()) && !telerikEnabled()">
+          <i class="pi pi-sliders-h"></i>
+          <p>Pick filter values above, then run the report.</p>
+        </div>
       </div>
     </section>
 

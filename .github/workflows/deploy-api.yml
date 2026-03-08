@@ -22,6 +22,19 @@ jobs:
         with:
           dotnet-version: '10.0.101'
 
+      - name: Configure Telerik NuGet feed
+        run: |
+          if [ -z "${{ secrets.TELERIK_NUGET_USERNAME }}" ] || [ -z "${{ secrets.TELERIK_NUGET_PASSWORD }}" ]; then
+            echo "Telerik NuGet feed credentials are not configured."
+            exit 1
+          fi
+          dotnet nuget remove source telerik || true
+          dotnet nuget add source https://nuget.telerik.com/v3/index.json \
+            --name telerik \
+            --username "${{ secrets.TELERIK_NUGET_USERNAME }}" \
+            --password "${{ secrets.TELERIK_NUGET_PASSWORD }}" \
+            --store-password-in-clear-text
+
       - name: Restore dependencies
         run: dotnet restore server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj
 

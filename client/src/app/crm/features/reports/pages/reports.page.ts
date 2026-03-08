@@ -1,24 +1,28 @@
 import { CommonModule } from '@angular/common';
 import { Component, ViewChild, inject, signal, AfterViewInit, ChangeDetectorRef, ElementRef } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
 import { TelerikReportingModule, TelerikReportViewerComponent } from '@progress/telerik-angular-report-viewer';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
-import { PipelineByStageReport, ReportCatalogItem, ReportServerConfig } from '../models/report.model';
+import { PipelineByStageReport, ReportCatalogItem, ReportParameterOption, ReportServerConfig } from '../models/report.model';
 import { ReportsDataService } from '../services/reports-data.service';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'app-reports-page',
   standalone: true,
-  imports: [CommonModule, ButtonModule, BreadcrumbsComponent, TelerikReportingModule],
+  imports: [CommonModule, FormsModule, ButtonModule, SelectModule, BreadcrumbsComponent, TelerikReportingModule],
   templateUrl: './reports.page.html',
   styleUrl: './reports.page.scss'
 })
 export class ReportsPage implements AfterViewInit {
   private static readonly crmCategoryName = 'CRM';
+  private static readonly ownerFilteredReportName = 'Open Opportunities by Owner';
+  private static readonly ownerFilterParameterName = 'OwnerUserId';
   private readonly data = inject(ReportsDataService);
   private readonly toast = inject(AppToastService);
   private readonly cdr = inject(ChangeDetectorRef);
@@ -46,9 +50,15 @@ export class ReportsPage implements AfterViewInit {
   protected readonly catalogLoading = signal(false);
   protected readonly selectedReport = signal<ReportCatalogItem | null>(null);
   protected readonly reportServerToken = signal('');
+  protected readonly viewerReady = signal(false);
   protected readonly canOpenReportDesigner = signal(
     tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
   );
+  protected readonly ownerOptions = signal<Array<{ label: string; value: string }>>([
+    { label: 'All owners', value: '' }
+  ]);
+  protected readonly ownerOptionsLoading = signal(false);
+  protected readonly selectedOwnerUserId = signal('');
 
   protected get telerikAuthToken(): string {
     const serviceUrl = this.telerikServiceUrl();
@@ -74,6 +84,7 @@ export class ReportsPage implements AfterViewInit {
 
   protected onTelerikReady = (): void => {
     console.log('[Telerik] Viewer ready');
+    this.viewerReady.set(true);
     this.normalizeTelerikViewerState();
   };
 
@@ -97,22 +108,51 @@ export class ReportsPage implements AfterViewInit {
   }
 
   protected openReport(item: ReportCatalogItem) {
-    const config = this.reportServerConfig();
-    if (!config?.reportServiceUrl) return;
-
     this.selectedReport.set(item);
-    this.telerikServiceUrl.set(this.resolveServiceUrl(config.reportServiceUrl));
-    const reportPath = item.categoryName
-      ? `${item.categoryName}/${item.name}`
-      : item.name;
-    this.telerikReportSource.set({ report: reportPath });
-    this.telerikEnabled.set(true);
+    this.viewerReady.set(false);
+
+    if (this.requiresOwnerFilter(item)) {
+      this.selectedOwnerUserId.set('');
+      this.telerikEnabled.set(false);
+      this.telerikReportSource.set(null);
+      this.loadOwnerOptions();
+      return;
+    }
+
+    this.applySelectedReportFilters();
   }
 
   protected backToCatalog() {
     this.selectedReport.set(null);
     this.telerikEnabled.set(false);
     this.telerikReportSource.set(null);
+    this.selectedOwnerUserId.set('');
+    this.ownerOptions.set([{ label: 'All owners', value: '' }]);
+    this.ownerOptionsLoading.set(false);
+    this.viewerReady.set(false);
+  }
+
+  protected applySelectedReportFilters() {
+    const selected = this.selectedReport();
+    const config = this.reportServerConfig();
+    if (!selected || !config?.reportServiceUrl) return;
+
+    this.viewerReady.set(false);
+    this.telerikServiceUrl.set(this.resolveServiceUrl(config.reportServiceUrl));
+    const reportPath = selected.categoryName
+      ? `${selected.categoryName}/${selected.name}`
+      : selected.name;
+
+    const reportSource: Record<string, unknown> = { report: reportPath };
+
+    if (this.requiresOwnerFilter(selected)) {
+      reportSource['parameters'] = {
+        [ReportsPage.ownerFilterParameterName]: this.selectedOwnerUserId() || ''
+      };
+    }
+
+    this.telerikReportSource.set(reportSource);
+    this.telerikEnabled.set(true);
   }
 
   private loadReportServerConfig() {
@@ -164,6 +204,36 @@ export class ReportsPage implements AfterViewInit {
     }
 
     return `${this.apiBaseUrl}/${servicePath.replace(/^\/+/, '')}`;
+  }
+
+  protected requiresOwnerFilter(item: ReportCatalogItem | null): boolean {
+    return (item?.name ?? '').trim().toLowerCase() === ReportsPage.ownerFilteredReportName.toLowerCase();
+  }
+
+  private loadOwnerOptions() {
+    const selected = this.selectedReport();
+    if (!selected) {
+      this.ownerOptions.set([{ label: 'All owners', value: '' }]);
+      return;
+    }
+
+    this.ownerOptionsLoading.set(true);
+    this.data.getReportParameterOptions(selected.id, ReportsPage.ownerFilterParameterName).subscribe({
+      next: (items) => {
+        this.ownerOptions.set([
+          ...items.map((item: ReportParameterOption) => ({
+            label: item.label,
+            value: item.value
+          }))
+        ]);
+        this.ownerOptionsLoading.set(false);
+      },
+      error: () => {
+        this.ownerOptions.set([{ label: 'All owners', value: '' }]);
+        this.ownerOptionsLoading.set(false);
+        this.toast.show('error', 'Unable to load report filter options.');
+      }
+    });
   }
 
   private normalizeTelerikViewerState(): void {

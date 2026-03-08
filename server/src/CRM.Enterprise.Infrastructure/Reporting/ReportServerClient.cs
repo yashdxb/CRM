@@ -1,8 +1,11 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using CRM.Enterprise.Application.Reporting;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -149,6 +152,94 @@ public sealed class ReportServerClient : IReportServerClient
         }
     }
 
+    public async Task<IReadOnlyList<ReportParameterOptionDto>> GetParameterOptionsAsync(
+        string reportId,
+        string parameterName,
+        CancellationToken ct = default)
+    {
+        if (!IsConfigured || string.IsNullOrWhiteSpace(reportId) || string.IsNullOrWhiteSpace(parameterName))
+        {
+            return [];
+        }
+
+        var token = await AuthenticateAsync(ct);
+        if (token is null) return [];
+
+        var report = await GetReportDetailsAsync(reportId, token.AccessToken, ct);
+        if (report is null || string.IsNullOrWhiteSpace(report.LastRevisionId))
+        {
+            return [];
+        }
+
+        var packageBytes = await DownloadRevisionPackageAsync(reportId, report.LastRevisionId, token.AccessToken, ct);
+        if (packageBytes is null || packageBytes.Length == 0)
+        {
+            return [];
+        }
+
+        try
+        {
+            using var archive = new ZipArchive(new MemoryStream(packageBytes), ZipArchiveMode.Read, leaveOpen: false);
+            var definitionEntry = archive.GetEntry("definition.xml");
+            if (definitionEntry is null)
+            {
+                return [];
+            }
+
+            using var definitionStream = definitionEntry.Open();
+            var document = XDocument.Load(definitionStream);
+            var ns = document.Root?.Name.Namespace ?? XNamespace.None;
+
+            var parameter = document
+                .Descendants(ns + "ReportParameter")
+                .FirstOrDefault(p => string.Equals((string?)p.Attribute("Name"), parameterName, StringComparison.OrdinalIgnoreCase));
+
+            var dataSourceName = parameter?
+                .Element(ns + "AvailableValues")?
+                .Attribute("DataSourceName")?
+                .Value;
+
+            if (string.IsNullOrWhiteSpace(dataSourceName))
+            {
+                return [];
+            }
+
+            var displayMember = ExtractFieldName(parameter
+                .Element(ns + "AvailableValues")?
+                .Attribute("DisplayMember")?
+                .Value);
+
+            var valueMember = ExtractFieldName(parameter
+                .Element(ns + "AvailableValues")?
+                .Attribute("ValueMember")?
+                .Value);
+
+            var dataSource = document
+                .Descendants(ns + "SqlDataSource")
+                .FirstOrDefault(d => string.Equals((string?)d.Attribute("Name"), dataSourceName, StringComparison.OrdinalIgnoreCase));
+
+            if (dataSource is null)
+            {
+                return [];
+            }
+
+            var connectionString = (string?)dataSource.Attribute("ConnectionString");
+            var selectCommand = (string?)dataSource.Attribute("SelectCommand");
+
+            if (string.IsNullOrWhiteSpace(connectionString) || string.IsNullOrWhiteSpace(selectCommand))
+            {
+                return [];
+            }
+
+            return await ExecuteLookupQueryAsync(connectionString, selectCommand, valueMember, displayMember, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to resolve parameter options for report {ReportId} parameter {ParameterName}", reportId, parameterName);
+            return [];
+        }
+    }
+
     // Internal DTOs for deserialization
     private sealed record TokenResponse(
         [property: JsonPropertyName("accessToken")] string AccessToken,
@@ -170,6 +261,113 @@ public sealed class ReportServerClient : IReportServerClient
     {
         public string? Id { get; set; }
         public string? Name { get; set; }
+    }
+
+    private sealed class ReportDetailsResponse
+    {
+        public string? Id { get; set; }
+        public string? LastRevisionId { get; set; }
+    }
+
+    private sealed class ReportRevisionResponse
+    {
+        public string? Content { get; set; }
+    }
+
+    private async Task<ReportDetailsResponse?> GetReportDetailsAsync(
+        string reportId,
+        string accessToken,
+        CancellationToken ct)
+    {
+        var baseUrl = _options.ReportServerUrl!.TrimEnd('/');
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/reportserver/v2/reports/{reportId}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ReportDetailsResponse>(JsonOptions, ct);
+    }
+
+    private async Task<byte[]?> DownloadRevisionPackageAsync(
+        string reportId,
+        string revisionId,
+        string accessToken,
+        CancellationToken ct)
+    {
+        var baseUrl = _options.ReportServerUrl!.TrimEnd('/');
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{baseUrl}/api/reportserver/v2/reports/{reportId}/revisions/{revisionId}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await _http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var revision = await response.Content.ReadFromJsonAsync<ReportRevisionResponse>(JsonOptions, ct);
+        if (string.IsNullOrWhiteSpace(revision?.Content))
+        {
+            return null;
+        }
+
+        return Convert.FromBase64String(revision.Content);
+    }
+
+    private static string? ExtractFieldName(string? expression)
+    {
+        if (string.IsNullOrWhiteSpace(expression))
+        {
+            return null;
+        }
+
+        const string prefix = "= Fields.";
+        return expression.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            ? expression[prefix.Length..].Trim()
+            : expression.Trim();
+    }
+
+    private async Task<IReadOnlyList<ReportParameterOptionDto>> ExecuteLookupQueryAsync(
+        string connectionString,
+        string selectCommand,
+        string? valueMember,
+        string? displayMember,
+        CancellationToken ct)
+    {
+        var options = new List<ReportParameterOptionDto>();
+
+        await using var connection = new SqlConnection(connectionString);
+        await connection.OpenAsync(ct);
+
+        await using var command = new SqlCommand(selectCommand, connection)
+        {
+            CommandTimeout = 30
+        };
+
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        while (await reader.ReadAsync(ct))
+        {
+            var value = ReadColumn(reader, valueMember);
+            var label = ReadColumn(reader, displayMember);
+
+            if (string.IsNullOrWhiteSpace(label) && string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            options.Add(new ReportParameterOptionDto(value, string.IsNullOrWhiteSpace(label) ? value : label));
+        }
+
+        return options;
+    }
+
+    private static string ReadColumn(SqlDataReader reader, string? columnName)
+    {
+        if (string.IsNullOrWhiteSpace(columnName))
+        {
+            return string.Empty;
+        }
+
+        var ordinal = reader.GetOrdinal(columnName);
+        return reader.IsDBNull(ordinal) ? string.Empty : Convert.ToString(reader.GetValue(ordinal)) ?? string.Empty;
     }
 
     private static string ResolveCategoryName(

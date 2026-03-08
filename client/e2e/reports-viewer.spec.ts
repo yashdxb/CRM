@@ -73,4 +73,20 @@ test.describe('Reports Experience', () => {
     await expect(page.locator('text=Legacy compatibility mode')).toHaveCount(0);
     await expect(page.locator('text=Loading legacy report designer')).toHaveCount(0);
   });
+
+  test('owner-filtered reports show a CRM filter form before rendering', async ({ page, request }) => {
+    await login(page, request);
+    await page.goto('/app/reports');
+
+    const reportCard = page.getByRole('heading', { name: 'Open Opportunities by Owner' }).first();
+    await expect(reportCard).toBeVisible();
+    await reportCard.click();
+
+    await expect(page.getByRole('heading', { name: 'Filters' })).toBeVisible();
+    await expect(page.getByText('Choose filter values before loading the report.')).toBeVisible();
+    await expect(page.getByText('Pick filter values above, then run the report.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Run Report' }).click();
+    await expect(page.locator('tr-viewer')).toBeVisible();
+  });
 });
