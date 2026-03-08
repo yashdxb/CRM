@@ -25,7 +25,7 @@ using CRM.Enterprise.Api.Reporting;
 
 var builder = WebApplication.CreateBuilder(args);
 
-if (!builder.Environment.IsEnvironment("Testing"))
+if (builder.Environment.IsDevelopment())
 {
     var sqlConnectionString = builder.Configuration.GetConnectionString("SqlServer")
         ?? throw new InvalidOperationException("Connection string 'SqlServer' was not found.");
