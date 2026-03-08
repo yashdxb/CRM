@@ -319,7 +319,10 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
     }
 }).AllowAnonymous();
 
-if (!app.Environment.IsEnvironment("Testing"))
+var runStartupInitialization = app.Environment.IsDevelopment() ||
+    builder.Configuration.GetValue<bool>("StartupInitialization:Enabled");
+
+if (runStartupInitialization)
 {
     app.Lifetime.ApplicationStarted.Register(() =>
     {
@@ -338,6 +341,10 @@ if (!app.Environment.IsEnvironment("Testing"))
             }
         });
     });
+}
+else
+{
+    app.Logger.LogInformation("Startup database initialization is disabled for this environment.");
 }
 
 await app.RunAsync();
