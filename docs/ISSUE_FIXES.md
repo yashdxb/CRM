@@ -1054,3 +1054,56 @@ cd client
 npm run build -- --configuration development
 E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
 ```
+
+## 20) Approval workflow security-level routing and approval notifications
+
+**Symptoms**
+- Approval steps could only target a role, not a minimum security level, even though roles already carry a tenant-configurable `SecurityLevelId`.
+- Runtime approver resolution would accept any active user in the selected role, even if the workflow should require a higher security tier.
+- Approval request/decision flows relied on generic decision events only and did not send explicit approver/requester notifications.
+
+**Fix pattern**
+1. Extend approval workflow steps with optional `minimumSecurityLevelId`.
+2. Expose the tenant security-level catalog to the builder and allow admins to set a minimum security level per approval step.
+3. Enforce the minimum security level at publish validation and at runtime approver resolution/decision authorization.
+4. Send explicit realtime/email notifications when:
+   - a new approval step is assigned
+   - an approval request is decided
+
+**Code changes**
+- Added `minimumSecurityLevelId` to the workflow step model and policy mapping:
+  - [ApprovalWorkflowPolicy.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Application/Approvals/ApprovalWorkflowPolicy.cs)
+  - [DealApprovalWorkflowDefinition.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Workflows/DealApprovalWorkflowDefinition.cs)
+- Added security-level selector support to the builder:
+  - [workflow-definition.model.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/models/workflow-definition.model.ts)
+  - [workflow-definition.service.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/services/workflow-definition.service.ts)
+  - [workflow-designer.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.ts)
+  - [workflow-designer.page.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.html)
+  - [properties-panel.component.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/components/properties-panel/properties-panel.component.ts)
+  - [properties-panel.component.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/components/properties-panel/properties-panel.component.html)
+- Added publish-time validation for approval-step security-level constraints:
+  - [WorkflowDefinitionService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Workflows/WorkflowDefinitionService.cs)
+- Enforced minimum-security routing and decision authorization, and added approval notifications:
+  - [OpportunityApprovalService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityApprovalService.cs)
+  - [crm-events.service.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/core/realtime/crm-events.service.ts)
+- Kept the legacy workflow-builder endpoint compatible with the updated workflow-step shape:
+  - [DealApprovalWorkflowContracts.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Contracts/Workflows/DealApprovalWorkflowContracts.cs)
+  - [DealApprovalWorkflowBuilderController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/DealApprovalWorkflowBuilderController.cs)
+- Extended browser coverage for the new security-level field:
+  - [workflow-designer.spec.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/e2e/workflow-designer.spec.ts)
+
+**Verified result**
+- Approval steps can now require a minimum tenant security level in addition to the selected role.
+- Publish validation blocks workflows where the selected role does not meet the configured minimum security level.
+- Runtime approver assignment and approval decisions enforce the same minimum security-level rule.
+- Approvers receive explicit approval-assigned notifications, and requesters receive explicit approval-outcome notifications.
+- Realtime `notification.alert` payloads now display detail text in the client notification center.
+
+**Verification commands**
+```bash
+dotnet build server/src/CRM.Enterprise.sln
+
+cd client
+npm run build -- --configuration development
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
+```

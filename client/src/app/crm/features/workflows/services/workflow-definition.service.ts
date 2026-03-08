@@ -21,6 +21,10 @@ export class WorkflowDefinitionService {
     return this.http.get<Array<{ id: string; name: string }>>(`${this.baseUrl}/api/roles`);
   }
 
+  getSecurityLevelOptions() {
+    return this.http.get<Array<{ id: string; name: string; rank: number }>>(`${this.baseUrl}/api/security-levels`);
+  }
+
   getScopeMetadata() {
     return this.http.get<WorkflowScopeMetadataResponse>(`${this.baseUrl}/api/workflows/definitions/${this.workflowKey}/metadata`);
   }

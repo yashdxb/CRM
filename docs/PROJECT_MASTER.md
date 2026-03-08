@@ -500,8 +500,8 @@ Win on **execution discipline**, **speed to value**, and **AI‑guided next step
 - Opportunities with stages + win/loss capture
 - Activities with outcomes + due dates
 - Dashboard KPI surface for pipeline and tasks
-- Approval thresholds (single-level)
-- Notifications (in-app + preferences)
+- Approval workflows (builder + publish lifecycle + runtime enforcement)
+- Notifications (in-app + preferences + approval alerts)
 
 **Future/Gap items to implement:**
 - Stage exit validation gates
@@ -997,7 +997,7 @@ Legend:
 5) Opportunity enhancements
 - Status: DONE
 
-6) Lightweight approval thresholds (single-level)
+6) Approval workflow builder + runtime governance
 - Status: DONE
 
 7) Calendar sync (Google/Outlook)

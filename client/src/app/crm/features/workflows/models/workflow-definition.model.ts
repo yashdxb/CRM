@@ -15,6 +15,7 @@ export interface WorkflowStep {
   order: number;
   approverRoleId?: string | null;
   approverRole: string;
+  minimumSecurityLevelId?: string | null;
   amountThreshold?: number | null;
   purpose?: string | null;
   nodeId?: string | null;

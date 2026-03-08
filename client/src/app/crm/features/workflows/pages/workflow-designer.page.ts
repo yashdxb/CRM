@@ -84,6 +84,7 @@ export class WorkflowDesignerPage {
   protected readonly lastValidationErrors = signal<string[]>([]);
   protected readonly lastValidationAtUtc = signal<string | null>(null);
   protected readonly roleOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly securityLevelOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly moduleOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackModuleOptions);
   protected readonly pipelineOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackPipelineOptions);
   protected readonly stageOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackStageOptions);
@@ -95,6 +96,7 @@ export class WorkflowDesignerPage {
 
   constructor() {
     this.loadRoleOptions();
+    this.loadSecurityLevelOptions();
     this.loadScopeMetadata();
     this.load();
   }
@@ -128,7 +130,7 @@ export class WorkflowDesignerPage {
     const nodeId = `approval-step-${crypto.randomUUID().slice(0, 8)}`;
     const nextOrder = current.steps.length + 1;
 
-    const steps = [...current.steps, { order: nextOrder, approverRole: '', amountThreshold: null, purpose: null, nodeId }];
+    const steps = [...current.steps, { order: nextOrder, approverRole: '', minimumSecurityLevelId: null, amountThreshold: null, purpose: null, nodeId }];
     const nodes = [
       ...current.nodes.filter((node) => node.type !== 'end'),
       { id: nodeId, type: 'approval' as const, x: 40 + nextOrder * 260, y: 180, label: `Step ${nextOrder}` },
@@ -401,8 +403,8 @@ export class WorkflowDesignerPage {
             version: 1
           },
           steps: [
-            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Discount', nodeId: 'approval-step-1' },
-            { order: 2, approverRoleId: financeManagerRoleId, approverRole: 'Finance Manager', amountThreshold: 25000, purpose: 'Discount', nodeId: 'approval-step-2' }
+            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', minimumSecurityLevelId: null, amountThreshold: null, purpose: 'Discount', nodeId: 'approval-step-1' },
+            { order: 2, approverRoleId: financeManagerRoleId, approverRole: 'Finance Manager', minimumSecurityLevelId: null, amountThreshold: 25000, purpose: 'Discount', nodeId: 'approval-step-2' }
           ],
           nodes: [
             { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
@@ -430,8 +432,8 @@ export class WorkflowDesignerPage {
             version: 1
           },
           steps: [
-            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', amountThreshold: 50000, purpose: 'Close', nodeId: 'approval-step-1' },
-            { order: 2, approverRoleId: financeManagerRoleId, approverRole: 'Finance Manager', amountThreshold: 100000, purpose: 'Close', nodeId: 'approval-step-2' }
+            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', minimumSecurityLevelId: null, amountThreshold: 50000, purpose: 'Close', nodeId: 'approval-step-1' },
+            { order: 2, approverRoleId: financeManagerRoleId, approverRole: 'Finance Manager', minimumSecurityLevelId: null, amountThreshold: 100000, purpose: 'Close', nodeId: 'approval-step-2' }
           ],
           nodes: [
             { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
@@ -461,8 +463,8 @@ export class WorkflowDesignerPage {
             version: 1
           },
           steps: [
-            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Update', nodeId: 'approval-step-1' },
-            { order: 2, approverRoleId: legalRoleId, approverRole: 'Legal Approver', amountThreshold: null, purpose: 'Update', nodeId: 'approval-step-2' }
+            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', minimumSecurityLevelId: null, amountThreshold: null, purpose: 'Update', nodeId: 'approval-step-1' },
+            { order: 2, approverRoleId: legalRoleId, approverRole: 'Legal Approver', minimumSecurityLevelId: null, amountThreshold: null, purpose: 'Update', nodeId: 'approval-step-2' }
           ],
           nodes: [
             { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
@@ -490,7 +492,7 @@ export class WorkflowDesignerPage {
             status: 'draft',
             version: 1
           },
-          steps: [{ order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }],
+          steps: [{ order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', minimumSecurityLevelId: null, amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }],
           nodes: [
             { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
             { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Step 1' },
@@ -525,6 +527,7 @@ export class WorkflowDesignerPage {
         ...step,
         order: index + 1,
         approverRoleId: step.approverRoleId ?? null,
+        minimumSecurityLevelId: step.minimumSecurityLevelId ?? null,
         nodeId: step.nodeId || `approval-step-${index + 1}`,
         approverRole: (step.approverRole ?? '').trim(),
         purpose: step.purpose?.trim() || null,
@@ -614,6 +617,19 @@ export class WorkflowDesignerPage {
       },
       error: () => {
         this.roleOptions.set([]);
+      }
+    });
+  }
+
+  private loadSecurityLevelOptions() {
+    this.workflowService.getSecurityLevelOptions().subscribe({
+      next: (levels) => {
+        this.securityLevelOptions.set((levels ?? [])
+          .map((level) => ({ label: `${level.name} (Rank ${level.rank})`, value: level.id }))
+          .sort((left, right) => left.label.localeCompare(right.label)));
+      },
+      error: () => {
+        this.securityLevelOptions.set([]);
       }
     });
   }

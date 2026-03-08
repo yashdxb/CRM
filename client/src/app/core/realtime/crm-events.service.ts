@@ -218,6 +218,12 @@ export class CrmEventsService {
 
   private resolveDetail(envelope: CrmEventEnvelope): string | undefined {
     switch (envelope.eventType) {
+      case 'notification.alert':
+        return String(
+          envelope.payload?.['detail']
+          ?? envelope.payload?.['message']
+          ?? ''
+        ) || undefined;
       case 'opportunity.stage.changed': {
         const name = String(envelope.payload?.['opportunityName'] ?? 'Opportunity');
         const from = String(envelope.payload?.['previousStage'] ?? 'previous');

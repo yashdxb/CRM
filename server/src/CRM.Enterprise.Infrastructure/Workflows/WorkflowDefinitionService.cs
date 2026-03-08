@@ -236,6 +236,8 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
                 {
                     ValidateScopeAgainstMetadata(normalized, metadata, errors);
                 }
+
+                await ValidateApprovalSecurityLevelsAsync(normalized, errors, cancellationToken);
             }
 
             return new WorkflowValidationResultDto(errors.Count == 0, errors.Distinct(StringComparer.Ordinal).ToArray());
@@ -275,6 +277,56 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
     private static bool ContainsOption(IEnumerable<WorkflowScopeOptionDto> options, string value)
     {
         return options.Any(option => string.Equals(option.Value, value?.Trim(), StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task ValidateApprovalSecurityLevelsAsync(
+        DealApprovalWorkflowDefinition definition,
+        ICollection<string> errors,
+        CancellationToken cancellationToken)
+    {
+        var configuredLevels = await _dbContext.SecurityLevelDefinitions
+            .AsNoTracking()
+            .Where(level => !level.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        var roles = await _dbContext.Roles
+            .AsNoTracking()
+            .Include(role => role.SecurityLevel)
+            .Where(role => !role.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        foreach (var step in definition.Steps.Where(step => step.MinimumSecurityLevelId is Guid id && id != Guid.Empty))
+        {
+            var requiredLevel = configuredLevels.FirstOrDefault(level => level.Id == step.MinimumSecurityLevelId);
+            if (requiredLevel is null)
+            {
+                errors.Add($"Approval step {step.Order} references a security level that is not configured.");
+                continue;
+            }
+
+            Domain.Entities.Role? role = null;
+            if (step.ApproverRoleId.HasValue && step.ApproverRoleId.Value != Guid.Empty)
+            {
+                role = roles.FirstOrDefault(candidate => candidate.Id == step.ApproverRoleId.Value);
+            }
+
+            if (role is null && !string.IsNullOrWhiteSpace(step.ApproverRole))
+            {
+                role = roles.FirstOrDefault(candidate =>
+                    string.Equals(candidate.Name, step.ApproverRole.Trim(), StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (role is null)
+            {
+                continue;
+            }
+
+            if (role.SecurityLevel is null || role.SecurityLevel.Rank < requiredLevel.Rank)
+            {
+                errors.Add(
+                    $"Approval step {step.Order} role '{role.Name}' does not meet minimum security level '{requiredLevel.Name}'.");
+            }
+        }
     }
 
     private static bool IsSupportedKey(string key)

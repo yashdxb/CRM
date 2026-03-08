@@ -5,7 +5,7 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-06 19:44 UTC**
+- Synced at: **2026-03-08 04:10 UTC**
 - ClickUp list id: `901710720381`
 - Total tasks mirrored: **195**
 - Epics mirrored: **39**
@@ -13,19 +13,25 @@
 
 ## Status Summary
 - All tasks:
-  - `done`: 116
-  - `backlog`: 74
-  - `in progress`: 5
+  - `done`: 118
+  - `backlog`: 73
+  - `in progress`: 4
 - Epics:
-  - `backlog`: 22
-  - `done`: 15
+  - `backlog`: 21
+  - `done`: 16
   - `in progress`: 2
 - Stories:
-  - `done`: 101
+  - `done`: 102
   - `backlog`: 52
-  - `in progress`: 3
+  - `in progress`: 2
 
 ## Epic and Story Mirror
+
+### [DONE] Approval Workflow Builder & Runtime (`86e041x9g`)
+- Status: `done`
+- Tags: built, core
+- Stories:
+  - `86e041x9h` | `done` | Drag-and-drop workflow designer | tags: built, core
 
 ### [LATER] AI Conversation Intelligence (`86e041xa6`)
 - Status: `backlog`
@@ -88,12 +94,6 @@
 - Stories:
   - `86e0422pw` | `backlog` | Social listening and tracking | tags: future, later
   - `86e0422pr` | `backlog` | Social profile enrichment (LinkedIn/Twitter) | tags: future, later
-
-### [LATER] Visual Workflow Builder (`86e041x9g`)
-- Status: `backlog`
-- Tags: future, later
-- Stories:
-  - `86e041x9h` | `in progress` | Drag-and-drop workflow designer | tags: -
 
 ### [NEXT] API Enhancement Layer (`86e0422mu`)
 - Status: `backlog`

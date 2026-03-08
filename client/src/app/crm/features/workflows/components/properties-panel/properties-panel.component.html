@@ -25,6 +25,19 @@
       Legacy role mapping: {{ step.approverRole }}. Re-select to bind to a tenant role.
     </small>
 
+    <label>Minimum security level</label>
+    <p-select
+      appendTo="body"
+      [options]="securityLevelOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="step.minimumSecurityLevelId || null"
+      (ngModelChange)="patchStep.emit({ index: i, patch: { minimumSecurityLevelId: $event } })"
+      placeholder="Optional"
+      [showClear]="true"
+      styleClass="w-full"
+    ></p-select>
+
     <label>Amount threshold</label>
     <p-inputNumber
       [ngModel]="step.amountThreshold"

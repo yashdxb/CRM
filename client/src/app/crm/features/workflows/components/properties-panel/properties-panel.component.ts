@@ -18,6 +18,7 @@ export class PropertiesPanelComponent {
   @Input({ required: true }) steps: WorkflowStep[] = [];
   @Input({ required: true }) nodes: WorkflowNode[] = [];
   @Input() roleOptions: Array<{ label: string; value: string }> = [];
+  @Input() securityLevelOptions: Array<{ label: string; value: string }> = [];
   @Output() removeStep = new EventEmitter<number>();
   @Output() patchStep = new EventEmitter<{ index: number; patch: Partial<WorkflowStep> }>();
   @Output() removeNode = new EventEmitter<string>();

@@ -72,6 +72,7 @@ public class DealApprovalWorkflowBuilderController : ControllerBase
                     step.Order,
                     step.ApproverRoleId,
                     step.ApproverRole,
+                    step.MinimumSecurityLevelId,
                     step.AmountThreshold,
                     step.Purpose,
                     step.NodeId)).ToArray(),
@@ -123,6 +124,7 @@ public class DealApprovalWorkflowBuilderController : ControllerBase
                     new DealApprovalWorkflowStepResponse(
                         step.Order,
                         step.ApproverRole,
+                        step.MinimumSecurityLevelId,
                         step.AmountThreshold,
                         step.Purpose,
                         step.NodeId))

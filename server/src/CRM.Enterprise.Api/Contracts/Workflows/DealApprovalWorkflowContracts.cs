@@ -20,6 +20,7 @@ public sealed record DealApprovalWorkflowScopeResponse(
 public sealed record DealApprovalWorkflowStepResponse(
     int Order,
     string ApproverRole,
+    Guid? MinimumSecurityLevelId,
     decimal? AmountThreshold,
     string? Purpose,
     string? NodeId);
@@ -56,6 +57,7 @@ public sealed record UpdateDealApprovalWorkflowStepRequest(
     int Order,
     Guid? ApproverRoleId,
     string ApproverRole,
+    Guid? MinimumSecurityLevelId,
     decimal? AmountThreshold,
     string? Purpose,
     string? NodeId);

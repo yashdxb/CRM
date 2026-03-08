@@ -19,7 +19,7 @@ public sealed record DealApprovalWorkflowDefinition(
             DealApprovalWorkflowScopeDefinition.Default(),
             new[]
             {
-                new DealApprovalWorkflowStepDefinition(1, null, role, defaultThreshold, "Deal Approval", stepNodeId)
+                new DealApprovalWorkflowStepDefinition(1, null, role, null, defaultThreshold, "Deal Approval", stepNodeId)
             },
             new[]
             {
@@ -61,6 +61,7 @@ public sealed record DealApprovalWorkflowStepDefinition(
     int Order,
     Guid? ApproverRoleId,
     string ApproverRole,
+    Guid? MinimumSecurityLevelId,
     decimal? AmountThreshold,
     string? Purpose,
     string? NodeId);
@@ -136,6 +137,7 @@ public static class DealApprovalWorkflowMapper
                     s.Order,
                     s.ApproverRoleId,
                     s.ApproverRole,
+                    s.MinimumSecurityLevelId,
                     s.AmountThreshold,
                     s.Purpose,
                     s.NodeId ?? $"approval-step-{index + 1}")));
@@ -159,7 +161,7 @@ public static class DealApprovalWorkflowMapper
         return new ApprovalWorkflowPolicy(
             true,
             normalized.Steps.Select(step =>
-                new ApprovalWorkflowStep(step.Order, step.ApproverRoleId, step.ApproverRole, step.AmountThreshold, step.Purpose, step.NodeId))
+                new ApprovalWorkflowStep(step.Order, step.ApproverRoleId, step.ApproverRole, step.MinimumSecurityLevelId, step.AmountThreshold, step.Purpose, step.NodeId))
                 .ToArray());
     }
 
@@ -420,6 +422,7 @@ public static class DealApprovalWorkflowMapper
                 index + 1,
                 step.ApproverRoleId,
                 step.ApproverRole.Trim(),
+                step.MinimumSecurityLevelId,
                 step.AmountThreshold,
                 string.IsNullOrWhiteSpace(step.Purpose) ? null : step.Purpose.Trim(),
                 string.IsNullOrWhiteSpace(step.NodeId) ? $"approval-step-{index + 1}" : step.NodeId.Trim()))

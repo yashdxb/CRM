@@ -82,6 +82,7 @@ test('workflow designer applies template and uses controlled scope options', asy
   await expect(page.locator('.scope-grid input').first()).toHaveValue('Discount Approval Workflow');
   await expect(page.locator('.properties-card .step-header strong', { hasText: 'Step 1' })).toBeVisible();
   await expect(page.locator('.properties-card .step-header strong', { hasText: 'Step 2' })).toBeVisible();
+  await expect(page.locator('.properties-card label', { hasText: 'Minimum security level' }).first()).toBeVisible();
 
   const publishRequest = page.waitForRequest((candidate) =>
     candidate.method() === 'PUT' && candidate.url().includes('/api/workflows/definitions/deal-approval')

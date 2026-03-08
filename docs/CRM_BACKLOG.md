@@ -357,16 +357,17 @@ MoSCoW: Should
   - Win/loss reason required on close.
   - Stalled deals flagged in pipeline view.
 
-9) Lightweight approval thresholds (single-level)
+9) Approval workflow builder + governed runtime
 MoSCoW: Must
 - Status: DONE
 - Evidence:
-  - Workspace settings UI: `client/src/app/features/settings/pages/workspace-settings.page.html`
-  - Opportunity enforcement: `server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs`
+  - Workflow designer UI: `client/src/app/crm/features/workflows/pages/workflow-designer.page.html`
+  - Runtime enforcement + routing: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityApprovalService.cs`
+  - Execution/inbox linkage: `server/src/CRM.Enterprise.Infrastructure/Workflows/WorkflowExecutionService.cs`
 - Acceptance criteria:
-  - Manager-configurable thresholds (amount and/or discount) stored in workspace settings.
-  - Opportunity close blocked when thresholds exceeded until approved.
-  - Single approver role (default Sales Manager).
+  - Draft workflow definitions can be validated, published, unpublished, and reverted without executing draft changes.
+  - Published workflows gate opportunity approval requests for amount/stage/discount triggers only.
+  - Approval routing resolves tenant roles and optional minimum security levels, with execution history linked into Decision Inbox.
 
 10) Epistemic dashboard widgets (Truth Metrics, Risk Register, Confidence Forecast)
 MoSCoW: Must

@@ -3,12 +3,14 @@ using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Audit;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Workflows;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace CRM.Enterprise.Infrastructure.Opportunities;
 
@@ -24,17 +26,26 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
     private readonly ITenantProvider _tenantProvider;
     private readonly IAuditEventService _auditEvents;
     private readonly ServiceBusApprovalQueue _approvalQueue;
+    private readonly ICrmRealtimePublisher _realtimePublisher;
+    private readonly IEmailSender _emailSender;
+    private readonly ILogger<OpportunityApprovalService> _logger;
 
     public OpportunityApprovalService(
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
         IAuditEventService auditEvents,
-        ServiceBusApprovalQueue approvalQueue)
+        ServiceBusApprovalQueue approvalQueue,
+        ICrmRealtimePublisher realtimePublisher,
+        IEmailSender emailSender,
+        ILogger<OpportunityApprovalService> logger)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _auditEvents = auditEvents;
         _approvalQueue = approvalQueue;
+        _realtimePublisher = realtimePublisher;
+        _emailSender = emailSender;
+        _logger = logger;
     }
 
     public async Task<IReadOnlyList<OpportunityApprovalDto>?> GetForOpportunityAsync(Guid opportunityId, CancellationToken cancellationToken = default)
@@ -479,6 +490,8 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 approval.Purpose),
             cancellationToken);
 
+        await NotifyApprovalRequestedAsync(approval, opportunity.Name, firstRouting.ApproverName, actor.UserName ?? SystemActor, cancellationToken);
+
         var approvalDto = await MapDtoAsync(approval, chain, cancellationToken);
         return OpportunityOperationResult<OpportunityApprovalDto>.Ok(approvalDto);
     }
@@ -504,7 +517,19 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval role must be configured for this approval step.");
         }
 
-        if (!await IsApproverAsync(actor.UserId, approval.ApproverRoleId, approverRole, cancellationToken))
+        OpportunityApprovalChain? chain = null;
+        ApprovalWorkflowStep? currentWorkflowStep = null;
+        if (approval.ApprovalChainId.HasValue)
+        {
+            chain = await _dbContext.OpportunityApprovalChains
+                .FirstOrDefaultAsync(c => c.Id == approval.ApprovalChainId, cancellationToken);
+            currentWorkflowStep = chain is null
+                ? null
+                : (JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(chain.StepsJson, JsonOptions) ?? new List<ApprovalWorkflowStep>())
+                    .FirstOrDefault(step => step.Order == approval.StepOrder);
+        }
+
+        if (!await IsApproverAsync(actor.UserId, approval.ApproverRoleId, approverRole, currentWorkflowStep?.MinimumSecurityLevelId, cancellationToken))
         {
             return OpportunityOperationResult<OpportunityApprovalDto>.Fail("You do not have permission to approve this request.");
         }
@@ -513,13 +538,6 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         approval.DecisionOn = DateTime.UtcNow;
         approval.Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
         approval.ApproverUserId = actor.UserId;
-
-        OpportunityApprovalChain? chain = null;
-        if (approval.ApprovalChainId.HasValue)
-        {
-            chain = await _dbContext.OpportunityApprovalChains
-                .FirstOrDefaultAsync(c => c.Id == approval.ApprovalChainId, cancellationToken);
-        }
 
         await _auditEvents.TrackAsync(
             new AuditEventEntry(
@@ -619,6 +637,9 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                             nextApproval.ApproverRole,
                             nextApproval.Purpose),
                         cancellationToken);
+
+                    var opportunityName = await ResolveOpportunityNameAsync(approval.OpportunityId, cancellationToken);
+                    await NotifyApprovalRequestedAsync(nextApproval, opportunityName, nextRouting.ApproverName, actor.UserName ?? SystemActor, cancellationToken);
                 }
             }
         }
@@ -631,6 +652,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         }
 
         var dto = await MapDtoAsync(approval, chain, cancellationToken);
+        await NotifyApprovalDecisionAsync(approval, dto, approved, actor.UserName ?? SystemActor, cancellationToken);
         return OpportunityOperationResult<OpportunityApprovalDto>.Ok(dto);
     }
 
@@ -990,6 +1012,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 approval.ApproverRole,
                 null,
                 null,
+                null,
                 null));
         }
 
@@ -1104,6 +1127,145 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         return await MapDtoAsync(approval, chain, cancellationToken);
     }
 
+    private async Task NotifyApprovalRequestedAsync(
+        OpportunityApproval approval,
+        string? opportunityName,
+        string? approverName,
+        string requesterName,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        var title = $"Approval requested: {opportunityName ?? "Opportunity"}";
+        var detail = $"{approval.Purpose} approval is waiting for {approverName ?? approval.ApproverRole}.";
+
+        if (approval.ApproverUserId.HasValue && approval.ApproverUserId.Value != Guid.Empty)
+        {
+            await PublishApprovalNotificationAsync(
+                tenantId,
+                [approval.ApproverUserId.Value],
+                title,
+                detail,
+                cancellationToken);
+
+            var approverContact = await ResolveUserContactAsync(approval.ApproverUserId, cancellationToken);
+            if (approverContact is not null)
+            {
+                await TrySendEmailAsync(
+                    approverContact.Email,
+                    $"Approval required: {opportunityName ?? "Opportunity"}",
+                    $"""
+                    <p>Hello {approverContact.FullName},</p>
+                    <p>A {approval.Purpose} approval is waiting for your review on <strong>{opportunityName ?? "Opportunity"}</strong>.</p>
+                    <p>Amount: {approval.Amount:0.##} {approval.Currency}<br/>Role: {approval.ApproverRole}</p>
+                    """,
+                    cancellationToken);
+            }
+        }
+
+        if (approval.RequestedByUserId.HasValue && approval.RequestedByUserId.Value != Guid.Empty)
+        {
+            await PublishApprovalNotificationAsync(
+                tenantId,
+                [approval.RequestedByUserId.Value],
+                "Approval submitted",
+                $"{approval.Purpose} approval for {opportunityName ?? "Opportunity"} was submitted to {approverName ?? approval.ApproverRole}.",
+                cancellationToken);
+        }
+    }
+
+    private async Task NotifyApprovalDecisionAsync(
+        OpportunityApproval approval,
+        OpportunityApprovalDto approvalDto,
+        bool approved,
+        string actorName,
+        CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        var opportunityName = await ResolveOpportunityNameAsync(approval.OpportunityId, cancellationToken) ?? "Opportunity";
+        var outcome = approved ? "approved" : "rejected";
+        var detail = $"{opportunityName} was {outcome} by {actorName}.";
+
+        if (approval.RequestedByUserId.HasValue && approval.RequestedByUserId.Value != Guid.Empty)
+        {
+            await PublishApprovalNotificationAsync(
+                tenantId,
+                [approval.RequestedByUserId.Value],
+                $"Approval {approval.Status.ToLowerInvariant()}",
+                detail,
+                cancellationToken);
+
+            var requesterContact = await ResolveUserContactAsync(approval.RequestedByUserId, cancellationToken);
+            if (requesterContact is not null)
+            {
+                await TrySendEmailAsync(
+                    requesterContact.Email,
+                    $"Approval {approval.Status}: {opportunityName}",
+                    $"""
+                    <p>Hello {requesterContact.FullName},</p>
+                    <p>Your {approval.Purpose} approval request for <strong>{opportunityName}</strong> was <strong>{approval.Status.ToLowerInvariant()}</strong> by {actorName}.</p>
+                    <p>Current status: {approvalDto.ChainStatus}</p>
+                    """,
+                    cancellationToken);
+            }
+        }
+    }
+
+    private async Task PublishApprovalNotificationAsync(
+        Guid tenantId,
+        IReadOnlyCollection<Guid> userIds,
+        string title,
+        string detail,
+        CancellationToken cancellationToken)
+    {
+        if (userIds.Count == 0)
+        {
+            return;
+        }
+
+        await _realtimePublisher.PublishUsersEventAsync(
+            tenantId,
+            userIds,
+            "notification.alert",
+            new
+            {
+                title,
+                detail,
+                createdAtUtc = DateTime.UtcNow
+            },
+            cancellationToken);
+    }
+
+    private async Task TrySendEmailAsync(
+        string? toEmail,
+        string subject,
+        string htmlBody,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(toEmail))
+        {
+            return;
+        }
+
+        try
+        {
+            await _emailSender.SendAsync(toEmail.Trim(), subject, htmlBody, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Approval notification email failed for {ToEmail}.", toEmail);
+        }
+    }
+
     private async Task<ApprovalWorkflowPolicy> ResolveApprovalWorkflowAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var definition = await ResolveApprovalWorkflowDefinitionAsync(tenantId, cancellationToken);
@@ -1174,6 +1336,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
     {
         var roleQuery = _dbContext.Roles
             .AsNoTracking()
+            .Include(role => role.SecurityLevel)
             .Where(role => !role.IsDeleted);
 
         Domain.Entities.Role? role = null;
@@ -1193,20 +1356,45 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             return ApprovalRoutingResolution.Fail($"Approver role '{step.ApproverRole}' is not configured in this workspace.");
         }
 
+        SecurityLevelDefinition? minimumSecurityLevel = null;
+        if (step.MinimumSecurityLevelId.HasValue && step.MinimumSecurityLevelId.Value != Guid.Empty)
+        {
+            minimumSecurityLevel = await _dbContext.SecurityLevelDefinitions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(level => level.Id == step.MinimumSecurityLevelId.Value && !level.IsDeleted, cancellationToken);
+
+            if (minimumSecurityLevel is null)
+            {
+                return ApprovalRoutingResolution.Fail("Minimum security level on the approval step is not configured in this workspace.");
+            }
+        }
+
+        if (minimumSecurityLevel is not null && (role.SecurityLevel is null || role.SecurityLevel.Rank < minimumSecurityLevel.Rank))
+        {
+            return ApprovalRoutingResolution.Fail(
+                $"Approver role '{role.Name}' does not meet minimum security level '{minimumSecurityLevel.Name}'.");
+        }
+
         var assignee = await (
                 from userRole in _dbContext.UserRoles.AsNoTracking()
                 join user in _dbContext.Users.AsNoTracking() on userRole.UserId equals user.Id
+                join assignedRole in _dbContext.Roles.AsNoTracking().Include(item => item.SecurityLevel) on userRole.RoleId equals assignedRole.Id
                 where !userRole.IsDeleted
                       && !user.IsDeleted
                       && user.IsActive
                       && userRole.RoleId == role.Id
+                      && (minimumSecurityLevel == null
+                          || (assignedRole.SecurityLevel != null && assignedRole.SecurityLevel.Rank >= minimumSecurityLevel.Rank))
                 orderby user.FullName, user.Email
                 select new { user.Id, user.FullName })
             .FirstOrDefaultAsync(cancellationToken);
 
         if (assignee is null)
         {
-            return ApprovalRoutingResolution.Fail($"No active users are assigned to approver role '{role.Name}'.");
+            return ApprovalRoutingResolution.Fail(
+                minimumSecurityLevel is null
+                    ? $"No active users are assigned to approver role '{role.Name}'."
+                    : $"No active users assigned to role '{role.Name}' meet minimum security level '{minimumSecurityLevel.Name}'.");
         }
 
         return ApprovalRoutingResolution.Ok(role.Id, role.Name, assignee.Id, assignee.FullName);
@@ -1226,22 +1414,56 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    private async Task<bool> IsApproverAsync(Guid? userId, Guid? approverRoleId, string approverRole, CancellationToken cancellationToken)
+    private async Task<UserContact?> ResolveUserContactAsync(Guid? userId, CancellationToken cancellationToken)
+    {
+        if (!userId.HasValue || userId.Value == Guid.Empty)
+        {
+            return null;
+        }
+
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Where(user => user.Id == userId.Value && !user.IsDeleted && user.IsActive)
+            .Select(user => new UserContact(user.Id, user.FullName, user.Email))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<string?> ResolveOpportunityNameAsync(Guid opportunityId, CancellationToken cancellationToken)
+    {
+        return await _dbContext.Opportunities
+            .AsNoTracking()
+            .Where(opportunity => opportunity.Id == opportunityId && !opportunity.IsDeleted)
+            .Select(opportunity => opportunity.Name)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<bool> IsApproverAsync(Guid? userId, Guid? approverRoleId, string approverRole, Guid? minimumSecurityLevelId, CancellationToken cancellationToken)
     {
         if (!userId.HasValue || userId.Value == Guid.Empty)
         {
             return false;
         }
 
+        var minimumRank = minimumSecurityLevelId.HasValue && minimumSecurityLevelId.Value != Guid.Empty
+            ? await _dbContext.SecurityLevelDefinitions
+                .AsNoTracking()
+                .Where(level => level.Id == minimumSecurityLevelId.Value && !level.IsDeleted)
+                .Select(level => (int?)level.Rank)
+                .FirstOrDefaultAsync(cancellationToken)
+            : null;
+
         return await _dbContext.UserRoles
             .Include(ur => ur.Role)
+            .ThenInclude(role => role!.SecurityLevel)
             .AnyAsync(
                 ur => ur.UserId == userId.Value &&
+                      !ur.IsDeleted &&
                       ur.Role != null &&
                       (
                           (approverRoleId.HasValue && approverRoleId.Value != Guid.Empty && ur.RoleId == approverRoleId.Value) ||
                           ur.Role.Name == approverRole
-                      ),
+                      ) &&
+                      (!minimumRank.HasValue || (ur.Role.SecurityLevel != null && ur.Role.SecurityLevel.Rank >= minimumRank.Value)),
                 cancellationToken);
     }
 
@@ -1259,4 +1481,6 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         public static ApprovalRoutingResolution Fail(string error) =>
             new(false, null, string.Empty, null, null, error);
     }
+
+    private sealed record UserContact(Guid Id, string FullName, string Email);
 }
