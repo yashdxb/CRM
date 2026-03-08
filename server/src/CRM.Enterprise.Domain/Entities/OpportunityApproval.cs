@@ -10,6 +10,7 @@ public sealed class OpportunityApproval : AuditableEntity
     public Guid? ApprovalChainId { get; set; }
     public OpportunityApprovalChain? ApprovalChain { get; set; }
 
+    public Guid? ApproverRoleId { get; set; }
     public string ApproverRole { get; set; } = string.Empty;
     public Guid? ApproverUserId { get; set; }
     public Guid? RequestedByUserId { get; set; }

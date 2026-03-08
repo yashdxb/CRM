@@ -13,6 +13,10 @@ public class Tenant : Entity
     public decimal? ApprovalAmountThreshold { get; set; }
     public string? ApprovalApproverRole { get; set; }
     public string? ApprovalWorkflowJson { get; set; }
+    public string? ApprovalWorkflowDraftJson { get; set; }
+    public string? ApprovalWorkflowPublishedJson { get; set; }
+    public DateTime? ApprovalWorkflowPublishedAtUtc { get; set; }
+    public string? ApprovalWorkflowPublishedBy { get; set; }
     public string? DashboardLayoutDefaultsJson { get; set; }
     public string? QualificationPolicyJson { get; set; }
     public string? AssistantActionScoringPolicyJson { get; set; }

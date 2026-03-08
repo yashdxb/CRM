@@ -9,9 +9,11 @@ public sealed record ApprovalWorkflowPolicy(
 
 public sealed record ApprovalWorkflowStep(
     int Order,
+    Guid? ApproverRoleId,
     string ApproverRole,
     decimal? AmountThreshold,
-    string? Purpose);
+    string? Purpose,
+    string? NodeId = null);
 
 public static class ApprovalWorkflowPolicyDefaults
 {
@@ -26,7 +28,7 @@ public static class ApprovalWorkflowPolicyDefaults
             true,
             new[]
             {
-                new ApprovalWorkflowStep(1, approvalApproverRole.Trim(), approvalAmountThreshold, null)
+                new ApprovalWorkflowStep(1, null, approvalApproverRole.Trim(), approvalAmountThreshold, null)
             });
     }
 }

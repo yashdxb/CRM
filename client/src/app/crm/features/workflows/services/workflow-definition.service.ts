@@ -16,6 +16,10 @@ export class WorkflowDefinitionService {
   private readonly workflowKey = 'deal-approval';
   private readonly legacyUrl = `${this.baseUrl}/api/workflows/deal-approval`;
 
+  getRoleOptions() {
+    return this.http.get<Array<{ id: string; name: string }>>(`${this.baseUrl}/api/roles`);
+  }
+
   getDealApprovalDefinition() {
     return this.http
       .get<WorkflowDefinitionResponse>(`${this.baseUrl}/api/workflows/definitions/${this.workflowKey}`)
@@ -25,7 +29,10 @@ export class WorkflowDefinitionService {
           return {
             definition: parsed,
             isActive: response.isActive,
-            updatedAtUtc: response.updatedAtUtc
+            updatedAtUtc: response.updatedAtUtc,
+            publishedDefinitionJson: response.publishedDefinitionJson ?? null,
+            publishedAtUtc: response.publishedAtUtc ?? null,
+            publishedBy: response.publishedBy ?? null
           };
         }),
         catchError(() => {
@@ -33,7 +40,10 @@ export class WorkflowDefinitionService {
             map((definition) => ({
               definition,
               isActive: definition.enabled,
-              updatedAtUtc: null
+              updatedAtUtc: null,
+              publishedDefinitionJson: null,
+              publishedAtUtc: null,
+              publishedBy: null
             })),
             catchError((legacyError) => throwError(() => legacyError))
           );
@@ -41,12 +51,17 @@ export class WorkflowDefinitionService {
       );
   }
 
-  saveDealApprovalDefinition(definition: DealApprovalWorkflowDefinition, isActive: boolean) {
+  saveDealApprovalDefinition(
+    definition: DealApprovalWorkflowDefinition,
+    isActive: boolean,
+    operation: 'save-draft' | 'publish' | 'unpublish' | 'revert-draft'
+  ) {
     return this.http.put<WorkflowDefinitionResponse>(
       `${this.baseUrl}/api/workflows/definitions/${this.workflowKey}`,
       {
         definitionJson: JSON.stringify(definition),
-        isActive
+        isActive,
+        operation
       }
     ).pipe(
       catchError((error: { status?: number }) => {
@@ -63,7 +78,10 @@ export class WorkflowDefinitionService {
             name: 'Deal Approval',
             isActive: legacy.enabled,
             definitionJson: JSON.stringify(legacy),
-            updatedAtUtc: null
+            updatedAtUtc: null,
+            publishedDefinitionJson: null,
+            publishedAtUtc: null,
+            publishedBy: null
           }))
         );
       })

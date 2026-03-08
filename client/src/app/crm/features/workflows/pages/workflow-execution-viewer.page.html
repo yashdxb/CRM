@@ -18,17 +18,77 @@
     <article class="kpi"><span>Completed Today</span><strong>{{ s.completedToday }}</strong></article>
   </section>
 
+  <section class="current-card" *ngIf="status() as s">
+    <h2>Current Execution</h2>
+    <div class="empty" *ngIf="!s.currentExecutionId">No running execution right now.</div>
+    <div class="current-grid" *ngIf="s.currentExecutionId">
+      <article>
+        <span>Deal</span>
+        <strong>{{ s.currentOpportunityName || 'Unknown deal' }}</strong>
+      </article>
+      <article>
+        <span>Purpose</span>
+        <strong>{{ s.currentPurpose || 'Deal Approval' }}</strong>
+      </article>
+      <article>
+        <span>Current Step</span>
+        <strong>Step {{ s.currentStepOrder || 1 }} of {{ s.currentTotalSteps || 1 }}</strong>
+      </article>
+      <article>
+        <span>Pending Approver</span>
+        <strong>{{ s.currentPendingApproverName || s.currentPendingApproverRole || 'Unassigned' }}</strong>
+      </article>
+      <article *ngIf="s.currentDecisionRequestId">
+        <span>Linked Decision</span>
+        <strong>{{ s.currentDecisionStatus || 'Pending' }}</strong>
+      </article>
+    </div>
+  </section>
+
+  <section class="current-card" *ngIf="selectedHistoryItem() as selected">
+    <h2>Focused Execution</h2>
+    <div class="current-grid">
+      <article>
+        <span>Deal</span>
+        <strong>{{ selected.opportunityName }}</strong>
+      </article>
+      <article>
+        <span>Workflow</span>
+        <strong>{{ selected.workflowName }} v{{ selected.workflowVersion }}</strong>
+      </article>
+      <article>
+        <span>Decision Status</span>
+        <strong>{{ selected.decisionStatus || 'Pending' }}</strong>
+      </article>
+      <article>
+        <span>Current Step</span>
+        <strong>Step {{ selected.currentStepOrder }} of {{ selected.totalSteps }}</strong>
+      </article>
+    </div>
+  </section>
+
   <section class="history-card">
     <h2>History Log</h2>
     <div class="empty" *ngIf="!history().length">No execution history yet.</div>
     <div class="history-list" *ngIf="history().length">
-      <article class="history-item" *ngFor="let item of history()">
+      <article class="history-item" [class.selected]="isSelected(item)" *ngFor="let item of history()">
         <div class="top">
-          <strong>{{ item.status }}</strong>
+          <strong>{{ item.opportunityName }}</strong>
           <span>{{ item.startedAtUtc }}</span>
         </div>
+        <div class="meta">
+          <span>{{ item.workflowName }} v{{ item.workflowVersion }}</span>
+          <span>{{ item.purpose }}</span>
+          <span>Step {{ item.currentStepOrder }} / {{ item.totalSteps }}</span>
+          <span *ngIf="item.pendingApproverName || item.pendingApproverRole">
+            Pending: {{ item.pendingApproverName || item.pendingApproverRole }}
+          </span>
+          <span *ngIf="item.decisionRequestId">
+            Decision: {{ item.decisionStatus || 'Pending' }}
+          </span>
+        </div>
         <div>{{ item.summary }}</div>
-        <small>By {{ item.triggeredBy }}</small>
+        <small>By {{ item.triggeredBy }} · {{ item.status }}</small>
       </article>
     </div>
   </section>

@@ -163,6 +163,19 @@ public class CrmDbContext : DbContext
             .HasIndex(r => new { r.TenantId, r.StageName, r.Name });
         modelBuilder.Entity<OpportunityApproval>().ToTable("OpportunityApprovals", CrmSchema);
         modelBuilder.Entity<OpportunityApprovalChain>().ToTable("OpportunityApprovalChains", CrmSchema);
+        modelBuilder.Entity<OpportunityApprovalChain>()
+            .HasIndex(chain => new { chain.TenantId, chain.OpportunityId, chain.Status, chain.RequestedOn });
+        modelBuilder.Entity<OpportunityApprovalChain>()
+            .HasIndex(chain => new { chain.TenantId, chain.DecisionRequestId })
+            .HasFilter("[DecisionRequestId] IS NOT NULL AND [IsDeleted] = 0");
+        modelBuilder.Entity<OpportunityApprovalChain>()
+            .Property(chain => chain.Purpose).HasMaxLength(80).IsRequired();
+        modelBuilder.Entity<OpportunityApprovalChain>()
+            .Property(chain => chain.Status).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<OpportunityApprovalChain>()
+            .Property(chain => chain.WorkflowKey).HasMaxLength(80).IsRequired();
+        modelBuilder.Entity<OpportunityApprovalChain>()
+            .Property(chain => chain.WorkflowName).HasMaxLength(160).IsRequired();
         modelBuilder.Entity<DecisionRequest>().ToTable("DecisionRequests", CrmSchema);
         modelBuilder.Entity<DecisionStep>().ToTable("DecisionSteps", CrmSchema);
         modelBuilder.Entity<DecisionActionLog>().ToTable("DecisionActionLogs", CrmSchema);
@@ -182,11 +195,20 @@ public class CrmDbContext : DbContext
             .HasIndex(d => new { d.TenantId, d.LegacyApprovalId })
             .HasFilter("[LegacyApprovalId] IS NOT NULL AND [IsDeleted] = 0");
         modelBuilder.Entity<DecisionRequest>()
+            .HasIndex(d => new { d.TenantId, d.WorkflowExecutionId })
+            .HasFilter("[WorkflowExecutionId] IS NOT NULL AND [IsDeleted] = 0");
+        modelBuilder.Entity<DecisionRequest>()
             .Property(d => d.Type).HasMaxLength(80).IsRequired();
         modelBuilder.Entity<DecisionRequest>()
             .Property(d => d.EntityType).HasMaxLength(80).IsRequired();
         modelBuilder.Entity<DecisionRequest>()
             .Property(d => d.Status).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.WorkflowStepNodeId).HasMaxLength(120);
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.WorkflowName).HasMaxLength(160);
+        modelBuilder.Entity<DecisionRequest>()
+            .Property(d => d.WorkflowDealName).HasMaxLength(240);
         modelBuilder.Entity<DecisionRequest>()
             .Property(d => d.Priority).HasMaxLength(32);
         modelBuilder.Entity<DecisionRequest>()
@@ -428,6 +450,9 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<OpportunityApproval>()
             .Property(a => a.Purpose)
             .HasMaxLength(40);
+        modelBuilder.Entity<OpportunityApproval>()
+            .Property(a => a.ApproverRole)
+            .HasMaxLength(120);
         modelBuilder.Entity<OpportunityReviewChecklistItem>()
             .Property(i => i.Type)
             .HasMaxLength(40);

@@ -27,7 +27,16 @@ public sealed class WorkflowExecutionsController : ControllerBase
             status.PendingApprovals,
             status.RunningExecutions,
             status.CompletedToday,
-            status.LastUpdatedAtUtc));
+            status.LastUpdatedAtUtc,
+            status.CurrentOpportunityId,
+            status.CurrentOpportunityName,
+            status.CurrentPurpose,
+            status.CurrentStepOrder,
+            status.CurrentTotalSteps,
+            status.CurrentPendingApproverRole,
+            status.CurrentPendingApproverName,
+            status.CurrentDecisionRequestId,
+            status.CurrentDecisionStatus));
     }
 
     [HttpGet("deal-approval/history")]
@@ -38,8 +47,19 @@ public sealed class WorkflowExecutionsController : ControllerBase
         var items = await _service.GetDealApprovalHistoryAsync(take, cancellationToken);
         return Ok(items.Select(item => new WorkflowExecutionHistoryItemResponse(
             item.ExecutionId,
+            item.OpportunityId,
+            item.OpportunityName,
+            item.WorkflowName,
+            item.WorkflowVersion,
+            item.Purpose,
             item.Status,
             item.TriggeredBy,
+            item.CurrentStepOrder,
+            item.TotalSteps,
+            item.PendingApproverRole,
+            item.PendingApproverName,
+            item.DecisionRequestId,
+            item.DecisionStatus,
             item.StartedAtUtc,
             item.CompletedAtUtc,
             item.Summary)).ToList());

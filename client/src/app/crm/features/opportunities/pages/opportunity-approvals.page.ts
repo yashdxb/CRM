@@ -239,6 +239,20 @@ export class OpportunityApprovalsPage {
     });
   }
 
+  protected openWorkflowExecution(item: OpportunityApprovalInboxItem) {
+    if (!item.workflowExecutionId) {
+      return;
+    }
+
+    this.router.navigate(['/app/workflows/executions'], {
+      queryParams: {
+        executionId: item.workflowExecutionId,
+        decisionId: item.id,
+        dealId: item.workflowDealId ?? item.opportunityId
+      }
+    });
+  }
+
   protected decide(item: OpportunityApprovalInboxItem, approved: boolean) {
     if (this.actioningIds().has(item.id)) {
       return;

@@ -834,3 +834,134 @@ cd client
 npm run build -- --configuration development
 E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/workflow-designer.spec.ts --workers=1
 ```
+
+## 16) Workflow execution viewer saved metadata but could not read published workflow state back reliably
+
+**Symptoms**
+- The workflow execution viewer showed `No execution history yet` even after a deal approval request was created.
+- `PUT /api/workflows/definitions/deal-approval` returned the new published workflow, but the next `GET` returned the old empty draft graph.
+- Approval requests failed with:
+  - `Approval workflow must be configured before requesting approval.`
+
+**Root causes**
+- The workflow JSON was being stored in camelCase, which is correct for the API and frontend.
+- [DealApprovalWorkflowDefinition.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Workflows/DealApprovalWorkflowDefinition.cs) rehydrated saved JSON with the default `System.Text.Json` settings instead of `JsonSerializerDefaults.Web`.
+- That made the runtime lose the persisted step/node data when reading the tenant workflow back, so approval execution and the execution viewer behaved as if the workflow were still empty.
+- The new execution viewer E2E also initially tried to publish the starter graph without an approval node, which is invalid by design.
+
+**Fix pattern**
+1. Read saved workflow JSON using the same web/camelCase serializer options used when saving.
+2. Persist execution metadata on approval chains and expose it through the execution status/history endpoints.
+3. Make the E2E publish a minimally valid approval workflow before requesting a deal approval.
+4. Run the browser against `http://localhost:4200` so the local Angular app and API do not fail on `127.0.0.1` vs `localhost` CORS mismatch.
+
+**Code changes**
+- Fixed workflow JSON rehydration:
+  - [DealApprovalWorkflowDefinition.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Workflows/DealApprovalWorkflowDefinition.cs)
+- Added persisted workflow execution metadata on approval chains:
+  - [OpportunityApprovalChain.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Domain/Entities/OpportunityApprovalChain.cs)
+  - [CrmDbContext.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Persistence/CrmDbContext.cs)
+  - [20260307213119_AddWorkflowExecutionMetadataToApprovalChains.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Persistence/Migrations/20260307213119_AddWorkflowExecutionMetadataToApprovalChains.cs)
+- Synced approval runtime metadata updates with chain state and linked decision requests:
+  - [OpportunityApprovalService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityApprovalService.cs)
+- Exposed current execution and history details to the UI:
+  - [WorkflowDefinitionDtos.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Application/Workflows/WorkflowDefinitionDtos.cs)
+  - [WorkflowExecutionService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Workflows/WorkflowExecutionService.cs)
+  - [WorkflowExecutionContracts.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Contracts/Workflows/WorkflowExecutionContracts.cs)
+  - [WorkflowExecutionsController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/WorkflowExecutionsController.cs)
+  - [workflow-definition.model.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/models/workflow-definition.model.ts)
+  - [workflow-execution-viewer.page.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-execution-viewer.page.html)
+  - [workflow-execution-viewer.page.scss](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-execution-viewer.page.scss)
+- Added targeted browser coverage:
+  - [workflow-execution-viewer.spec.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/e2e/workflow-execution-viewer.spec.ts)
+
+**Verified result**
+- `GET /api/workflows/definitions/deal-approval` now returns the same published approval graph that was just saved.
+- `POST /api/opportunities/{id}/approvals` succeeds against the published workflow.
+- `/api/workflows/executions/deal-approval/status` now returns the current deal, purpose, step, and pending approver.
+- `/app/workflows/executions` shows the current execution card and populated history items for deal approvals.
+
+**Verification commands**
+```bash
+dotnet build server/src/CRM.Enterprise.sln
+
+cd client
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
+```
+
+## 17) Approval workflow epic closeout: published lifecycle, tenant-role routing, and Decision Inbox linkage
+
+**Symptoms**
+- The builder only had one saved definition, so draft edits could immediately affect the live runtime path.
+- Approval steps relied on free-text role names instead of tenant role ids.
+- Decision Inbox items created from approval workflows did not carry workflow execution context, so the inbox could not deep-link into execution history.
+- Workflow execution history did not show the linked decision status.
+
+**Fix pattern**
+1. Split the tenant workflow state into `draft` and `published`, and make runtime read only the published definition.
+2. Add publish metadata (`publishedAtUtc`, `publishedBy`) and explicit operations for `save-draft`, `publish`, `unpublish`, and `revert-draft`.
+3. Resolve approval routing from tenant roles and active users, storing both `approverRoleId` and display name for backward compatibility.
+4. Persist workflow linkage on decision requests and expose it through the Decision Inbox and workflow execution endpoints.
+5. Add browser coverage for publish/save lifecycle and pending-action to workflow-execution deep-linking.
+
+**Code changes**
+- Added draft/published workflow persistence and publish governance on the tenant record:
+  - [Tenant.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Domain/Entities/Tenant.cs)
+  - [WorkflowDefinitionService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Workflows/WorkflowDefinitionService.cs)
+  - [WorkflowDefinitionDtos.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Application/Workflows/WorkflowDefinitionDtos.cs)
+  - [WorkflowDefinitionContracts.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Contracts/Workflows/WorkflowDefinitionContracts.cs)
+  - [WorkflowDefinitionsController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/WorkflowDefinitionsController.cs)
+- Added approver role ids to the workflow model and runtime routing:
+  - [ApprovalWorkflowPolicy.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Application/Approvals/ApprovalWorkflowPolicy.cs)
+  - [DealApprovalWorkflowDefinition.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Workflows/DealApprovalWorkflowDefinition.cs)
+  - [OpportunityApproval.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Domain/Entities/OpportunityApproval.cs)
+  - [DecisionStep.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Domain/Entities/DecisionStep.cs)
+  - [OpportunityApprovalService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityApprovalService.cs)
+- Added workflow linkage fields on decisions and surfaced them through the inbox:
+  - [DecisionRequest.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Domain/Entities/DecisionRequest.cs)
+  - [DecisionDtos.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Application/Decisions/DecisionDtos.cs)
+  - [DecisionInboxItem.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Contracts/Decisions/DecisionInboxItem.cs)
+  - [CreateDecisionRequest.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Contracts/Decisions/CreateDecisionRequest.cs)
+  - [DecisionsController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/DecisionsController.cs)
+  - [DecisionInboxService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Decisions/DecisionInboxService.cs)
+- Extended workflow execution status/history with decision linkage:
+  - [WorkflowExecutionService.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Workflows/WorkflowExecutionService.cs)
+  - [WorkflowExecutionContracts.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Contracts/Workflows/WorkflowExecutionContracts.cs)
+  - [WorkflowExecutionsController.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Api/Controllers/WorkflowExecutionsController.cs)
+- Updated the workflow builder and inbox/execution UI:
+  - [workflow-definition.model.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/models/workflow-definition.model.ts)
+  - [workflow-definition.service.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/services/workflow-definition.service.ts)
+  - [workflow-designer.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.ts)
+  - [workflow-designer.page.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-designer.page.html)
+  - [properties-panel.component.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/components/properties-panel/properties-panel.component.ts)
+  - [properties-panel.component.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/components/properties-panel/properties-panel.component.html)
+  - [workflow-execution-viewer.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-execution-viewer.page.ts)
+  - [workflow-execution-viewer.page.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/pages/workflow-execution-viewer.page.html)
+  - [opportunity.model.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/opportunities/models/opportunity.model.ts)
+  - [opportunity-approval.service.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/opportunities/services/opportunity-approval.service.ts)
+  - [opportunity-approvals.page.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/opportunities/pages/opportunity-approvals.page.ts)
+  - [opportunity-approvals.page.html](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/opportunities/pages/opportunity-approvals.page.html)
+- Added the schema migration:
+  - [20260308023703_AddWorkflowLifecycleAndDecisionLinks.cs](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/server/src/CRM.Enterprise.Infrastructure/Persistence/Migrations/20260308023703_AddWorkflowLifecycleAndDecisionLinks.cs)
+
+**Verified result**
+- Draft saves no longer change the runtime workflow used by approvals.
+- Published workflows stamp publish metadata and can be unpublished or reverted back into draft.
+- Approval steps can bind to a real tenant role id while still preserving the legacy role name for older saved JSON.
+- Decision Inbox items created from approval workflows now expose workflow execution id, workflow name, step order, and deal context.
+- Pending action rows can deep-link into `/app/workflows/executions` and focus the matching execution.
+- Workflow execution status/history now show linked decision status.
+
+**Verification commands**
+```bash
+dotnet build server/src/CRM.Enterprise.sln
+
+dotnet ef database update \
+  --project server/src/CRM.Enterprise.Infrastructure \
+  --startup-project server/src/CRM.Enterprise.Api \
+  --context CrmDbContext
+
+cd client
+npm run build -- --configuration development
+E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
+```

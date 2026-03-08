@@ -11,6 +11,10 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private const string DealApprovalKey = "deal-approval";
+    private const string SaveDraftOperation = "save-draft";
+    private const string PublishOperation = "publish";
+    private const string UnpublishOperation = "unpublish";
+    private const string RevertDraftOperation = "revert-draft";
 
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
@@ -34,25 +38,27 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
             return null;
         }
 
-        var definition = DealApprovalWorkflowMapper.FromStoredJson(
-            tenant.ApprovalWorkflowJson,
-            tenant.ApprovalAmountThreshold,
-            tenant.ApprovalApproverRole);
-
-        var json = JsonSerializer.Serialize(definition, JsonOptions);
+        var draftDefinition = ResolveDraftDefinition(tenant);
+        var publishedDefinition = ResolvePublishedDefinition(tenant);
+        var json = JsonSerializer.Serialize(draftDefinition, JsonOptions);
 
         return new WorkflowDefinitionDto(
             DealApprovalKey,
             "Deal Approval",
-            definition.Enabled,
+            publishedDefinition.Enabled,
             json,
-            tenant.UpdatedAtUtc ?? tenant.CreatedAtUtc);
+            tenant.UpdatedAtUtc ?? tenant.CreatedAtUtc,
+            publishedDefinition.Enabled ? JsonSerializer.Serialize(publishedDefinition, JsonOptions) : null,
+            tenant.ApprovalWorkflowPublishedAtUtc,
+            tenant.ApprovalWorkflowPublishedBy);
     }
 
     public async Task<WorkflowDefinitionDto> SaveAsync(
         string key,
         string definitionJson,
         bool isActive,
+        string? operation,
+        string? actorName = null,
         CancellationToken cancellationToken = default)
     {
         if (!IsSupportedKey(key))
@@ -60,33 +66,93 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
             throw new InvalidOperationException($"Unsupported workflow key '{key}'.");
         }
 
-        var validation = await ValidateAsync(key, definitionJson, cancellationToken);
-        if (!validation.IsValid)
-        {
-            throw new InvalidOperationException(string.Join("; ", validation.Errors));
-        }
-
         var tenant = await _dbContext.Tenants.FirstOrDefaultAsync(t => t.Id == _tenantProvider.TenantId, cancellationToken)
             ?? throw new InvalidOperationException("Tenant not found.");
 
         var parsed = JsonSerializer.Deserialize<DealApprovalWorkflowDefinition>(definitionJson, JsonOptions)
-            ?? DealApprovalWorkflowDefinition.CreateTemplate(tenant.ApprovalApproverRole ?? string.Empty, tenant.ApprovalAmountThreshold);
+            ?? ResolveDraftDefinition(tenant);
+        var normalizedDraft = DealApprovalWorkflowMapper.Normalize(parsed with { Enabled = false });
+        var normalizedOperation = NormalizeOperation(operation, isActive);
+        var nowUtc = DateTime.UtcNow;
+        var actor = string.IsNullOrWhiteSpace(actorName) ? "system" : actorName.Trim();
 
-        var normalized = DealApprovalWorkflowMapper.Normalize(parsed with { Enabled = isActive });
+        switch (normalizedOperation)
+        {
+            case SaveDraftOperation:
+                tenant.ApprovalWorkflowDraftJson = JsonSerializer.Serialize(
+                    normalizedDraft with
+                    {
+                        Enabled = false,
+                        Scope = normalizedDraft.Scope with { Status = "draft" }
+                    },
+                    JsonOptions);
+                tenant.UpdatedAtUtc = nowUtc;
+                break;
 
-        tenant.ApprovalWorkflowJson = JsonSerializer.Serialize(normalized, JsonOptions);
-        tenant.ApprovalApproverRole = normalized.Steps.FirstOrDefault()?.ApproverRole ?? tenant.ApprovalApproverRole;
-        tenant.ApprovalAmountThreshold = normalized.Steps.FirstOrDefault()?.AmountThreshold ?? tenant.ApprovalAmountThreshold;
-        tenant.UpdatedAtUtc = DateTime.UtcNow;
+            case PublishOperation:
+            {
+                var publishedCandidate = PreparePublishedDefinition(tenant, normalizedDraft);
+                var validation = await ValidateAsync(
+                    key,
+                    JsonSerializer.Serialize(publishedCandidate, JsonOptions),
+                    cancellationToken);
+                if (!validation.IsValid)
+                {
+                    throw new InvalidOperationException(string.Join("; ", validation.Errors));
+                }
+
+                var publishedJson = JsonSerializer.Serialize(publishedCandidate, JsonOptions);
+                tenant.ApprovalWorkflowDraftJson = publishedJson;
+                tenant.ApprovalWorkflowPublishedJson = publishedJson;
+                tenant.ApprovalWorkflowJson = publishedJson; // compatibility fallback for older runtime paths
+                tenant.ApprovalWorkflowPublishedAtUtc = nowUtc;
+                tenant.ApprovalWorkflowPublishedBy = actor;
+                tenant.ApprovalApproverRole = publishedCandidate.Steps.FirstOrDefault()?.ApproverRole ?? tenant.ApprovalApproverRole;
+                tenant.ApprovalAmountThreshold = publishedCandidate.Steps.FirstOrDefault()?.AmountThreshold ?? tenant.ApprovalAmountThreshold;
+                tenant.UpdatedAtUtc = nowUtc;
+                break;
+            }
+
+            case UnpublishOperation:
+                tenant.ApprovalWorkflowDraftJson = JsonSerializer.Serialize(
+                    normalizedDraft with
+                    {
+                        Enabled = false,
+                        Scope = normalizedDraft.Scope with { Status = "draft" }
+                    },
+                    JsonOptions);
+                tenant.ApprovalWorkflowPublishedJson = null;
+                tenant.ApprovalWorkflowPublishedAtUtc = null;
+                tenant.ApprovalWorkflowPublishedBy = null;
+                tenant.UpdatedAtUtc = nowUtc;
+                break;
+
+            case RevertDraftOperation:
+            {
+                var published = ResolvePublishedDefinition(tenant);
+                tenant.ApprovalWorkflowDraftJson = JsonSerializer.Serialize(
+                    published.Enabled
+                        ? published
+                        : published with
+                        {
+                            Enabled = false,
+                            Scope = published.Scope with { Status = "draft" }
+                        },
+                    JsonOptions);
+                tenant.UpdatedAtUtc = nowUtc;
+                break;
+            }
+
+            default:
+                throw new InvalidOperationException($"Unsupported workflow operation '{normalizedOperation}'.");
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new WorkflowDefinitionDto(
-            DealApprovalKey,
-            "Deal Approval",
-            normalized.Enabled,
-            JsonSerializer.Serialize(normalized, JsonOptions),
-            tenant.UpdatedAtUtc);
+        var response = await GetAsync(key, cancellationToken)
+            ?? throw new InvalidOperationException("Unable to load workflow definition after save.");
+
+        return response;
     }
 
     public Task<WorkflowValidationResultDto> ValidateAsync(string key, string definitionJson, CancellationToken cancellationToken = default)
@@ -133,5 +199,53 @@ public sealed class WorkflowDefinitionService : IWorkflowDefinitionService
     private static bool IsSupportedKey(string key)
     {
         return string.Equals(key?.Trim(), DealApprovalKey, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeOperation(string? operation, bool isActive)
+    {
+        var normalized = operation?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return isActive ? PublishOperation : SaveDraftOperation;
+        }
+
+        return normalized;
+    }
+
+    private static DealApprovalWorkflowDefinition ResolveDraftDefinition(Domain.Entities.Tenant tenant)
+    {
+        return DealApprovalWorkflowMapper.FromStoredJson(
+            tenant.ApprovalWorkflowDraftJson ?? tenant.ApprovalWorkflowJson ?? tenant.ApprovalWorkflowPublishedJson,
+            tenant.ApprovalAmountThreshold,
+            tenant.ApprovalApproverRole);
+    }
+
+    private static DealApprovalWorkflowDefinition ResolvePublishedDefinition(Domain.Entities.Tenant tenant)
+    {
+        return DealApprovalWorkflowMapper.FromStoredJson(
+            tenant.ApprovalWorkflowPublishedJson ?? tenant.ApprovalWorkflowJson,
+            tenant.ApprovalAmountThreshold,
+            tenant.ApprovalApproverRole);
+    }
+
+    private static DealApprovalWorkflowDefinition PreparePublishedDefinition(
+        Domain.Entities.Tenant tenant,
+        DealApprovalWorkflowDefinition draft)
+    {
+        var currentPublished = ResolvePublishedDefinition(tenant);
+        var currentPublishedVersion = currentPublished.Enabled ? Math.Max(1, currentPublished.Scope.Version) : 0;
+        var requestedVersion = Math.Max(1, draft.Scope.Version);
+        var nextVersion = Math.Max(requestedVersion, currentPublishedVersion + 1);
+
+        return DealApprovalWorkflowMapper.Normalize(
+            draft with
+            {
+                Enabled = true,
+                Scope = draft.Scope with
+                {
+                    Status = "published",
+                    Version = nextVersion
+                }
+            });
     }
 }

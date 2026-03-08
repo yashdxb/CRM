@@ -13,6 +13,8 @@
       <button pButton type="button" class="btn btn-ghost" (click)="autoArrange()" [disabled]="loading()">Auto Arrange</button>
       <button pButton type="button" class="btn btn-secondary" (click)="validate()" [disabled]="validating()">Validate</button>
       <button pButton type="button" class="btn btn-ghost" (click)="saveDraft()" [disabled]="saving()">Save Draft</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="revertDraft()" [disabled]="saving() || !publishedAtUtc()">Revert Draft</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="unpublish()" [disabled]="saving() || workflow().scope.status !== 'published'">Unpublish</button>
       <button pButton type="button" class="btn btn-primary" (click)="publish()" [disabled]="saving()">Publish</button>
     </div>
   </header>
@@ -48,6 +50,8 @@
     <div class="scope-meta">
       <span>Status: <strong>{{ workflow().scope.status }}</strong></span>
       <span>Version: <strong>v{{ workflow().scope.version }}</strong></span>
+      <span *ngIf="publishedAtUtc()">Published: <strong>{{ publishedAtUtc() }}</strong></span>
+      <span *ngIf="publishedBy()">Published by: <strong>{{ publishedBy() }}</strong></span>
       <span *ngIf="lastValidationAtUtc()">Last validation: {{ lastValidationAtUtc() }}</span>
     </div>
   </section>
@@ -83,6 +87,7 @@
     <app-workflow-properties-panel
       [steps]="workflow().steps"
       [nodes]="workflow().nodes"
+      [roleOptions]="roleOptions()"
       (removeStep)="removeStep($event)"
       (patchStep)="patchStep($event)"
       (patchNode)="patchNode($event)"

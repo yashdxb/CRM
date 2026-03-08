@@ -10,6 +10,7 @@ public class DecisionStep : AuditableEntity
     public int StepOrder { get; set; }
     public string StepType { get; set; } = "Approval";
     public string Status { get; set; } = "Pending";
+    public Guid? ApproverRoleId { get; set; }
     public string? ApproverRole { get; set; }
     public Guid? AssigneeUserId { get; set; }
     public DateTime? DueAtUtc { get; set; }

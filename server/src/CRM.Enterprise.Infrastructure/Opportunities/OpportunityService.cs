@@ -2732,7 +2732,13 @@ public sealed class OpportunityService : IOpportunityService
             return null;
         }
 
-        var workflow = ResolveApprovalWorkflowPolicy(tenant);
+        var definition = ResolveApprovalWorkflowDefinition(tenant);
+        if (!ShouldRunApprovalWorkflow(definition, "Close", request.StageName))
+        {
+            return null;
+        }
+
+        var workflow = DealApprovalWorkflowMapper.ToPolicy(definition);
         var matchingSteps = GetMatchingApprovalSteps(workflow, "Close", request.Amount);
         if (matchingSteps.Count == 0)
         {
@@ -2804,7 +2810,13 @@ public sealed class OpportunityService : IOpportunityService
         }
 
         var approvalAmount = discountAmount > 0 ? discountAmount : request.Amount;
-        var workflow = ResolveApprovalWorkflowPolicy(tenant);
+        var definition = ResolveApprovalWorkflowDefinition(tenant);
+        if (!ShouldRunApprovalWorkflow(definition, "Discount", request.StageName))
+        {
+            return null;
+        }
+
+        var workflow = DealApprovalWorkflowMapper.ToPolicy(definition);
         var matchingSteps = GetMatchingApprovalSteps(workflow, "Discount", approvalAmount);
         if (matchingSteps.Count == 0)
         {
@@ -2863,7 +2875,13 @@ public sealed class OpportunityService : IOpportunityService
             return null;
         }
 
-        var workflow = ResolveApprovalWorkflowPolicy(tenant);
+        var definition = ResolveApprovalWorkflowDefinition(tenant);
+        if (!ShouldRunApprovalWorkflow(definition, "Update", request.StageName))
+        {
+            return null;
+        }
+
+        var workflow = DealApprovalWorkflowMapper.ToPolicy(definition);
         var matchingSteps = GetMatchingApprovalSteps(workflow, "Update", request.Amount);
         if (matchingSteps.Count == 0)
         {
@@ -2949,13 +2967,55 @@ public sealed class OpportunityService : IOpportunityService
                 cancellationToken);
     }
 
-    private static ApprovalWorkflowPolicy ResolveApprovalWorkflowPolicy(Tenant tenant)
+    private static DealApprovalWorkflowDefinition ResolveApprovalWorkflowDefinition(Tenant tenant)
     {
+        var workflowJson = tenant.ApprovalWorkflowPublishedJson ?? tenant.ApprovalWorkflowJson;
         var definition = DealApprovalWorkflowMapper.FromStoredJson(
-            tenant.ApprovalWorkflowJson,
+            workflowJson,
             tenant.ApprovalAmountThreshold,
             tenant.ApprovalApproverRole);
-        return DealApprovalWorkflowMapper.ToPolicy(definition);
+        return definition;
+    }
+
+    private static bool ShouldRunApprovalWorkflow(
+        DealApprovalWorkflowDefinition definition,
+        string purpose,
+        string? stage)
+    {
+        if (!definition.Enabled || !string.Equals(definition.Scope.Module, "opportunities", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.Equals(definition.Scope.Status, "published", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(definition.Scope.Stage)
+            && !string.Equals(definition.Scope.Stage, "all", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(definition.Scope.Stage, stage, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var trigger = definition.Scope.Trigger?.Trim();
+        if (string.IsNullOrWhiteSpace(trigger) || string.Equals(trigger, "manual-request", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return purpose switch
+        {
+            "Close" => trigger.Contains("stage", StringComparison.OrdinalIgnoreCase)
+                       || trigger.Contains("amount", StringComparison.OrdinalIgnoreCase)
+                       || trigger.Contains("close", StringComparison.OrdinalIgnoreCase),
+            "Discount" => trigger.Contains("discount", StringComparison.OrdinalIgnoreCase),
+            "Update" => trigger.Contains("amount", StringComparison.OrdinalIgnoreCase)
+                        || trigger.Contains("stage", StringComparison.OrdinalIgnoreCase)
+                        || trigger.Contains("update", StringComparison.OrdinalIgnoreCase),
+            _ => true
+        };
     }
 
     private static List<ApprovalWorkflowStep> GetMatchingApprovalSteps(ApprovalWorkflowPolicy workflow, string purpose, decimal amount)

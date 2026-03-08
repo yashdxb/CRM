@@ -7,6 +7,13 @@ public class DecisionRequest : AuditableEntity
 {
     public Guid? LegacyApprovalId { get; set; }
     public Guid? LegacyApprovalChainId { get; set; }
+    public Guid? WorkflowExecutionId { get; set; }
+    public string? WorkflowStepNodeId { get; set; }
+    public int? WorkflowStepOrder { get; set; }
+    public string? WorkflowName { get; set; }
+    public int? WorkflowVersion { get; set; }
+    public Guid? WorkflowDealId { get; set; }
+    public string? WorkflowDealName { get; set; }
     public string Type { get; set; } = string.Empty;
     public string EntityType { get; set; } = string.Empty;
     public Guid EntityId { get; set; }

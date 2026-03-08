@@ -13,6 +13,7 @@ export interface WorkflowConnection {
 
 export interface WorkflowStep {
   order: number;
+  approverRoleId?: string | null;
   approverRole: string;
   amountThreshold?: number | null;
   purpose?: string | null;
@@ -44,6 +45,9 @@ export interface WorkflowDefinitionResponse {
   isActive: boolean;
   definitionJson: string;
   updatedAtUtc?: string | null;
+  publishedDefinitionJson?: string | null;
+  publishedAtUtc?: string | null;
+  publishedBy?: string | null;
 }
 
 export interface WorkflowValidationResponse {
@@ -57,12 +61,32 @@ export interface WorkflowExecutionStatus {
   runningExecutions: number;
   completedToday: number;
   lastUpdatedAtUtc?: string | null;
+  currentOpportunityId?: string | null;
+  currentOpportunityName?: string | null;
+  currentPurpose?: string | null;
+  currentStepOrder?: number | null;
+  currentTotalSteps?: number | null;
+  currentPendingApproverRole?: string | null;
+  currentPendingApproverName?: string | null;
+  currentDecisionRequestId?: string | null;
+  currentDecisionStatus?: string | null;
 }
 
 export interface WorkflowExecutionHistoryItem {
   executionId: string;
+  opportunityId: string;
+  opportunityName: string;
+  workflowName: string;
+  workflowVersion: number;
+  purpose: string;
   status: string;
   triggeredBy: string;
+  currentStepOrder: number;
+  totalSteps: number;
+  pendingApproverRole?: string | null;
+  pendingApproverName?: string | null;
+  decisionRequestId?: string | null;
+  decisionStatus?: string | null;
   startedAtUtc: string;
   completedAtUtc?: string | null;
   summary: string;

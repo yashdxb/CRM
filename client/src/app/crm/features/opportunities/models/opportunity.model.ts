@@ -275,6 +275,13 @@ export interface OpportunityApprovalInboxItem {
   requestedAgeHours: number;
   policyReason: string;
   businessImpactLabel: string;
+  workflowExecutionId?: string | null;
+  workflowStepNodeId?: string | null;
+  workflowStepOrder?: number | null;
+  workflowName?: string | null;
+  workflowVersion?: number | null;
+  workflowDealId?: string | null;
+  workflowDealName?: string | null;
 }
 
 export interface DecisionAssistDraft {

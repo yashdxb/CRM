@@ -70,6 +70,7 @@ public class DealApprovalWorkflowBuilderController : ControllerBase
             (request.Steps ?? Array.Empty<UpdateDealApprovalWorkflowStepRequest>()).Select(step =>
                 new DealApprovalWorkflowStepDefinition(
                     step.Order,
+                    step.ApproverRoleId,
                     step.ApproverRole,
                     step.AmountThreshold,
                     step.Purpose,

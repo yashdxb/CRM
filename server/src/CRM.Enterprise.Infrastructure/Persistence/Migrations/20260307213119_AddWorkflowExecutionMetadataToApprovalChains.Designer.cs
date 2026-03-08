@@ -4,6 +4,7 @@ using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CrmDbContext))]
-    partial class CrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260307213119_AddWorkflowExecutionMetadataToApprovalChains")]
+    partial class AddWorkflowExecutionMetadataToApprovalChains
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1556,39 +1559,12 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("UpdatedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("WorkflowDealId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("WorkflowDealName")
-                        .HasMaxLength(240)
-                        .HasColumnType("nvarchar(240)");
-
-                    b.Property<Guid?>("WorkflowExecutionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("WorkflowName")
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)");
-
-                    b.Property<string>("WorkflowStepNodeId")
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<int?>("WorkflowStepOrder")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("WorkflowVersion")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
 
                     b.HasIndex("TenantId", "LegacyApprovalId")
                         .HasFilter("[LegacyApprovalId] IS NOT NULL AND [IsDeleted] = 0");
-
-                    b.HasIndex("TenantId", "WorkflowExecutionId")
-                        .HasFilter("[WorkflowExecutionId] IS NOT NULL AND [IsDeleted] = 0");
 
                     b.HasIndex("TenantId", "EntityType", "EntityId");
 
@@ -1606,9 +1582,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("ApproverRole")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
-
-                    b.Property<Guid?>("ApproverRoleId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AssigneeNameSnapshot")
                         .HasMaxLength(200)
@@ -3196,11 +3169,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("ApproverRole")
                         .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)");
-
-                    b.Property<Guid?>("ApproverRoleId")
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("ApproverUserId")
                         .HasColumnType("uniqueidentifier");
@@ -6413,19 +6382,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<string>("ApprovalWorkflowDraftJson")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("ApprovalWorkflowJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ApprovalWorkflowPublishedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ApprovalWorkflowPublishedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ApprovalWorkflowPublishedJson")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("AssistantActionScoringPolicyJson")

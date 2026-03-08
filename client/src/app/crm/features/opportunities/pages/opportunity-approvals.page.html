@@ -121,6 +121,10 @@
               <div class="subject-cell">
                 <div class="subject-title">{{ item.opportunityName }}</div>
                 <div class="subject-subtitle">{{ item.accountName }}</div>
+                <div class="subject-subtitle" *ngIf="item.workflowExecutionId">
+                  From workflow: {{ item.workflowName || 'Deal Approval' }}
+                  <span *ngIf="item.workflowStepOrder">· Step {{ item.workflowStepOrder }}</span>
+                </div>
               </div>
             </td>
             <td>{{ item.requestedByName || '—' }}</td>
@@ -136,14 +140,25 @@
               <span class="sla-text" [class.overdue]="item.slaStatus === 'overdue'">{{ slaLabel(item) }}</span>
             </td>
             <td>
-              <button
-                pButton
-                type="button"
-                class="action-btn command-btn command-btn--ghost"
-                (click)="openOpportunity(item); $event.stopPropagation()"
-              >
-                <i class="pi pi-folder-open"></i>
-              </button>
+              <div class="row-actions">
+                <button
+                  pButton
+                  type="button"
+                  class="action-btn command-btn command-btn--ghost"
+                  (click)="openOpportunity(item); $event.stopPropagation()"
+                >
+                  <i class="pi pi-folder-open"></i>
+                </button>
+                <button
+                  *ngIf="item.workflowExecutionId"
+                  pButton
+                  type="button"
+                  class="action-btn command-btn command-btn--ghost"
+                  (click)="openWorkflowExecution(item); $event.stopPropagation()"
+                >
+                  <i class="pi pi-sitemap"></i>
+                </button>
+              </div>
             </td>
           </tr>
         </ng-template>

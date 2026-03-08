@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://127.0.0.1:5014';
+const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'http://localhost:5014';
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
 
@@ -55,8 +55,9 @@ test('workflow designer shows draggable palette item and supports drop add', asy
   await page.getByRole('button', { name: /^Save Draft$/i }).click();
 
   const saveHttpRequest = await saveRequest;
-  const payload = saveHttpRequest.postDataJSON() as { definitionJson?: string };
+  const payload = saveHttpRequest.postDataJSON() as { definitionJson?: string; operation?: string };
   expect(payload.definitionJson).toBeTruthy();
+  expect(payload.operation).toBe('save-draft');
 
   const definition = JSON.parse(payload.definitionJson as string) as {
     nodes?: Array<{ type?: string; label?: string }>;

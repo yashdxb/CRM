@@ -11,11 +11,19 @@
     </div>
 
     <label>Approver role</label>
-    <input
-      pInputText
-      [ngModel]="step.approverRole"
-      (ngModelChange)="patchStep.emit({ index: i, patch: { approverRole: $event } })"
-    />
+    <p-select
+      appendTo="body"
+      [options]="roleOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="step.approverRoleId || null"
+      (ngModelChange)="onRoleChange(i, $event)"
+      placeholder="Select approver role"
+      styleClass="w-full"
+    ></p-select>
+    <small *ngIf="!step.approverRoleId && step.approverRole">
+      Legacy role mapping: {{ step.approverRole }}. Re-select to bind to a tenant role.
+    </small>
 
     <label>Amount threshold</label>
     <p-inputNumber

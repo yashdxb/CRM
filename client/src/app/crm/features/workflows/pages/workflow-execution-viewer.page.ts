@@ -1,7 +1,7 @@
 import { NgFor, NgIf } from '@angular/common';
-import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
@@ -19,12 +19,32 @@ export class WorkflowExecutionViewerPage {
   private readonly service = inject(WorkflowExecutionService);
   private readonly crmEvents = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly loading = signal(true);
   protected readonly status = signal<WorkflowExecutionStatus | null>(null);
   protected readonly history = signal<WorkflowExecutionHistoryItem[]>([]);
+  protected readonly selectedExecutionId = signal<string | null>(null);
+  protected readonly selectedDecisionId = signal<string | null>(null);
+  protected readonly selectedDealId = signal<string | null>(null);
+  protected readonly selectedHistoryItem = computed(() => {
+    const executionId = this.selectedExecutionId();
+    if (!executionId) {
+      return null;
+    }
+
+    return this.history().find((item) => item.executionId === executionId) ?? null;
+  });
 
   constructor() {
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        this.selectedExecutionId.set(params.get('executionId'));
+        this.selectedDecisionId.set(params.get('decisionId'));
+        this.selectedDealId.set(params.get('dealId'));
+      });
+
     this.crmEvents.connect();
     this.crmEvents.events$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -58,5 +78,9 @@ export class WorkflowExecutionViewerPage {
         this.status.set(null);
       }
     });
+  }
+
+  protected isSelected(item: WorkflowExecutionHistoryItem) {
+    return item.executionId === this.selectedExecutionId();
   }
 }

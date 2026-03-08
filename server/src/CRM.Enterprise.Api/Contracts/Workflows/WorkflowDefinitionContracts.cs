@@ -5,11 +5,15 @@ public sealed record WorkflowDefinitionResponse(
     string Name,
     bool IsActive,
     string DefinitionJson,
-    DateTime? UpdatedAtUtc);
+    DateTime? UpdatedAtUtc,
+    string? PublishedDefinitionJson,
+    DateTime? PublishedAtUtc,
+    string? PublishedBy);
 
 public sealed record SaveWorkflowDefinitionRequest(
     string DefinitionJson,
-    bool IsActive);
+    bool IsActive,
+    string? Operation);
 
 public sealed record WorkflowValidationResponse(
     bool IsValid,

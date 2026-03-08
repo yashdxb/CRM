@@ -45,14 +45,18 @@ export class WorkflowDesignerPage {
   protected readonly saving = signal(false);
   protected readonly validating = signal(false);
   protected readonly updatedAtUtc = signal<string | null>(null);
+  protected readonly publishedAtUtc = signal<string | null>(null);
+  protected readonly publishedBy = signal<string | null>(null);
   protected readonly lastValidationErrors = signal<string[]>([]);
   protected readonly lastValidationAtUtc = signal<string | null>(null);
+  protected readonly roleOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly workflow = signal<DealApprovalWorkflowDefinition>(this.defaultWorkflow());
 
   @ViewChild(WorkflowCanvasComponent)
   private canvas?: WorkflowCanvasComponent;
 
   constructor() {
+    this.loadRoleOptions();
     this.load();
   }
 
@@ -64,6 +68,8 @@ export class WorkflowDesignerPage {
       next: (result) => {
         this.workflow.set(this.normalize(result.definition));
         this.updatedAtUtc.set(result.updatedAtUtc ?? null);
+        this.publishedAtUtc.set(result.publishedAtUtc ?? null);
+        this.publishedBy.set(result.publishedBy ?? null);
         this.loading.set(false);
       },
       error: () => {
@@ -186,11 +192,37 @@ export class WorkflowDesignerPage {
   }
 
   protected saveDraft() {
-    this.persistWorkflow('draft');
+    this.persistWorkflow('save-draft', 'draft');
   }
 
   protected publish() {
-    this.persistWorkflow('published');
+    this.persistWorkflow('publish', 'published');
+  }
+
+  protected unpublish() {
+    this.persistWorkflow('unpublish', 'draft');
+  }
+
+  protected revertDraft() {
+    this.saving.set(true);
+    const current = this.normalize(this.workflow());
+    this.workflowService.saveDealApprovalDefinition(current, false, 'revert-draft').subscribe({
+      next: (result) => {
+        this.saving.set(false);
+        this.workflow.set(this.normalize(JSON.parse(result.definitionJson) as DealApprovalWorkflowDefinition));
+        this.updatedAtUtc.set(result.updatedAtUtc ?? null);
+        this.publishedAtUtc.set(result.publishedAtUtc ?? null);
+        this.publishedBy.set(result.publishedBy ?? null);
+        this.lastValidationErrors.set([]);
+        this.toast.show('success', 'Draft reverted to last published workflow.', 3000);
+      },
+      error: (error: unknown) => {
+        this.saving.set(false);
+        const errors = this.extractErrors(error);
+        this.lastValidationErrors.set(errors);
+        this.toast.show('error', errors.join(' | '), 4000);
+      }
+    });
   }
 
   protected patchScope(field: keyof DealApprovalWorkflowDefinition['scope'], value: string | number) {
@@ -199,16 +231,19 @@ export class WorkflowDesignerPage {
     this.workflow.set(this.normalize({ ...current, scope }));
   }
 
-  private persistWorkflow(status: 'draft' | 'published') {
+  private persistWorkflow(
+    operation: 'save-draft' | 'publish' | 'unpublish',
+    status: 'draft' | 'published'
+  ) {
     this.saving.set(true);
     const current = this.normalize(this.workflow());
     const currentVersion = Math.max(1, current.scope.version || 1);
-    const nextVersion = status === 'published' && current.scope.status !== 'published'
+    const nextVersion = operation === 'publish' && current.scope.status !== 'published'
       ? currentVersion + 1
       : currentVersion;
     const definition: DealApprovalWorkflowDefinition = {
       ...current,
-      enabled: status === 'published',
+      enabled: operation === 'publish',
       scope: {
         ...current.scope,
         status,
@@ -216,14 +251,20 @@ export class WorkflowDesignerPage {
       }
     };
 
-    this.workflowService.saveDealApprovalDefinition(definition, definition.enabled).subscribe({
+    this.workflowService.saveDealApprovalDefinition(definition, definition.enabled, operation).subscribe({
       next: (result) => {
         this.saving.set(false);
         this.updatedAtUtc.set(result.updatedAtUtc ?? null);
+        this.publishedAtUtc.set(result.publishedAtUtc ?? null);
+        this.publishedBy.set(result.publishedBy ?? null);
         this.lastValidationErrors.set([]);
         this.lastValidationAtUtc.set(new Date().toISOString());
-        this.workflow.set(definition);
-        this.toast.show('success', status === 'published' ? 'Workflow published.' : 'Draft saved.', 3000);
+        this.workflow.set(this.normalize(JSON.parse(result.definitionJson) as DealApprovalWorkflowDefinition));
+        this.toast.show('success',
+          operation === 'publish' ? 'Workflow published.'
+            : operation === 'unpublish' ? 'Workflow unpublished.'
+            : 'Draft saved.',
+          3000);
       },
       error: (error: unknown) => {
         this.saving.set(false);
@@ -284,7 +325,7 @@ export class WorkflowDesignerPage {
         status: 'draft',
         version: 1
       },
-      steps: [{ order: 1, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }],
+      steps: [{ order: 1, approverRoleId: null, approverRole: 'Sales Manager', amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }],
       nodes: [
         { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
         { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Step 1' },
@@ -317,6 +358,7 @@ export class WorkflowDesignerPage {
       .map((step, index) => ({
         ...step,
         order: index + 1,
+        approverRoleId: step.approverRoleId ?? null,
         nodeId: step.nodeId || `approval-step-${index + 1}`,
         approverRole: (step.approverRole ?? '').trim(),
         purpose: step.purpose?.trim() || null,
@@ -395,6 +437,19 @@ export class WorkflowDesignerPage {
       nodes,
       connections: connections.length ? connections : this.createLinearConnections(steps)
     };
+  }
+
+  private loadRoleOptions() {
+    this.workflowService.getRoleOptions().subscribe({
+      next: (roles) => {
+        this.roleOptions.set((roles ?? [])
+          .map((role) => ({ label: role.name, value: role.id }))
+          .sort((left, right) => left.label.localeCompare(right.label)));
+      },
+      error: () => {
+        this.roleOptions.set([]);
+      }
+    });
   }
 
   private normalizeNodeType(node: DealApprovalWorkflowDefinition['nodes'][number]) {

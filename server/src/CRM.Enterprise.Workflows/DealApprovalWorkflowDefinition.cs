@@ -19,7 +19,7 @@ public sealed record DealApprovalWorkflowDefinition(
             DealApprovalWorkflowScopeDefinition.Default(),
             new[]
             {
-                new DealApprovalWorkflowStepDefinition(1, role, defaultThreshold, "Deal Approval", stepNodeId)
+                new DealApprovalWorkflowStepDefinition(1, null, role, defaultThreshold, "Deal Approval", stepNodeId)
             },
             new[]
             {
@@ -59,6 +59,7 @@ public sealed record DealApprovalWorkflowScopeDefinition(
 
 public sealed record DealApprovalWorkflowStepDefinition(
     int Order,
+    Guid? ApproverRoleId,
     string ApproverRole,
     decimal? AmountThreshold,
     string? Purpose,
@@ -99,7 +100,7 @@ public static class DealApprovalWorkflowMapper
 
         try
         {
-            var stored = System.Text.Json.JsonSerializer.Deserialize<DealApprovalWorkflowDefinition>(json);
+            var stored = System.Text.Json.JsonSerializer.Deserialize<DealApprovalWorkflowDefinition>(json, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
             if (stored is not null)
             {
                 return Normalize(stored);
@@ -112,7 +113,7 @@ public static class DealApprovalWorkflowMapper
 
         try
         {
-            var policy = System.Text.Json.JsonSerializer.Deserialize<ApprovalWorkflowPolicy>(json);
+            var policy = System.Text.Json.JsonSerializer.Deserialize<ApprovalWorkflowPolicy>(json, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
             return FromPolicy(policy, tenantThreshold, tenantApproverRole);
         }
         catch (System.Text.Json.JsonException)
@@ -131,12 +132,13 @@ public static class DealApprovalWorkflowMapper
         }
 
         var normalizedSteps = NormalizeSteps(policy.Steps.Select((s, index) =>
-            new DealApprovalWorkflowStepDefinition(
-                s.Order,
-                s.ApproverRole,
-                s.AmountThreshold,
-                s.Purpose,
-                $"approval-step-{index + 1}")));
+                new DealApprovalWorkflowStepDefinition(
+                    s.Order,
+                    s.ApproverRoleId,
+                    s.ApproverRole,
+                    s.AmountThreshold,
+                    s.Purpose,
+                    s.NodeId ?? $"approval-step-{index + 1}")));
 
         return Normalize(new DealApprovalWorkflowDefinition(
             policy.Enabled,
@@ -157,7 +159,7 @@ public static class DealApprovalWorkflowMapper
         return new ApprovalWorkflowPolicy(
             true,
             normalized.Steps.Select(step =>
-                    new ApprovalWorkflowStep(step.Order, step.ApproverRole, step.AmountThreshold, step.Purpose))
+                new ApprovalWorkflowStep(step.Order, step.ApproverRoleId, step.ApproverRole, step.AmountThreshold, step.Purpose, step.NodeId))
                 .ToArray());
     }
 
@@ -416,6 +418,7 @@ public static class DealApprovalWorkflowMapper
             .OrderBy(step => step.Order)
             .Select((step, index) => new DealApprovalWorkflowStepDefinition(
                 index + 1,
+                step.ApproverRoleId,
                 step.ApproverRole.Trim(),
                 step.AmountThreshold,
                 string.IsNullOrWhiteSpace(step.Purpose) ? null : step.Purpose.Trim(),

@@ -54,6 +54,7 @@ public sealed record UpdateDealApprovalWorkflowScopeRequest(
 
 public sealed record UpdateDealApprovalWorkflowStepRequest(
     int Order,
+    Guid? ApproverRoleId,
     string ApproverRole,
     decimal? AmountThreshold,
     string? Purpose,

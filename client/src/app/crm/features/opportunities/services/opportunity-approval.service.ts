@@ -17,6 +17,7 @@ interface DecisionInboxApiStep {
   status: string;
   assigneeUserId?: string | null;
   assigneeName?: string | null;
+  approverRoleId?: string | null;
   approverRole?: string | null;
   dueAtUtc?: string | null;
   completedAtUtc?: string | null;
@@ -49,6 +50,13 @@ interface DecisionInboxApiItem {
   requestedOn: string;
   decisionOn?: string | null;
   notes?: string | null;
+  workflowExecutionId?: string | null;
+  workflowStepNodeId?: string | null;
+  workflowStepOrder?: number | null;
+  workflowName?: string | null;
+  workflowVersion?: number | null;
+  workflowDealId?: string | null;
+  workflowDealName?: string | null;
   currentStepOrder: number;
   totalSteps: number;
   stepRole?: string | null;
@@ -265,6 +273,13 @@ export class OpportunityApprovalService {
       notes: item.notes,
       amount: item.amount,
       currency: item.currency,
+      workflowExecutionId: item.workflowExecutionId ?? null,
+      workflowStepNodeId: item.workflowStepNodeId ?? null,
+      workflowStepOrder: item.workflowStepOrder ?? item.currentStepOrder,
+      workflowName: item.workflowName ?? null,
+      workflowVersion: item.workflowVersion ?? null,
+      workflowDealId: item.workflowDealId ?? item.entityId,
+      workflowDealName: item.workflowDealName ?? item.entityName,
       decisionType: item.decisionType,
       priority: item.priority,
       riskLevel: item.riskLevel,

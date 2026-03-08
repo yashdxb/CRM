@@ -3,6 +3,7 @@ using CRM.Enterprise.Application.Workflows;
 using CRM.Enterprise.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -32,7 +33,10 @@ public sealed class WorkflowDefinitionsController : ControllerBase
             definition.Name,
             definition.IsActive,
             definition.DefinitionJson,
-            definition.UpdatedAtUtc));
+            definition.UpdatedAtUtc,
+            definition.PublishedDefinitionJson,
+            definition.PublishedAtUtc,
+            definition.PublishedBy));
     }
 
     [HttpPut("{key}")]
@@ -44,13 +48,22 @@ public sealed class WorkflowDefinitionsController : ControllerBase
     {
         try
         {
-            var definition = await _service.SaveAsync(key, request.DefinitionJson, request.IsActive, cancellationToken);
+            var definition = await _service.SaveAsync(
+                key,
+                request.DefinitionJson,
+                request.IsActive,
+                request.Operation,
+                User.FindFirstValue(ClaimTypes.Name) ?? User.Identity?.Name,
+                cancellationToken);
             return Ok(new WorkflowDefinitionResponse(
                 definition.Key,
                 definition.Name,
                 definition.IsActive,
                 definition.DefinitionJson,
-                definition.UpdatedAtUtc));
+                definition.UpdatedAtUtc,
+                definition.PublishedDefinitionJson,
+                definition.PublishedAtUtc,
+                definition.PublishedBy));
         }
         catch (InvalidOperationException ex)
         {
