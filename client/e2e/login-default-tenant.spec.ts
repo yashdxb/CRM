@@ -68,7 +68,7 @@ test('login without tenant header still resolves default tenant', async ({ page,
   const token = await loginWithoutTenantHeader(page, request);
 
   await page.goto('/app/settings/users');
-  await expect(page.getByRole('heading', { name: /Team & Access Management/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /People & Access|Team & Access Management/i }).first()).toBeVisible();
 
   const tenantContextResponse = await request.get(`${API_BASE_URL}/api/tenant-context`, {
     headers: {
@@ -99,4 +99,26 @@ test('invalid credentials show an error message', async ({ page }) => {
   const error = page.locator('.error-message');
   await expect(error).toBeVisible({ timeout: 20000 });
   await expect(error).toContainText(/Unable to sign in/i);
+});
+
+test('login page shows Microsoft sign-in when runtime auth config enables Entra', async ({ page }) => {
+  await page.route(`${API_BASE_URL}/api/auth/config`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        localLoginEnabled: true,
+        entra: {
+          enabled: true,
+          clientId: 'entra-client-id',
+          authority: 'https://login.microsoftonline.com/organizations',
+          redirectUri: 'http://127.0.0.1:4200/login'
+        }
+      })
+    });
+  });
+
+  await page.goto('/login');
+
+  await expect(page.getByRole('button', { name: /sign in with microsoft/i })).toBeVisible();
 });

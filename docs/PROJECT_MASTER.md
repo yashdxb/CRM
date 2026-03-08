@@ -719,7 +719,7 @@ These workflows define how non‑rep roles operate in the same CRM, with clear o
 
 ---
 
-## 17) Entra Migration Status (Now/Next)
+## 17) Entra Migration Status
 
 ### Goal
 Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant boundaries and roles.
@@ -727,9 +727,13 @@ Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant 
 ### Current State
 - JWT-based auth issued by the CRM API.
 - Roles and permissions are stored in the CRM database.
-- Entra internal login endpoint is implemented (`POST /api/auth/login/entra`) and feature-configurable.
-- Frontend login page supports optional Microsoft sign-in button when Entra config is enabled.
+- Entra internal login endpoint is implemented (`POST /api/auth/login/entra`) with deterministic identity binding.
+- Frontend login page loads public auth config at runtime from `GET /api/auth/config`.
 - Existing email/password login remains fully supported as fallback.
+- Entra identity is persisted directly on CRM users via `EntraObjectId`, `EntraTenantId`, and `EntraUpn`.
+- First-time Entra sign-in binds exactly one matching active internal user by email; subsequent sign-in resolves by persisted Entra identity.
+- Tenant-scoped Entra rollout is controlled by the `auth.entra` feature flag, with CRM roles and permissions remaining authoritative.
+- Entra login success, failure, and first-time bind events are audited.
 - External audience users are blocked from internal app sign-in paths and should use external-facing channels/portal scope.
 - Role intent packs include `Internal Admin` and `External Admin` templates for audience-safe role design.
 
@@ -738,11 +742,10 @@ Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant 
 - CRM continues to enforce `crm:permission` policies but maps users to Entra identities.
 - Tenant resolution stays inside CRM middleware; identity is externalized.
 
-### Remaining Updates (Next)
-- Add explicit user mapping by Entra object ID (`oid`) persistence (currently email-based matching).
-- Add Entra group/role sync strategy (optional; CRM roles remain source of truth now).
-- Expand rollout from pilot tenants after sign-in telemetry thresholds are met.
-- Align invite/reset flows for Entra-only internal tenants when fallback local login is disabled.
+### Deferred Scope
+- Entra group-to-role sync remains deferred; CRM roles remain the source of truth.
+- Generic SAML and non-Entra OIDC providers remain backlog.
+- Entra-only tenants with disabled local fallback remain deferred.
 
 ---
 

@@ -472,6 +472,24 @@
           <!-- Reports Configuration Section -->
           <section class="form-card">
             <h3 class="section-title section-title--info">
+              <i class="pi pi-shield"></i>
+              Enterprise Authentication
+            </h3>
+            <p class="section-description">Control Microsoft Entra sign-in availability for this tenant while keeping local login as fallback.</p>
+
+            <div class="settings-grid settings-grid--flags">
+              <div class="setting-toggle-card">
+                <div class="setting-toggle-copy">
+                  <strong>Enable Microsoft Entra sign-in</strong>
+                  <span>Shows the Microsoft sign-in path on the login page for this tenant.</span>
+                </div>
+                <p-checkbox formControlName="featureAuthEntra" [binary]="true"></p-checkbox>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
               <i class="pi pi-file-pdf"></i>
               Reports Configuration
             </h3>

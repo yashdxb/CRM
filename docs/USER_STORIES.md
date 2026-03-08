@@ -193,12 +193,12 @@
   - `86e041x5m` | `backlog` | Schedule recurring report delivery | tags: -
   - `86e041x5v` | `backlog` | Webhook configuration for CRM events | tags: -
 
-### [NOW] SSO & Enterprise Authentication (`86e0422k2`)
-- Status: `in progress`
-- Tags: future, now
+### SSO & Enterprise Authentication (`86e0422k2`)
+- Status: `done`
+- Tags: built, core
 - Stories:
-  - `86e0422ke` | `in progress` | OAuth2 external identity provider support | tags: future, now
-  - `86e0422k7` | `backlog` | SAML/SSO identity provider integration | tags: future, now
+  - `86e0422ke` | `done` | OAuth2 external identity provider support | tags: built, core
+  - `86e0422k7` | `backlog` | SAML/SSO identity provider integration | tags: -
 
 ### [NOW] Web-to-Lead Forms (`86e041x5a`)
 - Status: `backlog`

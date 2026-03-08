@@ -8,5 +8,6 @@ public class EntraIdOptions
     public string ClientId { get; set; } = string.Empty;
     public string TenantId { get; set; } = "organizations";
     public string? Authority { get; set; }
+    public bool LocalLoginEnabled { get; set; } = true;
     public string[] AllowedTenantIds { get; set; } = [];
 }

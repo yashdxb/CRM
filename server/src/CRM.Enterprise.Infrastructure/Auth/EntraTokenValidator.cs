@@ -56,12 +56,18 @@ public sealed class EntraTokenValidator : IEntraTokenValidator
                 return null;
             }
 
-            var email = principal.FindFirstValue("preferred_username")
-                ?? principal.FindFirstValue(ClaimTypes.Email)
-                ?? principal.FindFirstValue("email")
+            var upn = principal.FindFirstValue("preferred_username")
                 ?? principal.FindFirstValue("upn");
+            var email = upn
+                ?? principal.FindFirstValue(ClaimTypes.Email)
+                ?? principal.FindFirstValue("email");
             var displayName = principal.FindFirstValue("name") ?? principal.FindFirstValue(ClaimTypes.Name);
-            return new EntraIdentity(oid, tid, email, displayName);
+            var groupIds = principal.FindAll("groups")
+                .Select(claim => claim.Value)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            return new EntraIdentity(oid, tid, email, displayName, upn, groupIds);
         }
         catch (SecurityTokenException)
         {

@@ -96,6 +96,7 @@ export class WorkspaceSettingsPage {
     scoreImmediateUrgencyFrom: [80, [Validators.min(5), Validators.max(99)]],
     supportingDocsMaxPerRecord: [10, [Validators.min(1), Validators.max(100)]],
     supportingDocsMaxFileSizeMb: [10, [Validators.min(1), Validators.max(100)]],
+    featureAuthEntra: [false],
     featureRealtimeDashboard: [false],
     featureRealtimePipeline: [false],
     featureRealtimeEntityCrud: [false],
@@ -168,6 +169,7 @@ export class WorkspaceSettingsPage {
         allowedExtensions: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.png', '.jpg', '.jpeg', '.webp']
       },
       featureFlags: {
+        'auth.entra': !!payload.featureAuthEntra,
         'realtime.dashboard': !!payload.featureRealtimeDashboard,
         'realtime.pipeline': !!payload.featureRealtimePipeline,
         'realtime.entityCrud': !!payload.featureRealtimeEntityCrud,
@@ -214,6 +216,7 @@ export class WorkspaceSettingsPage {
       scoreImmediateUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.immediateUrgencyFrom ?? 80,
       supportingDocsMaxPerRecord: settings.supportingDocumentPolicy?.maxDocumentsPerRecord ?? 10,
       supportingDocsMaxFileSizeMb: settings.supportingDocumentPolicy?.maxFileSizeMb ?? 10,
+      featureAuthEntra: this.resolveFeatureFlag(settings.featureFlags, 'auth.entra'),
       featureRealtimeDashboard: this.resolveFeatureFlag(settings.featureFlags, 'realtime.dashboard'),
       featureRealtimePipeline: this.resolveFeatureFlag(settings.featureFlags, 'realtime.pipeline'),
       featureRealtimeEntityCrud: this.resolveFeatureFlag(settings.featureFlags, 'realtime.entityCrud'),

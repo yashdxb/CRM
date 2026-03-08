@@ -20,6 +20,7 @@ public class TenantContextController : ControllerBase
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
     {
+        "auth.entra",
         "marketing.campaigns",
         "helpdesk.cases",
         "helpdesk.emailIntake",

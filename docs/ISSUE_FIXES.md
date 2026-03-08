@@ -1107,3 +1107,35 @@ cd client
 npm run build -- --configuration development
 E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 npx playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts e2e/workflow-execution-viewer.spec.ts --workers=1
 ```
+## 14) Entra-First SSO Completion
+
+Problem:
+- Microsoft Entra sign-in existed, but it was still email-match driven and not safe enough for enterprise rollout.
+- Public login UX depended on compiled frontend flags instead of runtime configuration.
+- Tenant-scoped rollout control and first-time bind auditing were missing.
+
+Fix:
+- Persisted Entra identity directly on CRM users:
+  - `EntraObjectId`
+  - `EntraTenantId`
+  - `EntraUpn`
+- Added filtered unique index on `{ TenantId, EntraTenantId, EntraObjectId }`.
+- Changed `POST /api/auth/login/entra` to:
+  - authenticate by persisted Entra identity first
+  - first-time bind exactly one matching active internal user by email
+  - reject with structured codes for `tenant_mismatch`, `identity_not_linked`, `email_conflict`, and `external_audience_blocked`
+- Added `GET /api/auth/config` for runtime login bootstrap.
+- Added tenant feature flag support for `auth.entra`.
+- Audited successful local and Entra logins, plus first-time Entra bind.
+
+Verification:
+- `dotnet build server/src/CRM.Enterprise.sln`
+- `dotnet test server/tests/CRM.Enterprise.Infrastructure.Tests/CRM.Enterprise.Infrastructure.Tests.csproj --filter AuthServiceTests`
+- `dotnet test server/tests/CRM.Enterprise.Api.Tests/CRM.Enterprise.Api.Tests.csproj --filter AuthControllerTests`
+- `dotnet ef database update --project server/src/CRM.Enterprise.Infrastructure --startup-project server/src/CRM.Enterprise.Api --context CrmDbContext`
+- `cd client && npm run build -- --configuration development`
+- `cd client && E2E_BASE_URL=http://localhost:4200 E2E_API_URL=http://localhost:5014 E2E_SKIP_SERVER=1 npx playwright test e2e/smoke.spec.ts e2e/login-default-tenant.spec.ts --workers=1`
+
+Result:
+- Entra-first enterprise auth is complete for the CRM internal app.
+- Generic SAML and non-Entra OIDC remain intentionally deferred.

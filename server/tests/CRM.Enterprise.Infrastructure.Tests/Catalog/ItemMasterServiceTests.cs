@@ -28,7 +28,7 @@ public class ItemMasterServiceTests
         var service = new ItemMasterService(dbContext);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(
-            new ItemMasterUpsertRequest("sku-001", "Duplicate Item", null, null, null, true)));
+            new ItemMasterUpsertRequest("Inventory", "sku-001", "Duplicate Item", null, null, null, true)));
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class ItemMasterServiceTests
         await dbContext.SaveChangesAsync();
 
         var service = new ItemMasterService(dbContext);
-        var result = await service.SearchAsync(new ItemMasterSearchRequest(null, null, true, 1, 25));
+        var result = await service.SearchAsync(new ItemMasterSearchRequest(null, null, null, true, 1, 25));
 
         var mapped = Assert.Single(result.Items);
         Assert.Equal(129.99m, mapped.DefaultUnitPrice);
@@ -94,7 +94,7 @@ public class ItemMasterServiceTests
         var deleted = await service.DeleteAsync(item.Id);
         Assert.True(deleted);
 
-        var result = await service.SearchAsync(new ItemMasterSearchRequest(null, null, null, 1, 25));
+        var result = await service.SearchAsync(new ItemMasterSearchRequest(null, null, null, null, 1, 25));
         Assert.Empty(result.Items);
     }
 
@@ -128,7 +128,7 @@ public class ItemMasterServiceTests
 
         tenantProvider.SetTenant(tenantA.Id, tenantA.Key);
         var service = new ItemMasterService(dbContext);
-        var result = await service.SearchAsync(new ItemMasterSearchRequest(null, null, null, 1, 25));
+        var result = await service.SearchAsync(new ItemMasterSearchRequest(null, null, null, null, 1, 25));
 
         var single = Assert.Single(result.Items);
         Assert.Equal("SKU-A", single.Sku);

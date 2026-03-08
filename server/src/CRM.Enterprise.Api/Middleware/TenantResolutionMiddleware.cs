@@ -27,14 +27,19 @@ public class TenantResolutionMiddleware
             return;
         }
 
-        if (path.StartsWith("/api/auth/login", StringComparison.OrdinalIgnoreCase))
+        if (path.StartsWith("/api/auth/login", StringComparison.OrdinalIgnoreCase) ||
+            path.StartsWith("/api/auth/config", StringComparison.OrdinalIgnoreCase))
         {
-            // Allow login to proceed even if the tenant header is stale, but set it if we can resolve it.
+            // Allow public auth bootstrapping even if the tenant header is stale, but set it if we can resolve it.
             var loginHost = context.Request.Host.Host;
             var loginTenantKey = context.Request.Headers[TenantHeader].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(loginTenantKey))
             {
                 loginTenantKey = GetTenantFromHost(loginHost);
+            }
+            if (string.IsNullOrWhiteSpace(loginTenantKey))
+            {
+                loginTenantKey = _configuration["Tenant:DefaultKey"] ?? "default";
             }
 
             if (!string.IsNullOrWhiteSpace(loginTenantKey))

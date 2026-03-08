@@ -15,6 +15,7 @@
     </div>
 
     <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+      <ng-container *ngIf="localLoginEnabled; else localLoginDisabled">
       <div class="form-group">
         <label class="form-label">Email</label>
         <div class="input-wrapper" [class.focused]="emailFocused" [class.error]="form.get('email')?.touched && form.get('email')?.invalid">
@@ -67,6 +68,7 @@
           Signing in...
         </span>
       </button>
+      </ng-container>
 
       <button
         *ngIf="entraEnabled"
@@ -87,6 +89,13 @@
         <span>{{ error }}</span>
       </div>
     </form>
+
+    <ng-template #localLoginDisabled>
+      <div class="error-message">
+        <i class="pi pi-info-circle"></i>
+        <span>Local sign-in is disabled for this tenant. Use Microsoft sign-in.</span>
+      </div>
+    </ng-template>
 
     <div class="card-footer">
       <span class="footer-text">Don't have an account?</span>

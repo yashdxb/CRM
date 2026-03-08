@@ -17,6 +17,16 @@ interface EntraLoginRequest {
   idToken: string;
 }
 
+export interface PublicAuthConfig {
+  localLoginEnabled: boolean;
+  entra: {
+    enabled: boolean;
+    clientId: string;
+    authority: string;
+    redirectUri: string;
+  };
+}
+
 interface LoginResponse {
   accessToken: string;
   expiresAtUtc: string;
@@ -77,6 +87,11 @@ export class AuthService {
         this.crmEventsService.connect();
       })
     );
+  }
+
+  getPublicAuthConfig() {
+    const url = `${environment.apiUrl}/api/auth/config`;
+    return this.http.get<PublicAuthConfig>(url);
   }
 
   loginWithEntra(payload: EntraLoginRequest) {

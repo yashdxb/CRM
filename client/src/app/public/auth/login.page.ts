@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, NgZone } from '@angular/core';
+import { ChangeDetectorRef, Component, NgZone, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -31,14 +31,18 @@ import { environment } from '../../../environments/environment';
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss']
 })
-export class LoginPage {
+export class LoginPage implements OnInit {
   form: FormGroup;
   loading = false;
   error: string | null = null;
   emailFocused = false;
   passwordFocused = false;
   showErrors = false;
-  readonly entraEnabled = !!environment.auth?.entra?.enabled;
+  entraEnabled = !!environment.auth?.entra?.enabled;
+  localLoginEnabled = true;
+  private entraClientId = environment.auth?.entra?.clientId ?? '';
+  private entraAuthority = environment.auth?.entra?.authority ?? 'https://login.microsoftonline.com/organizations';
+  private entraRedirectUri = environment.auth?.entra?.redirectUri ?? (typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login');
 
   constructor(
     private fb: FormBuilder,
@@ -55,7 +59,30 @@ export class LoginPage {
     });
   }
 
+  ngOnInit(): void {
+    this.auth.getPublicAuthConfig().subscribe({
+      next: (config) => {
+        this.localLoginEnabled = config.localLoginEnabled;
+        this.entraEnabled = !!config.entra?.enabled;
+        this.entraClientId = config.entra?.clientId || this.entraClientId;
+        this.entraAuthority = config.entra?.authority || this.entraAuthority;
+        this.entraRedirectUri = config.entra?.redirectUri || this.entraRedirectUri;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.localLoginEnabled = true;
+        this.entraEnabled = !!environment.auth?.entra?.enabled;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
   submit(): void {
+    if (!this.localLoginEnabled) {
+      this.showErrors = true;
+      this.error = 'Local sign-in is disabled for this tenant. Use Microsoft sign-in.';
+      return;
+    }
     if (this.form.invalid) {
       this.showErrors = true;
       this.form.markAllAsTouched();
@@ -140,8 +167,7 @@ export class LoginPage {
       return;
     }
 
-    const entraConfig = environment.auth?.entra;
-    if (!entraConfig?.clientId) {
+    if (!this.entraClientId) {
       this.showErrors = true;
       this.error = 'Microsoft sign-in is not configured.';
       return;
@@ -153,9 +179,9 @@ export class LoginPage {
     try {
       const client = new PublicClientApplication({
         auth: {
-          clientId: entraConfig.clientId,
-          authority: entraConfig.authority,
-          redirectUri: entraConfig.redirectUri
+          clientId: this.entraClientId,
+          authority: this.entraAuthority,
+          redirectUri: this.entraRedirectUri
         },
         cache: {
           cacheLocation: 'localStorage'
@@ -199,9 +225,10 @@ export class LoginPage {
           },
           error: (err: unknown) => {
             const httpError = err as HttpErrorResponse | null;
+            const code = httpError?.error?.code || null;
             const messageBody = httpError?.error?.message || httpError?.error?.error || null;
             this.showErrors = true;
-            this.error = this.buildErrorText('Microsoft account', messageBody, httpError?.status);
+            this.error = this.buildErrorText('Microsoft account', messageBody, httpError?.status, code);
             this.cdr.detectChanges();
           }
         });
@@ -214,10 +241,22 @@ export class LoginPage {
     }
   }
 
-  private buildErrorText(email: string, serverMessage: string | null, status?: number) {
+  private buildErrorText(email: string, serverMessage: string | null, status?: number, code?: string | null) {
     const base = `Unable to sign in as ${email || 'the requested user'}.`;
     if (status === 0) {
       return `${base} Network error. Please check your connection and try again.`;
+    }
+    if (code === 'tenant_mismatch') {
+      return `${base} No CRM tenant could be resolved for this Microsoft account.`;
+    }
+    if (code === 'identity_not_linked') {
+      return `${base} This Microsoft account is not linked to a CRM user.`;
+    }
+    if (code === 'email_conflict') {
+      return `${base} Multiple CRM users match this Microsoft account. Contact an administrator.`;
+    }
+    if (code === 'external_audience_blocked') {
+      return `${base} External users cannot sign in to the internal CRM workspace.`;
     }
     if (status === 401) {
       return `${base} Invalid email or password.`;

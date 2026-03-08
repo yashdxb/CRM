@@ -5,7 +5,9 @@ using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Opportunities;
 using CRM.Enterprise.Infrastructure.Persistence;
+using CRM.Enterprise.Application.Notifications;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
 
@@ -158,7 +160,14 @@ public class OpportunityApprovalServiceTests
             QueueName = "approvals"
         });
         var queue = new ServiceBusApprovalQueue(null, queueOptions);
-        return new OpportunityApprovalService(dbContext, tenantProvider, auditService, queue);
+        return new OpportunityApprovalService(
+            dbContext,
+            tenantProvider,
+            auditService,
+            queue,
+            new FakeRealtimePublisher(),
+            new FakeEmailSender(),
+            NullLogger<OpportunityApprovalService>.Instance);
     }
 
     private static CrmDbContext CreateDbContext(out TestTenantProvider tenantProvider)
@@ -260,5 +269,17 @@ public class OpportunityApprovalServiceTests
         {
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class FakeRealtimePublisher : ICrmRealtimePublisher
+    {
+        public Task PublishTenantEventAsync(Guid tenantId, string eventType, object payload, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task PublishUserEventAsync(Guid tenantId, Guid userId, string eventType, object payload, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task PublishUsersEventAsync(Guid tenantId, IEnumerable<Guid> userIds, string eventType, object payload, CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class FakeEmailSender : IEmailSender
+    {
+        public Task SendAsync(string toEmail, string subject, string htmlBody, string? textBody = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 }

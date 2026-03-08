@@ -10,6 +10,9 @@ public class User : AuditableEntity
     public string Email { get; set; } = string.Empty;
     public string? EmailNormalized { get; set; }
     public string? PasswordHash { get; set; }
+    public string? EntraObjectId { get; set; }
+    public string? EntraTenantId { get; set; }
+    public string? EntraUpn { get; set; }
     public string? TimeZone { get; set; }
     public string? Locale { get; set; }
     public string? NotificationPreferencesJson { get; set; }

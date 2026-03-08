@@ -54,12 +54,27 @@ public class AuthController : ControllerBase
         }
 
         var result = await _authService.SignInWithEntraIdTokenAsync(request.IdToken, cancellationToken);
-        if (result is null)
+        if (result.AuthResult is null)
         {
-            return Unauthorized();
+            return Unauthorized(new { code = result.FailureCode, message = result.Message });
         }
 
-        return Ok(new LoginResponse(result.AccessToken, result.ExpiresAtUtc, result.Email, result.FullName, result.Roles, result.Permissions, result.TenantKey, result.MustChangePassword));
+        return Ok(new LoginResponse(result.AuthResult.AccessToken, result.AuthResult.ExpiresAtUtc, result.AuthResult.Email, result.AuthResult.FullName, result.AuthResult.Roles, result.AuthResult.Permissions, result.AuthResult.TenantKey, result.AuthResult.MustChangePassword));
+    }
+
+    [HttpGet("config")]
+    [AllowAnonymous]
+    public async Task<ActionResult<PublicAuthConfigResponse>> GetPublicAuthConfig(CancellationToken cancellationToken)
+    {
+        var origin = Request.Headers.Origin.FirstOrDefault();
+        var config = await _authService.GetPublicAuthConfigAsync(origin, cancellationToken);
+        return Ok(new PublicAuthConfigResponse(
+            config.LocalLoginEnabled,
+            new PublicEntraAuthConfigResponse(
+                config.Entra.Enabled,
+                config.Entra.ClientId,
+                config.Entra.Authority,
+                config.Entra.RedirectUri)));
     }
 
     [HttpPost("logout")]

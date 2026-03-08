@@ -357,6 +357,15 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<User>()
             .Property(u => u.EmailNormalized)
             .HasMaxLength(320);
+        modelBuilder.Entity<User>()
+            .Property(u => u.EntraObjectId)
+            .HasMaxLength(128);
+        modelBuilder.Entity<User>()
+            .Property(u => u.EntraTenantId)
+            .HasMaxLength(128);
+        modelBuilder.Entity<User>()
+            .Property(u => u.EntraUpn)
+            .HasMaxLength(320);
         // Keep the change-password flag explicit for predictable onboarding.
         modelBuilder.Entity<User>()
             .Property(u => u.MustChangePassword)
@@ -371,6 +380,10 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<User>()
             .HasIndex(u => new { u.TenantId, u.EmailNormalized })
             .HasFilter("[EmailNormalized] IS NOT NULL AND [IsDeleted] = 0")
+            .IsUnique();
+        modelBuilder.Entity<User>()
+            .HasIndex(u => new { u.TenantId, u.EntraTenantId, u.EntraObjectId })
+            .HasFilter("[EntraTenantId] IS NOT NULL AND [EntraObjectId] IS NOT NULL AND [IsDeleted] = 0")
             .IsUnique();
         modelBuilder.Entity<Role>().ToTable("Roles", IdentitySchema);
         modelBuilder.Entity<Role>()
