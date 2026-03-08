@@ -20,7 +20,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.101'
 
       - name: Configure Telerik NuGet feed
         run: |
@@ -56,11 +56,3 @@ jobs:
         with:
           app-name: crm-enterprise-api-dev-01122345
           package: ./artifacts/publish
-
-      - name: Align Azure App Service runtime
-        run: |
-          az webapp config set \
-            -g rg-crm-dev-ca \
-            -n crm-enterprise-api-dev-01122345 \
-            --linux-fx-version "DOTNETCORE|8.0" \
-            --startup-file ""
