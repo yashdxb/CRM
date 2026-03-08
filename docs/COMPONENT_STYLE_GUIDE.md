@@ -335,12 +335,16 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { IftaLabelModule } from 'primeng/iftalabel';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 
 @Component({
   selector: 'app-entity-form-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ButtonModule, BreadcrumbsComponent],
+  imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, IftaLabelModule, InputGroupModule, InputGroupAddonModule, BreadcrumbsComponent],
   templateUrl: './entity-form.page.html',
   styleUrl: './entity-form.page.scss'
 })
@@ -395,8 +399,18 @@ export class EntityFormPage implements OnInit {
         </h3>
         <div class="form-grid">
           <div class="form-field">
-            <label class="form-label">Name <span class="required">*</span></label>
-            <input pInputText formControlName="name" placeholder="Enter name" />
+            <p-iftalabel>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--name">
+                  <i class="pi pi-user"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="field-name" formControlName="name" placeholder="Enter name" />
+              </p-inputgroup>
+              <label for="field-name">Name <span class="required">*</span></label>
+            </p-iftalabel>
+            @if (form.get('name')?.invalid && form.get('name')?.touched) {
+              <small class="error-message">Name is required.</small>
+            }
           </div>
         </div>
       </section>
@@ -879,33 +893,82 @@ $glass-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.12); // Hover lift
 
 ---
 
-### Form Field Patterns
+### Form Field Patterns (MANDATORY)
 
-**Icon Colors (use on p-inputgroupaddon):**
+All form inputs **MUST** use PrimeNG `<p-iftalabel>` (floating label) + `<p-inputgroup>` (icon addon). Plain `<input pInputText>` inside `<div class="field"><label>` is **not allowed**.
+
+**Required Imports:**
+```typescript
+import { IftaLabelModule } from 'primeng/iftalabel';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+```
+
+**Icon Addon Colors (use on `<p-inputgroup-addon>`):**
 ```scss
-.icon-addon--info    // Blue
+.icon-addon--name    // Purple (name fields)
+.icon-addon--email   // Blue (email fields)
+.icon-addon--phone   // Green (phone/contact)
+.icon-addon--info    // Blue (general info)
 .icon-addon--success // Green
 .icon-addon--warning // Orange
 .icon-addon--danger  // Red
 ```
 
-**Complete Form Field with Validation:**
+**Text / Email / Number Input (with IftaLabel + InputGroup):**
 ```html
 <div class="form-field">
-  <label class="form-label">
-    Email <span class="required">*</span>
-  </label>
-  <p-inputgroup>
-    <p-inputgroupaddon class="icon-addon icon-addon--info">
-      <i class="pi pi-envelope"></i>
-    </p-inputgroupaddon>
-    <input pInputText type="email" formControlName="email" />
-  </p-inputgroup>
+  <p-iftalabel>
+    <p-inputgroup>
+      <p-inputgroup-addon class="icon-addon icon-addon--email">
+        <i class="pi pi-envelope"></i>
+      </p-inputgroup-addon>
+      <input pInputText id="field-email" type="email" formControlName="email" placeholder="Enter email" />
+    </p-inputgroup>
+    <label for="field-email">Email <span class="required">*</span></label>
+  </p-iftalabel>
   @if (form.get('email')?.invalid && form.get('email')?.touched) {
     <small class="error-message">{{ getErrorMessage('email') }}</small>
   }
 </div>
 ```
+
+**Textarea Input (IftaLabel only, no InputGroup):**
+```html
+<div class="form-field">
+  <p-iftalabel>
+    <textarea pTextarea id="field-notes" formControlName="notes" rows="4" placeholder="Enter notes"></textarea>
+    <label for="field-notes">Notes</label>
+  </p-iftalabel>
+</div>
+```
+
+**Select Dropdown (IftaLabel + icon templates):**
+```html
+<div class="form-field">
+  <p-iftalabel>
+    <p-select id="field-status" [options]="statusOptions()" optionLabel="label" optionValue="value"
+              formControlName="status" placeholder="Select status" class="w-full">
+      <ng-template pTemplate="item" let-option>
+        <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+      </ng-template>
+      <ng-template pTemplate="value" let-option>
+        <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        <span *ngIf="!option" class="select-placeholder">Select status</span>
+      </ng-template>
+    </p-select>
+    <label for="field-status">Status <span class="required">*</span></label>
+  </p-iftalabel>
+</div>
+```
+
+**Key Rules:**
+- `<p-iftalabel>` wraps every input — floating label is mandatory.
+- `<p-inputgroup>` + `<p-inputgroup-addon>` with icon is required for text/email/number/tel inputs.
+- Textareas and selects use `<p-iftalabel>` only (no `<p-inputgroup>`).
+- Error messages go **outside** `<p-iftalabel>`, inside `.form-field`.
+- Each input must have a unique `id` with matching `for` on `<label>`.
+- Dialogs follow the same standard — no exemptions.
 
 ---
 

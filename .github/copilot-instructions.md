@@ -1091,9 +1091,20 @@ Use for: `role-form.page`, `customer-form.page`, `lead-form.page`, `workspace-se
           Section Name
         </h3>
         <div class="form-grid">
-          <div class="field">
-            <label>Label <span class="required">*</span></label>
-            <input pInputText formControlName="name" />
+          <!-- Text input: IftaLabel + InputGroup + icon addon -->
+          <div class="form-field">
+            <p-iftalabel>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--name">
+                  <i class="pi pi-user"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="field-name" formControlName="name" placeholder="Enter name" />
+              </p-inputgroup>
+              <label for="field-name">Name <span class="required">*</span></label>
+            </p-iftalabel>
+            @if (form.get('name')?.invalid && form.get('name')?.touched) {
+              <small class="error-message">Name is required.</small>
+            }
           </div>
         </div>
       </section>
@@ -1101,6 +1112,86 @@ Use for: `role-form.page`, `customer-form.page`, `lead-form.page`, `workspace-se
   </div>
 </section>
 ```
+
+### Form Input Field Standard (MANDATORY)
+
+All form input fields across the CRM **MUST** use PrimeNG `<p-iftalabel>` (floating label) and `<p-inputgroup>` (icon addon) components. Plain `<input pInputText>` inside a `<div class="field"><label>` is **not allowed**.
+
+#### Required Imports
+```typescript
+import { IftaLabelModule } from 'primeng/iftalabel';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+// Add to component imports array
+```
+
+#### Text / Email / Number Inputs
+```html
+<div class="form-field">
+  <p-iftalabel>
+    <p-inputgroup>
+      <p-inputgroup-addon class="icon-addon icon-addon--email">
+        <i class="pi pi-envelope"></i>
+      </p-inputgroup-addon>
+      <input pInputText id="field-email" type="email" formControlName="email" placeholder="Enter email" />
+    </p-inputgroup>
+    <label for="field-email">Email <span class="required">*</span></label>
+  </p-iftalabel>
+  @if (form.get('email')?.invalid && form.get('email')?.touched) {
+    <small class="error-message">Valid email is required.</small>
+  }
+</div>
+```
+
+#### Textarea Inputs
+```html
+<div class="form-field">
+  <p-iftalabel>
+    <textarea pTextarea id="field-notes" formControlName="notes" rows="4" placeholder="Enter notes"></textarea>
+    <label for="field-notes">Notes</label>
+  </p-iftalabel>
+</div>
+```
+
+#### Select Dropdowns (with IftaLabel)
+```html
+<div class="form-field">
+  <p-iftalabel>
+    <p-select id="field-status" [options]="statusOptions()" optionLabel="label" optionValue="value"
+              formControlName="status" placeholder="Select status" class="w-full">
+      <ng-template pTemplate="item" let-option>
+        <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+      </ng-template>
+      <ng-template pTemplate="value" let-option>
+        <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        <span *ngIf="!option" class="select-placeholder">Select status</span>
+      </ng-template>
+    </p-select>
+    <label for="field-status">Status <span class="required">*</span></label>
+  </p-iftalabel>
+</div>
+```
+
+#### Icon Addon Variants
+Use `icon-addon` + a specific `icon-addon--*` class for per-field colors (global rules in `client/src/styles/_components.scss`):
+
+| Class | Color | Common Use |
+|-------|-------|------------|
+| `icon-addon--name` | Purple | Name fields |
+| `icon-addon--email` | Blue | Email fields |
+| `icon-addon--phone` | Green | Phone/contact |
+| `icon-addon--info` | Blue | General info |
+| `icon-addon--success` | Green | Success/positive |
+| `icon-addon--warning` | Orange | Warning/caution |
+| `icon-addon--danger` | Red | Danger/critical |
+
+#### Key Rules
+- **Always** use `<p-iftalabel>` to wrap inputs — the floating label pattern is mandatory.
+- **Always** use `<p-inputgroup>` + `<p-inputgroup-addon>` with a contextual icon for text/email/number/tel inputs.
+- Textareas and selects use `<p-iftalabel>` but do NOT need `<p-inputgroup>` wrapping.
+- Error messages go **outside** `<p-iftalabel>`, inside the `.form-field` container.
+- Each input must have a unique `id` and matching `for` on the `<label>`.
+- Dialogs follow the same standard — no exemptions for dialog forms.
 
 ### Mandatory Select Rules
 - **Every `<p-select>` MUST render icons for each option.**

@@ -61,6 +61,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - No inline templates or styles. Always use `templateUrl` and `styleUrl`.
 - Every page follows the Page Design System structure and uses global styles.
 - PrimeNG components are mandatory for inputs, tables, dialogs, and buttons.
+- **Form input field standard (mandatory):** All form inputs must use PrimeNG `<p-iftalabel>` (floating label) + `<p-inputgroup>` with `<p-inputgroup-addon>` icon prefixes. Plain `<input pInputText>` inside `<div class="field"><label>` is not allowed. Textareas and selects use `<p-iftalabel>` but do not need `<p-inputgroup>`. Use `icon-addon--*` classes for per-field icon colors. See `.github/copilot-instructions.md` for full examples.
 - Date/time display must follow current user timezone conversion rules (UTC storage; local display).
 - Mobile-first: every page must be responsive and usable on mobile devices.
 
