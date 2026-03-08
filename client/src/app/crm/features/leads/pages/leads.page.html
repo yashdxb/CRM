@@ -29,15 +29,15 @@
             <i class="pi pi-objects-column"></i>
           </button>
         </div>
-        <button pButton type="button" class="btn-icon" (click)="load()" title="Refresh">
-          <i class="pi pi-refresh"></i>
+        <button type="button" class="action-btn action-btn--refresh" (click)="load()" title="Refresh">
+          <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
         </button>
-        <button pButton type="button" class="btn-ghost" [disabled]="!canManage()" (click)="openImport()">
-          <i class="pi pi-upload"></i>
+        <button type="button" class="action-btn action-btn--import" [disabled]="!canManage()" (click)="openImport()">
+          <span class="action-btn__icon"><i class="pi pi-upload"></i></span>
           <span>Import</span>
         </button>
-        <button pButton type="button" class="btn-primary" [disabled]="!canManage()" (click)="onCreate()">
-          <i class="pi pi-plus"></i>
+        <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
+          <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
           <span>Add Lead</span>
         </button>
       </div>
@@ -218,16 +218,16 @@
                 {{ lead.owner }}
               </span>
               <div class="lead-actions">
-                <button pButton type="button" class="mini-btn" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button pButton type="button" class="mini-btn info" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--activity" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)">
                   <i class="pi pi-calendar-plus"></i>
                 </button>
-                <button pButton type="button" class="mini-btn success" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--convert" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)">
                   <i class="pi pi-bolt"></i>
                 </button>
-                <button pButton type="button" class="mini-btn danger" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--delete" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)">
                   <i class="pi pi-trash"></i>
                 </button>
               </div>
@@ -391,22 +391,20 @@
                   </td>
                   <td class="td-actions">
                     <div class="row-actions">
-                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-info" icon="pi pi-pencil" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)" title="Edit"></button>
+                      <button type="button" class="row-action-btn row-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)" title="Edit"><i class="pi pi-pencil"></i></button>
                       <button
                         *ngIf="showCqvsInLeadList()"
-                        pButton
                         type="button"
-                        class="action-btn p-button-text p-button-rounded p-button-sm p-button-help"
-                        icon="pi pi-compass"
+                        class="row-action-btn row-action-btn--coach"
                         [disabled]="!canManage()"
                         (click)="$event.stopPropagation(); openCoach(lead)"
                         title="Coach"
                         data-testid="lead-coach-open"
                         [attr.data-lead-id]="lead.id"
-                      ></button>
-                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-secondary" icon="pi pi-calendar-plus" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)" title="Log activity"></button>
-                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-success" icon="pi pi-bolt" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)" title="Convert"></button>
-                      <button pButton type="button" class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger" icon="pi pi-trash" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)" title="Delete"></button>
+                      ><i class="pi pi-compass"></i></button>
+                      <button type="button" class="row-action-btn row-action-btn--activity" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)" title="Log activity"><i class="pi pi-calendar-plus"></i></button>
+                      <button type="button" class="row-action-btn row-action-btn--convert" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)" title="Convert"><i class="pi pi-bolt"></i></button>
+                      <button type="button" class="row-action-btn row-action-btn--delete" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)" title="Delete"><i class="pi pi-trash"></i></button>
                     </div>
                   </td>
                 </tr>

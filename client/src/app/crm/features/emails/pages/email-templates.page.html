@@ -32,13 +32,12 @@
       </p>
 
       <div class="hero-actions">
-        <button pButton type="button" class="btn btn-primary btn-glow" [disabled]="!canManage()" (click)="openCreateDialog()">
-          <i class="pi pi-plus"></i>
+        <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="openCreateDialog()">
+          <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
           <span>New Template</span>
-          <div class="btn-shine"></div>
         </button>
-        <button pButton type="button" class="btn btn-secondary" routerLink="/app/emails">
-          <i class="pi pi-arrow-left"></i>
+        <button type="button" class="action-btn action-btn--back" routerLink="/app/emails">
+          <span class="action-btn__icon"><i class="pi pi-arrow-left"></i></span>
           <span>Back to Emails</span>
         </button>
       </div>
@@ -123,11 +122,11 @@
               <span class="template-date">{{ template.updatedAtUtc | date:'mediumDate' }}</span>
             </td>
             <td>
-              <div class="action-buttons">
-                <button pButton type="button" class="icon-btn" pTooltip="Edit" tooltipPosition="top" (click)="openEditDialog(template)" [disabled]="template.isSystem">
+              <div class="row-actions">
+                <button type="button" class="row-action-btn row-action-btn--edit" title="Edit" (click)="openEditDialog(template)" [disabled]="template.isSystem">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button pButton type="button" class="icon-btn icon-btn--danger" pTooltip="Delete" tooltipPosition="top" (click)="deleteTemplate(template)" [disabled]="template.isSystem">
+                <button type="button" class="row-action-btn row-action-btn--delete" title="Delete" (click)="deleteTemplate(template)" [disabled]="template.isSystem">
                   <i class="pi pi-trash"></i>
                 </button>
               </div>

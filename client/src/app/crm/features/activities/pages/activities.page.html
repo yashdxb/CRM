@@ -32,11 +32,12 @@
             <i class="pi pi-check-square"></i>
           </button>
         </div>
-        <button pButton type="button" class="btn-icon" (click)="load()" title="Refresh">
-          <i class="pi pi-refresh"></i>
+        <button type="button" class="action-btn action-btn--refresh" (click)="load()" title="Refresh">
+          <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+          <span>Refresh</span>
         </button>
-        <button pButton type="button" class="btn-primary" [disabled]="!canManage()" (click)="onCreate()">
-          <i class="pi pi-plus"></i>
+        <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
+          <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
           <span>Add Activity</span>
         </button>
       </div>
@@ -359,32 +360,26 @@
                     <td class="actions-col">
                       <div class="row-actions">
                         <button
-                          pButton
                           type="button"
-                          class="action-btn p-button-text p-button-rounded p-button-sm p-button-success"
-                          icon="pi pi-check"
+                          class="row-action-btn row-action-btn--complete"
                           [disabled]="!canMarkComplete(row)"
                           (click)="$event.stopPropagation(); markCompleted(row)"
                           title="Mark completed"
-                        ></button>
+                        ><i class="pi pi-check"></i></button>
                         <button
-                          pButton
                           type="button"
-                          class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
-                          icon="pi pi-pencil"
+                          class="row-action-btn row-action-btn--edit"
                           [disabled]="!canManage()"
                           (click)="$event.stopPropagation(); onEdit(row)"
                           title="Edit"
-                        ></button>
+                        ><i class="pi pi-pencil"></i></button>
                         <button
-                          pButton
                           type="button"
-                          class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
-                          icon="pi pi-trash"
+                          class="row-action-btn row-action-btn--delete"
                           [disabled]="!canManage()"
                           (click)="$event.stopPropagation(); onDelete(row)"
                           title="Delete"
-                        ></button>
+                        ><i class="pi pi-trash"></i></button>
                       </div>
                     </td>
                   </tr>

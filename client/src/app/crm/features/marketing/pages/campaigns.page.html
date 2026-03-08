@@ -44,38 +44,26 @@
 
         <div class="hero-actions">
           <button
-            pButton
             type="button"
-            class="crm-button crm-button--primary"
-            icon="pi pi-plus"
-            label="New Campaign"
+            class="action-btn action-btn--add"
             [disabled]="!canManage()"
             (click)="createCampaign()"
-          ></button>
+          ><span class="action-btn__icon"><i class="pi pi-plus"></i></span><span>New Campaign</span></button>
           <button
-            pButton
             type="button"
-            class="crm-button crm-button--ghost"
-            icon="pi pi-percentage"
-            label="Attribution"
+            class="action-btn action-btn--attribution"
             (click)="openAttribution()"
-          ></button>
+          ><span class="action-btn__icon"><i class="pi pi-percentage"></i></span><span>Attribution</span></button>
           <button
-            pButton
             type="button"
-            class="crm-button crm-button--ghost"
-            icon="pi pi-cog"
-            label="Settings"
+            class="action-btn action-btn--settings"
             (click)="openSettings()"
-          ></button>
+          ><span class="action-btn__icon"><i class="pi pi-cog"></i></span><span>Settings</span></button>
           <button
-            pButton
             type="button"
-            class="crm-button crm-button--text"
-            icon="pi pi-refresh"
-            label="Refresh"
+            class="action-btn action-btn--refresh"
             (click)="load()"
-          ></button>
+          ><span class="action-btn__icon"><i class="pi pi-refresh"></i></span><span>Refresh</span></button>
         </div>
       </div>
 
@@ -278,28 +266,25 @@
               <td>
                 <div class="row-actions">
                   <button
-                    pButton
                     type="button"
-                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
-                    icon="pi pi-eye"
+                    class="row-action-btn row-action-btn--view"
                     (click)="$event.stopPropagation(); openCampaign(campaign)"
-                  ></button>
+                    title="View"
+                  ><i class="pi pi-eye"></i></button>
                   <button
-                    pButton
                     type="button"
-                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-help"
-                    icon="pi pi-pencil"
+                    class="row-action-btn row-action-btn--edit"
                     [disabled]="!canManage()"
                     (click)="$event.stopPropagation(); editCampaign(campaign)"
-                  ></button>
+                    title="Edit"
+                  ><i class="pi pi-pencil"></i></button>
                   <button
-                    pButton
                     type="button"
-                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
-                    icon="pi pi-archive"
+                    class="row-action-btn row-action-btn--archive"
                     [disabled]="!canManage() || campaign.status === 'Archived'"
                     (click)="$event.stopPropagation(); archiveCampaign(campaign)"
-                  ></button>
+                    title="Archive"
+                  ><i class="pi pi-archive"></i></button>
                 </div>
               </td>
             </tr>

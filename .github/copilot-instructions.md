@@ -725,54 +725,89 @@ $font-size-2xl: 1.375rem;  // 22px - section headers
 
 ---
 
-### 8. TABLE ACTION BUTTONS
+### 8. UNIFIED BUTTON STANDARD (MANDATORY)
 
-```scss
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: transparent;
-  border: none;
-  border-radius: $radius-sm;  // 6px
-  color: $gray-400;
-  cursor: pointer;
-  font-size: $font-size-sm;  // 14px
-  transition: all 150ms;
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.06);
-    color: $gray-700;
-  }
-  
-  &--danger:hover {
-    background: rgba($danger, 0.1);
-    color: $danger;
-  }
-}
+> **Source file**: `client/src/app/shared/page-design-system.scss` (globally imported — no per-component import needed)
+> **Rule**: All list/dashboard/settings page buttons MUST use this 4-tier system. Do NOT use `pButton` directive, `crm-button`, `btn-primary`, `btn-ghost`, `icon-btn`, or `action-icon` classes for action buttons.
 
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-1;  // 4px
-  padding: $space-1 $space-3;  // 4px 12px
-  background: transparent;
-  border: 1px solid $gray-200;
-  border-radius: $radius-md;  // 8px
-  font-size: $font-size-sm;  // 14px
-  color: $gray-600;
-  cursor: pointer;
-  transition: all 150ms;
-  
-  &:hover {
-    background: $gray-50;
-    border-color: $gray-300;
-    color: $gray-800;
-  }
-}
+#### Tier 1 — Header / Toolbar Buttons (`.action-btn`)
+
+Glass pill buttons with gradient icon badges. Used in hero-actions, data-headers, and filter bars.
+
+```html
+<button type="button" class="action-btn action-btn--add">
+  <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+  <span>New Record</span>
+</button>
 ```
+
+| Variant | Color | Use Case |
+|---------|-------|----------|
+| `--add` | Primary gradient (#667eea→#764ba2) | Create / Add actions |
+| `--refresh` | Blue (#3b82f6) | Refresh / Reload |
+| `--import` | Cyan (#06b6d4) | Import data |
+| `--export` | Green (#22c55e) | Export data |
+| `--columns` | Purple (#a855f7) | Column config |
+| `--settings` | Gray (#6b7280) | Settings / Config |
+| `--attribution` | Orange (#f97316) | Attribution / Analytics |
+| `--security` | Orange (#f97316) | Security / Permissions |
+| `--users` | Purple (#a855f7) | User management |
+| `--back` | Gray (#6b7280) | Back navigation |
+
+#### Tier 2 — Table Row Buttons (`.row-action-btn`)
+
+32px gradient circles for table row actions. No text label — icon only with `title` attribute.
+
+```html
+<div class="row-actions">
+  <button type="button" class="row-action-btn row-action-btn--edit" title="Edit">
+    <i class="pi pi-pencil"></i>
+  </button>
+  <button type="button" class="row-action-btn row-action-btn--delete" title="Delete">
+    <i class="pi pi-trash"></i>
+  </button>
+</div>
+```
+
+| Variant | Gradient | Use Case |
+|---------|----------|----------|
+| `--edit` | Blue (#60a5fa→#3b82f6) | Edit record |
+| `--delete` | Red (#f87171→#ef4444) | Delete record |
+| `--view` | Cyan (#22d3ee→#06b6d4) | View details |
+| `--complete` | Green (#4ade80→#22c55e) | Mark complete |
+| `--convert` | Purple (#c084fc→#a855f7) | Convert / Promote |
+| `--coach` | Orange (#fb923c→#f97316) | AI Coach / Assist |
+| `--activity` | Primary (#818cf8→#667eea) | Log activity |
+| `--archive` | Gray (#9ca3af→#6b7280) | Archive |
+
+#### Tier 3 — Card Footer Buttons (`.card-btn`)
+
+Split buttons for card-style layouts with mini gradient icon badges.
+
+```html
+<button type="button" class="card-btn card-btn--edit">
+  <span class="card-btn__icon"><i class="pi pi-pencil"></i></span>
+  <span>Edit</span>
+</button>
+```
+
+#### Tier 4 — Kanban Mini Buttons (`.mini-action-btn`)
+
+26px compact buttons for kanban cards.
+
+```html
+<button type="button" class="mini-action-btn mini-action-btn--edit" title="Edit">
+  <i class="pi pi-pencil"></i>
+</button>
+```
+
+#### Key Rules
+- **Always** use plain `<button type="button">` — NO `pButton` directive
+- **Always** put icons via `<i class="pi pi-...">` tags inside the button
+- **Wrap** `.row-action-btn` containers in `<div class="row-actions">`
+- **Dialog buttons** (Cancel/Save inside `<p-dialog>`) are exempt — keep PrimeNG styling
+- **Empty-state CTA** buttons are exempt — keep existing styling
+- **View-toggle** and **filter-pill** buttons are exempt — they're not action buttons
 
 ---
 

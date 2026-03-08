@@ -56,20 +56,20 @@
       </div>
 
       <div class="hero-actions">
-        <button pButton type="button" class="btn btn-primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
-          <i class="pi pi-plus"></i>
+        <button type="button" class="action-btn action-btn--add" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
+          <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
           <span>New Role</span>
         </button>
-        <button pButton type="button" class="btn btn-secondary" [disabled]="!canManageAdmin()" routerLink="/app/settings/security-levels">
-          <i class="pi pi-lock"></i>
+        <button type="button" class="action-btn action-btn--security" [disabled]="!canManageAdmin()" routerLink="/app/settings/security-levels">
+          <span class="action-btn__icon"><i class="pi pi-lock"></i></span>
           <span>Manage Security Levels</span>
         </button>
-        <button pButton type="button" class="btn btn-secondary" routerLink="/app/settings/users">
-          <i class="pi pi-users"></i>
+        <button type="button" class="action-btn action-btn--users" routerLink="/app/settings/users">
+          <span class="action-btn__icon"><i class="pi pi-users"></i></span>
           <span>Manage Users</span>
         </button>
-        <button pButton type="button" class="btn btn-ghost" (click)="loadRoles()">
-          <i class="pi pi-refresh"></i>
+        <button type="button" class="action-btn action-btn--refresh" (click)="loadRoles()">
+          <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
           <span>Refresh</span>
         </button>
       </div>
@@ -134,12 +134,12 @@
                 <span class="record-count">{{ roles().length }} roles configured</span>
               </div>
               <div class="header-actions">
-                <button pButton type="button" class="action-btn action-btn--primary" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
-                  <i class="pi pi-plus"></i>
+                <button type="button" class="action-btn action-btn--add" [disabled]="roleSaving() || !canManageAdmin()" routerLink="/app/settings/roles/new">
+                  <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
                   <span>Add Role</span>
                 </button>
-                <button pButton type="button" class="action-btn" (click)="loadRoles()" [disabled]="loadingRoles()">
-                  <i class="pi pi-refresh"></i>
+                <button type="button" class="action-btn action-btn--refresh" (click)="loadRoles()" [disabled]="loadingRoles()">
+                  <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
                   <span>Reload</span>
                 </button>
               </div>
@@ -238,24 +238,20 @@
                       </span>
                     </td>
                     <td class="td-actions">
-                      <div class="action-buttons">
+                      <div class="row-actions">
                         <button
-                          pButton
                           type="button"
-                          class="action-icon"
-                          pTooltip="Edit role"
-                          tooltipPosition="top"
+                          class="row-action-btn row-action-btn--edit"
+                          title="Edit role"
                           [disabled]="!canManageAdmin()"
                           [routerLink]="['/app/settings/roles', role.id, 'edit']"
                         >
                           <i class="pi pi-pencil"></i>
                         </button>
                         <button
-                          pButton
                           type="button"
-                          class="action-icon action-icon--danger"
-                          pTooltip="Delete role"
-                          tooltipPosition="top"
+                          class="row-action-btn row-action-btn--delete"
+                          title="Delete role"
                           [disabled]="role.isSystem || roleSaving() || !canManageAdmin()"
                           (click)="deleteRole(role)"
                         >

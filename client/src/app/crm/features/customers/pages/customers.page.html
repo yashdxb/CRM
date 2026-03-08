@@ -317,16 +317,16 @@
           </span>
         </div>
         <div class="header-actions">
-          <button pButton type="button" class="action-btn" [disabled]="!canManage()" (click)="openImport()">
-            <i class="pi pi-upload"></i>
+          <button pButton type="button" class="action-btn action-btn--import" [disabled]="!canManage()" (click)="openImport()">
+            <span class="action-btn__icon"><i class="pi pi-upload"></i></span>
             <span>Import</span>
           </button>
-          <button pButton type="button" class="action-btn" (click)="onExport()">
-            <i class="pi pi-download"></i>
+          <button pButton type="button" class="action-btn action-btn--export" (click)="onExport()">
+            <span class="action-btn__icon"><i class="pi pi-download"></i></span>
             <span>Export</span>
           </button>
-          <button pButton type="button" class="action-btn" [disabled]="!canManage()">
-            <i class="pi pi-cog"></i>
+          <button pButton type="button" class="action-btn action-btn--columns" [disabled]="!canManage()">
+            <span class="action-btn__icon"><i class="pi pi-cog"></i></span>
             <span>Columns</span>
           </button>
         </div>
@@ -429,23 +429,23 @@
               <td class="td-actions">
                 <div class="row-actions">
                   <button
-                    pButton
                     type="button"
-                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
-                    icon="pi pi-pencil"
+                    class="row-action-btn row-action-btn--edit"
                     [disabled]="!canManage()"
-                    (click)="onEdit(row)"
+                    (click)="onEdit(row); $event.stopPropagation()"
                     title="Edit"
-                  ></button>
+                  >
+                    <i class="pi pi-pencil"></i>
+                  </button>
                   <button
-                    pButton
                     type="button"
-                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
-                    icon="pi pi-trash"
+                    class="row-action-btn row-action-btn--delete"
                     [disabled]="!canManage()"
-                    (click)="onDelete(row)"
+                    (click)="onDelete(row); $event.stopPropagation()"
                     title="Delete"
-                  ></button>
+                  >
+                    <i class="pi pi-trash"></i>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -483,12 +483,12 @@
             </div>
           </div>
           <div class="card-footer">
-            <button pButton type="button" class="card-btn" [disabled]="!canManage()" (click)="onEdit(row)">
-              <i class="pi pi-pencil"></i>
+            <button pButton type="button" class="card-btn card-btn--edit" [disabled]="!canManage()" (click)="onEdit(row)">
+              <span class="card-btn__icon"><i class="pi pi-pencil"></i></span>
               Edit
             </button>
-            <button pButton type="button" class="card-btn card-btn--danger" [disabled]="!canManage()" (click)="onDelete(row)">
-              <i class="pi pi-trash"></i>
+            <button pButton type="button" class="card-btn card-btn--delete" [disabled]="!canManage()" (click)="onDelete(row)">
+              <span class="card-btn__icon"><i class="pi pi-trash"></i></span>
               Delete
             </button>
           </div>
@@ -620,10 +620,5 @@
     </div>
   </p-dialog>
 
-  <!-- Floating Action Button -->
-  <button pButton type="button" class="fab" [disabled]="!canManage()" (click)="onCreate()" title="Add Customer">
-    <i class="pi pi-plus"></i>
-    <span class="fab-tooltip">Add Customer</span>
-  </button>
 
 </div>

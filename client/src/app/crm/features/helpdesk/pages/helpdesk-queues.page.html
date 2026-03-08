@@ -11,7 +11,7 @@
       <h1 class="hero-title">Help Desk Queues</h1>
       <p class="hero-subtitle">Configure operational queues for support ownership and triage.</p>
     </div>
-    <button pButton type="button" class="crm-button crm-button--primary" icon="pi pi-plus" label="New Queue" (click)="openCreate()"></button>
+    <button type="button" class="action-btn action-btn--add" (click)="openCreate()"><span class="action-btn__icon"><i class="pi pi-plus"></i></span><span>New Queue</span></button>
   </section>
 
   <section class="glass-card">
@@ -40,12 +40,11 @@
           <td class="actions">
             <div class="row-actions">
               <button
-                pButton
                 type="button"
-                class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
-                icon="pi pi-pencil"
+                class="row-action-btn row-action-btn--edit"
                 title="Edit queue"
                 (click)="openEdit(row)">
+                <i class="pi pi-pencil"></i>
               </button>
             </div>
           </td>

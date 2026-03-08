@@ -861,20 +861,72 @@
 .action-btn {
   display: inline-flex;
   align-items: center;
-  gap: $space-1;
+  gap: $space-2;
   padding: $space-1 $space-3;
-  background: transparent;
-  border: 1px solid $gray-200;
+  background: $glass-bg;
+  backdrop-filter: blur(12px);
+  border: 1px solid $glass-border;
   border-radius: $radius-md;
   font-size: $font-size-sm;
+  font-weight: 500;
   color: $gray-600;
   cursor: pointer;
-  transition: all $transition-fast;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  .action-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
+    color: white;
+    font-size: 0.75rem;
+    transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
 
   &:hover {
-    background: $gray-50;
-    border-color: $gray-300;
-    color: $gray-800;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+
+    .action-btn__icon {
+      transform: scale(1.15) rotate(3deg);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  &--import .action-btn__icon {
+    background: $cyan-gradient;
+  }
+
+  &--import:hover {
+    border-color: rgba($cyan, 0.3);
+    color: color.adjust($cyan, $lightness: -10%);
+    box-shadow: 0 4px 14px rgba($cyan, 0.15);
+  }
+
+  &--export .action-btn__icon {
+    background: $success-gradient;
+  }
+
+  &--export:hover {
+    border-color: rgba($success, 0.3);
+    color: color.adjust($success, $lightness: -10%);
+    box-shadow: 0 4px 14px rgba($success, 0.15);
+  }
+
+  &--columns .action-btn__icon {
+    background: $purple-gradient;
+  }
+
+  &--columns:hover {
+    border-color: rgba($purple, 0.3);
+    color: color.adjust($purple, $lightness: -10%);
+    box-shadow: 0 4px 14px rgba($purple, 0.15);
   }
 }
 
@@ -1221,6 +1273,52 @@
   text-align: right;
 }
 
+.row-actions {
+  display: inline-flex;
+  gap: $space-2;
+}
+
+.row-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: $radius-md;
+  cursor: pointer;
+  font-size: $font-size-sm;
+  color: white;
+  transition: all 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  &--edit {
+    background: $blue-gradient;
+    box-shadow: 0 2px 8px rgba($info, 0.25);
+
+    &:hover {
+      transform: translateY(-2px) scale(1.1);
+      box-shadow: 0 6px 16px rgba($info, 0.35);
+    }
+  }
+
+  &--delete {
+    background: linear-gradient(135deg, #f87171 0%, $danger 100%);
+    box-shadow: 0 2px 8px rgba($danger, 0.25);
+
+    &:hover {
+      transform: translateY(-2px) scale(1.1);
+      box-shadow: 0 6px 16px rgba($danger, 0.35);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;
@@ -1369,28 +1467,61 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: $space-1;
+    gap: $space-2;
     padding: $space-2;
     background: transparent;
     border: none;
     font-size: $font-size-sm;
-    font-weight: 500;
+    font-weight: 600;
     color: $gray-600;
     cursor: pointer;
-    transition: all $transition-fast;
+    transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
     &:first-child {
       border-right: 1px solid rgba(0, 0, 0, 0.06);
     }
 
-    &:hover {
-      background: rgba(0, 0, 0, 0.03);
-      color: $gray-800;
+    .card-btn__icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: $radius-sm;
+      color: white;
+      font-size: 0.7rem;
+      transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    &--danger:hover {
-      background: rgba($danger, 0.05);
-      color: $danger;
+    &--edit {
+      .card-btn__icon {
+        background: $blue-gradient;
+      }
+
+      &:hover {
+        background: rgba($info, 0.06);
+        color: $info;
+
+        .card-btn__icon { transform: scale(1.15) rotate(5deg); }
+      }
+    }
+
+    &--delete {
+      .card-btn__icon {
+        background: linear-gradient(135deg, #f87171 0%, $danger 100%);
+      }
+
+      &:hover {
+        background: rgba($danger, 0.06);
+        color: $danger;
+
+        .card-btn__icon { transform: scale(1.15) rotate(-5deg); }
+      }
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      pointer-events: none;
     }
   }
 }
@@ -1655,13 +1786,32 @@
   }
 
   .action-btn {
+    background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.7);
 
     &:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.18);
       color: white;
+    }
+
+    &--import:hover {
+      border-color: rgba($cyan, 0.4);
+      color: color.adjust($cyan, $lightness: 15%);
+      box-shadow: 0 4px 14px rgba($cyan, 0.2);
+    }
+
+    &--export:hover {
+      border-color: rgba($success, 0.4);
+      color: color.adjust($success, $lightness: 15%);
+      box-shadow: 0 4px 14px rgba($success, 0.2);
+    }
+
+    &--columns:hover {
+      border-color: rgba($purple, 0.4);
+      color: color.adjust($purple, $lightness: 15%);
+      box-shadow: 0 4px 14px rgba($purple, 0.2);
     }
   }
 
@@ -1714,6 +1864,16 @@
     color: rgba(255, 255, 255, 0.4);
   }
 
+  .row-action-btn {
+    &--edit {
+      box-shadow: 0 2px 8px rgba($info, 0.3);
+    }
+
+    &--delete {
+      box-shadow: 0 2px 8px rgba($danger, 0.3);
+    }
+  }
+
   .icon-btn {
     color: rgba(255, 255, 255, 0.4);
 
@@ -1752,15 +1912,20 @@
     }
 
     .card-btn {
-      color: rgba(255, 255, 255, 0.6);
+      color: rgba(255, 255, 255, 0.7);
 
       &:first-child {
         border-color: rgba(255, 255, 255, 0.06);
       }
 
-      &:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: white;
+      &--edit:hover {
+        background: rgba($info, 0.12);
+        color: color.adjust($info, $lightness: 15%);
+      }
+
+      &--delete:hover {
+        background: rgba($danger, 0.12);
+        color: color.adjust($danger, $lightness: 15%);
       }
     }
   }

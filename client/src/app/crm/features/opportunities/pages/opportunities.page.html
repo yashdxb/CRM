@@ -63,13 +63,12 @@
       </div>
 
       <div class="hero-actions">
-        <button pButton type="button" class="btn btn-primary btn-glow" [disabled]="!canManage()" (click)="onCreate()">
-          <i class="pi pi-plus"></i>
+        <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
+          <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
           <span>New Deal</span>
-          <div class="btn-shine"></div>
         </button>
-        <button pButton type="button" class="btn btn-secondary" (click)="load()">
-          <i class="pi pi-refresh"></i>
+        <button type="button" class="action-btn action-btn--refresh" (click)="load()">
+          <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
           <span>Refresh</span>
         </button>
       </div>
@@ -242,12 +241,12 @@
       </div>
 
       <div class="filter-actions">
-        <button pButton type="button" class="btn btn-ghost" (click)="clearFilters()">
-          <i class="pi pi-times"></i>
+        <button type="button" class="action-btn action-btn--settings" (click)="clearFilters()">
+          <span class="action-btn__icon"><i class="pi pi-times"></i></span>
           <span>Clear</span>
         </button>
-        <button pButton type="button" class="btn btn-ghost" (click)="onExport()">
-          <i class="pi pi-download"></i>
+        <button type="button" class="action-btn action-btn--export" (click)="onExport()">
+          <span class="action-btn__icon"><i class="pi pi-download"></i></span>
           <span>Export</span>
         </button>
       </div>
@@ -283,12 +282,12 @@
           </span>
         </div>
         <div class="header-actions">
-          <button pButton type="button" class="action-btn" (click)="onExport()">
-            <i class="pi pi-download"></i>
+          <button type="button" class="action-btn action-btn--export" (click)="onExport()">
+            <span class="action-btn__icon"><i class="pi pi-download"></i></span>
             <span>Export</span>
           </button>
-          <button pButton type="button" class="action-btn action-btn--primary" [disabled]="!canManage()" (click)="onCreate()">
-            <i class="pi pi-plus"></i>
+          <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
+            <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
             <span>Add Deal</span>
           </button>
         </div>
@@ -426,24 +425,8 @@
               </td>
               <td class="td-actions">
                 <div class="row-actions">
-                  <button
-                    pButton
-                    type="button"
-                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-info"
-                    icon="pi pi-pencil"
-                    [disabled]="!canManage()"
-                    (click)="$event.stopPropagation(); onEdit(row)"
-                    pTooltip="Edit"
-                  ></button>
-                  <button
-                    pButton
-                    type="button"
-                    class="action-btn p-button-text p-button-rounded p-button-sm p-button-danger"
-                    icon="pi pi-trash"
-                    [disabled]="!canManage()"
-                    (click)="$event.stopPropagation(); onDelete(row)"
-                    pTooltip="Delete"
-                  ></button>
+                  <button type="button" class="row-action-btn row-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(row)" title="Edit"><i class="pi pi-pencil"></i></button>
+                  <button type="button" class="row-action-btn row-action-btn--delete" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(row)" title="Delete"><i class="pi pi-trash"></i></button>
                 </div>
               </td>
             </tr>
