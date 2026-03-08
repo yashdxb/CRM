@@ -5,16 +5,14 @@
       <div class="header-content">
         <h1 class="hero-title">
           <span class="title-gradient">Report</span>
-          <span class="title-light">Designer</span>
+          <span class="title-light">Workspace</span>
         </h1>
-        <p class="hero-subtitle" *ngIf="!reportServerConfig()">Create and edit reports using the visual designer.</p>
-        <p class="hero-subtitle" *ngIf="reportServerConfig()">Design and manage reports on Report Server.</p>
+        <p class="hero-subtitle">Design, publish, and manage reports through Report Server.</p>
       </div>
     </div>
   </header>
 
-  <!-- Report Server Mode: External designer link -->
-  <div class="designer-section" *ngIf="reportServerConfig(); let cfg">
+  <div class="designer-section" *ngIf="reportServerConfig(); let cfg; else reportServerUnavailable">
     <div class="report-server-shell">
       <section class="report-server-hero">
         <div class="report-server-copy">
@@ -30,11 +28,11 @@
         <div class="report-server-actions">
           <a class="btn btn-primary" [href]="cfg.designerUrl" target="_blank" rel="noopener">
             <i class="pi pi-palette"></i>
-            Open Designer
+            Open Workspace
           </a>
           <button class="btn btn-secondary" type="button" (click)="openReportServerViewer()">
             <i class="pi pi-folder-open"></i>
-            Open Catalog
+            Open Report Server
           </button>
           <a class="btn btn-secondary" routerLink="/app/reports">
             <i class="pi pi-chart-bar"></i>
@@ -76,10 +74,10 @@
             <span class="workspace-pill">Recommended</span>
           </div>
           <ol class="workspace-steps">
-            <li>Open the Report Server Designer.</li>
+            <li>Open the Report Server workspace.</li>
             <li>Create or import a `.trdp` report.</li>
             <li>Save and publish the report to the catalog.</li>
-            <li>Return to the Reports page to run it through the viewer.</li>
+            <li>Return to the Reports page to run it inside CRM.</li>
           </ol>
         </article>
 
@@ -135,29 +133,16 @@
     </div>
   </div>
 
-  <!-- Embedded Mode: Local designer -->
-  <div class="designer-section" *ngIf="!reportServerConfig()">
-    <!-- Loading State -->
-    <div class="loading-state" *ngIf="loading()">
-      <i class="pi pi-spin pi-spinner"></i>
-      <span>Loading Report Designer...</span>
+  <ng-template #reportServerUnavailable>
+    <div class="designer-section">
+      <div class="error-state">
+        <i class="pi pi-server"></i>
+        <span>Report Server is not configured for this environment.</span>
+        <a class="btn btn-primary" routerLink="/app/reports">
+          <i class="pi pi-arrow-left"></i>
+          Back to Reports
+        </a>
+      </div>
     </div>
-
-    <!-- Error State -->
-    <div class="error-state" *ngIf="error(); let errorMessage">
-      <i class="pi pi-exclamation-triangle"></i>
-      <span>{{ errorMessage }}</span>
-      <button class="btn btn-primary" (click)="retry()">
-        <i class="pi pi-refresh"></i>
-        Retry
-      </button>
-    </div>
-
-    <!-- Designer Container -->
-    <div 
-      #designerContainer 
-      class="designer-container"
-      [class.hidden]="loading() || error()">
-    </div>
-  </div>
+  </ng-template>
 </section>

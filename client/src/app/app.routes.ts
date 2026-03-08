@@ -62,7 +62,7 @@ export const routes: Routes = [
       {
         path: 'report-designer',
         canActivate: [roleGuard],
-        data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Report Designer', icon: 'pi-palette' },
+        data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Report Workspace', icon: 'pi-palette' },
         loadComponent: () =>
           import('./crm/features/reports/pages/report-designer.page').then((m) => m.ReportDesignerPage)
       },

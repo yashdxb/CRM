@@ -5,7 +5,7 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-08 04:10 UTC**
+- Synced at: **2026-03-08 06:33 UTC**
 - ClickUp list id: `901710720381`
 - Total tasks mirrored: **195**
 - Epics mirrored: **39**
@@ -26,12 +26,6 @@
   - `in progress`: 2
 
 ## Epic and Story Mirror
-
-### [DONE] Approval Workflow Builder & Runtime (`86e041x9g`)
-- Status: `done`
-- Tags: built, core
-- Stories:
-  - `86e041x9h` | `done` | Drag-and-drop workflow designer | tags: built, core
 
 ### [LATER] AI Conversation Intelligence (`86e041xa6`)
 - Status: `backlog`
@@ -184,29 +178,6 @@
   - `86e0422jt` | `backlog` | Inbound email sync and auto-linking to records | tags: future, now
   - `86e041x3r` | `backlog` | Send emails from CRM records | tags: -
 
-### [NOW] Product Catalog & CPQ (`86e041x4a`)
-- Status: `done`
-- Tags: future, now
-- Stories:
-  - `86e041x4n` | `done` | Configure-Price-Quote (CPQ) workflow | tags: -
-  - `86e04290b` | `done` | CPQ proposal end-to-end test and smoke workflow coverage | tags: -
-  - `86e04290c` | `done` | Default-tenant item master seed for CPQ reliability | tags: -
-  - `86e041x4f` | `done` | Product and service catalog | tags: -
-  - `86e042909` | `done` | Proposal activity timeline with resend action | tags: -
-  - `86e042907` | `done` | Proposal preview and download panel | tags: -
-  - `86e042906` | `done` | Quote proposal generation and delivery from opportunity workspace | tags: -
-
-### [NOW] Real-Time SignalR Quick Wins (`86e0422m0`)
-- Status: `done`
-- Tags: future, now
-- Stories:
-  - `86e0422m9` | `done` | AI assistant token streaming via SignalR | tags: future, now
-  - `86e0422mh` | `done` | Dashboard live metrics auto-refresh via SignalR | tags: future, now
-  - `86e042evv` | `done` | Entity CRUD broadcast for list auto-refresh | tags: -
-  - `86e042evn` | `done` | Import job real-time progress via SignalR | tags: -
-  - `86e0424b9` | `done` | Pipeline kanban live updates via SignalR | tags: future, now
-  - `86e042ex6` | `done` | Record-level presence indicators | tags: -
-
 ### [NOW] Report Builder (`86e041x3y`)
 - Status: `backlog`
 - Tags: future, now
@@ -253,6 +224,12 @@
   - `86e041x0x` | `done` | AI assistant chat interface | tags: -
   - `86e041x13` | `done` | AI-powered CRM action execution | tags: -
   - `86e041x0z` | `done` | Knowledge-grounded AI responses | tags: -
+
+### Approval Workflow Builder & Runtime (`86e041x9g`)
+- Status: `done`
+- Tags: built, core
+- Stories:
+  - `86e041x9h` | `done` | Drag-and-drop workflow designer | tags: built, core
 
 ### Authentication & User Onboarding (`86e041ww0`)
 - Status: `done`
@@ -354,12 +331,35 @@
   - `86e041x3k` | `done` | Mock API layer for offline development | tags: -
   - `86e041x35` | `done` | Multi-tenant data isolation | tags: -
 
+### Product Catalog & CPQ (`86e041x4a`)
+- Status: `done`
+- Tags: -
+- Stories:
+  - `86e041x4n` | `done` | Configure-Price-Quote (CPQ) workflow | tags: -
+  - `86e04290b` | `done` | CPQ proposal end-to-end test and smoke workflow coverage | tags: -
+  - `86e04290c` | `done` | Default-tenant item master seed for CPQ reliability | tags: -
+  - `86e041x4f` | `done` | Product and service catalog | tags: -
+  - `86e042909` | `done` | Proposal activity timeline with resend action | tags: -
+  - `86e042907` | `done` | Proposal preview and download panel | tags: -
+  - `86e042906` | `done` | Quote proposal generation and delivery from opportunity workspace | tags: -
+
 ### Real-Time & Notifications (`86e041x2t`)
 - Status: `done`
 - Tags: built, infrastructure
 - Stories:
   - `86e041x31` | `done` | Live CRM event notifications | tags: -
   - `86e041x2w` | `done` | Real-time user presence tracking | tags: -
+
+### Real-Time SignalR Quick Wins (`86e0422m0`)
+- Status: `done`
+- Tags: -
+- Stories:
+  - `86e0422m9` | `done` | AI assistant token streaming via SignalR | tags: -
+  - `86e0422mh` | `done` | Dashboard live metrics auto-refresh via SignalR | tags: -
+  - `86e042evv` | `done` | Entity CRUD broadcast for list auto-refresh | tags: -
+  - `86e042evn` | `done` | Import job real-time progress via SignalR | tags: -
+  - `86e0424b9` | `done` | Pipeline kanban live updates via SignalR | tags: -
+  - `86e042ex6` | `done` | Record-level presence indicators | tags: -
 
 ### Settings & Administration (`86e041x1k`)
 - Status: `done`

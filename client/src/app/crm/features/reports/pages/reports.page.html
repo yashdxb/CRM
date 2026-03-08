@@ -11,8 +11,7 @@
   <section class="glass-card hero-card">
     <div class="hero-content">
       <h1 class="hero-title">Reports</h1>
-      <p class="hero-subtitle" *ngIf="!reportServerEnabled()">Demo Telerik report: Pipeline by stage with tenant-safe real-time snapshot.</p>
-      <p class="hero-subtitle" *ngIf="reportServerEnabled()">Browse and run reports from Report Server.</p>
+      <p class="hero-subtitle">Browse published reports from Report Server and run them inside CRM.</p>
       <p class="hero-note">
         Generated:
         {{ report().generatedAtUtc | date: 'medium' }}
@@ -20,20 +19,14 @@
     </div>
     <div class="hero-actions">
       <button pButton type="button" class="crm-button crm-button--secondary" icon="pi pi-refresh" label="Refresh" (click)="refresh()" [loading]="loading()"></button>
-      <button pButton type="button" class="crm-button crm-button--primary" icon="pi pi-download" label="Export CSV" (click)="exportCsv()" [disabled]="!report().stages.length" *ngIf="!reportServerEnabled()"></button>
-      <a pButton type="button" class="crm-button crm-button--secondary" routerLink="/app/report-designer" *ngIf="!reportServerEnabled() && canOpenReportDesigner()">
-        <i class="pi pi-palette"></i>
-        <span>Report Designer</span>
-      </a>
       <a pButton type="button" class="crm-button crm-button--secondary" [href]="reportServerConfig()?.designerUrl" target="_blank" *ngIf="reportServerEnabled() && reportServerConfig()?.designerUrl && canOpenReportDesigner()">
         <i class="pi pi-external-link"></i>
-        <span>Open Report Server</span>
+        <span>Open Report Workspace</span>
       </a>
     </div>
   </section>
 
-  <!-- Report Server Mode: Report Catalog -->
-  <ng-container *ngIf="reportServerEnabled()">
+  <ng-container *ngIf="reportServerEnabled(); else reportServerUnavailable">
     <!-- Back to catalog when viewing a report -->
     <section class="glass-card" *ngIf="selectedReport()">
       <div class="catalog-back">
@@ -55,7 +48,7 @@
 
     <!-- Report Catalog Grid -->
     <section class="glass-card catalog-section" *ngIf="!selectedReport()">
-      <h2 class="section-title">Report Catalog</h2>
+      <h2 class="section-title">Report Library</h2>
       <div class="catalog-grid" *ngIf="!catalogLoading() && reportCatalog().length">
         <article class="catalog-card glass-card" *ngFor="let item of reportCatalog()" (click)="openReport(item)">
           <div class="catalog-card-icon">
@@ -71,74 +64,21 @@
       </div>
       <div class="empty-state" *ngIf="!catalogLoading() && !reportCatalog().length">
         <i class="pi pi-inbox"></i>
-        <p>No reports published to Report Server yet. Open Report Server to create and publish reports.</p>
+        <p>No reports are published in the <strong>CRM</strong> category yet. Open the report workspace and publish reports into the CRM folder to show them here.</p>
       </div>
       <div class="loading-state" *ngIf="catalogLoading()">
         <i class="pi pi-spin pi-spinner"></i>
-        <span>Loading report catalog...</span>
+        <span>Loading report library...</span>
       </div>
     </section>
   </ng-container>
 
-  <!-- Embedded Mode (default, when Report Server is not configured) -->
-  <ng-container *ngIf="!reportServerEnabled()">
-    <section class="report-kpis">
-      <article class="glass-card kpi-card">
-        <p class="kpi-label">Open Opportunities</p>
-        <p class="kpi-value">{{ report().totalOpenOpportunities }}</p>
-      </article>
-      <article class="glass-card kpi-card">
-        <p class="kpi-label">Pipeline Value</p>
-        <p class="kpi-value">{{ report().totalPipelineValue | currency: currencyCode : 'symbol' : '1.0-0' }}</p>
-      </article>
-    </section>
-
-    <section class="glass-card">
-      <div class="embed-shell" *ngIf="telerikEnabled() && telerikReportSource()">
-        <h2 class="section-title">Telerik Demo Report Viewer</h2>
-        <tr-viewer
-          #telerikViewer
-          [serviceUrl]="telerikServiceUrl()"
-          [reportSource]="telerikReportSource()"
-          [authenticationToken]="telerikAuthToken"
-          [ready]="onTelerikReady"
-          [error]="onTelerikError"
-          [containerStyle]="{ height: '820px', width: '100%' }">
-        </tr-viewer>
+  <ng-template #reportServerUnavailable>
+    <section class="glass-card unavailable-card">
+      <div class="empty-state">
+        <i class="pi pi-server"></i>
+        <p>Report Server is not configured for this environment. Set <code>Reporting__ReportServerUrl</code> to enable the report library.</p>
       </div>
-      <p class="embed-disabled" *ngIf="!telerikEnabled()">Telerik Report Viewer is currently disabled. To enable, set <code>Reporting:EnableEmbeddedViewer</code> to <code>true</code> in configuration and ensure a valid Telerik license is installed.</p>
-
-      <p-table
-        #reportTable
-        [value]="report().stages"
-        [loading]="loading()"
-        dataKey="stage"
-        styleClass="data-table"
-        responsiveLayout="scroll">
-        <ng-template pTemplate="header">
-          <tr>
-            <th pSortableColumn="stage">Stage <p-sortIcon field="stage"></p-sortIcon></th>
-            <th pSortableColumn="opportunityCount">Count <p-sortIcon field="opportunityCount"></p-sortIcon></th>
-            <th pSortableColumn="pipelineValue">Value <p-sortIcon field="pipelineValue"></p-sortIcon></th>
-            <th pSortableColumn="sharePercent">Share % <p-sortIcon field="sharePercent"></p-sortIcon></th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-row>
-          <tr>
-            <td>{{ row.stage }}</td>
-            <td>{{ row.opportunityCount }}</td>
-            <td>{{ row.pipelineValue | currency: currencyCode : 'symbol' : '1.0-0' }}</td>
-            <td>{{ row.sharePercent | number: '1.0-2' }}%</td>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="4">
-              <div class="empty-state">No open pipeline records found for reporting.</div>
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
     </section>
-  </ng-container>
+  </ng-template>
 </section>

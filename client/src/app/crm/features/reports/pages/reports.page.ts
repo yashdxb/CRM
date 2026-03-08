@@ -1,8 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, ViewChild, inject, signal, AfterViewInit, ChangeDetectorRef, ElementRef } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { Table, TableModule } from 'primeng/table';
 import { TelerikReportingModule, TelerikReportViewerComponent } from '@progress/telerik-angular-report-viewer';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
@@ -15,18 +13,18 @@ import { environment } from '../../../../../environments/environment';
 @Component({
   selector: 'app-reports-page',
   standalone: true,
-  imports: [CommonModule, RouterLink, ButtonModule, TableModule, BreadcrumbsComponent, TelerikReportingModule],
+  imports: [CommonModule, ButtonModule, BreadcrumbsComponent, TelerikReportingModule],
   templateUrl: './reports.page.html',
   styleUrl: './reports.page.scss'
 })
 export class ReportsPage implements AfterViewInit {
+  private static readonly crmCategoryName = 'CRM';
   private readonly data = inject(ReportsDataService);
   private readonly toast = inject(AppToastService);
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly apiBaseUrl = environment.apiUrl.replace(/\/+$/, '');
 
-  @ViewChild('reportTable') private reportTable?: Table;
   @ViewChild('telerikViewer') private telerikViewer?: TelerikReportViewerComponent;
 
   protected readonly loading = signal(false);
@@ -37,7 +35,6 @@ export class ReportsPage implements AfterViewInit {
     stages: []
   });
 
-  protected readonly currencyCode = 'USD';
   protected readonly telerikEnabled = signal(false);
   protected readonly telerikServiceUrl = signal('');
   protected readonly telerikReportSource = signal<Record<string, unknown> | null>(null);
@@ -66,7 +63,6 @@ export class ReportsPage implements AfterViewInit {
 
   constructor() {
     this.loadReportServerConfig();
-    this.loadEmbedConfig();
     this.refresh();
   }
 
@@ -98,10 +94,6 @@ export class ReportsPage implements AfterViewInit {
         this.toast.show('error', 'Unable to load pipeline report.');
       }
     });
-  }
-
-  protected exportCsv() {
-    this.reportTable?.exportCSV();
   }
 
   protected openReport(item: ReportCatalogItem) {
@@ -147,33 +139,13 @@ export class ReportsPage implements AfterViewInit {
     this.catalogLoading.set(true);
     this.data.getReportCatalog().subscribe({
       next: (items) => {
-        this.reportCatalog.set(items);
+        this.reportCatalog.set(
+          items.filter((item) => (item.categoryName ?? '').trim().toLowerCase() === ReportsPage.crmCategoryName.toLowerCase())
+        );
         this.catalogLoading.set(false);
       },
       error: () => {
         this.catalogLoading.set(false);
-      }
-    });
-  }
-
-  private loadEmbedConfig() {
-    this.data.getEmbedConfig().subscribe({
-      next: (config) => {
-        // Skip embedded config if Report Server is the provider
-        if (config.provider === 'report-server') return;
-
-        const servicePath = (config.serviceUrl ?? '').trim();
-        const reportSource = (config.pipelineByStageReportSource ?? '').trim();
-        const serviceUrl = this.resolveServiceUrl(servicePath);
-
-        this.telerikEnabled.set(config.enabled && !!serviceUrl && !!reportSource);
-        this.telerikServiceUrl.set(serviceUrl);
-        this.telerikReportSource.set(reportSource ? { report: reportSource } : null);
-      },
-      error: () => {
-        this.telerikEnabled.set(false);
-        this.telerikServiceUrl.set('');
-        this.telerikReportSource.set(null);
       }
     });
   }

@@ -23,85 +23,54 @@ async function login(page, request) {
   }, payload.accessToken);
 }
 
-test.describe('Reports Viewer', () => {
-  test('displays report viewer without wrapper errors', async ({ page, request }) => {
+test.describe('Reports Experience', () => {
+  test('reports page renders the report library contract without legacy viewer errors', async ({ page, request }) => {
     const consoleErrors: string[] = [];
-    
-    // Capture console errors
-    page.on('console', msg => {
+
+    page.on('console', (msg) => {
       if (msg.type() === 'error') {
         consoleErrors.push(msg.text());
       }
     });
 
     await login(page, request);
-
-    // Navigate to reports
     await page.goto('/app/reports');
-    
-    // Wait for report viewer to be present
-    await page.waitForSelector('tr-viewer, .trv-report-viewer', { timeout: 30000 });
-    
-    // Wait for toolbar to load
-    await page.waitForSelector('.trv-toolbar', { timeout: 30000 });
-    
-    // Wait a bit for widget initialization
-    await page.waitForTimeout(3000);
-    
-    // Check no critical wrapper errors
-    const wrapperErrors = consoleErrors.filter(e => e.includes("reading 'wrapper'"));
-    expect(wrapperErrors).toHaveLength(0);
+
+    await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();
+
+    const hasReportServer = await page.locator('text=Report Library').first().isVisible().catch(() => false);
+    const hasUnavailable = await page.locator('text=Report Server is not configured for this environment').first().isVisible().catch(() => false);
+
+    expect(hasReportServer || hasUnavailable).toBeTruthy();
+
+    const legacyErrors = consoleErrors.filter((e) =>
+      e.includes("reading 'wrapper'") ||
+      e.includes('Telerik Web Report Designer plugin is not registered on jQuery')
+    );
+    expect(legacyErrors).toHaveLength(0);
   });
 
-  test('page number input widget is properly initialized', async ({ page, request }) => {
+  test('report workspace page shows Report Server workspace or not-configured state', async ({ page, request }) => {
     await login(page, request);
-    
-    await page.goto('/app/reports');
-    
-    // Wait for viewer
-    await page.waitForSelector('tr-viewer, .trv-report-viewer', { timeout: 30000 });
-    
-    // Wait for toolbar
-    await page.waitForSelector('.trv-toolbar', { timeout: 30000 });
-    
-    // Wait for widget initialization
-    await page.waitForTimeout(3000);
-    
-    // Check page number input exists
-    const pageNumberInput = page.locator('[data-role="telerik_ReportViewer_PageNumberInput"]');
-    await expect(pageNumberInput).toBeVisible();
-    
-    // Check the parent wrapper has proper Kendo classes
-    const wrapperClass = await pageNumberInput.locator('xpath=..').getAttribute('class');
-    expect(wrapperClass).toContain('k-numerictextbox');
-    
-    // Verify Kendo widget instance exists via JS evaluation
-    const hasKendoInstance = await page.evaluate(() => {
-      const el = document.querySelector('[data-role="telerik_ReportViewer_PageNumberInput"]');
-      const wrapper = el?.parentElement;
-      return !!window.jQuery?.(wrapper)?.data('kendoNumericTextBox');
-    });
-    
-    // Note: The widget might use internal Kendo, so we check DOM structure is correct
-    expect(wrapperClass).toContain('k-input');
+    await page.goto('/app/report-designer');
+
+    await expect(page.getByRole('heading', { name: 'Report Workspace' })).toBeVisible();
+
+    const workspaceVisible = await page.locator('text=Report Server Workspace').first().isVisible().catch(() => false);
+    const unavailableVisible = await page.locator('text=Report Server is not configured for this environment.').first().isVisible().catch(() => false);
+
+    expect(workspaceVisible || unavailableVisible).toBeTruthy();
   });
 
-  test('report pages area displays content', async ({ page, request }) => {
+  test('report pages expose no legacy embedded viewer copy', async ({ page, request }) => {
     await login(page, request);
-    
+
     await page.goto('/app/reports');
-    
-    // Wait for viewer
-    await page.waitForSelector('tr-viewer, .trv-report-viewer', { timeout: 30000 });
-    
-    // Wait for pages area
-    await page.waitForSelector('.trv-pages-area', { timeout: 30000 });
-    
-    // Wait for document to be ready
-    await page.waitForSelector('.trv-page-container', { timeout: 60000 });
-    
-    // Check if page content loaded
-    const pageContent = page.locator('.trv-report-page');
-    await expect(pageContent).toBeVisible({ timeout: 60000 });
+    await expect(page.locator('text=Legacy Embedded Viewer')).toHaveCount(0);
+    await expect(page.locator('text=Legacy embedded reporting')).toHaveCount(0);
+
+    await page.goto('/app/report-designer');
+    await expect(page.locator('text=Legacy compatibility mode')).toHaveCount(0);
+    await expect(page.locator('text=Loading legacy report designer')).toHaveCount(0);
   });
 });
