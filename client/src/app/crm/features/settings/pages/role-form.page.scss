@@ -326,9 +326,16 @@
 
   > p-inputgroup,
   > p-select,
-  > textarea {
+  > textarea,
+  > .field-body {
     flex: 1;
     min-width: 0;
+  }
+
+  .field-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   &:hover > label {

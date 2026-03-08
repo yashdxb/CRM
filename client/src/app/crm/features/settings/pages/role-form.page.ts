@@ -87,9 +87,9 @@ export class RoleFormPage {
   protected readonly inheritedPermissions = signal<string[]>([]);
   protected driftNotes = '';
   protected readonly visibilityOptions = [
-    { label: 'Team (default)', value: 'Team', hint: 'See own + descendant roles' },
-    { label: 'Self only', value: 'Self', hint: 'See only own records' },
-    { label: 'All', value: 'All', hint: 'See all records' }
+    { label: 'Team (default)', value: 'Team', hint: 'See own + descendant roles', icon: 'pi-users' },
+    { label: 'Self only', value: 'Self', hint: 'See only own records', icon: 'pi-user' },
+    { label: 'All', value: 'All', hint: 'See all records', icon: 'pi-globe' }
   ];
   protected readonly securityLevels = signal<{ id: string; name: string; description?: string | null; rank: number; isDefault: boolean }[]>([]);
   protected readonly loadingSecurityLevels = signal(false);

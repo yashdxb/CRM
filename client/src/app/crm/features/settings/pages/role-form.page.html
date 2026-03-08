@@ -55,24 +55,26 @@
           <div class="form-grid">
             <div class="form-field">
               <label for="roleName">Role Name <span class="required">*</span></label>
-              <p-inputgroup>
-                <p-inputgroup-addon class="icon-addon icon-addon--name">
-                  <i class="pi pi-tag"></i>
-                </p-inputgroup-addon>
-                <input
-                  pInputText
-                  id="roleName"
-                  formControlName="name"
-                  placeholder="e.g. Sales Manager"
-                  [readonly]="isSystemRole()"
-                />
-              </p-inputgroup>
-              <small class="field-hint field-hint--guidance" *ngIf="isSystemRole()">System roles cannot be renamed.</small>
+              <div class="field-body">
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--name">
+                    <i class="pi pi-tag"></i>
+                  </p-inputgroup-addon>
+                  <input
+                    pInputText
+                    id="roleName"
+                    formControlName="name"
+                    placeholder="e.g. Sales Manager"
+                    [readonly]="isSystemRole()"
+                  />
+                </p-inputgroup>
+                <small class="field-hint field-hint--guidance" *ngIf="isSystemRole()">System roles cannot be renamed.</small>
+              </div>
             </div>
             <div class="form-field">
               <label for="roleDesc">Description</label>
               <p-inputgroup>
-                <p-inputgroup-addon class="icon-addon icon-addon--info">
+                <p-inputgroup-addon class="icon-addon icon-addon--notes">
                   <i class="pi pi-align-left"></i>
                 </p-inputgroup-addon>
                 <input
@@ -84,85 +86,118 @@
               </p-inputgroup>
             </div>
             <div class="form-field">
-              <label for="role-hierarchyLevel">Hierarchy Level (computed)</label>
-              <p-inputgroup>
-                <p-inputgroup-addon class="icon-addon icon-addon--info">
-                  <i class="pi pi-info-circle"></i>
-                </p-inputgroup-addon>
-                <input
-                  pInputText
-                  id="role-hierarchyLevel"
-                  [value]="hierarchyPreviewLabel()"
-                  readonly
-                />
-              </p-inputgroup>
-              <small class="field-hint field-hint--guidance">Derived from parent role (no manual level input).</small>
+              <label for="role-hierarchyLevel">Hierarchy Level</label>
+              <div class="field-body">
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--status">
+                    <i class="pi pi-sitemap"></i>
+                  </p-inputgroup-addon>
+                  <input
+                    pInputText
+                    id="role-hierarchyLevel"
+                    [value]="hierarchyPreviewLabel()"
+                    readonly
+                  />
+                </p-inputgroup>
+                <small class="field-hint field-hint--guidance">Derived from parent role (no manual level input).</small>
+              </div>
             </div>
             <div class="form-field">
               <label for="visibilityScope">Visibility Scope</label>
-              <p-select
-                inputId="visibilityScope"
-                formControlName="visibilityScope"
-                [options]="visibilityOptions"
-                optionLabel="label"
-                optionValue="value"
-                appendTo="body"
-                styleClass="w-full"
-              >
-                <ng-template pTemplate="item" let-option>
-                  <div class="select-option">
-                    <span>{{ option.label }}</span>
-                    <span class="select-meta">{{ option.hint }}</span>
-                  </div>
-                </ng-template>
-              </p-select>
-              <small class="field-hint field-hint--guidance">Controls reporting rollups and default visibility for this role.</small>
+              <div class="field-body">
+                <p-select
+                  inputId="visibilityScope"
+                  formControlName="visibilityScope"
+                  [options]="visibilityOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                      <span class="select-meta">{{ option.hint }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i class="pi" [ngClass]="option.icon"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <span *ngIf="!option" class="select-placeholder">Select scope</span>
+                  </ng-template>
+                </p-select>
+                <small class="field-hint field-hint--guidance">Controls reporting rollups and default visibility for this role.</small>
+              </div>
             </div>
             <div class="form-field">
               <label for="securityLevel">Security Level</label>
-              <p-select
-                inputId="securityLevel"
-                formControlName="securityLevelId"
-                [options]="securityOptions()"
-                optionLabel="label"
-                optionValue="value"
-                appendTo="body"
-                styleClass="w-full"
-                [disabled]="loadingSecurityLevels()"
-              >
-                <ng-template pTemplate="item" let-option>
-                  <div class="select-option">
-                    <span>{{ option.label }}</span>
-                    <span class="select-meta">{{ option.hint }}</span>
-                  </div>
-                </ng-template>
-              </p-select>
-              <small class="field-hint field-hint--guidance">Controls high-risk actions (approvals, overrides, admin changes).</small>
-              <small class="field-hint field-hint--guidance">
-                Manage levels in
-                <a routerLink="/app/settings/security-levels">People &amp; Access › Security Level</a>.
-              </small>
+              <div class="field-body">
+                <p-select
+                  inputId="securityLevel"
+                  formControlName="securityLevelId"
+                  [options]="securityOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                  styleClass="w-full"
+                  placeholder="Select security level"
+                  [disabled]="loadingSecurityLevels()"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi pi-shield"></i>
+                      <span>{{ option.label }}</span>
+                      <span class="select-meta">{{ option.hint }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i class="pi pi-shield"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <span *ngIf="!option" class="select-placeholder">Select security level</span>
+                  </ng-template>
+                </p-select>
+                <small class="field-hint field-hint--guidance">Controls high-risk actions (approvals, overrides, admin changes).</small>
+                <small class="field-hint field-hint--guidance">
+                  Manage levels in
+                  <a routerLink="/app/settings/security-levels">People &amp; Access › Security Level</a>.
+                </small>
+              </div>
             </div>
             <div class="form-field">
               <label for="roleParent">Parent Role</label>
-              <p-select
-                inputId="roleParent"
-                formControlName="parentRoleId"
-                [options]="parentRoleOptions()"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Top-level role"
-                appendTo="body"
-                styleClass="w-full"
-              >
-                <ng-template pTemplate="item" let-option>
-                  <div class="select-option">
-                    <span>{{ option.label }}</span>
-                    <span class="select-meta">{{ option.meta }}</span>
-                  </div>
-                </ng-template>
-              </p-select>
-              <small class="field-hint field-hint--guidance">Hierarchy: {{ hierarchyPreviewLabel() }}</small>
+              <div class="field-body">
+                <p-select
+                  inputId="roleParent"
+                  formControlName="parentRoleId"
+                  [options]="parentRoleOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Top-level role"
+                  appendTo="body"
+                  styleClass="w-full"
+                >
+                  <ng-template pTemplate="item" let-option>
+                    <div class="select-option">
+                      <i class="pi pi-users"></i>
+                      <span>{{ option.label }}</span>
+                      <span class="select-meta">{{ option.meta }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template pTemplate="selectedItem" let-option>
+                    <div class="select-option" *ngIf="option">
+                      <i class="pi pi-users"></i>
+                      <span>{{ option.label }}</span>
+                    </div>
+                    <span *ngIf="!option" class="select-placeholder">Top-level role</span>
+                  </ng-template>
+                </p-select>
+                <small class="field-hint field-hint--guidance">Hierarchy: {{ hierarchyPreviewLabel() }}</small>
+              </div>
             </div>
           </div>
           <div class="role-pack-link">

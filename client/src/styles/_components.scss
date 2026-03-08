@@ -1121,6 +1121,48 @@ h3.card-title,
   color: #f59e0b !important;
 }
 
+.p-inputgroup-addon.icon-addon--name {
+  background: rgba(99, 102, 241, 0.14) !important;
+  border-color: rgba(99, 102, 241, 0.25) !important;
+  color: #6366f1 !important;
+}
+
+.p-inputgroup-addon.icon-addon--info {
+  background: rgba(59, 130, 246, 0.14) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+  color: #3b82f6 !important;
+}
+
+.p-inputgroup-addon.icon-addon--address {
+  background: rgba(245, 158, 11, 0.14) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  color: #f59e0b !important;
+}
+
+.p-inputgroup-addon.icon-addon--success {
+  background: rgba(34, 197, 94, 0.14) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+  color: #22c55e !important;
+}
+
+.p-inputgroup-addon.icon-addon--warning {
+  background: rgba(245, 158, 11, 0.14) !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  color: #f59e0b !important;
+}
+
+.p-inputgroup-addon.icon-addon--danger {
+  background: rgba(239, 68, 68, 0.14) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+  color: #ef4444 !important;
+}
+
+.p-inputgroup-addon.icon-addon--industry {
+  background: rgba(168, 85, 247, 0.14) !important;
+  border-color: rgba(168, 85, 247, 0.25) !important;
+  color: #a855f7 !important;
+}
+
 .card-header {
   padding: $space-3 $space-4;
   border-bottom: 1px solid $glass-border;
