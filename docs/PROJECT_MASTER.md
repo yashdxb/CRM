@@ -736,6 +736,8 @@ Migrate user identity to Microsoft Entra (Azure AD) while preserving CRM tenant 
 - Entra login success, failure, and first-time bind events are audited.
 - External audience users are blocked from internal app sign-in paths and should use external-facing channels/portal scope.
 - Role intent packs include `Internal Admin` and `External Admin` templates for audience-safe role design.
+- **SPA app registration completed** (2026-03-08): `CRM Enterprise - SSO Login` (`appId: 7ac0399a-d8ef-420f-b07e-65fb9a8de912`), single-tenant, SPA redirect URIs configured, `openid`/`profile`/`email` permissions granted.
+- **Backend and frontend configs updated** to `Enabled: true` with tenant-scoped authority (`df4fe0d4-9f04-4365-94d1-90b5ff952725`).
 
 ### Target Architecture
 - Entra becomes the identity provider for authentication.

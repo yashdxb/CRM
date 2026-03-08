@@ -9,6 +9,35 @@ Last Reviewed: 2026-03-08
 
 Enable Microsoft Entra ID sign-in for internal CRM users while keeping existing email/password login as fallback.
 
+## App Registration
+
+| Property | Value |
+|----------|-------|
+| Display Name | CRM Enterprise - SSO Login |
+| Application (client) ID | `7ac0399a-d8ef-420f-b07e-65fb9a8de912` |
+| Object ID | `af699db2-490c-4388-8772-9500a9ce0bd7` |
+| Directory (tenant) ID | `df4fe0d4-9f04-4365-94d1-90b5ff952725` |
+| Sign-in audience | AzureADMyOrg (single tenant) |
+| Platform | SPA (no client secret) |
+| ID token issuance | Enabled |
+
+### SPA Redirect URIs
+
+- `https://www.northedgesystem.com/login` (production)
+- `https://www.northedgesystem.com` (production root)
+- `http://localhost:4200/login` (local dev)
+- `http://localhost:4200` (local dev root)
+
+### API Permissions (Delegated)
+
+| Permission | Type | Status |
+|------------|------|--------|
+| `openid` | Delegated | Admin consent granted |
+| `profile` | Delegated | Admin consent granted |
+| `email` | Delegated | Admin consent granted |
+
+> **Note:** This app registration is for SSO login only. The existing registration `c901234e-bcbb-4c88-8eb7-81effd30a6e7` is for EmailOAuth (Mail.Read/Mail.Send) and is unrelated.
+
 ## Scope
 
 This runbook covers:
@@ -31,20 +60,20 @@ Set `EntraId` configuration in API settings/app service:
 ```json
 "EntraId": {
   "Enabled": true,
+  "ClientId": "7ac0399a-d8ef-420f-b07e-65fb9a8de912",
+  "TenantId": "df4fe0d4-9f04-4365-94d1-90b5ff952725",
+  "Authority": "https://login.microsoftonline.com/df4fe0d4-9f04-4365-94d1-90b5ff952725",
   "LocalLoginEnabled": true,
-  "ClientId": "<SPA_CLIENT_ID>",
-  "TenantId": "organizations",
-  "Authority": "https://login.microsoftonline.com/organizations",
-  "AllowedTenantIds": ["<TENANT_GUID_OPTIONAL>"]
+  "AllowedTenantIds": ["df4fe0d4-9f04-4365-94d1-90b5ff952725"]
 }
 ```
 
 Notes:
 
-1. `ClientId` must match the frontend app registration used by MSAL.
-2. `LocalLoginEnabled` should stay `true` in this slice so email/password fallback remains available.
-3. Keep `Enabled=false` until frontend is configured and tested.
-4. `AllowedTenantIds` is optional but recommended for tighter control.
+1. `ClientId` must match the SPA app registration (`CRM Enterprise - SSO Login`).
+2. `LocalLoginEnabled` stays `true` so email/password fallback remains available.
+3. `AllowedTenantIds` restricts sign-in to the North Edge tenant only.
+4. These values are set in both `appsettings.json` and `appsettings.Development.json`.
 
 ## Frontend Configuration
 
@@ -71,12 +100,29 @@ Behavior:
 
 ## Enablement Sequence
 
-1. Configure Entra app registration (SPA redirect URI = `/login`).
-2. Deploy backend config with `EntraId.Enabled=true`.
-3. Keep `EntraId.LocalLoginEnabled=true`.
+1. ~~Configure Entra app registration (SPA redirect URI = `/login`).~~ **Done** (2026-03-08)
+2. ~~Deploy backend config with `EntraId.Enabled=true`.~~ **Done** (2026-03-08)
+3. ~~Keep `EntraId.LocalLoginEnabled=true`.~~ **Done**
 4. Enable tenant feature flag `auth.entra=true` for pilot tenants.
 5. Test with tenant `default` first.
 6. Expand to additional tenants after pilot validation.
+
+## Angular Environment Config
+
+Both `environment.ts` and `environment.production.ts` now include:
+
+```typescript
+auth: {
+  entra: {
+    enabled: true,
+    clientId: '7ac0399a-d8ef-420f-b07e-65fb9a8de912',
+    authority: 'https://login.microsoftonline.com/df4fe0d4-9f04-4365-94d1-90b5ff952725',
+    redirectUri: `${window.location.origin}/login`
+  }
+}
+```
+
+> These are fallback values only. The login page reads runtime config from `GET /api/auth/config`.
 
 ## Validation Checklist
 

@@ -198,6 +198,9 @@
 - Tags: built, core
 - Stories:
   - `86e0422ke` | `done` | OAuth2 external identity provider support | tags: built, core
+  - `86e05r0ar` | `done` | Entra ID internal login endpoint and ID token validation | tags: done
+  - `86e05r0by` | `done` | Entra internal auth runbook and configuration guardrails | tags: done
+  - `86e08cfu4` | `done` | Entra SPA app registration and SSO enablement | tags: done, now, module:Settings
   - `86e0422k7` | `backlog` | SAML/SSO identity provider integration | tags: -
 
 ### [NOW] Web-to-Lead Forms (`86e041x5a`)

@@ -16,9 +16,9 @@ export const environment = {
   theme: 'default',
   auth: {
     entra: {
-      enabled: false,
-      clientId: '',
-      authority: 'https://login.microsoftonline.com/organizations',
+      enabled: true,
+      clientId: '7ac0399a-d8ef-420f-b07e-65fb9a8de912',
+      authority: 'https://login.microsoftonline.com/df4fe0d4-9f04-4365-94d1-90b5ff952725',
       redirectUri: typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login'
     }
   }

@@ -10,7 +10,28 @@ Legend:
 - NOT STARTED: no evidence yet
 - UNKNOWN: needs confirmation / no clear evidence found
 
-## Recent Delivery Updates (2026-03-02)
+## Recent Delivery Updates (2026-03-08)
+
+- Entra ID SSO Login (SPA App Registration & Full Enablement)
+  Status: DONE
+  ClickUp Epic: 86e0422k2 (SSO & Enterprise Authentication)
+  - Registered Entra SPA app `CRM Enterprise - SSO Login` (appId: `7ac0399a-d8ef-420f-b07e-65fb9a8de912`).
+  - Configured SPA redirect URIs, ID token issuance, openid/profile/email permissions, admin consent.
+  - Updated all config files (2 backend appsettings + 2 Angular environments) with real Entra values.
+  - Verified SSO login works across multiple browsers.
+  - Stories delivered:
+    - `86e05r0ar` | Entra ID internal login endpoint and ID token validation | DONE
+    - `86e05r0by` | Entra internal auth runbook and configuration guardrails | DONE
+    - `86e08cfu4` | Entra SPA app registration and SSO enablement | DONE
+  - Evidence:
+    - API config: `server/src/CRM.Enterprise.Api/appsettings.json` (EntraId section)
+    - Auth service: `server/src/CRM.Enterprise.Infrastructure/Auth/AuthService.cs`
+    - Login UI: `client/src/app/public/auth/login.page.ts` (`signInWithMicrosoft()`)
+    - Runbook: `docs/ENTRA_INTERNAL_AUTH_RUNBOOK.md`
+
+---
+
+## Previous Delivery Updates (2026-03-02)
 
 - Product & Services catalog foundation (ItemType Product/Service)  
   Status: DONE  
@@ -93,11 +114,15 @@ MoSCoW: Must
 - Status: DONE
 - Flow: 01A
 - Evidence:
-  - Auth endpoints: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`
-  - Users + roles: `server/src/CRM.Enterprise.Api/Controllers/UsersController.cs`
+  - Auth + Users CRUD: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs`, `UsersController.cs`
+  - Entra login endpoint: `server/src/CRM.Enterprise.Api/Controllers/AuthController.cs` (`POST /api/auth/login/entra`)
+  - Entra SSO SPA registration: appId `7ac0399a-d8ef-420f-b07e-65fb9a8de912` (ClickUp: 86e08cfu4, DONE 2026-03-08)
+  - Entra config: `server/src/CRM.Enterprise.Api/appsettings.json` (EntraId section, Enabled: true)
+  - Login UI: `client/src/app/public/auth/login.page.html`
   - Roles UI: `client/src/app/features/settings/pages/roles.page.ts`
 - Acceptance criteria:
   - User can log in with valid credentials and receives JWT.
+  - User can log in via Microsoft Entra SSO (MSAL popup flow).
   - Admin can list users and view roles.
   - Admin can create, edit, and deactivate a user.
 
