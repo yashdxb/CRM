@@ -313,9 +313,23 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
-    using var scope = app.Services.CreateScope();
-    var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
-    await initializer.InitializeAsync();
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = app.Services.CreateScope();
+                var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
+                await initializer.InitializeAsync();
+                app.Logger.LogInformation("Database initialization completed.");
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogError(ex, "Database initialization failed after application startup.");
+            }
+        });
+    });
 }
 
 await app.RunAsync();
