@@ -47,7 +47,12 @@ public sealed record LeadListItemDto(
     string? WeakestState,
     IReadOnlyList<string> NextEvidenceSuggestions,
     IReadOnlyList<LeadScoreBreakdownItem> ScoreBreakdown,
-    IReadOnlyList<string> RiskFlags);
+    IReadOnlyList<string> RiskFlags,
+    int? ConversationScore,
+    string? ConversationScoreLabel,
+    IReadOnlyList<string> ConversationScoreReasons,
+    DateTime? ConversationScoreUpdatedAtUtc,
+    bool ConversationSignalAvailable);
 
 public sealed record LeadSearchResultDto(IReadOnlyList<LeadListItemDto> Items, int Total);
 

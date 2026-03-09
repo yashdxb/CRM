@@ -1,6 +1,7 @@
 using CRM.Enterprise.Application.Activities;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
@@ -16,12 +17,18 @@ public sealed class ActivityService : IActivityService
     private readonly CrmDbContext _dbContext;
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
+    private readonly ILeadConversationScoreService _leadConversationScoreService;
 
-    public ActivityService(CrmDbContext dbContext, IAuditEventService auditEvents, IMediator mediator)
+    public ActivityService(
+        CrmDbContext dbContext,
+        IAuditEventService auditEvents,
+        IMediator mediator,
+        ILeadConversationScoreService leadConversationScoreService)
     {
         _dbContext = dbContext;
         _auditEvents = auditEvents;
         _mediator = mediator;
+        _leadConversationScoreService = leadConversationScoreService;
     }
 
     public async Task<ActivitySearchResultDto> SearchAsync(ActivitySearchRequest request, CancellationToken cancellationToken = default)
@@ -311,6 +318,7 @@ public sealed class ActivityService : IActivityService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await RefreshLeadConversationScoreAsync(activity.RelatedEntityType, activity.RelatedEntityId, cancellationToken);
 
         var dto = await MapToListItemAsync(activity.Id, cancellationToken);
         return ActivityOperationResult<ActivityListItemDto>.Ok(dto);
@@ -333,6 +341,8 @@ public sealed class ActivityService : IActivityService
         var previousOwnerId = activity.OwnerId;
         var previousCompletedAt = activity.CompletedDateUtc;
         var previousOutcome = activity.Outcome;
+        var previousRelatedEntityType = activity.RelatedEntityType;
+        var previousRelatedEntityId = activity.RelatedEntityId;
         activity.Subject = request.Subject;
         activity.Description = request.Description;
         activity.Outcome = request.Outcome;
@@ -412,6 +422,8 @@ public sealed class ActivityService : IActivityService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await RefreshLeadConversationScoreAsync(previousRelatedEntityType, previousRelatedEntityId, cancellationToken);
+        await RefreshLeadConversationScoreAsync(activity.RelatedEntityType, activity.RelatedEntityId, cancellationToken);
         return ActivityOperationResult<bool>.Ok(true);
     }
 
@@ -471,7 +483,21 @@ public sealed class ActivityService : IActivityService
             CreateAuditEntry(activity.Id, "Deleted", null, null, null, actor),
             cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await RefreshLeadConversationScoreAsync(activity.RelatedEntityType, activity.RelatedEntityId, cancellationToken);
         return ActivityOperationResult<bool>.Ok(true);
+    }
+
+    private async Task RefreshLeadConversationScoreAsync(
+        ActivityRelationType relatedEntityType,
+        Guid relatedEntityId,
+        CancellationToken cancellationToken)
+    {
+        if (relatedEntityType != ActivityRelationType.Lead || relatedEntityId == Guid.Empty)
+        {
+            return;
+        }
+
+        await _leadConversationScoreService.RefreshAsync(relatedEntityId, cancellationToken);
     }
 
     private static string ComputeStatus(DateTime? dueDateUtc, DateTime? completedDateUtc)

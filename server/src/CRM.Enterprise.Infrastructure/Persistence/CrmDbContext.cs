@@ -153,6 +153,9 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Lead>()
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);
+        modelBuilder.Entity<Lead>()
+            .Property(l => l.ConversationScoreLabel)
+            .HasMaxLength(32);
         modelBuilder.Entity<Opportunity>().ToTable("Opportunities", CrmSchema);
         modelBuilder.Entity<OpportunityQuote>().ToTable("OpportunityQuotes", CrmSchema);
         modelBuilder.Entity<OpportunityQuoteLine>().ToTable("OpportunityQuoteLines", CrmSchema);

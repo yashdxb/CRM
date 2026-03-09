@@ -519,8 +519,11 @@
       --lead-tab-bg: linear-gradient(135deg, #6f84aa 0%, #556f94 100%);
     }
 
-    :host ::ng-deep .lead-tabs .p-tab.p-tab-active {
+    :host ::ng-deep .lead-tabs .p-tab.p-tab-active,
+    :host ::ng-deep .lead-tabs .p-tab[aria-selected='true'],
+    :host ::ng-deep .lead-tabs .p-tab[data-p-active='true'] {
       z-index: 4;
+      opacity: 1;
       filter: brightness(1.18) saturate(1.3);
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.12)),
@@ -537,12 +540,16 @@
       animation: lead-tab-breathe 1.8s ease-in-out infinite;
     }
 
-    :host ::ng-deep .lead-tabs .p-tab.p-tab-active .lead-tab-label {
+    :host ::ng-deep .lead-tabs .p-tab.p-tab-active .lead-tab-label,
+    :host ::ng-deep .lead-tabs .p-tab[aria-selected='true'] .lead-tab-label,
+    :host ::ng-deep .lead-tabs .p-tab[data-p-active='true'] .lead-tab-label {
       color: #ffffff;
       text-shadow: 0 1px 1px rgba(15, 23, 42, 0.18), 0 0 12px rgba(255, 255, 255, 0.16);
     }
 
-    :host ::ng-deep .lead-tabs .p-tab.p-tab-active::after {
+    :host ::ng-deep .lead-tabs .p-tab.p-tab-active::after,
+    :host ::ng-deep .lead-tabs .p-tab[aria-selected='true']::after,
+    :host ::ng-deep .lead-tabs .p-tab[data-p-active='true']::after {
       height: 3px;
       bottom: 3px;
       left: 8%;
@@ -569,16 +576,18 @@
       animation: lead-tab-active-strip 3.4s linear infinite;
     }
 
-    :host ::ng-deep .lead-tabs .p-tab.p-tab-active::before {
+    :host ::ng-deep .lead-tabs .p-tab.p-tab-active::before,
+    :host ::ng-deep .lead-tabs .p-tab[aria-selected='true']::before,
+    :host ::ng-deep .lead-tabs .p-tab[data-p-active='true']::before {
       opacity: 0.95;
     }
 
-    :host ::ng-deep .lead-tabs .p-tab:not(.p-tab-active) {
+    :host ::ng-deep .lead-tabs .p-tab:not(.p-tab-active):not([aria-selected='true']):not([data-p-active='true']) {
       opacity: 0.7;
       transition: opacity 250ms, transform 250ms, filter 250ms;
     }
 
-    :host ::ng-deep .lead-tabs .p-tab:hover:not(.p-disabled):not(.p-tab-active) {
+    :host ::ng-deep .lead-tabs .p-tab:hover:not(.p-disabled):not(.p-tab-active):not([aria-selected='true']):not([data-p-active='true']) {
       opacity: 0.9;
       transform: translateY(-1px);
       filter: brightness(0.85) saturate(0.95);

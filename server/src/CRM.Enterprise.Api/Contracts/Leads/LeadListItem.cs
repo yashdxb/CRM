@@ -50,4 +50,9 @@ public record LeadListItem(
     string? WeakestState,
     IEnumerable<string> NextEvidenceSuggestions,
     IEnumerable<LeadScoreBreakdownItem> ScoreBreakdown,
-    IEnumerable<string> RiskFlags);
+    IEnumerable<string> RiskFlags,
+    int? ConversationScore,
+    string? ConversationScoreLabel,
+    IEnumerable<string> ConversationScoreReasons,
+    DateTime? ConversationScoreUpdatedAtUtc,
+    bool ConversationSignalAvailable);

@@ -942,6 +942,30 @@ export class LeadsPage {
     return this.computeOverallScore(lead).qualificationScore100;
   }
 
+  protected conversationScoreLabel(lead: Lead): string {
+    if (!lead.conversationSignalAvailable) {
+      return 'No conversation signal';
+    }
+
+    return `${lead.conversationScore ?? 0} / 100`;
+  }
+
+  protected conversationScoreHint(lead: Lead): string {
+    if (!lead.conversationSignalAvailable) {
+      return 'No conversation signal is available for this lead yet.';
+    }
+
+    const pieces = [`Conversation ${lead.conversationScore ?? 0}/100`];
+    if (lead.conversationScoreLabel) {
+      pieces.push(lead.conversationScoreLabel);
+    }
+    if (lead.conversationScoreReasons?.length) {
+      pieces.push(lead.conversationScoreReasons.slice(0, 2).join(' • '));
+    }
+
+    return pieces.join(' • ');
+  }
+
   protected evidenceCoveragePercent(lead: Lead): number | null {
     if (typeof lead.truthCoverage !== 'number' || !Number.isFinite(lead.truthCoverage)) return null;
     return Math.round(lead.truthCoverage * 100);

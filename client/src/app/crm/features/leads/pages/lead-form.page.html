@@ -550,6 +550,7 @@
                 <span class="summary-chip">Qualification {{ qualificationContributionTotal() }}/100</span>
                 <span class="summary-chip">Lead data {{ leadDataQualityTotal() }}/100</span>
                 <span class="summary-chip">Confidence {{ qualificationConfidenceDisplayLabel() }}</span>
+                <span class="summary-chip">Conversation {{ conversationScoreDisplayLabel() }}</span>
               </div>
             </div>
 
@@ -604,6 +605,18 @@
                   <span class="summary-metric__hint">Required 3+ to qualify</span>
                 </div>
               </article>
+              <article class="summary-metric summary-metric--conversation">
+                <div class="summary-metric__icon">
+                  <i class="pi pi-comments" aria-hidden="true"></i>
+                </div>
+                <div class="summary-metric__content">
+                  <span class="summary-metric__label">Conversation Score</span>
+                  <div class="summary-metric__value-row">
+                    <strong class="summary-metric__value">{{ conversationScoreDisplayLabel() }}</strong>
+                  </div>
+                  <span class="summary-metric__hint">{{ conversationScoreValueLabel() }}</span>
+                </div>
+              </article>
             </div>
 
             <div class="qualification-feedback qualification-feedback--summary" *ngIf="qualificationFeedback() as feedback">
@@ -643,6 +656,32 @@
                 <span class="feedback-title">Suggested next evidence</span>
                 <ul class="feedback-suggestions-list">
                   <li *ngFor="let suggestion of nextEvidenceSuggestions()">{{ suggestion }}</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="qualification-feedback qualification-feedback--summary" *ngIf="conversationScoreReasons().length">
+              <span class="feedback-title">Conversation score</span>
+              <div class="feedback-metrics">
+                <span class="feedback-item feedback-item--confidence">
+                  <i class="pi pi-comments feedback-icon" aria-hidden="true"></i>
+                  Score:
+                  <strong>{{ conversationScoreValueLabel() }}</strong>
+                </span>
+                <span class="feedback-item feedback-item--weakest">
+                  <i class="pi pi-chart-line feedback-icon" aria-hidden="true"></i>
+                  Band:
+                  <strong>{{ conversationScoreDisplayLabel() }}</strong>
+                </span>
+                <span class="feedback-item feedback-item--truth" *ngIf="conversationScoreUpdatedLabel() as updatedLabel">
+                  <i class="pi pi-clock feedback-icon" aria-hidden="true"></i>
+                  {{ updatedLabel }}
+                </span>
+              </div>
+              <div class="feedback-suggestions">
+                <span class="feedback-title">What the conversation is signaling</span>
+                <ul class="feedback-suggestions-list">
+                  <li *ngFor="let reason of conversationScoreReasons()">{{ reason }}</li>
                 </ul>
               </div>
             </div>

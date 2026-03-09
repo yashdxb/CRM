@@ -28,6 +28,7 @@ public sealed class LeadService : ILeadService
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private readonly ILeadScoringService _leadScoringService;
+    private readonly ILeadConversationScoreService _leadConversationScoreService;
     private readonly IAuditEventService _auditEvents;
     private readonly IMediator _mediator;
     private readonly IActivityService _activityService;
@@ -37,6 +38,7 @@ public sealed class LeadService : ILeadService
         CrmDbContext dbContext,
         ITenantProvider tenantProvider,
         ILeadScoringService leadScoringService,
+        ILeadConversationScoreService leadConversationScoreService,
         IAuditEventService auditEvents,
         IMediator mediator,
         IActivityService activityService)
@@ -44,6 +46,7 @@ public sealed class LeadService : ILeadService
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
         _leadScoringService = leadScoringService;
+        _leadConversationScoreService = leadConversationScoreService;
         _auditEvents = auditEvents;
         _mediator = mediator;
         _activityService = activityService;
@@ -130,7 +133,12 @@ public sealed class LeadService : ILeadService
                 l.BuyingTimelineValidatedAtUtc,
                 l.ProblemSeverityValidatedAtUtc,
                 l.EconomicBuyerValidatedAtUtc,
-                l.IcpFitValidatedAtUtc
+                l.IcpFitValidatedAtUtc,
+                l.ConversationScore,
+                l.ConversationScoreLabel,
+                l.ConversationScoreReasonsJson,
+                l.ConversationScoreUpdatedAtUtc,
+                l.ConversationSignalAvailable
             })
             .ToListAsync(cancellationToken);
 
@@ -209,7 +217,12 @@ public sealed class LeadService : ILeadService
                 insights.WeakestState,
                 insights.NextEvidenceSuggestions,
                 insights.Breakdown,
-                insights.RiskFlags);
+                insights.RiskFlags,
+                l.ConversationScore,
+                l.ConversationScoreLabel,
+                LeadConversationScoreService.ParseReasons(l.ConversationScoreReasonsJson),
+                l.ConversationScoreUpdatedAtUtc,
+                l.ConversationSignalAvailable);
         });
 
         return new LeadSearchResultDto(items.ToList(), total);
@@ -219,13 +232,16 @@ public sealed class LeadService : ILeadService
     {
         var lead = await _dbContext.Leads
             .Include(l => l.Status)
-            .AsNoTracking()
             .FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
 
         if (lead is null)
         {
             return null;
         }
+
+        var detailConversation = await _leadConversationScoreService.CalculateAsync(lead, cancellationToken);
+        LeadConversationScoreService.ApplySnapshot(lead, detailConversation);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         var ownerName = await _dbContext.Users
             .Where(u => u.Id == lead.OwnerId)
@@ -299,7 +315,12 @@ public sealed class LeadService : ILeadService
             detailInsights.WeakestState,
             detailInsights.NextEvidenceSuggestions,
             detailInsights.Breakdown,
-            detailInsights.RiskFlags);
+            detailInsights.RiskFlags,
+            lead.ConversationScore,
+            lead.ConversationScoreLabel,
+            detailConversation.Reasons,
+            lead.ConversationScoreUpdatedAtUtc,
+            lead.ConversationSignalAvailable);
     }
 
     public async Task<IReadOnlyList<LeadStatusHistoryDto>?> GetStatusHistoryAsync(Guid id, CancellationToken cancellationToken = default)
@@ -685,6 +706,9 @@ public sealed class LeadService : ILeadService
         await EnsureFirstTouchTaskAsync(lead, actor, cancellationToken);
         await EnsureNurtureFollowUpTaskAsync(lead, resolvedStatusName, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        var createConversation = await _leadConversationScoreService.CalculateAsync(lead, cancellationToken);
+        LeadConversationScoreService.ApplySnapshot(lead, createConversation);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         await EnsureHighImpactTasksAsync(lead, resolvedStatusName, actor, cancellationToken);
 
         if (HasAiSignals(request))
@@ -764,7 +788,12 @@ public sealed class LeadService : ILeadService
             createInsights.WeakestState,
             createInsights.NextEvidenceSuggestions,
             createInsights.Breakdown,
-            createInsights.RiskFlags);
+            createInsights.RiskFlags,
+            lead.ConversationScore,
+            lead.ConversationScoreLabel,
+            createConversation.Reasons,
+            lead.ConversationScoreUpdatedAtUtc,
+            lead.ConversationSignalAvailable);
 
         return LeadOperationResult<LeadListItemDto>.Ok(dto);
     }
@@ -915,6 +944,9 @@ public sealed class LeadService : ILeadService
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        var updateConversation = await _leadConversationScoreService.CalculateAsync(lead, cancellationToken);
+        LeadConversationScoreService.ApplySnapshot(lead, updateConversation);
+        await _dbContext.SaveChangesAsync(cancellationToken);
         await EnsureHighImpactTasksAsync(lead, resolvedStatusName, actor, cancellationToken);
 
         if (ownerChanged)
@@ -971,6 +1003,9 @@ public sealed class LeadService : ILeadService
         {
             return LeadOperationResult<LeadConversionResultDto>.Fail("Lead is already converted.");
         }
+
+        var refreshedConversation = await _leadConversationScoreService.CalculateAsync(lead, cancellationToken);
+        LeadConversationScoreService.ApplySnapshot(lead, refreshedConversation);
 
         var qualificationDecision = await EvaluateConversionPolicyAsync(lead, request, cancellationToken);
         if (!qualificationDecision.Allowed)

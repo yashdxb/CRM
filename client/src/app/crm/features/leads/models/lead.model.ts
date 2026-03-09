@@ -67,6 +67,11 @@ export interface Lead {
   nextEvidenceSuggestions?: string[];
   scoreBreakdown?: LeadScoreBreakdownItem[];
   riskFlags?: string[];
+  conversationScore?: number | null;
+  conversationScoreLabel?: string | null;
+  conversationScoreReasons?: string[];
+  conversationScoreUpdatedAtUtc?: string | null;
+  conversationSignalAvailable?: boolean;
 }
 
 export interface LeadSearchRequest {

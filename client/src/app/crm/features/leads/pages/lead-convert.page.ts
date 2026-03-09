@@ -482,4 +482,21 @@ export class LeadConvertPage implements OnInit, OnDestroy {
       ]
     };
   }
+
+  protected conversationReadinessMessage(lead: Lead): string {
+    if (!lead.conversationSignalAvailable) {
+      return 'Conversation signal is unavailable. Conversion can still proceed under qualification policy, but coaching evidence is thin.';
+    }
+
+    const score = lead.conversationScore ?? 0;
+    if (score >= 75) {
+      return `Conversation score ${score}/100 shows strong engagement momentum.`;
+    }
+
+    if (score >= 45) {
+      return `Conversation score ${score}/100 is usable, but the lead still needs stronger engagement signals.`;
+    }
+
+    return `Conversation score ${score}/100 is weak. Consider manager review or more discovery before converting.`;
+  }
 }

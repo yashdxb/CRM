@@ -122,9 +122,24 @@
               <span class="label">Threshold</span>
               <strong>{{ qualificationDecision().adjustedThreshold }}</strong>
             </div>
+            <div>
+              <span class="label">Conversation</span>
+              <strong *ngIf="leadData.conversationSignalAvailable; else unavailableConversation">
+                {{ leadData.conversationScore || 0 }}/100
+              </strong>
+              <ng-template #unavailableConversation>
+                <strong>Unavailable</strong>
+              </ng-template>
+            </div>
             <div class="summary-message">
               {{ qualificationDecision().message }}
             </div>
+            <div class="summary-message">
+              {{ conversationReadinessMessage(leadData) }}
+            </div>
+            <ul class="hint-list" *ngIf="leadData.conversationScoreReasons?.length">
+              <li *ngFor="let reason of leadData.conversationScoreReasons | slice:0:3">{{ reason }}</li>
+            </ul>
           </div>
 
           <div class="form-grid form-grid--2col">

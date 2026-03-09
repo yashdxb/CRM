@@ -434,7 +434,12 @@ public class LeadsController : ControllerBase
             dto.WeakestState,
             dto.NextEvidenceSuggestions,
             dto.ScoreBreakdown.Select(item => new CRM.Enterprise.Api.Contracts.Leads.LeadScoreBreakdownItem(item.Factor, item.Score, item.MaxScore)),
-            dto.RiskFlags);
+            dto.RiskFlags,
+            dto.ConversationScore,
+            dto.ConversationScoreLabel,
+            dto.ConversationScoreReasons,
+            dto.ConversationScoreUpdatedAtUtc,
+            dto.ConversationSignalAvailable);
     }
 
     private async Task PublishLeadRealtimeAsync(string action, Guid leadId, string? status, CancellationToken cancellationToken)

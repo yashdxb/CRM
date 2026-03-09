@@ -52,6 +52,11 @@ public class Lead : AuditableEntity
     public DateTime? ProblemSeverityValidatedAtUtc { get; set; }
     public DateTime? EconomicBuyerValidatedAtUtc { get; set; }
     public DateTime? IcpFitValidatedAtUtc { get; set; }
+    public int? ConversationScore { get; set; }
+    public string? ConversationScoreLabel { get; set; }
+    public string? ConversationScoreReasonsJson { get; set; }
+    public DateTime? ConversationScoreUpdatedAtUtc { get; set; }
+    public bool ConversationSignalAvailable { get; set; }
 
     public LeadStatus? Status { get; set; }
     public Account? Account { get; set; }

@@ -1,5 +1,6 @@
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Emails;
+using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
@@ -11,11 +12,16 @@ public sealed class EmailService : IEmailService
 {
     private readonly CrmDbContext _dbContext;
     private readonly IEmailSender _emailSender;
+    private readonly ILeadConversationScoreService _leadConversationScoreService;
 
-    public EmailService(CrmDbContext dbContext, IEmailSender emailSender)
+    public EmailService(
+        CrmDbContext dbContext,
+        IEmailSender emailSender,
+        ILeadConversationScoreService leadConversationScoreService)
     {
         _dbContext = dbContext;
         _emailSender = emailSender;
+        _leadConversationScoreService = leadConversationScoreService;
     }
 
     // ============ EMAIL LOG OPERATIONS ============
@@ -211,6 +217,11 @@ public sealed class EmailService : IEmailService
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        if (emailLog.RelatedEntityType == EmailRelationType.Lead && emailLog.RelatedEntityId.HasValue)
+        {
+            await _leadConversationScoreService.RefreshAsync(emailLog.RelatedEntityId.Value, cancellationToken);
         }
 
         // Reload with sender info

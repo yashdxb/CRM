@@ -49,7 +49,10 @@ public class LeadCadenceAndHandoffTests
             ownerId = owner.Id,
             assignmentStrategy = "Manual",
             score = 10,
-            qualifiedNotes = "Good fit and budget confirmed."
+            qualifiedNotes = "Good fit and budget confirmed.",
+            budgetAvailability = "Budget allocated and approved",
+            readinessToSpend = "Internal decision in progress",
+            buyingTimeline = "Decision date confirmed internally"
         });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -106,6 +109,51 @@ public class LeadCadenceAndHandoffTests
         Assert.Contains(activities, a => a.Subject.StartsWith("Follow-up", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task GetLead_ReturnsConversationScore_WhenCadenceEvidenceExists()
+    {
+        using var factory = new TestWebApplicationFactory();
+        var client = factory.CreateClient();
+        var context = factory.Services.GetRequiredService<CrmDbContext>();
+
+        var tenant = SeedTenant(context, "default");
+        var owner = SeedUser(context, tenant.Id, "Owner");
+        await context.SaveChangesAsync();
+
+        client.DefaultRequestHeaders.Add("X-Tenant-Key", tenant.Key);
+        client.DefaultRequestHeaders.Add("X-Test-UserId", owner.Id.ToString());
+        client.DefaultRequestHeaders.Add("X-Test-UserName", owner.FullName);
+
+        var created = await client.PostAsJsonAsync("/api/leads", new
+        {
+            firstName = "Maya",
+            lastName = "Buyer",
+            companyName = "Apex",
+            email = "maya.buyer@example.com",
+            status = "Contacted",
+            ownerId = owner.Id,
+            assignmentStrategy = "Manual",
+            score = 44
+        });
+        created.EnsureSuccessStatusCode();
+        var lead = await created.Content.ReadFromJsonAsync<LeadItem>();
+        Assert.NotNull(lead);
+
+        var touchResponse = await client.PostAsJsonAsync($"/api/leads/{lead!.Id}/cadence-touch", new
+        {
+            channel = "Call",
+            outcome = "Discussed budget and target launch timeline",
+            nextStepDueAtUtc = DateTime.UtcNow.AddDays(2)
+        });
+        touchResponse.EnsureSuccessStatusCode();
+
+        var detail = await client.GetFromJsonAsync<LeadDetailItem>($"/api/leads/{lead.Id}");
+        Assert.NotNull(detail);
+        Assert.True(detail!.ConversationSignalAvailable);
+        Assert.NotNull(detail.ConversationScore);
+        Assert.NotEmpty(detail.ConversationScoreReasons);
+    }
+
     private static Tenant SeedTenant(CrmDbContext context, string key)
     {
         var tenant = new Tenant
@@ -132,5 +180,5 @@ public class LeadCadenceAndHandoffTests
     }
 
     private sealed record LeadItem(Guid Id, string Name);
+    private sealed record LeadDetailItem(Guid Id, int? ConversationScore, IEnumerable<string> ConversationScoreReasons, bool ConversationSignalAvailable);
 }
-

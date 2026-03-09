@@ -190,6 +190,13 @@
                 >
                   Overall: {{ displayScore(lead) }} / 100
                 </span>
+                <span
+                  class="epistemic-chip conversation"
+                  pTooltip="{{ conversationScoreHint(lead) }}"
+                  tooltipPosition="top"
+                >
+                  Conversation: {{ conversationScoreLabel(lead) }}
+                </span>
               </div>
             </div>
             <div class="lead-related" *ngIf="hasConvertedLinks(lead)" (click)="$event.stopPropagation()">
@@ -301,6 +308,13 @@
                             tooltipPosition="top"
                           >
                             Overall: {{ displayScore(lead) }} / 100
+                          </span>
+                          <span
+                            class="epistemic-chip conversation"
+                            pTooltip="{{ conversationScoreHint(lead) }}"
+                            tooltipPosition="top"
+                          >
+                            Conversation: {{ conversationScoreLabel(lead) }}
                           </span>
                         </div>
                         <div class="lead-sla" *ngIf="lead.firstTouchDueAtUtc || lead.firstTouchedAtUtc">
@@ -630,6 +644,11 @@
         <strong class="kpi-value">{{ evidenceCoveragePercent(lead) }}</strong>
         <span class="kpi-sub">%</span>
       </div>
+      <div class="coach-kpi" pTooltip="{{ conversationScoreHint(lead) }}" tooltipPosition="top">
+        <span class="kpi-label">Conversation</span>
+        <strong class="kpi-value">{{ lead.conversationSignalAvailable ? (lead.conversationScore ?? 0) : '—' }}</strong>
+        <span class="kpi-sub">{{ lead.conversationSignalAvailable ? '/ 100' : 'no signal' }}</span>
+      </div>
     </section>
 
     <section class="coach-block">
@@ -680,6 +699,13 @@
       <h3 class="coach-block__title">Risk Flags</h3>
       <ul class="coach-list coach-list--flags">
         <li *ngFor="let item of lead.riskFlags">{{ item }}</li>
+      </ul>
+    </section>
+
+    <section class="coach-block" *ngIf="lead.conversationScoreReasons?.length">
+      <h3 class="coach-block__title">Conversation Signals</h3>
+      <ul class="coach-list">
+        <li *ngFor="let item of lead.conversationScoreReasons">{{ item }}</li>
       </ul>
     </section>
 

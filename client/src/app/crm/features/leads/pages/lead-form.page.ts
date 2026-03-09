@@ -273,6 +273,11 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected qualificationConfidence = signal<number | null>(null);
   protected truthCoverage = signal<number | null>(null);
   protected assumptionsOutstanding = signal<number | null>(null);
+  protected conversationScore = signal<number | null>(null);
+  protected conversationScoreLabel = signal<string | null>(null);
+  protected conversationScoreReasons = signal<string[]>([]);
+  protected conversationScoreUpdatedAtUtc = signal<string | null>(null);
+  protected conversationSignalAvailable = signal(false);
   protected serverNextEvidenceSuggestions = signal<string[]>([]);
   protected nextEvidenceSuggestions = signal<string[]>([]);
   protected qualificationFeedback = signal<{
@@ -1004,6 +1009,11 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.qualificationConfidence.set(lead.qualificationConfidence ?? null);
     this.truthCoverage.set(lead.truthCoverage ?? null);
     this.assumptionsOutstanding.set(lead.assumptionsOutstanding ?? null);
+    this.conversationScore.set(lead.conversationScore ?? null);
+    this.conversationScoreLabel.set(lead.conversationScoreLabel ?? null);
+    this.conversationScoreReasons.set(lead.conversationScoreReasons ?? []);
+    this.conversationScoreUpdatedAtUtc.set(lead.conversationScoreUpdatedAtUtc ?? null);
+    this.conversationSignalAvailable.set(lead.conversationSignalAvailable === true);
     this.serverWeakestSignal.set(lead.weakestSignal ?? null);
     this.serverWeakestState.set(lead.weakestState ?? null);
     this.serverNextEvidenceSuggestions.set(lead.nextEvidenceSuggestions ?? []);
@@ -2539,6 +2549,36 @@ export class LeadFormPage implements OnInit, OnDestroy {
     const count = this.assumptionsOutstanding();
     if (!count) return '0 assumptions';
     return `${count} assumption${count === 1 ? '' : 's'}`;
+  }
+
+  protected conversationScoreValueLabel(): string {
+    if (!this.conversationSignalAvailable()) {
+      return 'Signal unavailable';
+    }
+
+    return `${this.conversationScore() ?? 0} / 100`;
+  }
+
+  protected conversationScoreDisplayLabel(): string {
+    if (!this.conversationSignalAvailable()) {
+      return 'Unavailable';
+    }
+
+    return this.conversationScoreLabel() ?? 'Scored';
+  }
+
+  protected conversationScoreUpdatedLabel(): string | null {
+    const value = this.conversationScoreUpdatedAtUtc();
+    if (!value) {
+      return null;
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    return `Updated ${parsed.toLocaleString()}`;
   }
 
   private computeTruthCoverage(factors: Array<{ state: string }>): number {
