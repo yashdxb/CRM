@@ -48,6 +48,14 @@ __screenshots__/
 # .NET build output
 /server/**/bin
 /server/**/obj
+/tools/**/bin
+/tools/**/obj
+
+# Generated report files
+/generated/
+
+# Duplicate client folder
+/client/client/
 
 # System files
 .DS_Store
