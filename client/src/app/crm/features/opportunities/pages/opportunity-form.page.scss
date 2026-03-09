@@ -422,7 +422,7 @@
 
 .deal-workbench-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -732,8 +732,8 @@
 
 .form-field {
   display: flex;
-  flex-direction: row;
-  align-items: center;
+  flex-direction: column;
+  align-items: stretch;
   gap: 0.75rem;
   padding: 0.35rem 0.45rem 0.45rem;
   border-radius: 12px;
@@ -747,10 +747,10 @@
     font-weight: 600;
     color: #475569;
     letter-spacing: 0.01em;
-    white-space: nowrap;
-    min-width: 110px;
-    flex-shrink: 0;
-    text-align: right;
+    white-space: normal;
+    min-width: 0;
+    flex-shrink: 1;
+    text-align: left;
     transition: color 0.2s ease;
 
     .required {
@@ -764,8 +764,9 @@
   > p-datepicker,
   > input,
   > textarea {
-    flex: 1;
+    flex: none;
     min-width: 0;
+    width: 100%;
   }
 
   &:hover {
@@ -794,9 +795,10 @@
 
 .field-label-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
+  flex-wrap: wrap;
 
   label {
     margin: 0;
@@ -1587,6 +1589,17 @@
 .empty-state {
   margin: 0;
   color: rgba(71, 85, 105, 0.7);
+}
+
+@media (max-width: 1200px) {
+  .deal-workbench-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .deal-workbench-nav {
+    position: static;
+    top: auto;
+  }
 }
 
 @media (max-width: 900px) {
