@@ -717,6 +717,37 @@
               </article>
             </div>
 
+            <div class="qualification-feedback qualification-feedback--summary" *ngIf="conversionReadiness() as readiness">
+              <span class="feedback-title">Conversion readiness</span>
+              <div class="qualification-summary-card__focus">
+                <span class="focus-pill">Readiness</span>
+                <strong>{{ conversionReadinessScoreLabel() }}</strong>
+                <span class="focus-state">{{ conversionReadinessDisplayLabel() }}</span>
+              </div>
+              <div class="feedback-metrics">
+                <span class="feedback-item feedback-item--confidence">
+                  <i class="pi pi-flag feedback-icon" aria-hidden="true"></i>
+                  Summary:
+                  <strong>{{ conversionReadinessSummary() }}</strong>
+                </span>
+                <span class="feedback-item feedback-item--weakest" *ngIf="conversionReadinessPrimaryGap() as gap">
+                  <i class="pi pi-bolt feedback-icon" aria-hidden="true"></i>
+                  Primary gap:
+                  <strong>{{ gap }}</strong>
+                </span>
+                <span class="feedback-item feedback-item--assumptions" *ngIf="conversionReadinessManagerReview()">
+                  <i class="pi pi-user-edit feedback-icon" aria-hidden="true"></i>
+                  Manager review recommended
+                </span>
+              </div>
+              <div class="feedback-suggestions" *ngIf="conversionReadinessReasons().length">
+                <span class="feedback-title">Why the lead is or is not conversion-ready</span>
+                <ul class="feedback-suggestions-list">
+                  <li *ngFor="let reason of conversionReadinessReasons()">{{ reason }}</li>
+                </ul>
+              </div>
+            </div>
+
             <div class="qualification-feedback qualification-feedback--summary" *ngIf="qualificationFeedback() as feedback">
               <span class="feedback-title">Qualification status</span>
               <div class="qualification-summary-card__focus" *ngIf="feedback.weakestSignal">

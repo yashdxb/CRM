@@ -119,6 +119,7 @@ export class WorkspaceSettingsPage {
     featureRealtimeImportProgress: [false],
     featureRealtimeRecordPresence: [false],
     featureRealtimeAssistantStreaming: [false],
+    featureAiKnowledgeSearch: [true],
     featureHelpDeskCases: [false],
     featureHelpDeskEmailIntake: [false],
     featureHelpDeskRealtime: [false],
@@ -197,6 +198,7 @@ export class WorkspaceSettingsPage {
         'realtime.importProgress': !!payload.featureRealtimeImportProgress,
         'realtime.recordPresence': !!payload.featureRealtimeRecordPresence,
         'realtime.assistantStreaming': !!payload.featureRealtimeAssistantStreaming,
+        'ai.knowledgeSearch': !!payload.featureAiKnowledgeSearch,
         'helpdesk.cases': !!payload.featureHelpDeskCases,
         'helpdesk.emailIntake': !!payload.featureHelpDeskEmailIntake,
         'helpdesk.realtime': !!payload.featureHelpDeskRealtime
@@ -247,6 +249,7 @@ export class WorkspaceSettingsPage {
       featureRealtimeImportProgress: this.resolveFeatureFlag(settings.featureFlags, 'realtime.importProgress'),
       featureRealtimeRecordPresence: this.resolveFeatureFlag(settings.featureFlags, 'realtime.recordPresence'),
       featureRealtimeAssistantStreaming: this.resolveFeatureFlag(settings.featureFlags, 'realtime.assistantStreaming'),
+      featureAiKnowledgeSearch: this.resolveFeatureFlag(settings.featureFlags, 'ai.knowledgeSearch', true),
       featureHelpDeskCases: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.cases'),
       featureHelpDeskEmailIntake: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.emailIntake'),
       featureHelpDeskRealtime: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.realtime'),
@@ -336,12 +339,13 @@ export class WorkspaceSettingsPage {
     });
   }
 
-  private resolveFeatureFlag(overrides: Record<string, boolean> | null | undefined, key: string): boolean {
+  private resolveFeatureFlag(overrides: Record<string, boolean> | null | undefined, key: string, defaultValue = false): boolean {
     if (typeof overrides?.[key] === 'boolean') {
       return !!overrides[key];
     }
 
-    return this.effectiveFeatureFlags()[key] === true;
+    const effective = this.effectiveFeatureFlags()[key];
+    return typeof effective === 'boolean' ? effective : defaultValue;
   }
 
 }

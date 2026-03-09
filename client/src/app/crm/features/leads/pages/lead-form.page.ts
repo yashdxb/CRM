@@ -31,6 +31,7 @@ import {
   LeadAssignmentStrategy,
   LeadCadenceChannel,
   LeadCadenceTouch,
+  LeadConversionReadiness,
   LeadDuplicateCheckCandidate,
   LeadDuplicateCheckResponse,
   LEAD_STATUSES,
@@ -294,6 +295,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected conversationScoreReasons = signal<string[]>([]);
   protected conversationScoreUpdatedAtUtc = signal<string | null>(null);
   protected conversationSignalAvailable = signal(false);
+  protected conversionReadiness = signal<LeadConversionReadiness | null>(null);
   protected serverNextEvidenceSuggestions = signal<string[]>([]);
   protected nextEvidenceSuggestions = signal<string[]>([]);
   protected qualificationFeedback = signal<{
@@ -1067,6 +1069,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.conversationScoreReasons.set(lead.conversationScoreReasons ?? []);
     this.conversationScoreUpdatedAtUtc.set(lead.conversationScoreUpdatedAtUtc ?? null);
     this.conversationSignalAvailable.set(lead.conversationSignalAvailable === true);
+    this.conversionReadiness.set(lead.conversionReadiness ?? null);
     this.serverWeakestSignal.set(lead.weakestSignal ?? null);
     this.serverWeakestState.set(lead.weakestState ?? null);
     this.serverNextEvidenceSuggestions.set(lead.nextEvidenceSuggestions ?? []);
@@ -2743,6 +2746,30 @@ export class LeadFormPage implements OnInit, OnDestroy {
     }
 
     return `Updated ${parsed.toLocaleString()}`;
+  }
+
+  protected conversionReadinessScoreLabel(): string {
+    return `${this.conversionReadiness()?.score ?? 0} / 100`;
+  }
+
+  protected conversionReadinessDisplayLabel(): string {
+    return this.conversionReadiness()?.label ?? 'Not assessed';
+  }
+
+  protected conversionReadinessSummary(): string {
+    return this.conversionReadiness()?.summary ?? 'Conversion readiness is derived from qualification proof and conversation signal.';
+  }
+
+  protected conversionReadinessPrimaryGap(): string | null {
+    return this.conversionReadiness()?.primaryGap ?? null;
+  }
+
+  protected conversionReadinessReasons(): string[] {
+    return this.conversionReadiness()?.reasons ?? [];
+  }
+
+  protected conversionReadinessManagerReview(): boolean {
+    return this.conversionReadiness()?.managerReviewRecommended === true;
   }
 
   private computeTruthCoverage(factors: Array<{ state: string }>): number {

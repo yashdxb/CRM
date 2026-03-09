@@ -79,13 +79,26 @@ export interface Lead {
   conversationScoreReasons?: string[];
   conversationScoreUpdatedAtUtc?: string | null;
   conversationSignalAvailable?: boolean;
+  conversionReadiness?: LeadConversionReadiness;
+}
+
+export interface LeadConversionReadiness {
+  score: number;
+  label: string;
+  summary: string;
+  qualificationSignalScore: number;
+  conversationSignalScore?: number | null;
+  conversationSignalAvailable: boolean;
+  managerReviewRecommended: boolean;
+  primaryGap?: string | null;
+  reasons: string[];
 }
 
 export interface LeadSearchRequest {
   search?: string;
   status?: LeadStatus;
-  conversationView?: 'weak_signal' | 'no_signal' | 'coaching_queue' | 'engaged_but_unqualified';
-  sortBy?: 'newest' | 'lead_score_desc' | 'conversation_desc' | 'conversation_asc' | 'qualification_desc';
+  conversationView?: 'weak_signal' | 'no_signal' | 'coaching_queue' | 'engaged_but_unqualified' | 'manager_review' | 'at_risk' | 'ready_to_convert';
+  sortBy?: 'newest' | 'lead_score_desc' | 'conversation_desc' | 'conversation_asc' | 'qualification_desc' | 'readiness_desc';
   page?: number;
   pageSize?: number;
 }

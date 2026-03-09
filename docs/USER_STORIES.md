@@ -5,7 +5,7 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-09 02:32 UTC**
+- Synced at: **2026-03-09 18:01 UTC**
 - ClickUp list id: `901710720381`
 - Total tasks mirrored: **197**
 - Epics mirrored: **39**
@@ -14,16 +14,16 @@
 ## Status Summary
 - All tasks:
   - `done`: 122
-  - `backlog`: 73
-  - `in progress`: 2
+  - `backlog`: 72
+  - `in progress`: 3
 - Epics:
   - `backlog`: 21
   - `done`: 17
   - `in progress`: 1
 - Stories:
   - `done`: 105
-  - `backlog`: 52
-  - `in progress`: 1
+  - `backlog`: 51
+  - `in progress`: 2
 
 ## Epic and Story Mirror
 
@@ -31,7 +31,7 @@
 - Status: `backlog`
 - Tags: future, later
 - Stories:
-  - `86e041xa7` | `backlog` | Conversation scoring and analysis across email, calls, meetings, and activities | tags: -
+  - `86e041xa7` | `in progress` | Conversation scoring and analysis across email, calls, meetings, and activities | tags: -
 
 ### [LATER] Compliance & Collaboration (`86e041xa9`)
 - Status: `backlog`
@@ -380,7 +380,7 @@
 ## Detailed AI Conversation Intelligence Stories (Later)
 
 ### Conversation scoring and analysis across email, calls, meetings, and activities (`86e041xa7`)
-- Status: `backlog`
+- Status: `in progress`
 
 ## User Story
 As a **Sales Rep** and **Sales Manager**, I want the CRM to calculate a **Conversation Score** from all lead-related interactions so that qualification reflects actual engagement quality, momentum, and buying signals instead of only manually entered factor ratings.
@@ -413,6 +413,42 @@ As a **Sales Rep** and **Sales Manager**, I want the CRM to calculate a **Conver
 5. Lead conversion readiness can use conversation score as an additional readiness signal without replacing existing qualification-policy enforcement.
 6. The feature remains tenant-scoped and explainable; users can see why a lead is scoring high or low.
 
+## Current Implementation Status
+Implemented now:
+- Rules-based conversation score model and persisted snapshot on leads
+- Distinct score fields alongside data quality / qualification scoring
+- Aggregation from lead-related email, mailbox, call, meeting, and activity evidence
+- Reasons/explanations rendered in the lead qualification experience
+- Conversation score incorporated into lead conversion readiness messaging without replacing qualification-policy enforcement
+- Manager coaching queue and lead-list filtering/sorting for weak/no conversation signal
+- Recycle / disqualify lifecycle support aligned with lead coaching and follow-up flows
+
+Still to finish:
+- stronger combined conversion-readiness decision layer across data quality + qualification + conversation
+- manager-facing coaching rollups and summary views
+- reporting on disqualified/recycled leads by reason and owner
+- lead-source quality / attribution hardening
+- deduplication/merge handling that preserves qualification + conversation evidence
+- stage-based qualification enforcement
+
+## Ordered Next Work
+1. **Conversion Readiness Hardening**
+   - Add one combined readiness view on the lead and convert flow
+   - Keep qualification policy as the hard gate
+   - Use conversation score as risk/coaching signal
+2. **Manager Coaching Views**
+   - Add rollups for high qualification + weak conversation
+   - Add strong engagement + incomplete qualification views
+   - Add stale-lead visibility by owner
+3. **Disqualify / Recycle Reporting**
+   - Show disqualified/recycled trends by reason, owner, and source
+4. **Lead Source Quality / Attribution**
+   - Normalize source values and improve conversion analysis by source
+5. **Lead Deduplication / Merge**
+   - Preserve conversation evidence, qualification evidence, and history across merged leads
+6. **Qualification Stage Enforcement**
+   - Require stronger evidence as a lead advances toward conversion
+
 ## Notes
 - This extends the current qualification model rather than replacing it.
 - Recommended score stack:
@@ -420,12 +456,13 @@ As a **Sales Rep** and **Sales Manager**, I want the CRM to calculate a **Conver
   - Qualification Score
   - Conversation Score
   - Conversion Readiness
-- Initial implementation should be rules-first, not AI-only:
+- Initial implementation remains rules-first, not AI-only:
   - recency
   - reply behavior
   - stakeholder coverage
   - keyword/signal extraction
   - conversation momentum
+- AI enrichment such as transcription, sentiment, and summary extraction stays additive later, not the base source of truth.
 
 ## Evidence / Current Foundation
 - Qualification policy and conversion gating already exist:

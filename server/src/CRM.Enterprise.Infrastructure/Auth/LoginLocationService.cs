@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Net.Sockets;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +11,7 @@ namespace CRM.Enterprise.Infrastructure.Auth;
 
 public sealed class LoginLocationService
 {
-    private static readonly TimeSpan ProviderTimeout = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan ProviderTimeout = TimeSpan.FromSeconds(3);
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly HttpClient _httpClient;
@@ -222,16 +223,23 @@ public sealed class LoginLocationService
 
     private sealed class IpWhoIsResponse
     {
+        [JsonPropertyName("success")]
         public bool Success { get; init; }
+        [JsonPropertyName("city")]
         public string? City { get; init; }
+        [JsonPropertyName("region")]
         public string? Region { get; init; }
+        [JsonPropertyName("country")]
         public string? Country { get; init; }
     }
 
     private sealed class IpApiResponse
     {
+        [JsonPropertyName("city")]
         public string? City { get; init; }
+        [JsonPropertyName("region")]
         public string? Region { get; init; }
+        [JsonPropertyName("country_name")]
         public string? CountryName { get; init; }
     }
 

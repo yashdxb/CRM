@@ -583,7 +583,13 @@ export class SettingsPage {
   }
 
   protected formatUserEnvironmentDetail(user: UserListItem): string {
-    return user.lastLoginLocation?.trim() || user.lastLoginIp?.trim() || '';
+    if (user.lastLoginLocation?.trim()) {
+      return user.lastLoginLocation.trim();
+    }
+    if (user.lastLoginIp?.trim()) {
+      return `IP: ${user.lastLoginIp.trim()}`;
+    }
+    return '';
   }
 
   protected formatInviteSentTime(user: UserListItem): string {

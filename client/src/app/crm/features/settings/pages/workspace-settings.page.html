@@ -465,6 +465,23 @@
 
           <section class="form-card">
             <h3 class="section-title section-title--info">
+              <i class="pi pi-microchip-ai"></i>
+              AI Features
+            </h3>
+            <p class="section-description">Control AI-powered capabilities for this workspace.</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureAiKnowledgeSearch" [binary]="true"></p-checkbox>
+                  <span>AI Knowledge Search (Azure AI Search grounding)</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
               <i class="pi pi-briefcase"></i>
               Delivery & Renewal Defaults
             </h3>

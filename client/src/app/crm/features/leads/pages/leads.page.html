@@ -173,6 +173,21 @@
         <span class="coach-queue-strip__summary">Operational queue from the current lead results.</span>
       </div>
       <div class="coach-queue-strip__grid">
+        <button type="button" class="coach-queue-card" (click)="onConversationViewChange('manager_review')">
+          <span class="coach-queue-card__label">Manager review</span>
+          <strong class="coach-queue-card__value">{{ conversationCoachMetrics().managerReview }}</strong>
+          <span class="coach-queue-card__hint">Leads needing manager attention before confident conversion</span>
+        </button>
+        <button type="button" class="coach-queue-card" (click)="onConversationViewChange('at_risk')">
+          <span class="coach-queue-card__label">At risk</span>
+          <strong class="coach-queue-card__value">{{ conversationCoachMetrics().atRisk }}</strong>
+          <span class="coach-queue-card__hint">Low readiness or missing proof with weak engagement</span>
+        </button>
+        <button type="button" class="coach-queue-card" (click)="onConversationViewChange('ready_to_convert')">
+          <span class="coach-queue-card__label">Ready to convert</span>
+          <strong class="coach-queue-card__value">{{ conversationCoachMetrics().readyToConvert }}</strong>
+          <span class="coach-queue-card__hint">High readiness and strong engagement momentum</span>
+        </button>
         <button type="button" class="coach-queue-card" (click)="onConversationViewChange('coaching_queue')">
           <span class="coach-queue-card__label">Coaching queue</span>
           <strong class="coach-queue-card__value">{{ conversationCoachMetrics().coachingQueue }}</strong>
@@ -193,6 +208,22 @@
           <strong class="coach-queue-card__value">{{ conversationCoachMetrics().engagedButIncomplete }}</strong>
           <span class="coach-queue-card__hint">Strong engagement, qualification evidence still incomplete</span>
         </button>
+      </div>
+      <div class="coach-queue-strip__owners" *ngIf="readinessOwnerRollups().length">
+        <div class="coach-queue-strip__owners-head">
+          <span class="coach-queue-strip__eyebrow">Manager rollup by owner</span>
+          <span class="coach-queue-strip__summary">Top owners by readiness workload in the current result set.</span>
+        </div>
+        <div class="coach-queue-owner-list">
+          <div class="coach-queue-owner" *ngFor="let owner of readinessOwnerRollups()">
+            <strong class="coach-queue-owner__name">{{ owner.owner }}</strong>
+            <div class="coach-queue-owner__chips">
+              <span class="coach-mini-chip">{{ owner.managerReview }} review</span>
+              <span class="coach-mini-chip">{{ owner.atRisk }} at risk</span>
+              <span class="coach-mini-chip">{{ owner.readyToConvert }} ready</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -371,6 +402,13 @@
                             tooltipPosition="top"
                           >
                             Conversation: {{ conversationScoreLabel(lead) }}
+                          </span>
+                          <span
+                            class="epistemic-chip confidence"
+                            pTooltip="{{ readinessHint(lead) }}"
+                            tooltipPosition="top"
+                          >
+                            Readiness: {{ lead.conversionReadiness?.label || 'Not assessed' }}
                           </span>
                         </div>
                         <div class="lead-sla" *ngIf="lead.firstTouchDueAtUtc || lead.firstTouchedAtUtc">
@@ -717,6 +755,28 @@
         <strong class="kpi-value">{{ lead.conversationSignalAvailable ? (lead.conversationScore ?? 0) : '—' }}</strong>
         <span class="kpi-sub">{{ lead.conversationSignalAvailable ? '/ 100' : 'no signal' }}</span>
       </div>
+      <div class="coach-kpi" pTooltip="{{ readinessHint(lead) }}" tooltipPosition="top">
+        <span class="kpi-label">Readiness</span>
+        <strong class="kpi-value">{{ lead.conversionReadiness?.score ?? '—' }}</strong>
+        <span class="kpi-sub">{{ lead.conversionReadiness ? '/ 100' : 'not scored' }}</span>
+      </div>
+    </section>
+
+    <section class="coach-block" *ngIf="lead.conversionReadiness as readiness">
+      <h3 class="coach-block__title">Conversion Readiness</h3>
+      <div class="weakest-row">
+        <span class="cqvs-pill">{{ readiness.label }}</span>
+        <div class="weakest-row__text">
+          <div class="weakest-row__top">
+            <strong>{{ readiness.summary }}</strong>
+            <span class="state-pill" *ngIf="readiness.primaryGap">{{ readiness.primaryGap }}</span>
+          </div>
+          <span *ngIf="readiness.managerReviewRecommended">Manager review recommended before conversion.</span>
+        </div>
+      </div>
+      <ul class="coach-checklist" *ngIf="readiness.reasons.length">
+        <li *ngFor="let reason of readiness.reasons">{{ reason }}</li>
+      </ul>
     </section>
 
     <section class="coach-block">

@@ -59,7 +59,19 @@ public sealed record LeadListItemDto(
     string? ConversationScoreLabel,
     IReadOnlyList<string> ConversationScoreReasons,
     DateTime? ConversationScoreUpdatedAtUtc,
-    bool ConversationSignalAvailable);
+    bool ConversationSignalAvailable,
+    LeadConversionReadinessDto ConversionReadiness);
+
+public sealed record LeadConversionReadinessDto(
+    int Score,
+    string Label,
+    string Summary,
+    int QualificationSignalScore,
+    int? ConversationSignalScore,
+    bool ConversationSignalAvailable,
+    bool ManagerReviewRecommended,
+    string? PrimaryGap,
+    IReadOnlyList<string> Reasons);
 
 public sealed record LeadSearchResultDto(IReadOnlyList<LeadListItemDto> Items, int Total);
 

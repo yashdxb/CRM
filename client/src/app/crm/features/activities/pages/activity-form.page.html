@@ -41,6 +41,7 @@
               <div class="form-field">
                 <label for="act-template">Template</label>
                 <p-select
+                  inputId="act-template"
                   appendTo="body"
                   [options]="templateOptions"
                   optionLabel="label"
@@ -81,6 +82,7 @@
               <div class="form-field">
                 <label for="act-type">Type</label>
                 <p-select
+                  inputId="act-type"
                   appendTo="body"
                   [options]="typeOptions"
                   optionLabel="label"
@@ -111,6 +113,7 @@
               <div class="form-field">
                 <label for="act-priority">Priority</label>
                 <p-select
+                  inputId="act-priority"
                   appendTo="body"
                   [options]="priorityOptions"
                   optionLabel="label"
@@ -141,6 +144,7 @@
               <div class="form-field">
                 <label for="act-status">Status</label>
                 <p-select
+                  inputId="act-status"
                   appendTo="body"
                   [options]="statusOptions"
                   optionLabel="label"
@@ -171,6 +175,7 @@
               <div class="form-field">
                 <label for="act-ownerId">Owner</label>
                 <p-select
+                  inputId="act-ownerId"
                   appendTo="body"
                   [options]="ownerOptions"
                   optionLabel="label"
@@ -201,7 +206,8 @@
               <div class="form-field">
                 <label for="act-dueDateUtc">Due date</label>
                 <div class="due-date-content">
-                  <p-datePicker
+                <p-datePicker
+                    inputId="act-dueDateUtc"
                     name="dueDateUtc"
                     appendTo="body"
                     [(ngModel)]="form.dueDateUtc"
@@ -234,6 +240,7 @@
               <div class="form-field" *ngIf="activityStatus === 'Completed'">
                 <label for="act-completedDateUtc">Completed at</label>
                 <p-datePicker
+                  inputId="act-completedDateUtc"
                   name="completedDateUtc"
                   appendTo="body"
                   [(ngModel)]="form.completedDateUtc"
@@ -246,6 +253,7 @@
               <div class="form-field">
                 <label for="act-relatedEntityType">Related to</label>
                 <p-select
+                  inputId="act-relatedEntityType"
                   appendTo="body"
                   [options]="relationOptions"
                   optionLabel="label"
@@ -277,6 +285,7 @@
               <div class="form-field" *ngIf="form.relatedEntityType === 'Account'">
                 <label for="act-account">Account</label>
                 <p-select
+                  inputId="act-account"
                   appendTo="body"
                   [options]="customerOptions"
                   optionLabel="label"
@@ -308,6 +317,7 @@
               <div class="form-field" *ngIf="form.relatedEntityType === 'Contact'">
                 <label for="act-contact">Contact</label>
                 <p-select
+                  inputId="act-contact"
                   appendTo="body"
                   [options]="contactOptions"
                   optionLabel="label"
@@ -339,6 +349,7 @@
               <div class="form-field" *ngIf="form.relatedEntityType === 'Opportunity'">
                 <label for="act-opportunity">Opportunity</label>
                 <p-select
+                  inputId="act-opportunity"
                   appendTo="body"
                   [options]="opportunityOptions"
                   optionLabel="label"
@@ -370,6 +381,7 @@
               <div class="form-field" *ngIf="form.relatedEntityType === 'Lead'">
                 <label for="act-lead">Lead</label>
                 <p-select
+                  inputId="act-lead"
                   appendTo="body"
                   [options]="leadOptions"
                   optionLabel="label"
@@ -425,6 +437,7 @@
               <div class="form-field" *ngIf="activityStatus !== 'Completed'">
                 <label for="act-nextStepDueDateUtc">Next step due date <span class="required">*</span></label>
                 <p-datePicker
+                  inputId="act-nextStepDueDateUtc"
                   name="nextStepDueDateUtc"
                   appendTo="body"
                   [(ngModel)]="form.nextStepDueDateUtc"

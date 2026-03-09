@@ -89,6 +89,34 @@ public sealed class LeadService : ILeadService
             {
                 "weak_signal" => query.Where(l => l.ConversationSignalAvailable && (l.ConversationScore ?? 0) < 50),
                 "no_signal" => query.Where(l => !l.ConversationSignalAvailable),
+                "manager_review" => query.Where(l =>
+                    !l.ConversationSignalAvailable
+                    || (l.ConversationScore ?? 0) < 45
+                    || ((string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1)) < 4),
+                "at_risk" => query.Where(l =>
+                    (l.Score < 60)
+                    || ((!l.ConversationSignalAvailable || (l.ConversationScore ?? 0) < 45)
+                        && ((string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
+                            + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
+                            + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
+                            + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
+                            + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
+                            + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1)) < 3)),
+                "ready_to_convert" => query.Where(l =>
+                    l.ConversationSignalAvailable
+                    && (l.ConversationScore ?? 0) >= 75
+                    && l.Score >= 70
+                    && ((string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1)) >= 5),
                 "coaching_queue" => query.Where(l =>
                     (!l.ConversationSignalAvailable || (l.ConversationScore ?? 0) < 50)
                     && (
@@ -129,6 +157,17 @@ public sealed class LeadService : ILeadService
             "conversation_asc" => query
                 .OrderByDescending(l => l.ConversationSignalAvailable)
                 .ThenBy(l => l.ConversationScore ?? int.MaxValue)
+                .ThenByDescending(l => l.CreatedAtUtc),
+            "readiness_desc" => query
+                .OrderByDescending(l =>
+                    ((l.ConversationSignalAvailable ? (l.ConversationScore ?? 35) : 35) * 4)
+                    + (((string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
+                        + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1)) * 10)
+                    + l.Score)
                 .ThenByDescending(l => l.CreatedAtUtc),
             "qualification_desc" => query
                 .OrderByDescending(l =>
@@ -234,6 +273,8 @@ public sealed class LeadService : ILeadService
                 l.IcpFit,
                 l.IcpFitEvidence,
                 l.IcpFitValidatedAtUtc);
+            var conversationReasons = LeadConversationScoreService.ParseReasons(l.ConversationScoreReasonsJson);
+            var readiness = BuildConversionReadiness(insights, l.ConversationScore, l.ConversationScoreLabel, conversationReasons, l.ConversationSignalAvailable);
 
             return new LeadListItemDto(
                 l.Id,
@@ -292,9 +333,10 @@ public sealed class LeadService : ILeadService
                 insights.RiskFlags,
                 l.ConversationScore,
                 l.ConversationScoreLabel,
-                LeadConversationScoreService.ParseReasons(l.ConversationScoreReasonsJson),
+                conversationReasons,
                 l.ConversationScoreUpdatedAtUtc,
-                l.ConversationSignalAvailable);
+                l.ConversationSignalAvailable,
+                readiness);
         });
 
         return new LeadSearchResultDto(items.ToList(), total);
@@ -339,6 +381,7 @@ public sealed class LeadService : ILeadService
             lead.IcpFit,
             lead.IcpFitEvidence,
             lead.IcpFitValidatedAtUtc);
+        var detailReadiness = BuildConversionReadiness(detailInsights, lead.ConversationScore, lead.ConversationScoreLabel, detailConversation.Reasons, lead.ConversationSignalAvailable);
 
         return new LeadListItemDto(
             lead.Id,
@@ -399,7 +442,8 @@ public sealed class LeadService : ILeadService
             lead.ConversationScoreLabel,
             detailConversation.Reasons,
             lead.ConversationScoreUpdatedAtUtc,
-            lead.ConversationSignalAvailable);
+            lead.ConversationSignalAvailable,
+            detailReadiness);
     }
 
     public async Task<IReadOnlyList<LeadStatusHistoryDto>?> GetStatusHistoryAsync(Guid id, CancellationToken cancellationToken = default)
@@ -833,6 +877,7 @@ public sealed class LeadService : ILeadService
             lead.IcpFit,
             lead.IcpFitEvidence,
             lead.IcpFitValidatedAtUtc);
+        var createReadiness = BuildConversionReadiness(createInsights, lead.ConversationScore, lead.ConversationScoreLabel, createConversation.Reasons, lead.ConversationSignalAvailable);
 
         var dto = new LeadListItemDto(
             lead.Id,
@@ -893,7 +938,8 @@ public sealed class LeadService : ILeadService
             lead.ConversationScoreLabel,
             createConversation.Reasons,
             lead.ConversationScoreUpdatedAtUtc,
-            lead.ConversationSignalAvailable);
+            lead.ConversationSignalAvailable,
+            createReadiness);
 
         return LeadOperationResult<LeadListItemDto>.Ok(dto);
     }
@@ -2897,6 +2943,97 @@ public sealed class LeadService : ILeadService
             nextEvidenceSuggestions,
             breakdown,
             dedupedFlags);
+    }
+
+    private static LeadConversionReadinessDto BuildConversionReadiness(
+        QualificationInsights insights,
+        int? conversationScore,
+        string? conversationScoreLabel,
+        IReadOnlyList<string> conversationReasons,
+        bool conversationSignalAvailable)
+    {
+        var qualificationSignalScore = (int)Math.Round(((insights.Confidence * 0.65m) + (insights.TruthCoverage * 0.35m)) * 100m, MidpointRounding.AwayFromZero);
+        qualificationSignalScore = Math.Clamp(qualificationSignalScore, 0, 100);
+
+        var conversationSignalScore = conversationSignalAvailable && conversationScore.HasValue
+            ? Math.Clamp(conversationScore.Value, 0, 100)
+            : (int?)null;
+
+        var score = conversationSignalScore.HasValue
+            ? (int)Math.Round((qualificationSignalScore * 0.6m) + (conversationSignalScore.Value * 0.4m), MidpointRounding.AwayFromZero)
+            : qualificationSignalScore;
+
+        score = Math.Clamp(score, 0, 100);
+
+        var label = score >= 80
+            ? "Ready"
+            : score >= 60
+                ? "Monitor"
+                : score >= 40
+                    ? "Coach"
+                    : "At Risk";
+
+        var reasons = new List<string>();
+        if (conversationSignalScore.HasValue)
+        {
+            reasons.Add($"Conversation signal {conversationSignalScore.Value}/100 ({conversationScoreLabel ?? "Scored"}).");
+            reasons.AddRange(conversationReasons.Take(3));
+        }
+        else
+        {
+            reasons.Add("Conversation signal unavailable. Readiness is based on qualification evidence only.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(insights.WeakestSignal))
+        {
+            reasons.Add($"{insights.WeakestSignal} remains the weakest conversion signal.");
+        }
+
+        if (insights.AssumptionsOutstanding > 0)
+        {
+            reasons.Add($"{insights.AssumptionsOutstanding} high-impact assumption(s) still need validation.");
+        }
+
+        reasons.AddRange(insights.RiskFlags.Take(2));
+
+        var dedupedReasons = reasons
+            .Where(reason => !string.IsNullOrWhiteSpace(reason))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(5)
+            .ToList();
+
+        var primaryGap = !string.IsNullOrWhiteSpace(insights.WeakestSignal)
+            ? insights.WeakestSignal
+            : !conversationSignalScore.HasValue
+                ? "Conversation evidence"
+                : conversationSignalScore.Value < 45
+                    ? "Conversation momentum"
+                    : insights.AssumptionsOutstanding > 0
+                        ? "Qualification evidence"
+                        : null;
+
+        var managerReviewRecommended = insights.AssumptionsOutstanding >= 2
+            || (conversationSignalScore.HasValue && conversationSignalScore.Value < 45)
+            || score < 60;
+
+        var summary = label switch
+        {
+            "Ready" => "Lead shows strong qualification evidence and healthy engagement momentum.",
+            "Monitor" => "Lead is conversion-capable, but missing evidence or softer engagement should be reviewed.",
+            "Coach" => "Lead needs stronger qualification proof or conversation momentum before confident conversion.",
+            _ => "Lead is not conversion-ready without additional discovery or manager review."
+        };
+
+        return new LeadConversionReadinessDto(
+            score,
+            label,
+            summary,
+            qualificationSignalScore,
+            conversationSignalScore,
+            conversationSignalScore.HasValue,
+            managerReviewRecommended,
+            primaryGap,
+            dedupedReasons);
     }
 
     private sealed record QualificationInsights(

@@ -115,8 +115,16 @@
               <strong>{{ leadData.score }}/100</strong>
             </div>
             <div>
+              <span class="label">Readiness</span>
+              <strong>{{ conversionReadiness()?.score ?? 0 }}/100</strong>
+            </div>
+            <div>
               <span class="label">Band</span>
               <span class="pill" [attr.data-band]="qualificationDecision().band">{{ qualificationDecision().band }}</span>
+            </div>
+            <div>
+              <span class="label">Readiness label</span>
+              <span class="pill" [attr.data-band]="conversionReadiness()?.label?.toLowerCase()">{{ conversionReadiness()?.label ?? 'Not assessed' }}</span>
             </div>
             <div>
               <span class="label">Threshold</span>
@@ -132,13 +140,16 @@
               </ng-template>
             </div>
             <div class="summary-message">
-              {{ qualificationDecision().message }}
+              {{ conversionReadiness()?.summary || qualificationDecision().message }}
             </div>
-            <div class="summary-message">
-              {{ conversationReadinessMessage(leadData) }}
+            <div class="summary-message" *ngIf="conversionReadiness()?.primaryGap as primaryGap">
+              Primary gap: {{ primaryGap }}
             </div>
-            <ul class="hint-list" *ngIf="leadData.conversationScoreReasons?.length">
-              <li *ngFor="let reason of leadData.conversationScoreReasons | slice:0:3">{{ reason }}</li>
+            <div class="summary-message" *ngIf="conversionReadiness()?.managerReviewRecommended">
+              Manager review is recommended before conversion.
+            </div>
+            <ul class="hint-list" *ngIf="conversionReadinessReasons().length">
+              <li *ngFor="let reason of conversionReadinessReasons() | slice:0:4">{{ reason }}</li>
             </ul>
           </div>
 

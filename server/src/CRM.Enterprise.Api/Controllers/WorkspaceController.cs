@@ -36,7 +36,8 @@ public class WorkspaceController : ControllerBase
         "realtime.entityCrud",
         "realtime.importProgress",
         "realtime.recordPresence",
-        "realtime.assistantStreaming"
+        "realtime.assistantStreaming",
+        "ai.knowledgeSearch"
     };
 
     public WorkspaceController(

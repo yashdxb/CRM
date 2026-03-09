@@ -464,7 +464,7 @@ public sealed class AssistantChatService : IAssistantChatService
     {
         var executionSnapshot = await BuildExecutionSnapshotAsync(userId, cancellationToken);
 
-        if (!_knowledgeClient.IsConfigured)
+        if (!_knowledgeClient.IsConfigured || !await IsKnowledgeSearchEnabledAsync(cancellationToken))
         {
             return BuildStructuredPrompt(userQuestion, executionSnapshot, Array.Empty<KnowledgeSearchDocument>());
         }
@@ -480,6 +480,30 @@ public sealed class AssistantChatService : IAssistantChatService
         }
 
         return BuildStructuredPrompt(userQuestion, executionSnapshot, documents);
+    }
+
+    private async Task<bool> IsKnowledgeSearchEnabledAsync(CancellationToken cancellationToken)
+    {
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == _tenantProvider.TenantId)
+            .Select(t => t.FeatureFlagsJson)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(tenant))
+        {
+            return true; // enabled by default when no flags are set
+        }
+
+        try
+        {
+            var flags = JsonSerializer.Deserialize<Dictionary<string, bool>>(tenant, JsonOptions);
+            return flags is null || !flags.TryGetValue("ai.knowledgeSearch", out var enabled) || enabled;
+        }
+        catch (JsonException)
+        {
+            return true;
+        }
     }
 
     private async Task<AssistantExecutionSnapshot> BuildExecutionSnapshotAsync(Guid userId, CancellationToken cancellationToken)

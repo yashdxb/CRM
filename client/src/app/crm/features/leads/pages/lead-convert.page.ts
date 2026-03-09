@@ -13,7 +13,7 @@ import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 
-import { Lead, LeadConversionRequest } from '../models/lead.model';
+import { Lead, LeadConversionReadiness, LeadConversionRequest } from '../models/lead.model';
 import { LeadDataService } from '../services/lead-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
@@ -66,6 +66,7 @@ export class LeadConvertPage implements OnInit, OnDestroy {
   protected readonly qualificationPolicy = signal<QualificationPolicy>(LeadConvertPage.defaultPolicy());
   protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string; isEditing: boolean }>>([]);
   protected readonly qualificationDecision = computed(() => this.evaluateQualification());
+  protected readonly conversionReadiness = computed<LeadConversionReadiness | null>(() => this.lead()?.conversionReadiness ?? null);
   protected readonly canConvert = computed(() => {
     const value = this.form();
     if (value.createOpportunity && !value.createAccount) {
@@ -483,20 +484,7 @@ export class LeadConvertPage implements OnInit, OnDestroy {
     };
   }
 
-  protected conversationReadinessMessage(lead: Lead): string {
-    if (!lead.conversationSignalAvailable) {
-      return 'Conversation signal is unavailable. Conversion can still proceed under qualification policy, but coaching evidence is thin.';
-    }
-
-    const score = lead.conversationScore ?? 0;
-    if (score >= 75) {
-      return `Conversation score ${score}/100 shows strong engagement momentum.`;
-    }
-
-    if (score >= 45) {
-      return `Conversation score ${score}/100 is usable, but the lead still needs stronger engagement signals.`;
-    }
-
-    return `Conversation score ${score}/100 is weak. Consider manager review or more discovery before converting.`;
+  protected conversionReadinessReasons(): string[] {
+    return this.conversionReadiness()?.reasons ?? [];
   }
 }

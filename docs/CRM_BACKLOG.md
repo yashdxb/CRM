@@ -1025,7 +1025,7 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Summary updates immediately when qualification factors change.
     - If all factors are strong/known, weakest signal displays “No weak signals.”
   - Evidence:
-- Leads | As a Sales Rep and Sales Manager, I want a Conversation Score derived from all lead-related interactions so qualification reflects actual engagement quality, momentum, and buying signals instead of only manually entered factor states. (ClickUp: 86e041xa7, Status: BACKLOG) Flow: 02E1
+- Leads | As a Sales Rep and Sales Manager, I want a Conversation Score derived from all lead-related interactions so qualification reflects actual engagement quality, momentum, and buying signals instead of only manually entered factor states. (ClickUp: 86e041xa7, Status: IN PROGRESS) Flow: 02E1
   - Acceptance criteria:
     - Lead qualification shows a distinct `Conversation Score` alongside the current qualification/data quality scoring.
     - Conversation score aggregates lead-related interactions across synced email threads, calls, meetings, activity outcomes, and related notes.
@@ -1053,6 +1053,13 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
       - `server/src/CRM.Enterprise.Api/Controllers/MailboxController.cs`
       - `server/src/CRM.Enterprise.Api/Controllers/ActivitiesController.cs`
       - `server/src/CRM.Enterprise.Infrastructure/Activities/ActivityService.cs`
+  - Ordered next work:
+    1. Conversion readiness hardening across data quality, qualification, and conversation score
+    2. Manager coaching rollups and stale/weak-signal team views
+    3. Disqualify / recycle reporting by reason, owner, and source
+    4. Lead source quality / attribution hardening
+    5. Deduplication / merge with preservation of qualification and conversation evidence
+    6. Stage-based qualification enforcement
 - Leads | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately. (ClickUp: 86dzp8xe0, Status: COMPLETED) Flow: 02F
   - Acceptance criteria:
     - Dashboard command center shows sections for Tasks Due/Overdue and New Leads.

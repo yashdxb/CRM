@@ -28,6 +28,101 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 ### Summary for Project Master (If Verified)
 - 
 
+**Date:** 2026-03-09  
+**Environment:** Dev (Azure)  
+**Owner:** Yasser / Copilot
+
+### Actions Taken
+| Time | Area | Summary | Severity | Owner |
+|------|------|---------|----------|-------|
+| — | Azure AI Search | Deleted Azure AI Search service `crmenterprisesearchdevca` (Basic tier, ~$75/mo) to reduce costs | Medium | Yasser |
+| — | Settings | Implemented AI Knowledge Search toggle in Workspace Settings (not yet pushed) | Low | Copilot |
+
+### Azure AI Search Service Deletion
+
+#### Service Details (DELETED)
+| Property | Value |
+|----------|-------|
+| Service Name | `crmenterprisesearchdevca` |
+| Resource Group | `rg-crm-dev-ca` |
+| Location | `canadacentral` |
+| SKU / Tier | Basic (~$75/month fixed) |
+| Index | `crm-ai-knowledge` |
+| Endpoint | `https://crmenterprisesearchdevca.search.windows.net` |
+| Subscription | Azure subscription 1 (`6b89972c-ec4e-4cac-b988-7c1925f36029`) |
+| Deletion Date | 2026-03-09 |
+
+#### Why Deleted
+- Azure AI Search Basic tier charges ~$75/month regardless of usage volume.
+- The service has no pause/stop capability — it bills continuously once provisioned.
+- In-place tier downgrade (Basic → Free) is not supported; must delete and recreate.
+- Cost optimization decision: delete now, recreate on Free tier when needed.
+
+#### Affected Codebase (Impact Analysis)
+
+**Only the AI Assistant module is affected.** All other CRM modules (Customers, Leads, Opportunities, Contacts, Dashboard, Settings, Marketing, Reports, etc.) are completely unaffected.
+
+| File | Layer | Impact |
+|------|-------|--------|
+| `server/src/CRM.Enterprise.Infrastructure/AI/AzureSearchKnowledgeClient.cs` | Infrastructure | Primary client that calls Azure AI Search REST API. `IsConfigured` returns `false` when connection strings are missing — **graceful degradation, no crash.** |
+| `server/src/CRM.Enterprise.Infrastructure/AI/AzureSearchKnowledgeOptions.cs` | Infrastructure | Options class holding endpoint, key, index name. Will be empty/unconfigured. |
+| `server/src/CRM.Enterprise.Infrastructure/AI/AssistantChatService.cs` | Infrastructure | `BuildGroundedPromptAsync()` checks `_knowledgeClient.IsConfigured` before calling search. When `false`, knowledge grounding is skipped — AI assistant still works but without CRM knowledge context. |
+| `server/src/CRM.Enterprise.Infrastructure/DependencyInjection.cs` | Infrastructure | Registers `AzureSearchKnowledgeClient` and binds options from config. No-op when config is empty. |
+| `server/src/CRM.Enterprise.Api/appsettings.Development.json` | API Config | Contains `AzureAISearch` section with endpoint, key, index name. Values become stale after deletion. |
+| `scripts/setup_ai_knowledge_search_index.py` | Scripts | Creates the `crm-ai-knowledge` index schema. Needed when recreating. |
+| `scripts/push_ai_knowledge_to_search.py` | Scripts | Uploads knowledge documents to the index. Needed when recreating. |
+| `scripts/build_ai_knowledge_manifest.py` | Scripts | Builds the knowledge manifest JSON. Independent of Azure service. |
+
+#### What Still Works
+- AI Assistant chat (conversations, thread history, Foundry agent interaction)
+- AI Assistant token streaming via SignalR
+- AI lead scoring (uses Azure OpenAI / OpenAI, not AI Search)
+- All CRM core features (Customers, Leads, Opportunities, etc.)
+- All other Azure services (App Service, Static Web Apps, Azure SQL, SignalR, Service Bus, Communication Email)
+
+#### What Stops Working
+- **AI knowledge grounding**: The AI assistant will no longer retrieve CRM-specific knowledge documents to augment its responses. It will still respond but without grounded context from the knowledge base.
+
+#### Feature Flag Toggle (Implemented, Not Pushed)
+A workspace settings toggle was added to control AI Knowledge Search independently of the Azure service:
+
+| File | Change |
+|------|--------|
+| `server/src/CRM.Enterprise.Api/Controllers/WorkspaceController.cs` | Added `"ai.knowledgeSearch"` to `SupportedFeatureFlags` |
+| `server/src/CRM.Enterprise.Infrastructure/AI/AssistantChatService.cs` | Added `IsKnowledgeSearchEnabledAsync()` — checks tenant feature flag before calling search |
+| `client/src/app/crm/features/settings/pages/workspace-settings.page.ts` | Added `featureAiKnowledgeSearch` form control (default: `true`) |
+| `client/src/app/crm/features/settings/pages/workspace-settings.page.html` | Added "AI Features" section with toggle checkbox |
+
+#### How to Recreate the Service
+```bash
+# 1. Create Free tier service
+az search service create \
+  --name crmenterprisesearchdevca \
+  --resource-group rg-crm-dev-ca \
+  --sku free \
+  --location canadacentral
+
+# 2. Create the index schema
+python3 scripts/setup_ai_knowledge_search_index.py
+
+# 3. Upload knowledge documents
+python3 scripts/push_ai_knowledge_to_search.py
+```
+
+> **Note**: Free tier limits: 50 MB storage, 3 indexes, no SLA. Sufficient for dev/testing.
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Push AI Search toggle feature to git | Eng | 2026-03-10 | 4 files modified, builds clean |
+| Recreate AI Search on Free tier when needed | Eng | TBD | Use commands above; ~$0/mo on Free tier |
+| Update `appsettings.Development.json` if endpoint/key change | Eng | After recreation | New service may have different admin key |
+
+### Summary for Project Master (If Verified)
+- Azure AI Search service `crmenterprisesearchdevca` (Basic, ~$75/mo) deleted for cost optimization. Only AI Assistant knowledge grounding is affected — all other CRM features unaffected. Service can be recreated on Free tier when needed. AI Search toggle added to Workspace Settings (pending push).
+
+---
+
 **Date:** 2026-03-05  
 **Environment:** Dev (API)  
 **Owner:** Eng

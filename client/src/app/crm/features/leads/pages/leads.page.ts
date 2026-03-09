@@ -35,8 +35,8 @@ interface StatusOption {
   icon: string;
 }
 
-type ConversationView = 'all' | 'weak_signal' | 'no_signal' | 'coaching_queue' | 'engaged_but_unqualified';
-type LeadSortBy = 'newest' | 'lead_score_desc' | 'conversation_desc' | 'conversation_asc' | 'qualification_desc';
+type ConversationView = 'all' | 'weak_signal' | 'no_signal' | 'coaching_queue' | 'engaged_but_unqualified' | 'manager_review' | 'at_risk' | 'ready_to_convert';
+type LeadSortBy = 'newest' | 'lead_score_desc' | 'conversation_desc' | 'conversation_asc' | 'qualification_desc' | 'readiness_desc';
 
 interface ConversationViewOption {
   label: string;
@@ -112,6 +112,9 @@ export class LeadsPage {
   protected readonly kanbanStatuses = LEAD_STATUSES;
   protected readonly conversationViewOptions: ConversationViewOption[] = [
     { label: 'All signals', value: 'all' },
+    { label: 'Manager review', value: 'manager_review' },
+    { label: 'At risk', value: 'at_risk' },
+    { label: 'Ready to convert', value: 'ready_to_convert' },
     { label: 'Coaching queue', value: 'coaching_queue' },
     { label: 'Weak conversation', value: 'weak_signal' },
     { label: 'No signal', value: 'no_signal' },
@@ -122,7 +125,8 @@ export class LeadsPage {
     { label: 'Highest lead score', value: 'lead_score_desc' },
     { label: 'Highest conversation score', value: 'conversation_desc' },
     { label: 'Lowest conversation score', value: 'conversation_asc' },
-    { label: 'Most qualified', value: 'qualification_desc' }
+    { label: 'Most qualified', value: 'qualification_desc' },
+    { label: 'Highest readiness', value: 'readiness_desc' }
   ];
 
   protected readonly leads = signal<Lead[]>([]);
@@ -160,11 +164,30 @@ export class LeadsPage {
   protected readonly conversationCoachMetrics = computed(() => {
     const rows = this.leads();
     return {
+      managerReview: rows.filter((lead) => this.matchesConversationView(lead, 'manager_review')).length,
+      atRisk: rows.filter((lead) => this.matchesConversationView(lead, 'at_risk')).length,
+      readyToConvert: rows.filter((lead) => this.matchesConversationView(lead, 'ready_to_convert')).length,
       coachingQueue: rows.filter((lead) => this.matchesConversationView(lead, 'coaching_queue')).length,
       weakSignal: rows.filter((lead) => this.matchesConversationView(lead, 'weak_signal')).length,
       noSignal: rows.filter((lead) => this.matchesConversationView(lead, 'no_signal')).length,
       engagedButIncomplete: rows.filter((lead) => this.matchesConversationView(lead, 'engaged_but_unqualified')).length
     };
+  });
+  protected readonly readinessOwnerRollups = computed(() => {
+    const buckets = new Map<string, { owner: string; managerReview: number; atRisk: number; readyToConvert: number }>();
+    for (const lead of this.leads()) {
+      const key = lead.owner || 'Unassigned';
+      const current = buckets.get(key) ?? { owner: key, managerReview: 0, atRisk: 0, readyToConvert: 0 };
+      if (this.matchesConversationView(lead, 'manager_review')) current.managerReview += 1;
+      if (this.matchesConversationView(lead, 'at_risk')) current.atRisk += 1;
+      if (this.matchesConversationView(lead, 'ready_to_convert')) current.readyToConvert += 1;
+      buckets.set(key, current);
+    }
+
+    return Array.from(buckets.values())
+      .filter((row) => row.managerReview > 0 || row.atRisk > 0 || row.readyToConvert > 0)
+      .sort((a, b) => (b.managerReview + b.atRisk + b.readyToConvert) - (a.managerReview + a.atRisk + a.readyToConvert))
+      .slice(0, 5);
   });
 
   // Conversion rate: converted / (converted + lost) * 100
@@ -1053,6 +1076,26 @@ export class LeadsPage {
     return pieces.join(' • ');
   }
 
+  protected readinessScoreLabel(lead: Lead): string {
+    return lead.conversionReadiness ? `${lead.conversionReadiness.score} / 100` : 'Not assessed';
+  }
+
+  protected readinessHint(lead: Lead): string {
+    const readiness = lead.conversionReadiness;
+    if (!readiness) {
+      return 'Conversion readiness has not been computed for this lead yet.';
+    }
+
+    const parts = [`${readiness.label} (${readiness.score}/100)`, readiness.summary];
+    if (readiness.primaryGap) {
+      parts.push(`Primary gap: ${readiness.primaryGap}`);
+    }
+    if (readiness.managerReviewRecommended) {
+      parts.push('Manager review recommended');
+    }
+    return parts.join(' • ');
+  }
+
   protected conversationViewHint(): string {
     return this.conversationViewOptions.find((option) => option.value === this.conversationView)?.label ?? 'All signals';
   }
@@ -1177,6 +1220,12 @@ export class LeadsPage {
         return lead.conversationSignalAvailable === true && (lead.conversationScore ?? 0) < 50;
       case 'no_signal':
         return lead.conversationSignalAvailable !== true;
+      case 'manager_review':
+        return lead.conversionReadiness?.managerReviewRecommended === true;
+      case 'at_risk':
+        return (lead.conversionReadiness?.label ?? '').toLowerCase() === 'at risk';
+      case 'ready_to_convert':
+        return (lead.conversionReadiness?.label ?? '').toLowerCase() === 'ready';
       case 'coaching_queue':
         return (lead.conversationSignalAvailable !== true || (lead.conversationScore ?? 0) < 50)
           && (this.displayScore(lead) >= 70 || (lead.qualificationConfidence ?? 0) >= 0.7);
