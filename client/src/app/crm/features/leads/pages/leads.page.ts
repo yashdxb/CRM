@@ -301,12 +301,17 @@ export class LeadsPage {
         page: this.pageIndex + 1,
         pageSize: this.rows
       })
-      .subscribe((res) => {
-        this.leads.set(res.items);
-        this.syncLeadPresenceSubscriptions(res.items.map((lead) => lead.id));
-        this.total.set(res.total);
-        this.loading.set(false);
-        this.selectedIds.set([]);
+      .subscribe({
+        next: (res) => {
+          this.leads.set(res.items);
+          this.syncLeadPresenceSubscriptions(res.items.map((lead) => lead.id));
+          this.total.set(res.total);
+          this.loading.set(false);
+          this.selectedIds.set([]);
+        },
+        error: () => {
+          this.loading.set(false);
+        }
       });
   }
 
@@ -1040,9 +1045,14 @@ export class LeadsPage {
   }
 
   private loadOwners() {
-    this.userAdminData.lookupActive(undefined, 300).subscribe((items) => {
-      const options = items.map((user) => ({ label: user.fullName, value: user.id }));
-      this.ownerOptionsForAssign.set(options);
+    this.userAdminData.lookupActive(undefined, 300).subscribe({
+      next: (items) => {
+        const options = items.map((user) => ({ label: user.fullName, value: user.id }));
+        this.ownerOptionsForAssign.set(options);
+      },
+      error: () => {
+        this.ownerOptionsForAssign.set([]);
+      }
     });
   }
 
