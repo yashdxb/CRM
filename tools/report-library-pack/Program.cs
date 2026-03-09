@@ -44,7 +44,22 @@ var reports = new[]
     CreatePendingDealApprovalReport(connectionString),
     CreateLeadConversionSummaryReport(connectionString),
     CreateSalesActivitiesByOwnerReport(connectionString),
-    CreateForecastSummaryReport(connectionString)
+    CreateForecastSummaryReport(connectionString),
+    CreateRevenueForecastReport(connectionString),
+    CreateWinLossAnalysisReport(connectionString),
+    CreateSalesCycleDurationReport(connectionString),
+    CreateTopDealsReport(connectionString),
+    CreateLeadConversionFunnelReport(connectionString),
+    CreateLeadSourcePerformanceReport(connectionString),
+    CreateLeadAgingReport(connectionString),
+    CreateLeadScoreDistributionReport(connectionString),
+    CreateActivitySummaryReport(connectionString),
+    CreateTeamPerformanceReport(connectionString),
+    CreateCustomerGrowthReport(connectionString),
+    CreateCustomerRevenueConcentrationReport(connectionString),
+    CreateCampaignRoiReport(connectionString),
+    CreateEmailEngagementReport(connectionString),
+    CreatePipelineHealthScorecardReport(connectionString)
 };
 
 var packager = new ReportPackager();
@@ -515,3 +530,801 @@ static ReportParameter CreateHiddenStringParameter(string name, string value)
         Visible = false,
         Value = value
     };
+
+// ── New reports (15) ──────────────────────────────────────────────────
+
+static Report CreateRevenueForecastReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    FORMAT(o.ExpectedCloseDate, 'yyyy-MM') AS Period,
+    COUNT(*) AS DealCount,
+    SUM(o.Amount) AS ProjectedRevenue,
+    CAST(SUM(o.Amount * (ISNULL(o.Probability, 0) / 100.0)) AS decimal(18, 2)) AS WeightedRevenue
+FROM [crm].[Opportunities] o
+INNER JOIN [crm].[OpportunityStages] s ON s.Id = o.StageId AND s.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND o.IsClosed = 0
+  AND o.ExpectedCloseDate IS NOT NULL
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.ExpectedCloseDate AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.ExpectedCloseDate AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY FORMAT(o.ExpectedCloseDate, 'yyyy-MM')
+ORDER BY Period";
+
+    var report = CreateBaseReport("Revenue Forecast", "Revenue Forecast", "Projected and weighted revenue forecast grouped by period.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("RevenueForecastData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Period", "Deal Count", "Projected Revenue", "Weighted Revenue"],
+        [2.0, 1.2, 2.5, 2.5],
+        [
+            ("= Fields.Period", HorizontalAlign.Left, null),
+            ("= Fields.DealCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ProjectedRevenue", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.WeightedRevenue", HorizontalAlign.Right, "{0:C0}")
+        ]);
+    return report;
+}
+
+static Report CreateWinLossAnalysisReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    COALESCE(u.FullName, 'Unassigned') AS OwnerName,
+    SUM(CASE WHEN o.IsWon = 1 THEN 1 ELSE 0 END) AS WonCount,
+    SUM(CASE WHEN o.IsWon = 0 THEN 1 ELSE 0 END) AS LostCount,
+    CASE WHEN COUNT(*) = 0 THEN 0
+         ELSE CAST((SUM(CASE WHEN o.IsWon = 1 THEN 1 ELSE 0 END) * 100.0) / COUNT(*) AS decimal(10, 2))
+    END AS WinRate,
+    CAST(AVG(CASE WHEN o.IsWon = 1 THEN o.Amount END) AS decimal(18, 2)) AS AvgWonDealSize,
+    CAST(AVG(CASE WHEN o.IsWon = 0 THEN o.Amount END) AS decimal(18, 2)) AS AvgLostDealSize,
+    SUM(CASE WHEN o.IsWon = 1 THEN o.Amount ELSE 0 END) AS TotalWonRevenue
+FROM [crm].[Opportunities] o
+LEFT JOIN [identity].[Users] u ON u.Id = o.OwnerId AND u.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND o.IsClosed = 1
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.UpdatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.UpdatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY COALESCE(u.FullName, 'Unassigned')
+ORDER BY TotalWonRevenue DESC, OwnerName";
+
+    var report = CreateBaseReport("Win Loss Analysis", "Win Loss Analysis", "Won vs lost deals with win rate, deal size, and revenue by owner.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("WinLossData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Owner", "Won", "Lost", "Win %", "Avg Won Size", "Avg Lost Size", "Won Revenue"],
+        [1.8, 0.7, 0.7, 0.8, 1.3, 1.3, 1.5],
+        [
+            ("= Fields.OwnerName", HorizontalAlign.Left, null),
+            ("= Fields.WonCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.LostCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.WinRate", HorizontalAlign.Right, "{0:N1}%"),
+            ("= Fields.AvgWonDealSize", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.AvgLostDealSize", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.TotalWonRevenue", HorizontalAlign.Right, "{0:C0}")
+        ]);
+    return report;
+}
+
+static Report CreateSalesCycleDurationReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    s.Name AS StageName,
+    s.[Order] AS StageOrder,
+    COUNT(DISTINCT h.OpportunityId) AS OpportunityCount,
+    AVG(DATEDIFF(day, h.ChangedAtUtc,
+        COALESCE(
+            (SELECT TOP 1 h2.ChangedAtUtc FROM [crm].[OpportunityStageHistories] h2
+             WHERE h2.OpportunityId = h.OpportunityId AND h2.IsDeleted = 0
+               AND h2.ChangedAtUtc > h.ChangedAtUtc
+             ORDER BY h2.ChangedAtUtc), SYSUTCDATETIME()
+        ))) AS AvgDaysInStage,
+    MIN(DATEDIFF(day, h.ChangedAtUtc,
+        COALESCE(
+            (SELECT TOP 1 h2.ChangedAtUtc FROM [crm].[OpportunityStageHistories] h2
+             WHERE h2.OpportunityId = h.OpportunityId AND h2.IsDeleted = 0
+               AND h2.ChangedAtUtc > h.ChangedAtUtc
+             ORDER BY h2.ChangedAtUtc), SYSUTCDATETIME()
+        ))) AS MinDays,
+    MAX(DATEDIFF(day, h.ChangedAtUtc,
+        COALESCE(
+            (SELECT TOP 1 h2.ChangedAtUtc FROM [crm].[OpportunityStageHistories] h2
+             WHERE h2.OpportunityId = h.OpportunityId AND h2.IsDeleted = 0
+               AND h2.ChangedAtUtc > h.ChangedAtUtc
+             ORDER BY h2.ChangedAtUtc), SYSUTCDATETIME()
+        ))) AS MaxDays
+FROM [crm].[OpportunityStageHistories] h
+INNER JOIN [crm].[OpportunityStages] s ON s.Id = h.OpportunityStageId AND s.IsDeleted = 0
+INNER JOIN [crm].[Opportunities] o ON o.Id = h.OpportunityId AND o.IsDeleted = 0
+WHERE h.IsDeleted = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@Stage IS NULL OR @Stage = '' OR @Stage = 'All' OR s.Name = @Stage)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(h.ChangedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(h.ChangedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY s.Name, s.[Order]
+ORDER BY s.[Order]";
+
+    var report = CreateBaseReport("Sales Cycle Duration", "Sales Cycle Duration", "Average days in each sales stage with min/max range.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("Stage", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("SalesCycleDurationData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@Stage", "= Parameters.Stage.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Stage", "Opportunities", "Avg Days", "Min Days", "Max Days"],
+        [2.5, 1.3, 1.3, 1.3, 1.3],
+        [
+            ("= Fields.StageName", HorizontalAlign.Left, null),
+            ("= Fields.OpportunityCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.AvgDaysInStage", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.MinDays", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.MaxDays", HorizontalAlign.Right, "{0:N0}")
+        ]);
+    return report;
+}
+
+static Report CreateTopDealsReport(string connectionString)
+{
+    const string sql = @"
+SELECT TOP 25
+    o.Name AS DealName,
+    COALESCE(a.Name, '') AS AccountName,
+    COALESCE(s.Name, '') AS StageName,
+    COALESCE(u.FullName, '') AS OwnerName,
+    o.Amount,
+    o.Probability,
+    CAST(o.Amount * (ISNULL(o.Probability, 0) / 100.0) AS decimal(18, 2)) AS WeightedAmount,
+    o.ExpectedCloseDate
+FROM [crm].[Opportunities] o
+INNER JOIN [crm].[OpportunityStages] s ON s.Id = o.StageId AND s.IsDeleted = 0
+LEFT JOIN [crm].[Accounts] a ON a.Id = o.AccountId AND a.IsDeleted = 0
+LEFT JOIN [identity].[Users] u ON u.Id = o.OwnerId AND u.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND o.IsClosed = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@Stage IS NULL OR @Stage = '' OR @Stage = 'All' OR s.Name = @Stage)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+ORDER BY o.Amount DESC";
+
+    var report = CreateBaseReport("Top Deals", "Top Deals", "Highest-value open opportunities ranked by deal amount.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("Stage", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("TopDealsData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@Stage", "= Parameters.Stage.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Deal", "Account", "Stage", "Owner", "Amount", "Prob %", "Weighted", "Close Date"],
+        [2.2, 1.5, 1.0, 1.3, 1.1, 0.7, 1.1, 1.0],
+        [
+            ("= Fields.DealName", HorizontalAlign.Left, null),
+            ("= Fields.AccountName", HorizontalAlign.Left, null),
+            ("= Fields.StageName", HorizontalAlign.Left, null),
+            ("= Fields.OwnerName", HorizontalAlign.Left, null),
+            ("= Fields.Amount", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.Probability", HorizontalAlign.Right, "{0:N0}%"),
+            ("= Fields.WeightedAmount", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.ExpectedCloseDate", HorizontalAlign.Left, "{0:yyyy-MM-dd}")
+        ]);
+    return report;
+}
+
+static Report CreateLeadConversionFunnelReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    ls.Name AS StatusName,
+    COUNT(*) AS LeadCount,
+    CASE WHEN SUM(COUNT(*)) OVER () = 0 THEN 0
+         ELSE CAST((COUNT(*) * 100.0) / SUM(COUNT(*)) OVER () AS decimal(10, 2))
+    END AS SharePercent
+FROM [crm].[Leads] l
+INNER JOIN [crm].[LeadStatuses] ls ON ls.Id = l.LeadStatusId AND ls.IsDeleted = 0
+WHERE l.IsDeleted = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(l.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@LeadSource IS NULL OR @LeadSource = '' OR COALESCE(NULLIF(l.Source, ''), 'Unknown') = @LeadSource)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(l.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(l.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY ls.Name, ls.[Order]
+ORDER BY ls.[Order]";
+
+    var report = CreateBaseReport("Lead Conversion Funnel", "Lead Conversion Funnel", "Lead volume at each funnel stage from new to converted.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    var leadSourceLookup = CreateSqlDataSource("LeadSourceLookup", connectionString, leadSourceLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateLookupParameter("LeadSource", "Lead Source", leadSourceLookup, "LeadSource", "LeadSourceLabel"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("LeadConversionFunnelData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@LeadSource", "= Parameters.LeadSource.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Status", "Lead Count", "Share %"],
+        [3.5, 2.0, 2.0],
+        [
+            ("= Fields.StatusName", HorizontalAlign.Left, null),
+            ("= Fields.LeadCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.SharePercent", HorizontalAlign.Right, "{0:N2}%")
+        ]);
+    return report;
+}
+
+static Report CreateLeadSourcePerformanceReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    COALESCE(NULLIF(l.Source, ''), 'Unknown') AS LeadSource,
+    COUNT(*) AS TotalLeads,
+    SUM(CASE WHEN l.QualifiedAtUtc IS NOT NULL THEN 1 ELSE 0 END) AS QualifiedCount,
+    SUM(CASE WHEN l.ConvertedAtUtc IS NOT NULL OR l.ConvertedOpportunityId IS NOT NULL THEN 1 ELSE 0 END) AS ConvertedCount,
+    CASE WHEN COUNT(*) = 0 THEN 0
+         ELSE CAST((SUM(CASE WHEN l.ConvertedAtUtc IS NOT NULL OR l.ConvertedOpportunityId IS NOT NULL THEN 1 ELSE 0 END) * 100.0) / COUNT(*) AS decimal(10, 2))
+    END AS ConversionRate,
+    AVG(l.Score) AS AvgScore
+FROM [crm].[Leads] l
+WHERE l.IsDeleted = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(l.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(l.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(l.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY COALESCE(NULLIF(l.Source, ''), 'Unknown')
+ORDER BY TotalLeads DESC";
+
+    var report = CreateBaseReport("Lead Source Performance", "Lead Source Performance", "Lead count and conversion rate by source channel.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("LeadSourcePerformanceData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Lead Source", "Total Leads", "Qualified", "Converted", "Conversion %", "Avg Score"],
+        [2.0, 1.2, 1.2, 1.2, 1.3, 1.2],
+        [
+            ("= Fields.LeadSource", HorizontalAlign.Left, null),
+            ("= Fields.TotalLeads", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.QualifiedCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ConvertedCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ConversionRate", HorizontalAlign.Right, "{0:N2}%"),
+            ("= Fields.AvgScore", HorizontalAlign.Right, "{0:N0}")
+        ]);
+    return report;
+}
+
+static Report CreateLeadAgingReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    AgeBucket,
+    COUNT(*) AS LeadCount,
+    AVG(l.Score) AS AvgScore,
+    CASE WHEN SUM(COUNT(*)) OVER () = 0 THEN 0
+         ELSE CAST((COUNT(*) * 100.0) / SUM(COUNT(*)) OVER () AS decimal(10, 2))
+    END AS SharePercent
+FROM (
+    SELECT l.*,
+        CASE
+            WHEN DATEDIFF(day, l.CreatedAtUtc, SYSUTCDATETIME()) <= 7  THEN '0-7 days'
+            WHEN DATEDIFF(day, l.CreatedAtUtc, SYSUTCDATETIME()) <= 14 THEN '8-14 days'
+            WHEN DATEDIFF(day, l.CreatedAtUtc, SYSUTCDATETIME()) <= 30 THEN '15-30 days'
+            WHEN DATEDIFF(day, l.CreatedAtUtc, SYSUTCDATETIME()) <= 60 THEN '31-60 days'
+            ELSE '60+ days'
+        END AS AgeBucket,
+        CASE
+            WHEN DATEDIFF(day, l.CreatedAtUtc, SYSUTCDATETIME()) <= 7  THEN 1
+            WHEN DATEDIFF(day, l.CreatedAtUtc, SYSUTCDATETIME()) <= 14 THEN 2
+            WHEN DATEDIFF(day, l.CreatedAtUtc, SYSUTCDATETIME()) <= 30 THEN 3
+            WHEN DATEDIFF(day, l.CreatedAtUtc, SYSUTCDATETIME()) <= 60 THEN 4
+            ELSE 5
+        END AS BucketOrder
+    FROM [crm].[Leads] l
+    WHERE l.IsDeleted = 0
+      AND l.ConvertedAtUtc IS NULL
+      AND l.ConvertedOpportunityId IS NULL
+) l
+WHERE (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(l.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@LeadSource IS NULL OR @LeadSource = '' OR COALESCE(NULLIF(l.Source, ''), 'Unknown') = @LeadSource)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(l.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(l.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY AgeBucket, BucketOrder
+ORDER BY BucketOrder";
+
+    var report = CreateBaseReport("Lead Aging", "Lead Aging", "Open leads grouped by age bucket with average score.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    var leadSourceLookup = CreateSqlDataSource("LeadSourceLookup", connectionString, leadSourceLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateLookupParameter("LeadSource", "Lead Source", leadSourceLookup, "LeadSource", "LeadSourceLabel"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("LeadAgingData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@LeadSource", "= Parameters.LeadSource.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Age Bucket", "Lead Count", "Avg Score", "Share %"],
+        [2.5, 1.5, 1.5, 1.5],
+        [
+            ("= Fields.AgeBucket", HorizontalAlign.Left, null),
+            ("= Fields.LeadCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.AvgScore", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.SharePercent", HorizontalAlign.Right, "{0:N2}%")
+        ]);
+    return report;
+}
+
+static Report CreateLeadScoreDistributionReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    ScoreBand,
+    COUNT(*) AS LeadCount,
+    SUM(CASE WHEN l.ConvertedAtUtc IS NOT NULL OR l.ConvertedOpportunityId IS NOT NULL THEN 1 ELSE 0 END) AS ConvertedCount,
+    CASE WHEN COUNT(*) = 0 THEN 0
+         ELSE CAST((SUM(CASE WHEN l.ConvertedAtUtc IS NOT NULL OR l.ConvertedOpportunityId IS NOT NULL THEN 1 ELSE 0 END) * 100.0) / COUNT(*) AS decimal(10, 2))
+    END AS ConversionRate
+FROM (
+    SELECT l.*,
+        CASE
+            WHEN COALESCE(l.AiScore, l.Score) <= 20  THEN '0-20 (Cold)'
+            WHEN COALESCE(l.AiScore, l.Score) <= 40  THEN '21-40 (Cool)'
+            WHEN COALESCE(l.AiScore, l.Score) <= 60  THEN '41-60 (Warm)'
+            WHEN COALESCE(l.AiScore, l.Score) <= 80  THEN '61-80 (Hot)'
+            ELSE '81-100 (Very Hot)'
+        END AS ScoreBand,
+        CASE
+            WHEN COALESCE(l.AiScore, l.Score) <= 20  THEN 1
+            WHEN COALESCE(l.AiScore, l.Score) <= 40  THEN 2
+            WHEN COALESCE(l.AiScore, l.Score) <= 60  THEN 3
+            WHEN COALESCE(l.AiScore, l.Score) <= 80  THEN 4
+            ELSE 5
+        END AS BandOrder
+    FROM [crm].[Leads] l
+    WHERE l.IsDeleted = 0
+) l
+WHERE (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(l.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@LeadSource IS NULL OR @LeadSource = '' OR COALESCE(NULLIF(l.Source, ''), 'Unknown') = @LeadSource)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(l.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(l.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY ScoreBand, BandOrder
+ORDER BY BandOrder";
+
+    var report = CreateBaseReport("Lead Score Distribution", "Lead Score Distribution", "Distribution of AI-assigned lead scores with conversion correlation.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    var leadSourceLookup = CreateSqlDataSource("LeadSourceLookup", connectionString, leadSourceLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateLookupParameter("LeadSource", "Lead Source", leadSourceLookup, "LeadSource", "LeadSourceLabel"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("LeadScoreDistData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@LeadSource", "= Parameters.LeadSource.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Score Band", "Lead Count", "Converted", "Conversion %"],
+        [2.5, 1.5, 1.5, 1.5],
+        [
+            ("= Fields.ScoreBand", HorizontalAlign.Left, null),
+            ("= Fields.LeadCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ConvertedCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ConversionRate", HorizontalAlign.Right, "{0:N2}%")
+        ]);
+    return report;
+}
+
+static Report CreateActivitySummaryReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    COALESCE(u.FullName, 'Unassigned') AS OwnerName,
+    COUNT(*) AS TotalActivities,
+    SUM(CASE WHEN a.Type = 1 THEN 1 ELSE 0 END) AS Calls,
+    SUM(CASE WHEN a.Type = 2 THEN 1 ELSE 0 END) AS Emails,
+    SUM(CASE WHEN a.Type = 3 THEN 1 ELSE 0 END) AS Meetings,
+    SUM(CASE WHEN a.Type = 4 THEN 1 ELSE 0 END) AS Tasks,
+    SUM(CASE WHEN a.Type = 5 THEN 1 ELSE 0 END) AS Notes,
+    SUM(CASE WHEN a.CompletedDateUtc IS NOT NULL THEN 1 ELSE 0 END) AS CompletedCount,
+    FORMAT(a.CreatedAtUtc, 'yyyy-MM') AS ActivityMonth
+FROM [crm].[Activities] a
+LEFT JOIN [identity].[Users] u ON u.Id = a.OwnerId AND u.IsDeleted = 0
+WHERE a.IsDeleted = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(a.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(a.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(a.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY COALESCE(u.FullName, 'Unassigned'), FORMAT(a.CreatedAtUtc, 'yyyy-MM')
+ORDER BY ActivityMonth DESC, OwnerName";
+
+    var report = CreateBaseReport("Activity Summary", "Activity Summary", "Activity volume by type, owner, and monthly trend.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("ActivitySummaryData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Month", "Owner", "Total", "Calls", "Emails", "Meetings", "Tasks", "Notes", "Done"],
+        [0.9, 1.5, 0.7, 0.7, 0.7, 0.9, 0.7, 0.7, 0.7],
+        [
+            ("= Fields.ActivityMonth", HorizontalAlign.Left, null),
+            ("= Fields.OwnerName", HorizontalAlign.Left, null),
+            ("= Fields.TotalActivities", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.Calls", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.Emails", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.Meetings", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.Tasks", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.Notes", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.CompletedCount", HorizontalAlign.Right, "{0:N0}")
+        ]);
+    return report;
+}
+
+static Report CreateTeamPerformanceReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    COALESCE(u.FullName, 'Unassigned') AS OwnerName,
+    SUM(CASE WHEN o.IsClosed = 1 AND o.IsWon = 1 THEN 1 ELSE 0 END) AS DealsWon,
+    SUM(CASE WHEN o.IsClosed = 1 AND o.IsWon = 1 THEN o.Amount ELSE 0 END) AS WonRevenue,
+    SUM(CASE WHEN o.IsClosed = 0 THEN 1 ELSE 0 END) AS OpenDeals,
+    SUM(CASE WHEN o.IsClosed = 0 THEN o.Amount ELSE 0 END) AS OpenPipeline,
+    (SELECT COUNT(*) FROM [crm].[Activities] act
+     WHERE act.IsDeleted = 0 AND act.OwnerId = u.Id
+       AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(act.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+       AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(act.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+    ) AS ActivityCount,
+    CASE WHEN SUM(CASE WHEN o.IsClosed = 1 THEN 1 ELSE 0 END) = 0 THEN 0
+         ELSE CAST((SUM(CASE WHEN o.IsClosed = 1 AND o.IsWon = 1 THEN 1 ELSE 0 END) * 100.0) /
+              SUM(CASE WHEN o.IsClosed = 1 THEN 1 ELSE 0 END) AS decimal(10, 2))
+    END AS WinRate
+FROM [crm].[Opportunities] o
+LEFT JOIN [identity].[Users] u ON u.Id = o.OwnerId AND u.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY COALESCE(u.FullName, 'Unassigned'), u.Id
+ORDER BY WonRevenue DESC, OwnerName";
+
+    var report = CreateBaseReport("Team Performance", "Team Performance", "Deals won, revenue, activities, and conversion rate per team member.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("TeamPerformanceData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Owner", "Won", "Won Revenue", "Open", "Pipeline", "Activities", "Win %"],
+        [1.8, 0.7, 1.5, 0.7, 1.5, 0.9, 0.8],
+        [
+            ("= Fields.OwnerName", HorizontalAlign.Left, null),
+            ("= Fields.DealsWon", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.WonRevenue", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.OpenDeals", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.OpenPipeline", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.ActivityCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.WinRate", HorizontalAlign.Right, "{0:N1}%")
+        ]);
+    return report;
+}
+
+static Report CreateCustomerGrowthReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    FORMAT(a.CreatedAtUtc, 'yyyy-MM') AS Period,
+    COUNT(*) AS NewCustomers,
+    SUM(COUNT(*)) OVER (ORDER BY FORMAT(a.CreatedAtUtc, 'yyyy-MM')
+        ROWS UNBOUNDED PRECEDING) AS CumulativeTotal
+FROM [crm].[Accounts] a
+WHERE a.IsDeleted = 0
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(a.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(a.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY FORMAT(a.CreatedAtUtc, 'yyyy-MM')
+ORDER BY Period";
+
+    var report = CreateBaseReport("Customer Growth", "Customer Growth", "New customer acquisition trend by month.");
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("CustomerGrowthData", connectionString, sql,
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Period", "New Customers", "Cumulative Total"],
+        [3.0, 2.0, 2.5],
+        [
+            ("= Fields.Period", HorizontalAlign.Left, null),
+            ("= Fields.NewCustomers", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.CumulativeTotal", HorizontalAlign.Right, "{0:N0}")
+        ]);
+    return report;
+}
+
+static Report CreateCustomerRevenueConcentrationReport(string connectionString)
+{
+    const string sql = @"
+SELECT TOP 25
+    a.Name AS AccountName,
+    COALESCE(u.FullName, 'Unassigned') AS OwnerName,
+    COUNT(o.Id) AS DealCount,
+    SUM(o.Amount) AS TotalRevenue,
+    CASE WHEN SUM(SUM(o.Amount)) OVER () = 0 THEN 0
+         ELSE CAST((SUM(o.Amount) * 100.0) / SUM(SUM(o.Amount)) OVER () AS decimal(10, 2))
+    END AS RevenueShare,
+    SUM(SUM(o.Amount)) OVER (ORDER BY SUM(o.Amount) DESC
+        ROWS UNBOUNDED PRECEDING) /
+        NULLIF(SUM(SUM(o.Amount)) OVER (), 0) * 100.0 AS CumulativeSharePercent
+FROM [crm].[Opportunities] o
+INNER JOIN [crm].[Accounts] a ON a.Id = o.AccountId AND a.IsDeleted = 0
+LEFT JOIN [identity].[Users] u ON u.Id = a.OwnerId AND u.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND o.IsClosed = 1 AND o.IsWon = 1
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(a.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.UpdatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.UpdatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY a.Name, COALESCE(u.FullName, 'Unassigned')
+ORDER BY TotalRevenue DESC";
+
+    var report = CreateBaseReport("Customer Revenue Concentration", "Customer Revenue Concentration", "Top customers ranked by revenue contribution and cumulative share.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("CustomerRevenueData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Account", "Owner", "Deals", "Revenue", "Share %", "Cumulative %"],
+        [2.2, 1.5, 0.8, 1.5, 1.1, 1.2],
+        [
+            ("= Fields.AccountName", HorizontalAlign.Left, null),
+            ("= Fields.OwnerName", HorizontalAlign.Left, null),
+            ("= Fields.DealCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.TotalRevenue", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.RevenueShare", HorizontalAlign.Right, "{0:N2}%"),
+            ("= Fields.CumulativeSharePercent", HorizontalAlign.Right, "{0:N1}%")
+        ]);
+    return report;
+}
+
+static Report CreateCampaignRoiReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    c.Name AS CampaignName,
+    c.Type AS CampaignType,
+    c.Channel,
+    c.Status,
+    c.BudgetPlanned,
+    c.BudgetActual AS ActualSpend,
+    (SELECT COUNT(*) FROM [crm].[CampaignMembers] cm
+     WHERE cm.CampaignId = c.Id AND cm.IsDeleted = 0) AS MemberCount,
+    COALESCE(attr.AttributedRevenue, 0) AS AttributedRevenue,
+    CASE WHEN c.BudgetActual = 0 THEN 0
+         ELSE CAST((COALESCE(attr.AttributedRevenue, 0) - c.BudgetActual) * 100.0 / c.BudgetActual AS decimal(10, 2))
+    END AS RoiPercent
+FROM [crm].[Campaigns] c
+LEFT JOIN (
+    SELECT ca.CampaignId, SUM(ca.AttributedAmount) AS AttributedRevenue
+    FROM [crm].[CampaignAttributions] ca
+    WHERE ca.IsDeleted = 0
+    GROUP BY ca.CampaignId
+) attr ON attr.CampaignId = c.Id
+LEFT JOIN [identity].[Users] u ON u.Id = c.OwnerUserId AND u.IsDeleted = 0
+WHERE c.IsDeleted = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(c.OwnerUserId AS nvarchar(36)) = @OwnerUserId)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(c.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(c.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+ORDER BY AttributedRevenue DESC, CampaignName";
+
+    var report = CreateBaseReport("Campaign ROI", "Campaign ROI", "Campaign spend, attributed revenue, ROI, and members.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("CampaignRoiData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Campaign", "Type", "Channel", "Spend", "Revenue", "Members", "ROI %"],
+        [2.0, 1.0, 0.9, 1.2, 1.2, 0.8, 0.9],
+        [
+            ("= Fields.CampaignName", HorizontalAlign.Left, null),
+            ("= Fields.CampaignType", HorizontalAlign.Left, null),
+            ("= Fields.Channel", HorizontalAlign.Left, null),
+            ("= Fields.ActualSpend", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.AttributedRevenue", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.MemberCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.RoiPercent", HorizontalAlign.Right, "{0:N1}%")
+        ]);
+    return report;
+}
+
+static Report CreateEmailEngagementReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    c.Name AS CampaignName,
+    (SELECT COUNT(*) FROM [crm].[CampaignMembers] cm
+     WHERE cm.CampaignId = c.Id AND cm.IsDeleted = 0
+       AND cm.ResponseStatus IN ('Sent', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed')) AS SendCount,
+    (SELECT COUNT(*) FROM [crm].[CampaignMembers] cm
+     WHERE cm.CampaignId = c.Id AND cm.IsDeleted = 0
+       AND cm.ResponseStatus IN ('Opened', 'Clicked')) AS OpenCount,
+    (SELECT COUNT(*) FROM [crm].[CampaignMembers] cm
+     WHERE cm.CampaignId = c.Id AND cm.IsDeleted = 0
+       AND cm.ResponseStatus = 'Clicked') AS ClickCount,
+    (SELECT COUNT(*) FROM [crm].[CampaignMembers] cm
+     WHERE cm.CampaignId = c.Id AND cm.IsDeleted = 0
+       AND cm.ResponseStatus = 'Bounced') AS BounceCount,
+    CASE WHEN (SELECT COUNT(*) FROM [crm].[CampaignMembers] cm2
+              WHERE cm2.CampaignId = c.Id AND cm2.IsDeleted = 0
+                AND cm2.ResponseStatus IN ('Sent', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed')) = 0 THEN 0
+         ELSE CAST((SELECT COUNT(*) FROM [crm].[CampaignMembers] cm3
+                    WHERE cm3.CampaignId = c.Id AND cm3.IsDeleted = 0
+                      AND cm3.ResponseStatus IN ('Opened', 'Clicked')) * 100.0
+              / (SELECT COUNT(*) FROM [crm].[CampaignMembers] cm4
+                 WHERE cm4.CampaignId = c.Id AND cm4.IsDeleted = 0
+                   AND cm4.ResponseStatus IN ('Sent', 'Opened', 'Clicked', 'Bounced', 'Unsubscribed'))
+              AS decimal(10, 2))
+    END AS OpenRate
+FROM [crm].[Campaigns] c
+WHERE c.IsDeleted = 0
+  AND c.Channel IN ('Email', 'Mixed')
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(c.OwnerUserId AS nvarchar(36)) = @OwnerUserId)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(c.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(c.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+ORDER BY SendCount DESC, CampaignName";
+
+    var report = CreateBaseReport("Email Engagement", "Email Engagement", "Send volume, open rates, click rates, and bounces by campaign.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("EmailEngagementData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Campaign", "Sent", "Opened", "Clicked", "Bounced", "Open %"],
+        [2.5, 1.0, 1.0, 1.0, 1.0, 1.0],
+        [
+            ("= Fields.CampaignName", HorizontalAlign.Left, null),
+            ("= Fields.SendCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.OpenCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ClickCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.BounceCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.OpenRate", HorizontalAlign.Right, "{0:N1}%")
+        ]);
+    return report;
+}
+
+static Report CreatePipelineHealthScorecardReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    COALESCE(u.FullName, 'Unassigned') AS OwnerName,
+    COUNT(*) AS OpenDeals,
+    SUM(o.Amount) AS PipelineValue,
+    CAST(SUM(o.Amount * (ISNULL(o.Probability, 0) / 100.0)) AS decimal(18, 2)) AS WeightedForecast,
+    AVG(DATEDIFF(day, o.CreatedAtUtc, SYSUTCDATETIME())) AS AvgAgingDays,
+    SUM(CASE WHEN o.ExpectedCloseDate < SYSUTCDATETIME() THEN 1 ELSE 0 END) AS PastDueDeals,
+    SUM(CASE WHEN o.ExpectedCloseDate IS NOT NULL
+              AND o.ExpectedCloseDate BETWEEN SYSUTCDATETIME() AND DATEADD(day, 30, SYSUTCDATETIME())
+         THEN 1 ELSE 0 END) AS ClosingNext30
+FROM [crm].[Opportunities] o
+LEFT JOIN [identity].[Users] u ON u.Id = o.OwnerId AND u.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND o.IsClosed = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@Stage IS NULL OR @Stage = '' OR @Stage = 'All'
+       OR (SELECT s.Name FROM [crm].[OpportunityStages] s WHERE s.Id = o.StageId AND s.IsDeleted = 0) = @Stage)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY COALESCE(u.FullName, 'Unassigned')
+ORDER BY PipelineValue DESC, OwnerName";
+
+    var report = CreateBaseReport("Pipeline Health Scorecard", "Pipeline Health Scorecard", "Pipeline value, weighted forecast, deal aging, and coverage ratio.");
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("Stage", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("PipelineHealthData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@Stage", "= Parameters.Stage.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    report.DataSource = dataSource;
+    AddTableSections(report,
+        ["Owner", "Open", "Pipeline", "Weighted", "Avg Age", "Past Due", "Close 30d"],
+        [1.7, 0.6, 1.4, 1.4, 0.8, 0.9, 0.9],
+        [
+            ("= Fields.OwnerName", HorizontalAlign.Left, null),
+            ("= Fields.OpenDeals", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.PipelineValue", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.WeightedForecast", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.AvgAgingDays", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.PastDueDeals", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ClosingNext30", HorizontalAlign.Right, "{0:N0}")
+        ]);
+    return report;
+}

@@ -49,7 +49,7 @@ export class ReportDesignerPage {
 
         this.reportsData.getReportCatalog().subscribe({
           next: (items) => {
-            this.reportServerCatalog.set(items);
+            this.reportServerCatalog.set(items.filter(i => i.categoryName?.toLowerCase() === 'crm'));
             this.reportServerLoading.set(false);
           },
           error: () => {
@@ -59,7 +59,7 @@ export class ReportDesignerPage {
         });
 
         this.reportsData.getReportCategories().subscribe({
-          next: (items) => this.reportServerCategories.set(items),
+          next: (items) => this.reportServerCategories.set(items.filter(c => c.name?.toLowerCase() === 'crm')),
           error: () => this.reportServerCategories.set([])
         });
       },

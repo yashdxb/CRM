@@ -80,5 +80,4 @@ public class ReportsController : ControllerBase
         var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(subject, out var userId) ? userId : null;
     }
-
 }

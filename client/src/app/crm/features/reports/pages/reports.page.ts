@@ -326,7 +326,9 @@ export class ReportsPage implements AfterViewInit {
         this.reportServerConfig.set(config);
         this.reportServerEnabled.set(config.enabled);
         if (config.enabled) {
-          this.loadReportServerToken();
+          if (config.reportServerUrl) {
+            this.loadReportServerToken();
+          }
           this.loadLibrary();
         }
       }
@@ -344,7 +346,8 @@ export class ReportsPage implements AfterViewInit {
     this.catalogLoading.set(true);
     this.data.getReportLibrary().subscribe({
       next: (items) => {
-        this.reportCatalog.set(items.map((item) => this.normalizeReportLibraryItem(item)));
+        const crmOnly = items.filter((item) => item.categoryName?.toLowerCase() === 'crm');
+        this.reportCatalog.set(crmOnly.map((item) => this.normalizeReportLibraryItem(item)));
         this.catalogLoading.set(false);
       },
       error: () => {

@@ -35,10 +35,11 @@ public class ReportServerController : ControllerBase
     {
         if (!_options.UseReportServer)
         {
+            // Embedded mode: enable library + use built-in Telerik REST service
             return Ok(new ReportServerConfigResponse(
-                Enabled: false,
+                Enabled: true,
                 ReportServerUrl: null,
-                ReportServiceUrl: null,
+                ReportServiceUrl: "/api/telerik-reports",
                 DesignerUrl: null));
         }
 
@@ -87,9 +88,6 @@ public class ReportServerController : ControllerBase
     [HttpGet("library")]
     public async Task<ActionResult<IReadOnlyList<ReportLibraryItemResponse>>> GetLibrary(CancellationToken ct)
     {
-        if (!_client.IsConfigured)
-            return Ok(Array.Empty<ReportLibraryItemResponse>());
-
         var items = await _libraryService.GetLibraryAsync(ct);
         return Ok(items.Select(item => new ReportLibraryItemResponse(
             item.Id,
