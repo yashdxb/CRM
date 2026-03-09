@@ -77,6 +77,8 @@ export interface Lead {
 export interface LeadSearchRequest {
   search?: string;
   status?: LeadStatus;
+  conversationView?: 'weak_signal' | 'no_signal' | 'coaching_queue' | 'engaged_but_unqualified';
+  sortBy?: 'newest' | 'lead_score_desc' | 'conversation_desc' | 'conversation_asc' | 'qualification_desc';
   page?: number;
   pageSize?: number;
 }

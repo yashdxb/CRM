@@ -82,10 +82,68 @@ public sealed class LeadService : ILeadService
             query = query.Where(l => l.Status != null && l.Status.Name == normalizedStatus);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.ConversationView))
+        {
+            var view = request.ConversationView.Trim().ToLowerInvariant();
+            query = view switch
+            {
+                "weak_signal" => query.Where(l => l.ConversationSignalAvailable && (l.ConversationScore ?? 0) < 50),
+                "no_signal" => query.Where(l => !l.ConversationSignalAvailable),
+                "coaching_queue" => query.Where(l =>
+                    (!l.ConversationSignalAvailable || (l.ConversationScore ?? 0) < 50)
+                    && (
+                        l.Score >= 70
+                        || (
+                            (l.BudgetAvailability ?? string.Empty) != string.Empty
+                            || (l.ReadinessToSpend ?? string.Empty) != string.Empty
+                            || (l.BuyingTimeline ?? string.Empty) != string.Empty
+                            || (l.ProblemSeverity ?? string.Empty) != string.Empty
+                            || (l.EconomicBuyer ?? string.Empty) != string.Empty
+                            || (l.IcpFit ?? string.Empty) != string.Empty
+                        )
+                    )),
+                "engaged_but_unqualified" => query.Where(l =>
+                    l.ConversationSignalAvailable
+                    && (l.ConversationScore ?? 0) >= 70
+                    && (
+                        string.IsNullOrWhiteSpace(l.BudgetAvailability)
+                        || string.IsNullOrWhiteSpace(l.ReadinessToSpend)
+                        || string.IsNullOrWhiteSpace(l.BuyingTimeline)
+                        || string.IsNullOrWhiteSpace(l.ProblemSeverity)
+                        || string.IsNullOrWhiteSpace(l.EconomicBuyer)
+                        || string.IsNullOrWhiteSpace(l.IcpFit)
+                    )),
+                _ => query
+            };
+        }
+
         var total = await query.CountAsync(cancellationToken);
 
-        var leads = await query
-            .OrderByDescending(l => l.CreatedAtUtc)
+        var sortedQuery = (request.SortBy ?? "newest").Trim().ToLowerInvariant() switch
+        {
+            "lead_score_desc" => query.OrderByDescending(l => l.Score).ThenByDescending(l => l.CreatedAtUtc),
+            "conversation_desc" => query
+                .OrderByDescending(l => l.ConversationSignalAvailable)
+                .ThenByDescending(l => l.ConversationScore ?? -1)
+                .ThenByDescending(l => l.CreatedAtUtc),
+            "conversation_asc" => query
+                .OrderByDescending(l => l.ConversationSignalAvailable)
+                .ThenBy(l => l.ConversationScore ?? int.MaxValue)
+                .ThenByDescending(l => l.CreatedAtUtc),
+            "qualification_desc" => query
+                .OrderByDescending(l =>
+                    (string.IsNullOrWhiteSpace(l.BudgetAvailability) ? 0 : 1)
+                    + (string.IsNullOrWhiteSpace(l.ReadinessToSpend) ? 0 : 1)
+                    + (string.IsNullOrWhiteSpace(l.BuyingTimeline) ? 0 : 1)
+                    + (string.IsNullOrWhiteSpace(l.ProblemSeverity) ? 0 : 1)
+                    + (string.IsNullOrWhiteSpace(l.EconomicBuyer) ? 0 : 1)
+                    + (string.IsNullOrWhiteSpace(l.IcpFit) ? 0 : 1))
+                .ThenByDescending(l => l.Score)
+                .ThenByDescending(l => l.CreatedAtUtc),
+            _ => query.OrderByDescending(l => l.CreatedAtUtc)
+        };
+
+        var leads = await sortedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(l => new

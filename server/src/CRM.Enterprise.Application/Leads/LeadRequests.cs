@@ -1,6 +1,12 @@
 namespace CRM.Enterprise.Application.Leads;
 
-public sealed record LeadSearchRequest(string? Search, string? Status, int Page, int PageSize);
+public sealed record LeadSearchRequest(
+    string? Search,
+    string? Status,
+    string? ConversationView,
+    string? SortBy,
+    int Page,
+    int PageSize);
 
 public sealed record LeadUpsertRequest(
     string FirstName,

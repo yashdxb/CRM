@@ -35,6 +35,19 @@ interface StatusOption {
   icon: string;
 }
 
+type ConversationView = 'all' | 'weak_signal' | 'no_signal' | 'coaching_queue' | 'engaged_but_unqualified';
+type LeadSortBy = 'newest' | 'lead_score_desc' | 'conversation_desc' | 'conversation_asc' | 'qualification_desc';
+
+interface ConversationViewOption {
+  label: string;
+  value: ConversationView;
+}
+
+interface SortOption {
+  label: string;
+  value: LeadSortBy;
+}
+
 type CqvsCode = 'C' | 'Q' | 'V' | 'S';
 
 const CQVS_TITLES: Record<CqvsCode, string> = {
@@ -97,6 +110,20 @@ export class LeadsPage {
   ];
   protected readonly filteredStatusOptions = this.statusOptions.filter((o) => o.value !== 'all');
   protected readonly kanbanStatuses = LEAD_STATUSES;
+  protected readonly conversationViewOptions: ConversationViewOption[] = [
+    { label: 'All signals', value: 'all' },
+    { label: 'Coaching queue', value: 'coaching_queue' },
+    { label: 'Weak conversation', value: 'weak_signal' },
+    { label: 'No signal', value: 'no_signal' },
+    { label: 'Engaged but incomplete', value: 'engaged_but_unqualified' }
+  ];
+  protected readonly sortOptions: SortOption[] = [
+    { label: 'Newest', value: 'newest' },
+    { label: 'Highest lead score', value: 'lead_score_desc' },
+    { label: 'Highest conversation score', value: 'conversation_desc' },
+    { label: 'Lowest conversation score', value: 'conversation_asc' },
+    { label: 'Most qualified', value: 'qualification_desc' }
+  ];
 
   protected readonly leads = signal<Lead[]>([]);
   protected readonly total = signal(0);
@@ -130,6 +157,15 @@ export class LeadsPage {
       avgScore
     };
   });
+  protected readonly conversationCoachMetrics = computed(() => {
+    const rows = this.leads();
+    return {
+      coachingQueue: rows.filter((lead) => this.matchesConversationView(lead, 'coaching_queue')).length,
+      weakSignal: rows.filter((lead) => this.matchesConversationView(lead, 'weak_signal')).length,
+      noSignal: rows.filter((lead) => this.matchesConversationView(lead, 'no_signal')).length,
+      engagedButIncomplete: rows.filter((lead) => this.matchesConversationView(lead, 'engaged_but_unqualified')).length
+    };
+  });
 
   // Conversion rate: converted / (converted + lost) * 100
   protected readonly conversionRate = computed(() => {
@@ -140,6 +176,8 @@ export class LeadsPage {
 
   protected searchTerm = '';
   protected statusFilter: StatusOption['value'] = 'all';
+  protected conversationView: ConversationView = 'all';
+  protected sortBy: LeadSortBy = 'newest';
   protected pageIndex = 0;
   protected rows = 10;
   protected readonly selectedIds = signal<string[]>([]);
@@ -298,6 +336,8 @@ export class LeadsPage {
       .search({
         search: this.searchTerm || undefined,
         status,
+        conversationView: this.conversationView === 'all' ? undefined : this.conversationView,
+        sortBy: this.sortBy,
         page: this.pageIndex + 1,
         pageSize: this.rows
       })
@@ -558,6 +598,18 @@ export class LeadsPage {
 
   protected onStatusChange(value: StatusOption['value']) {
     this.statusFilter = value;
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  protected onConversationViewChange(value: ConversationView): void {
+    this.conversationView = value;
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  protected onSortChange(value: LeadSortBy | null | undefined): void {
+    this.sortBy = value ?? 'newest';
     this.pageIndex = 0;
     this.load();
   }
@@ -966,6 +1018,10 @@ export class LeadsPage {
     return pieces.join(' • ');
   }
 
+  protected conversationViewHint(): string {
+    return this.conversationViewOptions.find((option) => option.value === this.conversationView)?.label ?? 'All signals';
+  }
+
   protected evidenceCoveragePercent(lead: Lead): number | null {
     if (typeof lead.truthCoverage !== 'number' || !Number.isFinite(lead.truthCoverage)) return null;
     return Math.round(lead.truthCoverage * 100);
@@ -1078,6 +1134,22 @@ export class LeadsPage {
         this.ownerOptionsForAssign.set([]);
       }
     });
+  }
+
+  private matchesConversationView(lead: Lead, view: Exclude<ConversationView, 'all'>): boolean {
+    switch (view) {
+      case 'weak_signal':
+        return lead.conversationSignalAvailable === true && (lead.conversationScore ?? 0) < 50;
+      case 'no_signal':
+        return lead.conversationSignalAvailable !== true;
+      case 'coaching_queue':
+        return (lead.conversationSignalAvailable !== true || (lead.conversationScore ?? 0) < 50)
+          && (this.displayScore(lead) >= 70 || (lead.qualificationConfidence ?? 0) >= 0.7);
+      case 'engaged_but_unqualified':
+        return lead.conversationSignalAvailable === true
+          && (lead.conversationScore ?? 0) >= 70
+          && (lead.assumptionsOutstanding ?? 0) > 0;
+    }
   }
 
   private loadLeadDataWeights(): void {

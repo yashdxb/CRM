@@ -136,9 +136,62 @@
       </div>
 
       <div class="action-right">
+        <div class="conversation-filters">
+          <button
+            pButton
+            type="button"
+            class="filter-chip filter-chip--conversation"
+            *ngFor="let option of conversationViewOptions"
+            [class.active]="conversationView === option.value"
+            (click)="onConversationViewChange(option.value)"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+        <p-select appendTo="body"
+          class="lead-sort-select"
+          [options]="sortOptions"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="sortBy"
+          (ngModelChange)="onSortChange($event)"
+          placeholder="Sort leads"
+        ></p-select>
         <button pButton type="button" class="btn-ghost" *ngIf="statusFilter !== 'all'" (click)="onStatusChange('all')">
           <i class="pi pi-filter-slash"></i>
           Clear Filter
+        </button>
+      </div>
+    </section>
+
+    <section class="coach-queue-strip glass-card">
+      <div class="coach-queue-strip__header">
+        <div>
+          <span class="coach-queue-strip__eyebrow">Conversation Coaching</span>
+          <h2 class="coach-queue-strip__title">{{ conversationViewHint() }}</h2>
+        </div>
+        <span class="coach-queue-strip__summary">Operational queue from the current lead results.</span>
+      </div>
+      <div class="coach-queue-strip__grid">
+        <button type="button" class="coach-queue-card" (click)="onConversationViewChange('coaching_queue')">
+          <span class="coach-queue-card__label">Coaching queue</span>
+          <strong class="coach-queue-card__value">{{ conversationCoachMetrics().coachingQueue }}</strong>
+          <span class="coach-queue-card__hint">High lead confidence, weak conversation signal</span>
+        </button>
+        <button type="button" class="coach-queue-card" (click)="onConversationViewChange('weak_signal')">
+          <span class="coach-queue-card__label">Weak signal</span>
+          <strong class="coach-queue-card__value">{{ conversationCoachMetrics().weakSignal }}</strong>
+          <span class="coach-queue-card__hint">Replies or activity are not strong enough yet</span>
+        </button>
+        <button type="button" class="coach-queue-card" (click)="onConversationViewChange('no_signal')">
+          <span class="coach-queue-card__label">No signal</span>
+          <strong class="coach-queue-card__value">{{ conversationCoachMetrics().noSignal }}</strong>
+          <span class="coach-queue-card__hint">No usable conversation evidence captured</span>
+        </button>
+        <button type="button" class="coach-queue-card" (click)="onConversationViewChange('engaged_but_unqualified')">
+          <span class="coach-queue-card__label">Engaged but incomplete</span>
+          <strong class="coach-queue-card__value">{{ conversationCoachMetrics().engagedButIncomplete }}</strong>
+          <span class="coach-queue-card__hint">Strong engagement, qualification evidence still incomplete</span>
         </button>
       </div>
     </section>

@@ -52,11 +52,13 @@ public class LeadsController : ControllerBase
     public async Task<ActionResult<LeadSearchResponse>> GetLeads(
         [FromQuery] string? search,
         [FromQuery] string? status,
+        [FromQuery] string? conversationView,
+        [FromQuery] string? sortBy,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _leadService.SearchAsync(new LeadSearchRequest(search, status, page, pageSize), cancellationToken);
+        var result = await _leadService.SearchAsync(new LeadSearchRequest(search, status, conversationView, sortBy, page, pageSize), cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new LeadSearchResponse(items, result.Total));
     }

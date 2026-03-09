@@ -70,6 +70,8 @@ export class LeadDataService {
     let params = new HttpParams();
     if (request.search) params = params.set('search', request.search);
     if (request.status) params = params.set('status', request.status);
+    if (request.conversationView) params = params.set('conversationView', request.conversationView);
+    if (request.sortBy) params = params.set('sortBy', request.sortBy);
     if (request.page) params = params.set('page', request.page);
     if (request.pageSize) params = params.set('pageSize', request.pageSize);
 
