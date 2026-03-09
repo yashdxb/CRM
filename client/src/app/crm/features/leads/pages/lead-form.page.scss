@@ -273,9 +273,7 @@
     }
 
     .lead-sticky-bar {
-      position: sticky;
-      top: 5.5rem;
-      z-index: 20;
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -786,9 +784,7 @@
       gap: 0.8rem;
       margin-bottom: 0.7rem;
       padding: 0.95rem 1.05rem 1rem;
-      position: sticky;
-      top: 0.55rem;
-      z-index: 12;
+      position: relative;
       border-radius: 16px;
       border: 1px solid rgba(148, 163, 184, 0.24);
       background:
