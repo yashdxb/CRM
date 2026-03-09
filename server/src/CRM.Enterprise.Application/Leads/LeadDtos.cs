@@ -73,6 +73,43 @@ public sealed record LeadConversionReadinessDto(
     string? PrimaryGap,
     IReadOnlyList<string> Reasons);
 
+public sealed record LeadDispositionReportDto(
+    LeadDispositionTotalsDto Totals,
+    IReadOnlyList<LeadDispositionReasonCountDto> DisqualificationReasons,
+    IReadOnlyList<LeadDispositionReasonCountDto> LossReasons,
+    IReadOnlyList<LeadDispositionOwnerRollupDto> OwnerRollups,
+    IReadOnlyList<LeadDispositionSourceRollupDto> SourceRollups,
+    IReadOnlyList<LeadDispositionTrendPointDto> Trend);
+
+public sealed record LeadDispositionTotalsDto(
+    int Disqualified,
+    int Lost,
+    int InNurture,
+    int RecycledLast30Days);
+
+public sealed record LeadDispositionReasonCountDto(
+    string Reason,
+    int Count);
+
+public sealed record LeadDispositionOwnerRollupDto(
+    Guid OwnerId,
+    string OwnerName,
+    int Disqualified,
+    int Lost,
+    int RecycledToNurture);
+
+public sealed record LeadDispositionSourceRollupDto(
+    string Source,
+    int Disqualified,
+    int Lost,
+    int RecycledToNurture);
+
+public sealed record LeadDispositionTrendPointDto(
+    DateTime PeriodStartUtc,
+    int Disqualified,
+    int Lost,
+    int RecycledToNurture);
+
 public sealed record LeadSearchResultDto(IReadOnlyList<LeadListItemDto> Items, int Total);
 
 public sealed record LeadStatusHistoryDto(

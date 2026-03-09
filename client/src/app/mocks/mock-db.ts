@@ -492,6 +492,60 @@ export const mockActivities: Activity[] = [
     relatedEntityName: 'Liam Murphy',
     ownerName: 'Leah Singh',
     ownerId: ownerIdFor('Leah Singh')
+  },
+  {
+    id: 'a-008',
+    subject: 'Proposal walkthrough call',
+    type: 'Call',
+    priority: 'High',
+    dueDateUtc: addDays(today, -2),
+    completedDateUtc: addDays(today, -2),
+    status: 'Completed',
+    outcome: 'Client receptive, requested discount options',
+    relatedEntityType: 'Opportunity',
+    relatedEntityId: 'opp-001',
+    relatedEntityName: 'Cedar Analytics Expansion',
+    ownerName: 'Yasser Ahmed',
+    ownerId: ownerIdFor('Yasser Ahmed')
+  },
+  {
+    id: 'a-009',
+    subject: 'Executive sponsor introduction',
+    type: 'Meeting',
+    priority: 'High',
+    dueDateUtc: addDays(today, 4),
+    status: 'Upcoming',
+    relatedEntityType: 'Opportunity',
+    relatedEntityId: 'opp-001',
+    relatedEntityName: 'Cedar Analytics Expansion',
+    ownerName: 'Yasser Ahmed',
+    ownerId: ownerIdFor('Yasser Ahmed')
+  },
+  {
+    id: 'a-010',
+    subject: 'Send revised contract terms',
+    type: 'Task',
+    dueDateUtc: addDays(today, 1),
+    status: 'Upcoming',
+    relatedEntityType: 'Opportunity',
+    relatedEntityId: 'opp-002',
+    relatedEntityName: 'Evergreen Foods Renewal',
+    ownerName: 'Mia Khalid',
+    ownerId: ownerIdFor('Mia Khalid')
+  },
+  {
+    id: 'a-011',
+    subject: 'Negotiation follow-up email',
+    type: 'Email',
+    dueDateUtc: addDays(today, -1),
+    completedDateUtc: addDays(today, -1),
+    status: 'Completed',
+    outcome: 'Agreement on pricing tier 2',
+    relatedEntityType: 'Opportunity',
+    relatedEntityId: 'opp-002',
+    relatedEntityName: 'Evergreen Foods Renewal',
+    ownerName: 'Mia Khalid',
+    ownerId: ownerIdFor('Mia Khalid')
   }
 ];
 

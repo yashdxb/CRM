@@ -108,6 +108,49 @@ export interface LeadSearchResponse {
   total: number;
 }
 
+export interface LeadDispositionReport {
+  totals: LeadDispositionTotals;
+  disqualificationReasons: LeadDispositionReasonCount[];
+  lossReasons: LeadDispositionReasonCount[];
+  ownerRollups: LeadDispositionOwnerRollup[];
+  sourceRollups: LeadDispositionSourceRollup[];
+  trend: LeadDispositionTrendPoint[];
+}
+
+export interface LeadDispositionTotals {
+  disqualified: number;
+  lost: number;
+  inNurture: number;
+  recycledLast30Days: number;
+}
+
+export interface LeadDispositionReasonCount {
+  reason: string;
+  count: number;
+}
+
+export interface LeadDispositionOwnerRollup {
+  ownerId: string;
+  ownerName: string;
+  disqualified: number;
+  lost: number;
+  recycledToNurture: number;
+}
+
+export interface LeadDispositionSourceRollup {
+  source: string;
+  disqualified: number;
+  lost: number;
+  recycledToNurture: number;
+}
+
+export interface LeadDispositionTrendPoint {
+  periodStartUtc: string;
+  disqualified: number;
+  lost: number;
+  recycledToNurture: number;
+}
+
 export interface LeadConversionRequest {
   createAccount: boolean;
   accountName?: string;

@@ -63,6 +63,14 @@
       </div>
 
       <div class="hero-actions">
+        <div class="view-toggle">
+          <button type="button" class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View">
+            <i class="pi pi-list"></i>
+          </button>
+          <button type="button" class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Kanban View">
+            <i class="pi pi-objects-column"></i>
+          </button>
+        </div>
         <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
           <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
           <span>New Deal</span>
@@ -270,9 +278,93 @@
   </section>
 
   <!-- ═══════════════════════════════════════════════════════════════════════════
+       KANBAN BOARD VIEW
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <section class="kanban-board" *ngIf="viewMode === 'kanban'">
+    <!-- Loading State -->
+    <ng-container *ngIf="loading()">
+      <div class="kanban-column" *ngFor="let stage of kanbanStages">
+        <div class="column-header" [style.border-color]="stageColumnColor(stage)">
+          <span class="column-title">{{ stage }}</span>
+          <span class="column-count">—</span>
+        </div>
+        <div class="column-body">
+          <div class="deal-card deal-card--skeleton" *ngFor="let _ of [1,2]">
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line skeleton-short"></div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Loaded State -->
+    <ng-container *ngIf="!loading()">
+      <div class="kanban-column" *ngFor="let stage of kanbanStages">
+        <div class="column-header" [style.border-color]="stageColumnColor(stage)">
+          <span class="column-title">{{ stage }}</span>
+          <span class="column-count">{{ getOpportunitiesByStage(stage).length }}</span>
+        </div>
+        <div class="column-body">
+          <div class="deal-card" *ngFor="let deal of getOpportunitiesByStage(stage)" (click)="canManage() ? onEdit(deal) : null">
+            <div class="deal-card-header">
+              <div class="deal-avatar" [style.background]="'linear-gradient(135deg, ' + stageColumnColor(deal.stage) + ' 0%, ' + stageColumnColor(deal.stage) + 'cc 100%)'">
+                {{ deal.name?.charAt(0) || 'D' }}
+              </div>
+              <div class="deal-meta">
+                <span class="deal-name">{{ deal.name }}</span>
+                <span class="deal-account">{{ deal.account || 'No account' }}</span>
+              </div>
+              <div class="deal-probability" 
+                [class.high]="(deal.probability ?? 0) >= 70" 
+                [class.medium]="(deal.probability ?? 0) >= 40 && (deal.probability ?? 0) < 70" 
+                [class.low]="(deal.probability ?? 0) < 40">
+                {{ deal.probability || 0 }}%
+              </div>
+            </div>
+
+            <div class="deal-card-body">
+              <div class="deal-amount">
+                <i class="pi pi-dollar"></i>
+                <span>{{ deal.amount | currency: deal.currency:'symbol':'1.0-0' }}</span>
+              </div>
+              <div class="deal-close-date" *ngIf="deal.closeDate">
+                <i class="pi pi-calendar"></i>
+                <span>{{ deal.closeDate | date:'mediumDate' }}</span>
+              </div>
+              <div class="deal-risk" *ngIf="isStalled(deal)">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>{{ nextStepLabel(deal) }}</span>
+              </div>
+            </div>
+
+            <div class="deal-card-footer">
+              <span class="deal-owner">
+                <i class="pi pi-user"></i>
+                {{ deal.owner || 'Unassigned' }}
+              </span>
+              <div class="deal-actions">
+                <button type="button" class="mini-action-btn mini-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(deal)" title="Edit">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button type="button" class="mini-action-btn mini-action-btn--delete" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(deal)" title="Delete">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="column-empty" *ngIf="!getOpportunitiesByStage(stage).length">
+            <i class="pi pi-briefcase"></i>
+            <span>No {{ stage.toLowerCase() }} deals</span>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
        DATA TABLE
        ═══════════════════════════════════════════════════════════════════════════ -->
-  <section class="data-section">
+  <section class="data-section" *ngIf="viewMode === 'table'">
     <div class="data-card">
       <header class="data-header">
         <div class="header-title">

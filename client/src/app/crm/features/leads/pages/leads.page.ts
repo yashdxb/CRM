@@ -16,7 +16,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { forkJoin, of, Subscription, timer } from 'rxjs';
 import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 
-import { LEAD_STATUSES, Lead, LeadStatus } from '../models/lead.model';
+import { LEAD_STATUSES, Lead, LeadDispositionReport, LeadStatus } from '../models/lead.model';
 import { LeadDataService } from '../services/lead-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { BulkAction, BulkActionsBarComponent } from '../../../../shared/components/bulk-actions/bulk-actions-bar.component';
@@ -234,6 +234,7 @@ export class LeadsPage {
     return lead.convertedOpportunityId ? ['/app/opportunities', lead.convertedOpportunityId, 'edit'] : null;
   }
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
+  protected readonly dispositionReport = signal<LeadDispositionReport | null>(null);
   protected readonly ownerAssignmentEditable = signal(false);
   protected assignDialogVisible = false;
   protected assignOwnerId: string | null = null;
@@ -354,21 +355,23 @@ export class LeadsPage {
   protected load() {
     this.loading.set(true);
     const status = this.statusFilter === 'all' ? undefined : (this.statusFilter as LeadStatus);
-
-    this.leadData
-      .search({
+    forkJoin({
+      search: this.leadData.search({
         search: this.searchTerm || undefined,
         status,
         conversationView: this.conversationView === 'all' ? undefined : this.conversationView,
         sortBy: this.sortBy,
         page: this.pageIndex + 1,
         pageSize: this.rows
-      })
+      }),
+      dispositionReport: this.leadData.getDispositionReport().pipe(catchError(() => of(null)))
+    })
       .subscribe({
         next: (res) => {
-          this.leads.set(res.items);
-          this.syncLeadPresenceSubscriptions(res.items.map((lead) => lead.id));
-          this.total.set(res.total);
+          this.leads.set(res.search.items);
+          this.syncLeadPresenceSubscriptions(res.search.items.map((lead) => lead.id));
+          this.total.set(res.search.total);
+          this.dispositionReport.set(res.dispositionReport);
           this.loading.set(false);
           this.selectedIds.set([]);
         },
@@ -625,6 +628,21 @@ export class LeadsPage {
       return lead.lossReason?.trim() || null;
     }
     return null;
+  }
+
+  protected dispositionTrendLabel(periodStartUtc: string): string {
+    return new Date(periodStartUtc).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  protected dispositionTrendMax(): number {
+    const report = this.dispositionReport();
+    if (!report?.trend.length) {
+      return 1;
+    }
+
+    return Math.max(
+      1,
+      ...report.trend.map((item) => item.disqualified + item.lost + item.recycledToNurture));
   }
 
   protected recycleLead(row: Lead): void {

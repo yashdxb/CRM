@@ -8,6 +8,7 @@ import {
   LeadAssignmentStrategy,
   LeadConversionRequest,
   LeadConversionResponse,
+  LeadDispositionReport,
   LeadCadenceChannel,
   LeadCadenceChannelOption,
   LeadCadenceTouch,
@@ -87,6 +88,10 @@ export class LeadDataService {
 
   get(id: string) {
     return this.http.get<Lead>(`${this.baseUrl}/api/leads/${id}`);
+  }
+
+  getDispositionReport() {
+    return this.http.get<LeadDispositionReport>(`${this.baseUrl}/api/leads/disposition-report`);
   }
 
   getStatusHistory(id: string) {

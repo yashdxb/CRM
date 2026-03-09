@@ -50,6 +50,9 @@ interface StageOption {
   styleUrl: './opportunities.page.scss'
 })
 export class OpportunitiesPage {
+  protected viewMode: 'table' | 'kanban' = 'table';
+  protected readonly kanbanStages = ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
+
   protected readonly stageOptions: StageOption[] = [
     { label: 'Prospecting', value: 'Prospecting' },
     { label: 'Qualification', value: 'Qualification' },
@@ -115,6 +118,9 @@ export class OpportunitiesPage {
     private readonly router: Router,
     private readonly userAdminData: UserAdminDataService
   ) {
+    if (this.router.url.includes('/opportunities/pipeline')) {
+      this.viewMode = 'kanban';
+    }
     this.applyInitialQueryParams();
     this.load();
     this.loadOwners();
@@ -214,6 +220,22 @@ export class OpportunitiesPage {
     this.pageIndex = event.page ?? 0;
     this.rows = event.rows ?? this.rows;
     this.load();
+  }
+
+  protected getOpportunitiesByStage(stage: string): Opportunity[] {
+    return this.opportunities().filter(o => o.stage === stage);
+  }
+
+  protected stageColumnColor(stage: string): string {
+    switch (stage) {
+      case 'Prospecting': return '#3b82f6';
+      case 'Qualification': return '#8b5cf6';
+      case 'Proposal': return '#06b6d4';
+      case 'Negotiation': return '#f59e0b';
+      case 'Closed Won': return '#22c55e';
+      case 'Closed Lost': return '#ef4444';
+      default: return '#6b7280';
+    }
   }
 
   protected onExport() {

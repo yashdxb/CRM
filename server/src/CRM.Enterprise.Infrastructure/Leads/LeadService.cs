@@ -446,6 +446,127 @@ public sealed class LeadService : ILeadService
             detailReadiness);
     }
 
+    public async Task<LeadDispositionReportDto> GetDispositionReportAsync(CancellationToken cancellationToken = default)
+    {
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        var trendStart = DateTime.UtcNow.Date.AddDays(-7 * 7);
+
+        var leads = await _dbContext.Leads
+            .AsNoTracking()
+            .Include(l => l.Status)
+            .Select(l => new
+            {
+                l.Id,
+                Status = l.Status != null ? l.Status.Name : "New",
+                l.OwnerId,
+                l.Source,
+                l.DisqualifiedReason,
+                l.LossReason
+            })
+            .ToListAsync(cancellationToken);
+
+        var ownerIds = leads.Select(l => l.OwnerId).Distinct().ToList();
+        var ownerNames = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => ownerIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.FullName, cancellationToken);
+
+        var recycleEvents = await _dbContext.AuditEvents
+            .AsNoTracking()
+            .Where(a => a.EntityType == LeadEntityType && a.Action == "LeadRecycledToNurture")
+            .Select(a => new { a.EntityId, a.CreatedAtUtc })
+            .ToListAsync(cancellationToken);
+        var recycledLeadIds = recycleEvents.Select(e => e.EntityId).Distinct().ToHashSet();
+
+        var disqualifiedLeads = leads.Where(l => string.Equals(l.Status, LeadLifecycle.Disqualified, StringComparison.OrdinalIgnoreCase)).ToList();
+        var lostLeads = leads.Where(l => string.Equals(l.Status, LeadLifecycle.Lost, StringComparison.OrdinalIgnoreCase)).ToList();
+        var nurtureLeads = leads.Where(l => string.Equals(l.Status, LeadLifecycle.Nurture, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var disqualificationReasons = disqualifiedLeads
+            .GroupBy(l => string.IsNullOrWhiteSpace(l.DisqualifiedReason) ? "Unspecified" : l.DisqualifiedReason!.Trim())
+            .Select(g => new LeadDispositionReasonCountDto(g.Key, g.Count()))
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.Reason)
+            .Take(8)
+            .ToList();
+
+        var lossReasons = lostLeads
+            .GroupBy(l => string.IsNullOrWhiteSpace(l.LossReason) ? "Unspecified" : l.LossReason!.Trim())
+            .Select(g => new LeadDispositionReasonCountDto(g.Key, g.Count()))
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.Reason)
+            .Take(8)
+            .ToList();
+
+        var ownerRollups = leads
+            .GroupBy(l => new { l.OwnerId, OwnerName = ownerNames.GetValueOrDefault(l.OwnerId, "Unassigned") })
+            .Select(g => new LeadDispositionOwnerRollupDto(
+                g.Key.OwnerId,
+                g.Key.OwnerName,
+                g.Count(l => string.Equals(l.Status, LeadLifecycle.Disqualified, StringComparison.OrdinalIgnoreCase)),
+                g.Count(l => string.Equals(l.Status, LeadLifecycle.Lost, StringComparison.OrdinalIgnoreCase)),
+                g.Count(l => recycledLeadIds.Contains(l.Id))))
+            .Where(x => x.Disqualified > 0 || x.Lost > 0 || x.RecycledToNurture > 0)
+            .OrderByDescending(x => x.Disqualified + x.Lost + x.RecycledToNurture)
+            .ThenBy(x => x.OwnerName)
+            .Take(5)
+            .ToList();
+
+        var sourceRollups = leads
+            .GroupBy(l => string.IsNullOrWhiteSpace(l.Source) ? "Unspecified" : l.Source!.Trim())
+            .Select(g => new LeadDispositionSourceRollupDto(
+                g.Key,
+                g.Count(l => string.Equals(l.Status, LeadLifecycle.Disqualified, StringComparison.OrdinalIgnoreCase)),
+                g.Count(l => string.Equals(l.Status, LeadLifecycle.Lost, StringComparison.OrdinalIgnoreCase)),
+                g.Count(l => recycledLeadIds.Contains(l.Id))))
+            .Where(x => x.Disqualified > 0 || x.Lost > 0 || x.RecycledToNurture > 0)
+            .OrderByDescending(x => x.Disqualified + x.Lost + x.RecycledToNurture)
+            .ThenBy(x => x.Source)
+            .Take(5)
+            .ToList();
+
+        var trendHistory = await _dbContext.LeadStatusHistories
+            .AsNoTracking()
+            .Include(h => h.LeadStatus)
+            .Where(h => h.ChangedAtUtc >= trendStart)
+            .Select(h => new
+            {
+                h.ChangedAtUtc,
+                Status = h.LeadStatus != null ? h.LeadStatus.Name : null,
+                h.Notes
+            })
+            .ToListAsync(cancellationToken);
+
+        var trend = Enumerable.Range(0, 8)
+            .Select(offset => trendStart.Date.AddDays(offset * 7))
+            .Select(periodStart =>
+            {
+                var periodEnd = periodStart.AddDays(7);
+                var periodRows = trendHistory.Where(h => h.ChangedAtUtc >= periodStart && h.ChangedAtUtc < periodEnd);
+                return new LeadDispositionTrendPointDto(
+                    periodStart,
+                    periodRows.Count(h => string.Equals(h.Status, LeadLifecycle.Disqualified, StringComparison.OrdinalIgnoreCase)),
+                    periodRows.Count(h => string.Equals(h.Status, LeadLifecycle.Lost, StringComparison.OrdinalIgnoreCase)),
+                    periodRows.Count(h =>
+                        string.Equals(h.Status, LeadLifecycle.Nurture, StringComparison.OrdinalIgnoreCase)
+                        && !string.IsNullOrWhiteSpace(h.Notes)
+                        && h.Notes.Contains("Recycled from", StringComparison.OrdinalIgnoreCase)));
+            })
+            .ToList();
+
+        return new LeadDispositionReportDto(
+            new LeadDispositionTotalsDto(
+                disqualifiedLeads.Count,
+                lostLeads.Count,
+                nurtureLeads.Count,
+                recycleEvents.Count(e => e.CreatedAtUtc >= thirtyDaysAgo)),
+            disqualificationReasons,
+            lossReasons,
+            ownerRollups,
+            sourceRollups,
+            trend);
+    }
+
     public async Task<IReadOnlyList<LeadStatusHistoryDto>?> GetStatusHistoryAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var exists = await _dbContext.Leads

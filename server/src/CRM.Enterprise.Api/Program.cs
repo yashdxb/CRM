@@ -57,8 +57,9 @@ builder.Services.AddScoped<TenantConnectionStringHandler>();
 
 builder.Services.TryAddSingleton<IReportServiceConfiguration>(sp =>
 {
-    var reportsPath = Path.Combine(builder.Environment.ContentRootPath, "Reports");
-    var cachePath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "TelerikReportingCache");
+    var reportsPath = ResolveWritableReportsPath(builder.Environment);
+    var cachePath = ResolveWritableCachePath(builder.Environment);
+    Directory.CreateDirectory(reportsPath);
     Directory.CreateDirectory(cachePath);
 
     var httpContextAccessor = sp.GetRequiredService<IHttpContextAccessor>();
@@ -76,7 +77,7 @@ builder.Services.TryAddSingleton<IReportServiceConfiguration>(sp =>
 // Web Report Designer configuration
 builder.Services.TryAddSingleton<IReportDesignerServiceConfiguration>(_ =>
 {
-    var reportsPath = Path.Combine(builder.Environment.ContentRootPath, "Reports");
+    var reportsPath = ResolveWritableReportsPath(builder.Environment);
     Directory.CreateDirectory(reportsPath);
 
     return new ReportDesignerServiceConfiguration
@@ -112,6 +113,29 @@ var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     "https://northedgesystem.com",
     "https://www.northedgesystem.com"
 };
+
+
+static string ResolveWritableReportsPath(IHostEnvironment environment)
+{
+    var home = Environment.GetEnvironmentVariable("HOME");
+    if (!string.IsNullOrWhiteSpace(home) && !environment.IsDevelopment())
+    {
+        return Path.Combine(home, "site", "data", "CRM-Enterprise", "Reports");
+    }
+
+    return Path.Combine(environment.ContentRootPath, "Reports");
+}
+
+static string ResolveWritableCachePath(IHostEnvironment environment)
+{
+    var home = Environment.GetEnvironmentVariable("HOME");
+    if (!string.IsNullOrWhiteSpace(home) && !environment.IsDevelopment())
+    {
+        return Path.Combine(home, "site", "data", "CRM-Enterprise", "TelerikReportingCache");
+    }
+
+    return Path.Combine(environment.ContentRootPath, "App_Data", "TelerikReportingCache");
+}
 
 static bool IsAllowedOrigin(HashSet<string> origins, string? origin)
 {

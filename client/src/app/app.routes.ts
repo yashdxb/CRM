@@ -259,6 +259,13 @@ export const routes: Routes = [
           import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
       },
       {
+        path: 'opportunities/pipeline',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Deal Pipeline', icon: 'pi-objects-column' },
+        loadComponent: () =>
+          import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
+      },
+      {
         path: 'catalog',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Product & Service Catalog', icon: 'pi-tags' },

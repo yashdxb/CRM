@@ -11,6 +11,9 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { AccordionModule } from 'primeng/accordion';
 import { TreeModule } from 'primeng/tree';
 import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { FileUploadModule } from 'primeng/fileupload';
+import { ChartModule } from 'primeng/chart';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { Subject, map, of, switchMap, takeUntil } from 'rxjs';
@@ -37,6 +40,9 @@ import {
   PriceListListItem,
   ItemMasterListItem
 } from '../models/opportunity.model';
+import { Activity } from '../../activities/models/activity.model';
+import { ActivityDataService } from '../../activities/services/activity-data.service';
+import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext, readUserId, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
@@ -102,6 +108,8 @@ type DealPanelKey =
   | 'security-legal'
   | 'delivery-handoff'
   | 'onboarding'
+  | 'deal-activity'
+  | 'revenue-forecast'
   | 'review-thread';
 
 const DEAL_PANEL_ORDER: DealPanelKey[] = [
@@ -114,6 +122,8 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
   'security-legal',
   'delivery-handoff',
   'onboarding',
+  'deal-activity',
+  'revenue-forecast',
   'review-thread'
 ];
 
@@ -133,6 +143,9 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
     AccordionModule,
     TreeModule,
     DialogModule,
+    TableModule,
+    FileUploadModule,
+    ChartModule,
     InputGroupModule,
     InputGroupAddonModule,
     BreadcrumbsComponent
@@ -348,7 +361,69 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingOpportunity: Opportunity | null = null;
   private pendingAccountName: string | null = null;
+  protected recentDealActivities = signal<Activity[]>([]);
+  protected recentDealActivitiesLoading = signal(false);
+  protected dealAttachments = signal<AttachmentItem[]>([]);
+  protected dealAttachmentsLoading = signal(false);
+  protected dealAttachmentUploading = signal(false);
+  protected dealAttachmentDeletingIds = signal<string[]>([]);
 
+  /* ── Revenue Forecast Chart ─────────────────────────── */
+  protected forecastChartData = computed(() => {
+    const amount = Number(this.form?.amount ?? 0);
+    const probability = Number(this.form?.probability ?? 0);
+    const discountPct = Number(this.form?.discountPercent ?? 0);
+    const discountAmt = Number(this.form?.discountAmount ?? 0);
+
+    const discount = discountAmt > 0 ? discountAmt : (amount * discountPct / 100);
+    const netAmount = Math.max(amount - discount, 0);
+    const weightedValue = netAmount * (probability / 100);
+    const riskValue = netAmount - weightedValue;
+
+    return {
+      labels: ['Weighted Revenue', 'Risk Adjusted', 'Discount'],
+      datasets: [{
+        data: [weightedValue, riskValue, discount],
+        backgroundColor: ['rgba(102, 126, 234, 0.85)', 'rgba(156, 163, 175, 0.5)', 'rgba(239, 68, 68, 0.6)'],
+        borderColor: ['#667eea', '#9ca3af', '#ef4444'],
+        borderWidth: 2,
+        hoverBackgroundColor: ['rgba(102, 126, 234, 1)', 'rgba(156, 163, 175, 0.75)', 'rgba(239, 68, 68, 0.85)']
+      }]
+    };
+  });
+
+  protected forecastChartOptions: any = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { display: true, position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'circle', font: { size: 12 } } },
+      tooltip: {
+        callbacks: {
+          label: (ctx: any) => {
+            const val = ctx.parsed ?? 0;
+            return ` ${ctx.label}: ${val.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 })}`;
+          }
+        }
+      }
+    }
+  };
+
+  protected forecastMetrics = computed(() => {
+    const amount = Number(this.form?.amount ?? 0);
+    const probability = Number(this.form?.probability ?? 0);
+    const discountPct = Number(this.form?.discountPercent ?? 0);
+    const discountAmt = Number(this.form?.discountAmount ?? 0);
+
+    const discount = discountAmt > 0 ? discountAmt : (amount * discountPct / 100);
+    const netAmount = Math.max(amount - discount, 0);
+    const weightedValue = netAmount * (probability / 100);
+
+    return { amount, netAmount, weightedValue, discount, probability };
+  });
+
+  private readonly activityData = inject(ActivityDataService);
+  private readonly attachmentData = inject(AttachmentDataService);
   private readonly opportunityData = inject(OpportunityDataService);
   private readonly approvalService = inject(OpportunityApprovalService);
   private readonly checklistService = inject(OpportunityReviewChecklistService);
@@ -765,6 +840,8 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       'security-legal': { label: 'Security & Legal', icon: 'pi pi-shield' },
       'delivery-handoff': { label: 'Delivery & Handoff', icon: 'pi pi-truck' },
       onboarding: { label: 'Onboarding', icon: 'pi pi-list-check' },
+      'deal-activity': { label: 'Activity Timeline', icon: 'pi pi-clock' },
+      'revenue-forecast': { label: 'Revenue Forecast', icon: 'pi pi-chart-bar' },
       'review-thread': { label: 'Review / History', icon: 'pi pi-comments' }
     };
     return sectionMap[section];
@@ -1574,6 +1651,8 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.applyOpportunity(opp);
         this.loadQuoteWorkspace(id);
         this.loadProposalActivity(id);
+        this.loadRecentDealActivities(id);
+        this.loadDealAttachments(id);
         if (!this.accountOptions.length) {
           this.pendingOpportunity = opp;
         }
@@ -3179,5 +3258,99 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       return 'Handoff timeline is required before kickoff.';
     }
     return null;
+  }
+
+  /* ── Deal Activity Timeline ─────────────────────────────── */
+
+  private loadRecentDealActivities(opportunityId: string): void {
+    this.recentDealActivitiesLoading.set(true);
+    this.activityData
+      .search({ page: 1, pageSize: 8, relatedEntityType: 'Opportunity', relatedEntityId: opportunityId })
+      .subscribe({
+        next: (res) => {
+          this.recentDealActivities.set((res.items ?? []).slice(0, 8));
+          this.recentDealActivitiesLoading.set(false);
+        },
+        error: () => {
+          this.recentDealActivities.set([]);
+          this.recentDealActivitiesLoading.set(false);
+        }
+      });
+  }
+
+  protected activityTypeIcon(type: Activity['type']): string {
+    switch (type) {
+      case 'Meeting': return 'pi pi-users';
+      case 'Call':    return 'pi pi-phone';
+      case 'Email':   return 'pi pi-envelope';
+      case 'Task':    return 'pi pi-check-square';
+      case 'Note':
+      default:        return 'pi pi-file-edit';
+    }
+  }
+
+  protected activityTimelineDateLabel(item: Activity): string | undefined {
+    return item.completedDateUtc ?? item.dueDateUtc ?? item.createdAtUtc;
+  }
+
+  protected openActivityRecord(activityId: string): void {
+    void this.router.navigate(['/app/activities', activityId, 'edit']);
+  }
+
+  protected logDealActivity(): void {
+    void this.router.navigate(['/app/activities']);
+  }
+
+  /* ── Deal Attachments ───────────────────────────────────── */
+
+  private loadDealAttachments(opportunityId: string): void {
+    this.dealAttachmentsLoading.set(true);
+    this.attachmentData.list('Opportunity', opportunityId).subscribe({
+      next: (items) => {
+        this.dealAttachments.set(items);
+        this.dealAttachmentsLoading.set(false);
+      },
+      error: () => {
+        this.dealAttachments.set([]);
+        this.dealAttachmentsLoading.set(false);
+      }
+    });
+  }
+
+  protected onDealAttachmentUpload(event: { files: File[] }): void {
+    const file = event.files?.[0];
+    if (!file || !this.editingId) return;
+
+    this.dealAttachmentUploading.set(true);
+    this.attachmentData.upload(file, 'Opportunity', this.editingId).subscribe({
+      next: (item) => {
+        this.dealAttachments.update((list) => [...list, item]);
+        this.dealAttachmentUploading.set(false);
+        this.toastService.show('success', 'File uploaded successfully.');
+      },
+      error: () => {
+        this.dealAttachmentUploading.set(false);
+        this.toastService.show('error', 'File upload failed.');
+      }
+    });
+  }
+
+  protected deleteDealAttachment(item: AttachmentItem): void {
+    this.dealAttachmentDeletingIds.update((ids) => [...ids, item.id]);
+    this.attachmentData.delete(item.id).subscribe({
+      next: () => {
+        this.dealAttachments.update((list) => list.filter((a) => a.id !== item.id));
+        this.dealAttachmentDeletingIds.update((ids) => ids.filter((id) => id !== item.id));
+        this.toastService.show('success', 'File deleted.');
+      },
+      error: () => {
+        this.dealAttachmentDeletingIds.update((ids) => ids.filter((id) => id !== item.id));
+        this.toastService.show('error', 'Failed to delete file.');
+      }
+    });
+  }
+
+  protected downloadDealAttachment(item: AttachmentItem): void {
+    window.open(this.attachmentData.downloadUrl(item.id), '_blank');
   }
 }

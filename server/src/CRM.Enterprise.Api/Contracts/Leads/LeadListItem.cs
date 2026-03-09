@@ -62,4 +62,16 @@ public record LeadListItem(
     string? ConversationScoreLabel,
     IEnumerable<string> ConversationScoreReasons,
     DateTime? ConversationScoreUpdatedAtUtc,
-    bool ConversationSignalAvailable);
+    bool ConversationSignalAvailable,
+    LeadConversionReadinessItem? ConversionReadiness);
+
+public sealed record LeadConversionReadinessItem(
+    int Score,
+    string Label,
+    string Summary,
+    int QualificationSignalScore,
+    int? ConversationSignalScore,
+    bool ConversationSignalAvailable,
+    bool ManagerReviewRecommended,
+    string? PrimaryGap,
+    IEnumerable<string> Reasons);

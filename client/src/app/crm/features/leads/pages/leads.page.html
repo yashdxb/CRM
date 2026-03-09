@@ -227,6 +227,111 @@
       </div>
     </section>
 
+    <section class="disposition-strip glass-card" *ngIf="dispositionReport() as report">
+      <div class="disposition-strip__header">
+        <div>
+          <span class="coach-queue-strip__eyebrow">Disposition Reporting</span>
+          <h2 class="coach-queue-strip__title">Negative-path outcomes and nurture recovery</h2>
+        </div>
+        <span class="coach-queue-strip__summary">Tenant-wide management summary for disqualified, lost, and recycled leads.</span>
+      </div>
+
+      <div class="disposition-strip__totals">
+        <div class="disposition-total">
+          <span class="disposition-total__label">Disqualified</span>
+          <strong class="disposition-total__value">{{ report.totals.disqualified }}</strong>
+        </div>
+        <div class="disposition-total">
+          <span class="disposition-total__label">Lost</span>
+          <strong class="disposition-total__value">{{ report.totals.lost }}</strong>
+        </div>
+        <div class="disposition-total">
+          <span class="disposition-total__label">In nurture</span>
+          <strong class="disposition-total__value">{{ report.totals.inNurture }}</strong>
+        </div>
+        <div class="disposition-total disposition-total--accent">
+          <span class="disposition-total__label">Recycled last 30 days</span>
+          <strong class="disposition-total__value">{{ report.totals.recycledLast30Days }}</strong>
+        </div>
+      </div>
+
+      <div class="disposition-strip__grid">
+        <section class="disposition-card">
+          <h3 class="disposition-card__title">Top disqualification reasons</h3>
+          <div class="disposition-rank-list" *ngIf="report.disqualificationReasons.length; else noDisqualificationReasons">
+            <div class="disposition-rank" *ngFor="let item of report.disqualificationReasons">
+              <span class="disposition-rank__label">{{ item.reason }}</span>
+              <strong class="disposition-rank__value">{{ item.count }}</strong>
+            </div>
+          </div>
+          <ng-template #noDisqualificationReasons>
+            <p class="disposition-card__empty">No disqualification reasons captured yet.</p>
+          </ng-template>
+        </section>
+
+        <section class="disposition-card">
+          <h3 class="disposition-card__title">Top loss reasons</h3>
+          <div class="disposition-rank-list" *ngIf="report.lossReasons.length; else noLossReasons">
+            <div class="disposition-rank" *ngFor="let item of report.lossReasons">
+              <span class="disposition-rank__label">{{ item.reason }}</span>
+              <strong class="disposition-rank__value">{{ item.count }}</strong>
+            </div>
+          </div>
+          <ng-template #noLossReasons>
+            <p class="disposition-card__empty">No loss reasons captured yet.</p>
+          </ng-template>
+        </section>
+
+        <section class="disposition-card">
+          <h3 class="disposition-card__title">Owner rollup</h3>
+          <div class="disposition-rank-list" *ngIf="report.ownerRollups.length; else noOwnerRollups">
+            <div class="disposition-rank disposition-rank--owner" *ngFor="let item of report.ownerRollups">
+              <span class="disposition-rank__label">{{ item.ownerName }}</span>
+              <div class="coach-queue-owner__chips">
+                <span class="coach-mini-chip">{{ item.disqualified }} disq</span>
+                <span class="coach-mini-chip">{{ item.lost }} lost</span>
+                <span class="coach-mini-chip">{{ item.recycledToNurture }} recycled</span>
+              </div>
+            </div>
+          </div>
+          <ng-template #noOwnerRollups>
+            <p class="disposition-card__empty">No owner disposition activity yet.</p>
+          </ng-template>
+        </section>
+
+        <section class="disposition-card">
+          <h3 class="disposition-card__title">Source rollup</h3>
+          <div class="disposition-rank-list" *ngIf="report.sourceRollups.length; else noSourceRollups">
+            <div class="disposition-rank disposition-rank--owner" *ngFor="let item of report.sourceRollups">
+              <span class="disposition-rank__label">{{ item.source }}</span>
+              <div class="coach-queue-owner__chips">
+                <span class="coach-mini-chip">{{ item.disqualified }} disq</span>
+                <span class="coach-mini-chip">{{ item.lost }} lost</span>
+                <span class="coach-mini-chip">{{ item.recycledToNurture }} recycled</span>
+              </div>
+            </div>
+          </div>
+          <ng-template #noSourceRollups>
+            <p class="disposition-card__empty">No source trends yet.</p>
+          </ng-template>
+        </section>
+      </div>
+
+      <section class="disposition-trend" *ngIf="report.trend.length">
+        <h3 class="disposition-card__title">8-week trend</h3>
+        <div class="disposition-trend__bars">
+          <div class="disposition-trend__bar" *ngFor="let item of report.trend">
+            <div class="disposition-trend__stack">
+              <span class="disposition-trend__segment disposition-trend__segment--disqualified" [style.height.%]="(item.disqualified / dispositionTrendMax()) * 100"></span>
+              <span class="disposition-trend__segment disposition-trend__segment--lost" [style.height.%]="(item.lost / dispositionTrendMax()) * 100"></span>
+              <span class="disposition-trend__segment disposition-trend__segment--recycled" [style.height.%]="(item.recycledToNurture / dispositionTrendMax()) * 100"></span>
+            </div>
+            <span class="disposition-trend__label">{{ dispositionTrendLabel(item.periodStartUtc) }}</span>
+          </div>
+        </div>
+      </section>
+    </section>
+
     <!-- Kanban View -->
     <section class="kanban-board" *ngIf="viewMode === 'kanban'">
       <div class="kanban-column" *ngFor="let status of kanbanStatuses">

@@ -121,7 +121,11 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
             .Where(r => !r.IsDeleted
                         && r.DueAtUtc.HasValue
                         && r.DueAtUtc < nowUtc
-                        && (r.Status == null || !ClosedStatuses.Contains(r.Status)))
+                        && (r.Status == null
+                            || (r.Status != "Approved"
+                                && r.Status != "Rejected"
+                                && r.Status != "Cancelled"
+                                && r.Status != "Expired")))
             .Select(r => r.Id)
             .ToListAsync(cancellationToken);
 

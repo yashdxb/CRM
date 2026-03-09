@@ -1704,6 +1704,243 @@
               </p-accordion-content>
             </p-accordion-panel>
 
+            <!-- Deal Activity Timeline -->
+            <p-accordion-panel value="deal-activity" [attr.data-deal-section]="'deal-activity'">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-clock"></i>
+                    Deal Activity Timeline
+                  </span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info">
+                      {{ recentDealActivities().length }} activities
+                    </span>
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-card opportunity-accordion-card deal-activity-section">
+                  <div class="deal-activity-timeline" *ngIf="isEditMode()">
+                    <div class="deal-activity-timeline__header">
+                      <h3>
+                        <i class="pi pi-history"></i>
+                        Recent Activities
+                      </h3>
+                      <button
+                        type="button"
+                        class="action-btn action-btn--add action-btn--sm"
+                        (click)="logDealActivity()"
+                      >
+                        <span class="action-btn__icon"><i class="pi pi-external-link"></i></span>
+                        <span>Open Activities</span>
+                      </button>
+                    </div>
+
+                    <div class="deal-activity-timeline__loading" *ngIf="recentDealActivitiesLoading()">
+                      <i class="pi pi-spin pi-spinner"></i> Loading activities…
+                    </div>
+
+                    <div class="deal-activity-timeline__list" *ngIf="!recentDealActivitiesLoading() && recentDealActivities().length; else noDealActivities">
+                      <button
+                        type="button"
+                        class="deal-activity-timeline__item"
+                        *ngFor="let activity of recentDealActivities()"
+                        (click)="openActivityRecord(activity.id)"
+                      >
+                        <div class="deal-activity-timeline__icon" [attr.data-type]="activity.type">
+                          <i class="pi" [ngClass]="activityTypeIcon(activity.type)"></i>
+                        </div>
+                        <div class="deal-activity-timeline__content">
+                          <div class="deal-activity-timeline__top">
+                            <span class="deal-activity-timeline__subject">{{ activity.subject }}</span>
+                            <span class="deal-activity-timeline__status" [attr.data-status]="activity.status">{{ activity.status }}</span>
+                          </div>
+                          <div class="deal-activity-timeline__meta">
+                            <span>{{ activity.type }}</span>
+                            <span *ngIf="activity.ownerName">• {{ activity.ownerName }}</span>
+                            <span *ngIf="activityTimelineDateLabel(activity)">• {{ activityTimelineDateLabel(activity) | date:'medium' }}</span>
+                          </div>
+                          <div class="deal-activity-timeline__outcome" *ngIf="activity.outcome">{{ activity.outcome }}</div>
+                        </div>
+                      </button>
+                    </div>
+
+                    <ng-template #noDealActivities>
+                      <div class="deal-activity-empty" *ngIf="!recentDealActivitiesLoading()">
+                        <i class="pi pi-inbox"></i>
+                        <p>No activities logged for this deal yet.</p>
+                        <span class="deal-activity-empty__hint">Activities from the Activities module that reference this opportunity will appear here.</span>
+                      </div>
+                    </ng-template>
+                  </div>
+
+                  <div class="deal-activity-empty" *ngIf="!isEditMode()">
+                    <i class="pi pi-inbox"></i>
+                    <p>Save the deal first to track activities.</p>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+
+            <!-- ── Deal Attachments ─────────────────────────────── -->
+            <p-accordion-panel value="deal-attachments" [attr.data-deal-section]="'deal-attachments'">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-paperclip"></i>
+                    File Attachments
+                  </span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info">
+                      {{ dealAttachments().length }} file{{ dealAttachments().length !== 1 ? 's' : '' }}
+                    </span>
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-card opportunity-accordion-card deal-attachments-section">
+                  <div class="deal-attachments" *ngIf="isEditMode()">
+                    <!-- Upload area -->
+                    <div class="deal-attachments__upload">
+                      <p-fileUpload
+                        mode="basic"
+                        [customUpload]="true"
+                        [auto]="true"
+                        chooseLabel="Attach File"
+                        chooseIcon="pi pi-upload"
+                        (uploadHandler)="onDealAttachmentUpload($event)"
+                        [disabled]="dealAttachmentUploading()"
+                      ></p-fileUpload>
+                      <span class="deal-attachments__upload-hint" *ngIf="dealAttachmentUploading()">
+                        <i class="pi pi-spinner pi-spin"></i> Uploading…
+                      </span>
+                    </div>
+
+                    <!-- Loading state -->
+                    <div class="deal-attachments__loading" *ngIf="dealAttachmentsLoading()">
+                      <i class="pi pi-spinner pi-spin"></i> Loading attachments…
+                    </div>
+
+                    <!-- File list -->
+                    <p-table
+                      *ngIf="!dealAttachmentsLoading() && dealAttachments().length"
+                      [value]="dealAttachments()"
+                      [rows]="10"
+                      styleClass="p-datatable-sm"
+                    >
+                      <ng-template pTemplate="header">
+                        <tr>
+                          <th>File Name</th>
+                          <th>Size</th>
+                          <th>Uploaded</th>
+                          <th style="width: 100px; text-align: center;">Actions</th>
+                        </tr>
+                      </ng-template>
+                      <ng-template pTemplate="body" let-item>
+                        <tr>
+                          <td>
+                            <div class="deal-attachment-name">
+                              <i class="pi pi-file"></i>
+                              <span>{{ item.fileName }}</span>
+                            </div>
+                          </td>
+                          <td>{{ item.size | number:'1.0-0' }} KB</td>
+                          <td>{{ item.createdAtUtc | date:'mediumDate' }}</td>
+                          <td class="deal-attachment-actions">
+                            <div class="row-actions">
+                              <button type="button" class="row-action-btn row-action-btn--view" title="Download" (click)="downloadDealAttachment(item)">
+                                <i class="pi pi-download"></i>
+                              </button>
+                              <button
+                                type="button"
+                                class="row-action-btn row-action-btn--delete"
+                                title="Delete"
+                                (click)="deleteDealAttachment(item)"
+                                [disabled]="dealAttachmentDeletingIds().includes(item.id)"
+                              >
+                                <i class="pi" [ngClass]="dealAttachmentDeletingIds().includes(item.id) ? 'pi-spinner pi-spin' : 'pi-trash'"></i>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      </ng-template>
+                    </p-table>
+
+                    <!-- Empty state -->
+                    <div class="deal-attachments__empty" *ngIf="!dealAttachmentsLoading() && !dealAttachments().length">
+                      <i class="pi pi-cloud-upload"></i>
+                      <p>No files attached yet.</p>
+                      <span class="deal-attachments__empty-hint">Upload contracts, proposals, or other documents related to this deal.</span>
+                    </div>
+                  </div>
+
+                  <div class="deal-attachments__empty" *ngIf="!isEditMode()">
+                    <i class="pi pi-inbox"></i>
+                    <p>Save the deal first to attach files.</p>
+                  </div>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+
+            <!-- ── Revenue Forecast ──────────────────────────────── -->
+            <p-accordion-panel value="revenue-forecast" [attr.data-deal-section]="'revenue-forecast'">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-chart-bar"></i>
+                    Revenue Forecast
+                  </span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info">
+                      {{ forecastMetrics().weightedValue | currency:form.currency:'symbol':'1.0-0' }}
+                    </span>
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-card opportunity-accordion-card revenue-forecast-section">
+                  <div class="revenue-forecast" *ngIf="(form?.amount ?? 0) > 0; else noForecastData">
+                    <!-- Metric summary cards -->
+                    <div class="forecast-metrics">
+                      <div class="forecast-metric forecast-metric--primary">
+                        <span class="forecast-metric__label">Deal Value</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().amount | currency:form.currency:'symbol':'1.0-0' }}</strong>
+                      </div>
+                      <div class="forecast-metric forecast-metric--success">
+                        <span class="forecast-metric__label">Net Amount</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().netAmount | currency:form.currency:'symbol':'1.0-0' }}</strong>
+                      </div>
+                      <div class="forecast-metric forecast-metric--info">
+                        <span class="forecast-metric__label">Weighted Revenue</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().weightedValue | currency:form.currency:'symbol':'1.0-0' }}</strong>
+                      </div>
+                      <div class="forecast-metric forecast-metric--warn" *ngIf="forecastMetrics().discount > 0">
+                        <span class="forecast-metric__label">Discount</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().discount | currency:form.currency:'symbol':'1.0-0' }}</strong>
+                      </div>
+                      <div class="forecast-metric forecast-metric--neutral">
+                        <span class="forecast-metric__label">Win Probability</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().probability }}%</strong>
+                      </div>
+                    </div>
+
+                    <!-- Doughnut chart -->
+                    <div class="forecast-chart-container">
+                      <p-chart type="doughnut" [data]="forecastChartData()" [options]="forecastChartOptions" height="260px"></p-chart>
+                    </div>
+                  </div>
+
+                  <ng-template #noForecastData>
+                    <div class="forecast-empty">
+                      <i class="pi pi-chart-bar"></i>
+                      <p>Enter a deal amount to see the revenue forecast.</p>
+                    </div>
+                  </ng-template>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+
             <p-accordion-panel value="review-thread" *ngIf="isSectionVisible('review-thread')" [disabled]="isSectionLocked('review-thread')" [attr.data-deal-section]="'review-thread'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">

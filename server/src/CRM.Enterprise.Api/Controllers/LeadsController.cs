@@ -71,6 +71,36 @@ public class LeadsController : ControllerBase
         return Ok(ToApiItem(lead));
     }
 
+    [HttpGet("disposition-report")]
+    public async Task<ActionResult<LeadDispositionReportResponse>> GetDispositionReport(CancellationToken cancellationToken)
+    {
+        var report = await _leadService.GetDispositionReportAsync(cancellationToken);
+        return Ok(new LeadDispositionReportResponse(
+            new LeadDispositionTotalsItem(
+                report.Totals.Disqualified,
+                report.Totals.Lost,
+                report.Totals.InNurture,
+                report.Totals.RecycledLast30Days),
+            report.DisqualificationReasons.Select(item => new LeadDispositionReasonCountItem(item.Reason, item.Count)),
+            report.LossReasons.Select(item => new LeadDispositionReasonCountItem(item.Reason, item.Count)),
+            report.OwnerRollups.Select(item => new LeadDispositionOwnerRollupItem(
+                item.OwnerId,
+                item.OwnerName,
+                item.Disqualified,
+                item.Lost,
+                item.RecycledToNurture)),
+            report.SourceRollups.Select(item => new LeadDispositionSourceRollupItem(
+                item.Source,
+                item.Disqualified,
+                item.Lost,
+                item.RecycledToNurture)),
+            report.Trend.Select(item => new LeadDispositionTrendPointItem(
+                item.PeriodStartUtc,
+                item.Disqualified,
+                item.Lost,
+                item.RecycledToNurture))));
+    }
+
     [HttpGet("{id:guid}/status-history")]
     public async Task<ActionResult<IEnumerable<LeadStatusHistoryItem>>> GetLeadStatusHistory(Guid id, CancellationToken cancellationToken)
     {
@@ -458,7 +488,17 @@ public class LeadsController : ControllerBase
             dto.ConversationScoreLabel,
             dto.ConversationScoreReasons,
             dto.ConversationScoreUpdatedAtUtc,
-            dto.ConversationSignalAvailable);
+            dto.ConversationSignalAvailable,
+            new LeadConversionReadinessItem(
+                dto.ConversionReadiness.Score,
+                dto.ConversionReadiness.Label,
+                dto.ConversionReadiness.Summary,
+                dto.ConversionReadiness.QualificationSignalScore,
+                dto.ConversionReadiness.ConversationSignalScore,
+                dto.ConversionReadiness.ConversationSignalAvailable,
+                dto.ConversionReadiness.ManagerReviewRecommended,
+                dto.ConversionReadiness.PrimaryGap,
+                dto.ConversionReadiness.Reasons));
     }
 
     private async Task PublishLeadRealtimeAsync(string action, Guid leadId, string? status, CancellationToken cancellationToken)

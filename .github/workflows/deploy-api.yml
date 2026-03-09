@@ -44,7 +44,13 @@ jobs:
       - name: Publish
         run: |
           rm -rf ./artifacts/publish
-          dotnet publish server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj --configuration Release --output ./artifacts/publish --no-build
+          dotnet publish server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            /p:UseAppHost=true \
+            --output ./artifacts/publish
+          chmod +x ./artifacts/publish/CRM.Enterprise.Api
 
       - name: Azure Login
         uses: azure/login@v2
@@ -56,3 +62,11 @@ jobs:
         with:
           app-name: crm-enterprise-api-dev-01122345
           package: ./artifacts/publish
+
+      - name: Configure Azure Web App runtime and startup command
+        run: |
+          az webapp config set \
+            --resource-group rg-crm-dev-ca \
+            --name crm-enterprise-api-dev-01122345 \
+            --linux-fx-version "DOTNETCORE|10.0" \
+            --startup-file "./CRM.Enterprise.Api"

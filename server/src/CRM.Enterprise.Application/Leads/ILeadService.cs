@@ -6,6 +6,7 @@ public interface ILeadService
 {
     Task<LeadSearchResultDto> SearchAsync(LeadSearchRequest request, CancellationToken cancellationToken = default);
     Task<LeadListItemDto?> GetAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<LeadDispositionReportDto> GetDispositionReportAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeadStatusHistoryDto>?> GetStatusHistoryAsync(Guid id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeadAuditEventDto>?> GetAuditAsync(Guid id, CancellationToken cancellationToken = default);
     Task<LeadAiScoreResultDto?> ScoreAsync(Guid id, CancellationToken cancellationToken = default);

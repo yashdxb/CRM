@@ -314,6 +314,16 @@
   - `86e041wyx` | `done` | Opportunity onboarding workflow | tags: -
   - `86e041wyq` | `done` | Opportunity pipeline stages | tags: -
   - `86e041wyr` | `done` | Opportunity quotes (CPQ) | tags: -
+  - `86e08y0wt` | `backlog` | Deal Pipeline Kanban Board View | tags: now, module:Opportunities
+  - `86e08y0x6` | `backlog` | Deal Activity Timeline | tags: now, module:Opportunities
+  - `86e08y0xn` | `backlog` | Deal File Attachments | tags: now, module:Opportunities
+  - `86e08y0xw` | `backlog` | Deal Revenue Forecast Chart | tags: now, module:Opportunities
+  - `86e08y0y6` | `backlog` | Deal Health / AI Score | tags: next, module:Opportunities
+  - `86e08y0yu` | `backlog` | Deal 360 Detail View Page | tags: next, module:Opportunities
+  - `86e08y0z6` | `backlog` | Deal Contact Roles / Stakeholders | tags: next, module:Opportunities
+  - `86e08y0zx` | `backlog` | Deal Aging / Stage Duration Visualization | tags: next, module:Opportunities
+  - `86e08y10h` | `backlog` | Deal Competitor Tracking | tags: later, module:Opportunities
+  - `86e08y10z` | `backlog` | Deal List Page Polish and Bulk Actions | tags: later, module:Opportunities
 
 ### Platform Infrastructure (`86e041x34`)
 - Status: `done`
