@@ -5,13 +5,14 @@
   overflow: hidden !important;
   pointer-events: auto !important;
 
-  > * {
+  > *:not(.animated-orb):not(.grid-pattern) {
     position: relative;
     z-index: 1;
   }
 
   .animated-orb,
   .grid-pattern {
+    position: absolute !important;
     pointer-events: none;
     z-index: 0;
   }
