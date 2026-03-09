@@ -129,9 +129,83 @@ public sealed record RecommendationPilotMetricsDto(
     DateTime WindowStartUtc,
     DateTime WindowEndUtc);
 
+// ── Campaign Email DTOs ────────────────────────────────────────
+
+public sealed record CampaignEmailListItemDto(
+    Guid Id,
+    Guid CampaignId,
+    string CampaignName,
+    string Subject,
+    string Status,
+    string FromName,
+    DateTime? ScheduledAtUtc,
+    DateTime? SentAtUtc,
+    int RecipientCount,
+    int SentCount,
+    int DeliveredCount,
+    int OpenCount,
+    int ClickCount,
+    int BounceCount,
+    int UnsubscribeCount,
+    DateTime CreatedAtUtc,
+    DateTime? UpdatedAtUtc);
+
+public sealed record CampaignEmailSearchResultDto(IReadOnlyList<CampaignEmailListItemDto> Items, int Total);
+
+public sealed record CampaignEmailDetailDto(
+    Guid Id,
+    Guid CampaignId,
+    string CampaignName,
+    Guid? TemplateId,
+    string Subject,
+    string HtmlBody,
+    string? TextBody,
+    string FromName,
+    string? ReplyTo,
+    string Status,
+    DateTime? ScheduledAtUtc,
+    DateTime? SentAtUtc,
+    int RecipientCount,
+    int SentCount,
+    int DeliveredCount,
+    int OpenCount,
+    int ClickCount,
+    int BounceCount,
+    int UnsubscribeCount,
+    DateTime CreatedAtUtc,
+    DateTime? UpdatedAtUtc);
+
+public sealed record CampaignEmailRecipientDto(
+    Guid Id,
+    string Email,
+    string? Name,
+    string Status,
+    string? SkipReason,
+    DateTime? SentAtUtc,
+    DateTime? DeliveredAtUtc,
+    DateTime? OpenedAtUtc,
+    DateTime? ClickedAtUtc);
+
+public sealed record CampaignEmailRecipientSearchResultDto(IReadOnlyList<CampaignEmailRecipientDto> Items, int Total);
+
+// ── Email Preference DTOs ──────────────────────────────────────
+
+public sealed record EmailPreferenceDto(
+    Guid Id,
+    string Email,
+    string EntityType,
+    Guid EntityId,
+    bool IsSubscribed,
+    DateTime? UnsubscribedAtUtc,
+    string? UnsubscribeReason,
+    string UnsubscribeSource,
+    int HardBounceCount,
+    DateTime? LastBounceAtUtc);
+
 public sealed record MarketingOperationResult<T>(bool Success, T? Value, string? Error, bool NotFound = false)
 {
     public static MarketingOperationResult<T> Ok(T value) => new(true, value, null, false);
     public static MarketingOperationResult<T> Fail(string error) => new(false, default, error, false);
     public static MarketingOperationResult<T> NotFoundResult() => new(false, default, null, true);
+    public static MarketingOperationResult<T> NotFoundWithError(string error) => new(false, default, error, true);
 }

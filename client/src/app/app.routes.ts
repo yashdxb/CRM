@@ -39,6 +39,11 @@ export const routes: Routes = [
       import('./public/supplier/supplier-onboarding.page').then((m) => m.SupplierOnboardingPage)
   },
   {
+    path: 'unsubscribe',
+    loadComponent: () =>
+      import('./public/email-unsubscribe/email-unsubscribe.page').then((m) => m.EmailUnsubscribePage)
+  },
+  {
     path: 'app',
     component: ShellComponent,
     canActivate: [authGuard],
@@ -328,6 +333,20 @@ export const routes: Routes = [
         data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Campaign Emails', icon: 'pi-send' },
         loadComponent: () =>
           import('./crm/features/marketing/pages/campaign-emails.page').then((m) => m.CampaignEmailsPage)
+      },
+      {
+        path: 'marketing/emails/new',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Compose Email', icon: 'pi-plus' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaign-email-form.page').then((m) => m.CampaignEmailFormPage)
+      },
+      {
+        path: 'marketing/emails/:id/edit',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Edit Email', icon: 'pi-pencil' },
+        loadComponent: () =>
+          import('./crm/features/marketing/pages/campaign-email-form.page').then((m) => m.CampaignEmailFormPage)
       },
       {
         path: 'marketing/emails/:id',

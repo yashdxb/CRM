@@ -12,6 +12,7 @@ public interface ILeadService
     Task<LeadOperationResult<LeadListItemDto>> CreateAsync(LeadUpsertRequest request, LeadActor actor, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<bool>> UpdateAsync(Guid id, LeadUpsertRequest request, LeadActor actor, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<LeadConversionResultDto>> ConvertAsync(Guid id, LeadConversionRequest request, LeadActor actor, CancellationToken cancellationToken = default);
+    Task<LeadOperationResult<bool>> RecycleToNurtureAsync(Guid id, LeadActor actor, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<bool>> DeleteAsync(Guid id, LeadActor actor, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<bool>> UpdateOwnerAsync(Guid id, Guid ownerId, LeadActor actor, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<bool>> UpdateStatusAsync(Guid id, string status, LeadActor actor, CancellationToken cancellationToken = default);

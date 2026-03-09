@@ -10,23 +10,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { MarketingDataService } from '../services/marketing-data.service';
-
-interface CampaignEmailRow {
-  id: string;
-  campaignId: string;
-  campaignName: string;
-  subject: string;
-  recipientCount: number;
-  sentCount: number;
-  openCount: number;
-  clickCount: number;
-  bounceCount: number;
-  openRate: number;
-  clickRate: number;
-  status: 'Draft' | 'Scheduled' | 'Sending' | 'Sent' | 'Failed';
-  scheduledAt?: string;
-  sentAt?: string;
-}
+import { CampaignEmailListItem } from '../models/marketing.model';
 
 @Component({
   selector: 'app-campaign-emails-page',
@@ -55,7 +39,8 @@ export class CampaignEmailsPage {
     { label: 'Failed', value: 'Failed' }
   ];
 
-  protected readonly emails = signal<CampaignEmailRow[]>([]);
+  protected readonly emails = signal<CampaignEmailListItem[]>([]);
+  protected readonly totalRecords = signal(0);
   protected readonly loading = signal(false);
   protected statusFilter = signal('');
   protected searchText = signal('');
@@ -103,71 +88,22 @@ export class CampaignEmailsPage {
 
   protected load(): void {
     this.loading.set(true);
-    // Mock data for now - will be replaced with API call
-    setTimeout(() => {
-      this.emails.set([
-        {
-          id: '1',
-          campaignId: 'c1',
-          campaignName: 'Spring Product Launch',
-          subject: 'Introducing Our New Product Line',
-          recipientCount: 5000,
-          sentCount: 4850,
-          openCount: 1940,
-          clickCount: 485,
-          bounceCount: 150,
-          openRate: 40,
-          clickRate: 10,
-          status: 'Sent',
-          sentAt: '2026-02-28T10:00:00Z'
-        },
-        {
-          id: '2',
-          campaignId: 'c1',
-          campaignName: 'Spring Product Launch',
-          subject: 'Follow-up: Special Offer Inside',
-          recipientCount: 4850,
-          sentCount: 4700,
-          openCount: 1645,
-          clickCount: 376,
-          bounceCount: 150,
-          openRate: 35,
-          clickRate: 8,
-          status: 'Sent',
-          sentAt: '2026-03-01T10:00:00Z'
-        },
-        {
-          id: '3',
-          campaignId: 'c2',
-          campaignName: 'Customer Appreciation Week',
-          subject: 'Thank You for Being a Valued Customer',
-          recipientCount: 2500,
-          sentCount: 0,
-          openCount: 0,
-          clickCount: 0,
-          bounceCount: 0,
-          openRate: 0,
-          clickRate: 0,
-          status: 'Scheduled',
-          scheduledAt: '2026-03-05T09:00:00Z'
-        },
-        {
-          id: '4',
-          campaignId: 'c3',
-          campaignName: 'Q2 Newsletter',
-          subject: 'What\'s New This Quarter',
-          recipientCount: 8000,
-          sentCount: 0,
-          openCount: 0,
-          clickCount: 0,
-          bounceCount: 0,
-          openRate: 0,
-          clickRate: 0,
-          status: 'Draft'
-        }
-      ]);
-      this.loading.set(false);
-    }, 500);
+    this.data.searchEmails({
+      status: this.statusFilter() || undefined,
+      search: this.searchText()?.trim() || undefined,
+      page: 1,
+      pageSize: 50
+    }).subscribe({
+      next: (res) => {
+        this.emails.set(res.items);
+        this.totalRecords.set(res.total);
+        this.loading.set(false);
+      },
+      error: () => {
+        this.toast.show('error', 'Failed to load campaign emails');
+        this.loading.set(false);
+      }
+    });
   }
 
   protected viewCampaign(campaignId: string): void {
@@ -202,5 +138,9 @@ export class CampaignEmailsPage {
 
   protected formatNumber(num: number): string {
     return num.toLocaleString();
+  }
+
+  protected computeRate(count: number, total: number): number {
+    return total > 0 ? Math.round((count / total) * 100) : 0;
   }
 }

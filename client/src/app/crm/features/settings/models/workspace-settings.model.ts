@@ -11,6 +11,7 @@ export interface WorkspaceSettings {
   approvalApproverRole?: string | null;
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy: QualificationPolicy;
+  leadDispositionPolicy: LeadDispositionPolicy;
   assistantActionScoringPolicy: AssistantActionScoringPolicy;
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
@@ -29,6 +30,7 @@ export interface UpdateWorkspaceSettingsRequest {
   approvalApproverRole?: string | null;
   approvalWorkflowPolicy?: ApprovalWorkflowPolicy | null;
   qualificationPolicy?: QualificationPolicy | null;
+  leadDispositionPolicy?: LeadDispositionPolicy | null;
   assistantActionScoringPolicy?: AssistantActionScoringPolicy | null;
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
@@ -125,4 +127,9 @@ export interface QualificationExposureWeight {
 export interface QualificationLeadDataWeight {
   key: string;
   weight: number;
+}
+
+export interface LeadDispositionPolicy {
+  disqualificationReasons: string[];
+  lossReasons: string[];
 }

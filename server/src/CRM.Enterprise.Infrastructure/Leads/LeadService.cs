@@ -1205,6 +1205,50 @@ public sealed class LeadService : ILeadService
         return LeadOperationResult<LeadConversionResultDto>.Ok(new LeadConversionResultDto(lead.Id, accountId, contactId, opportunityId));
     }
 
+    public async Task<LeadOperationResult<bool>> RecycleToNurtureAsync(Guid id, LeadActor actor, CancellationToken cancellationToken = default)
+    {
+        var lead = await _dbContext.Leads
+            .Include(l => l.Status)
+            .FirstOrDefaultAsync(l => l.Id == id && !l.IsDeleted, cancellationToken);
+        if (lead is null)
+        {
+            return LeadOperationResult<bool>.NotFoundResult();
+        }
+
+        var previousStatusId = lead.LeadStatusId;
+        var previousStatusName = await ResolveLeadStatusNameAsync(previousStatusId, cancellationToken);
+        if (!string.Equals(previousStatusName, LeadLifecycle.Lost, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(previousStatusName, LeadLifecycle.Disqualified, StringComparison.OrdinalIgnoreCase))
+        {
+            return LeadOperationResult<bool>.Fail("Only Lost or Disqualified leads can be recycled to Nurture.");
+        }
+
+        var nurtureStatus = await ResolveLeadStatusAsync(LeadLifecycle.Nurture, cancellationToken);
+        lead.LeadStatusId = nurtureStatus.Id;
+        lead.Status = nurtureStatus;
+        lead.NurtureFollowUpAtUtc ??= DateTime.UtcNow.AddDays(14);
+        lead.UpdatedAtUtc = DateTime.UtcNow;
+
+        var dispositionSource = string.Equals(previousStatusName, LeadLifecycle.Lost, StringComparison.OrdinalIgnoreCase)
+            ? lead.LossReason
+            : lead.DisqualifiedReason;
+        var historyNote = string.IsNullOrWhiteSpace(dispositionSource)
+            ? $"Recycled from {previousStatusName} to nurture."
+            : $"Recycled from {previousStatusName} to nurture. Prior reason: {dispositionSource}.";
+
+        AddStatusHistory(lead, nurtureStatus.Id, historyNote, actor);
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(lead.Id, "StatusChanged", "Status", previousStatusName, LeadLifecycle.Nurture, actor),
+            cancellationToken);
+        await _auditEvents.TrackAsync(
+            CreateAuditEntry(lead.Id, "LeadRecycledToNurture", "Disposition", previousStatusName, historyNote, actor),
+            cancellationToken);
+
+        await EnsureNurtureFollowUpTaskAsync(lead, LeadLifecycle.Nurture, cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return LeadOperationResult<bool>.Ok(true);
+    }
+
     private async Task CreateConversionNoteActivityAsync(
         Lead lead,
         Guid? accountId,

@@ -34,20 +34,19 @@
           </button>
         </div>
         <h1 class="hero-title">{{ email()!.subject }}</h1>
-        <p class="hero-preview">{{ email()!.previewText }}</p>
         <div class="hero-info">
           <span class="info-item">
             <i class="pi pi-user"></i>
-            {{ email()!.fromName }} &lt;{{ email()!.fromEmail }}&gt;
+            {{ email()!.fromName }}
           </span>
           <span class="info-item">
             <i class="pi pi-calendar"></i>
-            @if (email()!.sentAt) {
-              Sent {{ formatDate(email()!.sentAt) }}
-            } @else if (email()!.scheduledAt) {
-              Scheduled {{ formatDate(email()!.scheduledAt) }}
+            @if (email()!.sentAtUtc) {
+              Sent {{ formatDate(email()!.sentAtUtc) }}
+            } @else if (email()!.scheduledAtUtc) {
+              Scheduled {{ formatDate(email()!.scheduledAtUtc) }}
             } @else {
-              Created {{ formatDate(email()!.createdAt) }}
+              Created {{ formatDate(email()!.createdAtUtc) }}
             }
           </span>
         </div>
@@ -80,9 +79,9 @@
           <i class="pi pi-eye"></i>
         </div>
         <div class="metric-content">
-          <span class="metric-label">Unique Opens</span>
-          <strong class="metric-value">{{ formatNumber(email()!.uniqueOpens) }}</strong>
-          <span class="metric-rate">{{ email()!.openRate }}%</span>
+          <span class="metric-label">Opens</span>
+          <strong class="metric-value">{{ formatNumber(email()!.openCount) }}</strong>
+          <span class="metric-rate">{{ computeRate(email()!.openCount, email()!.sentCount) }}%</span>
         </div>
       </div>
       <div class="metric-card metric-card--clicks">
@@ -90,9 +89,9 @@
           <i class="pi pi-external-link"></i>
         </div>
         <div class="metric-content">
-          <span class="metric-label">Unique Clicks</span>
-          <strong class="metric-value">{{ formatNumber(email()!.uniqueClicks) }}</strong>
-          <span class="metric-rate">{{ email()!.clickRate }}%</span>
+          <span class="metric-label">Clicks</span>
+          <strong class="metric-value">{{ formatNumber(email()!.clickCount) }}</strong>
+          <span class="metric-rate">{{ computeRate(email()!.clickCount, email()!.sentCount) }}%</span>
         </div>
       </div>
       <div class="metric-card metric-card--bounce">
@@ -102,7 +101,7 @@
         <div class="metric-content">
           <span class="metric-label">Bounced</span>
           <strong class="metric-value">{{ formatNumber(email()!.bounceCount) }}</strong>
-          <span class="metric-rate">{{ email()!.bounceRate }}%</span>
+          <span class="metric-rate">{{ computeRate(email()!.bounceCount, email()!.sentCount) }}%</span>
         </div>
       </div>
     </div>
@@ -142,22 +141,17 @@
             <div class="performance-item">
               <span class="perf-label">Total Opens</span>
               <span class="perf-value">{{ formatNumber(email()!.openCount) }}</span>
-              <p-progressBar [value]="email()!.openRate" [showValue]="false" styleClass="perf-bar perf-bar--opens"></p-progressBar>
+              <p-progressBar [value]="computeRate(email()!.openCount, email()!.sentCount)" [showValue]="false" styleClass="perf-bar perf-bar--opens"></p-progressBar>
             </div>
             <div class="performance-item">
               <span class="perf-label">Total Clicks</span>
               <span class="perf-value">{{ formatNumber(email()!.clickCount) }}</span>
-              <p-progressBar [value]="email()!.clickRate" [showValue]="false" styleClass="perf-bar perf-bar--clicks"></p-progressBar>
+              <p-progressBar [value]="computeRate(email()!.clickCount, email()!.sentCount)" [showValue]="false" styleClass="perf-bar perf-bar--clicks"></p-progressBar>
             </div>
             <div class="performance-item">
               <span class="perf-label">Unsubscribes</span>
               <span class="perf-value">{{ formatNumber(email()!.unsubscribeCount) }}</span>
-              <p-progressBar [value]="(email()!.unsubscribeCount / email()!.sentCount) * 100" [showValue]="false" styleClass="perf-bar perf-bar--unsub"></p-progressBar>
-            </div>
-            <div class="performance-item">
-              <span class="perf-label">Spam Reports</span>
-              <span class="perf-value">{{ formatNumber(email()!.spamCount) }}</span>
-              <p-progressBar [value]="(email()!.spamCount / email()!.sentCount) * 100" [showValue]="false" styleClass="perf-bar perf-bar--spam"></p-progressBar>
+              <p-progressBar [value]="computeRate(email()!.unsubscribeCount, email()!.sentCount)" [showValue]="false" styleClass="perf-bar perf-bar--unsub"></p-progressBar>
             </div>
           </div>
         </div>
@@ -171,28 +165,26 @@
           <div class="detail-list">
             <div class="detail-row">
               <span class="detail-label">From</span>
-              <span class="detail-value">{{ email()!.fromName }} &lt;{{ email()!.fromEmail }}&gt;</span>
+              <span class="detail-value">{{ email()!.fromName }}</span>
             </div>
-            <div class="detail-row">
-              <span class="detail-label">Reply-To</span>
-              <span class="detail-value">{{ email()!.replyTo }}</span>
-            </div>
+            @if (email()!.replyTo) {
+              <div class="detail-row">
+                <span class="detail-label">Reply-To</span>
+                <span class="detail-value">{{ email()!.replyTo }}</span>
+              </div>
+            }
             <div class="detail-row">
               <span class="detail-label">Subject</span>
               <span class="detail-value">{{ email()!.subject }}</span>
             </div>
             <div class="detail-row">
-              <span class="detail-label">Preview Text</span>
-              <span class="detail-value">{{ email()!.previewText }}</span>
-            </div>
-            <div class="detail-row">
               <span class="detail-label">Created</span>
-              <span class="detail-value">{{ formatDate(email()!.createdAt) }}</span>
+              <span class="detail-value">{{ formatDate(email()!.createdAtUtc) }}</span>
             </div>
-            @if (email()!.sentAt) {
+            @if (email()!.sentAtUtc) {
               <div class="detail-row">
                 <span class="detail-label">Sent</span>
-                <span class="detail-value">{{ formatDate(email()!.sentAt) }}</span>
+                <span class="detail-value">{{ formatDate(email()!.sentAtUtc) }}</span>
               </div>
             }
           </div>
@@ -231,7 +223,7 @@
       <div class="data-section">
         <div class="data-card">
           <p-table
-            [value]="email()!.recipients"
+            [value]="recipients()"
             [paginator]="true"
             [rows]="10"
             [rowsPerPageOptions]="[10, 25, 50]"
@@ -245,7 +237,6 @@
                 <th>Status</th>
                 <th>Opened</th>
                 <th>Clicked</th>
-                <th class="text-right">Click Count</th>
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-recipient>
@@ -260,21 +251,18 @@
                   <p-tag [value]="recipient.status" [severity]="getStatusSeverity(recipient.status)"></p-tag>
                 </td>
                 <td>
-                  @if (recipient.openedAt) {
-                    <span class="date-text">{{ formatDate(recipient.openedAt) }}</span>
+                  @if (recipient.openedAtUtc) {
+                    <span class="date-text">{{ formatDate(recipient.openedAtUtc) }}</span>
                   } @else {
                     <span class="date-text muted">—</span>
                   }
                 </td>
                 <td>
-                  @if (recipient.clickedAt) {
-                    <span class="date-text">{{ formatDate(recipient.clickedAt) }}</span>
+                  @if (recipient.clickedAtUtc) {
+                    <span class="date-text">{{ formatDate(recipient.clickedAtUtc) }}</span>
                   } @else {
                     <span class="date-text muted">—</span>
                   }
-                </td>
-                <td class="text-right">
-                  <span class="click-count">{{ recipient.clickCount }}</span>
                 </td>
               </tr>
             </ng-template>

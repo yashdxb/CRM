@@ -131,29 +131,41 @@ def render_markdown(list_id: str, tasks: list[dict]) -> str:
             )
         lines.append("")
 
-    detailed_story_ids = [
-        "86e06pbr0",
-        "86e06pbrp",
-        "86e06pbrb",
-        "86e06pbr3",
-        "86e06pbr9",
+    detailed_sections = [
+        (
+            "## Detailed AI Conversation Intelligence Stories (Later)",
+            ["86e041xa7"],
+        ),
+        (
+            "## Detailed Help Desk Stories (Now)",
+            [
+                "86e06pbr0",
+                "86e06pbrp",
+                "86e06pbrb",
+                "86e06pbr3",
+                "86e06pbr9",
+            ],
+        ),
     ]
     by_id = {task["id"]: task for task in normalized}
-    lines.append("## Detailed Help Desk Stories (Now)")
-    lines.append("")
-    for story_id in detailed_story_ids:
-        story = by_id.get(story_id)
-        if not story:
-            continue
-        lines.append(f"### {story['name']} (`{story['id']}`)")
-        lines.append(f"- Status: `{story['status']}`")
-        description = story.get("description", "").strip()
-        if description:
-            lines.append("")
-            lines.append(description)
-            lines.append("")
-        else:
-            lines.append("- Description: _No description in ClickUp task._")
+    for heading, detailed_story_ids in detailed_sections:
+        lines.append(heading)
+        lines.append("")
+        for story_id in detailed_story_ids:
+            story = by_id.get(story_id)
+            if not story:
+                continue
+            lines.append(f"### {story['name']} (`{story['id']}`)")
+            lines.append(f"- Status: `{story['status']}`")
+            description = story.get("description", "").strip()
+            if description:
+                lines.append("")
+                lines.append(description)
+                lines.append("")
+            else:
+                lines.append("- Description: _No description in ClickUp task._")
+                lines.append("")
+        if lines[-1] != "":
             lines.append("")
 
     lines.append("## Maintenance")

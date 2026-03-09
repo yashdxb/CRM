@@ -48,7 +48,7 @@ import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from 
 import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
-import { QualificationPolicy, SupportingDocumentPolicy } from '../../settings/models/workspace-settings.model';
+import { LeadDispositionPolicy, QualificationPolicy, SupportingDocumentPolicy } from '../../settings/models/workspace-settings.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
 import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreResult } from './lead-scoring.util';
 import { Activity } from '../../activities/models/activity.model';
@@ -254,6 +254,12 @@ export class LeadFormPage implements OnInit, OnDestroy {
     { label: 'Out-of-profile but exploratory', value: 'Out-of-profile but exploratory', icon: 'pi pi-info-circle', tone: 'assumed' },
     { label: 'Clearly out of ICP', value: 'Clearly out of ICP', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
+  protected readonly disqualificationReasonOptions = signal<Array<{ label: string; value: string }>>(
+    LeadFormPage.defaultLeadDispositionPolicy().disqualificationReasons.map((value) => ({ label: value, value }))
+  );
+  protected readonly lossReasonOptions = signal<Array<{ label: string; value: string }>>(
+    LeadFormPage.defaultLeadDispositionPolicy().lossReasons.map((value) => ({ label: value, value }))
+  );
   protected evidenceOptions: OptionItem[] = LeadFormPage.defaultEvidenceSources().map((source) =>
     LeadFormPage.toEvidenceOption(source)
   );
@@ -361,6 +367,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.loadOwners();
     this.loadCadenceChannels();
     this.loadEvidenceSources();
+    this.loadLeadDispositionPolicy();
     this.loadPhoneTypes();
     this.loadPhoneCountries();
     this.loadLeadDataWeights();
@@ -747,6 +754,28 @@ export class LeadFormPage implements OnInit, OnDestroy {
       return;
     }
     this.router.navigate(['/app/leads', this.editingId, 'convert']);
+  }
+
+  protected canRecycleLead(): boolean {
+    return this.isEditMode() && (this.form.status === 'Lost' || this.form.status === 'Disqualified');
+  }
+
+  protected recycleToNurture(): void {
+    if (!this.editingId || !this.canRecycleLead()) {
+      return;
+    }
+
+    this.leadData.recycleToNurture(this.editingId).subscribe({
+      next: () => {
+        this.raiseToast('success', 'Lead recycled to nurture.');
+        this.form.status = 'Nurture';
+        this.form.nurtureFollowUpAtUtc = this.toDateValue(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString());
+        this.reloadLeadDetails(this.editingId!);
+      },
+      error: () => {
+        this.raiseToast('error', 'Unable to recycle lead to nurture.');
+      }
+    });
   }
 
   protected onSave() {
@@ -1351,6 +1380,21 @@ export class LeadFormPage implements OnInit, OnDestroy {
       },
       error: () => {
         this.phoneTypeOptions = [];
+      }
+    });
+  }
+
+  private loadLeadDispositionPolicy() {
+    this.workspaceSettings.getSettings().subscribe({
+      next: (settings) => {
+        const policy = LeadFormPage.normalizeLeadDispositionPolicy(settings.leadDispositionPolicy);
+        this.disqualificationReasonOptions.set(policy.disqualificationReasons.map((value) => ({ label: value, value })));
+        this.lossReasonOptions.set(policy.lossReasons.map((value) => ({ label: value, value })));
+      },
+      error: () => {
+        const fallback = LeadFormPage.defaultLeadDispositionPolicy();
+        this.disqualificationReasonOptions.set(fallback.disqualificationReasons.map((value) => ({ label: value, value })));
+        this.lossReasonOptions.set(fallback.lossReasons.map((value) => ({ label: value, value })));
       }
     });
   }
@@ -2429,6 +2473,56 @@ export class LeadFormPage implements OnInit, OnDestroy {
       'Historical / prior deal',
       'Inferred from context'
     ];
+  }
+
+  private static defaultLeadDispositionPolicy(): LeadDispositionPolicy {
+    return {
+      disqualificationReasons: [
+        'No budget / funding',
+        'No clear need',
+        'No decision-maker access',
+        'Outside ICP / poor fit',
+        'Timeline not active',
+        'Duplicate / already managed',
+        'No response after repeated follow-up',
+        'Went with internal solution',
+        'Invalid contact / bad data',
+        'Other'
+      ],
+      lossReasons: [
+        'Lost to competitor',
+        'No decision / stalled',
+        'Priority changed',
+        'Budget withdrawn',
+        'Timing pushed',
+        'Internal solution chosen',
+        'Value not compelling enough',
+        'Procurement / legal blocker',
+        'Relationship lost',
+        'Other'
+      ]
+    };
+  }
+
+  private static normalizeLeadDispositionPolicy(policy: LeadDispositionPolicy | null | undefined): LeadDispositionPolicy {
+    const fallback = LeadFormPage.defaultLeadDispositionPolicy();
+    const normalize = (items: readonly string[] | null | undefined, defaults: readonly string[]) => {
+      const normalized = (items ?? [])
+        .map((item) => (item ?? '').trim())
+        .filter((item, index, all) => item.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
+      if (normalized.length === 0) {
+        return [...defaults];
+      }
+      if (!normalized.some((item) => item.toLowerCase() === 'other')) {
+        normalized.push('Other');
+      }
+      return normalized;
+    };
+
+    return {
+      disqualificationReasons: normalize(policy?.disqualificationReasons, fallback.disqualificationReasons),
+      lossReasons: normalize(policy?.lossReasons, fallback.lossReasons)
+    };
   }
 
   private static toEvidenceOption(source: string): OptionItem {

@@ -101,6 +101,9 @@ public class CrmDbContext : DbContext
     public DbSet<AssistantThread> AssistantThreads => Set<AssistantThread>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<EmailPreference> EmailPreferences => Set<EmailPreference>();
+    public DbSet<CampaignEmail> CampaignEmails => Set<CampaignEmail>();
+    public DbSet<CampaignEmailRecipient> CampaignEmailRecipients => Set<CampaignEmailRecipient>();
     public DbSet<UserEmailConnection> UserEmailConnections => Set<UserEmailConnection>();
     public DbSet<UserMailMessage> UserMailMessages => Set<UserMailMessage>();
     public DbSet<DirectChatThread> DirectChatThreads => Set<DirectChatThread>();
@@ -150,6 +153,12 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<AttributionExplainabilityEvent>().ToTable("AttributionExplainabilityEvents", CrmSchema);
         modelBuilder.Entity<EmailLog>().ToTable("EmailLogs", CrmSchema);
         modelBuilder.Entity<EmailTemplate>().ToTable("EmailTemplates", CrmSchema);
+        modelBuilder.Entity<EmailPreference>().ToTable("EmailPreferences", CrmSchema);
+        modelBuilder.Entity<EmailPreference>()
+            .HasIndex(p => new { p.TenantId, p.Email })
+            .IsUnique();
+        modelBuilder.Entity<CampaignEmail>().ToTable("CampaignEmails", CrmSchema);
+        modelBuilder.Entity<CampaignEmailRecipient>().ToTable("CampaignEmailRecipients", CrmSchema);
         modelBuilder.Entity<Lead>()
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);

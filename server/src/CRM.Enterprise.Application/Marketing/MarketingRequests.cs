@@ -29,3 +29,21 @@ public sealed record RecommendationDecisionRequest(
     string Decision,
     string? Reason,
     bool ApplyActions = true);
+
+// ── Campaign Email Requests ────────────────────────────────────
+
+public sealed record CampaignEmailSearchRequest(
+    Guid? CampaignId,
+    string? Status,
+    string? Search,
+    int Page,
+    int PageSize);
+
+public sealed record CampaignEmailUpsertRequest(
+    Guid CampaignId,
+    Guid? TemplateId,
+    string Subject,
+    string HtmlBody,
+    string? TextBody,
+    string FromName,
+    string? ReplyTo);

@@ -6,15 +6,22 @@ import {
   AttributionModel,
   AttributionSummaryItem,
   CampaignDetailResponse,
+  CampaignEmailDetail,
+  CampaignEmailRecipientSearchResponse,
+  CampaignEmailSearchResponse,
   CampaignHealthScore,
   CampaignMember,
+  EmailPreference,
   ImpactWorklistTelemetryRequest,
   RecommendationPilotMetrics,
   CampaignRecommendation,
   CampaignSearchResponse,
   RecommendationDecisionRequest,
+  SaveCampaignEmailRequest,
   SaveCampaignMemberRequest,
-  SaveCampaignRequest
+  SaveCampaignRequest,
+  ScheduleCampaignEmailRequest,
+  UpdateEmailPreferenceRequest
 } from '../models/marketing.model';
 
 @Injectable({ providedIn: 'root' })
@@ -96,5 +103,61 @@ export class MarketingDataService {
 
   trackImpactWorklistClick(payload: ImpactWorklistTelemetryRequest) {
     return this.http.post(`${this.baseUrl}/api/marketing/telemetry/impact-worklist-click`, payload);
+  }
+
+  // ── Campaign Email endpoints ──────────────────────────────────
+
+  searchEmails(request: { campaignId?: string; status?: string; search?: string; page?: number; pageSize?: number }) {
+    let params = new HttpParams();
+    if (request.campaignId) params = params.set('campaignId', request.campaignId);
+    if (request.status) params = params.set('status', request.status);
+    if (request.search) params = params.set('search', request.search);
+    if (request.page) params = params.set('page', request.page);
+    if (request.pageSize) params = params.set('pageSize', request.pageSize);
+    return this.http.get<CampaignEmailSearchResponse>(`${this.baseUrl}/api/marketing/emails`, { params });
+  }
+
+  getEmail(id: string) {
+    return this.http.get<CampaignEmailDetail>(`${this.baseUrl}/api/marketing/emails/${id}`);
+  }
+
+  createEmailDraft(payload: SaveCampaignEmailRequest) {
+    return this.http.post<CampaignEmailDetail>(`${this.baseUrl}/api/marketing/emails`, payload);
+  }
+
+  updateEmailDraft(id: string, payload: SaveCampaignEmailRequest) {
+    return this.http.put<CampaignEmailDetail>(`${this.baseUrl}/api/marketing/emails/${id}`, payload);
+  }
+
+  sendEmail(id: string) {
+    return this.http.post<CampaignEmailDetail>(`${this.baseUrl}/api/marketing/emails/${id}/send`, {});
+  }
+
+  scheduleEmail(id: string, payload: ScheduleCampaignEmailRequest) {
+    return this.http.post<CampaignEmailDetail>(`${this.baseUrl}/api/marketing/emails/${id}/schedule`, payload);
+  }
+
+  cancelEmail(id: string) {
+    return this.http.post<CampaignEmailDetail>(`${this.baseUrl}/api/marketing/emails/${id}/cancel`, {});
+  }
+
+  getEmailRecipients(emailId: string, request: { status?: string; page?: number; pageSize?: number } = {}) {
+    let params = new HttpParams();
+    if (request.status) params = params.set('status', request.status);
+    if (request.page) params = params.set('page', request.page);
+    if (request.pageSize) params = params.set('pageSize', request.pageSize);
+    return this.http.get<CampaignEmailRecipientSearchResponse>(`${this.baseUrl}/api/marketing/emails/${emailId}/recipients`, { params });
+  }
+
+  getEmailPreference(email: string) {
+    return this.http.get<EmailPreference>(`${this.baseUrl}/api/marketing/email-preferences/${encodeURIComponent(email)}`);
+  }
+
+  updateEmailPreference(email: string, payload: UpdateEmailPreferenceRequest) {
+    return this.http.put<EmailPreference>(`${this.baseUrl}/api/marketing/email-preferences/${encodeURIComponent(email)}`, payload);
+  }
+
+  publicUnsubscribe(payload: { email: string; tenantId: string; reason?: string }) {
+    return this.http.post(`${this.baseUrl}/api/marketing/public/unsubscribe`, payload);
   }
 }

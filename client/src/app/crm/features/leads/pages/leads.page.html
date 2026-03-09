@@ -281,6 +281,9 @@
                 <button type="button" class="mini-action-btn mini-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)">
                   <i class="pi pi-pencil"></i>
                 </button>
+                <button type="button" class="mini-action-btn mini-action-btn--activity" *ngIf="canRecycleLead(lead)" [disabled]="!canManage()" (click)="$event.stopPropagation(); recycleLead(lead)">
+                  <i class="pi pi-refresh"></i>
+                </button>
                 <button type="button" class="mini-action-btn mini-action-btn--activity" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)">
                   <i class="pi pi-calendar-plus"></i>
                 </button>
@@ -396,6 +399,10 @@
                             >Opportunity</a>
                           </div>
                         </div>
+                        <div class="lead-disposition" *ngIf="dispositionReasonLabel(lead) as reason">
+                          <span class="lead-disposition__label">{{ lead.status }} reason</span>
+                          <span class="lead-disposition__value">{{ reason }}</span>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -459,6 +466,14 @@
                   <td class="td-actions">
                     <div class="row-actions">
                       <button type="button" class="row-action-btn row-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)" title="Edit"><i class="pi pi-pencil"></i></button>
+                      <button
+                        *ngIf="canRecycleLead(lead)"
+                        type="button"
+                        class="row-action-btn row-action-btn--recycle"
+                        [disabled]="!canManage()"
+                        (click)="$event.stopPropagation(); recycleLead(lead)"
+                        title="Recycle to nurture"
+                      ><i class="pi pi-refresh"></i></button>
                       <button
                         *ngIf="showCqvsInLeadList()"
                         type="button"
@@ -755,6 +770,13 @@
       </ul>
     </section>
 
+    <section class="coach-block" *ngIf="dispositionReasonLabel(lead) as reason">
+      <h3 class="coach-block__title">Disposition</h3>
+      <ul class="coach-list">
+        <li>{{ lead.status }} reason: {{ reason }}</li>
+      </ul>
+    </section>
+
     <section class="coach-block" *ngIf="lead.conversationScoreReasons?.length">
       <h3 class="coach-block__title">Conversation Signals</h3>
       <ul class="coach-list">
@@ -767,6 +789,10 @@
         <button pButton type="button" class="coach-action-btn coach-action-btn--edit" (click)="onEdit(lead)">
           <i class="pi pi-pencil"></i>
           <span>Edit lead</span>
+        </button>
+        <button *ngIf="canRecycleLead(lead)" pButton type="button" class="coach-action-btn coach-action-btn--log" (click)="recycleLead(lead)">
+          <i class="pi pi-refresh"></i>
+          <span>Recycle</span>
         </button>
         <button pButton type="button" class="coach-action-btn coach-action-btn--log" (click)="onLogActivity(lead)">
           <i class="pi pi-calendar-plus"></i>

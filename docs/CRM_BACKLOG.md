@@ -1025,6 +1025,34 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
     - Summary updates immediately when qualification factors change.
     - If all factors are strong/known, weakest signal displays “No weak signals.”
   - Evidence:
+- Leads | As a Sales Rep and Sales Manager, I want a Conversation Score derived from all lead-related interactions so qualification reflects actual engagement quality, momentum, and buying signals instead of only manually entered factor states. (ClickUp: 86e041xa7, Status: BACKLOG) Flow: 02E1
+  - Acceptance criteria:
+    - Lead qualification shows a distinct `Conversation Score` alongside the current qualification/data quality scoring.
+    - Conversation score aggregates lead-related interactions across synced email threads, calls, meetings, activity outcomes, and related notes.
+    - The score explanation identifies at least:
+      - recency of engagement
+      - interaction frequency
+      - bidirectional engagement / replies
+      - stakeholder depth
+      - buyer-signal evidence (budget, timeline, pain, decision maker)
+      - momentum / stall risk
+    - When no usable conversation data exists, the UI shows `signal unavailable` or equivalent explicit fallback instead of inventing a confident score.
+    - Conversion readiness can use Conversation Score as an additional signal, but existing qualification-policy gating remains authoritative.
+    - Feature remains tenant-scoped and explainable; users can see why the conversation signal is high or low.
+  - Evidence:
+    - Qualification policy and conversion gating foundations:
+      - `server/src/CRM.Enterprise.Application/Qualifications/QualificationPolicy.cs`
+      - `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+      - `client/src/app/crm/features/leads/pages/lead-convert.page.ts`
+    - Existing lead qualification workspace:
+      - `client/src/app/crm/features/leads/pages/lead-form.page.ts`
+      - `client/src/app/crm/features/leads/pages/lead-form.page.html`
+    - Existing interaction sources to aggregate:
+      - `server/src/CRM.Enterprise.Infrastructure/Emails/EmailService.cs`
+      - `server/src/CRM.Enterprise.Infrastructure/Emails/MailboxSyncService.cs`
+      - `server/src/CRM.Enterprise.Api/Controllers/MailboxController.cs`
+      - `server/src/CRM.Enterprise.Api/Controllers/ActivitiesController.cs`
+      - `server/src/CRM.Enterprise.Infrastructure/Activities/ActivityService.cs`
 - Leads | As a Sales Rep, I want a daily command center showing tasks due/overdue, new leads, pipeline by stage, at‑risk deals, and my forecast snapshot so I can prioritize work immediately. (ClickUp: 86dzp8xe0, Status: COMPLETED) Flow: 02F
   - Acceptance criteria:
     - Dashboard command center shows sections for Tasks Due/Overdue and New Leads.

@@ -2,6 +2,7 @@ using CRM.Enterprise.Api.Contracts.Workspace;
 using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Application.Decisions;
+using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
@@ -69,6 +70,7 @@ public class WorkspaceController : ControllerBase
             tenant.ApprovalApproverRole,
             ResolveApprovalWorkflowPolicy(tenant),
             ResolveQualificationPolicy(tenant),
+            ResolveLeadDispositionPolicy(tenant),
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
@@ -106,6 +108,12 @@ public class WorkspaceController : ControllerBase
         if (request.QualificationPolicy is not null)
         {
             tenant.QualificationPolicyJson = JsonSerializer.Serialize(request.QualificationPolicy, JsonOptions);
+        }
+        if (request.LeadDispositionPolicy is not null)
+        {
+            tenant.LeadDispositionPolicyJson = JsonSerializer.Serialize(
+                LeadDispositionPolicyDefaults.Normalize(request.LeadDispositionPolicy),
+                JsonOptions);
         }
         if (request.AssistantActionScoringPolicy is not null)
         {
@@ -152,6 +160,7 @@ public class WorkspaceController : ControllerBase
             tenant.ApprovalApproverRole,
             ResolveApprovalWorkflowPolicy(tenant),
             ResolveQualificationPolicy(tenant),
+            ResolveLeadDispositionPolicy(tenant),
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
@@ -216,6 +225,24 @@ public class WorkspaceController : ControllerBase
         catch (JsonException)
         {
             return AssistantActionScoringPolicyDefaults.CreateDefault();
+        }
+    }
+
+    private static LeadDispositionPolicy ResolveLeadDispositionPolicy(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.LeadDispositionPolicyJson))
+        {
+            return LeadDispositionPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<LeadDispositionPolicy>(tenant.LeadDispositionPolicyJson, JsonOptions);
+            return LeadDispositionPolicyDefaults.Normalize(parsed);
+        }
+        catch (JsonException)
+        {
+            return LeadDispositionPolicyDefaults.CreateDefault();
         }
     }
 

@@ -5,25 +5,25 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-08 06:33 UTC**
+- Synced at: **2026-03-09 02:32 UTC**
 - ClickUp list id: `901710720381`
-- Total tasks mirrored: **195**
+- Total tasks mirrored: **197**
 - Epics mirrored: **39**
-- Stories mirrored: **156**
+- Stories mirrored: **158**
 
 ## Status Summary
 - All tasks:
-  - `done`: 118
+  - `done`: 122
   - `backlog`: 73
-  - `in progress`: 4
+  - `in progress`: 2
 - Epics:
   - `backlog`: 21
-  - `done`: 16
-  - `in progress`: 2
+  - `done`: 17
+  - `in progress`: 1
 - Stories:
-  - `done`: 102
+  - `done`: 105
   - `backlog`: 52
-  - `in progress`: 2
+  - `in progress`: 1
 
 ## Epic and Story Mirror
 
@@ -31,7 +31,7 @@
 - Status: `backlog`
 - Tags: future, later
 - Stories:
-  - `86e041xa7` | `backlog` | Call recording transcription and analysis | tags: -
+  - `86e041xa7` | `backlog` | Conversation scoring and analysis across email, calls, meetings, and activities | tags: -
 
 ### [LATER] Compliance & Collaboration (`86e041xa9`)
 - Status: `backlog`
@@ -192,16 +192,6 @@
 - Stories:
   - `86e041x5m` | `backlog` | Schedule recurring report delivery | tags: -
   - `86e041x5v` | `backlog` | Webhook configuration for CRM events | tags: -
-
-### SSO & Enterprise Authentication (`86e0422k2`)
-- Status: `done`
-- Tags: built, core
-- Stories:
-  - `86e0422ke` | `done` | OAuth2 external identity provider support | tags: built, core
-  - `86e05r0ar` | `done` | Entra ID internal login endpoint and ID token validation | tags: done
-  - `86e05r0by` | `done` | Entra internal auth runbook and configuration guardrails | tags: done
-  - `86e08cfu4` | `done` | Entra SPA app registration and SSO enablement | tags: done, now, module:Settings
-  - `86e0422k7` | `backlog` | SAML/SSO identity provider integration | tags: -
 
 ### [NOW] Web-to-Lead Forms (`86e041x5a`)
 - Status: `backlog`
@@ -377,6 +367,81 @@
   - `86e041x22` | `done` | User invitation flow | tags: -
   - `86e041x1x` | `done` | User management (list, create, edit, deactivate) | tags: -
   - `86e041x27` | `done` | Workspace settings | tags: -
+
+### SSO & Enterprise Authentication (`86e0422k2`)
+- Status: `done`
+- Tags: future, now
+- Stories:
+  - `86e08cfuj` | `done` | Module: Settings | Entra SPA app registration and SSO enablement | tags: done, module:settings, now
+  - `86e08cfu4` | `done` | Module: Settings | Entra SPA app registration and SSO enablement | tags: done, module:settings, now
+  - `86e0422ke` | `done` | OAuth2 external identity provider support | tags: future, now
+  - `86e0422k7` | `backlog` | SAML/SSO identity provider integration | tags: future, now
+
+## Detailed AI Conversation Intelligence Stories (Later)
+
+### Conversation scoring and analysis across email, calls, meetings, and activities (`86e041xa7`)
+- Status: `backlog`
+
+## User Story
+As a **Sales Rep** and **Sales Manager**, I want the CRM to calculate a **Conversation Score** from all lead-related interactions so that qualification reflects actual engagement quality, momentum, and buying signals instead of only manually entered factor ratings.
+
+## Business Value
+- Makes lead qualification more evidence-based and less dependent on rep interpretation alone
+- Helps managers coach against real conversation gaps such as silence, weak stakeholder coverage, or missing budget/timeline evidence
+- Improves conversion readiness decisions by combining qualification policy with actual engagement quality
+
+## Scope Intent
+- Aggregate lead-related interactions across:
+  - synced emails and mailbox threads
+  - calls and meetings
+  - activity outcomes and notes
+- Compute a distinct `Conversation Score` alongside existing qualification scoring
+- Surface the reasons behind the score, not only a final number
+- Feed the score into qualification summary and conversion-readiness decisions
+
+## Acceptance Criteria
+1. Lead qualification shows a separate `Conversation Score` in addition to data quality / qualification scoring.
+2. Conversation score aggregates all lead-related interactions across email, calls, meetings, and activities linked to the lead.
+3. Score explanation lists the strongest and weakest signals, including at minimum:
+   - recency of engagement
+   - interaction frequency
+   - bidirectional engagement / replies
+   - stakeholder depth
+   - buying-signal evidence such as budget, timeline, pain, or decision-maker presence
+   - momentum / stall risk
+4. If conversation data is unavailable, the UI shows `signal unavailable` or equivalent explicit state instead of silently defaulting to a misleading score.
+5. Lead conversion readiness can use conversation score as an additional readiness signal without replacing existing qualification-policy enforcement.
+6. The feature remains tenant-scoped and explainable; users can see why a lead is scoring high or low.
+
+## Notes
+- This extends the current qualification model rather than replacing it.
+- Recommended score stack:
+  - Data Quality Score
+  - Qualification Score
+  - Conversation Score
+  - Conversion Readiness
+- Initial implementation should be rules-first, not AI-only:
+  - recency
+  - reply behavior
+  - stakeholder coverage
+  - keyword/signal extraction
+  - conversation momentum
+
+## Evidence / Current Foundation
+- Qualification policy and conversion gating already exist:
+  - `server/src/CRM.Enterprise.Application/Qualifications/QualificationPolicy.cs`
+  - `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+- Lead qualification UI already exists:
+  - `client/src/app/crm/features/leads/pages/lead-form.page.ts`
+  - `client/src/app/crm/features/leads/pages/lead-form.page.html`
+  - `client/src/app/crm/features/leads/pages/lead-convert.page.ts`
+- Email/mailbox interaction sources already exist:
+  - `server/src/CRM.Enterprise.Infrastructure/Emails/EmailService.cs`
+  - `server/src/CRM.Enterprise.Infrastructure/Emails/MailboxSyncService.cs`
+  - `server/src/CRM.Enterprise.Api/Controllers/MailboxController.cs`
+- Activity interaction sources already exist:
+  - `server/src/CRM.Enterprise.Api/Controllers/ActivitiesController.cs`
+  - `server/src/CRM.Enterprise.Infrastructure/Activities/ActivityService.cs`
 
 ## Detailed Help Desk Stories (Now)
 

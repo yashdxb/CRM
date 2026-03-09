@@ -1,0 +1,152 @@
+<div class="page-background">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+  <div class="grid-pattern"></div>
+</div>
+
+<div class="campaign-email-form-page page-container">
+  <div class="page-content">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero">
+      <span class="hero-badge">
+        <span class="badge-dot"></span>
+        Email Campaigns
+      </span>
+      <h1 class="hero-title">
+        <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Compose' }}</span>
+        <span class="title-light">Email</span>
+      </h1>
+      <p class="hero-subtitle">Create and configure a campaign email to send to your audience.</p>
+    </section>
+
+    @if (loading()) {
+      <div class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Loading email...</span>
+      </div>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="save()" class="form-layout">
+        <!-- Campaign & Subject Section -->
+        <section class="form-card">
+          <h3 class="section-title">
+            <i class="pi pi-envelope"></i>
+            Email Setup
+          </h3>
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="campaignId">Campaign <span class="required">*</span></label>
+              <p-select
+                id="campaignId"
+                [options]="campaigns()"
+                optionLabel="label"
+                optionValue="value"
+                formControlName="campaignId"
+                placeholder="Select campaign"
+                class="w-full"
+                appendTo="body"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option"><i class="pi pi-flag"></i><span>{{ option.label }}</span></div>
+                </ng-template>
+                <ng-template pTemplate="value" let-option>
+                  <div class="select-option" *ngIf="option"><i class="pi pi-flag"></i><span>{{ option.label }}</span></div>
+                  <span *ngIf="!option" class="select-placeholder">Select campaign</span>
+                </ng-template>
+              </p-select>
+            </div>
+
+            <div class="form-field">
+              <label for="subject">Subject <span class="required">*</span></label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--name">
+                  <i class="pi pi-tag"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="subject" formControlName="subject" placeholder="Enter email subject line" />
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="fromName">From Name <span class="required">*</span></label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--company">
+                  <i class="pi pi-user"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="fromName" formControlName="fromName" placeholder="Sender display name" />
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="replyTo">Reply-To</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--email">
+                  <i class="pi pi-reply"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="replyTo" formControlName="replyTo" placeholder="Reply-to email (optional)" />
+              </p-inputgroup>
+            </div>
+          </div>
+        </section>
+
+        <!-- Email Body Section -->
+        <section class="form-card">
+          <h3 class="section-title">
+            <i class="pi pi-file-edit"></i>
+            Email Content
+          </h3>
+          <div class="form-grid">
+            <div class="form-field full-row">
+              <label for="htmlBody">HTML Body <span class="required">*</span></label>
+              <p-editor id="htmlBody" formControlName="htmlBody" [style]="{ height: '300px' }"></p-editor>
+            </div>
+
+            <div class="form-field full-row">
+              <label for="textBody">Plain Text (optional)</label>
+              <textarea pTextarea id="textBody" formControlName="textBody" rows="5" placeholder="Optional plain text version"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- Schedule Section -->
+        @if (showSchedule()) {
+          <section class="form-card">
+            <h3 class="section-title">
+              <i class="pi pi-clock"></i>
+              Schedule
+            </h3>
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="scheduledAtUtc">Send Date</label>
+                <p-datepicker
+                  id="scheduledAtUtc"
+                  formControlName="scheduledAtUtc"
+                  [showTime]="true"
+                  [showIcon]="true"
+                  placeholder="Pick date & time"
+                  appendTo="body"
+                ></p-datepicker>
+              </div>
+            </div>
+          </section>
+        }
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <button type="button" class="action-btn action-btn--back" (click)="cancel()">
+            <span class="action-btn__icon"><i class="pi pi-times"></i></span>
+            <span>Cancel</span>
+          </button>
+          <button type="button" class="action-btn action-btn--export" (click)="saveAndSchedule()" [disabled]="saving()">
+            <span class="action-btn__icon"><i class="pi pi-clock"></i></span>
+            <span>{{ showSchedule() ? 'Confirm Schedule' : 'Save & Schedule' }}</span>
+          </button>
+          <button type="submit" class="action-btn action-btn--add" [disabled]="saving()">
+            <span class="action-btn__icon"><i class="pi pi-save"></i></span>
+            <span>{{ saving() ? 'Saving...' : 'Save Draft' }}</span>
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+</div>

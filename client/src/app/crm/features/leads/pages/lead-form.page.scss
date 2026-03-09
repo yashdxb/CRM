@@ -2239,6 +2239,18 @@
       font-weight: 500;
     }
 
+    .disposition-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .disposition-actions__hint {
+      font-size: 0.9rem;
+      color: rgba(var(--apple-gray-1), 0.78);
+    }
+
     .status-option[data-status="New"] i { color: #06b6d4; }
     .status-option[data-status="Contacted"] i { color: #f59e0b; }
     .status-option[data-status="Qualified"] i { color: #10b981; }

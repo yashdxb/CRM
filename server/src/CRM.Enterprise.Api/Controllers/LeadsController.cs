@@ -224,6 +224,16 @@ public class LeadsController : ControllerBase
         return Ok(new LeadAiScoreResponse(result.Score, result.Confidence, result.Rationale, result.ScoredAtUtc));
     }
 
+    [HttpPost("{id:guid}/recycle-to-nurture")]
+    [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    public async Task<IActionResult> RecycleToNurture(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _leadService.RecycleToNurtureAsync(id, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        return NoContent();
+    }
+
     [HttpPost]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
     public async Task<ActionResult<LeadListItem>> Create([FromBody] UpsertLeadRequest request, CancellationToken cancellationToken)

@@ -3,6 +3,7 @@ namespace CRM.Enterprise.Api.Contracts.Workspace;
 using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Application.Decisions;
+using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 
@@ -17,6 +18,7 @@ public record UpdateWorkspaceSettingsRequest(
     string? ApprovalApproverRole,
     ApprovalWorkflowPolicy? ApprovalWorkflowPolicy,
     QualificationPolicy? QualificationPolicy,
+    LeadDispositionPolicy? LeadDispositionPolicy,
     AssistantActionScoringPolicy? AssistantActionScoringPolicy,
     DecisionEscalationPolicy? DecisionEscalationPolicy,
     SupportingDocumentPolicy? SupportingDocumentPolicy,

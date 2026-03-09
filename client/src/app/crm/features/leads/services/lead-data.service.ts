@@ -144,6 +144,10 @@ export class LeadDataService {
     });
   }
 
+  recycleToNurture(id: string) {
+    return this.http.post<void>(`${this.baseUrl}/api/leads/${id}/recycle-to-nurture`, {});
+  }
+
   logCadenceTouch(id: string, payload: { channel: LeadCadenceChannel; outcome: string; nextStepDueAtUtc: string | Date }) {
     return this.http.post<LeadCadenceTouch>(`${this.baseUrl}/api/leads/${id}/cadence-touch`, payload);
   }

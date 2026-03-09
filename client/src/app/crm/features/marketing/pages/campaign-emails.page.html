@@ -135,21 +135,21 @@
             <td class="text-right">
               <div class="metric-with-rate">
                 <span class="metric-value">{{ formatNumber(email.openCount) }}</span>
-                <span class="metric-rate" *ngIf="email.status === 'Sent'">({{ email.openRate }}%)</span>
+                <span class="metric-rate" *ngIf="email.status === 'Sent'">({{ computeRate(email.openCount, email.sentCount) }}%)</span>
               </div>
             </td>
             <td class="text-right">
               <div class="metric-with-rate">
                 <span class="metric-value">{{ formatNumber(email.clickCount) }}</span>
-                <span class="metric-rate" *ngIf="email.status === 'Sent'">({{ email.clickRate }}%)</span>
+                <span class="metric-rate" *ngIf="email.status === 'Sent'">({{ computeRate(email.clickCount, email.sentCount) }}%)</span>
               </div>
             </td>
             <td>
-              <span class="date-text" *ngIf="email.sentAt">{{ formatDate(email.sentAt) }}</span>
-              <span class="date-text scheduled" *ngIf="email.scheduledAt && !email.sentAt">
-                <i class="pi pi-clock"></i> {{ formatDate(email.scheduledAt) }}
+              <span class="date-text" *ngIf="email.sentAtUtc">{{ formatDate(email.sentAtUtc) }}</span>
+              <span class="date-text scheduled" *ngIf="email.scheduledAtUtc && !email.sentAtUtc">
+                <i class="pi pi-clock"></i> {{ formatDate(email.scheduledAtUtc) }}
               </span>
-              <span class="date-text draft" *ngIf="!email.sentAt && !email.scheduledAt">—</span>
+              <span class="date-text draft" *ngIf="!email.sentAtUtc && !email.scheduledAtUtc">—</span>
             </td>
             <td>
               <button class="icon-btn" pTooltip="View Details" (click)="viewEmail(email.id)">

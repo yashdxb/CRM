@@ -1,0 +1,56 @@
+<app-auth-shell>
+  <div class="login-card">
+    <div class="card-header">
+      <div class="signal"></div>
+      <div class="brand-logo">
+        <img
+          src="https://nedgtdal2.blob.core.windows.net/assets/branding/logo-v2.png"
+          alt="North Edge CRM"
+        />
+      </div>
+      <h1 class="card-title">Email Preferences</h1>
+      <p class="card-subtitle">Manage your email subscription.</p>
+    </div>
+
+    @if (done()) {
+      <div class="status-pill success">
+        <i class="pi pi-check-circle"></i>
+        You have been unsubscribed. You will no longer receive marketing emails.
+      </div>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()" class="login-form">
+        <div class="form-group">
+          <label class="form-label" for="email">Email address</label>
+          <div class="input-wrapper">
+            <input pInputText id="email" type="email" formControlName="email" placeholder="Your email address" readonly />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reason">Reason (optional)</label>
+          <div class="input-wrapper">
+            <textarea pTextarea id="reason" formControlName="reason" placeholder="Tell us why you're unsubscribing" rows="3"></textarea>
+          </div>
+        </div>
+
+        @if (errorMessage()) {
+          <div class="status-pill error">
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <button pButton type="submit" class="btn-submit" [disabled]="submitting()">
+          @if (submitting()) {
+            <span>Processing...</span>
+          } @else {
+            <span>Unsubscribe</span>
+          }
+        </button>
+
+        <p class="unsubscribe-note">
+          This will opt you out of all marketing emails. Transactional emails may still be sent.
+        </p>
+      </form>
+    }
+  </div>
+</app-auth-shell>

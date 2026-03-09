@@ -254,6 +254,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Policies support contextual rules (segment/deal type/stage) and modifiers (competitive, strategic, executive champion, velocity).
 - Conversion enforces thresholds server-side, with manager approval + override reason when below thresholds (configurable).
 - Storage is tenant-scoped (`QualificationPolicyJson` on `Tenants`) and returned via `GET /api/workspace`.
+- Roadmap extension: qualification readiness should incorporate a distinct **Conversation Score** derived from lead-related email, call, meeting, and activity evidence, feeding conversion-readiness decisions without replacing qualification-policy enforcement.
 
 ### Description Standard (Stories)
 ```

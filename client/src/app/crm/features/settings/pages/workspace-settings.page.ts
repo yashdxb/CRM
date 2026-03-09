@@ -10,9 +10,10 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { SkeletonModule } from 'primeng/skeleton';
+import { TextareaModule } from 'primeng/textarea';
 
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
-import { WorkspaceSettings } from '../models/workspace-settings.model';
+import { LeadDispositionPolicy, WorkspaceSettings } from '../models/workspace-settings.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -46,6 +47,7 @@ interface Option<T = string> {
     ReactiveFormsModule,
     RouterLink,
     SkeletonModule,
+    TextareaModule,
     BreadcrumbsComponent
   ],
   templateUrl: './workspace-settings.page.html',
@@ -87,6 +89,8 @@ export class WorkspaceSettingsPage {
     timeZone: ['UTC', [Validators.required]],
     currency: ['', [Validators.required]],
     leadFirstTouchSlaHours: [24, [Validators.min(1), Validators.max(168)]],
+    leadDisqualificationReasons: [''],
+    leadLossReasons: [''],
     defaultContractTermMonths: [12, [Validators.min(1), Validators.max(120)]],
     defaultDeliveryOwnerRoleId: [null as string | null],
     scoreWeightSlaBreaches: [14, [Validators.min(0), Validators.max(100)]],
@@ -150,6 +154,10 @@ export class WorkspaceSettingsPage {
       timeZone: payload.timeZone ?? 'UTC',
       currency: this.resolveCurrency(payload.currency ?? null),
       leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? 24,
+      leadDispositionPolicy: {
+        disqualificationReasons: this.parseReasonCatalog(payload.leadDisqualificationReasons),
+        lossReasons: this.parseReasonCatalog(payload.leadLossReasons)
+      },
       defaultContractTermMonths: payload.defaultContractTermMonths ?? 12,
       defaultDeliveryOwnerRoleId: payload.defaultDeliveryOwnerRoleId ?? null,
       assistantActionScoringPolicy: {
@@ -207,6 +215,8 @@ export class WorkspaceSettingsPage {
       timeZone: settings.timeZone,
       currency: this.resolveCurrency(settings.currency ?? null),
       leadFirstTouchSlaHours: settings.leadFirstTouchSlaHours ?? 24,
+      leadDisqualificationReasons: this.joinReasonCatalog(settings.leadDispositionPolicy?.disqualificationReasons),
+      leadLossReasons: this.joinReasonCatalog(settings.leadDispositionPolicy?.lossReasons),
       defaultContractTermMonths: settings.defaultContractTermMonths ?? 12,
       defaultDeliveryOwnerRoleId: settings.defaultDeliveryOwnerRoleId ?? null,
       scoreWeightSlaBreaches: settings.assistantActionScoringPolicy?.weights?.slaBreaches ?? 14,
@@ -270,6 +280,17 @@ export class WorkspaceSettingsPage {
         this.settingsForm.patchValue({ currency: fallback });
       }
     });
+  }
+
+  private joinReasonCatalog(values: readonly string[] | null | undefined): string {
+    return (values ?? []).join('\n');
+  }
+
+  private parseReasonCatalog(raw: string | null | undefined): string[] {
+    return (raw ?? '')
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter((value, index, all) => value.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === value.toLowerCase()) === index);
   }
 
   private resolveCurrency(value: string | null) {

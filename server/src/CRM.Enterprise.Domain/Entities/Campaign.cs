@@ -20,4 +20,5 @@ public class Campaign : AuditableEntity
     public ICollection<CampaignAttribution> Attributions { get; set; } = new List<CampaignAttribution>();
     public ICollection<CampaignInsightSnapshot> InsightSnapshots { get; set; } = new List<CampaignInsightSnapshot>();
     public ICollection<CampaignRecommendation> Recommendations { get; set; } = new List<CampaignRecommendation>();
+    public ICollection<CampaignEmail> Emails { get; set; } = new List<CampaignEmail>();
 }

@@ -178,3 +178,110 @@ export interface RecommendationPilotMetrics {
   windowStartUtc: string;
   windowEndUtc: string;
 }
+
+// ── Campaign Email Models ──────────────────────────────────────
+
+export type CampaignEmailStatus = 'Draft' | 'Scheduled' | 'Sending' | 'Sent' | 'Failed' | 'Cancelled';
+
+export interface CampaignEmailListItem {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  subject: string;
+  status: CampaignEmailStatus;
+  fromName: string;
+  scheduledAtUtc?: string;
+  sentAtUtc?: string;
+  recipientCount: number;
+  sentCount: number;
+  deliveredCount: number;
+  openCount: number;
+  clickCount: number;
+  bounceCount: number;
+  unsubscribeCount: number;
+  createdAtUtc: string;
+  updatedAtUtc?: string;
+}
+
+export interface CampaignEmailSearchResponse {
+  items: CampaignEmailListItem[];
+  total: number;
+}
+
+export interface CampaignEmailDetail {
+  id: string;
+  campaignId: string;
+  campaignName: string;
+  templateId?: string;
+  subject: string;
+  htmlBody: string;
+  textBody?: string;
+  fromName: string;
+  replyTo?: string;
+  status: CampaignEmailStatus;
+  scheduledAtUtc?: string;
+  sentAtUtc?: string;
+  recipientCount: number;
+  sentCount: number;
+  deliveredCount: number;
+  openCount: number;
+  clickCount: number;
+  bounceCount: number;
+  unsubscribeCount: number;
+  createdAtUtc: string;
+  updatedAtUtc?: string;
+}
+
+export interface CampaignEmailRecipient {
+  id: string;
+  email: string;
+  name?: string;
+  status: string;
+  skipReason?: string;
+  sentAtUtc?: string;
+  deliveredAtUtc?: string;
+  openedAtUtc?: string;
+  clickedAtUtc?: string;
+}
+
+export interface CampaignEmailRecipientSearchResponse {
+  items: CampaignEmailRecipient[];
+  total: number;
+}
+
+export interface SaveCampaignEmailRequest {
+  campaignId: string;
+  templateId?: string;
+  subject: string;
+  htmlBody: string;
+  textBody?: string;
+  fromName: string;
+  replyTo?: string;
+}
+
+export interface ScheduleCampaignEmailRequest {
+  scheduledAtUtc: string;
+}
+
+export interface EmailPreference {
+  id: string;
+  email: string;
+  entityType: string;
+  entityId: string;
+  isSubscribed: boolean;
+  unsubscribedAtUtc?: string;
+  unsubscribeReason?: string;
+  unsubscribeSource: string;
+  hardBounceCount: number;
+  lastBounceAtUtc?: string;
+}
+
+export interface UpdateEmailPreferenceRequest {
+  isSubscribed: boolean;
+}
+
+export interface PublicUnsubscribeRequest {
+  email: string;
+  tenantId: string;
+  reason?: string;
+}

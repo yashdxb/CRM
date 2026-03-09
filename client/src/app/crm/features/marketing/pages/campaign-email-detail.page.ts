@@ -7,45 +7,8 @@ import { TableModule } from 'primeng/table';
 import { ProgressBarModule } from 'primeng/progressbar';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AppToastService } from '../../../../core/app-toast.service';
-
-interface EmailRecipient {
-  id: string;
-  email: string;
-  name: string;
-  status: 'Delivered' | 'Opened' | 'Clicked' | 'Bounced' | 'Unsubscribed';
-  openedAt?: string;
-  clickedAt?: string;
-  clickCount: number;
-}
-
-interface CampaignEmailDetail {
-  id: string;
-  campaignId: string;
-  campaignName: string;
-  subject: string;
-  previewText: string;
-  fromName: string;
-  fromEmail: string;
-  replyTo: string;
-  recipientCount: number;
-  sentCount: number;
-  deliveredCount: number;
-  openCount: number;
-  uniqueOpens: number;
-  clickCount: number;
-  uniqueClicks: number;
-  bounceCount: number;
-  unsubscribeCount: number;
-  spamCount: number;
-  openRate: number;
-  clickRate: number;
-  bounceRate: number;
-  status: 'Draft' | 'Scheduled' | 'Sending' | 'Sent' | 'Failed';
-  scheduledAt?: string;
-  sentAt?: string;
-  createdAt: string;
-  recipients: EmailRecipient[];
-}
+import { MarketingDataService } from '../services/marketing-data.service';
+import { CampaignEmailDetail, CampaignEmailRecipient } from '../models/marketing.model';
 
 @Component({
   selector: 'app-campaign-email-detail-page',
@@ -63,12 +26,15 @@ interface CampaignEmailDetail {
 })
 export class CampaignEmailDetailPage implements OnInit {
   protected readonly email = signal<CampaignEmailDetail | null>(null);
+  protected readonly recipients = signal<CampaignEmailRecipient[]>([]);
+  protected readonly recipientTotal = signal(0);
   protected readonly loading = signal(true);
   protected readonly activeTab = signal<'overview' | 'recipients'>('overview');
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toast = inject(AppToastService);
+  private readonly data = inject(MarketingDataService);
 
   protected readonly deliveryRate = computed(() => {
     const e = this.email();
@@ -87,44 +53,29 @@ export class CampaignEmailDetailPage implements OnInit {
 
   protected loadEmail(id: string): void {
     this.loading.set(true);
-    // Mock data - will be replaced with API call
-    setTimeout(() => {
-      this.email.set({
-        id,
-        campaignId: 'c1',
-        campaignName: 'Spring Product Launch',
-        subject: 'Introducing Our New Product Line',
-        previewText: 'Discover the latest innovations designed just for you...',
-        fromName: 'North Edge Team',
-        fromEmail: 'marketing@northedge.com',
-        replyTo: 'support@northedge.com',
-        recipientCount: 5000,
-        sentCount: 4850,
-        deliveredCount: 4700,
-        openCount: 2350,
-        uniqueOpens: 1940,
-        clickCount: 680,
-        uniqueClicks: 485,
-        bounceCount: 150,
-        unsubscribeCount: 23,
-        spamCount: 2,
-        openRate: 40,
-        clickRate: 10,
-        bounceRate: 3,
-        status: 'Sent',
-        sentAt: '2026-02-28T10:00:00Z',
-        createdAt: '2026-02-25T14:30:00Z',
-        recipients: [
-          { id: '1', email: 'john.doe@example.com', name: 'John Doe', status: 'Clicked', openedAt: '2026-02-28T10:15:00Z', clickedAt: '2026-02-28T10:16:00Z', clickCount: 3 },
-          { id: '2', email: 'jane.smith@example.com', name: 'Jane Smith', status: 'Opened', openedAt: '2026-02-28T10:30:00Z', clickCount: 0 },
-          { id: '3', email: 'bob.wilson@example.com', name: 'Bob Wilson', status: 'Delivered', clickCount: 0 },
-          { id: '4', email: 'alice.johnson@example.com', name: 'Alice Johnson', status: 'Clicked', openedAt: '2026-02-28T11:00:00Z', clickedAt: '2026-02-28T11:02:00Z', clickCount: 1 },
-          { id: '5', email: 'invalid@bounced.com', name: 'Invalid Email', status: 'Bounced', clickCount: 0 },
-          { id: '6', email: 'mike.brown@example.com', name: 'Mike Brown', status: 'Unsubscribed', openedAt: '2026-02-28T12:00:00Z', clickCount: 0 }
-        ]
-      });
-      this.loading.set(false);
-    }, 500);
+    this.data.getEmail(id).subscribe({
+      next: (detail) => {
+        this.email.set(detail);
+        this.loading.set(false);
+        this.loadRecipients(id);
+      },
+      error: () => {
+        this.toast.show('error', 'Failed to load email details');
+        this.loading.set(false);
+      }
+    });
+  }
+
+  private loadRecipients(emailId: string): void {
+    this.data.getEmailRecipients(emailId, { page: 1, pageSize: 100 }).subscribe({
+      next: (res) => {
+        this.recipients.set(res.items);
+        this.recipientTotal.set(res.total);
+      },
+      error: () => {
+        this.toast.show('error', 'Failed to load recipients');
+      }
+    });
   }
 
   protected goBack(): void {
@@ -171,5 +122,9 @@ export class CampaignEmailDetailPage implements OnInit {
 
   protected formatNumber(num: number): string {
     return num.toLocaleString();
+  }
+
+  protected computeRate(count: number, total: number): number {
+    return total > 0 ? Math.round((count / total) * 100) : 0;
   }
 }

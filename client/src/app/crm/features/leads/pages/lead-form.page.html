@@ -1237,6 +1237,19 @@
               <p-accordion-content>
                 <section class="form-section form-section--qualification form-section--accordion-body">
                   <div class="form-grid">
+              <div class="form-field full-row" *ngIf="canRecycleLead()">
+                <div class="disposition-actions">
+                  <button
+                    pButton
+                    type="button"
+                    class="crm-button crm-button--secondary"
+                    icon="pi pi-refresh"
+                    label="Recycle to nurture"
+                    (click)="recycleToNurture()"
+                  ></button>
+                  <span class="disposition-actions__hint">Moves the lead back into nurture and schedules a follow-up.</span>
+                </div>
+              </div>
               <div class="form-field" *ngIf="form.status === 'Nurture'">
                 <label for="lead-nurtureFollowUp">Nurture follow-up date <span class="required">*</span></label>
                 <p-datepicker
@@ -1249,27 +1262,31 @@
               </div>
               <div class="form-field full-row" *ngIf="form.status === 'Disqualified'">
                 <label for="lead-disqualifiedReason">Disqualified reason <span class="required">*</span></label>
-                <textarea
-                  pTextarea
+                <p-select
                   id="lead-disqualifiedReason"
                   name="disqualifiedReason"
-                  rows="4"
-                  placeholder="Reason for disqualification"
-                  class="w-full"
+                  [options]="disqualificationReasonOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select the primary disqualification reason"
+                  appendTo="body"
+                  styleClass="w-full"
                   [(ngModel)]="form.disqualifiedReason"
-                ></textarea>
+                ></p-select>
               </div>
               <div class="form-field full-row" *ngIf="form.status === 'Lost'">
                 <label for="lead-lossReason">Loss reason <span class="required">*</span></label>
-                <textarea
-                  pTextarea
+                <p-select
                   id="lead-lossReason"
                   name="lossReason"
-                  rows="3"
-                  placeholder="Primary reason the lead was lost"
-                  class="w-full"
+                  [options]="lossReasonOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select the primary loss reason"
+                  appendTo="body"
+                  styleClass="w-full"
                   [(ngModel)]="form.lossReason"
-                ></textarea>
+                ></p-select>
               </div>
               <div class="form-field" *ngIf="form.status === 'Lost'">
                 <label for="lead-competitor">Competitor <span class="required">*</span></label>
@@ -1293,8 +1310,8 @@
                   pTextarea
                   id="lead-lossNotes"
                   name="lossNotes"
-                  rows="4"
-                  placeholder="Context and details about the loss"
+                  rows="3"
+                  placeholder="Add the key evidence behind the loss decision"
                   class="w-full"
                   [(ngModel)]="form.lossNotes"
                 ></textarea>

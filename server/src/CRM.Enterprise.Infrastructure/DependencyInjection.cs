@@ -195,6 +195,8 @@ public static class DependencyInjection
         services.AddScoped<IOpportunityService, OpportunityService>();
         services.AddScoped<IMarketingService, MarketingService>();
         services.AddScoped<ICampaignAttributionService, MarketingService>();
+        services.AddScoped<IEmailCampaignService, EmailCampaignService>();
+        services.AddScoped<IEmailComplianceService, EmailComplianceService>();
         services.AddScoped<IOpportunityApprovalService, OpportunityApprovalService>();
         services.AddScoped<IDecisionInboxService, DecisionInboxService>();
         services.AddScoped<IOpportunityReviewChecklistService, OpportunityReviewChecklistService>();

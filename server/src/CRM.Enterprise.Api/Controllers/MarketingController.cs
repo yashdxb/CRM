@@ -16,17 +16,23 @@ namespace CRM.Enterprise.Api.Controllers;
 public sealed class MarketingController : ControllerBase
 {
     private readonly IMarketingService _marketingService;
+    private readonly IEmailCampaignService _emailCampaignService;
+    private readonly IEmailComplianceService _complianceService;
     private readonly IAuditEventService _auditEvents;
     private readonly IConfiguration _configuration;
     private readonly ITenantProvider _tenantProvider;
 
     public MarketingController(
         IMarketingService marketingService,
+        IEmailCampaignService emailCampaignService,
+        IEmailComplianceService complianceService,
         IAuditEventService auditEvents,
         IConfiguration configuration,
         ITenantProvider tenantProvider)
     {
         _marketingService = marketingService;
+        _emailCampaignService = emailCampaignService;
+        _complianceService = complianceService;
         _auditEvents = auditEvents;
         _configuration = configuration;
         _tenantProvider = tenantProvider;
@@ -487,6 +493,249 @@ public sealed class MarketingController : ControllerBase
 
         return NoContent();
     }
+
+    // ── Campaign Email Endpoints ──────────────────────────────────
+
+    [HttpGet("emails")]
+    public async Task<ActionResult<CampaignEmailSearchResponse>> GetEmails(
+        [FromQuery] Guid? campaignId,
+        [FromQuery] string? status,
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 25,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        var request = new CampaignEmailSearchRequest(campaignId, status, search, page, pageSize);
+        var result = await _emailCampaignService.SearchEmailsAsync(request, cancellationToken);
+        return Ok(new CampaignEmailSearchResponse(
+            result.Items.Select(ToCampaignEmailItem),
+            result.Total));
+    }
+
+    [HttpGet("emails/{id:guid}")]
+    public async Task<IActionResult> GetEmail(Guid id, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        var result = await _emailCampaignService.GetEmailAsync(id, cancellationToken);
+        if (result is null) return NotFound();
+
+        return Ok(ToCampaignEmailDetail(result));
+    }
+
+    [Authorize(Policy = Permissions.Policies.MarketingManage)]
+    [HttpPost("emails")]
+    public async Task<IActionResult> CreateEmail([FromBody] UpsertCampaignEmailRequest request, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        if (request is null || string.IsNullOrWhiteSpace(request.Subject))
+            return SafeBadRequest("Subject is required.");
+
+        if (request.CampaignId == Guid.Empty)
+            return SafeBadRequest("Campaign is required.");
+
+        if (string.IsNullOrWhiteSpace(request.HtmlBody))
+            return SafeBadRequest("Email body is required.");
+
+        if (string.IsNullOrWhiteSpace(request.FromName))
+            return SafeBadRequest("From name is required.");
+
+        var appRequest = new CampaignEmailUpsertRequest(
+            request.CampaignId, request.TemplateId, request.Subject,
+            request.HtmlBody, request.TextBody, request.FromName, request.ReplyTo);
+
+        var result = await _emailCampaignService.CreateDraftAsync(appRequest, cancellationToken);
+        if (!result.Success)
+            return result.NotFound ? NotFound() : SafeBadRequest(result.Error);
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "CampaignEmail", result.Value!.Id, "Created", "campaign_email", null,
+                $"subject={request.Subject}", GetCurrentUserId(), GetCurrentUserName()),
+            cancellationToken);
+
+        return Ok(ToCampaignEmailDetail(result.Value));
+    }
+
+    [Authorize(Policy = Permissions.Policies.MarketingManage)]
+    [HttpPut("emails/{id:guid}")]
+    public async Task<IActionResult> UpdateEmail(Guid id, [FromBody] UpsertCampaignEmailRequest request, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        if (request is null || string.IsNullOrWhiteSpace(request.Subject))
+            return SafeBadRequest("Subject is required.");
+
+        var appRequest = new CampaignEmailUpsertRequest(
+            request.CampaignId, request.TemplateId, request.Subject,
+            request.HtmlBody, request.TextBody, request.FromName, request.ReplyTo);
+
+        var result = await _emailCampaignService.UpdateDraftAsync(id, appRequest, cancellationToken);
+        if (!result.Success)
+            return result.NotFound ? NotFound() : SafeBadRequest(result.Error);
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "CampaignEmail", id, "Updated", "campaign_email", null,
+                $"subject={request.Subject}", GetCurrentUserId(), GetCurrentUserName()),
+            cancellationToken);
+
+        return Ok(ToCampaignEmailDetail(result.Value!));
+    }
+
+    [Authorize(Policy = Permissions.Policies.MarketingManage)]
+    [HttpPost("emails/{id:guid}/send")]
+    public async Task<IActionResult> SendEmail(Guid id, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        var result = await _emailCampaignService.SendAsync(id, cancellationToken);
+        if (!result.Success)
+            return result.NotFound ? NotFound() : SafeBadRequest(result.Error);
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "CampaignEmail", id, "Sent", "campaign_email", null,
+                $"recipients={result.Value!.SentCount}", GetCurrentUserId(), GetCurrentUserName()),
+            cancellationToken);
+
+        return Ok(ToCampaignEmailDetail(result.Value));
+    }
+
+    [Authorize(Policy = Permissions.Policies.MarketingManage)]
+    [HttpPost("emails/{id:guid}/schedule")]
+    public async Task<IActionResult> ScheduleEmail(Guid id, [FromBody] ScheduleCampaignEmailRequest request, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        if (request is null)
+            return SafeBadRequest("Scheduled time is required.");
+
+        var result = await _emailCampaignService.ScheduleAsync(id, request.ScheduledAtUtc, cancellationToken);
+        if (!result.Success)
+            return result.NotFound ? NotFound() : SafeBadRequest(result.Error);
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "CampaignEmail", id, "Scheduled", "campaign_email", null,
+                $"scheduledAt={request.ScheduledAtUtc:O}", GetCurrentUserId(), GetCurrentUserName()),
+            cancellationToken);
+
+        return Ok(ToCampaignEmailDetail(result.Value!));
+    }
+
+    [Authorize(Policy = Permissions.Policies.MarketingManage)]
+    [HttpPost("emails/{id:guid}/cancel")]
+    public async Task<IActionResult> CancelEmail(Guid id, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        var result = await _emailCampaignService.CancelAsync(id, cancellationToken);
+        if (!result.Success)
+            return result.NotFound ? NotFound() : SafeBadRequest(result.Error);
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "CampaignEmail", id, "Cancelled", "campaign_email", null,
+                null, GetCurrentUserId(), GetCurrentUserName()),
+            cancellationToken);
+
+        return Ok(ToCampaignEmailDetail(result.Value!));
+    }
+
+    [HttpGet("emails/{id:guid}/recipients")]
+    public async Task<ActionResult<CampaignEmailRecipientSearchResponse>> GetEmailRecipients(
+        Guid id,
+        [FromQuery] string? status,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        var result = await _emailCampaignService.GetRecipientsAsync(id, status, page, pageSize, cancellationToken);
+        return Ok(new CampaignEmailRecipientSearchResponse(
+            result.Items.Select(r => new CampaignEmailRecipientItem(
+                r.Id, r.Email, r.Name, r.Status, r.SkipReason,
+                r.SentAtUtc, r.DeliveredAtUtc, r.OpenedAtUtc, r.ClickedAtUtc)),
+            result.Total));
+    }
+
+    // ── Email Compliance Endpoints ────────────────────────────────
+
+    [Authorize(Policy = Permissions.Policies.MarketingManage)]
+    [HttpGet("email-preferences/{email}")]
+    public async Task<IActionResult> GetEmailPreference(string email, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        var dto = await _complianceService.GetPreferenceAsync(email, _tenantProvider.TenantId, cancellationToken);
+        if (dto is null) return NotFound();
+
+        return Ok(new EmailPreferenceResponse(
+            dto.Id, dto.Email, dto.EntityType, dto.EntityId, dto.IsSubscribed,
+            dto.UnsubscribedAtUtc, dto.UnsubscribeReason, dto.UnsubscribeSource,
+            dto.HardBounceCount, dto.LastBounceAtUtc));
+    }
+
+    [Authorize(Policy = Permissions.Policies.MarketingManage)]
+    [HttpPut("email-preferences/{email}")]
+    public async Task<IActionResult> UpdateEmailPreference(string email, [FromBody] UpdateEmailPreferenceRequest request, CancellationToken cancellationToken)
+    {
+        if (!IsMarketingCampaignsEnabled()) return FeatureDisabled();
+
+        if (request is null)
+            return SafeBadRequest("Request body is required.");
+
+        var dto = await _complianceService.UpdatePreferenceAsync(email, _tenantProvider.TenantId, request.IsSubscribed, "Admin", cancellationToken);
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                "EmailPreference", dto.Id, request.IsSubscribed ? "Resubscribed" : "Unsubscribed",
+                "email_preference", null, $"email={email}", GetCurrentUserId(), GetCurrentUserName()),
+            cancellationToken);
+
+        return Ok(new EmailPreferenceResponse(
+            dto.Id, dto.Email, dto.EntityType, dto.EntityId,
+            dto.IsSubscribed, dto.UnsubscribedAtUtc, dto.UnsubscribeReason,
+            dto.UnsubscribeSource, dto.HardBounceCount, dto.LastBounceAtUtc));
+    }
+
+    // ── Public Unsubscribe (No Auth) ──────────────────────────────
+
+    [AllowAnonymous]
+    [HttpPost("public/unsubscribe")]
+    public async Task<IActionResult> PublicUnsubscribe([FromBody] PublicUnsubscribeRequest request, CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest(new { message = "Email is required." });
+
+        if (request.TenantId == Guid.Empty)
+            return BadRequest(new { message = "Invalid request." });
+
+        await _complianceService.ProcessUnsubscribeAsync(
+            request.Email, request.TenantId, "PublicLink", request.Reason ?? "Recipient unsubscribed", cancellationToken);
+
+        return Ok(new { message = "You have been unsubscribed successfully." });
+    }
+
+    // ── Private Helpers ───────────────────────────────────────────
+
+    private static CampaignEmailListItem ToCampaignEmailItem(CampaignEmailListItemDto dto)
+        => new(dto.Id, dto.CampaignId, dto.CampaignName, dto.Subject, dto.Status,
+            dto.FromName, dto.ScheduledAtUtc, dto.SentAtUtc, dto.RecipientCount, dto.SentCount,
+            dto.DeliveredCount, dto.OpenCount, dto.ClickCount, dto.BounceCount,
+            dto.UnsubscribeCount, dto.CreatedAtUtc, dto.UpdatedAtUtc);
+
+    private static CampaignEmailDetailResponse ToCampaignEmailDetail(CampaignEmailDetailDto dto)
+        => new(dto.Id, dto.CampaignId, dto.CampaignName, dto.TemplateId, dto.Subject,
+            dto.HtmlBody, dto.TextBody, dto.FromName, dto.ReplyTo, dto.Status,
+            dto.ScheduledAtUtc, dto.SentAtUtc, dto.RecipientCount, dto.SentCount,
+            dto.DeliveredCount, dto.OpenCount, dto.ClickCount, dto.BounceCount,
+            dto.UnsubscribeCount, dto.CreatedAtUtc, dto.UpdatedAtUtc);
 
     private static CampaignListItem ToCampaignItem(CampaignListItemDto dto)
         => new(

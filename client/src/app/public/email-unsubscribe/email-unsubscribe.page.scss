@@ -1,0 +1,37 @@
+@use '../../../styles/design-tokens' as *;
+
+.status-pill {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &.success {
+    background: rgba(34, 197, 94, 0.12);
+    color: #15803d;
+  }
+
+  &.error {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+  }
+
+  i {
+    font-size: 1rem;
+  }
+}
+
+.unsubscribe-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-align: center;
+  line-height: 1.5;
+}
+
+:host ::ng-deep textarea.p-textarea {
+  width: 100%;
+  resize: vertical;
+}

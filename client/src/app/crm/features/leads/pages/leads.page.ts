@@ -590,6 +590,41 @@ export class LeadsPage {
     });
   }
 
+  protected canRecycleLead(row: Lead): boolean {
+    return row.status === 'Lost' || row.status === 'Disqualified';
+  }
+
+  protected dispositionReasonLabel(lead: Lead): string | null {
+    if (lead.status === 'Disqualified') {
+      return lead.disqualifiedReason?.trim() || null;
+    }
+    if (lead.status === 'Lost') {
+      return lead.lossReason?.trim() || null;
+    }
+    return null;
+  }
+
+  protected recycleLead(row: Lead): void {
+    if (!this.canManage() || !this.canRecycleLead(row)) {
+      return;
+    }
+
+    const confirmed = confirm(`Recycle ${row.name} back to nurture?`);
+    if (!confirmed) {
+      return;
+    }
+
+    this.leadData.recycleToNurture(row.id).subscribe({
+      next: () => {
+        this.raiseToast('success', 'Lead recycled to nurture.');
+        this.load();
+      },
+      error: () => {
+        this.raiseToast('error', 'Unable to recycle lead.');
+      }
+    });
+  }
+
   protected onSearch(term: string) {
     this.searchTerm = term;
     this.pageIndex = 0;
