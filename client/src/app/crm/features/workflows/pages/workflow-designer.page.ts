@@ -6,6 +6,7 @@ import { SelectModule } from 'primeng/select';
 
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
+import { TenantContextService } from '../../../../core/tenant/tenant-context.service';
 import { WorkflowCanvasComponent } from '../components/workflow-canvas/workflow-canvas.component';
 import { NodePaletteComponent } from '../components/node-palette/node-palette.component';
 import { PropertiesPanelComponent } from '../components/properties-panel/properties-panel.component';
@@ -52,12 +53,12 @@ export class WorkflowDesignerPage {
     { label: 'Amount Threshold', value: 'on-amount-threshold' },
     { label: 'Discount Threshold', value: 'on-discount-threshold' }
   ];
-  protected readonly templateOptions = [
+  protected readonly templateOptions = signal([
     { label: 'Deal Approval', value: 'deal-approval' },
     { label: 'Discount Approval', value: 'discount-approval' },
     { label: 'Large Deal Escalation', value: 'large-deal-escalation' },
     { label: 'Stage Gate Exception', value: 'stage-gate-exception' }
-  ];
+  ]);
 
   private readonly supportedNodeTypes = new Set<DealApprovalWorkflowDefinition['nodes'][number]['type']>([
     'start',
@@ -73,6 +74,7 @@ export class WorkflowDesignerPage {
 
   private readonly workflowService = inject(WorkflowDefinitionService);
   private readonly toast = inject(AppToastService);
+  private readonly tenantContext = inject(TenantContextService);
 
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -90,15 +92,47 @@ export class WorkflowDesignerPage {
   protected readonly stageOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackStageOptions);
   protected readonly triggerOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackTriggerOptions);
   protected readonly workflow = signal<DealApprovalWorkflowDefinition>(this.defaultWorkflow());
+  protected readonly workflowTitle = signal('Approval Workflow Builder');
+  protected readonly workflowDescription = signal('Design and publish the single CRM deal approval workflow used by opportunity approvals.');
 
   @ViewChild(WorkflowCanvasComponent)
   private canvas?: WorkflowCanvasComponent;
 
   constructor() {
+    this.loadVerticalPresetContext();
     this.loadRoleOptions();
     this.loadSecurityLevelOptions();
     this.loadScopeMetadata();
     this.load();
+  }
+
+  private loadVerticalPresetContext() {
+    this.tenantContext.getTenantContext().subscribe({
+      next: (context) => {
+        const presetId = context.verticalPresetConfiguration?.presetId ?? 'CoreCRM';
+        if (presetId === 'RealEstateBrokerage') {
+          this.workflowTitle.set('Brokerage Workflow Builder');
+          this.workflowDescription.set('Design and publish brokerage approval and follow-up workflows for transactions and buyer readiness.');
+          this.templateOptions.set([
+            { label: 'New Inquiry Follow-up SLA', value: 'deal-approval' },
+            { label: 'Showing Follow-up Automation', value: 'discount-approval' },
+            { label: 'Weak Conversation Coaching', value: 'large-deal-escalation' },
+            { label: 'Low-Readiness Conversion Approval', value: 'stage-gate-exception' }
+          ]);
+          return;
+        }
+
+        this.workflowTitle.set('Approval Workflow Builder');
+        this.workflowDescription.set('Design and publish the single CRM deal approval workflow used by opportunity approvals.');
+        this.templateOptions.set([
+          { label: 'Deal Approval', value: 'deal-approval' },
+          { label: 'Discount Approval', value: 'discount-approval' },
+          { label: 'Large Deal Escalation', value: 'large-deal-escalation' },
+          { label: 'Stage Gate Exception', value: 'stage-gate-exception' }
+        ]);
+      },
+      error: () => {}
+    });
   }
 
   protected load() {

@@ -1,5 +1,6 @@
 using CRM.Enterprise.Api.Contracts.Tenants;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -103,6 +104,7 @@ public class TenantContextController : ControllerBase
             tenant.Key,
             tenant.Name,
             tenant.IndustryPreset,
+            ResolveVerticalPresetConfiguration(tenant),
             modules,
             featureFlags));
     }
@@ -163,5 +165,25 @@ public class TenantContextController : ControllerBase
         {
             // Ignore malformed overrides and continue with configuration defaults.
         }
+    }
+
+    private static VerticalPresetConfiguration ResolveVerticalPresetConfiguration(Tenant tenant)
+    {
+        if (!string.IsNullOrWhiteSpace(tenant.VerticalPresetConfigJson))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<VerticalPresetConfiguration>(tenant.VerticalPresetConfigJson, JsonOptions);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return VerticalPresetDefaults.Create(tenant.IndustryPreset);
     }
 }

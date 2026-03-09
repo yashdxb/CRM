@@ -5,7 +5,7 @@ import { DashboardSummary } from '../crm/features/dashboard/models/dashboard.mod
 import { PERMISSION_KEYS } from '../core/auth/permission.constants';
 import { Opportunity, OpportunitySearchRequest, OpportunitySearchResponse } from '../crm/features/opportunities/models/opportunity.model';
 import { SaveOpportunityRequest } from '../crm/features/opportunities/services/opportunity-data.service';
-import { UpdateWorkspaceSettingsRequest, WorkspaceSettings } from '../crm/features/settings/models/workspace-settings.model';
+import { UpdateWorkspaceSettingsRequest, VerticalPresetConfiguration, WorkspaceSettings } from '../crm/features/settings/models/workspace-settings.model';
 import {
   PermissionDefinition,
   RoleSummary,
@@ -179,6 +179,29 @@ let mockWorkspaceSettings: WorkspaceSettings = {
   name: 'CRM Enterprise',
   timeZone: 'UTC',
   currency: 'USD',
+  industryPreset: 'CoreCRM',
+  verticalPresetConfiguration: {
+    presetId: 'CoreCRM',
+    vocabulary: {
+      leadQualificationLabel: 'Qualification',
+      opportunitySingularLabel: 'Deal',
+      opportunityPluralLabel: 'Deals',
+      pipelineLabel: 'Deal pipeline',
+      qualificationGuidance: 'Validate fit, timeline, economic buyer, and urgency before progressing this lead.'
+    },
+    brokerageLeadProfileCatalog: {
+      buyerTypes: [],
+      motivationUrgencies: [],
+      financingReadinessOptions: [],
+      preApprovalStatuses: [],
+      preferredAreas: [],
+      propertyTypes: [],
+      budgetBands: []
+    },
+    dashboardPackDefaults: ['Revenue Intelligence'],
+    reportLibraryHighlights: ['Pipeline by Stage', 'Open Opportunities by Owner', 'Lead Conversion Summary'],
+    workflowTemplateHighlights: ['Deal Approval', 'Discount Approval', 'Large Deal Escalation', 'Stage Gate Exception']
+  } satisfies VerticalPresetConfiguration,
   assistantActionScoringPolicy: {
     weights: {
       slaBreaches: 14,
@@ -193,6 +216,10 @@ let mockWorkspaceSettings: WorkspaceSettings = {
       soonUrgencyFrom: 50,
       immediateUrgencyFrom: 80
     }
+  },
+  leadDispositionPolicy: {
+    disqualificationReasons: [],
+    lossReasons: []
   },
   qualificationPolicy: {
     defaultThreshold: 75,

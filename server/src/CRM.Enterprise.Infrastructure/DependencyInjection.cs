@@ -74,6 +74,7 @@ public static class DependencyInjection
         services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
         services.AddScoped<ITenantProvider, TenantProvider>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+        services.AddScoped<IIndustryPresetService, IndustryPresetService>();
         services.AddScoped<IDashboardReadService, DashboardReadService>();
         services.AddScoped<IDashboardLayoutService, DashboardLayoutService>();
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));

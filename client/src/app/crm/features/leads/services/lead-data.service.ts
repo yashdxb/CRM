@@ -40,6 +40,13 @@ export interface SaveLeadRequest {
   lossNotes?: string;
   nurtureFollowUpAtUtc?: string | Date | null;
   qualifiedNotes?: string;
+  buyerType?: string;
+  motivationUrgency?: string;
+  financingReadiness?: string;
+  preApprovalStatus?: string;
+  preferredArea?: string;
+  preferredPropertyType?: string;
+  budgetBand?: string;
   budgetAvailability?: string;
   budgetEvidence?: string;
   readinessToSpend?: string;

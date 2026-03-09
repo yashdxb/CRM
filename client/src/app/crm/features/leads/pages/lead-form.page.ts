@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, DestroyRef, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, OnDestroy, OnInit, WritableSignal, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -48,7 +48,13 @@ import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from 
 import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
-import { LeadDispositionPolicy, QualificationPolicy, SupportingDocumentPolicy } from '../../settings/models/workspace-settings.model';
+import {
+  BrokerageLeadProfileCatalog,
+  LeadDispositionPolicy,
+  QualificationPolicy,
+  SupportingDocumentPolicy,
+  VerticalPresetConfiguration
+} from '../../settings/models/workspace-settings.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
 import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadScoreResult } from './lead-scoring.util';
 import { Activity } from '../../activities/models/activity.model';
@@ -254,12 +260,16 @@ export class LeadFormPage implements OnInit, OnDestroy {
     { label: 'Out-of-profile but exploratory', value: 'Out-of-profile but exploratory', icon: 'pi pi-info-circle', tone: 'assumed' },
     { label: 'Clearly out of ICP', value: 'Clearly out of ICP', icon: 'pi pi-times-circle', tone: 'invalid' }
   ];
-  protected readonly disqualificationReasonOptions = signal<Array<{ label: string; value: string }>>(
-    LeadFormPage.defaultLeadDispositionPolicy().disqualificationReasons.map((value) => ({ label: value, value }))
-  );
-  protected readonly lossReasonOptions = signal<Array<{ label: string; value: string }>>(
-    LeadFormPage.defaultLeadDispositionPolicy().lossReasons.map((value) => ({ label: value, value }))
-  );
+  protected readonly disqualificationReasonOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly lossReasonOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly buyerTypeOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly motivationUrgencyOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly financingReadinessOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly preApprovalStatusOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly preferredAreaOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly propertyTypeOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly budgetBandOptions = signal<Array<{ label: string; value: string }>>([]);
+  protected readonly verticalPresetConfiguration = signal<VerticalPresetConfiguration | null>(null);
   protected evidenceOptions: OptionItem[] = LeadFormPage.defaultEvidenceSources().map((source) =>
     LeadFormPage.toEvidenceOption(source)
   );
@@ -459,6 +469,13 @@ export class LeadFormPage implements OnInit, OnDestroy {
       territory: this.form.territory,
       disqualifiedReason: this.form.disqualifiedReason,
       qualifiedNotes: this.form.qualifiedNotes,
+      buyerType: this.form.buyerType,
+      motivationUrgency: this.form.motivationUrgency,
+      financingReadiness: this.form.financingReadiness,
+      preApprovalStatus: this.form.preApprovalStatus,
+      preferredArea: this.form.preferredArea,
+      preferredPropertyType: this.form.preferredPropertyType,
+      budgetBand: this.form.budgetBand,
       budgetAvailability: this.form.budgetAvailability,
       budgetEvidence: this.form.budgetEvidence,
       readinessToSpend: this.form.readinessToSpend,
@@ -1012,6 +1029,13 @@ export class LeadFormPage implements OnInit, OnDestroy {
       lossNotes: lead.lossNotes ?? '',
       nurtureFollowUpAtUtc: this.toDateValue(lead.nurtureFollowUpAtUtc),
       qualifiedNotes: lead.qualifiedNotes ?? '',
+      buyerType: lead.buyerType ?? '',
+      motivationUrgency: lead.motivationUrgency ?? '',
+      financingReadiness: lead.financingReadiness ?? '',
+      preApprovalStatus: lead.preApprovalStatus ?? '',
+      preferredArea: lead.preferredArea ?? '',
+      preferredPropertyType: lead.preferredPropertyType ?? '',
+      budgetBand: lead.budgetBand ?? '',
       budgetAvailability: lead.budgetAvailability || 'Unknown / not yet discussed',
       budgetEvidence: lead.budgetEvidence || 'No evidence yet',
       readinessToSpend: lead.readinessToSpend || 'Unknown / unclear',
@@ -1289,6 +1313,13 @@ export class LeadFormPage implements OnInit, OnDestroy {
       lossNotes: '',
       nurtureFollowUpAtUtc: null,
       qualifiedNotes: '',
+      buyerType: '',
+      motivationUrgency: '',
+      financingReadiness: '',
+      preApprovalStatus: '',
+      preferredArea: '',
+      preferredPropertyType: '',
+      budgetBand: '',
       budgetAvailability: 'Unknown / not yet discussed',
       budgetEvidence: 'No evidence yet',
       readinessToSpend: 'Unknown / unclear',
@@ -1390,19 +1421,35 @@ export class LeadFormPage implements OnInit, OnDestroy {
         const policy = LeadFormPage.normalizeLeadDispositionPolicy(settings.leadDispositionPolicy);
         this.disqualificationReasonOptions.set(policy.disqualificationReasons.map((value) => ({ label: value, value })));
         this.lossReasonOptions.set(policy.lossReasons.map((value) => ({ label: value, value })));
+        this.applyVerticalPresetConfiguration(settings.verticalPresetConfiguration ?? null);
+        this.ensureDispositionSelectionsRemainVisible();
       },
       error: () => {
-        const fallback = LeadFormPage.defaultLeadDispositionPolicy();
-        this.disqualificationReasonOptions.set(fallback.disqualificationReasons.map((value) => ({ label: value, value })));
-        this.lossReasonOptions.set(fallback.lossReasons.map((value) => ({ label: value, value })));
+        this.disqualificationReasonOptions.set([]);
+        this.lossReasonOptions.set([]);
+        this.applyVerticalPresetConfiguration(null);
+        this.ensureDispositionSelectionsRemainVisible();
       }
     });
+  }
+
+  private ensureDispositionSelectionsRemainVisible() {
+    const disqualification = (this.form.disqualifiedReason ?? '').trim();
+    if (disqualification && !this.disqualificationReasonOptions().some((item) => item.value.toLowerCase() === disqualification.toLowerCase())) {
+      this.disqualificationReasonOptions.update((items) => [...items, { label: disqualification, value: disqualification }]);
+    }
+
+    const loss = (this.form.lossReason ?? '').trim();
+    if (loss && !this.lossReasonOptions().some((item) => item.value.toLowerCase() === loss.toLowerCase())) {
+      this.lossReasonOptions.update((items) => [...items, { label: loss, value: loss }]);
+    }
   }
 
   private loadLeadDataWeights() {
     this.workspaceSettings.getSettings().subscribe({
       next: (settings) => {
         this.qualificationPolicyConfig.set(settings.qualificationPolicy ?? null);
+        this.applyVerticalPresetConfiguration(settings.verticalPresetConfiguration ?? null);
         this.leadDataWeights = settings.qualificationPolicy?.leadDataWeights ?? [];
         if (this.form.autoScore) {
           this.form.score = this.computeAutoScore();
@@ -1418,12 +1465,72 @@ export class LeadFormPage implements OnInit, OnDestroy {
   private loadSupportingDocumentPolicy() {
     this.workspaceSettings.getSettings().subscribe({
       next: (settings) => {
+        this.applyVerticalPresetConfiguration(settings.verticalPresetConfiguration ?? null);
         this.supportingDocumentPolicy.set(settings.supportingDocumentPolicy ?? this.defaultSupportingDocumentPolicy());
       },
       error: () => {
+        this.applyVerticalPresetConfiguration(null);
         this.supportingDocumentPolicy.set(this.defaultSupportingDocumentPolicy());
       }
     });
+  }
+
+  protected isBrokeragePreset(): boolean {
+    return (this.verticalPresetConfiguration()?.presetId ?? 'CoreCRM') === 'RealEstateBrokerage';
+  }
+
+  protected qualificationSectionTitle(): string {
+    return this.isBrokeragePreset() ? 'Buyer Readiness Summary' : 'Qualification Summary';
+  }
+
+  protected qualificationGuidanceText(): string {
+    return this.verticalPresetConfiguration()?.vocabulary?.qualificationGuidance
+      ?? this.qualificationStatusHint();
+  }
+
+  private applyVerticalPresetConfiguration(config: VerticalPresetConfiguration | null) {
+    this.verticalPresetConfiguration.set(config);
+    const catalog = config?.brokerageLeadProfileCatalog;
+    this.buyerTypeOptions.set(this.mapCatalogOptions(catalog?.buyerTypes));
+    this.motivationUrgencyOptions.set(this.mapCatalogOptions(catalog?.motivationUrgencies));
+    this.financingReadinessOptions.set(this.mapCatalogOptions(catalog?.financingReadinessOptions));
+    this.preApprovalStatusOptions.set(this.mapCatalogOptions(catalog?.preApprovalStatuses));
+    this.preferredAreaOptions.set(this.mapCatalogOptions(catalog?.preferredAreas));
+    this.propertyTypeOptions.set(this.mapCatalogOptions(catalog?.propertyTypes));
+    this.budgetBandOptions.set(this.mapCatalogOptions(catalog?.budgetBands));
+    this.ensureBrokerageSelectionsRemainVisible();
+  }
+
+  private mapCatalogOptions(values: readonly string[] | null | undefined): Array<{ label: string; value: string }> {
+    return (values ?? [])
+      .map((value) => (value ?? '').trim())
+      .filter((value, index, all) => value.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === value.toLowerCase()) === index)
+      .map((value) => ({ label: value, value }));
+  }
+
+  private ensureBrokerageSelectionsRemainVisible() {
+    this.ensureOptionIncludesSelection(this.buyerTypeOptions, this.form.buyerType);
+    this.ensureOptionIncludesSelection(this.motivationUrgencyOptions, this.form.motivationUrgency);
+    this.ensureOptionIncludesSelection(this.financingReadinessOptions, this.form.financingReadiness);
+    this.ensureOptionIncludesSelection(this.preApprovalStatusOptions, this.form.preApprovalStatus);
+    this.ensureOptionIncludesSelection(this.preferredAreaOptions, this.form.preferredArea);
+    this.ensureOptionIncludesSelection(this.propertyTypeOptions, this.form.preferredPropertyType);
+    this.ensureOptionIncludesSelection(this.budgetBandOptions, this.form.budgetBand);
+  }
+
+  private ensureOptionIncludesSelection(
+    signalOptions: WritableSignal<Array<{ label: string; value: string }>>,
+    selectedValue: string | null | undefined
+  ) {
+    const value = (selectedValue ?? '').trim();
+    if (!value) {
+      return;
+    }
+
+    const exists = signalOptions().some((item) => item.value.toLowerCase() === value.toLowerCase());
+    if (!exists) {
+      signalOptions.update((items) => [...items, { label: value, value }]);
+    }
   }
 
   private loadSupportingDocuments(leadId: string) {
@@ -2475,53 +2582,16 @@ export class LeadFormPage implements OnInit, OnDestroy {
     ];
   }
 
-  private static defaultLeadDispositionPolicy(): LeadDispositionPolicy {
-    return {
-      disqualificationReasons: [
-        'No budget / funding',
-        'No clear need',
-        'No decision-maker access',
-        'Outside ICP / poor fit',
-        'Timeline not active',
-        'Duplicate / already managed',
-        'No response after repeated follow-up',
-        'Went with internal solution',
-        'Invalid contact / bad data',
-        'Other'
-      ],
-      lossReasons: [
-        'Lost to competitor',
-        'No decision / stalled',
-        'Priority changed',
-        'Budget withdrawn',
-        'Timing pushed',
-        'Internal solution chosen',
-        'Value not compelling enough',
-        'Procurement / legal blocker',
-        'Relationship lost',
-        'Other'
-      ]
-    };
-  }
-
   private static normalizeLeadDispositionPolicy(policy: LeadDispositionPolicy | null | undefined): LeadDispositionPolicy {
-    const fallback = LeadFormPage.defaultLeadDispositionPolicy();
-    const normalize = (items: readonly string[] | null | undefined, defaults: readonly string[]) => {
-      const normalized = (items ?? [])
+    const normalize = (items: readonly string[] | null | undefined) => {
+      return (items ?? [])
         .map((item) => (item ?? '').trim())
         .filter((item, index, all) => item.length > 0 && all.findIndex((candidate) => candidate.toLowerCase() === item.toLowerCase()) === index);
-      if (normalized.length === 0) {
-        return [...defaults];
-      }
-      if (!normalized.some((item) => item.toLowerCase() === 'other')) {
-        normalized.push('Other');
-      }
-      return normalized;
     };
 
     return {
-      disqualificationReasons: normalize(policy?.disqualificationReasons, fallback.disqualificationReasons),
-      lossReasons: normalize(policy?.lossReasons, fallback.lossReasons)
+      disqualificationReasons: normalize(policy?.disqualificationReasons),
+      lossReasons: normalize(policy?.lossReasons)
     };
   }
 

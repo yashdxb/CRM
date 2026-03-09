@@ -13,6 +13,8 @@ public record WorkspaceSettingsResponse(
     string Name,
     string TimeZone,
     string Currency,
+    string? IndustryPreset,
+    VerticalPresetConfiguration VerticalPresetConfiguration,
     int? LeadFirstTouchSlaHours,
     int? DefaultContractTermMonths,
     Guid? DefaultDeliveryOwnerRoleId,

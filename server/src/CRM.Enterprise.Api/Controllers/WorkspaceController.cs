@@ -22,6 +22,7 @@ public class WorkspaceController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IIndustryPresetService _industryPresetService;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -38,10 +39,14 @@ public class WorkspaceController : ControllerBase
         "realtime.assistantStreaming"
     };
 
-    public WorkspaceController(CrmDbContext dbContext, ITenantProvider tenantProvider)
+    public WorkspaceController(
+        CrmDbContext dbContext,
+        ITenantProvider tenantProvider,
+        IIndustryPresetService industryPresetService)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
+        _industryPresetService = industryPresetService;
     }
 
     [HttpGet]
@@ -63,6 +68,8 @@ public class WorkspaceController : ControllerBase
             tenant.Name,
             tenant.TimeZone,
             tenant.Currency,
+            tenant.IndustryPreset,
+            ResolveVerticalPresetConfiguration(tenant),
             tenant.LeadFirstTouchSlaHours,
             tenant.DefaultContractTermMonths,
             tenant.DefaultDeliveryOwnerRoleId,
@@ -94,6 +101,7 @@ public class WorkspaceController : ControllerBase
         tenant.Name = request.Name.Trim();
         tenant.TimeZone = request.TimeZone.Trim();
         tenant.Currency = request.Currency.Trim();
+        tenant.IndustryPreset = VerticalPresetIds.Normalize(request.IndustryPreset ?? tenant.IndustryPreset);
         tenant.LeadFirstTouchSlaHours = request.LeadFirstTouchSlaHours;
         tenant.DefaultContractTermMonths = request.DefaultContractTermMonths;
         tenant.DefaultDeliveryOwnerRoleId = request.DefaultDeliveryOwnerRoleId;
@@ -111,9 +119,9 @@ public class WorkspaceController : ControllerBase
         }
         if (request.LeadDispositionPolicy is not null)
         {
-            tenant.LeadDispositionPolicyJson = JsonSerializer.Serialize(
-                LeadDispositionPolicyDefaults.Normalize(request.LeadDispositionPolicy),
-                JsonOptions);
+                tenant.LeadDispositionPolicyJson = JsonSerializer.Serialize(
+                    LeadDispositionPolicyCatalog.Normalize(request.LeadDispositionPolicy),
+                    JsonOptions);
         }
         if (request.AssistantActionScoringPolicy is not null)
         {
@@ -153,6 +161,54 @@ public class WorkspaceController : ControllerBase
             tenant.Name,
             tenant.TimeZone,
             tenant.Currency,
+            tenant.IndustryPreset,
+            ResolveVerticalPresetConfiguration(tenant),
+            tenant.LeadFirstTouchSlaHours,
+            tenant.DefaultContractTermMonths,
+            tenant.DefaultDeliveryOwnerRoleId,
+            tenant.ApprovalAmountThreshold,
+            tenant.ApprovalApproverRole,
+            ResolveApprovalWorkflowPolicy(tenant),
+            ResolveQualificationPolicy(tenant),
+            ResolveLeadDispositionPolicy(tenant),
+            ResolveAssistantActionScoringPolicy(tenant),
+            ResolveDecisionEscalationPolicy(tenant),
+            ResolveSupportingDocumentPolicy(tenant),
+            ResolveFeatureFlags(tenant),
+            tenant.ReportDesignerRequiredPermission));
+    }
+
+    [HttpPost("vertical-preset")]
+    [Authorize(Policy = Permissions.Policies.AdministrationManage)]
+    public async Task<ActionResult<WorkspaceSettingsResponse>> ApplyVerticalPreset(
+        [FromBody] ApplyVerticalPresetRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.PresetId))
+        {
+            return BadRequest(new { message = "Preset id is required." });
+        }
+
+        var tenantId = _tenantProvider.TenantId;
+        await _industryPresetService.ApplyPresetAsync(tenantId, request.PresetId, request.ResetExisting, cancellationToken);
+
+        var tenant = await _dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+
+        if (tenant is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new WorkspaceSettingsResponse(
+            tenant.Id,
+            tenant.Key,
+            tenant.Name,
+            tenant.TimeZone,
+            tenant.Currency,
+            tenant.IndustryPreset,
+            ResolveVerticalPresetConfiguration(tenant),
             tenant.LeadFirstTouchSlaHours,
             tenant.DefaultContractTermMonths,
             tenant.DefaultDeliveryOwnerRoleId,
@@ -232,18 +288,38 @@ public class WorkspaceController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(tenant.LeadDispositionPolicyJson))
         {
-            return LeadDispositionPolicyDefaults.CreateDefault();
+            return LeadDispositionPolicyCatalog.Normalize(null);
         }
 
         try
         {
             var parsed = JsonSerializer.Deserialize<LeadDispositionPolicy>(tenant.LeadDispositionPolicyJson, JsonOptions);
-            return LeadDispositionPolicyDefaults.Normalize(parsed);
+            return LeadDispositionPolicyCatalog.Normalize(parsed);
         }
         catch (JsonException)
         {
-            return LeadDispositionPolicyDefaults.CreateDefault();
+            return LeadDispositionPolicyCatalog.Normalize(null);
         }
+    }
+
+    private static VerticalPresetConfiguration ResolveVerticalPresetConfiguration(Tenant tenant)
+    {
+        if (!string.IsNullOrWhiteSpace(tenant.VerticalPresetConfigJson))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<VerticalPresetConfiguration>(tenant.VerticalPresetConfigJson, JsonOptions);
+                if (parsed is not null)
+                {
+                    return parsed;
+                }
+            }
+            catch (JsonException)
+            {
+            }
+        }
+
+        return VerticalPresetDefaults.Create(tenant.IndustryPreset);
     }
 
     private static DecisionEscalationPolicy ResolveDecisionEscalationPolicy(Tenant tenant)

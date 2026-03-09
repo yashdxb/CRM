@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../../../environments/environment';
-import { UpdateWorkspaceSettingsRequest, WorkspaceSettings } from '../models/workspace-settings.model';
+import { ApplyVerticalPresetRequest, UpdateWorkspaceSettingsRequest, WorkspaceSettings } from '../models/workspace-settings.model';
 
 @Injectable({ providedIn: 'root' })
 export class WorkspaceSettingsService {
@@ -14,5 +14,9 @@ export class WorkspaceSettingsService {
 
   updateSettings(payload: UpdateWorkspaceSettingsRequest) {
     return this.http.put<WorkspaceSettings>(`${this.baseUrl}/api/workspace`, payload);
+  }
+
+  applyVerticalPreset(payload: ApplyVerticalPresetRequest) {
+    return this.http.post<WorkspaceSettings>(`${this.baseUrl}/api/workspace/vertical-preset`, payload);
   }
 }

@@ -449,6 +449,104 @@
                     />
                   </p-inputgroup>
                 </div>
+                <div class="form-field" *ngIf="isBrokeragePreset()">
+                  <label for="lead-buyerType">Buyer type</label>
+                  <p-select
+                    id="lead-buyerType"
+                    name="buyerType"
+                    [options]="buyerTypeOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select buyer type"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [(ngModel)]="form.buyerType"
+                  ></p-select>
+                </div>
+                <div class="form-field" *ngIf="isBrokeragePreset()">
+                  <label for="lead-motivationUrgency">Motivation / urgency</label>
+                  <p-select
+                    id="lead-motivationUrgency"
+                    name="motivationUrgency"
+                    [options]="motivationUrgencyOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select motivation"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [(ngModel)]="form.motivationUrgency"
+                  ></p-select>
+                </div>
+                <div class="form-field" *ngIf="isBrokeragePreset()">
+                  <label for="lead-financingReadiness">Financing readiness</label>
+                  <p-select
+                    id="lead-financingReadiness"
+                    name="financingReadiness"
+                    [options]="financingReadinessOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select financing readiness"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [(ngModel)]="form.financingReadiness"
+                  ></p-select>
+                </div>
+                <div class="form-field" *ngIf="isBrokeragePreset()">
+                  <label for="lead-preApprovalStatus">Pre-approval status</label>
+                  <p-select
+                    id="lead-preApprovalStatus"
+                    name="preApprovalStatus"
+                    [options]="preApprovalStatusOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select pre-approval status"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [(ngModel)]="form.preApprovalStatus"
+                  ></p-select>
+                </div>
+                <div class="form-field" *ngIf="isBrokeragePreset()">
+                  <label for="lead-preferredArea">Preferred area</label>
+                  <p-select
+                    id="lead-preferredArea"
+                    name="preferredArea"
+                    [options]="preferredAreaOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select preferred area"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [(ngModel)]="form.preferredArea"
+                  ></p-select>
+                </div>
+                <div class="form-field" *ngIf="isBrokeragePreset()">
+                  <label for="lead-preferredPropertyType">Property type</label>
+                  <p-select
+                    id="lead-preferredPropertyType"
+                    name="preferredPropertyType"
+                    [options]="propertyTypeOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select property type"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [(ngModel)]="form.preferredPropertyType"
+                  ></p-select>
+                </div>
+                <div class="form-field" *ngIf="isBrokeragePreset()">
+                  <label for="lead-budgetBand">Budget band</label>
+                  <p-select
+                    id="lead-budgetBand"
+                    name="budgetBand"
+                    [options]="budgetBandOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Select budget band"
+                    appendTo="body"
+                    styleClass="w-full"
+                    [(ngModel)]="form.budgetBand"
+                  ></p-select>
+                </div>
                     </div>
                   </div>
                 </section>
@@ -542,8 +640,8 @@
               <div class="qualification-summary-card__title">
                 <i class="pi pi-chart-line" aria-hidden="true"></i>
                 <div>
-                  <h2>Qualification Summary</h2>
-                  <p>{{ qualificationStatusHint() }}</p>
+                  <h2>{{ qualificationSectionTitle() }}</h2>
+                  <p>{{ qualificationGuidanceText() }}</p>
                 </div>
               </div>
               <div class="qualification-summary-card__chips">

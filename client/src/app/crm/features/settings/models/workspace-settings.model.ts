@@ -4,6 +4,8 @@ export interface WorkspaceSettings {
   name: string;
   timeZone: string;
   currency: string;
+  industryPreset?: string | null;
+  verticalPresetConfiguration: VerticalPresetConfiguration;
   leadFirstTouchSlaHours?: number | null;
   defaultContractTermMonths?: number | null;
   defaultDeliveryOwnerRoleId?: string | null;
@@ -23,6 +25,7 @@ export interface UpdateWorkspaceSettingsRequest {
   name: string;
   timeZone: string;
   currency: string;
+  industryPreset?: string | null;
   leadFirstTouchSlaHours?: number | null;
   defaultContractTermMonths?: number | null;
   defaultDeliveryOwnerRoleId?: string | null;
@@ -36,6 +39,38 @@ export interface UpdateWorkspaceSettingsRequest {
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
   featureFlags?: Record<string, boolean> | null;
   reportDesignerRequiredPermission?: string | null;
+}
+
+export interface ApplyVerticalPresetRequest {
+  presetId: string;
+  resetExisting?: boolean;
+}
+
+export interface VerticalPresetConfiguration {
+  presetId: string;
+  vocabulary: VerticalVocabulary;
+  brokerageLeadProfileCatalog: BrokerageLeadProfileCatalog;
+  dashboardPackDefaults: string[];
+  reportLibraryHighlights: string[];
+  workflowTemplateHighlights: string[];
+}
+
+export interface VerticalVocabulary {
+  leadQualificationLabel: string;
+  opportunitySingularLabel: string;
+  opportunityPluralLabel: string;
+  pipelineLabel: string;
+  qualificationGuidance: string;
+}
+
+export interface BrokerageLeadProfileCatalog {
+  buyerTypes: string[];
+  motivationUrgencies: string[];
+  financingReadinessOptions: string[];
+  preApprovalStatuses: string[];
+  preferredAreas: string[];
+  propertyTypes: string[];
+  budgetBands: string[];
 }
 
 export interface DecisionEscalationPolicy {

@@ -172,6 +172,13 @@ public sealed class LeadService : ILeadService
                 l.LossNotes,
                 l.NurtureFollowUpAtUtc,
                 l.QualifiedNotes,
+                l.BuyerType,
+                l.MotivationUrgency,
+                l.FinancingReadiness,
+                l.PreApprovalStatus,
+                l.PreferredArea,
+                l.PreferredPropertyType,
+                l.BudgetBand,
                 l.FirstTouchDueAtUtc,
                 l.FirstTouchedAtUtc,
                 l.BudgetAvailability,
@@ -253,6 +260,13 @@ public sealed class LeadService : ILeadService
                 l.LossNotes,
                 l.NurtureFollowUpAtUtc,
                 l.QualifiedNotes,
+                l.BuyerType,
+                l.MotivationUrgency,
+                l.FinancingReadiness,
+                l.PreApprovalStatus,
+                l.PreferredArea,
+                l.PreferredPropertyType,
+                l.BudgetBand,
                 l.FirstTouchDueAtUtc,
                 l.FirstTouchedAtUtc,
                 l.BudgetAvailability,
@@ -351,6 +365,13 @@ public sealed class LeadService : ILeadService
             lead.LossNotes,
             lead.NurtureFollowUpAtUtc,
             lead.QualifiedNotes,
+            lead.BuyerType,
+            lead.MotivationUrgency,
+            lead.FinancingReadiness,
+            lead.PreApprovalStatus,
+            lead.PreferredArea,
+            lead.PreferredPropertyType,
+            lead.BudgetBand,
             lead.FirstTouchDueAtUtc,
             lead.FirstTouchedAtUtc,
             lead.BudgetAvailability,
@@ -650,6 +671,13 @@ public sealed class LeadService : ILeadService
             lead.LossNotes,
             lead.NurtureFollowUpAtUtc,
             lead.QualifiedNotes,
+            lead.BuyerType,
+            lead.MotivationUrgency,
+            lead.FinancingReadiness,
+            lead.PreApprovalStatus,
+            lead.PreferredArea,
+            lead.PreferredPropertyType,
+            lead.BudgetBand,
             lead.BudgetAvailability,
             lead.BudgetEvidence,
             lead.ReadinessToSpend,
@@ -735,6 +763,13 @@ public sealed class LeadService : ILeadService
             LossNotes = request.LossNotes,
             NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc,
             QualifiedNotes = request.QualifiedNotes,
+            BuyerType = request.BuyerType,
+            MotivationUrgency = request.MotivationUrgency,
+            FinancingReadiness = request.FinancingReadiness,
+            PreApprovalStatus = request.PreApprovalStatus,
+            PreferredArea = request.PreferredArea,
+            PreferredPropertyType = request.PreferredPropertyType,
+            BudgetBand = request.BudgetBand,
             BudgetAvailability = request.BudgetAvailability,
             BudgetEvidence = request.BudgetEvidence,
             ReadinessToSpend = request.ReadinessToSpend,
@@ -824,6 +859,13 @@ public sealed class LeadService : ILeadService
             lead.LossNotes,
             lead.NurtureFollowUpAtUtc,
             lead.QualifiedNotes,
+            lead.BuyerType,
+            lead.MotivationUrgency,
+            lead.FinancingReadiness,
+            lead.PreApprovalStatus,
+            lead.PreferredArea,
+            lead.PreferredPropertyType,
+            lead.BudgetBand,
             lead.FirstTouchDueAtUtc,
             lead.FirstTouchedAtUtc,
             lead.BudgetAvailability,
@@ -927,6 +969,13 @@ public sealed class LeadService : ILeadService
         lead.LossNotes = request.LossNotes;
         lead.NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc;
         lead.QualifiedNotes = request.QualifiedNotes;
+        lead.BuyerType = request.BuyerType;
+        lead.MotivationUrgency = request.MotivationUrgency;
+        lead.FinancingReadiness = request.FinancingReadiness;
+        lead.PreApprovalStatus = request.PreApprovalStatus;
+        lead.PreferredArea = request.PreferredArea;
+        lead.PreferredPropertyType = request.PreferredPropertyType;
+        lead.BudgetBand = request.BudgetBand;
         lead.BudgetAvailability = request.BudgetAvailability;
         lead.BudgetEvidence = request.BudgetEvidence;
         lead.ReadinessToSpend = request.ReadinessToSpend;

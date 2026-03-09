@@ -16,6 +16,13 @@ public class Lead : AuditableEntity
     public string? Source { get; set; }
     public string? RoutingReason { get; set; }
     public string? Territory { get; set; }
+    public string? BuyerType { get; set; }
+    public string? MotivationUrgency { get; set; }
+    public string? FinancingReadiness { get; set; }
+    public string? PreApprovalStatus { get; set; }
+    public string? PreferredArea { get; set; }
+    public string? PreferredPropertyType { get; set; }
+    public string? BudgetBand { get; set; }
     public int Score { get; set; }
     public int? AiScore { get; set; }
     public decimal? AiConfidence { get; set; }

@@ -15,11 +15,16 @@ public class TenantsController : ControllerBase
 {
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvisioningService _provisioningService;
+    private readonly IIndustryPresetService _industryPresetService;
 
-    public TenantsController(CrmDbContext dbContext, ITenantProvisioningService provisioningService)
+    public TenantsController(
+        CrmDbContext dbContext,
+        ITenantProvisioningService provisioningService,
+        IIndustryPresetService industryPresetService)
     {
         _dbContext = dbContext;
         _provisioningService = provisioningService;
+        _industryPresetService = industryPresetService;
     }
 
     [HttpGet]
@@ -110,13 +115,15 @@ public class TenantsController : ControllerBase
             return NotFound(new { message = "Tenant not found." });
         }
 
-        tenant.IndustryPreset = string.IsNullOrWhiteSpace(request.IndustryPreset) ? "CoreCRM" : request.IndustryPreset.Trim();
+        var presetId = VerticalPresetIds.Normalize(request.IndustryPreset);
+        tenant.IndustryPreset = presetId;
         tenant.IndustryModules = request.IndustryModules is { Count: > 0 }
             ? string.Join(',', request.IndustryModules)
             : null;
         tenant.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _industryPresetService.ApplyPresetAsync(tenantId, presetId, false, cancellationToken);
 
         return Ok(new TenantSummaryResponse(
             tenant.Id,

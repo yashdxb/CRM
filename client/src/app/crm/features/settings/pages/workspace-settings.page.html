@@ -189,6 +189,63 @@
           </section>
 
           <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-compass"></i>
+              Vertical Preset
+            </h3>
+            <p class="section-description">Apply a tenant preset for industry-specific language, lead catalogs, reports, and workflow defaults.</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="form-field">
+                <label for="ws-industryPreset">Preset</label>
+                <p-select
+                  inputId="ws-industryPreset"
+                  formControlName="industryPreset"
+                  [options]="verticalPresetOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                  styleClass="w-full"
+                ></p-select>
+                <small class="field-hint">Use Core CRM for generic tenants. Use Real Estate Brokerage for brokerage operations.</small>
+              </div>
+              <div class="form-field form-field--actions">
+                <label>Apply preset</label>
+                <div class="button-row">
+                  <button pButton type="button" class="btn btn-secondary" [disabled]="presetApplying()" (click)="applyVerticalPreset(false)">
+                    <i class="pi pi-sparkles"></i>
+                    <span>Apply Missing Defaults</span>
+                  </button>
+                  <button pButton type="button" class="btn btn-ghost" [disabled]="presetApplying()" (click)="applyVerticalPreset(true)">
+                    <i class="pi pi-refresh"></i>
+                    <span>Reset to Preset</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid--3col" *ngIf="activeVerticalPresetConfiguration() as preset">
+              <div class="form-field">
+                <label>Qualification language</label>
+                <div class="field-preview">{{ preset.vocabulary.leadQualificationLabel }}</div>
+                <small class="field-hint">{{ preset.vocabulary.qualificationGuidance }}</small>
+              </div>
+              <div class="form-field">
+                <label>Report starter pack</label>
+                <div class="token-list">
+                  <span class="token-pill" *ngFor="let item of preset.reportLibraryHighlights">{{ item }}</span>
+                </div>
+              </div>
+              <div class="form-field">
+                <label>Workflow starter pack</label>
+                <div class="token-list">
+                  <span class="token-pill" *ngFor="let item of preset.workflowTemplateHighlights">{{ item }}</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
             <h3 class="section-title section-title--warning">
               <i class="pi pi-stopwatch"></i>
               Lead SLA

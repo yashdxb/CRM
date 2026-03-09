@@ -44,6 +44,13 @@ export interface Lead {
   lossNotes?: string;
   nurtureFollowUpAtUtc?: string;
   qualifiedNotes?: string;
+  buyerType?: string;
+  motivationUrgency?: string;
+  financingReadiness?: string;
+  preApprovalStatus?: string;
+  preferredArea?: string;
+  preferredPropertyType?: string;
+  budgetBand?: string;
   firstTouchDueAtUtc?: string;
   firstTouchedAtUtc?: string;
   budgetAvailability?: string;

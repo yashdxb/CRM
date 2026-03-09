@@ -20,6 +20,7 @@ public class Tenant : Entity
     public string? DashboardLayoutDefaultsJson { get; set; }
     public string? QualificationPolicyJson { get; set; }
     public string? LeadDispositionPolicyJson { get; set; }
+    public string? VerticalPresetConfigJson { get; set; }
     public string? AssistantActionScoringPolicyJson { get; set; }
     public string? DecisionEscalationPolicyJson { get; set; }
     public string? SupportingDocumentPolicyJson { get; set; }

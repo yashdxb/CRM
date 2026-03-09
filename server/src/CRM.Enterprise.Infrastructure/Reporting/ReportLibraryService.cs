@@ -1,4 +1,5 @@
 using CRM.Enterprise.Application.Reporting;
+using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -64,73 +65,230 @@ public sealed class ReportLibraryService : IReportLibraryService
                 OwnerFilter(),
                 DateRangeFilter("DateFrom", "DateTo", "Expected close date"),
                 StageFilter()
+            ]),
+        new(
+            "Revenue Forecast",
+            "Projected and weighted revenue forecast grouped by period.",
+            70,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Forecast period"),
+                OwnerFilter(),
+                StageFilter()
+            ]),
+        new(
+            "Win Loss Analysis",
+            "Won vs lost opportunities with win rate, deal size, and top reasons.",
+            80,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Close date"),
+                OwnerFilter(),
+                StageFilter()
+            ]),
+        new(
+            "Sales Cycle Duration",
+            "Average days in each sales stage and by owner.",
+            90,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Close date"),
+                OwnerFilter(),
+                StageFilter()
+            ]),
+        new(
+            "Top Deals",
+            "Highest-value open opportunities ranked by deal amount.",
+            100,
+            [
+                OwnerFilter(),
+                StageFilter(),
+                DateRangeFilter("DateFrom", "DateTo", "Expected close date")
+            ]),
+        new(
+            "Lead Conversion Funnel",
+            "Lead volume at each funnel stage from new to converted.",
+            110,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Lead created date"),
+                OwnerFilter()
+            ]),
+        new(
+            "Lead Source Performance",
+            "Lead count and conversion rate by source channel.",
+            120,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Lead created date"),
+                OwnerFilter(),
+                ReportParameterFilter("LeadSource", "Lead source", "leadSource", "report-parameter")
+            ]),
+        new(
+            "Lead Aging",
+            "Open leads grouped by age bucket showing stale pipeline risk.",
+            130,
+            [
+                OwnerFilter(),
+                ReportParameterFilter("LeadSource", "Lead source", "leadSource", "report-parameter")
+            ]),
+        new(
+            "Lead Score Distribution",
+            "Distribution of AI-assigned lead scores across the pipeline.",
+            140,
+            [
+                OwnerFilter(),
+                ReportParameterFilter("LeadSource", "Lead source", "leadSource", "report-parameter")
+            ]),
+        new(
+            "Activity Summary",
+            "Activity volume by type, owner, and monthly trend.",
+            150,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Activity date"),
+                OwnerFilter(),
+                StatusFilter()
+            ]),
+        new(
+            "Team Performance",
+            "Team member performance: deals won, revenue, activities, and conversion rate.",
+            160,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Period"),
+                OwnerFilter()
+            ]),
+        new(
+            "Customer Growth",
+            "New customer acquisition trend by month and industry breakdown.",
+            170,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Customer created date")
+            ]),
+        new(
+            "Customer Revenue Concentration",
+            "Top customers ranked by revenue contribution and share of total.",
+            180,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Period"),
+                OwnerFilter()
+            ]),
+        new(
+            "Campaign ROI",
+            "Campaign spend, revenue, ROI, leads generated, and cost per lead.",
+            190,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Campaign date")
+            ]),
+        new(
+            "Email Engagement",
+            "Email send volume, open rates, click rates, bounces, and unsubscribes.",
+            200,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Send date")
+            ]),
+        new(
+            "Pipeline Health Scorecard",
+            "Pipeline value, weighted forecast, deal aging, stale deals, and coverage ratio by stage.",
+            210,
+            [
+                OwnerFilter(),
+                StageFilter(),
+                DateRangeFilter("DateFrom", "DateTo", "Period")
             ])
     ];
 
     private readonly IReportServerClient _reportServerClient;
     private readonly CrmDbContext _dbContext;
+    private readonly ITenantProvider _tenantProvider;
 
-    public ReportLibraryService(IReportServerClient reportServerClient, CrmDbContext dbContext)
+    public ReportLibraryService(IReportServerClient reportServerClient, CrmDbContext dbContext, ITenantProvider tenantProvider)
     {
         _reportServerClient = reportServerClient;
         _dbContext = dbContext;
+        _tenantProvider = tenantProvider;
     }
 
     public async Task<IReadOnlyList<ReportLibraryItemDto>> GetLibraryAsync(CancellationToken ct = default)
     {
-        if (!_reportServerClient.IsConfigured)
-        {
-            return [];
-        }
+        var tenantPreset = await _dbContext.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == _tenantProvider.TenantId)
+            .Select(t => t.IndustryPreset)
+            .FirstOrDefaultAsync(ct);
 
-        var reportCatalog = await _reportServerClient.GetCatalogAsync(ct);
-        if (reportCatalog.Count == 0)
-        {
-            return [];
-        }
-
+        var templates = ResolveTemplatesForPreset(tenantPreset);
         var stageOptions = await BuildStageOptionsAsync(ct);
         var pipelineOptions = BuildPipelineOptions();
         var statusOptions = BuildStatusOptions();
         var approvalStatusOptions = BuildApprovalStatusOptions();
 
-        var availableByName = reportCatalog
-            .Where(item => string.Equals(item.CategoryName?.Trim(), CrmCategoryName, StringComparison.OrdinalIgnoreCase))
-            .ToDictionary(item => item.Name.Trim(), item => item, StringComparer.OrdinalIgnoreCase);
+        List<ReportLibraryItemDto> results;
 
-        var results = new List<ReportLibraryItemDto>();
-
-        foreach (var template in Templates)
+        if (_reportServerClient.IsConfigured)
         {
-            if (!availableByName.TryGetValue(template.Name, out var report))
-            {
-                continue;
-            }
+            var reportCatalog = await _reportServerClient.GetCatalogAsync(ct);
+            if (reportCatalog.Count == 0)
+                return [];
 
-            results.Add(new ReportLibraryItemDto(
-                report.Id,
-                report.Name,
-                string.IsNullOrWhiteSpace(report.Description) ? template.Description : report.Description,
-                report.CategoryId,
-                report.CategoryName,
-                report.Extension,
-                report.CreatedOn,
-                report.ModifiedOn,
-                template.SortOrder,
-                template.Filters.Select(filter => filter switch
-                {
-                    { Kind: "stage" } => filter with { Options = stageOptions },
-                    { Kind: "pipeline" } => filter with { Options = pipelineOptions },
-                    { Kind: "status" } => filter with { Options = statusOptions },
-                    { Kind: "approvalStatus" } => filter with { Options = approvalStatusOptions },
-                    _ => filter
-                }).ToList()));
+            var availableByName = reportCatalog
+                .Where(item => string.Equals(item.CategoryName?.Trim(), CrmCategoryName, StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(item => item.Name.Trim(), item => item, StringComparer.OrdinalIgnoreCase);
+
+            results = new List<ReportLibraryItemDto>();
+
+            foreach (var template in templates)
+            {
+                if (!availableByName.TryGetValue(template.Name, out var report))
+                    continue;
+
+                results.Add(BuildItem(template, report.Id, report.Name,
+                    string.IsNullOrWhiteSpace(report.Description) ? template.Description : report.Description,
+                    report.CategoryId, report.CategoryName, report.Extension,
+                    report.CreatedOn, report.ModifiedOn,
+                    stageOptions, pipelineOptions, statusOptions, approvalStatusOptions));
+            }
+        }
+        else
+        {
+            // Embedded mode: build library items directly from templates
+            var now = DateTimeOffset.UtcNow;
+            results = templates.Select(template =>
+                BuildItem(template,
+                    template.Name.ToLowerInvariant().Replace(' ', '-'),
+                    template.Name,
+                    template.Description,
+                    CrmCategoryName.ToLowerInvariant(),
+                    CrmCategoryName,
+                    ".trdp",
+                    now, now,
+                    stageOptions, pipelineOptions, statusOptions, approvalStatusOptions))
+                .ToList();
         }
 
         return results
             .OrderBy(item => item.SortOrder)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    private static ReportLibraryItemDto BuildItem(
+        ReportTemplateDefinition template,
+        string id, string name, string description,
+        string categoryId, string categoryName, string extension,
+        DateTimeOffset createdOn, DateTimeOffset modifiedOn,
+        IReadOnlyList<ReportParameterOptionDto> stageOptions,
+        IReadOnlyList<ReportParameterOptionDto> pipelineOptions,
+        IReadOnlyList<ReportParameterOptionDto> statusOptions,
+        IReadOnlyList<ReportParameterOptionDto> approvalStatusOptions)
+    {
+        return new ReportLibraryItemDto(
+            id, name, description,
+            categoryId, categoryName, extension,
+            createdOn, modifiedOn,
+            template.SortOrder,
+            template.Filters.Select(filter => filter switch
+            {
+                { Kind: "stage" } => filter with { Options = stageOptions },
+                { Kind: "pipeline" } => filter with { Options = pipelineOptions },
+                { Kind: "status" } => filter with { Options = statusOptions },
+                { Kind: "approvalStatus" } => filter with { Options = approvalStatusOptions },
+                _ => filter
+            }).ToList());
     }
 
     private async Task<IReadOnlyList<ReportParameterOptionDto>> BuildStageOptionsAsync(CancellationToken ct)
@@ -243,4 +401,23 @@ public sealed class ReportLibraryService : IReportLibraryService
         string Description,
         int SortOrder,
         IReadOnlyList<ReportLibraryFilterDto> Filters);
+
+    private static IReadOnlyList<ReportTemplateDefinition> ResolveTemplatesForPreset(string? presetId)
+    {
+        if (VerticalPresetIds.Normalize(presetId) != VerticalPresetIds.RealEstateBrokerage)
+        {
+            return Templates;
+        }
+
+        return Templates.Select(template => template.Name switch
+        {
+            "Pipeline by Stage" => template with { Description = "Open buyer and seller pipeline grouped by transaction stage." },
+            "Open Opportunities by Owner" => template with { Description = "Active transactions by agent, stage, and expected close date." },
+            "Pending Deal Approval" => template with { Description = "Approvals queue for low-readiness conversions and transaction exceptions." },
+            "Lead Conversion Summary" => template with { Description = "Inquiry, qualification, and transaction conversion by agent and source." },
+            "Sales Activities by Owner" => template with { Description = "Showings, calls, meetings, and overdue follow-up by agent." },
+            "Forecast Summary" => template with { Description = "Expected closings and weighted transaction value by stage and close window." },
+            _ => template
+        }).ToList();
+    }
 }

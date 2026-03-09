@@ -3,8 +3,8 @@
 
   <header class="workflow-header">
     <div>
-      <h1 class="hero-title">Approval Workflow Builder</h1>
-      <p>Design and publish the single CRM deal approval workflow used by opportunity approvals.</p>
+      <h1 class="hero-title">{{ workflowTitle() }}</h1>
+      <p>{{ workflowDescription() }}</p>
       <small *ngIf="updatedAtUtc()">Last updated: {{ updatedAtUtc() }}</small>
     </div>
     <div class="header-actions">
@@ -26,7 +26,7 @@
         <span>Template</span>
         <p-select
           appendTo="body"
-          [options]="templateOptions"
+          [options]="templateOptions()"
           optionLabel="label"
           optionValue="value"
           [ngModel]="selectedTemplate()"

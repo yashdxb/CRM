@@ -26,6 +26,13 @@ public class UpsertLeadRequest
     public string? LossNotes { get; set; }
     public DateTime? NurtureFollowUpAtUtc { get; set; }
     public string? QualifiedNotes { get; set; }
+    public string? BuyerType { get; set; }
+    public string? MotivationUrgency { get; set; }
+    public string? FinancingReadiness { get; set; }
+    public string? PreApprovalStatus { get; set; }
+    public string? PreferredArea { get; set; }
+    public string? PreferredPropertyType { get; set; }
+    public string? BudgetBand { get; set; }
     public string? BudgetAvailability { get; set; }
     public string? BudgetEvidence { get; set; }
     public string? ReadinessToSpend { get; set; }

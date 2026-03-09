@@ -11,6 +11,7 @@ public record UpdateWorkspaceSettingsRequest(
     string Name,
     string TimeZone,
     string Currency,
+    string? IndustryPreset,
     int? LeadFirstTouchSlaHours,
     int? DefaultContractTermMonths,
     Guid? DefaultDeliveryOwnerRoleId,
@@ -24,3 +25,7 @@ public record UpdateWorkspaceSettingsRequest(
     SupportingDocumentPolicy? SupportingDocumentPolicy,
     IReadOnlyDictionary<string, bool>? FeatureFlags = null,
     string? ReportDesignerRequiredPermission = null);
+
+public record ApplyVerticalPresetRequest(
+    string PresetId,
+    bool ResetExisting = false);

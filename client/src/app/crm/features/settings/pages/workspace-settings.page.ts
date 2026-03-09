@@ -13,7 +13,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { TextareaModule } from 'primeng/textarea';
 
 import { WorkspaceSettingsService } from '../services/workspace-settings.service';
-import { LeadDispositionPolicy, WorkspaceSettings } from '../models/workspace-settings.model';
+import { LeadDispositionPolicy, VerticalPresetConfiguration, WorkspaceSettings } from '../models/workspace-settings.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -76,6 +76,13 @@ export class WorkspaceSettingsPage {
   protected readonly getFlagUrl = getTimeZoneFlagUrl;
 
   protected currencyOptions: Option[] = [];
+  protected readonly verticalPresetOptions: Option[] = [
+    { label: 'Core CRM', value: 'CoreCRM' },
+    { label: 'Supply Chain', value: 'SupplyChain' },
+    { label: 'Real Estate Brokerage', value: 'RealEstateBrokerage' }
+  ];
+  protected readonly activeVerticalPresetConfiguration = signal<VerticalPresetConfiguration | null>(null);
+  protected readonly presetApplying = signal(false);
 
   protected readonly reportDesignerPermissionOptions: Option[] = [
     { label: 'Admins Only (Administration Manage)', value: 'Permissions.Administration.Manage' },
@@ -88,6 +95,7 @@ export class WorkspaceSettingsPage {
     name: ['', [Validators.required, Validators.maxLength(120)]],
     timeZone: ['UTC', [Validators.required]],
     currency: ['', [Validators.required]],
+    industryPreset: ['CoreCRM', [Validators.required]],
     leadFirstTouchSlaHours: [24, [Validators.min(1), Validators.max(168)]],
     leadDisqualificationReasons: [''],
     leadLossReasons: [''],
@@ -153,6 +161,7 @@ export class WorkspaceSettingsPage {
       name: payload.name ?? '',
       timeZone: payload.timeZone ?? 'UTC',
       currency: this.resolveCurrency(payload.currency ?? null),
+      industryPreset: payload.industryPreset ?? 'CoreCRM',
       leadFirstTouchSlaHours: payload.leadFirstTouchSlaHours ?? 24,
       leadDispositionPolicy: {
         disqualificationReasons: this.parseReasonCatalog(payload.leadDisqualificationReasons),
@@ -214,6 +223,7 @@ export class WorkspaceSettingsPage {
       name: settings.name,
       timeZone: settings.timeZone,
       currency: this.resolveCurrency(settings.currency ?? null),
+      industryPreset: settings.industryPreset || settings.verticalPresetConfiguration?.presetId || 'CoreCRM',
       leadFirstTouchSlaHours: settings.leadFirstTouchSlaHours ?? 24,
       leadDisqualificationReasons: this.joinReasonCatalog(settings.leadDispositionPolicy?.disqualificationReasons),
       leadLossReasons: this.joinReasonCatalog(settings.leadDispositionPolicy?.lossReasons),
@@ -242,6 +252,23 @@ export class WorkspaceSettingsPage {
       featureHelpDeskRealtime: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.realtime'),
       reportDesignerRequiredPermission: settings.reportDesignerRequiredPermission || 'Permissions.Administration.Manage'
     });
+    this.activeVerticalPresetConfiguration.set(settings.verticalPresetConfiguration ?? null);
+  }
+
+  protected applyVerticalPreset(resetExisting: boolean) {
+    const presetId = this.settingsForm.getRawValue().industryPreset || 'CoreCRM';
+    this.presetApplying.set(true);
+    this.settingsService.applyVerticalPreset({ presetId, resetExisting }).subscribe({
+      next: (settings) => {
+        this.presetApplying.set(false);
+        this.applySettings(settings);
+        this.raiseToast('success', resetExisting ? 'Vertical preset reset and applied.' : 'Vertical preset applied.');
+      },
+      error: () => {
+        this.presetApplying.set(false);
+        this.raiseToast('error', 'Unable to apply vertical preset.');
+      }
+    });
   }
 
   protected clearToast() {
@@ -264,7 +291,7 @@ export class WorkspaceSettingsPage {
   }
 
   protected currentCurrency() {
-    return this.settingsForm.value.currency || this.currencyOptions[0]?.value || '';
+    return this.settingsForm.value.currency || '';
   }
 
   private loadCurrencies() {

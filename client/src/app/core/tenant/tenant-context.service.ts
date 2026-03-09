@@ -7,6 +7,28 @@ export interface TenantContext {
   key: string;
   name: string;
   industryPreset?: string | null;
+  verticalPresetConfiguration: {
+    presetId: string;
+    vocabulary: {
+      leadQualificationLabel: string;
+      opportunitySingularLabel: string;
+      opportunityPluralLabel: string;
+      pipelineLabel: string;
+      qualificationGuidance: string;
+    };
+    brokerageLeadProfileCatalog: {
+      buyerTypes: string[];
+      motivationUrgencies: string[];
+      financingReadinessOptions: string[];
+      preApprovalStatuses: string[];
+      preferredAreas: string[];
+      propertyTypes: string[];
+      budgetBands: string[];
+    };
+    dashboardPackDefaults: string[];
+    reportLibraryHighlights: string[];
+    workflowTemplateHighlights: string[];
+  };
   industryModules?: string[];
   featureFlags?: Record<string, boolean>;
 }
