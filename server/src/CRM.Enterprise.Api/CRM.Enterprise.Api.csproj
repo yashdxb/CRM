@@ -17,7 +17,6 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
     <PackageReference Include="Telerik.Drawing.Skia" Version="20.0.26.304" />
     <PackageReference Include="Telerik.Reporting.Services.AspNetCore" Version="20.0.26.304" />
     <PackageReference Include="Telerik.WebReportDesigner.Services" Version="20.0.26.304" />

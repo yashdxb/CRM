@@ -89,8 +89,7 @@ builder.Services.TryAddSingleton<IReportDesignerServiceConfiguration>(_ =>
     };
 });
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 var signalRConnectionString = builder.Configuration["Azure:SignalR:ConnectionString"];
 if (!string.IsNullOrWhiteSpace(signalRConnectionString))
 {
@@ -296,8 +295,7 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
 }
 
 // Enforce HTTPS only for non-local traffic to prevent 307 CORS preflight failures during local dev.
