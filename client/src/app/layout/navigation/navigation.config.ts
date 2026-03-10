@@ -78,8 +78,7 @@ export const NAV_LINKS: NavLink[] = [
       { label: 'Campaigns', icon: 'pi-list', path: '/app/marketing/campaigns', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' },
       { label: 'Add Campaign', icon: 'pi-plus', path: '/app/marketing/campaigns/new', permission: PERMISSION_KEYS.marketingManage, featureFlag: 'marketing.campaigns' },
       { label: 'Campaign Emails', icon: 'pi-send', path: '/app/marketing/emails', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' },
-      { label: 'Attribution', icon: 'pi-percentage', path: '/app/marketing/attribution', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' },
-      { label: 'Marketing Settings', icon: 'pi-cog', path: '/app/settings/marketing', permission: PERMISSION_KEYS.administrationView, featureFlag: 'marketing.campaigns' }
+      { label: 'Attribution', icon: 'pi-percentage', path: '/app/marketing/attribution', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' }
     ]
   },
   { 

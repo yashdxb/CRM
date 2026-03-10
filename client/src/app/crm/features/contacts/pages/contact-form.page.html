@@ -221,7 +221,11 @@
                     <div class="timeline-description" *ngIf="activity.description">{{ activity.description }}</div>
                   </div>
                 </div>
-                <div class="empty-state" *ngIf="!activities().length">No activity yet.</div>
+                <div class="empty-state" *ngIf="!activities().length">
+                  <i class="pi pi-clock"></i>
+                  <span>No activity yet.</span>
+                  <a class="empty-state-link" routerLink="/app/activities">+ Log first activity</a>
+                </div>
               </div>
               <ng-template #timelineLoadingTpl>
                 <div class="empty-state">Loading timeline...</div>
@@ -262,7 +266,10 @@
                   </div>
                 </div>
                 <ng-template #notesEmpty>
-                  <div class="empty-state">No notes yet.</div>
+                  <div class="empty-state">
+                    <i class="pi pi-file-edit"></i>
+                    <span>No notes yet. Use the editor above to add one.</span>
+                  </div>
                 </ng-template>
               </div>
               </p-tabpanel>
@@ -310,7 +317,11 @@
                       </tr>
                     </ng-template>
                   </p-table>
-                  <div class="empty-state" *ngIf="!relatedOpportunities().length">No opportunities yet.</div>
+                  <div class="empty-state" *ngIf="!relatedOpportunities().length">
+                    <i class="pi pi-chart-line"></i>
+                    <span>No opportunities yet.</span>
+                    <a class="empty-state-link" routerLink="/app/opportunities/new">+ Create opportunity</a>
+                  </div>
                 </div>
 
                 <div class="related-section">
@@ -333,7 +344,10 @@
                       </tr>
                     </ng-template>
                   </p-table>
-                  <div class="empty-state" *ngIf="!relatedAccounts().length">No related accounts.</div>
+                  <div class="empty-state" *ngIf="!relatedAccounts().length">
+                    <i class="pi pi-building"></i>
+                    <span>No related accounts.</span>
+                  </div>
                 </div>
 
                 <div class="related-section">
@@ -391,7 +405,10 @@
                     </tr>
                   </ng-template>
                 </p-table>
-                <div class="empty-state" *ngIf="!attachments().length">No attachments yet.</div>
+                <div class="empty-state" *ngIf="!attachments().length">
+                  <i class="pi pi-paperclip"></i>
+                  <span>No attachments yet. Use the upload button above.</span>
+                </div>
               </div>
               </p-tabpanel>
             </p-tabpanels>

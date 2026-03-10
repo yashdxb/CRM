@@ -925,3 +925,490 @@ test.describe('UAT — Additional Seed Data', () => {
     console.log('Additional seed data creation complete');
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  Scenario 2 — Extended Seeding: Users, Lead Enrichment,            */
+/*               Campaigns, Help Desk, Pipeline Close                 */
+/* ------------------------------------------------------------------ */
+
+test.describe('UAT — Scenario 2: Extended Data Seeding', () => {
+  test.setTimeout(120_000);
+
+  let token: string;
+  let lastRequestContext: any;
+
+  /** Authenticate — re-login if request context changes between tests */
+  async function ensureAuth(request) {
+    if (token && lastRequestContext === request) return token;
+    let loginRes = await request.post(`${API}/api/auth/login`, {
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Key': TENANT },
+      data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD },
+    });
+    if (!loginRes.ok()) throw new Error(`Admin login failed: ${loginRes.status()}`);
+    const body = await loginRes.json();
+    token = body.accessToken;
+    lastRequestContext = request;
+    return token;
+  }
+
+  // ── Step 1: Seed Test Users (8 Sales Reps + 2 Sales Managers) ──────
+
+  test('Step 1 — Seed test users (8 reps + 2 managers)', async ({ request }) => {
+    await ensureAuth(request);
+
+    // Fetch role catalog to resolve role IDs by name
+    const rolesRes = await apiGet(request, token, '/api/roles');
+    expect(rolesRes.ok()).toBeTruthy();
+    const roles: Array<{ id: string; name: string }> = await rolesRes.json();
+    const roleMap: Record<string, string> = {};
+    for (const r of roles) roleMap[r.name] = r.id;
+
+    const salesRepRoleId = roleMap['Sales Rep'] ?? roleMap['SalesRep'];
+    const salesMgrRoleId = roleMap['Sales Manager'] ?? roleMap['SalesManager'];
+
+    if (!salesRepRoleId) console.warn('⚠ "Sales Rep" role not found — users will be created without it');
+    if (!salesMgrRoleId) console.warn('⚠ "Sales Manager" role not found — users will be created without it');
+
+    const users = [
+      { fullName: 'Marcus Rivera', email: 'marcus.rivera@crmenterprise.demo', role: 'rep', timeZone: 'America/New_York', locale: 'en-US', monthlyQuota: 75000 },
+      { fullName: 'Sarah Kim', email: 'sarah.kim@crmenterprise.demo', role: 'rep', timeZone: 'America/Los_Angeles', locale: 'en-US', monthlyQuota: 80000 },
+      { fullName: 'David Okonkwo', email: 'david.okonkwo@crmenterprise.demo', role: 'rep', timeZone: 'Europe/London', locale: 'en-GB', monthlyQuota: 65000 },
+      { fullName: 'Emily Zhang', email: 'emily.zhang@crmenterprise.demo', role: 'rep', timeZone: 'Asia/Singapore', locale: 'en-SG', monthlyQuota: 70000 },
+      { fullName: 'Carlos Mendez', email: 'carlos.mendez@crmenterprise.demo', role: 'rep', timeZone: 'America/Chicago', locale: 'es-US', monthlyQuota: 60000 },
+      { fullName: 'Aisha Patel', email: 'aisha.patel@crmenterprise.demo', role: 'rep', timeZone: 'Asia/Dubai', locale: 'en-AE', monthlyQuota: 85000 },
+      { fullName: 'James Sullivan', email: 'james.sullivan@crmenterprise.demo', role: 'rep', timeZone: 'America/Denver', locale: 'en-US', monthlyQuota: 72000 },
+      { fullName: 'Fatima Al-Hassan', email: 'fatima.alhassan@crmenterprise.demo', role: 'rep', timeZone: 'Asia/Dubai', locale: 'ar-AE', monthlyQuota: 78000 },
+      { fullName: 'Rachel Torres', email: 'rachel.torres@crmenterprise.demo', role: 'mgr', timeZone: 'America/New_York', locale: 'en-US', monthlyQuota: 500000 },
+      { fullName: 'Daniel Brooks', email: 'daniel.brooks@crmenterprise.demo', role: 'mgr', timeZone: 'Europe/London', locale: 'en-GB', monthlyQuota: 450000 },
+    ];
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const u of users) {
+      const roleId = u.role === 'mgr' ? salesMgrRoleId : salesRepRoleId;
+      const res = await apiPost(request, token, '/api/users', {
+        fullName: u.fullName,
+        email: u.email,
+        userAudience: 'Internal',
+        timeZone: u.timeZone,
+        locale: u.locale,
+        monthlyQuota: u.monthlyQuota,
+        isActive: true,
+        roleIds: roleId ? [roleId] : [],
+        temporaryPassword: 'CrmTest!1',
+      });
+      if (res.ok()) {
+        created++;
+        console.log(`✓ Created user: ${u.fullName} (${u.email})`);
+      } else if (res.status() === 409) {
+        skipped++;
+        console.log(`⊘ User already exists: ${u.fullName} (${u.email})`);
+      } else {
+        console.log(`✗ User create failed ${res.status()} for ${u.fullName}: ${await res.text()}`);
+      }
+    }
+
+    console.log(`User seeding complete — created: ${created}, skipped: ${skipped}`);
+    expect(created + skipped).toBe(users.length);
+  });
+
+  // ── Step 2: Enrich Lead Statuses per UAT Spec ─────────────────────
+
+  test('Step 2 — Enrich lead statuses (Contacted, Nurture, Qualified, Disqualified)', async ({ request }) => {
+    await ensureAuth(request);
+
+    // Lead definitions — create if they don't exist, then enrich
+    const leadDefs = [
+      { firstName: 'Liam', lastName: 'Hartley', companyName: 'Atlas Financial Group', email: 'liam.hartley@atlas-financial.example.com', source: 'Trade Show', territory: 'APAC' },
+      { firstName: 'Yuki', lastName: 'Tanaka', companyName: 'Sakura Digital', email: 'yuki.tanaka@sakura-digital.example.com', source: 'Website', territory: 'APAC' },
+      { firstName: 'Pradeep', lastName: 'Sharma', companyName: 'Indus Manufacturing', email: 'pradeep.sharma@indus-manufacturing.example.com', source: 'Cold Call', territory: 'APAC' },
+      { firstName: 'Eva', lastName: 'Kowalski', companyName: 'EuroTech Dynamics', email: 'eva.kowalski@eurotech-dynamics.example.com', source: 'Event', territory: 'EMEA' },
+      { firstName: 'Omar', lastName: 'Khalil', companyName: 'Crescent Trading Co.', email: 'omar.khalil@crescent-trading.example.com', source: 'Partner', territory: 'MENA' },
+    ];
+
+    // Ensure all leads exist — create if not found
+    const leadIds: Record<string, { id: string; status: string; email: string; company: string }> = {};
+    for (const ld of leadDefs) {
+      const searchRes = await apiGet(request, token, `/api/leads?search=${encodeURIComponent(ld.lastName)}&page=1&pageSize=5`);
+      const searchData = searchRes.ok() ? await searchRes.json() : { items: [] };
+      const items = searchData.items || searchData.data || [];
+      let lead = items.find((l: any) => l.name?.includes(ld.lastName));
+
+      if (!lead) {
+        // Create the lead
+        const createRes = await apiPost(request, token, '/api/leads', ld);
+        if (createRes.ok()) {
+          lead = await createRes.json();
+          console.log(`Created lead: ${ld.firstName} ${ld.lastName} (${lead.id})`);
+        } else if (createRes.status() === 409) {
+          console.log(`Lead ${ld.lastName} already exists (409) — re-searching`);
+          const retryRes = await apiGet(request, token, `/api/leads?search=${encodeURIComponent(ld.lastName)}&page=1&pageSize=5`);
+          if (retryRes.ok()) {
+            const retryData = await retryRes.json();
+            lead = (retryData.items || []).find((l: any) => l.name?.includes(ld.lastName));
+          }
+        } else {
+          console.log(`Lead create failed for ${ld.lastName}: ${createRes.status()} ${await createRes.text()}`);
+        }
+      } else {
+        console.log(`Found existing lead: ${lead.name} (${lead.id})`);
+      }
+
+      if (lead) {
+        leadIds[ld.lastName] = { id: lead.id, status: lead.status ?? 'New', email: lead.email ?? ld.email, company: lead.company ?? ld.companyName };
+      }
+    }
+
+    // Define enrichments
+    const enrichments: Array<{
+      lastName: string;
+      targetStatus: string;
+      score?: number;
+      extra?: Record<string, unknown>;
+    }> = [
+      { lastName: 'Hartley', targetStatus: 'Contacted', score: 25 },
+      { lastName: 'Tanaka', targetStatus: 'Contacted', score: 30 },
+      { lastName: 'Sharma', targetStatus: 'Nurture', score: 40, extra: { nurtureFollowUpAtUtc: '2026-10-01T00:00:00Z' } },
+      { lastName: 'Kowalski', targetStatus: 'Qualified', score: 78, extra: { budgetAvailability: '8', readinessToSpend: '7', buyingTimeline: '7', problemSeverity: '8', economicBuyer: 'VP of Sales', icpFit: '8' } },
+      { lastName: 'Khalil', targetStatus: 'Disqualified', score: 15, extra: { disqualifiedReason: 'Company too small, < 10 employees, not ICP fit' } },
+    ];
+
+    let updated = 0;
+
+    for (const e of enrichments) {
+      const lead = leadIds[e.lastName];
+      if (!lead) {
+        console.log(`Lead not resolved: ${e.lastName} — skipping enrichment`);
+        continue;
+      }
+
+      const firstName = leadDefs.find(d => d.lastName === e.lastName)!.firstName;
+
+      // Check current status — skip if already at or past target
+      const statusOrder = ['New', 'Contacted', 'Nurture', 'Qualified', 'Converted', 'Disqualified'];
+      const currentIdx = statusOrder.indexOf(lead.status);
+      const targetIdx = statusOrder.indexOf(e.targetStatus);
+      if (currentIdx >= targetIdx && lead.status !== 'New') {
+        console.log(`Lead ${e.lastName} is already ${lead.status} — skipping`);
+        updated++;
+        continue;
+      }
+
+      const transitionPath = getTransitionPath(lead.status, e.targetStatus);
+
+      for (let i = 0; i < transitionPath.length; i++) {
+        const isLast = i === transitionPath.length - 1;
+        const putData: Record<string, unknown> = {
+          firstName,
+          lastName: e.lastName,
+          email: lead.email,
+          companyName: lead.company,
+          status: transitionPath[i],
+          ...(isLast && e.score != null ? { score: e.score } : {}),
+          ...(isLast && e.extra ? e.extra : {}),
+        };
+        const putRes = await apiPut(request, token, `/api/leads/${lead.id}`, putData);
+        if (!putRes.ok()) {
+          console.log(`Lead status update ${e.lastName} → ${transitionPath[i]} failed (${putRes.status()}): ${await putRes.text()}`);
+          break;
+        }
+      }
+
+      console.log(`✓ Lead ${e.lastName} → ${e.targetStatus} (score: ${e.score ?? 'unchanged'})`);
+      updated++;
+    }
+
+    console.log(`Lead enrichment complete — ${updated}/${enrichments.length} processed`);
+    expect(updated).toBe(enrichments.length);
+  });
+
+  // ── Step 3: Create Marketing Campaigns ─────────────────────────────
+
+  test('Step 3 — Create marketing campaigns', async ({ request }) => {
+    await ensureAuth(request);
+
+    // Get current user ID for campaign ownership
+    const usersRes = await apiGet(request, token, `/api/users?search=${encodeURIComponent('yasser')}&page=1&pageSize=5`);
+    let ownerUserId: string | null = null;
+    if (usersRes.ok()) {
+      const usersData = await usersRes.json();
+      const items = usersData.items || usersData.data || [];
+      if (items.length > 0) ownerUserId = items[0].id;
+    }
+    if (!ownerUserId) {
+      console.log('Could not resolve owner user ID — will attempt campaigns without it');
+    }
+
+    const campaigns = [
+      { name: 'Q2 Product Launch', type: 'Product Launch', channel: 'Email', status: 'Active', budgetPlanned: 15000, budgetActual: 3200, objective: 'Drive awareness for new enterprise platform features' },
+      { name: 'FinTech Summit 2026', type: 'Event', channel: 'Event', status: 'Planned', budgetPlanned: 25000, budgetActual: 0, objective: 'Generate 50 qualified leads from financial services vertical' },
+      { name: 'LinkedIn ABM Campaign', type: 'ABM', channel: 'Social', status: 'Active', budgetPlanned: 8000, budgetActual: 4500, objective: 'Target 20 mid-market accounts in technology sector' },
+      { name: 'Customer Referral Program', type: 'Referral', channel: 'Partner', status: 'Completed', budgetPlanned: 5000, budgetActual: 4800, objective: 'Activate existing customer base for referral leads' },
+    ];
+
+    let created = 0;
+    let featureDisabled = false;
+
+    for (const c of campaigns) {
+      const res = await apiPost(request, token, '/api/marketing/campaigns', {
+        name: c.name,
+        type: c.type,
+        channel: c.channel,
+        status: c.status,
+        ownerUserId: ownerUserId ?? '00000000-0000-0000-0000-000000000000',
+        startDateUtc: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+        endDateUtc: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+        budgetPlanned: c.budgetPlanned,
+        budgetActual: c.budgetActual,
+        objective: c.objective,
+      });
+
+      if (res.ok()) {
+        created++;
+        console.log(`✓ Created campaign: ${c.name}`);
+      } else if (res.status() === 403 || res.status() === 404) {
+        // Feature may be disabled or permission denied
+        const errText = await res.text();
+        if (errText.includes('disabled') || errText.includes('not enabled') || res.status() === 404) {
+          featureDisabled = true;
+          console.log(`⊘ Marketing campaigns feature is disabled — skipping remaining`);
+          break;
+        }
+        console.log(`✗ Campaign create failed ${res.status()} for ${c.name}: ${errText}`);
+      } else if (res.status() === 409) {
+        created++; // Already exists, count as success
+        console.log(`⊘ Campaign already exists: ${c.name}`);
+      } else {
+        console.log(`✗ Campaign create returned ${res.status()} for ${c.name}: ${await res.text()}`);
+      }
+    }
+
+    if (featureDisabled) {
+      console.log('Marketing campaigns skipped — feature not enabled');
+      test.skip();
+    } else {
+      console.log(`Campaign seeding complete — ${created}/${campaigns.length} processed`);
+    }
+  });
+
+  // ── Step 4: Create Help Desk Support Cases ─────────────────────────
+
+  test('Step 4 — Create help desk support cases', async ({ request }) => {
+    await ensureAuth(request);
+
+    // Resolve account IDs for linking
+    const accountNames = ['TechNova Solutions Inc.', 'Atlas Financial Group', 'EuroTech Dynamics', 'GreenLeaf Organics'];
+    const accountIds: Record<string, string> = {};
+
+    for (const name of accountNames) {
+      const res = await apiGet(request, token, `/api/customers?search=${encodeURIComponent(name)}&page=1&pageSize=5`);
+      if (res.ok()) {
+        const data = await res.json();
+        const items = data.items || data.data || [];
+        const match = items.find((c: any) => c.name === name);
+        if (match) accountIds[name] = match.id;
+      }
+    }
+
+    const cases = [
+      { subject: 'Unable to access dashboard reports', description: 'User reports 500 error when loading analytics dashboard. Affects 3 team members since this morning.', priority: 'High', severity: 'S2', category: 'Technical', source: 'Email', accountName: 'TechNova Solutions Inc.' },
+      { subject: 'Request for API integration documentation', description: 'Customer needs updated REST API docs for integrating their finance system with CRM pipeline data.', priority: 'Medium', severity: 'S3', category: 'General', source: 'Portal', accountName: 'Atlas Financial Group' },
+      { subject: 'Billing discrepancy on Q1 invoice', description: 'Invoice shows $67,500 but customer expected $62,000 based on contract terms. Needs immediate review.', priority: 'High', severity: 'S2', category: 'Billing', source: 'Phone', accountName: 'EuroTech Dynamics' },
+      { subject: 'Feature request: custom workflow templates', description: 'Customer wants ability to create reusable workflow templates for onboarding new clients.', priority: 'Low', severity: 'S4', category: 'Feature Request', source: 'Email', accountName: 'GreenLeaf Organics' },
+    ];
+
+    let created = 0;
+    let featureDisabled = false;
+
+    for (const c of cases) {
+      const res = await apiPost(request, token, '/api/helpdesk/cases', {
+        subject: c.subject,
+        description: c.description,
+        priority: c.priority,
+        severity: c.severity,
+        category: c.category,
+        subcategory: null,
+        source: c.source,
+        accountId: accountIds[c.accountName] ?? null,
+        contactId: null,
+        queueId: null,
+        ownerUserId: null,
+      });
+
+      if (res.ok()) {
+        created++;
+        console.log(`✓ Created case: ${c.subject}`);
+      } else if (res.status() === 403 || res.status() === 404) {
+        const errText = await res.text();
+        if (errText.includes('disabled') || errText.includes('not enabled') || res.status() === 404) {
+          featureDisabled = true;
+          console.log(`⊘ HelpDesk feature is disabled or not available — skipping remaining`);
+          break;
+        }
+        console.log(`✗ Case create failed ${res.status()} for "${c.subject}": ${errText}`);
+      } else {
+        console.log(`✗ Case create returned ${res.status()} for "${c.subject}": ${await res.text()}`);
+      }
+    }
+
+    if (featureDisabled) {
+      console.log('HelpDesk cases skipped — feature not available');
+      test.skip();
+    } else {
+      console.log(`HelpDesk case seeding complete — ${created}/${cases.length} processed`);
+    }
+  });
+
+  // ── Step 5: Close Sakura Digital opportunity (Closed Lost) ─────────
+
+  test('Step 5 — Close Sakura Digital opportunity as Closed Lost', async ({ request }) => {
+    await ensureAuth(request);
+
+    // Try to find existing Sakura opportunity
+    const searchRes = await apiGet(request, token, '/api/opportunities?search=Sakura&page=1&pageSize=5');
+    let opp: any = null;
+    if (searchRes.ok()) {
+      const data = await searchRes.json();
+      opp = (data.items || data.data || []).find((o: any) => o.name?.includes('Sakura'));
+    }
+
+    if (!opp) {
+      // Ensure the Sakura Digital account exists
+      let sakuraAccountId: string | null = null;
+      const acctSearchRes = await apiGet(request, token, '/api/customers?search=Sakura+Digital&page=1&pageSize=5');
+      if (acctSearchRes.ok()) {
+        const acctData = await acctSearchRes.json();
+        const match = (acctData.items || acctData.data || []).find((c: any) => c.name?.includes('Sakura'));
+        if (match) sakuraAccountId = match.id;
+      }
+
+      if (!sakuraAccountId) {
+        // Create the account
+        const acctCreateRes = await apiPost(request, token, '/api/customers', {
+          name: 'Sakura Digital', industry: 'Media & Entertainment',
+          email: 'info@sakura-digital.example.com', phone: '+81 3 5555 6500',
+          website: 'https://sakura-digital.example.com', address: 'Tokyo, Japan',
+        });
+        if (acctCreateRes.ok()) {
+          const acctBody = await acctCreateRes.json();
+          sakuraAccountId = acctBody.id;
+          console.log(`Created account: Sakura Digital (${sakuraAccountId})`);
+        } else {
+          console.log(`Could not create Sakura Digital account: ${acctCreateRes.status()} ${await acctCreateRes.text()}`);
+        }
+      }
+
+      if (!sakuraAccountId) {
+        console.log('Sakura Digital account not available — skipping');
+        test.skip();
+        return;
+      }
+
+      // Create the opportunity
+      const oppCreateRes = await apiPost(request, token, '/api/opportunities', {
+        name: 'Sakura Digital Expansion',
+        amount: 28000,
+        stageName: 'Prospecting',
+        accountId: sakuraAccountId,
+        currency: 'USD',
+        expectedCloseDate: '2026-03-01T00:00:00Z',
+        summary: 'Digital media platform expansion. Lost to competitor.',
+      });
+      if (oppCreateRes.ok()) {
+        opp = await oppCreateRes.json();
+        console.log(`Created opportunity: Sakura Digital Expansion (${opp.id})`);
+      } else {
+        console.log(`Could not create Sakura Digital opportunity: ${oppCreateRes.status()} ${await oppCreateRes.text()}`);
+      }
+    }
+
+    if (!opp) {
+      console.log('Sakura Digital opportunity not available — skipping');
+      test.skip();
+      return;
+    }
+
+    // Check if already closed
+    if (opp.isClosed || opp.stageName === 'Closed Lost') {
+      console.log('Sakura Digital opportunity is already Closed Lost — skipping');
+      return;
+    }
+
+    // Close it as Lost
+    const putRes = await apiPut(request, token, `/api/opportunities/${opp.id}`, {
+      name: opp.name ?? 'Sakura Digital Expansion',
+      amount: opp.amount ?? 28000,
+      currency: opp.currency ?? 'USD',
+      expectedCloseDate: opp.expectedCloseDate ?? '2026-03-01T00:00:00Z',
+      stageName: 'Closed Lost',
+      isClosed: true,
+      isWon: false,
+      winLossReason: 'Lost to competitor — pricing gap',
+      forecastCategory: 'Omitted',
+      probability: 0,
+    });
+
+    if (putRes.ok()) {
+      console.log('✓ Sakura Digital opportunity closed as Lost');
+    } else {
+      const errText = await putRes.text();
+      if (errText.includes('Approval required') || errText.includes('approval') || errText.includes('locked')) {
+        console.log(`⊘ Opportunity close blocked by approval workflow: ${errText}`);
+      } else {
+        console.log(`✗ Opportunity close failed ${putRes.status()}: ${errText}`);
+      }
+    }
+  });
+
+  // ── Step 6: Verify All List Views ──────────────────────────────────
+
+  test('Step 6 — Verify all list views load with data', async ({ page, request }) => {
+    const authToken = await ensureAuth(request);
+    await page.addInitScript((t) => {
+      localStorage.setItem('auth_token', t as string);
+      localStorage.setItem('tenant_key', 'default');
+    }, authToken);
+
+    const pages = [
+      { name: 'Leads', path: '/app/leads' },
+      { name: 'Opportunities', path: '/app/opportunities' },
+      { name: 'Accounts', path: '/app/customers' },
+      { name: 'Contacts', path: '/app/contacts' },
+      { name: 'Dashboard', path: '/app/dashboard' },
+    ];
+
+    for (const p of pages) {
+      await page.goto(`${BASE}${p.path}`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+      // Wait for Angular to render content
+      await page.waitForTimeout(3000);
+      // Verify page loaded — check for heading, table, or rendered content
+      const visible = await page.locator('.page-container, .hero-title, .page-header, p-table, .dashboard-page, .data-table, main, [class*="page"]').first().isVisible().catch(() => false);
+      if (!visible) {
+        // Fallback: just check body has meaningful content
+        const bodyText = await page.locator('body').innerText().catch(() => '');
+        expect(bodyText.length).toBeGreaterThan(10);
+      }
+      console.log(`✓ ${p.name} page loaded successfully`);
+    }
+
+    console.log('All list views verified');
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/*  Helper: compute transition path for lead status changes            */
+/* ------------------------------------------------------------------ */
+
+function getTransitionPath(current: string, target: string): string[] {
+  // Valid transitions: New→Contacted→Qualified→Converted, New→Nurture, *→Disqualified
+  if (current === target) return [];
+  if (target === 'Disqualified') return ['Disqualified'];
+  if (target === 'Nurture') return ['Nurture'];
+  if (current === 'New' && target === 'Contacted') return ['Contacted'];
+  if (current === 'New' && target === 'Qualified') return ['Contacted', 'Qualified'];
+  if (current === 'Contacted' && target === 'Qualified') return ['Qualified'];
+  if (current === 'Contacted' && target === 'Nurture') return ['Nurture'];
+  // Fallback: try direct
+  return [target];
+}

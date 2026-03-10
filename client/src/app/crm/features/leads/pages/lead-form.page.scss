@@ -2262,6 +2262,24 @@
       margin: 0.5rem 0 0;
       font-size: 0.82rem;
       color: rgba(var(--apple-secondary), 0.7);
+
+      p { margin: 0; }
+
+      .status-action-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin-top: 0.35rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #4f46e5;
+        cursor: pointer;
+        transition: color 200ms;
+
+        &:hover { color: #4338ca; }
+
+        i { font-size: 0.75rem; }
+      }
     }
 
     .status-next-chip {

@@ -900,9 +900,30 @@
     }
 
     .empty-state {
-      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 1.5rem 1rem;
       color: #94a3b8;
       font-size: 0.9rem;
+      text-align: center;
+
+      > i {
+        font-size: 1.5rem;
+        opacity: 0.5;
+      }
+
+      .empty-state-link {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #6366f1;
+        cursor: pointer;
+        text-decoration: none;
+        transition: color 200ms;
+
+        &:hover { color: #4338ca; }
+      }
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════

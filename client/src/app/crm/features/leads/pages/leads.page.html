@@ -61,15 +61,15 @@
         </div>
 
         <div class="hero-actions">
-          <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
+          <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()" aria-label="Add new lead">
             <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
             <span>Add Lead</span>
           </button>
-          <button type="button" class="action-btn action-btn--import" [disabled]="!canManage()" (click)="openImport()">
+          <button type="button" class="action-btn action-btn--import" [disabled]="!canManage()" (click)="openImport()" aria-label="Import leads">
             <span class="action-btn__icon"><i class="pi pi-upload"></i></span>
             <span>Import</span>
           </button>
-          <button type="button" class="action-btn action-btn--refresh" (click)="load()">
+          <button type="button" class="action-btn action-btn--refresh" (click)="load()" aria-label="Refresh leads">
             <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
             <span>Refresh</span>
           </button>
@@ -232,12 +232,13 @@
       </div>
       
       <div class="quick-filters">
-        <button pButton type="button" class="filter-chip" [class.active]="statusFilter === 'all'" (click)="onStatusChange('all')">
+        <button pButton type="button" class="filter-chip" [class.active]="statusFilter === 'all'" (click)="onStatusChange('all')" aria-label="Filter: All leads">
           All
         </button>
         <button pButton type="button" class="filter-chip" *ngFor="let opt of filteredStatusOptions" 
                 [class.active]="statusFilter === opt.value"
-                (click)="onStatusChange(opt.value)">
+                (click)="onStatusChange(opt.value)"
+                [attr.aria-label]="'Filter: ' + opt.label + ' leads'">
           <span class="chip-dot" [attr.data-status]="opt.value"></span>
           {{ opt.label }}
         </button>
@@ -245,10 +246,10 @@
 
       <div class="action-right">
         <div class="view-toggle">
-          <button type="button" class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View">
+          <button type="button" class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View" aria-label="Switch to table view">
             <i class="pi pi-list"></i>
           </button>
-          <button type="button" class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Kanban View">
+          <button type="button" class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Kanban View" aria-label="Switch to kanban view">
             <i class="pi pi-objects-column"></i>
           </button>
         </div>
@@ -260,6 +261,7 @@
             *ngFor="let option of conversationViewOptions"
             [class.active]="conversationView === option.value"
             (click)="onConversationViewChange(option.value)"
+            [attr.aria-label]="'Conversation filter: ' + option.label"
           >
             {{ option.label }}
           </button>
@@ -273,7 +275,7 @@
           (ngModelChange)="onSortChange($event)"
           placeholder="Sort leads"
         ></p-select>
-        <button pButton type="button" class="btn-ghost" *ngIf="statusFilter !== 'all'" (click)="onStatusChange('all')">
+        <button pButton type="button" class="btn-ghost" *ngIf="statusFilter !== 'all'" (click)="onStatusChange('all')" aria-label="Clear status filter">
           <i class="pi pi-filter-slash"></i>
           Clear Filter
         </button>
@@ -290,7 +292,7 @@
           <span class="column-count">{{ getLeadsByStatus(status).length }}</span>
         </div>
         <div class="column-body">
-          <div class="lead-card" *ngFor="let lead of getLeadsByStatus(status)" (click)="canManage() ? onEdit(lead) : null">
+          <div class="lead-card" *ngFor="let lead of getLeadsByStatus(status)" (click)="canManage() ? onEdit(lead) : null" role="article" [attr.aria-label]="lead.name + ' – ' + lead.company">
             <div class="lead-card-header">
               <div class="lead-avatar" [attr.data-status]="lead.status">
                 {{ lead.name.charAt(0) }}
@@ -364,19 +366,19 @@
                 {{ lead.owner }}
               </span>
               <div class="lead-actions">
-                <button type="button" class="mini-action-btn mini-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(lead)" aria-label="Edit lead">
                   <i class="pi pi-pencil"></i>
                 </button>
-                <button type="button" class="mini-action-btn mini-action-btn--activity" *ngIf="canRecycleLead(lead)" [disabled]="!canManage()" (click)="$event.stopPropagation(); recycleLead(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--activity" *ngIf="canRecycleLead(lead)" [disabled]="!canManage()" (click)="$event.stopPropagation(); recycleLead(lead)" aria-label="Recycle lead">
                   <i class="pi pi-refresh"></i>
                 </button>
-                <button type="button" class="mini-action-btn mini-action-btn--activity" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--activity" [disabled]="!canManage()" (click)="$event.stopPropagation(); onLogActivity(lead)" aria-label="Log activity">
                   <i class="pi pi-calendar-plus"></i>
                 </button>
-                <button type="button" class="mini-action-btn mini-action-btn--convert" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--convert" *ngIf="lead.status === 'Qualified'" [disabled]="!canManage()" (click)="$event.stopPropagation(); onConvert(lead)" aria-label="Convert lead">
                   <i class="pi pi-bolt"></i>
                 </button>
-                <button type="button" class="mini-action-btn mini-action-btn--delete" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)">
+                <button type="button" class="mini-action-btn mini-action-btn--delete" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(lead)" aria-label="Delete lead">
                   <i class="pi pi-trash"></i>
                 </button>
               </div>
@@ -409,11 +411,11 @@
                       (onChange)="toggleSelectAll($event.checked)"
                     ></p-checkbox>
                   </th>
-                  <th class="th-lead">Lead</th>
-                  <th class="th-status">Status</th>
+                  <th class="th-lead" pSortableColumn="name">Lead <p-sortIcon field="name"></p-sortIcon></th>
+                  <th class="th-status" pSortableColumn="status">Status <p-sortIcon field="status"></p-sortIcon></th>
                   <th class="th-contact">Contact</th>
-                  <th class="th-score">Lead Score</th>
-                  <th class="th-owner">Owner</th>
+                  <th class="th-score" pSortableColumn="score">Lead Score <p-sortIcon field="score"></p-sortIcon></th>
+                  <th class="th-owner" pSortableColumn="ownerId">Owner <p-sortIcon field="ownerId"></p-sortIcon></th>
                   <th class="th-actions"></th>
                 </tr>
               </ng-template>

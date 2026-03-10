@@ -54,19 +54,19 @@
       <header class="page-header">
         <div class="header-content">
           <div class="header-top">
-            <button pButton type="button" class="back-link p-button-text" routerLink="/app/leads">
+            <button type="button" class="back-link" routerLink="/app/leads">
               <i class="pi pi-arrow-left"></i>
               <span>Back to leads</span>
             </button>
             <button
-              pButton
               type="button"
-              class="crm-button crm-button--primary"
-              icon="pi pi-calendar-plus"
-              label="Log activity"
+              class="action-btn action-btn--add"
               *ngIf="isEditMode()"
               (click)="logActivity()"
-            ></button>
+            >
+              <span class="action-btn__icon"><i class="pi pi-calendar-plus"></i></span>
+              <span>Log activity</span>
+            </button>
           </div>
           <div class="header-title">
             <h1 class="hero-title">
@@ -148,14 +148,14 @@
               </div>
             </div>
             <button
-              pButton
               type="button"
-              class="crm-button crm-button--primary"
-              icon="pi pi-bolt"
-              label="Convert lead"
+              class="action-btn action-btn--add"
               [disabled]="!canConvertLead()"
               (click)="onConvertLead()"
-            ></button>
+            >
+              <span class="action-btn__icon"><i class="pi pi-bolt"></i></span>
+              <span>Convert lead</span>
+            </button>
           </div>
         </div>
 
@@ -259,7 +259,10 @@
                     <i class="pi pi-sparkles"></i>
                     <span>{{ next.label }}</span>
                   </div>
-                  <p class="status-note" *ngIf="statusPolicyHint() as hint">{{ hint }}</p>
+                  <div class="status-note" *ngIf="statusPolicyHint() as hint">
+                    <p>{{ hint }}</p>
+                    <a class="status-action-link" *ngIf="isActivityDrivenHint()" (click)="goToActivityTab()"><i class="pi pi-plus-circle"></i> Log an activity</a>
+                  </div>
                 </div>
                 <div class="form-field">
                   <label>Assignment</label>
@@ -603,14 +606,14 @@
                   </div>
                   <div class="ai-score-row" *ngIf="isEditMode()">
                     <button
-                      pButton
                       type="button"
-                      label="Refresh score"
-                      icon="pi pi-sync"
-                      class="crm-button crm-button--primary ai-score-button"
+                      class="action-btn action-btn--refresh ai-score-button"
                       (click)="onAiScore()"
                       [disabled]="aiScoring() || !canRefreshScore()"
-                    ></button>
+                    >
+                      <span class="action-btn__icon"><i class="pi pi-sync"></i></span>
+                      <span>Refresh score</span>
+                    </button>
                     <div class="ai-score-inline" *ngIf="aiScoreNote() && !aiScoring()" [ngClass]="aiScoreClass()">
                       <i class="pi" [ngClass]="aiScoreIcon()"></i>
                       <span>{{ aiScoreNote() }}</span>
@@ -1369,13 +1372,13 @@
               <div class="form-field full-row" *ngIf="canRecycleLead()">
                 <div class="disposition-actions">
                   <button
-                    pButton
                     type="button"
-                    class="crm-button crm-button--secondary"
-                    icon="pi pi-refresh"
-                    label="Recycle to nurture"
+                    class="action-btn action-btn--refresh"
                     (click)="recycleToNurture()"
-                  ></button>
+                  >
+                    <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+                    <span>Recycle to nurture</span>
+                  </button>
                   <span class="disposition-actions__hint">Moves the lead back into nurture and schedules a follow-up.</span>
                 </div>
               </div>
@@ -1517,14 +1520,14 @@
                   </div>
                   <div class="cadence-actions">
               <button
-                pButton
                 type="button"
-                label="Log cadence touch"
-                icon="pi pi-check"
-                class="crm-button crm-button--primary"
+                class="action-btn action-btn--add"
                 (click)="logCadenceTouch()"
                 [disabled]="cadenceSubmitting() || !cadenceOutcome.trim()"
-              ></button>
+              >
+                <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+                <span>Log cadence touch</span>
+              </button>
                   </div>
                   <div class="cadence-history" *ngIf="cadenceTouches().length; else noCadenceTouches">
               <div class="cadence-item" *ngFor="let touch of cadenceTouches()">
@@ -1552,13 +1555,13 @@
                         Recent Lead Activities
                       </h3>
                       <button
-                        pButton
                         type="button"
-                        class="crm-button crm-button--ghost crm-button--sm"
-                        icon="pi pi-external-link"
-                        label="Open Activities"
+                        class="action-btn action-btn--settings"
                         (click)="logActivity()"
-                      ></button>
+                      >
+                        <span class="action-btn__icon"><i class="pi pi-external-link"></i></span>
+                        <span>Open Activities</span>
+                      </button>
                     </div>
 
                     <div class="history-empty" *ngIf="recentLeadActivitiesLoading()">Loading activities...</div>
@@ -1605,13 +1608,13 @@
                           </span>
                         </div>
                         <button
-                          pButton
                           type="button"
-                          class="crm-button crm-button--ghost crm-button--sm"
-                          icon="pi pi-external-link"
-                          label="Open transferred activities"
+                          class="action-btn action-btn--settings"
                           (click)="openConvertedActivityTimeline()"
-                        ></button>
+                        >
+                          <span class="action-btn__icon"><i class="pi pi-external-link"></i></span>
+                          <span>Open transferred activities</span>
+                        </button>
                       </div>
                     </ng-template>
                   </div>
@@ -1690,25 +1693,23 @@
                     <td>{{ row.createdAtUtc | date:'MMM d, yyyy · h:mm a' }}</td>
                     <td class="table-actions">
                       <button
-                        pButton
                         type="button"
-                        class="icon-btn danger"
-                        icon="pi pi-trash"
+                        class="row-action-btn row-action-btn--delete"
+                        title="Delete"
                         (click)="deleteAttachment(row)"
                         [disabled]="attachmentDeleting(row.id)"
-                        pTooltip="Delete"
-                        tooltipPosition="top"
-                      ></button>
+                      >
+                        <i class="pi pi-trash"></i>
+                      </button>
                       <button
-                        pButton
                         type="button"
-                        class="icon-btn"
-                        icon="pi pi-download"
+                        class="row-action-btn row-action-btn--view"
+                        title="Download"
                         (click)="downloadAttachment(row)"
                         [disabled]="attachmentDeleting(row.id)"
-                        pTooltip="Download"
-                        tooltipPosition="top"
-                      ></button>
+                      >
+                        <i class="pi pi-download"></i>
+                      </button>
                     </td>
                   </tr>
                 </ng-template>
@@ -1765,14 +1766,17 @@
           </p-tabs>
 
           <footer class="form-actions">
-            <button type="button" pButton label="Cancel" class="crm-button crm-button--ghost" (click)="router.navigate(['/app/leads'])"></button>
+            <button type="button" class="action-btn action-btn--back" (click)="router.navigate(['/app/leads'])">
+              <span>Cancel</span>
+            </button>
             <button
               type="submit"
-              pButton
-              [label]="isEditMode() ? 'Update lead' : 'Create lead'"
-              class="crm-button crm-button--primary"
+              class="action-btn action-btn--add"
               [disabled]="!form.firstName || !form.lastName || saving() || isReadOnlyDueToEditing()"
-            ></button>
+            >
+              <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+              <span>{{ isEditMode() ? 'Update lead' : 'Create lead' }}</span>
+            </button>
           </footer>
           </fieldset>
         </form>

@@ -15,6 +15,7 @@ import { TextareaModule } from 'primeng/textarea';
 
 import { Lead, LeadConversionReadiness, LeadConversionRequest } from '../models/lead.model';
 import { LeadDataService } from '../services/lead-data.service';
+import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
 import { QualificationPolicy } from '../../settings/models/workspace-settings.model';
@@ -82,6 +83,7 @@ export class LeadConvertPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly leadData = inject(LeadDataService);
+  private readonly toastService = inject(AppToastService);
   private readonly workspaceSettings = inject(WorkspaceSettingsService);
   private readonly crmEvents = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
@@ -145,7 +147,10 @@ export class LeadConvertPage implements OnInit, OnDestroy {
         this.saving.set(false);
         this.router.navigate(['/app/leads'], { state: { toast: { tone: 'success', message: 'Lead converted.' } } });
       },
-      error: () => this.saving.set(false)
+      error: () => {
+        this.toastService.show('error', 'Lead conversion failed. Please try again.', 3000);
+        this.saving.set(false);
+      }
     });
   }
 

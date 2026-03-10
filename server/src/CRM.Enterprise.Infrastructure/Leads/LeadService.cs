@@ -3632,4 +3632,40 @@ public sealed class LeadService : ILeadService
             actor.UserId == Guid.Empty ? null : actor.UserId,
             DateTime.UtcNow), cancellationToken);
     }
+
+    public async Task<IReadOnlyList<LeadCadenceChannelDto>> GetCadenceChannelsAsync(CancellationToken cancellationToken = default)
+    {
+        async Task<List<LeadCadenceChannelDto>> LoadAsync()
+        {
+            return await _dbContext.LeadCadenceChannels
+                .AsNoTracking()
+                .Where(c => c.IsActive && !c.IsDeleted)
+                .OrderBy(c => c.Order)
+                .ThenBy(c => c.Name)
+                .Select(c => new LeadCadenceChannelDto(
+                    c.Id,
+                    c.Name,
+                    c.Order,
+                    c.IsDefault,
+                    c.IsActive))
+                .ToListAsync(cancellationToken);
+        }
+
+        var items = await LoadAsync();
+        if (items.Count == 0)
+        {
+            var now = DateTime.UtcNow;
+            _dbContext.LeadCadenceChannels.AddRange(new[]
+            {
+                new LeadCadenceChannel { Name = "Call", Order = 1, IsActive = true, IsDefault = true, CreatedAtUtc = now },
+                new LeadCadenceChannel { Name = "Email", Order = 2, IsActive = true, CreatedAtUtc = now },
+                new LeadCadenceChannel { Name = "LinkedIn", Order = 3, IsActive = true, CreatedAtUtc = now }
+            });
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            items = await LoadAsync();
+        }
+
+        return items;
+    }
 }

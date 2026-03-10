@@ -151,6 +151,13 @@ public sealed record LeadCadenceTouchDto(
     DateTime? NextStepDueAtUtc,
     string OwnerName);
 
+public sealed record LeadCadenceChannelDto(
+    Guid Id,
+    string Name,
+    int Order,
+    bool IsDefault,
+    bool IsActive);
+
 public sealed record LeadScoreBreakdownItem(
     string Factor,
     int Score,

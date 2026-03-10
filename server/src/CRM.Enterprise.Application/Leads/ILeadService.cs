@@ -24,4 +24,5 @@ public interface ILeadService
     Task<LeadDuplicateCheckResultDto> CheckDuplicatesAsync(LeadDuplicateCheckRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeadCadenceTouchDto>?> GetCadenceTouchesAsync(Guid id, CancellationToken cancellationToken = default);
     Task<LeadOperationResult<LeadCadenceTouchDto>> LogCadenceTouchAsync(Guid id, LeadCadenceTouchRequest request, LeadActor actor, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<LeadCadenceChannelDto>> GetCadenceChannelsAsync(CancellationToken cancellationToken = default);
 }

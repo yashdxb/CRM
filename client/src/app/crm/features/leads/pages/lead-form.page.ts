@@ -719,6 +719,14 @@ export class LeadFormPage implements OnInit, OnDestroy {
     return null;
   }
 
+  protected isActivityDrivenHint(): boolean {
+    return this.isEditMode() && this.form.status === 'New' && !this.firstTouchedAtUtc();
+  }
+
+  protected goToActivityTab(): void {
+    this.setActiveTab('activity');
+  }
+
   protected nextRecommendedStatusChip(): StatusRecommendationChip | null {
     if (!this.isEditMode() || this.form.status === 'Converted') {
       return null;

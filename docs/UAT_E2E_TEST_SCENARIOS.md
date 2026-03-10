@@ -394,3 +394,113 @@ All E2E seed data is guarded by `ShouldSeedProductionTestData()` — will NOT ex
 
 ### Password
 All test users use password `CrmTest!1`, hashed via ASP.NET Identity `PasswordHasher<User>` (PBKDF2-SHA256).
+
+---
+
+## 10. Scenario 2 — Extended Data Seeding (Users, Lead Enrichment, Campaigns, Help Desk, Pipeline)
+
+> **Execution Method**: API-based Playwright tests (no fragile UI automation)  
+> **Spec File**: `client/e2e/uat-e2e-data-entry.spec.ts` → `test.describe('UAT — Scenario 2')`  
+> **Depends on**: Scenario 1 (TechNova workflow) + seed data must run first
+
+### Step 1 — Seed Test Users (8 Sales Reps + 2 Sales Managers)
+
+Create team members via `POST /api/users`. Each user gets:
+- Assigned role(s) by name lookup (`GET /api/roles`)
+- Temporary password `CrmTest!1`
+- `UserAudience = "Internal"`
+- Idempotent: 409 Conflict → skip (already exists)
+
+| # | Full Name | Email | Role | TimeZone | Locale | Monthly Quota |
+|---|-----------|-------|------|----------|--------|---------------|
+| 1 | Marcus Rivera | marcus.rivera@crmenterprise.demo | Sales Rep | America/New_York | en-US | $75,000 |
+| 2 | Sarah Kim | sarah.kim@crmenterprise.demo | Sales Rep | America/Los_Angeles | en-US | $80,000 |
+| 3 | David Okonkwo | david.okonkwo@crmenterprise.demo | Sales Rep | Europe/London | en-GB | $65,000 |
+| 4 | Emily Zhang | emily.zhang@crmenterprise.demo | Sales Rep | Asia/Singapore | en-SG | $70,000 |
+| 5 | Carlos Mendez | carlos.mendez@crmenterprise.demo | Sales Rep | America/Chicago | es-US | $60,000 |
+| 6 | Aisha Patel | aisha.patel@crmenterprise.demo | Sales Rep | Asia/Dubai | en-AE | $85,000 |
+| 7 | James Sullivan | james.sullivan@crmenterprise.demo | Sales Rep | America/Denver | en-US | $72,000 |
+| 8 | Fatima Al-Hassan | fatima.alhassan@crmenterprise.demo | Sales Rep | Asia/Dubai | ar-AE | $78,000 |
+| 9 | Rachel Torres | rachel.torres@crmenterprise.demo | Sales Manager | America/New_York | en-US | $500,000 |
+| 10 | Daniel Brooks | daniel.brooks@crmenterprise.demo | Sales Manager | Europe/London | en-GB | $450,000 |
+
+### Step 2 — Enrich Lead Statuses per UAT Spec
+
+Update additional leads from Step 14 (Scenario 1) to realistic lifecycle statuses via `PUT /api/leads/:id`.
+
+| Lead | Current Status | Target Status | Score | Extra Fields |
+|------|---------------|---------------|-------|--------------|
+| Robert Fischer | New | New | 0 | (no change) |
+| Amara Osei | New | New | 0 | (no change) |
+| Liam Hartley | New | Contacted | 25 | — |
+| Yuki Tanaka | New | Contacted | 30 | — |
+| Pradeep Sharma | New | Nurture | 40 | nurtureFollowUpAtUtc = 2026-10-01 |
+| Eva Kowalski | New | Qualified | 78 | BANT scores filled |
+| Omar Khalil | New | Disqualified | 15 | disqualifiedReason = "Company too small, < 10 employees, not ICP fit" |
+
+### Step 3 — Create Marketing Campaigns
+
+Create 4 campaigns via `POST /api/marketing/campaigns` at different lifecycle stages.
+If the marketing feature is disabled, the test skips gracefully.
+
+| # | Name | Type | Channel | Status | Budget Planned | Objective |
+|---|------|------|---------|--------|----------------|-----------|
+| 1 | Q2 Product Launch | Product Launch | Email | Active | $15,000 | Drive awareness for new enterprise platform features |
+| 2 | FinTech Summit 2026 | Event | Event | Planned | $25,000 | Generate 50 qualified leads from financial services vertical |
+| 3 | LinkedIn ABM Campaign | ABM | Social | Active | $8,000 | Target 20 mid-market accounts in technology sector |
+| 4 | Customer Referral Program | Referral | Partner | Completed | $5,000 | Activate existing customer base for referral leads |
+
+### Step 4 — Create Help Desk Support Cases
+
+Create 4 support cases via `POST /api/helpdesk/cases` with various priorities/categories.
+Linked to existing accounts and contacts from Scenario 1 seed data.
+
+| # | Subject | Priority | Severity | Category | Source | Account |
+|---|---------|----------|----------|----------|--------|---------|
+| 1 | Unable to access dashboard reports | High | Sev2 | Technical | Email | TechNova Solutions Inc. |
+| 2 | Request for API integration documentation | Medium | Sev3 | General | Portal | Atlas Financial Group |
+| 3 | Billing discrepancy on Q1 invoice | High | Sev2 | Billing | Phone | EuroTech Dynamics |
+| 4 | Feature request: custom workflow templates | Low | Sev4 | Feature Request | Email | GreenLeaf Organics |
+
+### Step 5 — Close Sakura Digital Opportunity (Closed Lost)
+
+Update the "Sakura Digital Expansion" opportunity via `PUT /api/opportunities/:id`:
+- `stageName = "Closed Lost"`
+- `isClosed = true`, `isWon = false`
+- `winLossReason = "Lost to competitor — pricing gap"`
+- `forecastCategory = "Omitted"`
+
+### Step 6 — Verify All List Views
+
+Navigate to each CRM list page via Playwright and verify data loads:
+- **Leads page** — verify mixed statuses visible (New, Contacted, Nurture, Qualified, Disqualified, Converted)
+- **Deals page** — verify pipeline stages populated
+- **Accounts page** — verify 8+ accounts
+- **Contacts page** — verify 8+ contacts
+- **Dashboard** — verify dashboard loads with data
+
+---
+
+## 11. Scenario 2 Validation Checklist
+
+### Test Users
+- [ ] All 10 test users created (or confirmed existing)
+- [ ] Each user has correct role assignment (Sales Rep or Sales Manager)
+- [ ] Users can login with `CrmTest!1` password
+
+### Lead Lifecycle Mix
+- [ ] Leads page shows mixed statuses: New (2), Contacted (2+), Nurture (1), Qualified (1+), Disqualified (1), Converted (1)
+- [ ] Lead scores reflect updated values
+- [ ] Disqualified lead shows reason
+
+### Marketing Campaigns
+- [ ] 4 campaigns visible in campaign list (or skipped if feature disabled)
+- [ ] Campaign statuses: Active (2), Planned (1), Completed (1)
+
+### Help Desk Cases
+- [ ] 4 support cases created with correct priorities
+- [ ] Cases linked to accounts
+
+### Pipeline
+- [ ] Sakura Digital opportunity shows as Closed Lost
+- [ ] Dashboard reflects all pipeline data
