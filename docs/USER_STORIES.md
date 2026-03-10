@@ -286,6 +286,7 @@
   - `86e041wwt` | `done` | Lead list with search and filtering | tags: -
   - `86e041wwz` | `done` | Lead qualification scoring (CQVS model) | tags: -
   - `86e041wwv` | `done` | Pipeline (Kanban) view for leads | tags: -
+  - `TBD` | `done` | Leads page golden-standard redesign (Hero + Metrics + streamlined layout) | tags: now, module:Leads
 
 ### Marketing & Campaigns (`86e041wzy`)
 - Status: `done`
@@ -314,14 +315,14 @@
   - `86e041wyx` | `done` | Opportunity onboarding workflow | tags: -
   - `86e041wyq` | `done` | Opportunity pipeline stages | tags: -
   - `86e041wyr` | `done` | Opportunity quotes (CPQ) | tags: -
-  - `86e08y0wt` | `backlog` | Deal Pipeline Kanban Board View | tags: now, module:Opportunities
-  - `86e08y0x6` | `backlog` | Deal Activity Timeline | tags: now, module:Opportunities
-  - `86e08y0xn` | `backlog` | Deal File Attachments | tags: now, module:Opportunities
-  - `86e08y0xw` | `backlog` | Deal Revenue Forecast Chart | tags: now, module:Opportunities
-  - `86e08y0y6` | `backlog` | Deal Health / AI Score | tags: next, module:Opportunities
-  - `86e08y0yu` | `backlog` | Deal 360 Detail View Page | tags: next, module:Opportunities
-  - `86e08y0z6` | `backlog` | Deal Contact Roles / Stakeholders | tags: next, module:Opportunities
-  - `86e08y0zx` | `backlog` | Deal Aging / Stage Duration Visualization | tags: next, module:Opportunities
+  - `86e08y0wt` | `done` | Deal Pipeline Kanban Board View | tags: now, module:Opportunities
+  - `86e08y0x6` | `done` | Deal Activity Timeline | tags: now, module:Opportunities
+  - `86e08y0xn` | `done` | Deal File Attachments | tags: now, module:Opportunities
+  - `86e08y0xw` | `done` | Deal Revenue Forecast Chart | tags: now, module:Opportunities
+  - `86e08y0y6` | `done` | Deal Health / AI Score | tags: next, module:Opportunities
+  - `86e08y0yu` | `done` | Deal 360 Detail View Page | tags: next, module:Opportunities
+  - `86e08y0z6` | `done` | Deal Contact Roles / Stakeholders | tags: next, module:Opportunities
+  - `86e08y0zx` | `done` | Deal Aging / Stage Duration Visualization | tags: next, module:Opportunities
   - `86e08y10h` | `backlog` | Deal Competitor Tracking | tags: later, module:Opportunities
   - `86e08y10z` | `backlog` | Deal List Page Polish and Bulk Actions | tags: later, module:Opportunities
 

@@ -22,4 +22,10 @@ public interface IOpportunityService
     Task<OpportunityOperationResult<OpportunityReviewThreadItemDto>> AcknowledgeReviewAsync(Guid id, ActorContext actor, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<OpportunityTeamMemberDto>?> GetTeamAsync(Guid id, CancellationToken cancellationToken = default);
     Task<OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>> UpdateTeamAsync(Guid id, IReadOnlyList<OpportunityTeamMemberRequest> members, ActorContext actor, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<OpportunityContactRoleDto>?> GetContactRolesAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<OpportunityOperationResult<OpportunityContactRoleDto>> AddContactRoleAsync(Guid id, AddOpportunityContactRoleRequest request, ActorContext actor, CancellationToken cancellationToken = default);
+    Task<OpportunityOperationResult<bool>> RemoveContactRoleAsync(Guid id, Guid contactRoleId, ActorContext actor, CancellationToken cancellationToken = default);
+
+    Task<OpportunityHealthScoreDto?> GetHealthScoreAsync(Guid id, CancellationToken cancellationToken = default);
 }

@@ -1,0 +1,243 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="page-content" *ngIf="!loading(); else pageLoading">
+    <ng-container *ngIf="opportunity() as opp">
+      <!-- ═══ HERO ═══ -->
+      <header class="hero-section">
+        <div class="hero-left">
+          <app-breadcrumbs></app-breadcrumbs>
+          <div class="hero-nav">
+            <a class="back-link" routerLink="/app/opportunities">
+              <i class="pi pi-arrow-left"></i> Deals
+            </a>
+            <a *ngIf="canEdit" class="edit-link" [routerLink]="'/app/opportunities/' + opp.id + '/edit'">
+              <i class="pi pi-pencil"></i> Edit
+            </a>
+          </div>
+          <h1 class="hero-title">
+            <span class="title-gradient">{{ opp.name }}</span>
+          </h1>
+          <div class="hero-meta">
+            <span class="hero-badge" [ngClass]="statusClass(opp.status)">{{ opp.status }}</span>
+            <span class="hero-stage" [ngClass]="stageBadgeClass(opp.stage)">{{ opp.stage }}</span>
+            <span class="hero-account" *ngIf="opp.account">
+              <i class="pi pi-building"></i> {{ opp.account }}
+            </span>
+          </div>
+        </div>
+        <div class="hero-right">
+          <div class="hero-amount">
+            <span class="hero-amount-value">{{ formatCurrency(opp.amount, opp.currency) }}</span>
+            <span class="hero-amount-label">Deal value</span>
+          </div>
+          <div class="hero-probability">
+            <div class="probability-ring">
+              <svg viewBox="0 0 36 36">
+                <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                <path class="ring-fill" [attr.stroke-dasharray]="opp.probability + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              </svg>
+              <span class="probability-value">{{ opp.probability }}%</span>
+            </div>
+            <span class="probability-label">Win probability</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══ KPI CARDS ═══ -->
+      <section class="kpi-section">
+        <div class="kpi-card kpi-card--age">
+          <div class="kpi-icon"><i class="pi pi-stopwatch"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Deal Age</span>
+            <strong class="kpi-value">{{ dealAgeDays() }}d</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--health">
+          <div class="kpi-icon"><i class="pi pi-heart"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Health Score</span>
+            <strong class="kpi-value" *ngIf="healthScore() as hs; else noHealth" [style.color]="healthScoreColor(hs.score)">{{ hs.score }}/100</strong>
+            <ng-template #noHealth><strong class="kpi-value kpi-value--muted">—</strong></ng-template>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--team">
+          <div class="kpi-icon"><i class="pi pi-users"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Team</span>
+            <strong class="kpi-value">{{ teamMembers().length }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--stakeholders">
+          <div class="kpi-icon"><i class="pi pi-id-card"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Stakeholders</span>
+            <strong class="kpi-value">{{ contactRoles().length }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--activities">
+          <div class="kpi-icon"><i class="pi pi-clock"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Activities</span>
+            <strong class="kpi-value">{{ activities().length }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ MAIN GRID ═══ -->
+      <div class="detail-grid">
+        <!-- LEFT COLUMN -->
+        <div class="detail-col">
+          <!-- Key Details -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-info-circle"></i> Key Details</h2>
+            <div class="detail-fields">
+              <div class="detail-field">
+                <span class="field-label">Close Date</span>
+                <span class="field-value">{{ opp.closeDate ? (opp.closeDate | date:'MMM d, yyyy') : '—' }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Forecast</span>
+                <span class="field-value">{{ opp.forecastCategory || '—' }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Type</span>
+                <span class="field-value">{{ opp.opportunityType || '—' }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Owner</span>
+                <span class="field-value">{{ opp.owner || '—' }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Created</span>
+                <span class="field-value">{{ opp.createdAtUtc | date:'MMM d, yyyy' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="opp.updatedAtUtc">
+                <span class="field-label">Updated</span>
+                <span class="field-value">{{ opp.updatedAtUtc | date:'MMM d, yyyy' }}</span>
+              </div>
+            </div>
+            <div class="detail-summary" *ngIf="opp.summary">
+              <span class="field-label">Summary</span>
+              <p class="summary-text">{{ opp.summary }}</p>
+            </div>
+          </section>
+
+          <!-- Stage Timeline -->
+          <section class="detail-card" *ngIf="stageDurations().length">
+            <h2 class="card-title"><i class="pi pi-stopwatch"></i> Stage Timeline</h2>
+            <div class="stage-bar">
+              <div *ngFor="let sd of stageDurations()" class="stage-bar__segment"
+                   [style.flex]="sd.durationDays || 1"
+                   [class.stage-bar__segment--current]="sd.isCurrent"
+                   [pTooltip]="sd.stage + ': ' + sd.durationDays + ' days'"
+                   tooltipPosition="top">
+              </div>
+            </div>
+            <div class="stage-list">
+              <div *ngFor="let sd of stageDurations()" class="stage-item" [class.stage-item--current]="sd.isCurrent">
+                <span class="stage-dot" [class.stage-dot--current]="sd.isCurrent"></span>
+                <span class="stage-name">{{ sd.stage }}</span>
+                <span class="stage-days">{{ sd.durationDays }}d</span>
+                <span class="stage-current-tag" *ngIf="sd.isCurrent">current</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Health Score Factors -->
+          <section class="detail-card" *ngIf="healthScore() as hs">
+            <h2 class="card-title"><i class="pi pi-heart"></i> Health Breakdown</h2>
+            <div class="health-factors">
+              <div *ngFor="let f of hs.factors" class="health-factor">
+                <div class="factor-header">
+                  <span class="factor-name">{{ f.factor }}</span>
+                  <span class="factor-score">{{ f.score }}/{{ f.maxScore }}</span>
+                </div>
+                <div class="factor-bar">
+                  <div class="factor-bar__fill" [style.width.%]="(f.score / f.maxScore) * 100" [style.background]="healthScoreColor((f.score / f.maxScore) * 100)"></div>
+                </div>
+              </div>
+            </div>
+            <p class="health-rationale" *ngIf="hs.rationale">{{ hs.rationale }}</p>
+          </section>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="detail-col">
+          <!-- Stakeholders -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-id-card"></i> Stakeholders</h2>
+            <div class="stakeholder-list" *ngIf="contactRoles().length; else noStakeholders">
+              <div *ngFor="let cr of contactRoles()" class="stakeholder-item">
+                <div class="stakeholder-avatar">{{ (cr.contactName || '?')[0] }}</div>
+                <div class="stakeholder-info">
+                  <span class="stakeholder-name">{{ cr.contactName }}</span>
+                  <span class="stakeholder-role">{{ cr.role }}</span>
+                </div>
+                <span class="stakeholder-primary" *ngIf="cr.isPrimary" pTooltip="Primary contact" tooltipPosition="left">
+                  <i class="pi pi-star-fill"></i>
+                </span>
+              </div>
+            </div>
+            <ng-template #noStakeholders>
+              <p class="empty-text">No stakeholders assigned.</p>
+            </ng-template>
+          </section>
+
+          <!-- Team -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-users"></i> Team</h2>
+            <div class="team-list" *ngIf="teamMembers().length; else noTeam">
+              <div *ngFor="let tm of teamMembers()" class="team-item">
+                <div class="team-avatar">{{ (tm.userName || '?')[0] }}</div>
+                <div class="team-info">
+                  <span class="team-name">{{ tm.userName }}</span>
+                  <span class="team-role">{{ tm.role }}</span>
+                </div>
+              </div>
+            </div>
+            <ng-template #noTeam>
+              <p class="empty-text">No team members assigned.</p>
+            </ng-template>
+          </section>
+
+          <!-- Recent Activities -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-clock"></i> Recent Activities</h2>
+            <div class="activity-list" *ngIf="activities().length; else noActivities">
+              <div *ngFor="let act of activities()" class="activity-item">
+                <div class="activity-icon">
+                  <i class="pi" [ngClass]="activityIcon(act.type)"></i>
+                </div>
+                <div class="activity-info">
+                  <span class="activity-subject">{{ act.subject }}</span>
+                  <span class="activity-meta">
+                    {{ act.type }} · {{ act.createdAtUtc | date:'MMM d' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <ng-template #noActivities>
+              <p class="empty-text">No activities recorded.</p>
+            </ng-template>
+          </section>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <ng-template #pageLoading>
+    <div class="page-loading">
+      <p-skeleton width="60%" height="2rem" styleClass="mb-3"></p-skeleton>
+      <p-skeleton width="40%" height="1.5rem" styleClass="mb-4"></p-skeleton>
+      <div class="loading-grid">
+        <p-skeleton width="100%" height="200px"></p-skeleton>
+        <p-skeleton width="100%" height="200px"></p-skeleton>
+      </div>
+    </div>
+  </ng-template>
+</div>

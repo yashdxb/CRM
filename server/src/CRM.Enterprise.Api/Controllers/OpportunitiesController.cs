@@ -4,6 +4,8 @@ using ApiOpportunityCoachingRequest = CRM.Enterprise.Api.Contracts.Opportunities
 using ApiOpportunityReviewOutcomeRequest = CRM.Enterprise.Api.Contracts.Opportunities.OpportunityReviewOutcomeRequest;
 using ApiOpportunityUpsertRequest = CRM.Enterprise.Api.Contracts.Opportunities.UpsertOpportunityRequest;
 using ApiOpportunityTeamRequest = CRM.Enterprise.Api.Contracts.Opportunities.UpdateOpportunityTeamRequest;
+using ApiAddContactRoleRequest = CRM.Enterprise.Api.Contracts.Opportunities.AddOpportunityContactRoleRequest;
+using AppAddContactRoleRequest = CRM.Enterprise.Application.Opportunities.AddOpportunityContactRoleRequest;
 using AppOpportunityUpsertRequest = CRM.Enterprise.Application.Opportunities.OpportunityUpsertRequest;
 using AppOpportunityCoachingRequest = CRM.Enterprise.Application.Opportunities.OpportunityCoachingRequest;
 using AppOpportunityReviewOutcomeRequest = CRM.Enterprise.Application.Opportunities.OpportunityReviewOutcomeRequest;
@@ -300,6 +302,56 @@ public class OpportunitiesController : ControllerBase
         return Ok(result.Value.Select(ToTeamItem));
     }
 
+    [HttpGet("{id:guid}/contact-roles")]
+    public async Task<ActionResult<IEnumerable<OpportunityContactRoleItem>>> GetContactRoles(Guid id, CancellationToken cancellationToken)
+    {
+        var roles = await _opportunityService.GetContactRolesAsync(id, cancellationToken);
+        if (roles is null) return NotFound();
+        return Ok(roles.Select(ToContactRoleItem));
+    }
+
+    [HttpPost("{id:guid}/contact-roles")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<ActionResult<OpportunityContactRoleItem>> AddContactRole(
+        Guid id,
+        [FromBody] ApiAddContactRoleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _opportunityService.AddContactRoleAsync(
+            id,
+            new AppAddContactRoleRequest(request.ContactId, request.Role, request.Notes, request.IsPrimary),
+            GetActor(),
+            cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success || result.Value is null) return BadRequest(result.Error);
+        return Ok(ToContactRoleItem(result.Value));
+    }
+
+    [HttpDelete("{id:guid}/contact-roles/{contactRoleId:guid}")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    public async Task<IActionResult> RemoveContactRole(Guid id, Guid contactRoleId, CancellationToken cancellationToken)
+    {
+        var result = await _opportunityService.RemoveContactRoleAsync(id, contactRoleId, GetActor(), cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        return NoContent();
+    }
+
+    [HttpGet("{id:guid}/health-score")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesView)]
+    public async Task<ActionResult<OpportunityHealthScoreResponse>> GetHealthScore(Guid id, CancellationToken cancellationToken)
+    {
+        var dto = await _opportunityService.GetHealthScoreAsync(id, cancellationToken);
+        if (dto is null) return NotFound();
+        return Ok(new OpportunityHealthScoreResponse(
+            dto.Score,
+            dto.Label,
+            dto.Confidence,
+            dto.Rationale,
+            dto.Factors.Select(f => new OpportunityHealthFactorItem(f.Factor, f.Score, f.MaxScore)).ToList(),
+            dto.ComputedUtc));
+    }
+
     private static OpportunityListItem ToApiItem(OpportunityListItemDto dto)
     {
         return new OpportunityListItem(
@@ -387,6 +439,21 @@ public class OpportunitiesController : ControllerBase
             dto.UserId,
             dto.UserName,
             dto.Role,
+            dto.CreatedAtUtc,
+            dto.UpdatedAtUtc);
+    }
+
+    private static OpportunityContactRoleItem ToContactRoleItem(OpportunityContactRoleDto dto)
+    {
+        return new OpportunityContactRoleItem(
+            dto.Id,
+            dto.ContactId,
+            dto.ContactName,
+            dto.Email,
+            dto.JobTitle,
+            dto.Role,
+            dto.Notes,
+            dto.IsPrimary,
             dto.CreatedAtUtc,
             dto.UpdatedAtUtc);
     }

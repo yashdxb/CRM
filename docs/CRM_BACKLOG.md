@@ -1382,3 +1382,31 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
         - `client/src/app/layout/sidebar/sidebar.component.ts`
         - `client/src/app/layout/sidebar/sidebar.component.html`
         - `client/src/app/layout/navigation/navigation.config.ts`
+    - Leads | As a Sales Manager, I want the Leads list page to follow the golden-standard layout (Hero section, 5 metric cards, streamlined action bar, data table) matching the Customers Workspace design. (ClickUp: TBD, Status: COMPLETED) Flow: 09A
+      - Acceptance criteria:
+        - Leads page uses Hero section with gradient title, badge, inline stats, action buttons, and visual summary cards.
+        - 5 metric cards with ring SVG charts replace the old 6 KPI strip cards.
+        - Coaching Queue section (7 cards) removed from page.
+        - Disposition Reporting section (4 totals + 4 analysis cards + 8-week trend) removed from page.
+        - Table/Kanban view toggle relocated to the action bar.
+        - Page structure matches Customers golden standard: Hero → Metrics → Action Bar → Data Table/Kanban → Dialogs.
+        - SCSS uses shared design tokens ($glass-*, $radius-*, $space-*, $font-size-*) and standard animations.
+      - Evidence:
+        - `client/src/app/crm/features/leads/pages/leads.page.html`
+        - `client/src/app/crm/features/leads/pages/leads.page.scss`
+    - Opportunities | Deal 360 Detail View — unified deal detail page with contact roles, health score, stage aging, and activity timeline. (ClickUp: 86e08y0yu, Status: COMPLETED) Flow: 09B
+      - Acceptance criteria:
+        - Deal 360 page accessible at `/app/opportunities/:id`.
+        - Shows deal overview, contact roles/stakeholders, health/AI score, stage duration visualization, activity timeline.
+        - Backend exposes contact-role and health-score endpoints.
+      - Evidence:
+        - `client/src/app/crm/features/opportunities/pages/opportunity-detail.page.html`
+        - `client/src/app/crm/features/opportunities/pages/opportunity-detail.page.scss`
+        - `client/src/app/crm/features/opportunities/pages/opportunity-detail.page.ts`
+        - `client/src/app/app.routes.ts`
+        - `server/src/CRM.Enterprise.Api/Controllers/OpportunitiesController.cs`
+        - `server/src/CRM.Enterprise.Api/Contracts/Opportunities/OpportunityContactRoleContracts.cs`
+        - `server/src/CRM.Enterprise.Api/Contracts/Opportunities/OpportunityHealthScoreResponse.cs`
+        - `server/src/CRM.Enterprise.Domain/Entities/OpportunityContactRole.cs`
+        - `server/src/CRM.Enterprise.Application/Opportunities/IOpportunityService.cs`
+        - `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`

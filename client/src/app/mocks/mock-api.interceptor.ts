@@ -162,6 +162,66 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     }
   }
 
+  // ── Opportunity Contact Roles (Stakeholders) ──
+  if (req.method === 'GET' && /^\/api\/opportunities\/[^/]+\/contact-roles$/.test(path)) {
+    return respond([], 200, 100);
+  }
+
+  if (req.method === 'POST' && /^\/api\/opportunities\/[^/]+\/contact-roles$/.test(path)) {
+    const body = req.body as any;
+    const fakeRole = {
+      id: crypto.randomUUID(),
+      contactId: body.contactId,
+      contactName: 'Mock Contact',
+      email: 'mock@example.com',
+      jobTitle: 'Stakeholder',
+      role: body.role,
+      notes: body.notes ?? null,
+      isPrimary: body.isPrimary ?? false,
+      createdAtUtc: new Date().toISOString(),
+      updatedAtUtc: null
+    };
+    return respond(fakeRole, 201, 120);
+  }
+
+  if (req.method === 'DELETE' && /^\/api\/opportunities\/[^/]+\/contact-roles\/[^/]+$/.test(path)) {
+    return respond(null, 204, 100);
+  }
+
+  // ── Opportunity Health Score ──
+  if (req.method === 'GET' && /^\/api\/opportunities\/[^/]+\/health-score$/.test(path)) {
+    const mockHealthScore = {
+      score: 68,
+      label: 'Good',
+      confidence: 0.75,
+      rationale: 'Deal is progressing well. Activity recency and stakeholder coverage could be improved.',
+      factors: [
+        { factor: 'Stage Progression', score: 9, maxScore: 15 },
+        { factor: 'Activity Recency', score: 12, maxScore: 20 },
+        { factor: 'Close Date Health', score: 12, maxScore: 15 },
+        { factor: 'Stakeholder Coverage', score: 4, maxScore: 10 },
+        { factor: 'Deal Completeness', score: 12, maxScore: 15 },
+        { factor: 'Team Coverage', score: 6, maxScore: 10 },
+        { factor: 'Process Compliance', score: 8, maxScore: 15 }
+      ],
+      computedUtc: new Date().toISOString()
+    };
+    return respond(mockHealthScore, 200, 300);
+  }
+
+  // ── Opportunity Stage History ──
+  if (req.method === 'GET' && /^\/api\/opportunities\/[^/]+\/history$/.test(path)) {
+    const now = new Date();
+    const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
+    const mockHistory = [
+      { id: 'sh-1', stage: 'Prospecting', changedAtUtc: daysAgo(42), changedBy: 'Jane Smith', notes: 'Deal created' },
+      { id: 'sh-2', stage: 'Qualification', changedAtUtc: daysAgo(35), changedBy: 'Jane Smith', notes: 'Qualified after discovery call' },
+      { id: 'sh-3', stage: 'Proposal', changedAtUtc: daysAgo(21), changedBy: 'John Doe', notes: 'Proposal sent' },
+      { id: 'sh-4', stage: 'Negotiation', changedAtUtc: daysAgo(10), changedBy: 'Jane Smith', notes: 'Terms under review' }
+    ];
+    return respond(mockHistory, 200, 200);
+  }
+
   if (req.method === 'GET' && path === '/api/dashboard/summary') {
     const summary = buildDashboardSummary();
     return of(new HttpResponse({ status: 200, body: summary })).pipe(delay(100));

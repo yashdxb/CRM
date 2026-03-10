@@ -44,6 +44,7 @@ public class CrmDbContext : DbContext
     public DbSet<DecisionStep> DecisionSteps => Set<DecisionStep>();
     public DbSet<DecisionActionLog> DecisionActionLogs => Set<DecisionActionLog>();
     public DbSet<OpportunityTeamMember> OpportunityTeamMembers => Set<OpportunityTeamMember>();
+    public DbSet<OpportunityContactRole> OpportunityContactRoles => Set<OpportunityContactRole>();
     public DbSet<OpportunityOnboardingItem> OpportunityOnboardingItems => Set<OpportunityOnboardingItem>();
     public DbSet<OpportunityStageAutomationRule> OpportunityStageAutomationRules => Set<OpportunityStageAutomationRule>();
     public DbSet<Activity> Activities => Set<Activity>();
@@ -193,10 +194,15 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<DecisionActionLog>().ToTable("DecisionActionLogs", CrmSchema);
         modelBuilder.Entity<OpportunityReviewChecklistItem>().ToTable("OpportunityReviewChecklistItems", CrmSchema);
         modelBuilder.Entity<OpportunityTeamMember>().ToTable("OpportunityTeamMembers", CrmSchema);
+        modelBuilder.Entity<OpportunityContactRole>().ToTable("OpportunityContactRoles", CrmSchema);
         modelBuilder.Entity<OpportunityOnboardingItem>().ToTable("OpportunityOnboardingItems", CrmSchema);
         modelBuilder.Entity<OpportunityTeamMember>()
             .HasIndex(member => new { member.OpportunityId, member.UserId })
             .IsUnique();
+        modelBuilder.Entity<OpportunityContactRole>()
+            .HasIndex(role => new { role.OpportunityId, role.ContactId })
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
         modelBuilder.Entity<OpportunityOnboardingItem>()
             .HasIndex(item => new { item.OpportunityId, item.Type, item.Title });
         modelBuilder.Entity<DecisionRequest>()

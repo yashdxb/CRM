@@ -58,4 +58,5 @@ public class Opportunity : AuditableEntity
     public ICollection<OpportunityTeamMember> TeamMembers { get; set; } = new List<OpportunityTeamMember>();
     public ICollection<OpportunityOnboardingItem> OnboardingItems { get; set; } = new List<OpportunityOnboardingItem>();
     public ICollection<OpportunityQuote> Quotes { get; set; } = new List<OpportunityQuote>();
+    public ICollection<OpportunityContactRole> ContactRoles { get; set; } = new List<OpportunityContactRole>();
 }

@@ -10,6 +10,9 @@ import {
   OpportunitySearchResponse,
   OpportunityTeamMember,
   UpdateOpportunityTeamRequest,
+  OpportunityContactRole,
+  AddOpportunityContactRoleRequest,
+  OpportunityHealthScore,
   OpportunityQuoteSummary,
   OpportunityQuoteDetail,
   OpportunityCreateQuoteRequest,
@@ -142,6 +145,18 @@ export class OpportunityDataService {
     return this.http.put<OpportunityTeamMember[]>(`${this.baseUrl}/api/opportunities/${id}/team`, payload);
   }
 
+  getContactRoles(id: string) {
+    return this.http.get<OpportunityContactRole[]>(`${this.baseUrl}/api/opportunities/${id}/contact-roles`);
+  }
+
+  addContactRole(id: string, payload: AddOpportunityContactRoleRequest) {
+    return this.http.post<OpportunityContactRole>(`${this.baseUrl}/api/opportunities/${id}/contact-roles`, payload);
+  }
+
+  removeContactRole(id: string, contactRoleId: string) {
+    return this.http.delete<void>(`${this.baseUrl}/api/opportunities/${id}/contact-roles/${contactRoleId}`);
+  }
+
   getExpansionSignals() {
     return this.http.get<ExpansionSignal[]>(`${this.baseUrl}/api/opportunities/expansion-signals`);
   }
@@ -201,5 +216,9 @@ export class OpportunityDataService {
       .set('page', 1)
       .set('pageSize', 200);
     return this.http.get<{ items: ItemMasterListItem[]; total: number }>(`${this.baseUrl}/api/supply-chain/item-master`, { params });
+  }
+
+  getHealthScore(opportunityId: string) {
+    return this.http.get<OpportunityHealthScore>(`${this.baseUrl}/api/opportunities/${opportunityId}/health-score`);
   }
 }

@@ -83,6 +83,18 @@ public sealed record OpportunityTeamMemberDto(
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc);
 
+public sealed record OpportunityContactRoleDto(
+    Guid Id,
+    Guid ContactId,
+    string ContactName,
+    string? Email,
+    string? JobTitle,
+    string Role,
+    string? Notes,
+    bool IsPrimary,
+    DateTime CreatedAtUtc,
+    DateTime? UpdatedAtUtc);
+
 public sealed record OpportunityOnboardingItemDto(
     Guid Id,
     Guid OpportunityId,
@@ -169,3 +181,16 @@ public sealed record OpportunityApprovalInboxItemDto(
     double RequestedAgeHours,
     string PolicyReason,
     string BusinessImpactLabel);
+
+public sealed record OpportunityHealthScoreDto(
+    int Score,
+    string Label,
+    decimal Confidence,
+    string Rationale,
+    IReadOnlyList<OpportunityHealthFactorDto> Factors,
+    DateTime ComputedUtc);
+
+public sealed record OpportunityHealthFactorDto(
+    string Factor,
+    int Score,
+    int MaxScore);

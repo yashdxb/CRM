@@ -1875,6 +1875,274 @@ public sealed class OpportunityService : IOpportunityService
         return OpportunityOperationResult<IReadOnlyList<OpportunityTeamMemberDto>>.Ok(team);
     }
 
+    public async Task<IReadOnlyList<OpportunityContactRoleDto>?> GetContactRolesAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var exists = await _dbContext.Opportunities
+            .AsNoTracking()
+            .AnyAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (!exists)
+        {
+            return null;
+        }
+
+        var roles = await _dbContext.OpportunityContactRoles
+            .AsNoTracking()
+            .Where(r => r.OpportunityId == id && !r.IsDeleted)
+            .Join(_dbContext.Contacts,
+                role => role.ContactId,
+                contact => contact.Id,
+                (role, contact) => new OpportunityContactRoleDto(
+                    role.Id,
+                    role.ContactId,
+                    (contact.FirstName + " " + contact.LastName).Trim(),
+                    contact.Email,
+                    contact.JobTitle,
+                    role.Role,
+                    role.Notes,
+                    role.IsPrimary,
+                    role.CreatedAtUtc,
+                    role.UpdatedAtUtc))
+            .OrderByDescending(r => r.IsPrimary)
+            .ThenBy(r => r.ContactName)
+            .ToListAsync(cancellationToken);
+
+        return roles;
+    }
+
+    public async Task<OpportunityOperationResult<OpportunityContactRoleDto>> AddContactRoleAsync(
+        Guid id,
+        AddOpportunityContactRoleRequest request,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var opportunity = await _dbContext.Opportunities
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (opportunity is null)
+        {
+            return OpportunityOperationResult<OpportunityContactRoleDto>.NotFoundResult();
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Role))
+        {
+            return OpportunityOperationResult<OpportunityContactRoleDto>.Fail("Stakeholder role is required.");
+        }
+
+        var contact = await _dbContext.Contacts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == request.ContactId && !c.IsDeleted, cancellationToken);
+        if (contact is null)
+        {
+            return OpportunityOperationResult<OpportunityContactRoleDto>.Fail("Contact not found.");
+        }
+
+        var duplicate = await _dbContext.OpportunityContactRoles
+            .AnyAsync(r => r.OpportunityId == id && r.ContactId == request.ContactId && !r.IsDeleted, cancellationToken);
+        if (duplicate)
+        {
+            return OpportunityOperationResult<OpportunityContactRoleDto>.Fail("This contact is already assigned to this deal.");
+        }
+
+        var now = DateTime.UtcNow;
+        var entity = new OpportunityContactRole
+        {
+            OpportunityId = id,
+            ContactId = request.ContactId,
+            Role = request.Role.Trim(),
+            Notes = request.Notes?.Trim(),
+            IsPrimary = request.IsPrimary,
+            TenantId = opportunity.TenantId,
+            CreatedAtUtc = now,
+            CreatedBy = actor.UserName
+        };
+
+        _dbContext.OpportunityContactRoles.Add(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var dto = new OpportunityContactRoleDto(
+            entity.Id,
+            entity.ContactId,
+            (contact.FirstName + " " + contact.LastName).Trim(),
+            contact.Email,
+            contact.JobTitle,
+            entity.Role,
+            entity.Notes,
+            entity.IsPrimary,
+            entity.CreatedAtUtc,
+            entity.UpdatedAtUtc);
+
+        return OpportunityOperationResult<OpportunityContactRoleDto>.Ok(dto);
+    }
+
+    public async Task<OpportunityOperationResult<bool>> RemoveContactRoleAsync(
+        Guid id,
+        Guid contactRoleId,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var opportunity = await _dbContext.Opportunities
+            .AsNoTracking()
+            .AnyAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (!opportunity)
+        {
+            return OpportunityOperationResult<bool>.NotFoundResult();
+        }
+
+        var role = await _dbContext.OpportunityContactRoles
+            .FirstOrDefaultAsync(r => r.Id == contactRoleId && r.OpportunityId == id && !r.IsDeleted, cancellationToken);
+        if (role is null)
+        {
+            return OpportunityOperationResult<bool>.NotFoundResult();
+        }
+
+        role.IsDeleted = true;
+        role.DeletedAtUtc = DateTime.UtcNow;
+        role.DeletedBy = actor.UserName;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return OpportunityOperationResult<bool>.Ok(true);
+    }
+
+    public async Task<OpportunityHealthScoreDto?> GetHealthScoreAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var opp = await _dbContext.Opportunities
+            .Include(o => o.Stage)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
+        if (opp is null) return null;
+
+        var factors = new List<OpportunityHealthFactorDto>();
+        var now = DateTime.UtcNow;
+
+        // 1. Stage Progression (0-15)
+        var stageOrder = opp.Stage?.Order ?? 0;
+        var stageScore = Math.Min(stageOrder * 3, 15);
+        factors.Add(new OpportunityHealthFactorDto("Stage Progression", stageScore, 15));
+
+        // 2. Activity Recency (0-20)
+        var lastActivity = await _dbContext.Activities
+            .Where(a => a.RelatedEntityType == Domain.Enums.ActivityRelationType.Opportunity && a.RelatedEntityId == id && !a.IsDeleted)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Select(a => (DateTime?)a.CreatedAtUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+        var daysSinceActivity = lastActivity.HasValue ? (now - lastActivity.Value).TotalDays : 999;
+        var activityScore = daysSinceActivity switch
+        {
+            <= 3 => 20,
+            <= 7 => 16,
+            <= 14 => 12,
+            <= 30 => 6,
+            _ => 0
+        };
+        factors.Add(new OpportunityHealthFactorDto("Activity Recency", activityScore, 20));
+
+        // 3. Close Date Health (0-15)
+        var closeDateScore = 0;
+        if (opp.ExpectedCloseDate.HasValue && !opp.IsClosed)
+        {
+            var daysToClose = (opp.ExpectedCloseDate.Value - now).TotalDays;
+            closeDateScore = daysToClose switch
+            {
+                < 0 => 0,   // overdue
+                <= 7 => 8,  // imminent
+                <= 30 => 12,
+                <= 90 => 15,
+                _ => 10
+            };
+        }
+        else if (opp.IsClosed && opp.IsWon)
+        {
+            closeDateScore = 15;
+        }
+        factors.Add(new OpportunityHealthFactorDto("Close Date Health", closeDateScore, 15));
+
+        // 4. Stakeholder Coverage (0-10)
+        var contactRolesCount = await _dbContext.OpportunityContactRoles
+            .CountAsync(r => r.OpportunityId == id && !r.IsDeleted, cancellationToken);
+        var stakeholderScore = contactRolesCount switch
+        {
+            0 => 0,
+            1 => 4,
+            2 => 7,
+            >= 3 => 10,
+            _ => 0
+        };
+        factors.Add(new OpportunityHealthFactorDto("Stakeholder Coverage", stakeholderScore, 10));
+
+        // 5. Deal Completeness (0-15)
+        var completenessHits = 0;
+        if (opp.Amount > 0) completenessHits++;
+        if (opp.Probability > 0) completenessHits++;
+        if (!string.IsNullOrWhiteSpace(opp.Requirements)) completenessHits++;
+        if (!string.IsNullOrWhiteSpace(opp.SuccessCriteria)) completenessHits++;
+        if (opp.ExpectedCloseDate.HasValue) completenessHits++;
+        var completenessScore = (int)Math.Round(completenessHits / 5.0 * 15);
+        factors.Add(new OpportunityHealthFactorDto("Deal Completeness", completenessScore, 15));
+
+        // 6. Team Coverage (0-10)
+        var teamCount = await _dbContext.OpportunityTeamMembers
+            .CountAsync(m => m.OpportunityId == id && !m.IsDeleted, cancellationToken);
+        var teamScore = teamCount switch
+        {
+            0 => 2, // owner always exists
+            1 => 6,
+            >= 2 => 10,
+            _ => 2
+        };
+        factors.Add(new OpportunityHealthFactorDto("Team Coverage", teamScore, 10));
+
+        // 7. Process Compliance (0-15)
+        var processHits = 0;
+        if (!string.IsNullOrWhiteSpace(opp.ProposalStatus) && opp.ProposalStatus != "Not Started") processHits += 2;
+        if (!string.IsNullOrWhiteSpace(opp.SecurityReviewStatus) && opp.SecurityReviewStatus != "Not Started") processHits += 2;
+        if (!string.IsNullOrWhiteSpace(opp.LegalReviewStatus) && opp.LegalReviewStatus != "Not Started") processHits += 2;
+        if (!string.IsNullOrWhiteSpace(opp.BuyingProcess)) processHits++;
+        var processScore = Math.Min((int)Math.Round(processHits / 7.0 * 15), 15);
+        factors.Add(new OpportunityHealthFactorDto("Process Compliance", processScore, 15));
+
+        var totalScore = factors.Sum(f => f.Score);
+        var maxTotal = factors.Sum(f => f.MaxScore);
+        var normalizedScore = maxTotal > 0 ? (int)Math.Round(totalScore * 100.0 / maxTotal) : 0;
+
+        var label = normalizedScore switch
+        {
+            >= 80 => "Excellent",
+            >= 60 => "Good",
+            >= 40 => "Fair",
+            >= 20 => "At Risk",
+            _ => "Critical"
+        };
+
+        var rationale = BuildHealthRationale(factors, normalizedScore, daysSinceActivity, opp);
+
+        return new OpportunityHealthScoreDto(
+            normalizedScore,
+            label,
+            0.75m,
+            rationale,
+            factors,
+            now);
+    }
+
+    private static string BuildHealthRationale(
+        List<OpportunityHealthFactorDto> factors,
+        int score,
+        double daysSinceActivity,
+        Opportunity opp)
+    {
+        var weakFactors = factors
+            .Where(f => f.MaxScore > 0 && f.Score < f.MaxScore * 0.5)
+            .OrderBy(f => (double)f.Score / f.MaxScore)
+            .Take(2)
+            .Select(f => f.Factor)
+            .ToList();
+
+        if (weakFactors.Count == 0)
+            return $"Deal health is strong at {score}/100. All factors are in good shape.";
+
+        var issues = string.Join(" and ", weakFactors);
+        return $"Deal health is {score}/100. Areas needing attention: {issues}.";
+    }
+
     private async Task EnsureOnboardingDefaultsAsync(Opportunity opportunity, ActorContext actor, CancellationToken cancellationToken)
     {
         var hasItems = await _dbContext.OpportunityOnboardingItems

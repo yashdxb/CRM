@@ -38,10 +38,16 @@ import {
   OpportunityProposalActionResult,
   OpportunityAuditEvent,
   PriceListListItem,
-  ItemMasterListItem
+  ItemMasterListItem,
+  OpportunityContactRole,
+  AddOpportunityContactRoleRequest,
+  OpportunityHealthScore,
+  OpportunityStageHistoryItem
 } from '../models/opportunity.model';
 import { Activity } from '../../activities/models/activity.model';
 import { ActivityDataService } from '../../activities/services/activity-data.service';
+import { ContactDataService } from '../../contacts/services/contact-data.service';
+import { Contact } from '../../contacts/models/contact.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext, readUserId, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
@@ -104,6 +110,9 @@ type DealPanelKey =
   | 'pricing-discounts'
   | 'quote-proposal'
   | 'pre-sales-team'
+  | 'deal-stakeholders'
+  | 'deal-health-score'
+  | 'deal-aging'
   | 'approval-workflow'
   | 'security-legal'
   | 'delivery-handoff'
@@ -118,6 +127,9 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
   'pricing-discounts',
   'quote-proposal',
   'pre-sales-team',
+  'deal-stakeholders',
+  'deal-health-score',
+  'deal-aging',
   'approval-workflow',
   'security-legal',
   'delivery-handoff',
@@ -361,12 +373,66 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingOpportunity: Opportunity | null = null;
   private pendingAccountName: string | null = null;
+  private dealCreatedAtUtc: string | null = null;
   protected recentDealActivities = signal<Activity[]>([]);
   protected recentDealActivitiesLoading = signal(false);
   protected dealAttachments = signal<AttachmentItem[]>([]);
   protected dealAttachmentsLoading = signal(false);
   protected dealAttachmentUploading = signal(false);
   protected dealAttachmentDeletingIds = signal<string[]>([]);
+
+  /* ── Stakeholders / Contact Roles ───────────────────── */
+  protected dealContactRoles = signal<OpportunityContactRole[]>([]);
+  protected dealContactRolesLoading = signal(false);
+  protected stakeholderRemovingIds = signal<string[]>([]);
+  protected stakeholderContactSuggestions = signal<Contact[]>([]);
+  protected stakeholderContactSearching = signal(false);
+  protected stakeholderContactOptions = signal<Option[]>([]);
+  protected stakeholderSelectedContactId = '';
+  protected stakeholderSelectedRole = '';
+  protected stakeholderNotes = '';
+  protected stakeholderIsPrimary = false;
+  protected stakeholderAdding = signal(false);
+  protected readonly stakeholderRoleOptions: Option[] = [
+    { label: 'Decision Maker', value: 'Decision Maker' },
+    { label: 'Champion', value: 'Champion' },
+    { label: 'Influencer', value: 'Influencer' },
+    { label: 'Evaluator', value: 'Evaluator' },
+    { label: 'Blocker', value: 'Blocker' }
+  ];
+
+  /* ── Deal Health Score ────────────────────────────────── */
+  protected dealHealthScore = signal<OpportunityHealthScore | null>(null);
+  protected dealHealthScoreLoading = signal(false);
+
+  /* ── Deal Aging / Stage Duration ────────────────────── */
+  protected stageHistory = signal<OpportunityStageHistoryItem[]>([]);
+  protected stageHistoryLoading = signal(false);
+  protected stageDurations = computed(() => {
+    const history = this.stageHistory();
+    if (!history.length) return [];
+    const sorted = [...history].sort((a, b) => new Date(a.changedAtUtc).getTime() - new Date(b.changedAtUtc).getTime());
+    const durations: Array<{ stage: string; durationDays: number; enteredAt: Date; exitedAt: Date | null; isCurrent: boolean }> = [];
+    for (let i = 0; i < sorted.length; i++) {
+      const enteredAt = new Date(sorted[i].changedAtUtc);
+      const exitedAt = i + 1 < sorted.length ? new Date(sorted[i + 1].changedAtUtc) : null;
+      const diffMs = (exitedAt ?? new Date()).getTime() - enteredAt.getTime();
+      durations.push({
+        stage: sorted[i].stage,
+        durationDays: Math.max(Math.round(diffMs / 86_400_000), 0),
+        enteredAt,
+        exitedAt,
+        isCurrent: !exitedAt
+      });
+    }
+    return durations;
+  });
+  protected totalDealAgeDays = computed(() => {
+    const created = this.dealCreatedAtUtc;
+    if (!created) return 0;
+    const diffMs = new Date().getTime() - new Date(created).getTime();
+    return Math.max(Math.round(diffMs / 86_400_000), 0);
+  });
 
   /* ── Revenue Forecast Chart ─────────────────────────── */
   protected forecastChartData = computed(() => {
@@ -424,6 +490,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
   private readonly activityData = inject(ActivityDataService);
   private readonly attachmentData = inject(AttachmentDataService);
+  private readonly contactData = inject(ContactDataService);
   private readonly opportunityData = inject(OpportunityDataService);
   private readonly approvalService = inject(OpportunityApprovalService);
   private readonly checklistService = inject(OpportunityReviewChecklistService);
@@ -598,6 +665,22 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       return null;
     }
 
+    if (section === 'deal-stakeholders') {
+      if (!this.isEditMode()) return 'Save deal first to assign stakeholders.';
+      if (stageRank < this.stageRank('Qualification')) return 'Move to Qualification stage to unlock Stakeholders.';
+      return null;
+    }
+
+    if (section === 'deal-health-score') {
+      if (!this.isEditMode()) return 'Save deal first to view health score.';
+      return null;
+    }
+
+    if (section === 'deal-aging') {
+      if (!this.isEditMode()) return 'Save deal first to view stage timeline.';
+      return null;
+    }
+
     if (section === 'approval-workflow') {
       if (!this.isEditMode()) return 'Save deal first to request approvals.';
       if (!this.shouldShowApprovalWorkflowSection() && !this.approvals.length) {
@@ -653,6 +736,18 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     if (section === 'pre-sales-team') {
       return this.teamMembers.length ? 'in-progress' : 'ready';
     }
+    if (section === 'deal-stakeholders') {
+      return this.dealContactRoles().length ? 'in-progress' : 'ready';
+    }
+    if (section === 'deal-health-score') {
+      const hs = this.dealHealthScore();
+      if (!hs) return 'ready';
+      if (hs.score >= 80) return 'complete';
+      return 'in-progress';
+    }
+    if (section === 'deal-aging') {
+      return this.stageHistory().length ? 'in-progress' : 'ready';
+    }
     if (section === 'approval-workflow') {
       if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'pending')) return 'in-progress';
       if (this.approvals.some((a) => (a.status || '').toLowerCase() === 'approved')) return 'complete';
@@ -690,6 +785,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       { key: 'pricing-discounts', label: 'Pricing & Discounts', icon: 'pi pi-percentage', unlockStageRank: 0 },
       { key: 'quote-proposal', label: 'Quote / Proposal', icon: 'pi pi-file-edit', unlockStageRank: proposalRank },
       { key: 'pre-sales-team', label: 'Pre-Sales Team', icon: 'pi pi-users', unlockStageRank: proposalRank },
+      { key: 'deal-stakeholders', label: 'Stakeholders', icon: 'pi pi-id-card', unlockStageRank: qualificationRank },
+      { key: 'deal-health-score', label: 'Deal Health', icon: 'pi pi-heart', unlockStageRank: 0 },
+      { key: 'deal-aging', label: 'Deal Aging', icon: 'pi pi-stopwatch', unlockStageRank: 0 },
       { key: 'approval-workflow', label: 'Approval Workflow', icon: 'pi pi-check-circle', unlockStageRank: 0 },
       { key: 'security-legal', label: 'Security & Legal', icon: 'pi pi-shield', unlockStageRank: securityRank },
       { key: 'delivery-handoff', label: 'Delivery & Handoff', icon: 'pi pi-briefcase', unlockStageRank: commitRank },
@@ -836,6 +934,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       'pricing-discounts': { label: 'Pricing & Discounts', icon: 'pi pi-percentage' },
       'quote-proposal': { label: 'Quote / Proposal', icon: 'pi pi-file-edit' },
       'pre-sales-team': { label: 'Pre-Sales Team', icon: 'pi pi-users' },
+      'deal-stakeholders': { label: 'Stakeholders', icon: 'pi pi-id-card' },
+      'deal-health-score': { label: 'Deal Health', icon: 'pi pi-heart' },
+      'deal-aging': { label: 'Deal Aging', icon: 'pi pi-stopwatch' },
       'approval-workflow': { label: 'Approval Workflow', icon: 'pi pi-check-circle' },
       'security-legal': { label: 'Security & Legal', icon: 'pi pi-shield' },
       'delivery-handoff': { label: 'Delivery & Handoff', icon: 'pi pi-truck' },
@@ -919,6 +1020,18 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
     if (section === 'quote-proposal' || section === 'pre-sales-team') {
       return rank >= proposalRank;
+    }
+
+    if (section === 'deal-stakeholders') {
+      return this.isEditMode() && rank >= qualificationRank;
+    }
+
+    if (section === 'deal-health-score') {
+      return this.isEditMode();
+    }
+
+    if (section === 'deal-aging') {
+      return this.isEditMode();
     }
 
     if (section === 'security-legal') {
@@ -1653,6 +1766,9 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.loadProposalActivity(id);
         this.loadRecentDealActivities(id);
         this.loadDealAttachments(id);
+        this.loadDealContactRoles(id);
+        this.loadDealHealthScore(id);
+        this.loadStageHistory(id);
         if (!this.accountOptions.length) {
           this.pendingOpportunity = opp;
         }
@@ -1728,6 +1844,15 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         break;
       case 'pre-sales-team':
         this.loadTeamMembers(this.editingId, markDone);
+        break;
+      case 'deal-stakeholders':
+        this.loadDealContactRoles(this.editingId, markDone);
+        break;
+      case 'deal-health-score':
+        this.loadDealHealthScore(this.editingId, markDone);
+        break;
+      case 'deal-aging':
+        this.loadStageHistory(this.editingId, markDone);
         break;
       case 'approval-workflow':
         this.loadApprovals(this.editingId, markDone);
@@ -2935,6 +3060,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       isWon: opp.status === 'Closed Won',
       winLossReason: opp.winLossReason ?? ''
     });
+    this.dealCreatedAtUtc = opp.createdAtUtc ?? null;
     this.nextStepDueAtUtc = opp.nextStepDueAtUtc ? new Date(opp.nextStepDueAtUtc) : null;
     this.approvalRequest = {
       ...this.approvalRequest,
@@ -3258,6 +3384,140 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       return 'Handoff timeline is required before kickoff.';
     }
     return null;
+  }
+
+  /* ── Stakeholders / Contact Roles ─────────────────────── */
+
+  private loadDealContactRoles(opportunityId: string, onSettled?: () => void): void {
+    this.dealContactRolesLoading.set(true);
+    this.opportunityData.getContactRoles(opportunityId).subscribe({
+      next: (items) => {
+        this.dealContactRoles.set(items);
+        this.dealContactRolesLoading.set(false);
+        onSettled?.();
+      },
+      error: () => {
+        this.dealContactRoles.set([]);
+        this.dealContactRolesLoading.set(false);
+        onSettled?.();
+      }
+    });
+    this.loadStakeholderContactOptions();
+  }
+
+  private loadDealHealthScore(opportunityId: string, onSettled?: () => void): void {
+    this.dealHealthScoreLoading.set(true);
+    this.opportunityData.getHealthScore(opportunityId).subscribe({
+      next: (hs) => {
+        this.dealHealthScore.set(hs);
+        this.dealHealthScoreLoading.set(false);
+        onSettled?.();
+      },
+      error: () => {
+        this.dealHealthScore.set(null);
+        this.dealHealthScoreLoading.set(false);
+        onSettled?.();
+      }
+    });
+  }
+
+  protected refreshDealHealthScore(): void {
+    if (!this.editingId) return;
+    this.loadDealHealthScore(this.editingId);
+  }
+
+  protected healthScoreColor(score: number): string {
+    if (score >= 80) return '#22c55e';
+    if (score >= 60) return '#3b82f6';
+    if (score >= 40) return '#f59e0b';
+    if (score >= 20) return '#f97316';
+    return '#ef4444';
+  }
+
+  private loadStageHistory(opportunityId: string, onSettled?: () => void): void {
+    this.stageHistoryLoading.set(true);
+    this.opportunityData.getHistory(opportunityId).subscribe({
+      next: (items) => {
+        this.stageHistory.set(items);
+        this.stageHistoryLoading.set(false);
+        onSettled?.();
+      },
+      error: () => {
+        this.stageHistory.set([]);
+        this.stageHistoryLoading.set(false);
+        onSettled?.();
+      }
+    });
+  }
+
+  private loadStakeholderContactOptions(): void {
+    const accountId = this.form?.accountId;
+    this.stakeholderContactSearching.set(true);
+    this.contactData.search({ accountId: accountId || undefined, pageSize: 100 }).subscribe({
+      next: (res) => {
+        this.stakeholderContactOptions.set(
+          (res.items ?? []).map((c) => ({ label: `${c.name}${c.jobTitle ? ' – ' + c.jobTitle : ''}`, value: c.id }))
+        );
+        this.stakeholderContactSearching.set(false);
+      },
+      error: () => {
+        this.stakeholderContactOptions.set([]);
+        this.stakeholderContactSearching.set(false);
+      }
+    });
+  }
+
+  protected addDealStakeholder(): void {
+    if (!this.editingId || !this.stakeholderSelectedContactId || !this.stakeholderSelectedRole) return;
+    const payload: AddOpportunityContactRoleRequest = {
+      contactId: this.stakeholderSelectedContactId,
+      role: this.stakeholderSelectedRole,
+      notes: this.stakeholderNotes || undefined,
+      isPrimary: this.stakeholderIsPrimary
+    };
+    this.stakeholderAdding.set(true);
+    this.opportunityData.addContactRole(this.editingId, payload).subscribe({
+      next: (role) => {
+        this.dealContactRoles.update((list) => [...list, role]);
+        this.stakeholderSelectedContactId = '';
+        this.stakeholderSelectedRole = '';
+        this.stakeholderNotes = '';
+        this.stakeholderIsPrimary = false;
+        this.stakeholderAdding.set(false);
+        this.toastService.show('success', 'Stakeholder added.');
+      },
+      error: () => {
+        this.stakeholderAdding.set(false);
+        this.toastService.show('error', 'Failed to add stakeholder.');
+      }
+    });
+  }
+
+  protected removeDealStakeholder(roleId: string): void {
+    if (!this.editingId) return;
+    this.stakeholderRemovingIds.update((ids) => [...ids, roleId]);
+    this.opportunityData.removeContactRole(this.editingId, roleId).subscribe({
+      next: () => {
+        this.dealContactRoles.update((list) => list.filter((r) => r.id !== roleId));
+        this.stakeholderRemovingIds.update((ids) => ids.filter((id) => id !== roleId));
+        this.toastService.show('success', 'Stakeholder removed.');
+      },
+      error: () => {
+        this.stakeholderRemovingIds.update((ids) => ids.filter((id) => id !== roleId));
+        this.toastService.show('error', 'Failed to remove stakeholder.');
+      }
+    });
+  }
+
+  protected stakeholderRoleIcon(role: string): string {
+    switch (role) {
+      case 'Decision Maker': return 'pi pi-star';
+      case 'Champion': return 'pi pi-heart';
+      case 'Influencer': return 'pi pi-megaphone';
+      case 'Evaluator': return 'pi pi-search';
+      case 'Blocker': return 'pi pi-ban';
+      default: return 'pi pi-user';
+    }
   }
 
   /* ── Deal Activity Timeline ─────────────────────────────── */

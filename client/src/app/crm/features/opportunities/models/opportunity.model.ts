@@ -345,3 +345,38 @@ export interface UpdateOpportunityTeamRequest {
     role: string;
   }>;
 }
+
+export interface OpportunityContactRole {
+  id: string;
+  contactId: string;
+  contactName: string;
+  email?: string | null;
+  jobTitle?: string | null;
+  role: string;
+  notes?: string | null;
+  isPrimary: boolean;
+  createdAtUtc: string;
+  updatedAtUtc?: string | null;
+}
+
+export interface AddOpportunityContactRoleRequest {
+  contactId: string;
+  role: string;
+  notes?: string | null;
+  isPrimary: boolean;
+}
+
+export interface OpportunityHealthScore {
+  score: number;
+  label: string;
+  confidence: number;
+  rationale: string;
+  factors: OpportunityHealthFactor[];
+  computedUtc: string;
+}
+
+export interface OpportunityHealthFactor {
+  factor: string;
+  score: number;
+  maxScore: number;
+}

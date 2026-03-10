@@ -70,3 +70,9 @@ public sealed record OpportunityOnboardingUpdateRequest(
     string? Status,
     DateTime? DueDateUtc,
     string? Notes);
+
+public sealed record AddOpportunityContactRoleRequest(
+    Guid ContactId,
+    string Role,
+    string? Notes,
+    bool IsPrimary);

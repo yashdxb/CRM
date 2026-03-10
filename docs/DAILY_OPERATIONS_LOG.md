@@ -481,4 +481,33 @@ RunAndStreamReplyAsync() ← SSE events from Azure AI Foundry
 | | | | |
 
 ### Summary for Project Master (If Verified)
-- 
+-
+
+---
+
+**Date:** 2026-03-09  
+**Environment:** Local dev  
+**Owner:** Copilot  
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| - | Leads UI | Leads list page had 17 metric/stat cards + coaching queue + disposition reporting, pushing data table far below fold | Medium | Owner |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Leads page card overload | Leads page diverged from golden-standard layout; coaching queue (7 cards) + disposition reporting (4 totals + 4 analysis cards + 8-week trend) bloated the page | Restructured to match Customers golden standard: Hero section + 5 metric cards with ring SVGs + streamlined action bar with view toggle + data table/kanban. Removed Coaching Queue and Disposition Reporting sections entirely. | `leads.page.html`, `leads.page.scss` | Build verify | `ng build --configuration=development` passes with no errors |
+| Deal 360 Detail View | No unified deal detail page existed | Created opportunity-detail page with contact roles, health score, stage aging, activity timeline. Added route, backend endpoints, domain entities. | `opportunity-detail.page.*`, `OpportunitiesController.cs`, `OpportunityContactRole.cs`, `IOpportunityService.cs`, `OpportunityService.cs`, `app.routes.ts` | Build verify | Build passes, route registered at `/app/opportunities/:id` |
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| ClickUp task update for Leads redesign + Deal 360 | Owner | 2026-03-10 | Update ClickUp tasks to match USER_STORIES.md and CRM_BACKLOG.md |
+
+### Summary for Project Master (If Verified)
+✅ **Leads Page Golden-Standard Redesign**: Leads list page restructured to match Customers Workspace layout — Hero section, 5 metric cards with ring SVGs, streamlined action bar with view toggle, data table/kanban. Removed Coaching Queue (7 cards) and Disposition Reporting (4 totals + 4 analysis cards + 8-week trend).
+
+✅ **Deal 360 Detail View**: New opportunity detail page at `/app/opportunities/:id` with contact roles/stakeholders, health/AI score, stage duration visualization, activity timeline. Full-stack (frontend + backend endpoints + domain entities).
+
+✅ **Deal NEXT Stories Complete**: Deal Contact Roles/Stakeholders, Deal Health/AI Score, Deal Aging/Stage Duration, Deal 360 Detail View — all marked done in USER_STORIES.md.
