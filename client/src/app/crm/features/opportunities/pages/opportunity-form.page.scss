@@ -420,170 +420,286 @@
   min-width: 0;
 }
 
-.deal-workbench-layout {
-  display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
-}
-
-.deal-workbench-content {
-  min-width: 0;
-}
-
-.deal-workbench-nav {
-  position: sticky;
-  top: calc(var(--shell-topbar-height, 47px) + var(--shell-topbar-strip-height, 4px) + var(--shell-floating-gap, 10px) + 126px);
-  z-index: 8;
-  min-width: 0;
-  border-radius: 16px;
-  border: 1px solid rgba(191, 219, 254, 0.28);
-  background:
-    linear-gradient(120deg, rgba(59, 130, 246, 0.2), rgba(20, 184, 166, 0.16), rgba(139, 92, 246, 0.2)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.58), rgba(248, 250, 252, 0.52));
-  box-shadow:
-    0 12px 28px rgba(15, 23, 42, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  padding: 0.8rem;
-  backdrop-filter: blur(14px) saturate(1.15);
-}
-
-.deal-workbench-nav__title {
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 800;
-  color: rgba(15, 23, 42, 0.84);
-  margin-bottom: 0.6rem;
-}
-
-:host ::ng-deep .deal-stage-tree.p-tree {
-  border: 0;
-  background: transparent;
+// ── Deal Tabs ──
+.deal-tabs-shell {
+  margin-bottom: 0.55rem;
   padding: 0;
-  overflow: visible;
-  overflow-x: hidden;
-  overflow-y: visible;
-  width: 100%;
-  max-width: 100%;
-}
-
-:host ::ng-deep .deal-stage-tree .p-tree-container {
-  display: grid;
-  gap: 0.5rem;
-  overflow-x: hidden;
-  overflow-y: visible;
-  min-width: 0;
-  width: 100%;
-  max-width: 100%;
-}
-
-:host ::ng-deep .deal-stage-tree .p-treenode-children {
-  min-width: 0;
-  overflow-x: hidden;
-}
-
-:host ::ng-deep .deal-stage-tree .p-treenode {
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: rgba(255, 255, 255, 0.38);
-  padding: 0.2rem;
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-:host ::ng-deep .deal-stage-tree .p-treenode-content {
-  border-radius: 10px;
-  padding: 0.45rem 0.5rem;
+  border-radius: 16px;
   background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+:host ::ng-deep .deal-tabs .p-tablist {
+  display: flex;
+  gap: 0;
+  flex-wrap: nowrap;
+  padding: 0;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(23, 50, 93, 0.84), rgba(16, 37, 71, 0.9));
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 8px 18px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: blur(10px) saturate(125%);
+  -webkit-backdrop-filter: blur(10px) saturate(125%);
+}
+
+:host ::ng-deep .deal-tabs .p-tablist-tab-list {
+  border: none !important;
+}
+
+:host ::ng-deep .deal-tabs .p-tab {
+  flex: 1 1 0;
   min-width: 0;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-:host ::ng-deep .deal-stage-tree .p-treenode-content.p-treenode-selectable:hover {
-  background: rgba(59, 130, 246, 0.08);
-}
-
-:host ::ng-deep .deal-stage-tree .p-tree-toggler {
-  color: #2563eb;
-  margin-right: 0.25rem;
-}
-
-.deal-stage-tree__node,
-.deal-stage-tree__section {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
+  min-height: 56px;
+  border: none;
+  border-radius: 0;
+  padding: 0.35rem 0.8rem 0.4rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.96);
+  opacity: 1 !important;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.18;
+  cursor: pointer;
+  transition: transform 0.18s ease, filter 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  overflow: visible;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.28);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    var(--deal-tab-bg, linear-gradient(135deg, #3b82f6, #1d4ed8));
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%, 14px 50%);
+  margin-right: -20px;
+  filter: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px) saturate(120%);
+  -webkit-backdrop-filter: blur(8px) saturate(120%);
 }
 
-.deal-stage-tree__stage-label {
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: rgba(15, 23, 42, 0.92);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+:host ::ng-deep .deal-tabs .p-tab::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 45%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+  opacity: 0.8;
+  pointer-events: none;
+  clip-path: inherit;
 }
 
-.deal-stage-tree__section-main {
+:host ::ng-deep .deal-tabs .p-tab::after {
+  content: '';
+  position: absolute;
+  left: 6%;
+  right: 8%;
+  bottom: 4px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.12));
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+:host ::ng-deep .deal-tabs .p-tab:first-child {
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
+  margin-left: 0;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  z-index: 2;
+}
+
+:host ::ng-deep .deal-tabs .p-tab:last-child {
+  clip-path: polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 0 50%);
+  margin-right: 0;
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+// Per-tab gradient colours
+:host ::ng-deep .deal-tabs .p-tab:nth-child(1) {
+  --deal-tab-bg: linear-gradient(135deg, #3f8dff 0%, #2364da 100%); // Core – blue
+}
+:host ::ng-deep .deal-tabs .p-tab:nth-child(2) {
+  --deal-tab-bg: linear-gradient(135deg, #36c3df 0%, #1497c0 100%); // Commercial – cyan
+}
+:host ::ng-deep .deal-tabs .p-tab:nth-child(3) {
+  --deal-tab-bg: linear-gradient(135deg, #ffaf47 0%, #f07f10 100%); // People – orange
+}
+:host ::ng-deep .deal-tabs .p-tab:nth-child(4) {
+  --deal-tab-bg: linear-gradient(135deg, #8b6bff 0%, #6948e4 100%); // Compliance – purple
+}
+:host ::ng-deep .deal-tabs .p-tab:nth-child(5) {
+  --deal-tab-bg: linear-gradient(135deg, #6f84aa 0%, #556f94 100%); // Delivery – slate
+}
+
+// ── Active tab ──
+:host ::ng-deep .deal-tabs .p-tab.p-tab-active,
+:host ::ng-deep .deal-tabs .p-tab[aria-selected='true'],
+:host ::ng-deep .deal-tabs .p-tab[data-p-active='true'] {
+  z-index: 4;
+  opacity: 1;
+  filter: brightness(1.05) saturate(1.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.12)),
+    radial-gradient(circle at 50% 16%, rgba(255, 255, 255, 0.28), transparent 58%),
+    var(--deal-tab-bg, linear-gradient(135deg, #3b82f6, #1d4ed8));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 0 0 3px rgba(255, 255, 255, 0.12),
+    0 10px 22px rgba(15, 23, 42, 0.22),
+    0 0 32px rgba(125, 211, 252, 0.3);
+  transform: translateY(-2px) scale(1.02);
+  animation: deal-tab-breathe 1.8s ease-in-out infinite;
+}
+
+:host ::ng-deep .deal-tabs .p-tab.p-tab-active .deal-tab-label,
+:host ::ng-deep .deal-tabs .p-tab[aria-selected='true'] .deal-tab-label,
+:host ::ng-deep .deal-tabs .p-tab[data-p-active='true'] .deal-tab-label {
+  color: #ffffff;
+  text-shadow: 0 1px 1px rgba(15, 23, 42, 0.18), 0 0 12px rgba(255, 255, 255, 0.16);
+}
+
+:host ::ng-deep .deal-tabs .p-tab.p-tab-active::after,
+:host ::ng-deep .deal-tabs .p-tab[aria-selected='true']::after,
+:host ::ng-deep .deal-tabs .p-tab[data-p-active='true']::after {
+  height: 3px;
+  bottom: 3px;
+  left: 8%;
+  right: 10%;
+  opacity: 1;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.16) 0%,
+    rgba(239, 68, 68, 0.95) 12%,
+    rgba(245, 158, 11, 0.95) 26%,
+    rgba(250, 204, 21, 0.95) 38%,
+    rgba(34, 197, 94, 0.95) 50%,
+    rgba(59, 130, 246, 0.98) 64%,
+    rgba(139, 92, 246, 0.98) 78%,
+    rgba(236, 72, 153, 0.95) 90%,
+    rgba(255, 255, 255, 0.18) 100%
+  );
+  box-shadow:
+    0 0 6px rgba(255, 255, 255, 0.35),
+    0 0 14px rgba(59, 130, 246, 0.28),
+    0 0 20px rgba(236, 72, 153, 0.2),
+    0 1px 0 rgba(15, 23, 42, 0.12);
+  background-size: 320% 100%;
+  animation: deal-tab-active-strip 3.4s linear infinite;
+}
+
+:host ::ng-deep .deal-tabs .p-tab.p-tab-active::before,
+:host ::ng-deep .deal-tabs .p-tab[aria-selected='true']::before,
+:host ::ng-deep .deal-tabs .p-tab[data-p-active='true']::before {
+  opacity: 0.95;
+}
+
+// ── Inactive / hover / focus / disabled ──
+:host ::ng-deep .deal-tabs .p-tab:not(.p-tab-active):not([aria-selected='true']):not([data-p-active='true']) {
+  opacity: 1;
+  transition: opacity 250ms, transform 250ms, filter 250ms;
+}
+
+:host ::ng-deep .deal-tabs .p-tab:hover:not(.p-disabled):not(.p-tab-active):not([aria-selected='true']):not([data-p-active='true']) {
+  opacity: 1;
+  transform: translateY(-1px);
+  filter: brightness(1.05) saturate(1.05);
+  z-index: 6;
+}
+
+:host ::ng-deep .deal-tabs .p-tab:focus-visible {
+  outline: none;
+  z-index: 6;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.28),
+    0 0 0 5px rgba(59, 130, 246, 0.2);
+}
+
+:host ::ng-deep .deal-tabs .p-tab.p-disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  filter: grayscale(0.08) saturate(0.65);
+}
+
+.deal-tab-label {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  min-width: 0;
+  gap: 0.4rem;
   max-width: 100%;
-  flex: 1 1 auto;
-  font-size: 0.78rem;
+  text-wrap: balance;
+  white-space: normal;
+  font-size: 0.88rem;
   font-weight: 700;
-  color: rgba(30, 41, 59, 0.9);
+  letter-spacing: 0.005em;
 
   i {
-    font-size: 0.82rem;
-    color: #2563eb;
-  }
-
-  span:last-child {
-    min-width: 0;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: 0.92rem;
   }
 }
 
-:host ::ng-deep .deal-stage-tree .opportunity-accordion-badge {
-  max-width: min(9.25rem, 48%);
-  white-space: normal;
-  overflow-wrap: anywhere;
-  text-align: right;
-  flex: 0 1 auto;
+// ── Tab animations ──
+@keyframes deal-tab-breathe {
+  0%, 100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.16),
+      0 0 0 1px rgba(255, 255, 255, 0.2),
+      0 0 0 3px rgba(255, 255, 255, 0.08),
+      0 10px 18px rgba(15, 23, 42, 0.16),
+      0 0 20px rgba(125, 211, 252, 0.18);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+      0 0 0 1px rgba(255, 255, 255, 0.28),
+      0 0 0 4px rgba(255, 255, 255, 0.1),
+      0 12px 22px rgba(15, 23, 42, 0.18),
+      0 0 30px rgba(255, 255, 255, 0.16),
+      0 0 34px rgba(125, 211, 252, 0.24);
+  }
 }
 
-.deal-stage-tree__section--active .deal-stage-tree__section-main {
-  color: #1d4ed8;
+@keyframes deal-tab-active-strip {
+  0%, 100% {
+    background-position: 0% 50%;
+    opacity: 0.88;
+    transform: scaleX(0.985);
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 1;
+    transform: scaleX(1);
+  }
 }
 
-.deal-stage-tree__section--locked {
-  opacity: 0.82;
+@media (prefers-reduced-motion: reduce) {
+  :host ::ng-deep .deal-tabs .p-tab.p-tab-active {
+    animation: none;
+  }
+  :host ::ng-deep .deal-tabs .p-tab.p-tab-active::after {
+    animation: none;
+  }
 }
 
-:host ::ng-deep .deal-stage-tree .deal-stage-tree-node--warning {
-  background: linear-gradient(120deg, rgba(249, 115, 22, 0.15), rgba(251, 191, 36, 0.1));
-}
-
-:host ::ng-deep .deal-stage-tree .deal-stage-tree-node--info {
-  background: linear-gradient(120deg, rgba(59, 130, 246, 0.16), rgba(14, 165, 233, 0.1));
-}
-
-:host ::ng-deep .deal-stage-tree .deal-stage-tree-node--success {
-  background: linear-gradient(120deg, rgba(16, 185, 129, 0.16), rgba(20, 184, 166, 0.1));
+@media (max-width: 980px) {
+  :host ::ng-deep .deal-tabs .p-tablist {
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scrollbar-width: thin;
+  }
 }
 
 .form-layout--read-only {
@@ -1592,32 +1708,9 @@
 }
 
 @media (max-width: 1200px) {
-  .deal-workbench-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .deal-workbench-nav {
-    position: static;
-    top: auto;
-  }
 }
 
 @media (max-width: 900px) {
-  .deal-workbench-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .deal-workbench-nav {
-    position: static;
-    top: auto;
-    padding: 0.6rem;
-  }
-
-  .deal-workbench-nav__items {
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 0.45rem;
-  }
-
   .deal-sticky-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1719,10 +1812,6 @@
 }
 
 @media (max-width: 768px) {
-  .deal-workbench-nav__items {
-    grid-template-columns: 1fr;
-  }
-
   .deal-sticky-summary {
     top: calc(var(--shell-topbar-height, 106px) + var(--shell-topbar-strip-height, 4px) + var(--shell-floating-gap, 6px) + 8px);
     grid-template-columns: 1fr;

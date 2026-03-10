@@ -162,63 +162,36 @@
           </div>
         </section>
 
-        <div class="deal-workbench-layout">
-          <aside class="deal-workbench-nav" aria-label="Deal workflow navigation">
-            <div class="deal-workbench-nav__title">Deal Workbench</div>
-            <p-tree
-              class="deal-stage-tree"
-              [value]="dealStageTreeNodes()"
-              selectionMode="single"
-              [(selection)]="selectedDealTreeNode"
-              (onNodeSelect)="onDealTreeNodeSelect($event)"
-            >
-              <ng-template let-node pTemplate="default">
-                <div class="deal-stage-tree__node" *ngIf="node.data?.kind === 'stage'; else sectionNode">
-                  <span class="deal-stage-tree__stage-label">{{ node.label }}</span>
-                  <span
-                    class="opportunity-accordion-badge"
-                    [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + stageTreeTone(node.label)"
-                  >
-                    {{ stageTreeLabel(node.label) }}
-                  </span>
-                </div>
-                <ng-template #sectionNode>
-                  <div
-                    class="deal-stage-tree__section"
-                    [class.deal-stage-tree__section--active]="node.data?.kind === 'section' && isSectionActive(node.data.section)"
-                    [class.deal-stage-tree__section--locked]="node.data?.kind === 'section' && isSectionLocked(node.data.section)"
-                    [title]="node.data?.kind === 'section' && isSectionLocked(node.data.section) ? (sectionLockReason(node.data.section) || '') : ''"
-                  >
-                    <span class="deal-stage-tree__section-main">
-                      <i [class]="node.data?.kind === 'section' ? sectionIcon(node.data.section) : 'pi pi-circle'"></i>
-                      <span>{{ node.label }}</span>
-                    </span>
-                    <span
-                      *ngIf="node.data?.kind === 'section'"
-                      class="opportunity-accordion-badge"
-                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone(node.data.section)"
-                    >
-                      {{ sectionStatusLabel(node.data.section) }}
-                    </span>
-                  </div>
-                </ng-template>
-              </ng-template>
-            </p-tree>
-          </aside>
 
-          <div class="deal-workbench-content">
         <form class="form-layout" [class.form-layout--read-only]="decisionReviewMode() || requesterApprovalLocked()" (ngSubmit)="onSave()">
           <fieldset
             class="form-lock-fieldset"
             [disabled]="decisionReviewMode() || requesterApprovalLocked()"
             [attr.aria-busy]="decisionReviewMode() || requesterApprovalLocked()"
           >
-            <p-accordion
-              class="opportunity-section-accordion"
-              [multiple]="true"
-              [value]="accordionPanels()"
-              (valueChange)="onAccordionPanelsChange($event)"
-            >
+            <p-tabs class="deal-tabs-shell" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
+              <p-tablist class="deal-tabs">
+                @for (tab of tabOrder; track tab) {
+                  @if (isTabVisible(tab)) {
+                    <p-tab [value]="tab" [pt]="{ root: { class: 'deal-tab' } }">
+                      <span class="deal-tab-label">
+                        <i [class]="tabMeta[tab].icon"></i>
+                        <span>{{ tabMeta[tab].label }}</span>
+                      </span>
+                    </p-tab>
+                  }
+                }
+              </p-tablist>
+              <p-tabpanels>
+
+                <!-- CORE tab -->
+                <p-tabpanel value="core">
+                  <p-accordion
+                    class="opportunity-section-accordion"
+                    [multiple]="true"
+                    [value]="tabSectionPanels('core')"
+                    (valueChange)="onTabAccordionChange('core', $event)"
+                  >
             <p-accordion-panel value="opportunity-details" [disabled]="isSectionLocked('opportunity-details')" [attr.data-deal-section]="'opportunity-details'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
@@ -499,6 +472,17 @@
               </p-accordion-content>
             </p-accordion-panel>
 
+                  </p-accordion>
+                </p-tabpanel>
+
+                <!-- COMMERCIAL tab -->
+                <p-tabpanel value="commercial">
+                  <p-accordion
+                    class="opportunity-section-accordion"
+                    [multiple]="true"
+                    [value]="tabSectionPanels('commercial')"
+                    (valueChange)="onTabAccordionChange('commercial', $event)"
+                  >
             <p-accordion-panel value="pricing-discounts" [disabled]="isSectionLocked('pricing-discounts')" [attr.data-deal-section]="'pricing-discounts'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
@@ -973,6 +957,74 @@
               </p-accordion-content>
             </p-accordion-panel>
 
+            <p-accordion-panel value="revenue-forecast" [attr.data-deal-section]="'revenue-forecast'">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-chart-bar"></i>
+                    Revenue Forecast
+                  </span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info">
+                      {{ forecastMetrics().weightedValue | currency:form.currency:'symbol':'1.0-0' }}
+                    </span>
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+                <section class="form-card opportunity-accordion-card revenue-forecast-section">
+                  <div class="revenue-forecast" *ngIf="(form?.amount ?? 0) > 0; else noForecastData">
+                    <!-- Metric summary cards -->
+                    <div class="forecast-metrics">
+                      <div class="forecast-metric forecast-metric--primary">
+                        <span class="forecast-metric__label">Deal Value</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().amount | currency:form.currency:'symbol':'1.0-0' }}</strong>
+                      </div>
+                      <div class="forecast-metric forecast-metric--success">
+                        <span class="forecast-metric__label">Net Amount</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().netAmount | currency:form.currency:'symbol':'1.0-0' }}</strong>
+                      </div>
+                      <div class="forecast-metric forecast-metric--info">
+                        <span class="forecast-metric__label">Weighted Revenue</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().weightedValue | currency:form.currency:'symbol':'1.0-0' }}</strong>
+                      </div>
+                      <div class="forecast-metric forecast-metric--warn" *ngIf="forecastMetrics().discount > 0">
+                        <span class="forecast-metric__label">Discount</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().discount | currency:form.currency:'symbol':'1.0-0' }}</strong>
+                      </div>
+                      <div class="forecast-metric forecast-metric--neutral">
+                        <span class="forecast-metric__label">Win Probability</span>
+                        <strong class="forecast-metric__value">{{ forecastMetrics().probability }}%</strong>
+                      </div>
+                    </div>
+
+                    <!-- Doughnut chart -->
+                    <div class="forecast-chart-container">
+                      <p-chart type="doughnut" [data]="forecastChartData()" [options]="forecastChartOptions" height="260px"></p-chart>
+                    </div>
+                  </div>
+
+                  <ng-template #noForecastData>
+                    <div class="forecast-empty">
+                      <i class="pi pi-chart-bar"></i>
+                      <p>Enter a deal amount to see the revenue forecast.</p>
+                    </div>
+                  </ng-template>
+                </section>
+              </p-accordion-content>
+            </p-accordion-panel>
+
+                  </p-accordion>
+                </p-tabpanel>
+
+                <!-- PEOPLE tab -->
+                <p-tabpanel value="people">
+                  <p-accordion
+                    class="opportunity-section-accordion"
+                    [multiple]="true"
+                    [value]="tabSectionPanels('people')"
+                    (valueChange)="onTabAccordionChange('people', $event)"
+                  >
             <p-accordion-panel *ngIf="isSectionVisible('pre-sales-team')" value="pre-sales-team" [disabled]="isSectionLocked('pre-sales-team')" [attr.data-deal-section]="'pre-sales-team'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
@@ -1069,7 +1121,6 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <!-- ── Deal Stakeholders / Contact Roles ─────────── -->
             <p-accordion-panel *ngIf="isSectionVisible('deal-stakeholders')" value="deal-stakeholders" [disabled]="isSectionLocked('deal-stakeholders')" [attr.data-deal-section]="'deal-stakeholders'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
@@ -1199,199 +1250,95 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <!-- ── Deal Health Score ──────────────────────────── -->
-            <p-accordion-panel *ngIf="isSectionVisible('deal-health-score')" value="deal-health-score" [disabled]="isSectionLocked('deal-health-score')" [attr.data-deal-section]="'deal-health-score'">
+            <p-accordion-panel value="deal-activity" [attr.data-deal-section]="'deal-activity'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
-                    <i class="pi pi-heart"></i>
-                    Deal Health
+                    <i class="pi pi-clock"></i>
+                    Deal Activity Timeline
                   </span>
                   <span class="opportunity-accordion-header-meta">
-                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info" *ngIf="dealHealthScore()">
-                      Score: {{ dealHealthScore()!.score }}
-                    </span>
-                    <span
-                      class="opportunity-accordion-badge"
-                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('deal-health-score')"
-                    >
-                      {{ sectionStatusLabel('deal-health-score') }}
+                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info">
+                      {{ recentDealActivities().length }} activities
                     </span>
                   </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
-                <ng-container *ngIf="isSectionLoaded('deal-health-score'); else healthScoreLoading">
-                  <section class="form-card opportunity-accordion-card deal-health-section">
-                    <div class="deal-health__header">
-                      <p class="section-subtitle">AI-powered health assessment based on deal completeness, activity recency, stakeholder coverage, and process compliance.</p>
-                      <button type="button" class="action-btn action-btn--refresh action-btn--sm" (click)="refreshDealHealthScore()" [disabled]="dealHealthScoreLoading()">
-                        <span class="action-btn__icon"><i class="pi" [ngClass]="dealHealthScoreLoading() ? 'pi-spin pi-spinner' : 'pi-refresh'"></i></span>
-                        <span>Refresh</span>
+                <section class="form-card opportunity-accordion-card deal-activity-section">
+                  <div class="deal-activity-timeline" *ngIf="isEditMode()">
+                    <div class="deal-activity-timeline__header">
+                      <h3>
+                        <i class="pi pi-history"></i>
+                        Recent Activities
+                      </h3>
+                      <button
+                        type="button"
+                        class="action-btn action-btn--add action-btn--sm"
+                        (click)="logDealActivity()"
+                      >
+                        <span class="action-btn__icon"><i class="pi pi-external-link"></i></span>
+                        <span>Open Activities</span>
                       </button>
                     </div>
 
-                    <ng-container *ngIf="dealHealthScore(); else noHealthScore">
-                      <div class="deal-health__overview">
-                        <!-- Score Gauge -->
-                        <div class="deal-health__gauge">
-                          <svg viewBox="0 0 120 120" class="deal-health__gauge-svg">
-                            <circle cx="60" cy="60" r="52" fill="none" stroke="#e5e7eb" stroke-width="8" />
-                            <circle cx="60" cy="60" r="52"
-                              fill="none"
-                              [attr.stroke]="healthScoreColor(dealHealthScore()!.score)"
-                              stroke-width="8"
-                              stroke-linecap="round"
-                              [attr.stroke-dasharray]="(dealHealthScore()!.score / 100 * 326.7) + ' 326.7'"
-                              transform="rotate(-90 60 60)"
-                              class="deal-health__gauge-fill"
-                            />
-                            <text x="60" y="55" text-anchor="middle" class="deal-health__gauge-value">{{ dealHealthScore()!.score }}</text>
-                            <text x="60" y="72" text-anchor="middle" class="deal-health__gauge-label">{{ dealHealthScore()!.label }}</text>
-                          </svg>
-                        </div>
+                    <div class="deal-activity-timeline__loading" *ngIf="recentDealActivitiesLoading()">
+                      <i class="pi pi-spin pi-spinner"></i> Loading activities…
+                    </div>
 
-                        <!-- Score Details -->
-                        <div class="deal-health__details">
-                          <div class="deal-health__rationale">
-                            <i class="pi pi-info-circle"></i>
-                            <span>{{ dealHealthScore()!.rationale }}</span>
-                          </div>
-                          <div class="deal-health__meta">
-                            <span class="deal-health__confidence">
-                              <i class="pi pi-verified"></i>
-                              Confidence: {{ (dealHealthScore()!.confidence * 100) | number:'1.0-0' }}%
-                            </span>
-                            <span class="deal-health__computed">
-                              Computed {{ dealHealthScore()!.computedUtc | date:'short' }}
-                            </span>
-                          </div>
+                    <div class="deal-activity-timeline__list" *ngIf="!recentDealActivitiesLoading() && recentDealActivities().length; else noDealActivities">
+                      <button
+                        type="button"
+                        class="deal-activity-timeline__item"
+                        *ngFor="let activity of recentDealActivities()"
+                        (click)="openActivityRecord(activity.id)"
+                      >
+                        <div class="deal-activity-timeline__icon" [attr.data-type]="activity.type">
+                          <i class="pi" [ngClass]="activityTypeIcon(activity.type)"></i>
                         </div>
-                      </div>
-
-                      <!-- Factor Breakdown -->
-                      <div class="deal-health__factors">
-                        <h4 class="deal-health__factors-title">
-                          <i class="pi pi-chart-bar"></i>
-                          Score Breakdown
-                        </h4>
-                        <div class="deal-health__factor" *ngFor="let factor of dealHealthScore()!.factors">
-                          <div class="deal-health__factor-header">
-                            <span class="deal-health__factor-name">{{ factor.factor }}</span>
-                            <span class="deal-health__factor-score">{{ factor.score }} / {{ factor.maxScore }}</span>
+                        <div class="deal-activity-timeline__content">
+                          <div class="deal-activity-timeline__top">
+                            <span class="deal-activity-timeline__subject">{{ activity.subject }}</span>
+                            <span class="deal-activity-timeline__status" [attr.data-status]="activity.status">{{ activity.status }}</span>
                           </div>
-                          <div class="deal-health__factor-bar">
-                            <div class="deal-health__factor-bar-fill"
-                              [style.width.%]="factor.maxScore > 0 ? (factor.score / factor.maxScore * 100) : 0"
-                              [style.background]="healthScoreColor(factor.maxScore > 0 ? (factor.score / factor.maxScore * 100) : 0)"
-                            ></div>
+                          <div class="deal-activity-timeline__meta">
+                            <span>{{ activity.type }}</span>
+                            <span *ngIf="activity.ownerName">• {{ activity.ownerName }}</span>
+                            <span *ngIf="activityTimelineDateLabel(activity)">• {{ activityTimelineDateLabel(activity) | date:'medium' }}</span>
                           </div>
+                          <div class="deal-activity-timeline__outcome" *ngIf="activity.outcome">{{ activity.outcome }}</div>
                         </div>
-                      </div>
-                    </ng-container>
+                      </button>
+                    </div>
 
-                    <ng-template #noHealthScore>
-                      <div class="deal-health__empty">
-                        <i class="pi pi-heart"></i>
-                        <p>Health score not yet computed.</p>
-                        <span class="deal-health__empty-hint">Click Refresh to compute the deal health score.</span>
+                    <ng-template #noDealActivities>
+                      <div class="deal-activity-empty" *ngIf="!recentDealActivitiesLoading()">
+                        <i class="pi pi-inbox"></i>
+                        <p>No activities logged for this deal yet.</p>
+                        <span class="deal-activity-empty__hint">Activities from the Activities module that reference this opportunity will appear here.</span>
                       </div>
                     </ng-template>
-                  </section>
-                </ng-container>
-                <ng-template #healthScoreLoading>
-                  <section class="form-card opportunity-accordion-card section-loading-card">
-                    <p class="helper-text">{{ isSectionLoading('deal-health-score') ? 'Computing health score…' : 'Open section to load health score.' }}</p>
-                  </section>
-                </ng-template>
+                  </div>
+
+                  <div class="deal-activity-empty" *ngIf="!isEditMode()">
+                    <i class="pi pi-inbox"></i>
+                    <p>Save the deal first to track activities.</p>
+                  </div>
+                </section>
               </p-accordion-content>
             </p-accordion-panel>
 
-            <!-- ═══ DEAL AGING / STAGE DURATION ═══ -->
-            <p-accordion-panel *ngIf="isSectionVisible('deal-aging')" value="deal-aging" [disabled]="isSectionLocked('deal-aging')" [attr.data-deal-section]="'deal-aging'">
-              <p-accordion-header>
-                <div class="opportunity-accordion-header">
-                  <span class="opportunity-accordion-title">
-                    <i class="pi pi-stopwatch"></i>
-                    Deal Aging
-                  </span>
-                  <span class="opportunity-accordion-header-meta">
-                    <span
-                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('deal-aging')"
-                    >
-                      {{ sectionStatusLabel('deal-aging') }}
-                    </span>
-                  </span>
-                </div>
-              </p-accordion-header>
-              <p-accordion-content>
-                <ng-container *ngIf="isSectionLoaded('deal-aging'); else agingLoading">
-                  <section class="form-card opportunity-accordion-card deal-aging">
-                    <!-- Total age header -->
-                    <div class="deal-aging__header">
-                      <div class="deal-aging__total">
-                        <span class="deal-aging__total-value">{{ totalDealAgeDays() }}</span>
-                        <span class="deal-aging__total-label">days total</span>
-                      </div>
-                      <div class="deal-aging__stage-count">
-                        {{ stageDurations().length }} stage{{ stageDurations().length === 1 ? '' : 's' }}
-                      </div>
-                    </div>
+                  </p-accordion>
+                </p-tabpanel>
 
-                    <!-- Stage timeline -->
-                    <div class="deal-aging__timeline" *ngIf="stageDurations().length; else agingEmpty">
-                      <div class="deal-aging__bar-container">
-                        <div
-                          *ngFor="let sd of stageDurations(); let i = index"
-                          class="deal-aging__bar-segment"
-                          [style.flex]="sd.durationDays || 1"
-                          [class.deal-aging__bar-segment--current]="sd.isCurrent"
-                          [title]="sd.stage + ': ' + sd.durationDays + ' days'"
-                        ></div>
-                      </div>
-
-                      <div class="deal-aging__stages">
-                        <div
-                          *ngFor="let sd of stageDurations(); let i = index"
-                          class="deal-aging__stage"
-                          [class.deal-aging__stage--current]="sd.isCurrent"
-                        >
-                          <div class="deal-aging__stage-marker">
-                            <span class="deal-aging__stage-dot" [class.deal-aging__stage-dot--current]="sd.isCurrent"></span>
-                            <span class="deal-aging__stage-line" *ngIf="i < stageDurations().length - 1"></span>
-                          </div>
-                          <div class="deal-aging__stage-info">
-                            <div class="deal-aging__stage-name">{{ sd.stage }}</div>
-                            <div class="deal-aging__stage-duration">
-                              <strong>{{ sd.durationDays }}</strong> day{{ sd.durationDays === 1 ? '' : 's' }}
-                              <span class="deal-aging__stage-badge" *ngIf="sd.isCurrent">Current</span>
-                            </div>
-                            <div class="deal-aging__stage-date">
-                              {{ sd.enteredAt | date:'MMM d, yyyy' }}
-                              <span *ngIf="sd.exitedAt"> → {{ sd.exitedAt | date:'MMM d, yyyy' }}</span>
-                              <span *ngIf="!sd.exitedAt"> → now</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <ng-template #agingEmpty>
-                      <div class="deal-aging__empty">
-                        <i class="pi pi-stopwatch"></i>
-                        <p>No stage history recorded yet.</p>
-                      </div>
-                    </ng-template>
-                  </section>
-                </ng-container>
-                <ng-template #agingLoading>
-                  <section class="form-card opportunity-accordion-card section-loading-card">
-                    <p class="helper-text">{{ isSectionLoading('deal-aging') ? 'Loading stage history…' : 'Open section to load stage history.' }}</p>
-                  </section>
-                </ng-template>
-              </p-accordion-content>
-            </p-accordion-panel>
-
+                <!-- COMPLIANCE tab -->
+                <p-tabpanel value="compliance">
+                  <p-accordion
+                    class="opportunity-section-accordion"
+                    [multiple]="true"
+                    [value]="tabSectionPanels('compliance')"
+                    (valueChange)="onTabAccordionChange('compliance', $event)"
+                  >
             <p-accordion-panel value="approval-workflow" *ngIf="isSectionVisible('approval-workflow')" [disabled]="isSectionLocked('approval-workflow')" [attr.data-deal-section]="'approval-workflow'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
@@ -1773,6 +1720,154 @@
               </p-accordion-content>
             </p-accordion-panel>
 
+            <p-accordion-panel value="review-thread" *ngIf="isSectionVisible('review-thread')" [disabled]="isSectionLocked('review-thread')" [attr.data-deal-section]="'review-thread'">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-comments"></i>
+                    Deal Review Thread
+                  </span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + reviewThreadHeaderTone()"
+                    >
+                      {{ reviewThreadHeaderBadge() }}
+                    </span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('review-thread')"
+                    >
+                      {{ sectionStatusLabel('review-thread') }}
+                    </span>
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+          <ng-container *ngIf="isSectionLoaded('review-thread'); else reviewLoading">
+          <section class="form-card review-thread-card opportunity-accordion-card" *ngIf="isEditMode()">
+
+            <div class="review-thread-controls" *ngIf="isManager(); else repAckBlock">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="reviewOutcome">Review outcome</label>
+                  <p-select
+                    inputId="reviewOutcome"
+                    appendTo="body"
+                    [options]="reviewOutcomeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    [(ngModel)]="reviewOutcome"
+                    name="reviewOutcome"
+                    styleClass="w-full"
+                  ></p-select>
+                </div>
+                <div class="form-field" *ngIf="reviewOutcome !== 'Approved'">
+                  <label for="reviewDue">Acknowledgment due</label>
+                  <input
+                    id="reviewDue"
+                    type="datetime-local"
+                    class="review-input"
+                    [(ngModel)]="reviewAckDueLocal"
+                    name="reviewAckDueLocal"
+                  />
+                </div>
+                <div class="form-field full-row">
+                  <label for="reviewComment">Manager comment</label>
+                  <textarea
+                    id="reviewComment"
+                    pTextarea
+                    rows="3"
+                    class="w-full"
+                    [(ngModel)]="reviewComment"
+                    name="reviewComment"
+                    placeholder="Explain what needs to change, or confirm approval."
+                  ></textarea>
+                </div>
+              </div>
+              <div class="review-actions">
+                <button
+                  pButton
+                  type="button"
+                  class="btn-gradient"
+                  (click)="submitReviewOutcome()"
+                  [disabled]="reviewSubmitting"
+                >
+                  {{ reviewSubmitting ? 'Saving...' : 'Save review outcome' }}
+                </button>
+              </div>
+            </div>
+
+            <ng-template #repAckBlock>
+              <div class="review-thread-controls review-thread-controls--rep">
+                <p class="helper-text" *ngIf="hasPendingAcknowledgment(); else noAckNeeded">
+                  A manager has requested acknowledgment on this deal review.
+                </p>
+                <ng-template #noAckNeeded>
+                  <p class="helper-text">No manager acknowledgment is required right now.</p>
+                </ng-template>
+                <div class="review-actions" *ngIf="hasPendingAcknowledgment()">
+                  <button
+                    pButton
+                    type="button"
+                    class="btn-gradient"
+                    (click)="acknowledgeReview()"
+                    [disabled]="ackSubmitting"
+                  >
+                    {{ ackSubmitting ? 'Acknowledging...' : 'Acknowledge review' }}
+                  </button>
+                </div>
+              </div>
+            </ng-template>
+
+            <div class="review-thread-list" *ngIf="reviewThread().length; else emptyReviewThread">
+              <div class="review-thread-item" *ngFor="let item of reviewThread()">
+                <div class="review-thread-item__header">
+                  <span class="review-badge" [ngClass]="item.kind === 'Acknowledgment' ? 'ack' : 'review'">
+                    {{ item.kind }}
+                  </span>
+                  <strong class="review-outcome">{{ item.outcome }}</strong>
+                  <span class="review-meta">
+                    {{ item.ownerName }} · {{ item.createdAtUtc | date: 'MMM d, y, h:mm a' }}
+                  </span>
+                </div>
+                <div class="review-thread-item__comment" *ngIf="item.comment">
+                  {{ item.comment }}
+                </div>
+                <div class="review-thread-item__dates" *ngIf="item.dueDateUtc || item.completedDateUtc">
+                  <span *ngIf="item.dueDateUtc">
+                    Due: {{ item.dueDateUtc | date: 'MMM d, y, h:mm a' }}
+                  </span>
+                  <span *ngIf="item.completedDateUtc">
+                    Completed: {{ item.completedDateUtc | date: 'MMM d, y, h:mm a' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <ng-template #emptyReviewThread>
+              <p class="helper-text">No manager review comments yet.</p>
+            </ng-template>
+          </section>
+          </ng-container>
+          <ng-template #reviewLoading>
+            <section class="form-card opportunity-accordion-card section-loading-card">
+              <p class="helper-text">{{ isSectionLoading('review-thread') ? 'Loading review history…' : 'Open section to load review history.' }}</p>
+            </section>
+          </ng-template>
+              </p-accordion-content>
+            </p-accordion-panel>
+
+                  </p-accordion>
+                </p-tabpanel>
+
+                <!-- DELIVERY tab -->
+                <p-tabpanel value="delivery">
+                  <p-accordion
+                    class="opportunity-section-accordion"
+                    [multiple]="true"
+                    [value]="tabSectionPanels('delivery')"
+                    (valueChange)="onTabAccordionChange('delivery', $event)"
+                  >
             <p-accordion-panel *ngIf="isSectionVisible('delivery-handoff')" value="delivery-handoff" [disabled]="isSectionLocked('delivery-handoff')" [attr.data-deal-section]="'delivery-handoff'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
@@ -2027,86 +2122,197 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <!-- Deal Activity Timeline -->
-            <p-accordion-panel value="deal-activity" [attr.data-deal-section]="'deal-activity'">
+            <p-accordion-panel *ngIf="isSectionVisible('deal-health-score')" value="deal-health-score" [disabled]="isSectionLocked('deal-health-score')" [attr.data-deal-section]="'deal-health-score'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
                   <span class="opportunity-accordion-title">
-                    <i class="pi pi-clock"></i>
-                    Deal Activity Timeline
+                    <i class="pi pi-heart"></i>
+                    Deal Health
                   </span>
                   <span class="opportunity-accordion-header-meta">
-                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info">
-                      {{ recentDealActivities().length }} activities
+                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info" *ngIf="dealHealthScore()">
+                      Score: {{ dealHealthScore()!.score }}
+                    </span>
+                    <span
+                      class="opportunity-accordion-badge"
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('deal-health-score')"
+                    >
+                      {{ sectionStatusLabel('deal-health-score') }}
                     </span>
                   </span>
                 </div>
               </p-accordion-header>
               <p-accordion-content>
-                <section class="form-card opportunity-accordion-card deal-activity-section">
-                  <div class="deal-activity-timeline" *ngIf="isEditMode()">
-                    <div class="deal-activity-timeline__header">
-                      <h3>
-                        <i class="pi pi-history"></i>
-                        Recent Activities
-                      </h3>
-                      <button
-                        type="button"
-                        class="action-btn action-btn--add action-btn--sm"
-                        (click)="logDealActivity()"
-                      >
-                        <span class="action-btn__icon"><i class="pi pi-external-link"></i></span>
-                        <span>Open Activities</span>
+                <ng-container *ngIf="isSectionLoaded('deal-health-score'); else healthScoreLoading">
+                  <section class="form-card opportunity-accordion-card deal-health-section">
+                    <div class="deal-health__header">
+                      <p class="section-subtitle">AI-powered health assessment based on deal completeness, activity recency, stakeholder coverage, and process compliance.</p>
+                      <button type="button" class="action-btn action-btn--refresh action-btn--sm" (click)="refreshDealHealthScore()" [disabled]="dealHealthScoreLoading()">
+                        <span class="action-btn__icon"><i class="pi" [ngClass]="dealHealthScoreLoading() ? 'pi-spin pi-spinner' : 'pi-refresh'"></i></span>
+                        <span>Refresh</span>
                       </button>
                     </div>
 
-                    <div class="deal-activity-timeline__loading" *ngIf="recentDealActivitiesLoading()">
-                      <i class="pi pi-spin pi-spinner"></i> Loading activities…
-                    </div>
-
-                    <div class="deal-activity-timeline__list" *ngIf="!recentDealActivitiesLoading() && recentDealActivities().length; else noDealActivities">
-                      <button
-                        type="button"
-                        class="deal-activity-timeline__item"
-                        *ngFor="let activity of recentDealActivities()"
-                        (click)="openActivityRecord(activity.id)"
-                      >
-                        <div class="deal-activity-timeline__icon" [attr.data-type]="activity.type">
-                          <i class="pi" [ngClass]="activityTypeIcon(activity.type)"></i>
+                    <ng-container *ngIf="dealHealthScore(); else noHealthScore">
+                      <div class="deal-health__overview">
+                        <!-- Score Gauge -->
+                        <div class="deal-health__gauge">
+                          <svg viewBox="0 0 120 120" class="deal-health__gauge-svg">
+                            <circle cx="60" cy="60" r="52" fill="none" stroke="#e5e7eb" stroke-width="8" />
+                            <circle cx="60" cy="60" r="52"
+                              fill="none"
+                              [attr.stroke]="healthScoreColor(dealHealthScore()!.score)"
+                              stroke-width="8"
+                              stroke-linecap="round"
+                              [attr.stroke-dasharray]="(dealHealthScore()!.score / 100 * 326.7) + ' 326.7'"
+                              transform="rotate(-90 60 60)"
+                              class="deal-health__gauge-fill"
+                            />
+                            <text x="60" y="55" text-anchor="middle" class="deal-health__gauge-value">{{ dealHealthScore()!.score }}</text>
+                            <text x="60" y="72" text-anchor="middle" class="deal-health__gauge-label">{{ dealHealthScore()!.label }}</text>
+                          </svg>
                         </div>
-                        <div class="deal-activity-timeline__content">
-                          <div class="deal-activity-timeline__top">
-                            <span class="deal-activity-timeline__subject">{{ activity.subject }}</span>
-                            <span class="deal-activity-timeline__status" [attr.data-status]="activity.status">{{ activity.status }}</span>
-                          </div>
-                          <div class="deal-activity-timeline__meta">
-                            <span>{{ activity.type }}</span>
-                            <span *ngIf="activity.ownerName">• {{ activity.ownerName }}</span>
-                            <span *ngIf="activityTimelineDateLabel(activity)">• {{ activityTimelineDateLabel(activity) | date:'medium' }}</span>
-                          </div>
-                          <div class="deal-activity-timeline__outcome" *ngIf="activity.outcome">{{ activity.outcome }}</div>
-                        </div>
-                      </button>
-                    </div>
 
-                    <ng-template #noDealActivities>
-                      <div class="deal-activity-empty" *ngIf="!recentDealActivitiesLoading()">
-                        <i class="pi pi-inbox"></i>
-                        <p>No activities logged for this deal yet.</p>
-                        <span class="deal-activity-empty__hint">Activities from the Activities module that reference this opportunity will appear here.</span>
+                        <!-- Score Details -->
+                        <div class="deal-health__details">
+                          <div class="deal-health__rationale">
+                            <i class="pi pi-info-circle"></i>
+                            <span>{{ dealHealthScore()!.rationale }}</span>
+                          </div>
+                          <div class="deal-health__meta">
+                            <span class="deal-health__confidence">
+                              <i class="pi pi-verified"></i>
+                              Confidence: {{ (dealHealthScore()!.confidence * 100) | number:'1.0-0' }}%
+                            </span>
+                            <span class="deal-health__computed">
+                              Computed {{ dealHealthScore()!.computedUtc | date:'short' }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Factor Breakdown -->
+                      <div class="deal-health__factors">
+                        <h4 class="deal-health__factors-title">
+                          <i class="pi pi-chart-bar"></i>
+                          Score Breakdown
+                        </h4>
+                        <div class="deal-health__factor" *ngFor="let factor of dealHealthScore()!.factors">
+                          <div class="deal-health__factor-header">
+                            <span class="deal-health__factor-name">{{ factor.factor }}</span>
+                            <span class="deal-health__factor-score">{{ factor.score }} / {{ factor.maxScore }}</span>
+                          </div>
+                          <div class="deal-health__factor-bar">
+                            <div class="deal-health__factor-bar-fill"
+                              [style.width.%]="factor.maxScore > 0 ? (factor.score / factor.maxScore * 100) : 0"
+                              [style.background]="healthScoreColor(factor.maxScore > 0 ? (factor.score / factor.maxScore * 100) : 0)"
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    </ng-container>
+
+                    <ng-template #noHealthScore>
+                      <div class="deal-health__empty">
+                        <i class="pi pi-heart"></i>
+                        <p>Health score not yet computed.</p>
+                        <span class="deal-health__empty-hint">Click Refresh to compute the deal health score.</span>
                       </div>
                     </ng-template>
-                  </div>
-
-                  <div class="deal-activity-empty" *ngIf="!isEditMode()">
-                    <i class="pi pi-inbox"></i>
-                    <p>Save the deal first to track activities.</p>
-                  </div>
-                </section>
+                  </section>
+                </ng-container>
+                <ng-template #healthScoreLoading>
+                  <section class="form-card opportunity-accordion-card section-loading-card">
+                    <p class="helper-text">{{ isSectionLoading('deal-health-score') ? 'Computing health score…' : 'Open section to load health score.' }}</p>
+                  </section>
+                </ng-template>
               </p-accordion-content>
             </p-accordion-panel>
 
-            <!-- ── Deal Attachments ─────────────────────────────── -->
+            <p-accordion-panel *ngIf="isSectionVisible('deal-aging')" value="deal-aging" [disabled]="isSectionLocked('deal-aging')" [attr.data-deal-section]="'deal-aging'">
+              <p-accordion-header>
+                <div class="opportunity-accordion-header">
+                  <span class="opportunity-accordion-title">
+                    <i class="pi pi-stopwatch"></i>
+                    Deal Aging
+                  </span>
+                  <span class="opportunity-accordion-header-meta">
+                    <span
+                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('deal-aging')"
+                    >
+                      {{ sectionStatusLabel('deal-aging') }}
+                    </span>
+                  </span>
+                </div>
+              </p-accordion-header>
+              <p-accordion-content>
+                <ng-container *ngIf="isSectionLoaded('deal-aging'); else agingLoading">
+                  <section class="form-card opportunity-accordion-card deal-aging">
+                    <!-- Total age header -->
+                    <div class="deal-aging__header">
+                      <div class="deal-aging__total">
+                        <span class="deal-aging__total-value">{{ totalDealAgeDays() }}</span>
+                        <span class="deal-aging__total-label">days total</span>
+                      </div>
+                      <div class="deal-aging__stage-count">
+                        {{ stageDurations().length }} stage{{ stageDurations().length === 1 ? '' : 's' }}
+                      </div>
+                    </div>
+
+                    <!-- Stage timeline -->
+                    <div class="deal-aging__timeline" *ngIf="stageDurations().length; else agingEmpty">
+                      <div class="deal-aging__bar-container">
+                        <div
+                          *ngFor="let sd of stageDurations(); let i = index"
+                          class="deal-aging__bar-segment"
+                          [style.flex]="sd.durationDays || 1"
+                          [class.deal-aging__bar-segment--current]="sd.isCurrent"
+                          [title]="sd.stage + ': ' + sd.durationDays + ' days'"
+                        ></div>
+                      </div>
+
+                      <div class="deal-aging__stages">
+                        <div
+                          *ngFor="let sd of stageDurations(); let i = index"
+                          class="deal-aging__stage"
+                          [class.deal-aging__stage--current]="sd.isCurrent"
+                        >
+                          <div class="deal-aging__stage-marker">
+                            <span class="deal-aging__stage-dot" [class.deal-aging__stage-dot--current]="sd.isCurrent"></span>
+                            <span class="deal-aging__stage-line" *ngIf="i < stageDurations().length - 1"></span>
+                          </div>
+                          <div class="deal-aging__stage-info">
+                            <div class="deal-aging__stage-name">{{ sd.stage }}</div>
+                            <div class="deal-aging__stage-duration">
+                              <strong>{{ sd.durationDays }}</strong> day{{ sd.durationDays === 1 ? '' : 's' }}
+                              <span class="deal-aging__stage-badge" *ngIf="sd.isCurrent">Current</span>
+                            </div>
+                            <div class="deal-aging__stage-date">
+                              {{ sd.enteredAt | date:'MMM d, yyyy' }}
+                              <span *ngIf="sd.exitedAt"> → {{ sd.exitedAt | date:'MMM d, yyyy' }}</span>
+                              <span *ngIf="!sd.exitedAt"> → now</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ng-template #agingEmpty>
+                      <div class="deal-aging__empty">
+                        <i class="pi pi-stopwatch"></i>
+                        <p>No stage history recorded yet.</p>
+                      </div>
+                    </ng-template>
+                  </section>
+                </ng-container>
+                <ng-template #agingLoading>
+                  <section class="form-card opportunity-accordion-card section-loading-card">
+                    <p class="helper-text">{{ isSectionLoading('deal-aging') ? 'Loading stage history…' : 'Open section to load stage history.' }}</p>
+                  </section>
+                </ng-template>
+              </p-accordion-content>
+            </p-accordion-panel>
+
             <p-accordion-panel value="deal-attachments" [attr.data-deal-section]="'deal-attachments'">
               <p-accordion-header>
                 <div class="opportunity-accordion-header">
@@ -2206,201 +2412,10 @@
               </p-accordion-content>
             </p-accordion-panel>
 
-            <!-- ── Revenue Forecast ──────────────────────────────── -->
-            <p-accordion-panel value="revenue-forecast" [attr.data-deal-section]="'revenue-forecast'">
-              <p-accordion-header>
-                <div class="opportunity-accordion-header">
-                  <span class="opportunity-accordion-title">
-                    <i class="pi pi-chart-bar"></i>
-                    Revenue Forecast
-                  </span>
-                  <span class="opportunity-accordion-header-meta">
-                    <span class="opportunity-accordion-badge opportunity-accordion-badge--info">
-                      {{ forecastMetrics().weightedValue | currency:form.currency:'symbol':'1.0-0' }}
-                    </span>
-                  </span>
-                </div>
-              </p-accordion-header>
-              <p-accordion-content>
-                <section class="form-card opportunity-accordion-card revenue-forecast-section">
-                  <div class="revenue-forecast" *ngIf="(form?.amount ?? 0) > 0; else noForecastData">
-                    <!-- Metric summary cards -->
-                    <div class="forecast-metrics">
-                      <div class="forecast-metric forecast-metric--primary">
-                        <span class="forecast-metric__label">Deal Value</span>
-                        <strong class="forecast-metric__value">{{ forecastMetrics().amount | currency:form.currency:'symbol':'1.0-0' }}</strong>
-                      </div>
-                      <div class="forecast-metric forecast-metric--success">
-                        <span class="forecast-metric__label">Net Amount</span>
-                        <strong class="forecast-metric__value">{{ forecastMetrics().netAmount | currency:form.currency:'symbol':'1.0-0' }}</strong>
-                      </div>
-                      <div class="forecast-metric forecast-metric--info">
-                        <span class="forecast-metric__label">Weighted Revenue</span>
-                        <strong class="forecast-metric__value">{{ forecastMetrics().weightedValue | currency:form.currency:'symbol':'1.0-0' }}</strong>
-                      </div>
-                      <div class="forecast-metric forecast-metric--warn" *ngIf="forecastMetrics().discount > 0">
-                        <span class="forecast-metric__label">Discount</span>
-                        <strong class="forecast-metric__value">{{ forecastMetrics().discount | currency:form.currency:'symbol':'1.0-0' }}</strong>
-                      </div>
-                      <div class="forecast-metric forecast-metric--neutral">
-                        <span class="forecast-metric__label">Win Probability</span>
-                        <strong class="forecast-metric__value">{{ forecastMetrics().probability }}%</strong>
-                      </div>
-                    </div>
-
-                    <!-- Doughnut chart -->
-                    <div class="forecast-chart-container">
-                      <p-chart type="doughnut" [data]="forecastChartData()" [options]="forecastChartOptions" height="260px"></p-chart>
-                    </div>
-                  </div>
-
-                  <ng-template #noForecastData>
-                    <div class="forecast-empty">
-                      <i class="pi pi-chart-bar"></i>
-                      <p>Enter a deal amount to see the revenue forecast.</p>
-                    </div>
-                  </ng-template>
-                </section>
-              </p-accordion-content>
-            </p-accordion-panel>
-
-            <p-accordion-panel value="review-thread" *ngIf="isSectionVisible('review-thread')" [disabled]="isSectionLocked('review-thread')" [attr.data-deal-section]="'review-thread'">
-              <p-accordion-header>
-                <div class="opportunity-accordion-header">
-                  <span class="opportunity-accordion-title">
-                    <i class="pi pi-comments"></i>
-                    Deal Review Thread
-                  </span>
-                  <span class="opportunity-accordion-header-meta">
-                    <span
-                      class="opportunity-accordion-badge"
-                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + reviewThreadHeaderTone()"
-                    >
-                      {{ reviewThreadHeaderBadge() }}
-                    </span>
-                    <span
-                      class="opportunity-accordion-badge"
-                      [class]="'opportunity-accordion-badge opportunity-accordion-badge--' + sectionStatusTone('review-thread')"
-                    >
-                      {{ sectionStatusLabel('review-thread') }}
-                    </span>
-                  </span>
-                </div>
-              </p-accordion-header>
-              <p-accordion-content>
-          <ng-container *ngIf="isSectionLoaded('review-thread'); else reviewLoading">
-          <section class="form-card review-thread-card opportunity-accordion-card" *ngIf="isEditMode()">
-
-            <div class="review-thread-controls" *ngIf="isManager(); else repAckBlock">
-              <div class="form-grid">
-                <div class="form-field">
-                  <label for="reviewOutcome">Review outcome</label>
-                  <p-select
-                    inputId="reviewOutcome"
-                    appendTo="body"
-                    [options]="reviewOutcomeOptions"
-                    optionLabel="label"
-                    optionValue="value"
-                    [(ngModel)]="reviewOutcome"
-                    name="reviewOutcome"
-                    styleClass="w-full"
-                  ></p-select>
-                </div>
-                <div class="form-field" *ngIf="reviewOutcome !== 'Approved'">
-                  <label for="reviewDue">Acknowledgment due</label>
-                  <input
-                    id="reviewDue"
-                    type="datetime-local"
-                    class="review-input"
-                    [(ngModel)]="reviewAckDueLocal"
-                    name="reviewAckDueLocal"
-                  />
-                </div>
-                <div class="form-field full-row">
-                  <label for="reviewComment">Manager comment</label>
-                  <textarea
-                    id="reviewComment"
-                    pTextarea
-                    rows="3"
-                    class="w-full"
-                    [(ngModel)]="reviewComment"
-                    name="reviewComment"
-                    placeholder="Explain what needs to change, or confirm approval."
-                  ></textarea>
-                </div>
-              </div>
-              <div class="review-actions">
-                <button
-                  pButton
-                  type="button"
-                  class="btn-gradient"
-                  (click)="submitReviewOutcome()"
-                  [disabled]="reviewSubmitting"
-                >
-                  {{ reviewSubmitting ? 'Saving...' : 'Save review outcome' }}
-                </button>
-              </div>
-            </div>
-
-            <ng-template #repAckBlock>
-              <div class="review-thread-controls review-thread-controls--rep">
-                <p class="helper-text" *ngIf="hasPendingAcknowledgment(); else noAckNeeded">
-                  A manager has requested acknowledgment on this deal review.
-                </p>
-                <ng-template #noAckNeeded>
-                  <p class="helper-text">No manager acknowledgment is required right now.</p>
-                </ng-template>
-                <div class="review-actions" *ngIf="hasPendingAcknowledgment()">
-                  <button
-                    pButton
-                    type="button"
-                    class="btn-gradient"
-                    (click)="acknowledgeReview()"
-                    [disabled]="ackSubmitting"
-                  >
-                    {{ ackSubmitting ? 'Acknowledging...' : 'Acknowledge review' }}
-                  </button>
-                </div>
-              </div>
-            </ng-template>
-
-            <div class="review-thread-list" *ngIf="reviewThread().length; else emptyReviewThread">
-              <div class="review-thread-item" *ngFor="let item of reviewThread()">
-                <div class="review-thread-item__header">
-                  <span class="review-badge" [ngClass]="item.kind === 'Acknowledgment' ? 'ack' : 'review'">
-                    {{ item.kind }}
-                  </span>
-                  <strong class="review-outcome">{{ item.outcome }}</strong>
-                  <span class="review-meta">
-                    {{ item.ownerName }} · {{ item.createdAtUtc | date: 'MMM d, y, h:mm a' }}
-                  </span>
-                </div>
-                <div class="review-thread-item__comment" *ngIf="item.comment">
-                  {{ item.comment }}
-                </div>
-                <div class="review-thread-item__dates" *ngIf="item.dueDateUtc || item.completedDateUtc">
-                  <span *ngIf="item.dueDateUtc">
-                    Due: {{ item.dueDateUtc | date: 'MMM d, y, h:mm a' }}
-                  </span>
-                  <span *ngIf="item.completedDateUtc">
-                    Completed: {{ item.completedDateUtc | date: 'MMM d, y, h:mm a' }}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <ng-template #emptyReviewThread>
-              <p class="helper-text">No manager review comments yet.</p>
-            </ng-template>
-          </section>
-          </ng-container>
-          <ng-template #reviewLoading>
-            <section class="form-card opportunity-accordion-card section-loading-card">
-              <p class="helper-text">{{ isSectionLoading('review-thread') ? 'Loading review history…' : 'Open section to load review history.' }}</p>
-            </section>
-          </ng-template>
-              </p-accordion-content>
-            </p-accordion-panel>
-            </p-accordion>
+                  </p-accordion>
+                </p-tabpanel>
+              </p-tabpanels>
+            </p-tabs>
           </fieldset>
 
           <section class="form-card opportunity-accordion-card decision-review-panel" *ngIf="decisionReviewMode()">
@@ -2527,8 +2542,6 @@
             ></button>
           </div>
         </form>
-          </div>
-        </div>
       </div>
     </section>
   
