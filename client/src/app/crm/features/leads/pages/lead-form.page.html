@@ -872,6 +872,7 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
+                  aria-describedby="hint-budgetAvailability"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -886,6 +887,7 @@
                     </div>
                   </ng-template>
                 </p-select>
+                <span id="hint-budgetAvailability" class="field-hint">Has the lead confirmed a budget for this initiative?</span>
               </div>
               <div class="form-field">
                 <label for="lead-budgetEvidence">Evidence source</label>
@@ -928,6 +930,7 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
+                  aria-describedby="hint-readinessToSpend"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -942,6 +945,7 @@
                     </div>
                   </ng-template>
                 </p-select>
+                <span id="hint-readinessToSpend" class="field-hint">How willing is the lead to commit funds in the near term?</span>
               </div>
               <div class="form-field">
                 <label for="lead-readinessEvidence">Evidence source</label>
@@ -984,6 +988,7 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
+                  aria-describedby="hint-buyingTimeline"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -998,6 +1003,7 @@
                     </div>
                   </ng-template>
                 </p-select>
+                <span id="hint-buyingTimeline" class="field-hint">When does the lead expect to make a purchase decision?</span>
               </div>
               <div class="form-field">
                 <label for="lead-timelineEvidence">Evidence source</label>
@@ -1040,6 +1046,7 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
+                  aria-describedby="hint-problemSeverity"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -1054,6 +1061,7 @@
                     </div>
                   </ng-template>
                 </p-select>
+                <span id="hint-problemSeverity" class="field-hint">How critical is the problem this lead is trying to solve?</span>
               </div>
               <div class="form-field">
                 <label for="lead-problemEvidence">Evidence source</label>
@@ -1096,6 +1104,7 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
+                  aria-describedby="hint-economicBuyer"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -1110,6 +1119,7 @@
                     </div>
                   </ng-template>
                 </p-select>
+                <span id="hint-economicBuyer" class="field-hint">Has the decision-maker with budget authority been identified?</span>
               </div>
               <div class="form-field">
                 <label for="lead-economicBuyerEvidence">Evidence source</label>

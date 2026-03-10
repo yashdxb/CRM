@@ -2361,7 +2361,22 @@ $status-lost: #ef4444;
   }
 
   .leads-table {
-    min-width: 760px;
+    min-width: 520px;
+
+    // Hide lower-priority columns on mobile
+    .th-contact, .td-contact,
+    .th-owner, .td-owner {
+      display: none;
+    }
+
+    thead th {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .th-lead { min-width: 160px; }
+    .th-score { width: 100px; }
+    .th-actions { width: 80px; }
   }
 }
 

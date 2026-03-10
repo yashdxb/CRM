@@ -1573,9 +1573,26 @@ export class LeadFormPage implements OnInit, OnDestroy {
       return;
     }
 
+    const file = event.files[0];
+    const maxSizeBytes = this.supportingDocumentMaxFileSizeMb() * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      this.attachmentUploadError.set(`File exceeds ${this.supportingDocumentMaxFileSizeMb()} MB limit.`);
+      this.raiseToast('error', `File exceeds ${this.supportingDocumentMaxFileSizeMb()} MB limit.`);
+      return;
+    }
+
+    const allowedExts = this.supportingDocumentPolicy()?.allowedExtensions ?? this.defaultSupportingDocumentPolicy().allowedExtensions;
+    const fileExt = '.' + (file.name.split('.').pop()?.toLowerCase() ?? '');
+    if (!allowedExts.includes(fileExt)) {
+      const message = `File type "${fileExt}" is not allowed. Accepted: ${allowedExts.join(', ')}`;
+      this.attachmentUploadError.set(message);
+      this.raiseToast('error', message);
+      return;
+    }
+
     this.attachmentUploadError.set(null);
     this.attachmentUploading.set(true);
-    this.attachmentData.upload(event.files[0], 'Lead', this.editingId).subscribe({
+    this.attachmentData.upload(file, 'Lead', this.editingId).subscribe({
       next: (attachment) => {
         this.attachmentUploading.set(false);
         this.attachments.set([attachment, ...this.attachments()]);
