@@ -65,6 +65,8 @@ public class Lead : AuditableEntity
     public DateTime? ConversationScoreUpdatedAtUtc { get; set; }
     public bool ConversationSignalAvailable { get; set; }
 
+    public bool IsConverted => ConvertedOpportunityId.HasValue;
+
     public LeadStatus? Status { get; set; }
     public Account? Account { get; set; }
     public Contact? Contact { get; set; }

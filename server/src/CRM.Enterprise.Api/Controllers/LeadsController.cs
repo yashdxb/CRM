@@ -43,6 +43,7 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet]
+    [ProducesResponseType(typeof(LeadSearchResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<LeadSearchResponse>> GetLeads(
         [FromQuery] string? search,
         [FromQuery] string? status,
@@ -58,6 +59,8 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
+    [ProducesResponseType(typeof(LeadListItem), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<LeadListItem>> GetLead(Guid id, CancellationToken cancellationToken)
     {
         var lead = await _leadService.GetAsync(id, cancellationToken);
@@ -66,6 +69,7 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet("disposition-report")]
+    [ProducesResponseType(typeof(LeadDispositionReportResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<LeadDispositionReportResponse>> GetDispositionReport(CancellationToken cancellationToken)
     {
         var report = await _leadService.GetDispositionReportAsync(cancellationToken);
@@ -96,15 +100,19 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/status-history")]
+    [ProducesResponseType(typeof(IEnumerable<LeadStatusHistoryItem>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<LeadStatusHistoryItem>>> GetLeadStatusHistory(Guid id, CancellationToken cancellationToken)
     {
         var history = await _leadService.GetStatusHistoryAsync(id, cancellationToken);
         if (history is null) return NotFound();
-        var items = history.Select(h => new LeadStatusHistoryItem(h.Id, h.Status, h.ChangedAtUtc, h.ChangedBy, h.Notes));
+        var items = history.Select(h => new LeadStatusHistoryItem(h.Id, h.Status, h.ChangedAtUtc, h.ChangedBy, h.Notes, h.Reason));
         return Ok(items);
     }
 
     [HttpGet("{id:guid}/cadence-touches")]
+    [ProducesResponseType(typeof(IEnumerable<LeadCadenceTouchItem>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<LeadCadenceTouchItem>>> GetCadenceTouches(Guid id, CancellationToken cancellationToken)
     {
         var touches = await _leadService.GetCadenceTouchesAsync(id, cancellationToken);
@@ -120,6 +128,7 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet("cadence-channels")]
+    [ProducesResponseType(typeof(IEnumerable<LeadCadenceChannelItem>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<LeadCadenceChannelItem>>> GetCadenceChannels(CancellationToken cancellationToken)
     {
         var channels = await _leadService.GetCadenceChannelsAsync(cancellationToken);
@@ -133,6 +142,7 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet("evidence-sources")]
+    [ProducesResponseType(typeof(IEnumerable<string>), StatusCodes.Status200OK)]
     public async Task<ActionResult<IEnumerable<string>>> GetEvidenceSources(CancellationToken cancellationToken)
     {
         var items = await _leadService.GetEvidenceSourcesAsync(cancellationToken);
@@ -140,6 +150,7 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet("qualification-policy")]
+    [ProducesResponseType(typeof(QualificationPolicy), StatusCodes.Status200OK)]
     public async Task<ActionResult<QualificationPolicy>> GetQualificationPolicy(CancellationToken cancellationToken)
     {
         var policy = await _leadService.GetQualificationPolicyAsync(cancellationToken);
@@ -148,6 +159,8 @@ public class LeadsController : ControllerBase
 
     [HttpPost("duplicate-check")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(typeof(LeadDuplicateCheckResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<LeadDuplicateCheckResponse>> CheckDuplicates(
         [FromBody] ApiLeadDuplicateCheckRequest request,
         CancellationToken cancellationToken)
@@ -172,6 +185,9 @@ public class LeadsController : ControllerBase
 
     [HttpPost("{id:guid}/cadence-touch")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(typeof(LeadCadenceTouchItem), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<LeadCadenceTouchItem>> LogCadenceTouch(Guid id, [FromBody] ApiLeadCadenceTouchRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Channel) || string.IsNullOrWhiteSpace(request.Outcome))
@@ -197,6 +213,8 @@ public class LeadsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/audit")]
+    [ProducesResponseType(typeof(IEnumerable<AuditEventItem>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IEnumerable<AuditEventItem>>> GetLeadAudit(Guid id, CancellationToken cancellationToken)
     {
         var audit = await _leadService.GetAuditAsync(id, cancellationToken);
@@ -217,6 +235,8 @@ public class LeadsController : ControllerBase
 
     [HttpPost("{id:guid}/ai-score")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(typeof(LeadAiScoreResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<LeadAiScoreResponse>> ScoreLead(Guid id, CancellationToken cancellationToken)
     {
         var result = await _leadService.ScoreAsync(id, cancellationToken);
@@ -226,6 +246,9 @@ public class LeadsController : ControllerBase
 
     [HttpPost("{id:guid}/recycle-to-nurture")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> RecycleToNurture(Guid id, CancellationToken cancellationToken)
     {
         var result = await _leadService.RecycleToNurtureAsync(id, GetActor(), cancellationToken);
@@ -236,6 +259,8 @@ public class LeadsController : ControllerBase
 
     [HttpPost]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(typeof(LeadListItem), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<LeadListItem>> Create([FromBody] UpsertLeadRequest request, CancellationToken cancellationToken)
     {
         var result = await _leadService.CreateAsync(MapUpsertRequest(request), GetActor(), cancellationToken);
@@ -250,6 +275,8 @@ public class LeadsController : ControllerBase
 
     [HttpPost("import")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(typeof(CsvImportResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<CsvImportResult>> Import([FromForm] IFormFile file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
@@ -265,6 +292,8 @@ public class LeadsController : ControllerBase
 
     [HttpPost("import/queue")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(typeof(ImportJobResponse), StatusCodes.Status202Accepted)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ImportJobResponse>> QueueImport([FromForm] IFormFile file, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
@@ -282,6 +311,9 @@ public class LeadsController : ControllerBase
 
     [HttpPut("{id:guid}")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpsertLeadRequest request, CancellationToken cancellationToken)
     {
         var before = await _leadService.GetAsync(id, cancellationToken);
@@ -302,6 +334,9 @@ public class LeadsController : ControllerBase
 
     [HttpPost("{id:guid}/convert")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(typeof(LeadConversionResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<LeadConversionResponse>> Convert(Guid id, [FromBody] ApiLeadConversionRequest request, CancellationToken cancellationToken)
     {
         var result = await _leadService.ConvertAsync(id, MapConversionRequest(request), GetActor(), cancellationToken);
@@ -315,6 +350,9 @@ public class LeadsController : ControllerBase
 
     [HttpDelete("{id:guid}")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var result = await _leadService.DeleteAsync(id, GetActor(), cancellationToken);
@@ -325,6 +363,9 @@ public class LeadsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/owner")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateOwner(Guid id, [FromBody] UpdateOwnerRequest request, CancellationToken cancellationToken)
     {
         if (request.OwnerId == Guid.Empty)
@@ -339,6 +380,9 @@ public class LeadsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UpdateStatusRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Status))
@@ -361,6 +405,8 @@ public class LeadsController : ControllerBase
 
     [HttpPost("bulk-assign-owner")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> BulkAssignOwner([FromBody] BulkAssignOwnerRequest request, CancellationToken cancellationToken)
     {
         if (request.Ids is null || request.Ids.Count == 0)
@@ -380,6 +426,8 @@ public class LeadsController : ControllerBase
 
     [HttpPost("bulk-update-status")]
     [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> BulkUpdateStatus([FromBody] BulkUpdateStatusRequest request, CancellationToken cancellationToken)
     {
         if (request.Ids is null || request.Ids.Count == 0)
@@ -459,6 +507,7 @@ public class LeadsController : ControllerBase
             dto.ConversationScoreReasons,
             dto.ConversationScoreUpdatedAtUtc,
             dto.ConversationSignalAvailable,
+            dto.IsConverted,
             new LeadConversionReadinessItem(
                 dto.ConversionReadiness.Score,
                 dto.ConversionReadiness.Label,
@@ -468,7 +517,8 @@ public class LeadsController : ControllerBase
                 dto.ConversionReadiness.ConversationSignalAvailable,
                 dto.ConversionReadiness.ManagerReviewRecommended,
                 dto.ConversionReadiness.PrimaryGap,
-                dto.ConversionReadiness.Reasons));
+                dto.ConversionReadiness.Reasons),
+            dto.LastActivityAtUtc);
     }
 
     private async Task PublishLeadRealtimeAsync(string action, Guid leadId, string? status, CancellationToken cancellationToken)

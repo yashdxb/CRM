@@ -9,6 +9,7 @@ public class LeadStatusHistory : AuditableEntity
     public DateTime ChangedAtUtc { get; set; }
     public string? ChangedBy { get; set; }
     public string? Notes { get; set; }
+    public string? Reason { get; set; }
 
     public Lead? Lead { get; set; }
     public LeadStatus? LeadStatus { get; set; }

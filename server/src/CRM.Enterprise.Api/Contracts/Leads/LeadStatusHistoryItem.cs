@@ -7,4 +7,5 @@ public record LeadStatusHistoryItem(
     string Status,
     DateTime ChangedAtUtc,
     string? ChangedBy,
-    string? Notes);
+    string? Notes,
+    string? Reason);

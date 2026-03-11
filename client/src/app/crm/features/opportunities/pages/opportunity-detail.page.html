@@ -184,7 +184,12 @@
               </div>
             </div>
             <ng-template #noStakeholders>
-              <p class="empty-text">No stakeholders assigned.</p>
+              <div class="empty-state-cta">
+                <p class="empty-text">No stakeholders assigned.</p>
+                <button *ngIf="canEdit" type="button" class="cta-link" [routerLink]="['/app/opportunities', opportunity()?.id, 'edit']">
+                  <i class="pi pi-plus"></i> Add Stakeholder
+                </button>
+              </div>
             </ng-template>
           </section>
 
@@ -201,7 +206,12 @@
               </div>
             </div>
             <ng-template #noTeam>
-              <p class="empty-text">No team members assigned.</p>
+              <div class="empty-state-cta">
+                <p class="empty-text">No team members assigned.</p>
+                <button *ngIf="canEdit" type="button" class="cta-link" [routerLink]="['/app/opportunities', opportunity()?.id, 'edit']">
+                  <i class="pi pi-plus"></i> Add Team Member
+                </button>
+              </div>
             </ng-template>
           </section>
 
@@ -222,7 +232,12 @@
               </div>
             </div>
             <ng-template #noActivities>
-              <p class="empty-text">No activities recorded.</p>
+              <div class="empty-state-cta">
+                <p class="empty-text">No activities recorded.</p>
+                <button *ngIf="canEdit" type="button" class="cta-link" [routerLink]="['/app/opportunities', opportunity()?.id, 'edit']">
+                  <i class="pi pi-plus"></i> Log Activity
+                </button>
+              </div>
             </ng-template>
           </section>
         </div>

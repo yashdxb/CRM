@@ -76,6 +76,8 @@ export class ContactFormPage implements OnInit, OnDestroy {
   protected readonly accounts = signal<Customer[]>([]);
   protected form: SaveContactRequest = this.createEmptyForm();
   protected saving = signal(false);
+  protected firstNameError = signal<string | null>(null);
+  protected lastNameError = signal<string | null>(null);
   protected readonly activities = signal<Activity[]>([]);
   protected readonly notes = signal<Activity[]>([]);
   protected readonly relatedOpportunities = signal<Opportunity[]>([]);
@@ -165,7 +167,10 @@ export class ContactFormPage implements OnInit, OnDestroy {
   }
 
   protected onSave() {
-    if (!this.form.firstName || !this.form.lastName) {
+    this.firstNameError.set(!this.form.firstName ? 'First name is required.' : null);
+    this.lastNameError.set(!this.form.lastName ? 'Last name is required.' : null);
+    if (this.firstNameError() || this.lastNameError()) {
+      this.raiseToast('error', 'Please fix the highlighted errors before saving.');
       return;
     }
 
@@ -193,7 +198,7 @@ export class ContactFormPage implements OnInit, OnDestroy {
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
-    this.toastService.show(tone, message, 3000);
+    this.toastService.show(tone, message, tone === 'error' ? 5000 : 3000);
   }
 
   private prefill(contact: Contact) {

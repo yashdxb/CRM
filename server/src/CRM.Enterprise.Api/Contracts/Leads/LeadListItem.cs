@@ -63,7 +63,9 @@ public record LeadListItem(
     IEnumerable<string> ConversationScoreReasons,
     DateTime? ConversationScoreUpdatedAtUtc,
     bool ConversationSignalAvailable,
-    LeadConversionReadinessItem? ConversionReadiness);
+    bool IsConverted,
+    LeadConversionReadinessItem? ConversionReadiness,
+    DateTime? LastActivityAtUtc);
 
 public sealed record LeadConversionReadinessItem(
     int Score,

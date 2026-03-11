@@ -5,24 +5,24 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-09 18:01 UTC**
+- Synced at: **2026-03-11 01:08 UTC**
 - ClickUp list id: `901710720381`
-- Total tasks mirrored: **197**
+- Total tasks mirrored: **225**
 - Epics mirrored: **39**
-- Stories mirrored: **158**
+- Stories mirrored: **186**
 
 ## Status Summary
 - All tasks:
-  - `done`: 122
-  - `backlog`: 72
+  - `done`: 134
+  - `backlog`: 88
   - `in progress`: 3
 - Epics:
   - `backlog`: 21
   - `done`: 17
   - `in progress`: 1
 - Stories:
-  - `done`: 105
-  - `backlog`: 51
+  - `done`: 117
+  - `backlog`: 67
   - `in progress`: 2
 
 ## Epic and Story Mirror
@@ -285,8 +285,15 @@
   - `86e041wx9` | `done` | Lead assignment rules | tags: -
   - `86e041wwt` | `done` | Lead list with search and filtering | tags: -
   - `86e041wwz` | `done` | Lead qualification scoring (CQVS model) | tags: -
+  - `86e09xd45` | `done` | Module: Leads | Accessibility: aria-labels on leads list | tags: done, module:leads, now
+  - `86e09xd3d` | `done` | Module: Leads | Add help text to qualification factor fields | tags: done, module:leads, now
+  - `86e09xd32` | `done` | Module: Leads | Client-side attachment upload validation | tags: done, module:leads, now
+  - `86e09xd41` | `done` | Module: Leads | Error toast on lead convert failure | tags: done, module:leads, now
+  - `86e09xd3j` | `done` | Module: Leads | Mobile responsive table improvements | tags: done, module:leads, now
+  - `86e09xd4c` | `done` | Module: Leads | Move LeadsController to clean architecture | tags: done, module:leads, now
+  - `86e09xd2x` | `done` | Module: Leads | Remove dead .field CSS from lead form | tags: done, module:leads, now
+  - `86e09xd3v` | `done` | Module: Leads | Replace pButton with unified button standard | tags: done, module:leads, now
   - `86e041wwv` | `done` | Pipeline (Kanban) view for leads | tags: -
-  - `TBD` | `done` | Leads page golden-standard redesign (Hero + Metrics + streamlined layout) | tags: now, module:Leads
 
 ### Marketing & Campaigns (`86e041wzy`)
 - Status: `done`
@@ -309,22 +316,32 @@
 - Tags: built, core
 - Stories:
   - `86e041wyg` | `done` | Create new deal | tags: -
+  - `86e08y0yu` | `backlog` | Deal 360 Detail View Page | tags: module:opportunities, next
+  - `86e08xx09` | `backlog` | Deal 360 Detail View Page | tags: module:opportunities, next
+  - `86e08y0x6` | `done` | Deal Activity Timeline | tags: module:opportunities, now
+  - `86e08xwxq` | `backlog` | Deal Activity Timeline | tags: module:opportunities, now
+  - `86e08y0zx` | `backlog` | Deal Aging / Stage Duration Visualization | tags: module:opportunities, next
+  - `86e08xx10` | `backlog` | Deal Aging / Stage Duration Visualization | tags: module:opportunities, next
   - `86e041wz1` | `done` | Deal automation rules | tags: -
+  - `86e08y10h` | `backlog` | Deal Competitor Tracking | tags: later, module:opportunities
+  - `86e08xx1e` | `backlog` | Deal Competitor Tracking | tags: later, module:opportunities
+  - `86e08y0z6` | `backlog` | Deal Contact Roles / Stakeholders | tags: module:opportunities, next
+  - `86e08xx0q` | `backlog` | Deal Contact Roles / Stakeholders | tags: module:opportunities, next
+  - `86e08y0xn` | `done` | Deal File Attachments | tags: module:opportunities, now
+  - `86e08xwyh` | `backlog` | Deal File Attachments | tags: module:opportunities, now
+  - `86e08y0y6` | `backlog` | Deal Health / AI Score | tags: module:opportunities, next
+  - `86e08xwzp` | `backlog` | Deal Health / AI Score | tags: module:opportunities, next
+  - `86e08y10z` | `backlog` | Deal List Page Polish and Bulk Actions | tags: later, module:opportunities
+  - `86e08xx1p` | `backlog` | Deal List Page Polish and Bulk Actions | tags: later, module:opportunities
+  - `86e08y0wt` | `done` | Deal Pipeline Kanban Board View | tags: module:opportunities, now
+  - `86e08xwx3` | `backlog` | Deal Pipeline Kanban Board View | tags: module:opportunities, now
+  - `86e08y0xw` | `done` | Deal Revenue Forecast Chart | tags: module:opportunities, now
+  - `86e08xwz3` | `backlog` | Deal Revenue Forecast Chart | tags: module:opportunities, now
   - `86e041wym` | `done` | Edit existing deal | tags: -
   - `86e041wyf` | `done` | Opportunity list with stage filtering | tags: -
   - `86e041wyx` | `done` | Opportunity onboarding workflow | tags: -
   - `86e041wyq` | `done` | Opportunity pipeline stages | tags: -
   - `86e041wyr` | `done` | Opportunity quotes (CPQ) | tags: -
-  - `86e08y0wt` | `done` | Deal Pipeline Kanban Board View | tags: now, module:Opportunities
-  - `86e08y0x6` | `done` | Deal Activity Timeline | tags: now, module:Opportunities
-  - `86e08y0xn` | `done` | Deal File Attachments | tags: now, module:Opportunities
-  - `86e08y0xw` | `done` | Deal Revenue Forecast Chart | tags: now, module:Opportunities
-  - `86e08y0y6` | `done` | Deal Health / AI Score | tags: next, module:Opportunities
-  - `86e08y0yu` | `done` | Deal 360 Detail View Page | tags: next, module:Opportunities
-  - `86e08y0z6` | `done` | Deal Contact Roles / Stakeholders | tags: next, module:Opportunities
-  - `86e08y0zx` | `done` | Deal Aging / Stage Duration Visualization | tags: next, module:Opportunities
-  - `86e08y10h` | `backlog` | Deal Competitor Tracking | tags: later, module:Opportunities
-  - `86e08y10z` | `backlog` | Deal List Page Polish and Bulk Actions | tags: later, module:Opportunities
 
 ### Platform Infrastructure (`86e041x34`)
 - Status: `done`

@@ -63,7 +63,10 @@ export class DashboardDataService {
       forecastScenarios: []
     };
 
-    return this.http.get<DashboardSummary>(url).pipe(catchError(() => of(empty)));
+    return this.http.get<DashboardSummary>(url).pipe(catchError((err) => {
+      console.error('Failed to load dashboard summary', err);
+      return of(empty);
+    }));
   }
 
   getManagerPipelineHealth() {
@@ -89,7 +92,10 @@ export class DashboardDataService {
       topTruthGaps: [],
       reviewQueue: []
     };
-    return this.http.get<ManagerPipelineHealth>(url).pipe(catchError(() => of(empty)));
+    return this.http.get<ManagerPipelineHealth>(url).pipe(catchError((err) => {
+      console.error('Failed to load manager pipeline health', err);
+      return of(empty);
+    }));
   }
 
   getAssistantInsights() {
@@ -100,7 +106,10 @@ export class DashboardDataService {
       actions: [],
       generatedAtUtc: new Date().toISOString()
     };
-    return this.http.get<AssistantInsights>(url).pipe(catchError(() => of(empty)));
+    return this.http.get<AssistantInsights>(url).pipe(catchError((err) => {
+      console.error('Failed to load assistant insights', err);
+      return of(empty);
+    }));
   }
 
   executeAssistantAction(action: AssistantInsightsAction, note?: string) {
@@ -156,7 +165,10 @@ export class DashboardDataService {
         roleLevel?: number | null;
         packName?: string | null;
       }>(url)
-      .pipe(catchError(() => of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], roleLevel: null, packName: null })));
+      .pipe(catchError((err) => {
+        console.error('Failed to load dashboard layout', err);
+        return of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], roleLevel: null, packName: null });
+      }));
   }
 
   saveLayout(payload: {

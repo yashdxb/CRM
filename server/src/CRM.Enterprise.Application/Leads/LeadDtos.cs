@@ -60,7 +60,9 @@ public sealed record LeadListItemDto(
     IReadOnlyList<string> ConversationScoreReasons,
     DateTime? ConversationScoreUpdatedAtUtc,
     bool ConversationSignalAvailable,
-    LeadConversionReadinessDto ConversionReadiness);
+    bool IsConverted,
+    LeadConversionReadinessDto ConversionReadiness,
+    DateTime? LastActivityAtUtc);
 
 public sealed record LeadConversionReadinessDto(
     int Score,
@@ -117,7 +119,8 @@ public sealed record LeadStatusHistoryDto(
     string Status,
     DateTime ChangedAtUtc,
     string? ChangedBy,
-    string? Notes);
+    string? Notes,
+    string? Reason);
 
 public sealed record LeadAuditEventDto(
     Guid Id,

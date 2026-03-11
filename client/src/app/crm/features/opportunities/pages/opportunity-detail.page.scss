@@ -714,6 +714,36 @@
   margin: 0;
 }
 
+.empty-state-cta {
+  text-align: center;
+  padding: $space-3 0;
+}
+
+.cta-link {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  margin-top: $space-2;
+  padding: $space-1 $space-3;
+  background: none;
+  border: 1px dashed rgba(102, 126, 234, 0.4);
+  border-radius: $radius-md;
+  color: #667eea;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 200ms ease;
+
+  &:hover {
+    background: rgba(102, 126, 234, 0.08);
+    border-color: #667eea;
+  }
+
+  i {
+    font-size: 0.75rem;
+  }
+}
+
 // ═══ LOADING ═══
 
 .page-loading {

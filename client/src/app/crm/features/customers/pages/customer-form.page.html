@@ -61,6 +61,7 @@
                     </p-inputgroup-addon>
                     <input pInputText id="customerName" name="name" [(ngModel)]="form.name" required placeholder="Enter customer name" />
                   </p-inputgroup>
+                  <p class="field-error" *ngIf="nameError()">{{ nameError() }}</p>
                 </div>
                 
                 <div class="form-field">

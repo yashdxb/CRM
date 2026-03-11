@@ -953,7 +953,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
-    this.toastService.show(tone, message, 3000);
+    this.toastService.show(tone, message, tone === 'error' ? 5000 : 3000);
   }
 
   private extractApiError(error: unknown, fallback: string): { message: string; code: string | null } {

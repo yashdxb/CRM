@@ -242,7 +242,8 @@ public sealed class LeadService : ILeadService
                 l.ConversationScoreLabel,
                 l.ConversationScoreReasonsJson,
                 l.ConversationScoreUpdatedAtUtc,
-                l.ConversationSignalAvailable
+                l.ConversationSignalAvailable,
+                LastActivityAtUtc = l.Activities.Any() ? l.Activities.Max(a => a.CreatedAtUtc) : (DateTime?)null
             })
             .ToListAsync(cancellationToken);
 
@@ -336,7 +337,9 @@ public sealed class LeadService : ILeadService
                 conversationReasons,
                 l.ConversationScoreUpdatedAtUtc,
                 l.ConversationSignalAvailable,
-                readiness);
+                l.ConvertedOpportunityId.HasValue,
+                readiness,
+                l.LastActivityAtUtc);
         });
 
         return new LeadSearchResultDto(items.ToList(), total);
@@ -443,7 +446,13 @@ public sealed class LeadService : ILeadService
             detailConversation.Reasons,
             lead.ConversationScoreUpdatedAtUtc,
             lead.ConversationSignalAvailable,
-            detailReadiness);
+            lead.IsConverted,
+            detailReadiness,
+            await _dbContext.Activities
+                .Where(a => a.RelatedEntityId == lead.Id)
+                .OrderByDescending(a => a.CreatedAtUtc)
+                .Select(a => (DateTime?)a.CreatedAtUtc)
+                .FirstOrDefaultAsync(cancellationToken));
     }
 
     public async Task<LeadDispositionReportDto> GetDispositionReportAsync(CancellationToken cancellationToken = default)
@@ -588,7 +597,8 @@ public sealed class LeadService : ILeadService
                 h.LeadStatus != null ? h.LeadStatus.Name : "Unknown",
                 h.ChangedAtUtc,
                 h.ChangedBy,
-                h.Notes))
+                h.Notes,
+                h.Reason))
             .ToListAsync(cancellationToken);
 
         return history;
@@ -1060,7 +1070,9 @@ public sealed class LeadService : ILeadService
             createConversation.Reasons,
             lead.ConversationScoreUpdatedAtUtc,
             lead.ConversationSignalAvailable,
-            createReadiness);
+            lead.IsConverted,
+            createReadiness,
+            null);
 
         return LeadOperationResult<LeadListItemDto>.Ok(dto);
     }

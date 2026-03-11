@@ -65,6 +65,7 @@
                   </p-inputgroup-addon>
                   <input pInputText id="contact-firstName" name="firstName" [(ngModel)]="form.firstName" required placeholder="First name" />
                 </p-inputgroup>
+                <p class="field-error" *ngIf="firstNameError()">{{ firstNameError() }}</p>
               </div>
               <div class="form-field">
                 <label for="contact-lastName">Last name <span class="required">*</span></label>
@@ -74,6 +75,7 @@
                   </p-inputgroup-addon>
                   <input pInputText id="contact-lastName" name="lastName" [(ngModel)]="form.lastName" required placeholder="Last name" />
                 </p-inputgroup>
+                <p class="field-error" *ngIf="lastNameError()">{{ lastNameError() }}</p>
               </div>
               <div class="form-field">
                 <label for="contact-email">Email</label>

@@ -26,7 +26,10 @@ export class ReportsDataService {
       stages: []
     };
 
-    return this.http.get<PipelineByStageReport>(url).pipe(catchError(() => of(empty)));
+    return this.http.get<PipelineByStageReport>(url).pipe(catchError((err) => {
+      console.error('Failed to load pipeline-by-stage report', err);
+      return of(empty);
+    }));
   }
 
   getEmbedConfig() {
@@ -38,13 +41,19 @@ export class ReportsDataService {
       pipelineByStageReportSource: null
     };
 
-    return this.http.get<ReportsEmbedConfig>(url).pipe(catchError(() => of(empty)));
+    return this.http.get<ReportsEmbedConfig>(url).pipe(catchError((err) => {
+      console.error('Failed to load embed config', err);
+      return of(empty);
+    }));
   }
 
   getReportServerConfig() {
     const url = `${environment.apiUrl}/api/report-server/config`;
     const empty: ReportServerConfig = { enabled: false };
-    return this.http.get<ReportServerConfig>(url).pipe(catchError(() => of(empty)));
+    return this.http.get<ReportServerConfig>(url).pipe(catchError((err) => {
+      console.error('Failed to load report server config', err);
+      return of(empty);
+    }));
   }
 
   getReportServerToken() {
@@ -54,23 +63,35 @@ export class ReportsDataService {
 
   getReportCatalog() {
     const url = `${environment.apiUrl}/api/report-server/catalog`;
-    return this.http.get<ReportCatalogItem[]>(url).pipe(catchError(() => of([])));
+    return this.http.get<ReportCatalogItem[]>(url).pipe(catchError((err) => {
+      console.error('Failed to load report catalog', err);
+      return of([] as ReportCatalogItem[]);
+    }));
   }
 
   getReportLibrary() {
     const url = `${environment.apiUrl}/api/report-server/library`;
-    return this.http.get<ReportLibraryItem[]>(url).pipe(catchError(() => of([])));
+    return this.http.get<ReportLibraryItem[]>(url).pipe(catchError((err) => {
+      console.error('Failed to load report library', err);
+      return of([] as ReportLibraryItem[]);
+    }));
   }
 
   getReportCategories() {
     const url = `${environment.apiUrl}/api/report-server/categories`;
-    return this.http.get<ReportCategory[]>(url).pipe(catchError(() => of([])));
+    return this.http.get<ReportCategory[]>(url).pipe(catchError((err) => {
+      console.error('Failed to load report categories', err);
+      return of([] as ReportCategory[]);
+    }));
   }
 
   getReportParameterOptions(reportId: string, parameterName: string) {
     const encodedReportId = encodeURIComponent(reportId);
     const encodedParameterName = encodeURIComponent(parameterName);
     const url = `${environment.apiUrl}/api/report-server/reports/${encodedReportId}/parameters/${encodedParameterName}/options`;
-    return this.http.get<ReportParameterOption[]>(url).pipe(catchError(() => of([])));
+    return this.http.get<ReportParameterOption[]>(url).pipe(catchError((err) => {
+      console.error('Failed to load report parameter options', err);
+      return of([] as ReportParameterOption[]);
+    }));
   }
 }

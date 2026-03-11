@@ -8,6 +8,8 @@ public class LeadStatusHistoryConfiguration : IEntityTypeConfiguration<LeadStatu
 {
     public void Configure(EntityTypeBuilder<LeadStatusHistory> builder)
     {
+        builder.Property(h => h.Reason).HasMaxLength(500);
+
         builder.HasOne(h => h.LeadStatus)
             .WithMany()
             .HasForeignKey(h => h.LeadStatusId)

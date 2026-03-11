@@ -228,6 +228,7 @@
                     placeholder="ACME rollout"
                   />
                 </p-inputgroup>
+                <p class="field-error" *ngIf="dealNameError()">{{ dealNameError() }}</p>
               </div>
               <div class="form-field">
                 <label for="oppAccount">Account</label>

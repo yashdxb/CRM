@@ -67,6 +67,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   protected readonly isEditMode = signal(false);
   protected readonly saving = signal(false);
   protected readonly loading = signal(false);
+  protected readonly nameError = signal<string | null>(null);
   private readonly toastService = inject(AppToastService);
   private readonly activityData = inject(ActivityDataService);
   private readonly contactData = inject(ContactDataService);
@@ -187,7 +188,11 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   }
 
   protected onSave() {
-    if (!this.form.name) return;
+    this.nameError.set(!this.form.name ? 'Customer name is required.' : null);
+    if (this.nameError()) {
+      this.raiseToast('error', 'Please fix the highlighted errors before saving.');
+      return;
+    }
 
     this.saving.set(true);
     const payload: SaveCustomerRequest = {
@@ -281,7 +286,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   }
 
   private raiseToast(tone: 'success' | 'error', message: string) {
-    this.toastService.show(tone, message, 3000);
+    this.toastService.show(tone, message, tone === 'error' ? 5000 : 3000);
   }
 
   private loadDetailData() {

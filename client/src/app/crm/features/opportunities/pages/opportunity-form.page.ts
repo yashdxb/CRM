@@ -229,6 +229,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected selectedStage = 'Prospecting';
   protected form: SaveOpportunityRequest = this.createEmptyForm();
   protected saving = signal(false);
+  protected dealNameError = signal<string | null>(null);
   protected readonly isEditMode = signal(false);
   protected readonly canManage = computed(() => {
     const context = readTokenContext();
@@ -1232,23 +1233,30 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
   protected onSave() {
     if (this.requesterApprovalLocked()) {
-      this.toastService.show('error', 'This deal is read-only while approval is pending.', 3000);
+      this.toastService.show('error', 'This deal is read-only while approval is pending.', 5000);
       return;
     }
     if (this.decisionReviewMode()) {
       this.toastService.show('success', 'This record is opened in decision review mode (read-only).', 3000);
       return;
     }
-    if (!this.form.name) return;
+    if (!this.form.name) {
+      this.dealNameError.set('Deal name is required.');
+      this.toastService.show('error', 'Deal name is required.', 5000);
+      this.scrollToFirstError('oppName');
+      return;
+    }
+    this.dealNameError.set(null);
     const teamError = this.validateTeamMembers();
     if (teamError) {
-      this.toastService.show('error', teamError, 4000);
+      this.toastService.show('error', teamError, 5000);
       return;
     }
     const validationError = this.validateStageRequirements();
     if (validationError) {
       this.handlePolicyGateMessage(validationError);
-      this.toastService.show('error', validationError, 4000);
+      this.toastService.show('error', validationError, 5000);
+      this.scrollToGateBanner();
       return;
     }
     this.saving.set(true);
@@ -1306,7 +1314,8 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
           this.saving.set(false);
           const message = typeof err?.error === 'string' ? err.error : 'Unable to save deal.';
           this.handlePolicyGateMessage(message);
-          this.toastService.show('error', message, 4000);
+          this.toastService.show('error', message, 5000);
+          this.scrollToGateBanner();
         }
       });
   }
@@ -2099,6 +2108,33 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     const gateMessage = (isApprovalGate || isStageOverrideCandidate) ? message : null;
     this.policyGateMessage.set(gateMessage);
     this.canRequestStageOverride.set(Boolean(gateMessage && isStageOverrideCandidate && this.canRequestApproval()));
+  }
+
+  private scrollToGateBanner(): void {
+    requestAnimationFrame(() => {
+      const banner = document.querySelector('.policy-gate-banner');
+      if (banner) {
+        banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
+
+  private scrollToFirstError(fieldId?: string): void {
+    requestAnimationFrame(() => {
+      if (fieldId) {
+        const el = document.getElementById(fieldId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.focus();
+          return;
+        }
+      }
+      const invalid = document.querySelector('.ng-invalid:not(form)');
+      if (invalid) {
+        (invalid as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        (invalid as HTMLElement).focus();
+      }
+    });
   }
 
   private isStageOverrideContext(): boolean {

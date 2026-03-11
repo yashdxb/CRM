@@ -428,6 +428,12 @@
       }
     }
 
+    .field-error {
+      margin: 0.35rem 0 0;
+      font-size: 0.75rem;
+      color: #b91c1c;
+    }
+
     .required {
       color: rgba(var(--apple-pink), 1);
       font-weight: 600;
