@@ -1,5 +1,5 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
@@ -13,7 +13,6 @@ import { IftaLabelModule } from 'primeng/iftalabel';
 import { finalize } from 'rxjs';
 
 import { CrmLandingService } from './services/crm-landing.service';
-import { CrmLandingVm } from './models/crm-landing.models';
 import { AppToastService } from '../../core/app-toast.service';
 
 @Component({
@@ -43,20 +42,42 @@ export class LandingPage implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly toastService = inject(AppToastService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
 
-  vm: CrmLandingVm | null = null;
   currentYear = new Date().getFullYear();
   showDemoForm = false;
   showDemoSuccess = false;
   submittingDemo = false;
   demoSubmitted = false;
   minDemoDateTime = new Date();
+  isScrolled = false;
+  mobileMenuOpen = false;
   activeHeroPreview = 0;
-  readonly heroPreviewSlides = ['Truth Metrics', 'Verified Pipeline', 'Risk Register', 'AI Execution'];
+  readonly heroPreviewSlides = [
+    { label: 'Pipeline Overview', image: '/assets/landing/kpi-pipeline.png' },
+    { label: 'AI Lead Score', image: '/assets/landing/kpi-lead-score.png' },
+    { label: 'Win Rate Summary', image: '/assets/landing/kpi-winrate.png' }
+  ];
   readonly timezoneOptions = this.buildTimeZoneOptions();
   private readonly detectedTimeZone = this.detectBrowserTimeZone();
   private heroPreviewIntervalId: number | null = null;
   private lastHeroPreviewWheelAt = 0;
+
+  readonly features = [
+    { icon: 'pi-bolt', color: 'primary', title: 'AI Lead Scoring', description: 'Predictive scoring powered by AI ranks every lead so your team focuses on the deals most likely to close.' },
+    { icon: 'pi-chart-bar', color: 'cyan', title: 'Verified Pipeline', description: 'Real-time pipeline view with evidence-based deal health — no guesswork, just facts.' },
+    { icon: 'pi-users', color: 'green', title: '360° Contact Management', description: 'Full relationship history, communication timeline, and engagement tracking in one place.' },
+    { icon: 'pi-chart-pie', color: 'purple', title: 'Real-Time Dashboards', description: 'Live KPIs, conversion funnels, and team performance dashboards with drill-down analytics.' },
+    { icon: 'pi-shield', color: 'orange', title: 'Risk Register', description: 'Proactive deal risk detection with SLA monitoring, stale deal alerts, and at-risk deal flagging.' },
+    { icon: 'pi-cog', color: 'slate', title: 'Smart Automation', description: 'Automated workflows for follow-ups, stage transitions, and notifications that keep deals moving.' }
+  ];
+
+  readonly howItWorks = [
+    { title: 'Create Your Workspace', description: 'Set up your team workspace in minutes. Invite your sales reps and configure your pipeline stages.' },
+    { title: 'Import Your Pipeline', description: 'Bring your existing deals, contacts, and leads. Our import wizard maps your data automatically.' },
+    { title: 'Start Closing Deals', description: 'AI scores your leads, flags at-risk deals, and surfaces the next-best action for every opportunity.' }
+  ];
+
   readonly teamSizeOptions = [
     { label: '1-10', value: '1-10' },
     { label: '11-50', value: '11-50' },
@@ -78,7 +99,6 @@ export class LandingPage implements OnInit {
   });
 
   ngOnInit(): void {
-    this.vm = this.svc.getVm();
     this.startHeroPreviewCarousel();
     this.demoForm.controls.timezone.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -87,8 +107,22 @@ export class LandingPage implements OnInit {
       });
   }
 
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    const scrolled = (this.document.defaultView?.scrollY ?? 0) > 40;
+    if (scrolled !== this.isScrolled) {
+      this.isScrolled = scrolled;
+      this.cdr.markForCheck();
+    }
+  }
+
+  scrollTo(id: string): void {
+    this.mobileMenuOpen = false;
+    const el = this.document.getElementById(id);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   onGetStarted(): void {
-    // TODO: route to auth/register or app shell
     console.log('Get Started');
   }
 

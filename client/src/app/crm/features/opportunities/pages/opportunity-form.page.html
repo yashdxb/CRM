@@ -974,7 +974,7 @@
               </p-accordion-header>
               <p-accordion-content>
                 <section class="form-card opportunity-accordion-card revenue-forecast-section">
-                  <div class="revenue-forecast" *ngIf="(form?.amount ?? 0) > 0; else noForecastData">
+                  <div class="revenue-forecast" *ngIf="(form.amount ?? 0) > 0; else noForecastData">
                     <!-- Metric summary cards -->
                     <div class="forecast-metrics">
                       <div class="forecast-metric forecast-metric--primary">

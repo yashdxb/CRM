@@ -1,6 +1,6 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { NgFor, NgIf, DecimalPipe, NgClass } from '@angular/common';
+import { NgFor, NgIf, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -79,7 +79,6 @@ const CQVS_FACTOR_GROUPS: Array<{ code: CqvsCode; title: string; factorMatchers:
     SelectModule,
     TableModule,
     PaginatorModule,
-    DecimalPipe,
     DialogModule,
     TooltipModule,
     DrawerModule,

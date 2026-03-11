@@ -1,4 +1,5 @@
-<main class="landing" *ngIf="vm as viewModel">
+<main class="landing">
+  <!-- Background -->
   <div class="landing-bg" aria-hidden="true">
     <span class="orb orb-1"></span>
     <span class="orb orb-2"></span>
@@ -6,167 +7,183 @@
     <span class="grid-pattern"></span>
     <span class="noise-layer"></span>
   </div>
-  <section class="shell nav-shell">
-    <header class="topbar">
-      <div class="brand">
-        <img
-          class="brand-logo"
-          src="/assets/branding/logo-v2-light.png"
-          alt="North Edge System"
-        />
-      </div>
-      <div class="top-actions">
-        <button pButton type="button" label="Sign In" class="ne-btn ne-btn--link" (click)="onSignIn()"></button>
-      </div>
-    </header>
-  </section>
 
-  <section class="shell hero">
-    <div class="hero-copy">
+  <!-- Sticky Nav -->
+  <nav class="topbar" [class.topbar--scrolled]="isScrolled">
+    <div class="topbar__inner shell">
+      <a class="topbar__brand" (click)="scrollTo('hero')">
+        <img src="/assets/branding/logo-v2-light.png" alt="North Edge System" class="topbar__logo" />
+      </a>
+      <ul class="topbar__nav" [class.topbar__nav--open]="mobileMenuOpen">
+        <li><a (click)="scrollTo('features')">Features</a></li>
+        <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
+        <li><a (click)="scrollTo('pricing')">Pricing</a></li>
+      </ul>
+      <div class="topbar__actions">
+        <button type="button" class="nav-btn nav-btn--ghost" (click)="onSignIn()">Sign In</button>
+        <button type="button" class="nav-btn nav-btn--primary" (click)="onWatchDemo()">Book a Demo</button>
+      </div>
+      <button type="button" class="topbar__hamburger" [class.is-open]="mobileMenuOpen" (click)="mobileMenuOpen = !mobileMenuOpen" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section id="hero" class="hero shell">
+    <div class="hero__content">
       <div class="hero-brand">
         <span class="hero-brand-wordmark">North Edge</span>
         <span class="hero-brand-crm">CRM</span>
       </div>
-      <h1>Run Your Pipeline<br />on Verified Truth</h1>
-      <div class="hero-cta">
-        <button pButton type="button" label="Book a Demo" class="ne-btn ne-btn--ghost" (click)="onWatchDemo()"></button>
+      <h1 class="hero__title">Close More Deals with<br />AI-Powered Pipeline Intelligence</h1>
+      <p class="hero__subtitle">North Edge CRM gives your sales team real-time pipeline visibility, AI-driven lead scoring, and evidence-based forecasting — so every deal in your pipeline is defensible.</p>
+      <div class="hero__cta">
+        <button type="button" class="hero-btn hero-btn--primary" (click)="onWatchDemo()">
+          <i class="pi pi-calendar"></i> Book a Demo
+        </button>
+        <button type="button" class="hero-btn hero-btn--ghost" (click)="onSignIn()">
+          Sign In <i class="pi pi-arrow-right"></i>
+        </button>
       </div>
     </div>
-    <div class="hero-visual">
-      <article class="hero-panel hero-panel--preview">
-        <div class="hero-preview-carousel" (click)="advanceHeroPreview()" (wheel)="onHeroPreviewWheel($event)">
-          <div class="hero-preview-track" [style.transform]="'translateX(-' + (activeHeroPreview * 100) + '%)'">
-            <div class="hero-preview-slide">
-              <section class="preview-card preview-card--truth">
-                <div class="preview-card-header">
-                  <span class="preview-title">Truth Metrics</span>
-                  <span class="preview-badge">83%</span>
-                </div>
-                <div class="truth-grid">
-                  <div class="truth-cell">
-                    <span class="truth-label">Truth Coverage</span>
-                    <strong class="truth-value">83%</strong>
-                  </div>
-                  <div class="truth-cell">
-                    <span class="truth-label">Confidence</span>
-                    <strong class="truth-value truth-value--good">High</strong>
-                  </div>
-                  <div class="truth-cell">
-                    <span class="truth-label">Time-to-Truth</span>
-                    <strong class="truth-value">0.8d</strong>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div class="hero-preview-slide">
-              <section class="preview-card preview-card--pipeline">
-                <div class="preview-card-header">
-                  <span class="preview-title">Verified Pipeline</span>
-                  <span class="preview-live">$65,070 defensible</span>
-                </div>
-                <div class="hero-panel-row">
-                  <span class="key">Pipeline</span>
-                  <span class="val">$120,500</span>
-                </div>
-                <div class="hero-panel-row emphasis">
-                  <span class="key">Defensible</span>
-                  <span class="val">$65,070</span>
-                </div>
-                <div class="hero-panel-row">
-                  <span class="key">Win rate</span>
-                  <span class="val">72%</span>
-                </div>
-              </section>
-            </div>
-
-            <div class="hero-preview-slide">
-              <section class="preview-card preview-card--risk">
-                <div class="preview-card-header">
-                  <span class="preview-title">Risk Register</span>
-                  <span class="preview-badge preview-badge--warn">9</span>
-                </div>
-                <div class="risk-preview-chips">
-                  <span class="risk-chip risk-chip--high">High 3</span>
-                  <span class="risk-chip risk-chip--medium">Medium 4</span>
-                  <span class="risk-chip risk-chip--low">Low 2</span>
-                </div>
-                <div class="risk-preview-bars" aria-hidden="true">
-                  <div class="risk-bar-row">
-                    <span class="risk-bar-label">SLA</span>
-                    <div class="risk-bar-track"><span class="risk-bar-fill risk-bar-fill--high" style="width: 78%"></span></div>
-                    <strong class="risk-bar-value">1</strong>
-                  </div>
-                  <div class="risk-bar-row">
-                    <span class="risk-bar-label">No next step</span>
-                    <div class="risk-bar-track"><span class="risk-bar-fill risk-bar-fill--medium" style="width: 62%"></span></div>
-                    <strong class="risk-bar-value">3</strong>
-                  </div>
-                  <div class="risk-bar-row">
-                    <span class="risk-bar-label">Stale activity</span>
-                    <div class="risk-bar-track"><span class="risk-bar-fill risk-bar-fill--low" style="width: 86%"></span></div>
-                    <strong class="risk-bar-value">5</strong>
-                  </div>
-                </div>
-                <div class="risk-preview-list">
-                  <div class="risk-preview-item">
-                    <span>At-risk deals</span>
-                    <strong>9</strong>
-                  </div>
-                  <div class="risk-preview-item">
-                    <span>No next step</span>
-                    <strong>3</strong>
-                  </div>
-                  <div class="risk-preview-item">
-                    <span>SLA breaches</span>
-                    <strong>1</strong>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <div class="hero-preview-slide">
-              <section class="preview-card preview-card--ai">
-                <div class="preview-card-header">
-                  <span class="preview-title">AI Execution Orchestration</span>
-                  <span class="preview-live">Live queue</span>
-                </div>
-                <div class="ai-preview-row">
-                  <div class="ai-preview-copy">
-                    <strong>Recover breached first-touch SLAs</strong>
-                    <small>1 lead missed SLA. Prioritize outreach today.</small>
-                  </div>
-                  <span class="ai-preview-chip ai-preview-chip--high">High risk</span>
-                </div>
-                <div class="ai-preview-row">
-                  <div class="ai-preview-copy">
-                    <strong>Reactivate stale opportunities</strong>
-                    <small>9 opportunities inactive 7+ days.</small>
-                  </div>
-                  <span class="ai-preview-chip ai-preview-chip--medium">Review</span>
-                </div>
-              </section>
-            </div>
+    <div class="hero__visual">
+      <div class="kpi-carousel" (wheel)="onHeroPreviewWheel($event)">
+        <div class="kpi-carousel__track" [style.transform]="'translateX(-' + activeHeroPreview * 100 + '%)'">
+          <div class="kpi-carousel__slide" *ngFor="let slide of heroPreviewSlides; let i = index">
+            <img [src]="slide.image" [alt]="slide.label" loading="eager" />
           </div>
         </div>
-        <div class="hero-preview-controls" aria-label="KPI preview carousel">
-          <button
-            *ngFor="let slide of heroPreviewSlides; let i = index"
-            type="button"
-            class="hero-preview-dot"
-            [class.is-active]="activeHeroPreview === i"
-            [attr.aria-label]="'Show ' + slide"
-            [attr.aria-pressed]="activeHeroPreview === i"
-            (click)="$event.stopPropagation(); goToHeroPreview(i)"
-          ></button>
+        <div class="kpi-carousel__indicators">
+          <button *ngFor="let slide of heroPreviewSlides; let i = index"
+                  type="button"
+                  class="kpi-carousel__dot"
+                  [class.active]="i === activeHeroPreview"
+                  [attr.aria-label]="'View ' + slide.label"
+                  (click)="goToHeroPreview(i)">
+          </button>
         </div>
-      </article>
+        <span class="kpi-carousel__label">{{ heroPreviewSlides[activeHeroPreview].label }}</span>
+      </div>
     </div>
   </section>
 
-  <section class="shell final-cta">
-    <h2>If You Can't Defend it, Don't forecast It.</h2>
+  <!-- Differentiator Banner -->
+  <section class="banner">
+    <div class="shell banner__inner">
+      <span class="banner__icon"><i class="pi pi-unlock"></i></span>
+      <h2 class="banner__title">One License. Unlimited Users. Forever.</h2>
+      <p class="banner__subtitle">No per-seat pricing. No annual renewals. Pay once and your entire team gets full access — forever.</p>
+    </div>
   </section>
+
+  <!-- Features -->
+  <section id="features" class="features">
+    <div class="shell">
+      <span class="section-badge">Platform Capabilities</span>
+      <h2 class="section-title">Everything Your Sales Team Needs</h2>
+      <p class="section-subtitle">Six core capabilities designed to give your team an unfair advantage in every deal.</p>
+      <div class="features__grid">
+        <div class="feature-card" *ngFor="let feat of features">
+          <div class="feature-card__icon" [ngClass]="'feature-card__icon--' + feat.color">
+            <i class="pi" [ngClass]="feat.icon"></i>
+          </div>
+          <h3>{{ feat.title }}</h3>
+          <p>{{ feat.description }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" class="how-it-works">
+    <div class="shell">
+      <span class="section-badge">Getting Started</span>
+      <h2 class="section-title">Up and Running in Three Steps</h2>
+      <div class="how-it-works__steps">
+        <div class="step-card" *ngFor="let step of howItWorks; let i = index">
+          <div class="step-card__number">{{ i + 1 }}</div>
+          <h3>{{ step.title }}</h3>
+          <p>{{ step.description }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="pricing">
+    <div class="shell">
+      <span class="section-badge">Simple Pricing</span>
+      <h2 class="section-title">One Price. Everything Included.</h2>
+      <div class="pricing__card">
+        <div class="pricing__badge">Most Popular</div>
+        <h3 class="pricing__plan">Enterprise</h3>
+        <div class="pricing__price">
+          <span class="pricing__amount">One-Time Payment</span>
+          <span class="pricing__term">Lifetime access — no recurring fees</span>
+        </div>
+        <ul class="pricing__features">
+          <li><i class="pi pi-check-circle"></i> Unlimited users</li>
+          <li><i class="pi pi-check-circle"></i> AI lead scoring &amp; pipeline intelligence</li>
+          <li><i class="pi pi-check-circle"></i> Real-time dashboards &amp; analytics</li>
+          <li><i class="pi pi-check-circle"></i> Risk register &amp; deal health monitor</li>
+          <li><i class="pi pi-check-circle"></i> Smart automation &amp; workflows</li>
+          <li><i class="pi pi-check-circle"></i> 360&deg; contact management</li>
+          <li><i class="pi pi-check-circle"></i> Priority support &amp; onboarding</li>
+        </ul>
+        <button type="button" class="pricing__cta" (click)="onWatchDemo()">
+          <i class="pi pi-calendar"></i> Book a Demo
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Final CTA -->
+  <section class="final-cta">
+    <div class="shell final-cta__inner">
+      <h2>Ready to Run Your Pipeline on Truth?</h2>
+      <p>Join forward-thinking sales teams who close more deals with AI-powered intelligence.</p>
+      <button type="button" class="hero-btn hero-btn--primary hero-btn--lg" (click)="onWatchDemo()">
+        <i class="pi pi-calendar"></i> Schedule Your Demo
+      </button>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="shell footer__grid">
+      <div class="footer__brand">
+        <div class="hero-brand">
+          <span class="hero-brand-wordmark">North Edge</span>
+          <span class="hero-brand-crm">CRM</span>
+        </div>
+        <p>Evidence-based CRM for sales teams that close.</p>
+      </div>
+      <div class="footer__col">
+        <h4>Product</h4>
+        <ul>
+          <li><a (click)="scrollTo('features')">Features</a></li>
+          <li><a (click)="scrollTo('pricing')">Pricing</a></li>
+          <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="mailto:contact&#64;northedgesystem.com">Contact</a></li>
+        </ul>
+      </div>
+      <div class="footer__col">
+        <h4>Get In Touch</h4>
+        <ul>
+          <li><a href="mailto:contact&#64;northedgesystem.com">contact&#64;northedgesystem.com</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="shell footer__bottom">
+      <span>&copy; {{ currentYear }} North Edge System. All rights reserved.</span>
+    </div>
+  </footer>
 
   <p-dialog
     [(visible)]="showDemoForm"

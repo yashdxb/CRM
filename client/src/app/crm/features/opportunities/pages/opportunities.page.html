@@ -308,16 +308,16 @@
           <div class="deal-card" *ngFor="let deal of getOpportunitiesByStage(stage)" (click)="canManage() ? onEdit(deal) : null">
             <div class="deal-card-header">
               <div class="deal-avatar" [style.background]="'linear-gradient(135deg, ' + stageColumnColor(deal.stage) + ' 0%, ' + stageColumnColor(deal.stage) + 'cc 100%)'">
-                {{ deal.name?.charAt(0) || 'D' }}
+                {{ deal.name.charAt(0) || 'D' }}
               </div>
               <div class="deal-meta">
                 <span class="deal-name">{{ deal.name }}</span>
                 <span class="deal-account">{{ deal.account || 'No account' }}</span>
               </div>
               <div class="deal-probability" 
-                [class.high]="(deal.probability ?? 0) >= 70" 
-                [class.medium]="(deal.probability ?? 0) >= 40 && (deal.probability ?? 0) < 70" 
-                [class.low]="(deal.probability ?? 0) < 40">
+                [class.high]="deal.probability >= 70" 
+                [class.medium]="deal.probability >= 40 && deal.probability < 70" 
+                [class.low]="deal.probability < 40">
                 {{ deal.probability || 0 }}%
               </div>
             </div>
