@@ -1,7 +1,7 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { finalize } from 'rxjs/operators';
-import { SKIP_LOADING_OVERLAY } from './loading-overlay.context';
+import { SHOW_LOADING_OVERLAY, SKIP_LOADING_OVERLAY } from './loading-overlay.context';
 import { LoadingOverlayService } from './loading-overlay.service';
 
 export const loadingOverlayInterceptor: HttpInterceptorFn = (req, next) => {
@@ -10,7 +10,8 @@ export const loadingOverlayInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   const loading = inject(LoadingOverlayService);
+  const blocking = req.context.get(SHOW_LOADING_OVERLAY);
 
-  loading.start();
-  return next(req).pipe(finalize(() => loading.stop()));
+  loading.start(blocking);
+  return next(req).pipe(finalize(() => loading.stop(blocking)));
 };

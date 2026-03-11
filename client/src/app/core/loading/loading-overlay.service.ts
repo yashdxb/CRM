@@ -3,68 +3,127 @@ import { Injectable, computed, signal } from '@angular/core';
 @Injectable({ providedIn: 'root' })
 export class LoadingOverlayService {
   private readonly activeRequests = signal(0);
-  private readonly visibleSignal = signal(false);
-  private visibleSinceMs = 0;
-  private showTimer: ReturnType<typeof setTimeout> | null = null;
-  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly blockingRequests = signal(0);
+  private readonly activitySignal = signal(false);
+  private readonly overlaySignal = signal(false);
+  private activityVisibleSinceMs = 0;
+  private overlayVisibleSinceMs = 0;
+  private activityShowTimer: ReturnType<typeof setTimeout> | null = null;
+  private activityHideTimer: ReturnType<typeof setTimeout> | null = null;
+  private overlayShowTimer: ReturnType<typeof setTimeout> | null = null;
+  private overlayHideTimer: ReturnType<typeof setTimeout> | null = null;
 
-  readonly visible = computed(() => this.visibleSignal());
+  readonly activityVisible = computed(() => this.activitySignal());
+  readonly visible = computed(() => this.overlaySignal());
 
-  start(): void {
+  start(blocking = false): void {
     this.activeRequests.update((count) => count + 1);
-    this.scheduleShow();
+    if (blocking) {
+      this.blockingRequests.update((count) => count + 1);
+      this.scheduleOverlayShow();
+    }
+    this.scheduleActivityShow();
   }
 
-  stop(): void {
+  stop(blocking = false): void {
     this.activeRequests.update((count) => Math.max(0, count - 1));
-    if (this.activeRequests() > 0) {
-      return;
+    if (blocking) {
+      this.blockingRequests.update((count) => Math.max(0, count - 1));
+      if (this.blockingRequests() === 0) {
+        this.scheduleOverlayHide();
+      }
     }
-    this.scheduleHide();
+
+    if (this.activeRequests() === 0) {
+      this.scheduleActivityHide();
+    }
   }
 
-  private scheduleShow(): void {
-    if (this.visibleSignal()) {
+  private scheduleActivityShow(): void {
+    if (this.activitySignal()) {
       return;
     }
-    if (this.hideTimer) {
-      clearTimeout(this.hideTimer);
-      this.hideTimer = null;
+    if (this.activityHideTimer) {
+      clearTimeout(this.activityHideTimer);
+      this.activityHideTimer = null;
     }
-    if (this.showTimer) {
+    if (this.activityShowTimer) {
       return;
     }
 
-    this.showTimer = setTimeout(() => {
-      this.showTimer = null;
+    this.activityShowTimer = setTimeout(() => {
+      this.activityShowTimer = null;
       if (this.activeRequests() > 0) {
-        this.visibleSinceMs = Date.now();
-        this.visibleSignal.set(true);
+        this.activityVisibleSinceMs = Date.now();
+        this.activitySignal.set(true);
       }
     }, 120);
   }
 
-  private scheduleHide(): void {
-    if (this.showTimer) {
-      clearTimeout(this.showTimer);
-      this.showTimer = null;
+  private scheduleActivityHide(): void {
+    if (this.activityShowTimer) {
+      clearTimeout(this.activityShowTimer);
+      this.activityShowTimer = null;
     }
-    if (!this.visibleSignal()) {
+    if (!this.activitySignal()) {
       return;
     }
-    if (this.hideTimer) {
+    if (this.activityHideTimer) {
       return;
     }
 
     const minVisibleMs = 260;
-    const elapsed = Date.now() - this.visibleSinceMs;
+    const elapsed = Date.now() - this.activityVisibleSinceMs;
     const delay = Math.max(0, minVisibleMs - elapsed);
-    this.hideTimer = setTimeout(() => {
-      this.hideTimer = null;
+    this.activityHideTimer = setTimeout(() => {
+      this.activityHideTimer = null;
       if (this.activeRequests() === 0) {
-        this.visibleSignal.set(false);
+        this.activitySignal.set(false);
+      }
+    }, delay);
+  }
+
+  private scheduleOverlayShow(): void {
+    if (this.overlaySignal()) {
+      return;
+    }
+    if (this.overlayHideTimer) {
+      clearTimeout(this.overlayHideTimer);
+      this.overlayHideTimer = null;
+    }
+    if (this.overlayShowTimer) {
+      return;
+    }
+
+    this.overlayShowTimer = setTimeout(() => {
+      this.overlayShowTimer = null;
+      if (this.blockingRequests() > 0) {
+        this.overlayVisibleSinceMs = Date.now();
+        this.overlaySignal.set(true);
+      }
+    }, 180);
+  }
+
+  private scheduleOverlayHide(): void {
+    if (this.overlayShowTimer) {
+      clearTimeout(this.overlayShowTimer);
+      this.overlayShowTimer = null;
+    }
+    if (!this.overlaySignal()) {
+      return;
+    }
+    if (this.overlayHideTimer) {
+      return;
+    }
+
+    const minVisibleMs = 260;
+    const elapsed = Date.now() - this.overlayVisibleSinceMs;
+    const delay = Math.max(0, minVisibleMs - elapsed);
+    this.overlayHideTimer = setTimeout(() => {
+      this.overlayHideTimer = null;
+      if (this.blockingRequests() === 0) {
+        this.overlaySignal.set(false);
       }
     }, delay);
   }
 }
-
