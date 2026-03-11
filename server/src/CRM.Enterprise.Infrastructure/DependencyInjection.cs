@@ -167,6 +167,8 @@ public static class DependencyInjection
             return new RuleBasedLeadScoringService();
         });
         services.AddScoped<ILeadConversationScoreService, LeadConversationScoreService>();
+        services.AddScoped<ILeadInteractionSummaryService, LeadInteractionSummaryService>();
+        services.AddScoped<ILeadConversationSummarizer, LeadConversationSummarizer>();
         services.Configure<FoundryAgentOptions>(configuration.GetSection(FoundryAgentOptions.SectionName));
         services.Configure<AzureSearchKnowledgeOptions>(configuration.GetSection(AzureSearchKnowledgeOptions.SectionName));
         services.AddSingleton(sp =>

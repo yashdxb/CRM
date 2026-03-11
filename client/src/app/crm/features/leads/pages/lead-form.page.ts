@@ -39,7 +39,7 @@ import {
   LeadStatus,
   LeadStatusHistoryItem
 } from '../models/lead.model';
-import { LeadDataService, SaveLeadRequest } from '../services/lead-data.service';
+import { LeadDataService, LeadConversationSummaryResponse, SaveLeadRequest } from '../services/lead-data.service';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -61,6 +61,22 @@ import { computeLeadScore, computeQualificationRawScore, LeadDataWeight, LeadSco
 import { Activity } from '../../activities/models/activity.model';
 import { ActivityDataService } from '../../activities/services/activity-data.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
+import { EmailListItem } from '../../emails/models/email.model';
+
+/** Progression statuses shown in the stepper (left → right) */
+const LEAD_PROGRESSION_STATUSES: readonly LeadStatus[] = ['New', 'Contacted', 'Nurture', 'Qualified'] as const;
+/** Outcome statuses shown as exit buttons below the stepper */
+const LEAD_OUTCOME_STATUSES: readonly LeadStatus[] = ['Converted', 'Lost', 'Disqualified'] as const;
+
+type StepState = 'completed' | 'current' | 'available' | 'locked';
+
+interface StepperStep {
+  status: LeadStatus;
+  label: string;
+  icon: string;
+  state: StepState;
+  unlockHint: string | null;
+}
 
 interface StatusOption {
   label: string;
@@ -193,6 +209,14 @@ const CQVS_GROUP_DEFINITIONS: Array<{
 export class LeadFormPage implements OnInit, OnDestroy {
   private static readonly ACCORDION_STATE_STORAGE_KEY = 'crm.lead-form.accordion-state.v1';
   protected activeTab = signal<'overview' | 'qualification' | 'activity' | 'history' | 'documents'>('overview');
+
+  /** Inline closure form state (Strategy C – stepper morphs) */
+  protected closureFormActive = signal(false);
+  protected closureFormStatus = signal<'Lost' | 'Disqualified' | null>(null);
+  protected closureReason = '';
+  protected closureCompetitor = '';
+  protected closureNotes = '';
+
   protected overviewAccordionOpenPanels = signal<string[]>(['lead-basics', 'contact-details', 'score']);
   protected qualificationAccordionOpenPanels = signal<string[]>([
     'qualification-factors',
@@ -318,6 +342,12 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected cadenceTouches = signal<LeadCadenceTouch[]>([]);
   protected recentLeadActivities = signal<Activity[]>([]);
   protected recentLeadActivitiesLoading = signal(false);
+  protected leadEmails = signal<EmailListItem[]>([]);
+  protected leadEmailsLoading = signal(false);
+  protected leadEmailsExpanded = signal(false);
+  protected leadEmailsTotalCount = signal(0);
+  protected conversationAiSummary = signal<LeadConversationSummaryResponse | null>(null);
+  protected conversationAiSummaryLoading = signal(false);
   protected transferredActivityCount = signal<number>(0);
   protected transferredLastActivity = signal<Activity | null>(null);
   protected transferredActivityEntityType = signal<'Opportunity' | 'Account' | null>(null);
@@ -397,9 +427,14 @@ export class LeadFormPage implements OnInit, OnDestroy {
           this.loadCadenceTouches(this.editingId!);
           this.loadRecentLeadActivities(this.editingId!);
           this.loadSupportingDocuments(this.editingId!);
+          this.loadLeadEmails(this.editingId!);
         },
-        error: () => {
-          this.raiseToast('error', 'This lead is no longer available.');
+        error: (err) => {
+          console.error('Lead load failed:', err);
+          const status = (err as { status?: number })?.status;
+          const parsed = this.extractApiError(err, 'This lead is no longer available.');
+          const detail = status ? `(HTTP ${status}) ${parsed.message}` : parsed.message;
+          this.raiseToast('error', detail);
           this.router.navigate(['/app/leads']);
         }
       });
@@ -649,7 +684,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.leadsManage);
   }
 
-  private statusIcon(status: LeadStatus): string {
+  protected statusIcon(status: LeadStatus): string {
     switch (status) {
       case 'New':
         return 'pi-star';
@@ -755,6 +790,159 @@ export class LeadFormPage implements OnInit, OnDestroy {
     }
 
     return null;
+  }
+
+  // ─── Status Stepper ────────────────────────────────────────────
+
+  /** Whether to show the visual stepper (non-admin edit mode) */
+  protected showStatusStepper(): boolean {
+    return this.isEditMode() && !this.hasAdministrationManagePermission();
+  }
+
+  /** The ordered progression order index for the current status */
+  private progressionIndex(status: LeadStatus): number {
+    return LEAD_PROGRESSION_STATUSES.indexOf(status);
+  }
+
+  /** Build the stepper steps with state + unlock hints */
+  protected stepperSteps(): StepperStep[] {
+    const current = this.form.status as LeadStatus;
+    const currentIdx = this.progressionIndex(current);
+    const hasFirstTouch = !!this.firstTouchedAtUtc();
+    const qualFactors = this.countQualificationFactors();
+    const hasQualNotes = !!this.form.qualifiedNotes?.trim();
+    const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
+
+    return LEAD_PROGRESSION_STATUSES.map((status, idx) => {
+      let state: StepState;
+      let unlockHint: string | null = null;
+
+      if (status === current) {
+        state = 'current';
+      } else if (currentIdx >= 0 && idx < currentIdx) {
+        // Steps before current are completed (in the progression)
+        state = 'completed';
+      } else {
+        // Steps after current — check if unlocked
+        state = this.isStepUnlocked(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence)
+          ? 'available'
+          : 'locked';
+        if (state === 'locked') {
+          unlockHint = this.stepUnlockHint(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence);
+        }
+      }
+
+      // Special case: if current status is an outcome (Lost/Disqualified/Converted),
+      // mark all progression steps by their natural order
+      if (currentIdx < 0) {
+        if (current === 'Converted') {
+          state = 'completed';
+        } else {
+          // Lost/Disqualified — show steps as they were before exit
+          state = idx === 0 ? 'completed' : 'locked';
+        }
+      }
+
+      return {
+        status,
+        label: status,
+        icon: this.statusIcon(status),
+        state,
+        unlockHint
+      };
+    });
+  }
+
+  private isStepUnlocked(status: LeadStatus, hasFirstTouch: boolean, qualFactors: number, hasQualNotes: boolean, meetsEvidence: boolean): boolean {
+    switch (status) {
+      case 'Contacted':
+        return hasFirstTouch;
+      case 'Nurture':
+        return true; // Nurture is always available as a parking state
+      case 'Qualified':
+        return hasFirstTouch && qualFactors >= 3 && hasQualNotes && meetsEvidence;
+      default:
+        return true;
+    }
+  }
+
+  private stepUnlockHint(status: LeadStatus, hasFirstTouch: boolean, qualFactors: number, hasQualNotes: boolean, meetsEvidence: boolean): string {
+    switch (status) {
+      case 'Contacted':
+        return 'Log a completed call, email, or meeting to unlock this step';
+      case 'Qualified': {
+        const missing: string[] = [];
+        if (!hasFirstTouch) missing.push('log an activity');
+        if (qualFactors < 3) missing.push(`complete ${3 - qualFactors} more qualification factor${3 - qualFactors > 1 ? 's' : ''}`);
+        if (!hasQualNotes) missing.push('add qualification notes');
+        if (!meetsEvidence) missing.push('add evidence to meet coverage threshold');
+        return `To unlock: ${missing.join(', ')}`;
+      }
+      default:
+        return 'Complete the previous steps first';
+    }
+  }
+
+  /** Whether the current status is an outcome (below the stepper) */
+  protected isOutcomeStatus(): boolean {
+    return !!this.form.status && (LEAD_OUTCOME_STATUSES as readonly string[]).includes(this.form.status);
+  }
+
+  /** Click handler for a stepper step */
+  protected onStepClick(step: StepperStep): void {
+    if (step.state === 'locked' || step.state === 'current') return;
+    this.form.status = step.status;
+  }
+
+  /** Click handler for outcome exit buttons */
+  protected onOutcomeClick(status: LeadStatus): void {
+    if (status === 'Converted') {
+      this.onConvertLead();
+    } else if (status === 'Lost' || status === 'Disqualified') {
+      // Strategy C: morph stepper into inline closure form
+      this.closureReason = '';
+      this.closureCompetitor = '';
+      this.closureNotes = '';
+      this.closureFormStatus.set(status);
+      this.closureFormActive.set(true);
+    }
+  }
+
+  /** Confirm the closure: apply status + populate form fields, then trigger save */
+  protected confirmClosure(): void {
+    const status = this.closureFormStatus();
+    if (!status) return;
+
+    if (status === 'Lost') {
+      if (!this.closureReason?.trim()) return;
+      this.form.status = status;
+      this.form.lossReason = this.closureReason;
+      this.form.lossCompetitor = this.closureCompetitor;
+      this.form.lossNotes = this.closureNotes;
+    } else {
+      if (!this.closureReason?.trim()) return;
+      this.form.status = status;
+      this.form.disqualifiedReason = this.closureReason;
+    }
+
+    // Trigger save — closure form closes only on success (inside performSave)
+    this.onSave();
+  }
+
+  /** Cancel the inline closure form without changing status */
+  protected cancelClosure(): void {
+    this.closureFormActive.set(false);
+    this.closureFormStatus.set(null);
+  }
+
+  /** Whether a specific outcome action is available */
+  protected isOutcomeAvailable(status: LeadStatus): boolean {
+    if (status === 'Converted') return this.canConvertLead();
+    if (status === 'Lost' || status === 'Disqualified') {
+      const current = this.form.status as LeadStatus;
+      return current !== 'Converted'; // Can exit to lost/disqualified from any non-converted status
+    }
+    return false;
   }
 
   protected hasLinkedRecords(): boolean {
@@ -932,12 +1120,16 @@ export class LeadFormPage implements OnInit, OnDestroy {
             state: { lead: created, defaultTab: 'qualification' }
           });
         }
-        if (isEdit && this.editingId) {
-          // Reset editing state after save - snapshot will be recaptured in prefillFromLead
-          this.resetEditingState();
-          this.reloadLeadDetails(this.editingId);
+        if (isEdit) {
+          // Navigate back to leads list after successful update
+          this.router.navigate(['/app/leads']);
         }
         this.statusApiError.set(null);
+        // Close inline closure form on successful save
+        if (this.closureFormActive()) {
+          this.closureFormActive.set(false);
+          this.closureFormStatus.set(null);
+        }
         const message = isEdit ? 'Lead updated.' : 'Lead created. Complete qualification now or later.';
         this.raiseToast('success', message);
         this.updateQualificationFeedback();
@@ -1139,6 +1331,85 @@ export class LeadFormPage implements OnInit, OnDestroy {
           this.recentLeadActivitiesLoading.set(false);
         }
       });
+  }
+
+  private loadLeadEmails(leadId: string) {
+    this.leadEmailsLoading.set(true);
+    this.leadData.getLeadEmails(leadId).subscribe({
+      next: (res) => {
+        this.leadEmails.set(res.items ?? []);
+        this.leadEmailsTotalCount.set(res.total ?? 0);
+        this.leadEmailsLoading.set(false);
+      },
+      error: () => {
+        this.leadEmails.set([]);
+        this.leadEmailsLoading.set(false);
+      }
+    });
+  }
+
+  protected emailEngagementStats() {
+    const emails = this.leadEmails();
+    if (!emails.length) return null;
+    const sent = emails.filter(e => e.status !== 'Failed');
+    const opened = emails.filter(e => e.status === 'Opened' || e.status === 'Clicked');
+    const sorted = [...emails].sort((a, b) =>
+      new Date(b.sentAtUtc || b.createdAtUtc).getTime() - new Date(a.sentAtUtc || a.createdAtUtc).getTime()
+    );
+    return {
+      total: this.leadEmailsTotalCount(),
+      displayed: emails.length,
+      openRate: sent.length ? Math.round((opened.length / sent.length) * 100) : 0,
+      lastEmailDate: sorted[0]?.sentAtUtc || sorted[0]?.createdAtUtc || null
+    };
+  }
+
+  protected toggleEmailsExpanded() {
+    this.leadEmailsExpanded.update(v => !v);
+  }
+
+  protected trackEmailById(_index: number, email: EmailListItem): string {
+    return email.id;
+  }
+
+  protected emailDirection(email: EmailListItem): 'outbound' | 'inbound' {
+    const currentEmail = readUserEmail();
+    if (!currentEmail) return 'outbound';
+    return email.toEmail?.toLowerCase() === currentEmail.toLowerCase() ? 'inbound' : 'outbound';
+  }
+
+  protected onGenerateConversationSummary() {
+    if (!this.editingId || this.conversationAiSummaryLoading()) return;
+    this.conversationAiSummaryLoading.set(true);
+    this.leadData.generateConversationSummary(this.editingId).subscribe({
+      next: (result) => {
+        this.conversationAiSummary.set(result);
+        this.conversationAiSummaryLoading.set(false);
+        this.raiseToast('success', 'AI conversation summary generated.');
+      },
+      error: (err) => {
+        this.conversationAiSummaryLoading.set(false);
+        this.raiseToast('error', this.extractApiErrorMessage(err, 'Unable to generate conversation summary.'));
+      }
+    });
+  }
+
+  protected sentimentIcon(sentiment: string): string {
+    switch (sentiment?.toLowerCase()) {
+      case 'positive': return 'pi-thumbs-up';
+      case 'cautious': return 'pi-exclamation-triangle';
+      case 'negative': return 'pi-thumbs-down';
+      default: return 'pi-minus';
+    }
+  }
+
+  protected sentimentClass(sentiment: string): string {
+    switch (sentiment?.toLowerCase()) {
+      case 'positive': return 'sentiment--positive';
+      case 'cautious': return 'sentiment--cautious';
+      case 'negative': return 'sentiment--negative';
+      default: return 'sentiment--neutral';
+    }
   }
 
   private loadTransferredActivitiesSummary(): void {
@@ -2477,8 +2748,20 @@ export class LeadFormPage implements OnInit, OnDestroy {
       return 'Nurture follow-up date is required when setting a lead to Nurture.';
     }
 
-    if ((this.form.status === 'Lost' || this.form.status === 'Disqualified') && !this.form.disqualifiedReason?.trim()) {
-      return 'Disqualified reason is required when closing a lead.';
+    if (this.form.status === 'Disqualified' && !this.form.disqualifiedReason?.trim()) {
+      return 'Disqualified reason is required when closing a lead as Disqualified.';
+    }
+
+    if (this.form.status === 'Lost') {
+      if (!this.form.lossReason?.trim()) {
+        return 'Loss reason is required when closing a lead as Lost.';
+      }
+      if (!this.form.lossCompetitor?.trim()) {
+        return 'Competitor is required when closing a lead as Lost.';
+      }
+      if (!this.form.lossNotes?.trim()) {
+        return 'Loss notes are required when closing a lead as Lost.';
+      }
     }
 
     return null;

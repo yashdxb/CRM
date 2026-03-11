@@ -29,17 +29,20 @@ public class LeadsController : ControllerBase
     private readonly ILeadImportService _leadImportService;
     private readonly ICrmRealtimePublisher _realtimePublisher;
     private readonly ITenantProvider _tenantProvider;
+    private readonly ILeadConversationSummarizer _conversationSummarizer;
 
     public LeadsController(
         ILeadService leadService,
         ILeadImportService leadImportService,
         ICrmRealtimePublisher realtimePublisher,
-        ITenantProvider tenantProvider)
+        ITenantProvider tenantProvider,
+        ILeadConversationSummarizer conversationSummarizer)
     {
         _leadService = leadService;
         _leadImportService = leadImportService;
         _realtimePublisher = realtimePublisher;
         _tenantProvider = tenantProvider;
+        _conversationSummarizer = conversationSummarizer;
     }
 
     [HttpGet]
@@ -242,6 +245,23 @@ public class LeadsController : ControllerBase
         var result = await _leadService.ScoreAsync(id, cancellationToken);
         if (result is null) return NotFound();
         return Ok(new LeadAiScoreResponse(result.Score, result.Confidence, result.Rationale, result.ScoredAtUtc));
+    }
+
+    [HttpPost("{id:guid}/conversation-summary")]
+    [Authorize(Policy = Permissions.Policies.LeadsManage)]
+    [ProducesResponseType(typeof(LeadConversationSummaryResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<LeadConversationSummaryResponse>> GenerateConversationSummary(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _conversationSummarizer.SummarizeAsync(id, cancellationToken);
+            return Ok(new LeadConversationSummaryResponse(result.Summary, result.Sentiment, result.NextAction, result.GeneratedAtUtc));
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("not found"))
+        {
+            return NotFound();
+        }
     }
 
     [HttpPost("{id:guid}/recycle-to-nurture")]

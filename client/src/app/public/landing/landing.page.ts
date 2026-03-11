@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, DestroyRef, ElementRef, HostListener, OnInit, inject } from '@angular/core';
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -33,7 +33,7 @@ import { AppToastService } from '../../core/app-toast.service';
   styleUrls: ['./landing.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class LandingPage implements OnInit {
+export class LandingPage implements OnInit, AfterViewInit {
   private readonly torontoZone = 'America/Toronto';
   private readonly heroPreviewIntervalMs = 4200;
   private readonly svc = inject(CrmLandingService);
@@ -43,6 +43,7 @@ export class LandingPage implements OnInit {
   private readonly toastService = inject(AppToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
+  private readonly elRef = inject(ElementRef);
 
   currentYear = new Date().getFullYear();
   showDemoForm = false;
@@ -54,9 +55,10 @@ export class LandingPage implements OnInit {
   mobileMenuOpen = false;
   activeHeroPreview = 0;
   readonly heroPreviewSlides = [
-    { label: 'Pipeline Overview', image: '/assets/landing/kpi-pipeline.png' },
-    { label: 'AI Lead Score', image: '/assets/landing/kpi-lead-score.png' },
-    { label: 'Win Rate Summary', image: '/assets/landing/kpi-winrate.png' }
+    { label: 'Pipeline Overview', image: '/assets/landing/kpi-pipeline.png', title: 'Close More Deals with', titleAccent: 'AI-Powered Pipeline Intelligence', subtitle: 'North Edge CRM gives your sales team real-time pipeline visibility, AI-driven lead scoring, and evidence-based forecasting — so every deal in your pipeline is defensible.' },
+    { label: 'AI Lead Score', image: '/assets/landing/kpi-lead-score.png', title: 'Focus on Leads that', titleAccent: 'Actually Convert', subtitle: 'Predictive AI scoring ranks every lead so your team spends time on deals most likely to close.' },
+    { label: 'Win Rate Summary', image: '/assets/landing/kpi-winrate.png', title: 'Track Win Rates with', titleAccent: 'Precision Analytics', subtitle: 'Evidence-based win rate tracking with drill-down analytics — know exactly what drives your wins.' },
+    { label: 'AI Execution Orchestration', image: '/assets/landing/kpi-ai-execution.png', title: 'Automate Actions with', titleAccent: 'AI Execution Orchestration', subtitle: 'Intelligent workflow orchestration powered by AI — automate follow-ups, approvals, and next-best-actions across your pipeline.' }
   ];
   readonly timezoneOptions = this.buildTimeZoneOptions();
   private readonly detectedTimeZone = this.detectBrowserTimeZone();
@@ -71,6 +73,16 @@ export class LandingPage implements OnInit {
     { icon: 'pi-shield', color: 'orange', title: 'Risk Register', description: 'Proactive deal risk detection with SLA monitoring, stale deal alerts, and at-risk deal flagging.' },
     { icon: 'pi-cog', color: 'slate', title: 'Smart Automation', description: 'Automated workflows for follow-ups, stage transitions, and notifications that keep deals moving.' }
   ];
+
+  readonly stats = [
+    { icon: 'pi-users', value: 500, suffix: '+', label: 'Enterprise Users' },
+    { icon: 'pi-globe', value: 12, suffix: '', label: 'Countries' },
+    { icon: 'pi-shield', value: 99.9, suffix: '%', label: 'Uptime SLA' },
+    { icon: 'pi-headphones', value: 24, suffix: '/7', label: 'Support' }
+  ];
+  animatedStatValues: number[] = [0, 0, 0, 0];
+  private statsAnimated = false;
+  private scrollObserver: IntersectionObserver | null = null;
 
   readonly howItWorks = [
     { title: 'Create Your Workspace', description: 'Set up your team workspace in minutes. Invite your sales reps and configure your pipeline stages.' },
@@ -105,6 +117,84 @@ export class LandingPage implements OnInit {
       .subscribe(() => {
         this.demoForm.controls.preferredDateTime.updateValueAndValidity({ emitEvent: false });
       });
+  }
+
+  ngAfterViewInit(): void {
+    this.initScrollAnimations();
+  }
+
+  onCardMouseMove(event: MouseEvent): void {
+    const card = (event.currentTarget as HTMLElement);
+    const rect = card.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -8;
+    const rotateY = ((x - centerX) / centerX) * 8;
+    card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+    card.style.setProperty('--glow-x', `${(x / rect.width) * 100}%`);
+    card.style.setProperty('--glow-y', `${(y / rect.height) * 100}%`);
+  }
+
+  onCardMouseLeave(event: MouseEvent): void {
+    const card = (event.currentTarget as HTMLElement);
+    card.style.transform = '';
+    card.style.removeProperty('--glow-x');
+    card.style.removeProperty('--glow-y');
+  }
+
+  private initScrollAnimations(): void {
+    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    this.scrollObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          if (prefersReducedMotion) {
+            entry.target.classList.add('scroll-visible');
+          } else {
+            entry.target.classList.add('scroll-visible');
+          }
+
+          if (entry.target.classList.contains('stats-bar') && !this.statsAnimated) {
+            this.statsAnimated = true;
+            this.animateCounters();
+          }
+
+          this.scrollObserver?.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+
+    const els = this.elRef.nativeElement.querySelectorAll('.scroll-animate');
+    els.forEach((el: Element) => this.scrollObserver!.observe(el));
+
+    this.destroyRef.onDestroy(() => this.scrollObserver?.disconnect());
+  }
+
+  private animateCounters(): void {
+    const duration = 1800;
+    const start = performance.now();
+    const targets = this.stats.map(s => s.value);
+
+    const step = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+
+      this.animatedStatValues = targets.map(t => {
+        const v = ease * t;
+        return t % 1 !== 0 ? Math.round(v * 10) / 10 : Math.round(v);
+      });
+      this.cdr.markForCheck();
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+    requestAnimationFrame(step);
   }
 
   @HostListener('window:scroll')

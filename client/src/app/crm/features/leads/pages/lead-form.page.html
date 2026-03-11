@@ -60,29 +60,129 @@
             </button>
             <button
               type="button"
-              class="action-btn action-btn--add"
+              class="lead-btn lead-btn--accent"
               *ngIf="isEditMode()"
               (click)="logActivity()"
             >
-              <span class="action-btn__icon"><i class="pi pi-calendar-plus"></i></span>
+              <i class="pi pi-calendar-plus"></i>
               <span>Log activity</span>
             </button>
           </div>
-          <div class="header-title">
-            <h1 class="hero-title">
-              <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
-              <span class="title-light">Lead</span>
-            </h1>
-            <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
-            <div class="presence-focus presence-focus--viewing" *ngIf="isEditMode() && visiblePresenceUsers().length">
-              <i class="pi pi-eye"></i>
-              <span>{{ viewingPresenceSummary() }}</span>
+          <div class="header-row">
+            <div class="header-title">
+              <h1 class="hero-title">
+                <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
+                <span class="title-light">Lead</span>
+              </h1>
+              <p>{{ isEditMode() ? 'Update lead details and status' : 'Add a new lead to your pipeline' }}</p>
+              <div class="presence-focus presence-focus--viewing" *ngIf="isEditMode() && visiblePresenceUsers().length">
+                <i class="pi pi-eye"></i>
+                <span>{{ viewingPresenceSummary() }}</span>
+              </div>
+              <div class="presence-editing-note" *ngIf="isEditMode() && activeEditors().length">
+                <i class="pi pi-pencil"></i>
+                <span>{{ editingPresenceSummary() }}</span>
+              </div>
             </div>
-            <div class="presence-editing-note" *ngIf="isEditMode() && activeEditors().length">
-              <i class="pi pi-pencil"></i>
-              <span>{{ editingPresenceSummary() }}</span>
+
+            <!-- Hero Status Ribbon (visual stepper beside title) -->
+            <div class="status-ribbon" *ngIf="showStatusStepper()">
+            <div class="status-ribbon__inner">
+              <div class="lead-stepper lead-stepper--ribbon">
+                <div class="lead-stepper__track">
+                  @for (step of stepperSteps(); track step.status; let i = $index; let last = $last) {
+                    <div
+                      class="lead-stepper__step"
+                      [attr.data-state]="step.state"
+                      [class.lead-stepper__step--clickable]="step.state === 'available'"
+                      (click)="step.state === 'available' ? onStepClick(step) : null"
+                      [pTooltip]="step.unlockHint ?? undefined"
+                      tooltipPosition="top"
+                    >
+                      <div class="lead-stepper__icon">
+                        <i class="pi" [ngClass]="step.state === 'completed' ? 'pi-check' : (step.state === 'locked' ? 'pi-lock' : step.icon)"></i>
+                      </div>
+                      <span class="lead-stepper__label">{{ step.label }}</span>
+                    </div>
+                    <div class="lead-stepper__connector" *ngIf="!last" [attr.data-filled]="step.state === 'completed'"></div>
+                  }
+                </div>
+
+                <div class="lead-stepper__outcomes" *ngIf="!isOutcomeStatus() && !closureFormActive()">
+                  <button
+                    type="button"
+                    class="lead-stepper__outcome lead-stepper__outcome--convert"
+                    [disabled]="!isOutcomeAvailable('Converted')"
+                    (click)="onOutcomeClick('Converted')"
+                    pTooltip="Promote this lead to a customer"
+                    tooltipPosition="top"
+                  >
+                    <i class="pi pi-arrow-up-right"></i> Convert
+                  </button>
+                  <button
+                    type="button"
+                    class="lead-stepper__outcome lead-stepper__outcome--lost"
+                    [disabled]="!isOutcomeAvailable('Lost')"
+                    (click)="onOutcomeClick('Lost')"
+                  >
+                    <i class="pi pi-times-circle"></i> Lost
+                  </button>
+                  <button
+                    type="button"
+                    class="lead-stepper__outcome lead-stepper__outcome--disqualified"
+                    [disabled]="!isOutcomeAvailable('Disqualified')"
+                    (click)="onOutcomeClick('Disqualified')"
+                  >
+                    <i class="pi pi-ban"></i> Disqualified
+                  </button>
+                </div>
+
+                <!-- Inline closure form (Strategy C morph) -->
+                <div class="lead-stepper__closure-form" *ngIf="closureFormActive()">
+                  <span class="closure-form__label">
+                    <i class="pi" [ngClass]="closureFormStatus() === 'Lost' ? 'pi-times-circle' : 'pi-ban'"></i>
+                    {{ closureFormStatus() }}
+                  </span>
+                  <p-select
+                    [options]="closureFormStatus() === 'Lost' ? lossReasonOptions() : disqualificationReasonOptions()"
+                    optionLabel="label"
+                    optionValue="value"
+                    [(ngModel)]="closureReason"
+                    [placeholder]="closureFormStatus() === 'Lost' ? 'Loss reason *' : 'Disqualification reason *'"
+                    appendTo="body"
+                    styleClass="closure-form__select"
+                  ></p-select>
+                  <input
+                    *ngIf="closureFormStatus() === 'Lost'"
+                    pInputText
+                    [(ngModel)]="closureCompetitor"
+                    placeholder="Competitor"
+                    class="closure-form__input"
+                  />
+                  <input
+                    *ngIf="closureFormStatus() === 'Lost'"
+                    pInputText
+                    [(ngModel)]="closureNotes"
+                    placeholder="Loss notes"
+                    class="closure-form__input"
+                  />
+                  <button type="button" class="closure-form__confirm" (click)="confirmClosure()" [disabled]="!closureReason.trim()">
+                    <i class="pi pi-check"></i> Confirm
+                  </button>
+                  <button type="button" class="closure-form__cancel" (click)="cancelClosure()">
+                    <i class="pi pi-times"></i>
+                  </button>
+                </div>
+
+                <div class="lead-stepper__outcome-active" *ngIf="isOutcomeStatus()">
+                  <i class="pi" [ngClass]="statusIcon(form.status!)"></i>
+                  <span>{{ form.status }}</span>
+                </div>
+              </div>
             </div>
           </div>
+          </div>
+
         </div>
       </header>
 
@@ -228,7 +328,109 @@
                     <input pInputText id="lead-companyName" name="companyName" [(ngModel)]="form.companyName" placeholder="Company" class="w-full" />
                   </p-inputgroup>
                 </div>
-                <div class="form-field">
+                <!-- Status Stepper (guided flow for non-admin edit) -->
+                <div class="form-field form-field--stepper" *ngIf="showStatusStepper()">
+                  <label>Status</label>
+                  <div class="lead-stepper">
+                    <div class="lead-stepper__track">
+                      @for (step of stepperSteps(); track step.status; let i = $index; let last = $last) {
+                        <div
+                          class="lead-stepper__step"
+                          [attr.data-state]="step.state"
+                          [class.lead-stepper__step--clickable]="step.state === 'available'"
+                          (click)="step.state === 'available' ? onStepClick(step) : null"
+                          [pTooltip]="step.unlockHint ?? undefined"
+                          tooltipPosition="top"
+                        >
+                          <div class="lead-stepper__icon">
+                            <i class="pi" [ngClass]="step.state === 'completed' ? 'pi-check' : (step.state === 'locked' ? 'pi-lock' : step.icon)"></i>
+                          </div>
+                          <span class="lead-stepper__label">{{ step.label }}</span>
+                        </div>
+                        <div class="lead-stepper__connector" *ngIf="!last" [attr.data-filled]="step.state === 'completed'"></div>
+                      }
+                    </div>
+
+                    <div class="lead-stepper__outcomes" *ngIf="!isOutcomeStatus() && !closureFormActive()">
+                      <button
+                        type="button"
+                        class="lead-stepper__outcome lead-stepper__outcome--convert"
+                        [disabled]="!isOutcomeAvailable('Converted')"
+                        (click)="onOutcomeClick('Converted')"
+                        pTooltip="Promote this lead to a customer"
+                        tooltipPosition="top"
+                      >
+                        <i class="pi pi-arrow-up-right"></i> Convert
+                      </button>
+                      <button
+                        type="button"
+                        class="lead-stepper__outcome lead-stepper__outcome--lost"
+                        [disabled]="!isOutcomeAvailable('Lost')"
+                        (click)="onOutcomeClick('Lost')"
+                      >
+                        <i class="pi pi-times-circle"></i> Lost
+                      </button>
+                      <button
+                        type="button"
+                        class="lead-stepper__outcome lead-stepper__outcome--disqualified"
+                        [disabled]="!isOutcomeAvailable('Disqualified')"
+                        (click)="onOutcomeClick('Disqualified')"
+                      >
+                        <i class="pi pi-ban"></i> Disqualified
+                      </button>
+                    </div>
+
+                    <!-- Inline closure form (Strategy C morph) -->
+                    <div class="lead-stepper__closure-form" *ngIf="closureFormActive()">
+                      <span class="closure-form__label">
+                        <i class="pi" [ngClass]="closureFormStatus() === 'Lost' ? 'pi-times-circle' : 'pi-ban'"></i>
+                        {{ closureFormStatus() }}
+                      </span>
+                      <p-select
+                        [options]="closureFormStatus() === 'Lost' ? lossReasonOptions() : disqualificationReasonOptions()"
+                        optionLabel="label"
+                        optionValue="value"
+                        [(ngModel)]="closureReason"
+                        [placeholder]="closureFormStatus() === 'Lost' ? 'Loss reason *' : 'Disqualification reason *'"
+                        appendTo="body"
+                        styleClass="closure-form__select"
+                      ></p-select>
+                      <input
+                        *ngIf="closureFormStatus() === 'Lost'"
+                        pInputText
+                        [(ngModel)]="closureCompetitor"
+                        placeholder="Competitor"
+                        class="closure-form__input"
+                      />
+                      <input
+                        *ngIf="closureFormStatus() === 'Lost'"
+                        pInputText
+                        [(ngModel)]="closureNotes"
+                        placeholder="Loss notes"
+                        class="closure-form__input"
+                      />
+                      <button type="button" class="closure-form__confirm" (click)="confirmClosure()" [disabled]="!closureReason.trim()">
+                        <i class="pi pi-check"></i> Confirm
+                      </button>
+                      <button type="button" class="closure-form__cancel" (click)="cancelClosure()">
+                        <i class="pi pi-times"></i>
+                      </button>
+                    </div>
+
+                    <div class="lead-stepper__outcome-active" *ngIf="isOutcomeStatus()">
+                      <i class="pi" [ngClass]="statusIcon(form.status!)"></i>
+                      <span>{{ form.status }}</span>
+                    </div>
+                  </div>
+
+                  <div class="status-note" *ngIf="statusPolicyHint() as hint">
+                    <p>{{ hint }}</p>
+                    <a class="status-action-link" *ngIf="isActivityDrivenHint()" (click)="goToActivityTab()"><i class="pi pi-plus-circle"></i> Log an activity</a>
+                  </div>
+                </div>
+
+                <!-- Status Dropdown (admin fallback / create mode) -->
+                <div class="form-field" *ngIf="!showStatusStepper()">
                   <label>Status</label>
                   <p-select
                     [options]="statusOptionsForView()"
@@ -816,6 +1018,133 @@
                   <li *ngFor="let reason of conversationScoreReasons()">{{ reason }}</li>
                 </ul>
               </div>
+            </div>
+          </section>
+
+          <!-- ═══ Email engagement panel ═══ -->
+          <section class="email-engagement-panel" *ngIf="!leadEmailsLoading() || leadEmails().length">
+            <div class="email-engagement-panel__header">
+              <div class="email-engagement-panel__title">
+                <i class="pi pi-envelope" aria-hidden="true"></i>
+                <div>
+                  <h3>Email Engagement</h3>
+                  <p>Email communication history with this lead</p>
+                </div>
+              </div>
+              <div class="email-engagement-panel__stats" *ngIf="emailEngagementStats() as stats">
+                <span class="email-stat">
+                  <i class="pi pi-send" aria-hidden="true"></i>
+                  <strong>{{ stats.total }}</strong> emails
+                </span>
+                <span class="email-stat email-stat--open">
+                  <i class="pi pi-eye" aria-hidden="true"></i>
+                  <strong>{{ stats.openRate }}%</strong> opened
+                </span>
+                <span class="email-stat email-stat--date" *ngIf="stats.lastEmailDate">
+                  <i class="pi pi-clock" aria-hidden="true"></i>
+                  Last: {{ stats.lastEmailDate | date:'MMM d, y' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="email-thread-list" *ngIf="leadEmails().length">
+              <div
+                class="email-thread-item"
+                *ngFor="let email of (leadEmailsExpanded() ? leadEmails() : leadEmails().slice(0, 5)); trackBy: trackEmailById"
+                [class.email-thread-item--inbound]="emailDirection(email) === 'inbound'"
+                [class.email-thread-item--outbound]="emailDirection(email) === 'outbound'"
+              >
+                <div class="email-thread-item__direction">
+                  <i class="pi" [ngClass]="emailDirection(email) === 'inbound' ? 'pi-arrow-down-left' : 'pi-arrow-up-right'" aria-hidden="true"></i>
+                </div>
+                <div class="email-thread-item__body">
+                  <div class="email-thread-item__meta">
+                    <span class="email-thread-item__sender">{{ email.senderName || email.toEmail }}</span>
+                    <span class="email-thread-item__date">{{ (email.sentAtUtc || email.createdAtUtc) | date:'MMM d, h:mm a' }}</span>
+                  </div>
+                  <span class="email-thread-item__subject">{{ email.subject }}</span>
+                </div>
+                <div class="email-thread-item__status">
+                  <span class="email-status-badge" [attr.data-status]="email.status.toLowerCase()">{{ email.status }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="email-engagement-panel__empty" *ngIf="!leadEmailsLoading() && !leadEmails().length">
+              <i class="pi pi-inbox" aria-hidden="true"></i>
+              <span>No email communication recorded for this lead</span>
+            </div>
+
+            <div class="email-engagement-panel__loading" *ngIf="leadEmailsLoading() && !leadEmails().length">
+              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              <span>Loading emails…</span>
+            </div>
+
+            <button
+              type="button"
+              class="email-engagement-panel__toggle"
+              *ngIf="leadEmails().length > 5"
+              (click)="toggleEmailsExpanded()"
+            >
+              <i class="pi" [ngClass]="leadEmailsExpanded() ? 'pi-chevron-up' : 'pi-chevron-down'" aria-hidden="true"></i>
+              {{ leadEmailsExpanded() ? 'Show fewer' : 'Show all ' + leadEmailsTotalCount() + ' emails' }}
+            </button>
+          </section>
+
+          <!-- ═══ AI Conversation Summary ═══ -->
+          <section class="ai-summary-card" *ngIf="isEditMode()">
+            <div class="ai-summary-card__header">
+              <div class="ai-summary-card__title">
+                <i class="pi pi-sparkles" aria-hidden="true"></i>
+                <div>
+                  <h3>AI Conversation Summary</h3>
+                  <p>AI-powered analysis of your interactions with this lead</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="action-btn action-btn--refresh ai-summary-card__generate"
+                (click)="onGenerateConversationSummary()"
+                [disabled]="conversationAiSummaryLoading()"
+              >
+                <span class="action-btn__icon">
+                  <i class="pi" [ngClass]="conversationAiSummaryLoading() ? 'pi-spin pi-spinner' : 'pi-sparkles'" aria-hidden="true"></i>
+                </span>
+                <span>{{ conversationAiSummary() ? 'Refresh' : 'Generate' }}</span>
+              </button>
+            </div>
+
+            <div class="ai-summary-card__body" *ngIf="conversationAiSummary() as summary">
+              <div class="ai-summary-card__summary">
+                <div class="ai-summary-card__section-label">Summary</div>
+                <p>{{ summary.summary }}</p>
+              </div>
+              <div class="ai-summary-card__meta">
+                <div class="ai-summary-meta-item" [ngClass]="sentimentClass(summary.sentiment)">
+                  <i class="pi" [ngClass]="sentimentIcon(summary.sentiment)" aria-hidden="true"></i>
+                  <span class="ai-summary-meta-label">Sentiment</span>
+                  <strong>{{ summary.sentiment }}</strong>
+                </div>
+                <div class="ai-summary-meta-item ai-summary-meta-item--action">
+                  <i class="pi pi-arrow-right" aria-hidden="true"></i>
+                  <span class="ai-summary-meta-label">Next Action</span>
+                  <strong>{{ summary.nextAction }}</strong>
+                </div>
+                <div class="ai-summary-meta-item ai-summary-meta-item--time" *ngIf="summary.generatedAtUtc">
+                  <i class="pi pi-clock" aria-hidden="true"></i>
+                  <span>{{ summary.generatedAtUtc | date:'MMM d, h:mm a' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-summary-card__empty" *ngIf="!conversationAiSummary() && !conversationAiSummaryLoading()">
+              <i class="pi pi-sparkles" aria-hidden="true"></i>
+              <span>Click Generate to create an AI-powered summary of your conversations with this lead</span>
+            </div>
+
+            <div class="ai-summary-card__loading" *ngIf="conversationAiSummaryLoading() && !conversationAiSummary()">
+              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+              <span>Analyzing conversation…</span>
             </div>
           </section>
 
@@ -1776,15 +2105,16 @@
           </p-tabs>
 
           <footer class="form-actions">
-            <button type="button" class="action-btn action-btn--back" (click)="router.navigate(['/app/leads'])">
+            <button type="button" class="lead-btn lead-btn--secondary" (click)="router.navigate(['/app/leads'])">
+              <i class="pi pi-times"></i>
               <span>Cancel</span>
             </button>
             <button
               type="submit"
-              class="action-btn action-btn--add"
+              class="lead-btn lead-btn--primary"
               [disabled]="!form.firstName || !form.lastName || saving() || isReadOnlyDueToEditing()"
             >
-              <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+              <i class="pi pi-check"></i>
               <span>{{ isEditMode() ? 'Update lead' : 'Create lead' }}</span>
             </button>
           </footer>

@@ -18,6 +18,10 @@
         <li><a (click)="scrollTo('features')">Features</a></li>
         <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
         <li><a (click)="scrollTo('pricing')">Pricing</a></li>
+        <li class="topbar__nav-actions">
+          <button type="button" class="nav-btn nav-btn--ghost" (click)="onSignIn()">Sign In</button>
+          <button type="button" class="nav-btn nav-btn--primary" (click)="onWatchDemo()">Book a Demo</button>
+        </li>
       </ul>
       <div class="topbar__actions">
         <button type="button" class="nav-btn nav-btn--ghost" (click)="onSignIn()">Sign In</button>
@@ -36,8 +40,19 @@
         <span class="hero-brand-wordmark">North Edge</span>
         <span class="hero-brand-crm">CRM</span>
       </div>
-      <h1 class="hero__title">Close More Deals with<br />AI-Powered Pipeline Intelligence</h1>
-      <p class="hero__subtitle">North Edge CRM gives your sales team real-time pipeline visibility, AI-driven lead scoring, and evidence-based forecasting — so every deal in your pipeline is defensible.</p>
+      <h1 class="hero__title">
+        <span class="hero__title-text" *ngFor="let slide of heroPreviewSlides; let i = index"
+              [class.hero__title-text--active]="i === activeHeroPreview">
+          {{ slide.title }}<br />
+          <span class="hero__title-accent">{{ slide.titleAccent }}</span>
+        </span>
+      </h1>
+      <div class="hero__subtitle-wrap">
+        <p class="hero__subtitle" *ngFor="let slide of heroPreviewSlides; let i = index"
+           [class.hero__subtitle--active]="i === activeHeroPreview">
+          {{ slide.subtitle }}
+        </p>
+      </div>
       <div class="hero__cta">
         <button type="button" class="hero-btn hero-btn--primary" (click)="onWatchDemo()">
           <i class="pi pi-calendar"></i> Book a Demo
@@ -69,7 +84,7 @@
   </section>
 
   <!-- Differentiator Banner -->
-  <section class="banner">
+  <section class="banner scroll-animate">
     <div class="shell banner__inner">
       <span class="banner__icon"><i class="pi pi-unlock"></i></span>
       <h2 class="banner__title">One License. Unlimited Users. Forever.</h2>
@@ -77,14 +92,35 @@
     </div>
   </section>
 
+  <!-- Stats Bar -->
+  <section class="stats-bar scroll-animate">
+    <div class="shell stats-bar__inner">
+      <div class="stat-item" *ngFor="let stat of stats; let i = index" [style.animation-delay]="i * 0.1 + 's'">
+        <div class="stat-item__icon">
+          <i class="pi" [ngClass]="stat.icon"></i>
+        </div>
+        <div class="stat-item__content">
+          <span class="stat-item__value">{{ animatedStatValues[i] }}{{ stat.suffix }}</span>
+          <span class="stat-item__label">{{ stat.label }}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gradient Bridge -->
+  <div class="gradient-bridge" aria-hidden="true"></div>
+
   <!-- Features -->
   <section id="features" class="features">
     <div class="shell">
-      <span class="section-badge">Platform Capabilities</span>
-      <h2 class="section-title">Everything Your Sales Team Needs</h2>
-      <p class="section-subtitle">Six core capabilities designed to give your team an unfair advantage in every deal.</p>
+      <span class="section-badge scroll-animate">Platform Capabilities</span>
+      <h2 class="section-title scroll-animate">Everything Your Sales Team Needs</h2>
+      <p class="section-subtitle scroll-animate">Six core capabilities designed to give your team an unfair advantage in every deal.</p>
       <div class="features__grid">
-        <div class="feature-card" *ngFor="let feat of features">
+        <div class="feature-card scroll-animate" *ngFor="let feat of features; let i = index"
+             [style.animation-delay]="i * 0.08 + 's'"
+             (mousemove)="onCardMouseMove($event)"
+             (mouseleave)="onCardMouseLeave($event)">
           <div class="feature-card__icon" [ngClass]="'feature-card__icon--' + feat.color">
             <i class="pi" [ngClass]="feat.icon"></i>
           </div>
@@ -98,10 +134,10 @@
   <!-- How It Works -->
   <section id="how-it-works" class="how-it-works">
     <div class="shell">
-      <span class="section-badge">Getting Started</span>
-      <h2 class="section-title">Up and Running in Three Steps</h2>
+      <span class="section-badge scroll-animate">Getting Started</span>
+      <h2 class="section-title scroll-animate">Up and Running in Three Steps</h2>
       <div class="how-it-works__steps">
-        <div class="step-card" *ngFor="let step of howItWorks; let i = index">
+        <div class="step-card scroll-animate" *ngFor="let step of howItWorks; let i = index" [style.animation-delay]="i * 0.12 + 's'">
           <div class="step-card__number">{{ i + 1 }}</div>
           <h3>{{ step.title }}</h3>
           <p>{{ step.description }}</p>
@@ -113,9 +149,9 @@
   <!-- Pricing -->
   <section id="pricing" class="pricing">
     <div class="shell">
-      <span class="section-badge">Simple Pricing</span>
-      <h2 class="section-title">One Price. Everything Included.</h2>
-      <div class="pricing__card">
+      <span class="section-badge scroll-animate">Simple Pricing</span>
+      <h2 class="section-title scroll-animate">One Price. Everything Included.</h2>
+      <div class="pricing__card scroll-animate">
         <div class="pricing__badge">Most Popular</div>
         <h3 class="pricing__plan">Enterprise</h3>
         <div class="pricing__price">
@@ -139,7 +175,7 @@
   </section>
 
   <!-- Final CTA -->
-  <section class="final-cta">
+  <section class="final-cta scroll-animate">
     <div class="shell final-cta__inner">
       <h2>Ready to Run Your Pipeline on Truth?</h2>
       <p>Join forward-thinking sales teams who close more deals with AI-powered intelligence.</p>

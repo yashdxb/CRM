@@ -17,11 +17,13 @@ public sealed class AzureOpenAiLeadScoringService : ILeadScoringService
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly HttpClient _httpClient;
     private readonly AzureOpenAiOptions _options;
+    private readonly ILeadInteractionSummaryService _interactionSummary;
 
-    public AzureOpenAiLeadScoringService(HttpClient httpClient, IOptions<AzureOpenAiOptions> options)
+    public AzureOpenAiLeadScoringService(HttpClient httpClient, IOptions<AzureOpenAiOptions> options, ILeadInteractionSummaryService interactionSummary)
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _interactionSummary = interactionSummary;
     }
 
     public async Task<LeadAiScore> ScoreAsync(Lead lead, CancellationToken cancellationToken)
@@ -41,6 +43,8 @@ public sealed class AzureOpenAiLeadScoringService : ILeadScoringService
             throw new InvalidOperationException("Azure OpenAI API version is not configured.");
         }
 
+        var interactionSummary = await _interactionSummary.GetSummaryAsync(lead.Id, lead.TenantId, cancellationToken);
+
         var request = new
         {
             temperature = _options.Temperature,
@@ -56,7 +60,7 @@ public sealed class AzureOpenAiLeadScoringService : ILeadScoringService
                 new
                 {
                     role = "user",
-                    content = BuildLeadPrompt(lead)
+                    content = BuildLeadPrompt(lead, interactionSummary)
                 }
             }
         };
@@ -83,9 +87,9 @@ public sealed class AzureOpenAiLeadScoringService : ILeadScoringService
         return ParseScore(content);
     }
 
-    private static string BuildLeadPrompt(Lead lead)
+    private static string BuildLeadPrompt(Lead lead, LeadInteractionSummary? summary = null)
     {
-        return $"Lead profile:\n" +
+        var prompt = $"Lead profile:\n" +
                $"Name: {lead.FirstName} {lead.LastName}\n" +
                $"Company: {lead.CompanyName ?? "N/A"}\n" +
                $"Job title: {lead.JobTitle ?? "N/A"}\n" +
@@ -96,6 +100,22 @@ public sealed class AzureOpenAiLeadScoringService : ILeadScoringService
                $"Linked Account: {(lead.AccountId.HasValue ? "Yes" : "No")}\n" +
                $"Linked Contact: {(lead.ContactId.HasValue ? "Yes" : "No")}\n" +
                $"Status: {(lead.Status?.Name ?? "Unknown")}";
+
+        if (summary is not null && summary.TotalEmails > 0)
+        {
+            prompt += $"\n\nEmail engagement:\n" +
+                      $"Total emails: {summary.TotalEmails} (Inbound: {summary.InboundEmails}, Outbound: {summary.OutboundEmails})\n" +
+                      $"Open rate: {summary.OpenRate:F0}%\n" +
+                      $"Click rate: {summary.ClickRate:F0}%\n" +
+                      $"Last email: {summary.LastEmailAtUtc?.ToString("yyyy-MM-dd") ?? "N/A"}";
+
+            if (summary.DetectedSignals.Count > 0)
+            {
+                prompt += $"\nBuyer signals detected: {string.Join(", ", summary.DetectedSignals)}";
+            }
+        }
+
+        return prompt;
     }
 
     private static LeadAiScore ParseScore(string jsonContent)

@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { environment } from '../../../../../environments/environment';
 import { CsvImportJob } from '../../../../shared/models/csv-import.model';
+import { EmailSearchResponse } from '../../emails/models/email.model';
 import { QualificationPolicy } from '../../settings/models/workspace-settings.model';
 import {
   Lead,
@@ -67,6 +68,13 @@ export interface LeadAiScoreResponse {
   confidence: number;
   rationale: string;
   scoredAtUtc: string;
+}
+
+export interface LeadConversationSummaryResponse {
+  summary: string;
+  sentiment: string;
+  nextAction: string;
+  generatedAtUtc: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -164,8 +172,21 @@ export class LeadDataService {
     return this.http.post<LeadCadenceTouch>(`${this.baseUrl}/api/leads/${id}/cadence-touch`, payload);
   }
 
+  getLeadEmails(id: string, page = 1, pageSize = 10) {
+    const params = new HttpParams()
+      .set('relatedEntityType', 'Lead')
+      .set('relatedEntityId', id)
+      .set('page', page)
+      .set('pageSize', pageSize);
+    return this.http.get<EmailSearchResponse>(`${this.baseUrl}/api/emails`, { params });
+  }
+
   aiScore(id: string) {
     return this.http.post<LeadAiScoreResponse>(`${this.baseUrl}/api/leads/${id}/ai-score`, {});
+  }
+
+  generateConversationSummary(id: string) {
+    return this.http.post<LeadConversationSummaryResponse>(`${this.baseUrl}/api/leads/${id}/conversation-summary`, {});
   }
 
   convert(id: string, payload: LeadConversionRequest) {
