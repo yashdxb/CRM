@@ -1202,7 +1202,6 @@ The following documents are superseded by this master file and should only be us
 - `docs/USER_GUIDE.md`
 - `docs/UseCases_V1.txt`
 - `docs/TEST_PLAN.md`
-- `docs/COMPETITIVE_GAP.md`
 - `docs/login-cors-fix.md`
 
 ---

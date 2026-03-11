@@ -1581,10 +1581,16 @@ public class DatabaseInitializer : IDatabaseInitializer
         return _configuration.GetValue<bool>("Seeding:AllowProductionTestData", false);
     }
 
+    // Essential admin users — always seeded, including Production.
+    private readonly (string Name, string Email, string TimeZone, string Locale, string[] Roles, string Password)[] _essentialUsers =
+    {
+        ("Yasser Ahamed", "yasser.ahamed@live.com", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "ChangeThisAdmin!1"),
+    };
+
+    // Demo/test users — seeded only in non-Production or when explicitly allowed.
     private readonly (string Name, string Email, string TimeZone, string Locale, string[] Roles, string Password)[] _seedUsers =
     {
         ("Super Admin", "super.admin@crmenterprise.demo", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "ChangeThisSuper!1"),
-        ("Yasser Ahamed", "yasser.ahamed@live.com", "UTC", "en-US", new[] { "Admin" }, "ChangeThisAdmin!1"),
         ("Jordan Patel", "jordan.patel@crmenterprise.demo", "America/New_York", "en-US", new[] { "Sales Manager" }, "ChangeThisSales!1"),
         ("Ava Chen", "ava.chen@crmenterprise.demo", "America/Los_Angeles", "en-US", new[] { "Sales Rep" }, "ChangeThisRep!1"),
         ("Leo Martins", "leo.martins@crmenterprise.demo", "Europe/London", "en-GB", new[] { "Marketing Ops" }, "ChangeThisMops!1"),
@@ -1911,6 +1917,12 @@ public class DatabaseInitializer : IDatabaseInitializer
 
     private async Task SeedUsersAsync(CancellationToken cancellationToken)
     {
+        // Essential admin users are always seeded, even in Production.
+        foreach (var (name, email, tz, locale, roles, password) in _essentialUsers)
+        {
+            await EnsureDemoUserAsync(name, email, tz, locale, roles, password, cancellationToken);
+        }
+
         if (!ShouldSeedProductionTestData())
         {
             return;

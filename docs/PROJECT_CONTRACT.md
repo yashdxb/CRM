@@ -158,7 +158,5 @@ This document defines the binding technical, UX, and delivery rules for the curr
   - `docs/UseCases_V1.txt`
 - Testing:
   - `docs/TEST_PLAN.md`
-- Competitive/Gap Analysis:
-  - `docs/COMPETITIVE_GAP.md`
 - Legacy/History:
   - `docs/login-cors-fix.md`

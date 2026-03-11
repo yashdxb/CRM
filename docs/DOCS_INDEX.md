@@ -75,7 +75,6 @@ Important:
 | `docs/MOBILE_BACKLOG.md` | Roadmap / Backlog Planning | No | Active | Product/Engineering | Mobile backlog planning |
 | `docs/USER_STORIES_LEGACY.md` | Reference / Mapping | No | Reference | Product | Legacy narrative preserved |
 | `docs/SALES_REP_USER_STORIES.md` | Reference / Mapping | No | Reference | Product | Role-specific story subset/reference |
-| `docs/COMPETITIVE_GAP.md` | Reference / Mapping | No | Active | Product | Competitive analysis |
 | `docs/CRM_CAPABILITIES_KNOWLEDGE_MAPPING.md` | Reference / Mapping | No | Active | Product/RevOps | Capability-to-AI-knowledge coverage map |
 | `docs/AI_ASSISTANT_ACTION_EXECUTION_BLUEPRINT.md` | Reference / Mapping | No | Active | Engineering | Design/implementation blueprint |
 | `docs/AI_ASSISTANT_KNOWLEDGE_QUICK_START.md` | Operational Guide | No | Active | Engineering/RevOps | Quick start for AI knowledge feeding |
@@ -172,7 +171,6 @@ These are **proposed exact moves** for cleanup. Do not execute until references 
 
 ### C) Reference / mapping -> `docs/mappings/`
 1. `docs/CRM_CAPABILITIES_KNOWLEDGE_MAPPING.md` -> `docs/mappings/CRM_CAPABILITIES_KNOWLEDGE_MAPPING.md`
-2. `docs/COMPETITIVE_GAP.md` -> `docs/mappings/COMPETITIVE_GAP.md`
 3. `docs/LESSONS_LEARNED.md` -> `docs/mappings/LESSONS_LEARNED.md` (or `docs/retros/`)
 4. `docs/USER_STORIES_LEGACY.md` -> `docs/mappings/USER_STORIES_LEGACY.md`
 5. `docs/SALES_REP_USER_STORIES.md` -> `docs/mappings/SALES_REP_USER_STORIES.md`
