@@ -67,6 +67,59 @@ public sealed class ReportLibraryService : IReportLibraryService
                 StageFilter()
             ]),
         new(
+            "Pipeline Stage Mix",
+            "Visual pipeline mix by stage using value, deal count, and share of open pipeline.",
+            65,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Date range"),
+                OwnerFilter(),
+                StageFilter()
+            ]),
+        new(
+            "Revenue and Conversion Trend",
+            "Monthly revenue and lead conversion trend for sales leadership.",
+            75,
+            [
+                DateRangeFilter("DateFrom", "DateTo", "Period"),
+                OwnerFilter()
+            ]),
+        new(
+            "Lead Quality vs Conversation Signal",
+            "Scatter view of qualification score versus conversation score to expose outliers and coaching gaps.",
+            145,
+            [
+                OwnerFilter(),
+                DateRangeFilter("DateFrom", "DateTo", "Lead created date"),
+                ReportParameterFilter("LeadSource", "Lead source", "leadSource", "report-parameter")
+            ]),
+        new(
+            "CQVS Readiness Heatmap",
+            "Factor-by-readiness heatmap showing where CQVS evidence is weak across the lead funnel.",
+            146,
+            [
+                OwnerFilter(),
+                DateRangeFilter("DateFrom", "DateTo", "Lead created date"),
+                ReportParameterFilter("LeadSource", "Lead source", "leadSource", "report-parameter")
+            ]),
+        new(
+            "Manager Pipeline Health",
+            "Stage-level pipeline health with stale deal count, average age, and weighted exposure.",
+            211,
+            [
+                OwnerFilter(),
+                StageFilter(),
+                DateRangeFilter("DateFrom", "DateTo", "Period")
+            ]),
+        new(
+            "Forecast Distribution",
+            "Forecast bucket distribution using open value and weighted pipeline share.",
+            212,
+            [
+                OwnerFilter(),
+                DateRangeFilter("DateFrom", "DateTo", "Expected close date"),
+                StageFilter()
+            ]),
+        new(
             "Revenue Forecast",
             "Projected and weighted revenue forecast grouped by period.",
             70,
@@ -417,6 +470,12 @@ public sealed class ReportLibraryService : IReportLibraryService
             "Lead Conversion Summary" => template with { Description = "Inquiry, qualification, and transaction conversion by agent and source." },
             "Sales Activities by Owner" => template with { Description = "Showings, calls, meetings, and overdue follow-up by agent." },
             "Forecast Summary" => template with { Description = "Expected closings and weighted transaction value by stage and close window." },
+            "Pipeline Stage Mix" => template with { Description = "Visual mix of active transactions by stage, value, and share." },
+            "Revenue and Conversion Trend" => template with { Description = "Monthly closings revenue and inquiry-to-transaction trend." },
+            "Lead Quality vs Conversation Signal" => template with { Description = "Buyer-readiness versus conversation momentum by inquiry." },
+            "CQVS Readiness Heatmap" => template with { Description = "CQVS factor heatmap showing weak readiness signals by inquiry." },
+            "Manager Pipeline Health" => template with { Description = "Transaction-stage health with stale listings, age, and weighted exposure." },
+            "Forecast Distribution" => template with { Description = "Forecast mix across active transactions and expected close windows." },
             _ => template
         }).ToList();
     }

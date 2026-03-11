@@ -45,6 +45,12 @@ var reports = new[]
     CreateLeadConversionSummaryReport(connectionString),
     CreateSalesActivitiesByOwnerReport(connectionString),
     CreateForecastSummaryReport(connectionString),
+    CreatePipelineStageMixVisualReport(connectionString),
+    CreateRevenueAndConversionTrendReport(connectionString),
+    CreateLeadQualityConversationSignalReport(connectionString),
+    CreateCqvsReadinessHeatmapReport(connectionString),
+    CreateManagerPipelineHealthVisualReport(connectionString),
+    CreateForecastDistributionVisualReport(connectionString),
     CreateRevenueForecastReport(connectionString),
     CreateWinLossAnalysisReport(connectionString),
     CreateSalesCycleDurationReport(connectionString),
@@ -390,6 +396,461 @@ ORDER BY ForecastBucket";
     return report;
 }
 
+static Report CreatePipelineStageMixVisualReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    s.Name AS StageName,
+    s.[Order] AS StageOrder,
+    COUNT(*) AS OpportunityCount,
+    SUM(o.Amount) AS PipelineValue,
+    CASE
+        WHEN SUM(SUM(o.Amount)) OVER () = 0 THEN 0
+        ELSE CAST((SUM(o.Amount) * 100.0) / SUM(SUM(o.Amount)) OVER () AS decimal(10, 2))
+    END AS SharePercent
+FROM [crm].[Opportunities] o
+INNER JOIN [crm].[OpportunityStages] s ON s.Id = o.StageId AND s.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND o.IsClosed = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@Stage IS NULL OR @Stage = '' OR @Stage = 'All' OR s.Name = @Stage)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY s.Name, s.[Order]
+ORDER BY s.[Order]";
+
+    var (report, detail) = CreateVisualReportBase("Pipeline Stage Mix", "Pipeline Stage Mix", "Visual mix of open pipeline by stage, value, and share.", 6.1);
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("Stage", string.Empty));
+
+    var dataSource = CreateSqlDataSource("PipelineStageMixData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@Stage", "= Parameters.Stage.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    detail.Items.Add(CreateBarChart(
+        "Pipeline value by stage",
+        dataSource,
+        "=Fields.StageName",
+        "=Fields.StageOrder",
+        "=Fields.PipelineValue",
+        0, 0.15, 9.45, 4.05,
+        "${0:#,0}"));
+    detail.Items.Add(CreateDataTable(
+        "PipelineStageMixTable",
+        dataSource,
+        0, 4.45,
+        ["Stage", "Open deals", "Pipeline value", "Share %"],
+        [3.6, 1.5, 2.2, 1.4],
+        [
+            ("= Fields.StageName", HorizontalAlign.Left, null),
+            ("= Fields.OpportunityCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.PipelineValue", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.SharePercent", HorizontalAlign.Right, "{0:N1}%")
+        ]));
+    return report;
+}
+
+static Report CreateRevenueAndConversionTrendReport(string connectionString)
+{
+    const string sql = @"
+WITH Revenue AS (
+    SELECT
+        FORMAT(o.UpdatedAtUtc, 'yyyy-MM') AS Period,
+        SUM(CASE WHEN o.IsClosed = 1 AND o.IsWon = 1 THEN o.Amount ELSE 0 END) AS WonRevenue
+    FROM [crm].[Opportunities] o
+    WHERE o.IsDeleted = 0
+      AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+      AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.UpdatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+      AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.UpdatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+    GROUP BY FORMAT(o.UpdatedAtUtc, 'yyyy-MM')
+),
+LeadAgg AS (
+    SELECT
+        FORMAT(l.CreatedAtUtc, 'yyyy-MM') AS Period,
+        COUNT(*) AS LeadsCreated,
+        SUM(CASE WHEN l.ConvertedAtUtc IS NOT NULL OR l.ConvertedOpportunityId IS NOT NULL THEN 1 ELSE 0 END) AS ConvertedCount
+    FROM [crm].[Leads] l
+    WHERE l.IsDeleted = 0
+      AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(l.OwnerId AS nvarchar(36)) = @OwnerUserId)
+      AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(l.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+      AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(l.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+    GROUP BY FORMAT(l.CreatedAtUtc, 'yyyy-MM')
+),
+Periods AS (
+    SELECT Period FROM Revenue
+    UNION
+    SELECT Period FROM LeadAgg
+)
+SELECT
+    p.Period,
+    ISNULL(r.WonRevenue, 0) AS WonRevenue,
+    ISNULL(l.LeadsCreated, 0) AS LeadsCreated,
+    ISNULL(l.ConvertedCount, 0) AS ConvertedCount,
+    CASE
+        WHEN ISNULL(l.LeadsCreated, 0) = 0 THEN 0
+        ELSE CAST((ISNULL(l.ConvertedCount, 0) * 100.0) / l.LeadsCreated AS decimal(10, 2))
+    END AS ConversionRate
+FROM Periods p
+LEFT JOIN Revenue r ON r.Period = p.Period
+LEFT JOIN LeadAgg l ON l.Period = p.Period
+ORDER BY p.Period";
+
+    var (report, detail) = CreateVisualReportBase("Revenue and Conversion Trend", "Revenue and Conversion Trend", "Monthly revenue trend with lead conversion rate.", 6.35);
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("RevenueConversionTrendData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    detail.Items.Add(CreateLineChart(
+        "Won revenue trend",
+        dataSource,
+        "=Fields.Period",
+        "=Fields.Period",
+        "=Fields.WonRevenue",
+        0, 0.15, 9.45, 2.35,
+        "${0:#,0}"));
+    detail.Items.Add(CreateLineChart(
+        "Lead conversion rate",
+        dataSource,
+        "=Fields.Period",
+        "=Fields.Period",
+        "=Fields.ConversionRate",
+        0, 2.8, 9.45, 2.2,
+        "{0:N0}%"));
+    detail.Items.Add(CreateDataTable(
+        "RevenueConversionTrendTable",
+        dataSource,
+        0, 5.2,
+        ["Period", "Won revenue", "Leads", "Converted", "Conversion %"],
+        [1.7, 2.4, 1.2, 1.2, 1.4],
+        [
+            ("= Fields.Period", HorizontalAlign.Left, null),
+            ("= Fields.WonRevenue", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.LeadsCreated", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ConvertedCount", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ConversionRate", HorizontalAlign.Right, "{0:N1}%")
+        ]));
+    return report;
+}
+
+static Report CreateLeadQualityConversationSignalReport(string connectionString)
+{
+    const string sql = @"
+SELECT TOP 100
+    CONCAT(l.FirstName, ' ', l.LastName) AS LeadName,
+    COALESCE(u.FullName, 'Unassigned') AS OwnerName,
+    ISNULL(l.Score, 0) AS QualificationScore,
+    ISNULL(l.ConversationScore, 0) AS ConversationScore,
+    CASE
+        WHEN l.Score >= 80 AND ISNULL(l.ConversationScore, 0) >= 75 THEN 'Ready'
+        WHEN l.Score >= 65 AND ISNULL(l.ConversationScore, 0) >= 55 THEN 'Monitor'
+        WHEN l.Score >= 50 OR ISNULL(l.ConversationScore, 0) >= 50 THEN 'Coach'
+        ELSE 'At Risk'
+    END AS ReadinessBand,
+    COALESCE(NULLIF(l.Source, ''), 'Unknown') AS LeadSource
+FROM [crm].[Leads] l
+LEFT JOIN [identity].[Users] u ON u.Id = l.OwnerId AND u.IsDeleted = 0
+WHERE l.IsDeleted = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(l.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@LeadSource IS NULL OR @LeadSource = '' OR COALESCE(NULLIF(l.Source, ''), 'Unknown') = @LeadSource)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(l.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(l.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+ORDER BY QualificationScore DESC, ConversationScore DESC, LeadName";
+
+    var (report, detail) = CreateVisualReportBase("Lead Quality vs Conversation Signal", "Lead Quality vs Conversation Signal", "Scatter view of qualification strength versus conversation momentum.", 6.15);
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    var leadSourceLookup = CreateSqlDataSource("LeadSourceLookup", connectionString, leadSourceLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateLookupParameter("LeadSource", "Lead Source", leadSourceLookup, "LeadSource", "LeadSourceLabel"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("LeadQualityConversationSignalData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@LeadSource", "= Parameters.LeadSource.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    detail.Items.Add(CreateScatterChart(
+        "Qualification vs conversation score",
+        dataSource,
+        "=Fields.LeadName",
+        "=Fields.QualificationScore",
+        "=Fields.ConversationScore",
+        0, 0.15, 9.45, 4.1));
+    detail.Items.Add(CreateDataTable(
+        "LeadQualityConversationSignalTable",
+        dataSource,
+        0, 4.55,
+        ["Lead", "Owner", "Qualification", "Conversation", "Readiness"],
+        [2.6, 2.0, 1.4, 1.4, 1.5],
+        [
+            ("= Fields.LeadName", HorizontalAlign.Left, null),
+            ("= Fields.OwnerName", HorizontalAlign.Left, null),
+            ("= Fields.QualificationScore", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ConversationScore", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.ReadinessBand", HorizontalAlign.Left, null)
+        ]));
+    return report;
+}
+
+static Report CreateCqvsReadinessHeatmapReport(string connectionString)
+{
+    const string sql = @"
+WITH LeadBands AS (
+    SELECT
+        CASE
+            WHEN ISNULL(l.Score, 0) >= 80 AND ISNULL(l.ConversationScore, 0) >= 75 THEN 'Ready'
+            WHEN ISNULL(l.Score, 0) >= 65 AND ISNULL(l.ConversationScore, 0) >= 55 THEN 'Monitor'
+            WHEN ISNULL(l.Score, 0) >= 50 OR ISNULL(l.ConversationScore, 0) >= 50 THEN 'Coach'
+            ELSE 'At Risk'
+        END AS ReadinessBand,
+        l.BudgetAvailability,
+        l.ReadinessToSpend,
+        l.BuyingTimeline,
+        l.ProblemSeverity,
+        l.EconomicBuyer,
+        l.IcpFit
+    FROM [crm].[Leads] l
+    WHERE l.IsDeleted = 0
+      AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(l.OwnerId AS nvarchar(36)) = @OwnerUserId)
+      AND (@LeadSource IS NULL OR @LeadSource = '' OR COALESCE(NULLIF(l.Source, ''), 'Unknown') = @LeadSource)
+      AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(l.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+      AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(l.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+),
+FactorRows AS (
+    SELECT ReadinessBand, 'Budget availability' AS FactorName, BudgetAvailability AS FactorValue FROM LeadBands
+    UNION ALL SELECT ReadinessBand, 'Readiness to spend', ReadinessToSpend FROM LeadBands
+    UNION ALL SELECT ReadinessBand, 'Buying timeline', BuyingTimeline FROM LeadBands
+    UNION ALL SELECT ReadinessBand, 'Problem severity', ProblemSeverity FROM LeadBands
+    UNION ALL SELECT ReadinessBand, 'Economic buyer', EconomicBuyer FROM LeadBands
+    UNION ALL SELECT ReadinessBand, 'ICP fit', IcpFit FROM LeadBands
+)
+SELECT
+    FactorName,
+    SUM(CASE WHEN ReadinessBand = 'Ready' AND (
+            FactorValue IS NULL OR FactorValue = '' OR
+            FactorValue LIKE 'Unknown%' OR
+            FactorValue LIKE '%not discussed%' OR
+            FactorValue LIKE '%unclear%' OR
+            FactorValue LIKE '%not identified%' OR
+            FactorValue LIKE '%not assessed%' OR
+            FactorValue LIKE '%No defined%' OR
+            FactorValue LIKE '%unavailable%' OR
+            FactorValue LIKE '%deprioritized%' OR
+            FactorValue LIKE '%not involved%' OR
+            FactorValue LIKE 'Partial ICP fit' OR
+            FactorValue LIKE 'Out-of-profile%'
+        ) THEN 1 ELSE 0 END) AS ReadyCount,
+    SUM(CASE WHEN ReadinessBand = 'Monitor' AND (
+            FactorValue IS NULL OR FactorValue = '' OR
+            FactorValue LIKE 'Unknown%' OR
+            FactorValue LIKE '%not discussed%' OR
+            FactorValue LIKE '%unclear%' OR
+            FactorValue LIKE '%not identified%' OR
+            FactorValue LIKE '%not assessed%' OR
+            FactorValue LIKE '%No defined%' OR
+            FactorValue LIKE '%unavailable%' OR
+            FactorValue LIKE '%deprioritized%' OR
+            FactorValue LIKE '%not involved%' OR
+            FactorValue LIKE 'Partial ICP fit' OR
+            FactorValue LIKE 'Out-of-profile%'
+        ) THEN 1 ELSE 0 END) AS MonitorCount,
+    SUM(CASE WHEN ReadinessBand = 'Coach' AND (
+            FactorValue IS NULL OR FactorValue = '' OR
+            FactorValue LIKE 'Unknown%' OR
+            FactorValue LIKE '%not discussed%' OR
+            FactorValue LIKE '%unclear%' OR
+            FactorValue LIKE '%not identified%' OR
+            FactorValue LIKE '%not assessed%' OR
+            FactorValue LIKE '%No defined%' OR
+            FactorValue LIKE '%unavailable%' OR
+            FactorValue LIKE '%deprioritized%' OR
+            FactorValue LIKE '%not involved%' OR
+            FactorValue LIKE 'Partial ICP fit' OR
+            FactorValue LIKE 'Out-of-profile%'
+        ) THEN 1 ELSE 0 END) AS CoachCount,
+    SUM(CASE WHEN ReadinessBand = 'At Risk' AND (
+            FactorValue IS NULL OR FactorValue = '' OR
+            FactorValue LIKE 'Unknown%' OR
+            FactorValue LIKE '%not discussed%' OR
+            FactorValue LIKE '%unclear%' OR
+            FactorValue LIKE '%not identified%' OR
+            FactorValue LIKE '%not assessed%' OR
+            FactorValue LIKE '%No defined%' OR
+            FactorValue LIKE '%unavailable%' OR
+            FactorValue LIKE '%deprioritized%' OR
+            FactorValue LIKE '%not involved%' OR
+            FactorValue LIKE 'Partial ICP fit' OR
+            FactorValue LIKE 'Out-of-profile%'
+        ) THEN 1 ELSE 0 END) AS AtRiskCount
+FROM FactorRows
+GROUP BY FactorName
+ORDER BY CASE FactorName
+    WHEN 'Budget availability' THEN 1
+    WHEN 'Readiness to spend' THEN 2
+    WHEN 'Buying timeline' THEN 3
+    WHEN 'Problem severity' THEN 4
+    WHEN 'Economic buyer' THEN 5
+    ELSE 6
+END";
+
+    var (report, detail) = CreateVisualReportBase("CQVS Readiness Heatmap", "CQVS Readiness Heatmap", "Matrix of weak CQVS factors across readiness bands.", 5.4);
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    var leadSourceLookup = CreateSqlDataSource("LeadSourceLookup", connectionString, leadSourceLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateLookupParameter("LeadSource", "Lead Source", leadSourceLookup, "LeadSource", "LeadSourceLabel"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("CqvsReadinessHeatmapData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@LeadSource", "= Parameters.LeadSource.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    detail.Items.Add(CreateHeatmapTable(
+        "CqvsReadinessHeatmapTable",
+        dataSource,
+        0, 0.15));
+    return report;
+}
+
+static Report CreateManagerPipelineHealthVisualReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    s.Name AS StageName,
+    s.[Order] AS StageOrder,
+    COUNT(*) AS OpenDeals,
+    SUM(o.Amount) AS PipelineValue,
+    CAST(AVG(DATEDIFF(day, o.CreatedAtUtc, SYSUTCDATETIME())) AS decimal(10, 1)) AS AvgAgeDays,
+    SUM(CASE WHEN DATEDIFF(day, o.UpdatedAtUtc, SYSUTCDATETIME()) >= 14 THEN 1 ELSE 0 END) AS StaleDeals,
+    CAST(SUM(o.Amount * (ISNULL(o.Probability, 0) / 100.0)) AS decimal(18, 2)) AS WeightedExposure
+FROM [crm].[Opportunities] o
+INNER JOIN [crm].[OpportunityStages] s ON s.Id = o.StageId AND s.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND o.IsClosed = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@Stage IS NULL OR @Stage = '' OR @Stage = 'All' OR s.Name = @Stage)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.CreatedAtUtc AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.CreatedAtUtc AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY s.Name, s.[Order]
+ORDER BY s.[Order]";
+
+    var (report, detail) = CreateVisualReportBase("Manager Pipeline Health", "Manager Pipeline Health", "Stage-level view of stale deals, age, and weighted exposure.", 6.15);
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("Stage", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("ManagerPipelineHealthData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@Stage", "= Parameters.Stage.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    detail.Items.Add(CreateBarChart(
+        "Stale deals by stage",
+        dataSource,
+        "=Fields.StageName",
+        "=Fields.StageOrder",
+        "=Fields.StaleDeals",
+        0, 0.15, 9.45, 3.3,
+        "{0:N0}"));
+    detail.Items.Add(CreateDataTable(
+        "ManagerPipelineHealthTable",
+        dataSource,
+        0, 3.7,
+        ["Stage", "Open deals", "Avg age", "Stale", "Weighted exposure"],
+        [2.8, 1.2, 1.2, 1.0, 2.0],
+        [
+            ("= Fields.StageName", HorizontalAlign.Left, null),
+            ("= Fields.OpenDeals", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.AvgAgeDays", HorizontalAlign.Right, "{0:N1}d"),
+            ("= Fields.StaleDeals", HorizontalAlign.Right, "{0:N0}"),
+            ("= Fields.WeightedExposure", HorizontalAlign.Right, "{0:C0}")
+        ]));
+    return report;
+}
+
+static Report CreateForecastDistributionVisualReport(string connectionString)
+{
+    const string sql = @"
+SELECT
+    COALESCE(NULLIF(COALESCE(o.ForecastCategory, s.ForecastCategory), ''), 'Unspecified') AS ForecastBucket,
+    COUNT(*) AS OpportunityCount,
+    SUM(o.Amount) AS OpenValue,
+    CAST(SUM(o.Amount * (ISNULL(o.Probability, 0) / 100.0)) AS decimal(18, 2)) AS WeightedPipeline
+FROM [crm].[Opportunities] o
+INNER JOIN [crm].[OpportunityStages] s ON s.Id = o.StageId AND s.IsDeleted = 0
+WHERE o.IsDeleted = 0
+  AND o.IsClosed = 0
+  AND (@OwnerUserId IS NULL OR @OwnerUserId = '' OR CAST(o.OwnerId AS nvarchar(36)) = @OwnerUserId)
+  AND (@Stage IS NULL OR @Stage = '' OR @Stage = 'All' OR s.Name = @Stage)
+  AND (TRY_CONVERT(date, @DateFrom) IS NULL OR CAST(o.ExpectedCloseDate AS date) >= TRY_CONVERT(date, @DateFrom))
+  AND (TRY_CONVERT(date, @DateTo) IS NULL OR CAST(o.ExpectedCloseDate AS date) <= TRY_CONVERT(date, @DateTo))
+GROUP BY COALESCE(NULLIF(COALESCE(o.ForecastCategory, s.ForecastCategory), ''), 'Unspecified')
+ORDER BY ForecastBucket";
+
+    var (report, detail) = CreateVisualReportBase("Forecast Distribution", "Forecast Distribution", "Forecast bucket mix across open value and weighted pipeline.", 6.0);
+    var ownerLookup = CreateSqlDataSource("OwnerLookup", connectionString, ownerLookupSql);
+    report.ReportParameters.Add(CreateLookupParameter("OwnerUserId", "Owner", ownerLookup, "UserId", "FullName"));
+    report.ReportParameters.Add(CreateHiddenStringParameter("Stage", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateFrom", string.Empty));
+    report.ReportParameters.Add(CreateHiddenStringParameter("DateTo", string.Empty));
+
+    var dataSource = CreateSqlDataSource("ForecastDistributionData", connectionString, sql,
+        ("@OwnerUserId", "= Parameters.OwnerUserId.Value"),
+        ("@Stage", "= Parameters.Stage.Value"),
+        ("@DateFrom", "= Parameters.DateFrom.Value"),
+        ("@DateTo", "= Parameters.DateTo.Value"));
+
+    detail.Items.Add(CreateDonutChart(
+        "Forecast open value distribution",
+        dataSource,
+        "=Fields.ForecastBucket",
+        "=Fields.ForecastBucket",
+        "=Fields.OpenValue",
+        0, 0.15, 5.0, 3.9));
+    detail.Items.Add(CreateDataTable(
+        "ForecastDistributionTable",
+        dataSource,
+        5.2, 0.35,
+        ["Bucket", "Open value", "Weighted", "Open deals"],
+        [2.0, 1.6, 1.7, 1.0],
+        [
+            ("= Fields.ForecastBucket", HorizontalAlign.Left, null),
+            ("= Fields.OpenValue", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.WeightedPipeline", HorizontalAlign.Right, "{0:C0}"),
+            ("= Fields.OpportunityCount", HorizontalAlign.Right, "{0:N0}")
+        ]));
+    return report;
+}
+
+static (Report Report, DetailSection Detail) CreateVisualReportBase(string reportName, string title, string subtitle, double detailHeight)
+{
+    var report = CreateBaseReport(reportName, title, subtitle);
+    var detail = new DetailSection
+    {
+        Name = "detail",
+        Height = Unit.Inch(detailHeight)
+    };
+    report.Items.Add(detail);
+    return (report, detail);
+}
+
 static Report CreateBaseReport(string reportName, string title, string subtitle)
 {
     var report = new Report
@@ -412,6 +873,459 @@ static Report CreateBaseReport(string reportName, string title, string subtitle)
     report.Items.Add(reportHeader);
 
     return report;
+}
+
+static Graph CreateBarChart(
+    string title,
+    SqlDataSource dataSource,
+    string categoryExpression,
+    string sortExpression,
+    string valueExpression,
+    double left,
+    double top,
+    double width,
+    double height,
+    string valueLabelFormat)
+{
+    var graph = new Graph
+    {
+        DataSource = dataSource,
+        Location = new PointU(Unit.Inch(left), Unit.Inch(top)),
+        Size = new SizeU(Unit.Inch(width), Unit.Inch(height)),
+        Style = { BackgroundColor = Color.Transparent }
+    };
+    graph.Legend.Style.Visible = false;
+
+    var categoryGroup = new GraphGroup { Name = "CategoryGroup" };
+    categoryGroup.Groupings.Add(new Grouping(categoryExpression));
+    categoryGroup.Sortings.Add(new Sorting(sortExpression, SortDirection.Asc));
+    graph.CategoryGroups.Add(categoryGroup);
+
+    var seriesGroup = new GraphGroup { Name = "SeriesGroup" };
+    graph.SeriesGroups.Add(seriesGroup);
+
+    var categoryAxis = new GraphAxis { Name = "CategoryAxis", Scale = new CategoryScale() };
+    categoryAxis.Style.Font.Size = Unit.Point(8);
+    categoryAxis.Style.LineColor = Color.Transparent;
+
+    var valueAxis = new GraphAxis
+    {
+        Name = "ValueAxis",
+        Scale = new NumericalScale(),
+        LabelFormat = valueLabelFormat
+    };
+    valueAxis.Style.Font.Size = Unit.Point(8);
+    valueAxis.Style.LineColor = Color.Transparent;
+
+    var coordinateSystem = new CartesianCoordinateSystem
+    {
+        Name = "cs",
+        XAxis = categoryAxis,
+        YAxis = valueAxis
+    };
+    graph.CoordinateSystems.Add(coordinateSystem);
+
+    var series = new BarSeries
+    {
+        CategoryGroup = categoryGroup,
+        SeriesGroup = seriesGroup,
+        CoordinateSystem = coordinateSystem,
+        Y = valueExpression,
+        ArrangeMode = GraphSeriesArrangeMode.Clustered
+    };
+    series.DataPointStyle.BackgroundColor = Color.FromArgb(37, 99, 235);
+    series.DataPointStyle.LineWidth = Unit.Point(0);
+    graph.Series.Add(series);
+    graph.Titles.Add(CreateGraphTitle(title));
+    return graph;
+}
+
+static Graph CreateLineChart(
+    string title,
+    SqlDataSource dataSource,
+    string categoryExpression,
+    string sortExpression,
+    string valueExpression,
+    double left,
+    double top,
+    double width,
+    double height,
+    string valueLabelFormat)
+{
+    var graph = new Graph
+    {
+        DataSource = dataSource,
+        Location = new PointU(Unit.Inch(left), Unit.Inch(top)),
+        Size = new SizeU(Unit.Inch(width), Unit.Inch(height)),
+        Style = { BackgroundColor = Color.Transparent }
+    };
+    graph.Legend.Style.Visible = false;
+
+    var categoryGroup = new GraphGroup { Name = "CategoryGroup" };
+    categoryGroup.Groupings.Add(new Grouping(categoryExpression));
+    categoryGroup.Sortings.Add(new Sorting(sortExpression, SortDirection.Asc));
+    graph.CategoryGroups.Add(categoryGroup);
+
+    var seriesGroup = new GraphGroup { Name = "SeriesGroup" };
+    graph.SeriesGroups.Add(seriesGroup);
+
+    var categoryAxis = new GraphAxis { Name = "CategoryAxis", Scale = new CategoryScale() };
+    categoryAxis.Style.Font.Size = Unit.Point(8);
+    categoryAxis.Style.LineColor = Color.Transparent;
+
+    var valueAxis = new GraphAxis
+    {
+        Name = "ValueAxis",
+        Scale = new NumericalScale(),
+        LabelFormat = valueLabelFormat
+    };
+    valueAxis.Style.Font.Size = Unit.Point(8);
+    valueAxis.Style.LineColor = Color.Transparent;
+
+    var coordinateSystem = new CartesianCoordinateSystem
+    {
+        Name = "cs",
+        XAxis = categoryAxis,
+        YAxis = valueAxis
+    };
+    graph.CoordinateSystems.Add(coordinateSystem);
+
+    var series = new LineSeries
+    {
+        CategoryGroup = categoryGroup,
+        SeriesGroup = seriesGroup,
+        CoordinateSystem = coordinateSystem,
+        Y = valueExpression,
+        MarkerType = DataPointMarkerType.Circle
+    };
+    series.LineStyle.LineWidth = Unit.Point(2);
+    series.LineStyle.Color = Color.FromArgb(14, 165, 233);
+    series.DataPointStyle.BackgroundColor = Color.FromArgb(14, 165, 233);
+    graph.Series.Add(series);
+    graph.Titles.Add(CreateGraphTitle(title));
+    return graph;
+}
+
+static Graph CreateScatterChart(
+    string title,
+    SqlDataSource dataSource,
+    string categoryExpression,
+    string xExpression,
+    string yExpression,
+    double left,
+    double top,
+    double width,
+    double height)
+{
+    var graph = new Graph
+    {
+        DataSource = dataSource,
+        Location = new PointU(Unit.Inch(left), Unit.Inch(top)),
+        Size = new SizeU(Unit.Inch(width), Unit.Inch(height)),
+        Style = { BackgroundColor = Color.Transparent }
+    };
+    graph.Legend.Style.Visible = false;
+
+    var categoryGroup = new GraphGroup { Name = "CategoryGroup" };
+    categoryGroup.Groupings.Add(new Grouping(categoryExpression));
+    categoryGroup.Sortings.Add(new Sorting(xExpression, SortDirection.Asc));
+    graph.CategoryGroups.Add(categoryGroup);
+
+    var seriesGroup = new GraphGroup { Name = "SeriesGroup" };
+    graph.SeriesGroups.Add(seriesGroup);
+
+    var xAxis = new GraphAxis
+    {
+        Name = "XAxis",
+        Scale = new NumericalScale(),
+        LabelFormat = "{0:N0}"
+    };
+    xAxis.Style.Font.Size = Unit.Point(8);
+    xAxis.Style.LineColor = Color.Transparent;
+
+    var yAxis = new GraphAxis
+    {
+        Name = "YAxis",
+        Scale = new NumericalScale(),
+        LabelFormat = "{0:N0}"
+    };
+    yAxis.Style.Font.Size = Unit.Point(8);
+    yAxis.Style.LineColor = Color.Transparent;
+
+    var coordinateSystem = new CartesianCoordinateSystem
+    {
+        Name = "cs",
+        XAxis = xAxis,
+        YAxis = yAxis
+    };
+    graph.CoordinateSystems.Add(coordinateSystem);
+
+    var series = new LineSeries
+    {
+        CategoryGroup = categoryGroup,
+        SeriesGroup = seriesGroup,
+        CoordinateSystem = coordinateSystem,
+        X = xExpression,
+        Y = yExpression,
+        MarkerType = DataPointMarkerType.Circle
+    };
+    series.LineStyle.LineWidth = Unit.Point(0);
+    series.DataPointStyle.BackgroundColor = Color.FromArgb(124, 58, 237);
+    graph.Series.Add(series);
+    graph.Titles.Add(CreateGraphTitle(title));
+    return graph;
+}
+
+static Graph CreateDonutChart(
+    string title,
+    SqlDataSource dataSource,
+    string categoryExpression,
+    string sortExpression,
+    string valueExpression,
+    double left,
+    double top,
+    double width,
+    double height)
+{
+    var graph = new Graph
+    {
+        DataSource = dataSource,
+        Location = new PointU(Unit.Inch(left), Unit.Inch(top)),
+        Size = new SizeU(Unit.Inch(width), Unit.Inch(height)),
+        Style = { BackgroundColor = Color.Transparent }
+    };
+    graph.Legend.Style.Visible = true;
+    graph.Legend.Position = GraphItemPosition.RightCenter;
+    graph.Legend.Style.Font.Size = Unit.Point(8);
+
+    var categoryGroup = new GraphGroup { Name = "CategoryGroup" };
+    categoryGroup.Groupings.Add(new Grouping(categoryExpression));
+    categoryGroup.Sortings.Add(new Sorting(sortExpression, SortDirection.Asc));
+    graph.CategoryGroups.Add(categoryGroup);
+
+    var seriesGroup = new GraphGroup { Name = "SeriesGroup" };
+    graph.SeriesGroups.Add(seriesGroup);
+
+    var angularAxis = new GraphAxis { Name = "AngularAxis", Scale = new CategoryScale() };
+    angularAxis.Style.LineColor = Color.Transparent;
+
+    var radialAxis = new GraphAxis
+    {
+        Name = "RadialAxis",
+        Scale = new NumericalScale(),
+        LabelFormat = "{0:C0}"
+    };
+    radialAxis.Style.Visible = false;
+    radialAxis.Style.LineColor = Color.Transparent;
+
+    var coordinateSystem = new PolarCoordinateSystem
+    {
+        Name = "pcs",
+        AngularAxis = angularAxis,
+        RadialAxis = radialAxis,
+        InnerRadiusRatio = 0.55
+    };
+    graph.CoordinateSystems.Add(coordinateSystem);
+
+    var series = new BarSeries
+    {
+        CategoryGroup = categoryGroup,
+        SeriesGroup = seriesGroup,
+        CoordinateSystem = coordinateSystem,
+        Y = valueExpression,
+        ArrangeMode = GraphSeriesArrangeMode.Stacked
+    };
+    series.DataPointStyle.LineWidth = Unit.Point(0);
+    graph.Series.Add(series);
+    graph.Titles.Add(CreateGraphTitle(title));
+    return graph;
+}
+
+static GraphTitle CreateGraphTitle(string text)
+{
+    var title = new GraphTitle { Text = text };
+    title.Style.Font.Size = Unit.Point(11);
+    title.Style.Font.Bold = true;
+    title.Style.Color = Color.FromArgb(31, 41, 55);
+    return title;
+}
+
+static Table CreateDataTable(
+    string name,
+    SqlDataSource dataSource,
+    double left,
+    double top,
+    string[] headers,
+    double[] widths,
+    (string Expression, HorizontalAlign Align, string? Format)[] fields)
+{
+    var totalWidth = widths.Sum();
+    var table = new Table
+    {
+        Name = name,
+        DataSource = dataSource,
+        Location = new PointU(Unit.Inch(left), Unit.Inch(top)),
+        Size = new SizeU(Unit.Inch(totalWidth), Unit.Inch(0.7))
+    };
+
+    foreach (var width in widths)
+    {
+        table.Body.Columns.Add(new TableBodyColumn(Unit.Inch(width)));
+    }
+
+    var detailGroup = new TableGroup { Name = $"{name}DetailGroup" };
+    detailGroup.Groupings.Add(new Grouping());
+    table.RowGroups.Add(detailGroup);
+
+    for (var i = 0; i < headers.Length; i++)
+    {
+        var header = new TextBox
+        {
+            Value = headers[i],
+            Style =
+            {
+                BackgroundColor = Color.FromArgb(240, 247, 255),
+                Color = Color.FromArgb(37, 99, 235),
+                Font = { Name = "Segoe UI", Size = Unit.Point(8), Bold = true },
+                TextAlign = fields[i].Align,
+                VerticalAlign = VerticalAlign.Middle,
+                Padding = { Left = Unit.Point(4), Right = Unit.Point(4), Top = Unit.Point(4), Bottom = Unit.Point(4) }
+            }
+        };
+        header.Style.BorderStyle.Bottom = BorderType.Solid;
+        header.Style.BorderColor.Bottom = Color.FromArgb(191, 219, 254);
+        table.ColumnGroups.Add(new TableGroup { Name = $"{name}Column{i}", ReportItem = header });
+    }
+
+    table.Body.Rows.Add(new TableBodyRow(Unit.Inch(0.32)));
+
+    for (var i = 0; i < fields.Length; i++)
+    {
+        var box = new TextBox
+        {
+            Value = fields[i].Expression,
+            Style =
+            {
+                Color = Color.FromArgb(31, 41, 55),
+                Font = { Name = "Segoe UI", Size = Unit.Point(8.5) },
+                TextAlign = fields[i].Align,
+                VerticalAlign = VerticalAlign.Middle,
+                Padding = { Left = Unit.Point(4), Right = Unit.Point(4), Top = Unit.Point(3), Bottom = Unit.Point(3) }
+            }
+        };
+        box.Style.BorderStyle.Bottom = BorderType.Solid;
+        box.Style.BorderColor.Bottom = Color.FromArgb(229, 231, 235);
+        if (!string.IsNullOrWhiteSpace(fields[i].Format))
+        {
+            box.Format = fields[i].Format;
+        }
+        table.Body.SetCellContent(0, i, box);
+    }
+
+    return table;
+}
+
+static Table CreateHeatmapTable(string name, SqlDataSource dataSource, double left, double top)
+{
+    var table = new Table
+    {
+        Name = name,
+        DataSource = dataSource,
+        Location = new PointU(Unit.Inch(left), Unit.Inch(top)),
+        Size = new SizeU(Unit.Inch(9.2), Unit.Inch(3.7))
+    };
+
+    var headers = new[] { "CQVS factor", "Ready", "Monitor", "Coach", "At Risk" };
+    var widths = new[] { 3.2, 1.3, 1.3, 1.3, 1.4 };
+    foreach (var width in widths)
+    {
+        table.Body.Columns.Add(new TableBodyColumn(Unit.Inch(width)));
+    }
+
+    var detailGroup = new TableGroup { Name = $"{name}DetailGroup" };
+    detailGroup.Groupings.Add(new Grouping());
+    table.RowGroups.Add(detailGroup);
+
+    for (var i = 0; i < headers.Length; i++)
+    {
+        var header = new TextBox
+        {
+            Value = headers[i],
+            Style =
+            {
+                BackgroundColor = Color.FromArgb(240, 247, 255),
+                Color = Color.FromArgb(37, 99, 235),
+                Font = { Name = "Segoe UI", Size = Unit.Point(9), Bold = true },
+                TextAlign = i == 0 ? HorizontalAlign.Left : HorizontalAlign.Center,
+                VerticalAlign = VerticalAlign.Middle,
+                Padding = { Left = Unit.Point(6), Right = Unit.Point(6), Top = Unit.Point(5), Bottom = Unit.Point(5) }
+            }
+        };
+        header.Style.BorderStyle.Bottom = BorderType.Solid;
+        header.Style.BorderColor.Bottom = Color.FromArgb(191, 219, 254);
+        table.ColumnGroups.Add(new TableGroup { Name = $"{name}Column{i}", ReportItem = header });
+    }
+
+    table.Body.Rows.Add(new TableBodyRow(Unit.Inch(0.38)));
+
+    var factorCell = new TextBox
+    {
+        Value = "= Fields.FactorName",
+        Style =
+        {
+            Color = Color.FromArgb(31, 41, 55),
+            Font = { Name = "Segoe UI", Size = Unit.Point(8.5), Bold = true },
+            TextAlign = HorizontalAlign.Left,
+            VerticalAlign = VerticalAlign.Middle,
+            Padding = { Left = Unit.Point(6), Right = Unit.Point(6), Top = Unit.Point(4), Bottom = Unit.Point(4) }
+        }
+    };
+    factorCell.Style.BorderStyle.Bottom = BorderType.Solid;
+    factorCell.Style.BorderColor.Bottom = Color.FromArgb(229, 231, 235);
+    table.Body.SetCellContent(0, 0, factorCell);
+
+    table.Body.SetCellContent(0, 1, CreateHeatCell("= Fields.ReadyCount"));
+    table.Body.SetCellContent(0, 2, CreateHeatCell("= Fields.MonitorCount"));
+    table.Body.SetCellContent(0, 3, CreateHeatCell("= Fields.CoachCount"));
+    table.Body.SetCellContent(0, 4, CreateHeatCell("= Fields.AtRiskCount"));
+
+    return table;
+}
+
+static TextBox CreateHeatCell(string expression)
+{
+    var box = new TextBox
+    {
+        Value = expression,
+        Style =
+        {
+            Font = { Name = "Segoe UI", Size = Unit.Point(9), Bold = true },
+            TextAlign = HorizontalAlign.Center,
+            VerticalAlign = VerticalAlign.Middle,
+            BackgroundColor = Color.FromArgb(243, 244, 246),
+            Padding = { Top = Unit.Point(4), Bottom = Unit.Point(4) }
+        }
+    };
+    box.Style.BorderStyle.Bottom = BorderType.Solid;
+    box.Style.BorderColor.Bottom = Color.FromArgb(229, 231, 235);
+    box.ConditionalFormatting.Add(CreateHeatRule(expression, ">= 8", Color.FromArgb(29, 78, 216), Color.White));
+    box.ConditionalFormatting.Add(CreateHeatRule(expression, ">= 4", Color.FromArgb(147, 197, 253), Color.FromArgb(30, 41, 59)));
+    box.ConditionalFormatting.Add(CreateHeatRule(expression, "> 0", Color.FromArgb(219, 234, 254), Color.FromArgb(30, 41, 59)));
+    return box;
+}
+
+static FormattingRule CreateHeatRule(string expression, string value, Color background, Color foreground)
+{
+    var rule = new FormattingRule();
+    rule.Filters.Add(new Filter(expression, FilterOperator.GreaterOrEqual, value switch
+    {
+        ">= 8" => "= 8",
+        ">= 4" => "= 4",
+        _ => "= 1"
+    }));
+    rule.Style.BackgroundColor = background;
+    rule.Style.Color = foreground;
+    return rule;
 }
 
 static void AddTableSections(Report report, string[] headers, double[] widths, (string Expression, HorizontalAlign Align, string? Format)[] fields)

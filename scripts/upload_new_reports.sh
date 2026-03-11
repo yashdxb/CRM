@@ -56,20 +56,26 @@ for r in reports:
 echo "Existing CRM reports:"
 echo "$EXISTING" | sed 's/^/  /'
 
-# The 15 new report files to upload
+# The visual and extended report files to upload
 GENERATED_DIR="$ROOT_DIR/generated"
 
 NEW_REPORTS=(
   "Activity Summary"
   "Campaign ROI"
+  "CQVS Readiness Heatmap"
   "Customer Growth"
   "Customer Revenue Concentration"
   "Email Engagement"
+  "Forecast Distribution"
   "Lead Aging"
   "Lead Conversion Funnel"
+  "Lead Quality vs Conversation Signal"
   "Lead Score Distribution"
   "Lead Source Performance"
+  "Manager Pipeline Health"
+  "Pipeline Stage Mix"
   "Pipeline Health Scorecard"
+  "Revenue and Conversion Trend"
   "Revenue Forecast"
   "Sales Cycle Duration"
   "Team Performance"
@@ -78,8 +84,8 @@ NEW_REPORTS=(
 )
 
 echo ""
-echo "Uploading 15 new reports to CRM category..."
-echo "============================================"
+echo "Uploading report pack to CRM category..."
+echo "========================================"
 
 SUCCESS=0
 FAILED=0
