@@ -76,6 +76,7 @@ interface StepperStep {
   icon: string;
   state: StepState;
   unlockHint: string | null;
+  timeInStage: string | null;
 }
 
 interface StatusOption {
@@ -88,6 +89,14 @@ interface StatusOption {
 interface StatusRecommendationChip {
   label: string;
   tone: 'info' | 'success' | 'warn';
+}
+
+interface LeadPrimaryStatusAction {
+  kind: 'progress' | 'convert' | 'recycle';
+  status?: LeadStatus;
+  label: string;
+  icon: string;
+  disabled: boolean;
 }
 
 interface AssignmentOption {
@@ -216,6 +225,14 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected closureReason = '';
   protected closureCompetitor = '';
   protected closureNotes = '';
+
+  /** Backward movement confirmation state */
+  protected backwardConfirmPending = signal(false);
+  protected backwardConfirmTarget = signal<StepperStep | null>(null);
+
+  /** Inline convert form state (Strategy C – stepper morphs for Convert) */
+  protected convertFormActive = signal(false);
+  protected statusPathExpanded = signal(false);
 
   protected overviewAccordionOpenPanels = signal<string[]>(['lead-basics', 'contact-details', 'score']);
   protected qualificationAccordionOpenPanels = signal<string[]>([
@@ -792,6 +809,155 @@ export class LeadFormPage implements OnInit, OnDestroy {
     return null;
   }
 
+  protected primaryStatusAction(): LeadPrimaryStatusAction | null {
+    if (!this.isEditMode()) {
+      return null;
+    }
+
+    if (this.canRecycleLead()) {
+      return {
+        kind: 'recycle',
+        label: 'Recycle to Nurture',
+        icon: 'pi pi-refresh',
+        disabled: false
+      };
+    }
+
+    if (this.form.status === 'Qualified') {
+      return {
+        kind: 'convert',
+        label: 'Convert Lead',
+        icon: 'pi pi-arrow-up-right',
+        disabled: !this.canConvertLead()
+      };
+    }
+
+    const nextStatus = this.nextProgressionStatus();
+    if (!nextStatus) {
+      return null;
+    }
+
+    return {
+      kind: 'progress',
+      status: nextStatus,
+      label: this.progressActionLabel(nextStatus),
+      icon: this.statusIcon(nextStatus),
+      disabled: this.progressActionBlockedReasons().length > 0
+    };
+  }
+
+  protected triggerPrimaryStatusAction(): void {
+    const action = this.primaryStatusAction();
+    if (!action || action.disabled) {
+      return;
+    }
+
+    switch (action.kind) {
+      case 'progress':
+        if (action.status) {
+          this.form.status = action.status;
+        }
+        return;
+      case 'convert':
+        this.onOutcomeClick('Converted');
+        return;
+      case 'recycle':
+        this.recycleToNurture();
+        return;
+    }
+  }
+
+  protected toggleStatusPath(): void {
+    this.statusPathExpanded.update((value) => !value);
+  }
+
+  protected progressActionBlockedReasons(): string[] {
+    const status = this.nextProgressionStatus();
+    if (!status) {
+      return [];
+    }
+
+    const hasFirstTouch = !!this.firstTouchedAtUtc();
+    const qualFactors = this.countQualificationFactors();
+    const hasQualNotes = !!this.form.qualifiedNotes?.trim();
+    const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
+
+    if (this.isStepUnlocked(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence)) {
+      return [];
+    }
+
+    const hint = this.stepUnlockHint(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence);
+    if (!hint) {
+      return [];
+    }
+
+    return hint.replace(/^To unlock:\s*/i, '').split(',').map((item) => item.trim()).filter(Boolean);
+  }
+
+  protected secondaryOutcomeActions(): Array<{ status: 'Lost' | 'Disqualified'; label: string; icon: string; disabled: boolean }> {
+    return [
+      {
+        status: 'Lost',
+        label: 'Mark Lost',
+        icon: 'pi pi-times-circle',
+        disabled: !this.isOutcomeAvailable('Lost')
+      },
+      {
+        status: 'Disqualified',
+        label: 'Disqualify',
+        icon: 'pi pi-ban',
+        disabled: !this.isOutcomeAvailable('Disqualified')
+      }
+    ];
+  }
+
+  protected currentStatusInstruction(): string | null {
+    const action = this.primaryStatusAction();
+    if (!action) {
+      return this.statusPolicyHint();
+    }
+
+    if (action.kind === 'progress') {
+      const blockers = this.progressActionBlockedReasons();
+      if (blockers.length) {
+        return `Blocked until: ${blockers.join(' · ')}`;
+      }
+      return `Next step: ${action.label}`;
+    }
+
+    if (action.kind === 'convert') {
+      return action.disabled ? 'Conversion is blocked until qualification and policy requirements are met.' : 'Lead is ready for conversion.';
+    }
+
+    if (action.kind === 'recycle') {
+      return 'This lead can be recycled back into nurture for follow-up.';
+    }
+
+    return null;
+  }
+
+  private nextProgressionStatus(): LeadStatus | null {
+    const currentIndex = this.progressionIndex(this.form.status as LeadStatus);
+    if (currentIndex < 0 || currentIndex >= LEAD_PROGRESSION_STATUSES.length - 1) {
+      return null;
+    }
+
+    return LEAD_PROGRESSION_STATUSES[currentIndex + 1];
+  }
+
+  private progressActionLabel(status: LeadStatus): string {
+    switch (status) {
+      case 'Contacted':
+        return 'Mark as Contacted';
+      case 'Nurture':
+        return 'Move to Nurture';
+      case 'Qualified':
+        return 'Move to Qualified';
+      default:
+        return `Move to ${status}`;
+    }
+  }
+
   // ─── Status Stepper ────────────────────────────────────────────
 
   /** Whether to show the visual stepper (non-admin edit mode) */
@@ -848,9 +1014,46 @@ export class LeadFormPage implements OnInit, OnDestroy {
         label: status,
         icon: this.statusIcon(status),
         state,
-        unlockHint
+        unlockHint,
+        timeInStage: state === 'current' ? this.computeTimeInStage(status) : null
       };
     });
+  }
+
+  /** Compute how long the lead has been in the given status */
+  private computeTimeInStage(status: LeadStatus): string | null {
+    const history = this.statusHistory();
+    if (!history.length) return null;
+    // Find the most recent entry matching current status
+    const entry = history.find(h => h.status === status);
+    if (!entry?.changedAtUtc) return null;
+    const changed = new Date(entry.changedAtUtc.endsWith('Z') ? entry.changedAtUtc : entry.changedAtUtc + 'Z');
+    const now = new Date();
+    const diffMs = now.getTime() - changed.getTime();
+    if (diffMs < 0) return null;
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 60) return `${diffMins}m`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 30) return `${diffDays}d`;
+    const diffMonths = Math.floor(diffDays / 30);
+    return `${diffMonths}mo`;
+  }
+
+  /** Build a compact audit trail from status history for display near the stepper */
+  protected statusAuditTrail(): Array<{ status: string; date: string }> {
+    const history = this.statusHistory();
+    if (!history.length) return [];
+    // Show history in chronological order (oldest first), limit to last 6
+    return [...history]
+      .sort((a, b) => new Date(a.changedAtUtc).getTime() - new Date(b.changedAtUtc).getTime())
+      .slice(-6)
+      .map(h => ({
+        status: h.status,
+        date: new Date(h.changedAtUtc.endsWith('Z') ? h.changedAtUtc : h.changedAtUtc + 'Z')
+          .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      }));
   }
 
   private isStepUnlocked(status: LeadStatus, hasFirstTouch: boolean, qualFactors: number, hasQualNotes: boolean, meetsEvidence: boolean): boolean {
@@ -891,21 +1094,55 @@ export class LeadFormPage implements OnInit, OnDestroy {
   /** Click handler for a stepper step */
   protected onStepClick(step: StepperStep): void {
     if (step.state === 'locked' || step.state === 'current') return;
+
+    // Backward movement: clicking a completed step to regress
+    if (step.state === 'completed') {
+      this.backwardConfirmTarget.set(step);
+      this.backwardConfirmPending.set(true);
+      return;
+    }
+
     this.form.status = step.status;
+  }
+
+  /** Confirm backward movement */
+  protected confirmBackward(): void {
+    const target = this.backwardConfirmTarget();
+    if (target) {
+      this.form.status = target.status;
+    }
+    this.backwardConfirmPending.set(false);
+    this.backwardConfirmTarget.set(null);
+  }
+
+  /** Cancel backward movement */
+  protected cancelBackward(): void {
+    this.backwardConfirmPending.set(false);
+    this.backwardConfirmTarget.set(null);
   }
 
   /** Click handler for outcome exit buttons */
   protected onOutcomeClick(status: LeadStatus): void {
     if (status === 'Converted') {
-      this.onConvertLead();
+      this.convertFormActive.set(true);
     } else if (status === 'Lost' || status === 'Disqualified') {
-      // Strategy C: morph stepper into inline closure form
       this.closureReason = '';
       this.closureCompetitor = '';
       this.closureNotes = '';
       this.closureFormStatus.set(status);
       this.closureFormActive.set(true);
     }
+  }
+
+  /** Confirm inline convert → navigate to the convert page */
+  protected confirmConvert(): void {
+    this.convertFormActive.set(false);
+    this.onConvertLead();
+  }
+
+  /** Cancel the inline convert prompt */
+  protected cancelConvert(): void {
+    this.convertFormActive.set(false);
   }
 
   /** Confirm the closure: apply status + populate form fields, then trigger save */
