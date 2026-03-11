@@ -63,6 +63,15 @@ jobs:
           app-name: crm-enterprise-api-dev-01122345
           package: ./artifacts/publish
 
+      - name: Set Azure Web App environment to Production
+        run: |
+          az webapp config appsettings set \
+            --resource-group rg-crm-dev-ca \
+            --name crm-enterprise-api-dev-01122345 \
+            --settings \
+              ASPNETCORE_ENVIRONMENT=Production \
+              StartupInitialization__Enabled=true
+
       - name: Configure Azure Web App runtime and startup command
         run: |
           az webapp config set \
