@@ -57,18 +57,6 @@ export const NAV_LINKS: NavLink[] = [
     ]
   },
   {
-    label: 'Product & Services',
-    icon: 'pi-tags',
-    path: '/app/catalog',
-    iconColor: '#8b5cf6',
-    permission: PERMISSION_KEYS.opportunitiesView,
-    children: [
-      { label: 'Catalog', icon: 'pi-book', path: '/app/catalog', permission: PERMISSION_KEYS.opportunitiesView, iconColor: '#3b82f6' },
-      { label: 'Add Item', icon: 'pi-plus', path: '/app/catalog/new', permission: PERMISSION_KEYS.opportunitiesManage, iconColor: '#22c55e' },
-      { label: 'Price Books', icon: 'pi-receipt', path: '/app/catalog/price-books', permission: PERMISSION_KEYS.opportunitiesView, iconColor: '#f59e0b' }
-    ]
-  },
-  {
     label: 'Marketing',
     icon: 'pi-megaphone',
     path: '/app/marketing/campaigns',
@@ -116,107 +104,6 @@ export const NAV_LINKS: NavLink[] = [
     children: [
       { label: 'All Contacts', icon: 'pi-list', path: '/app/contacts', permission: PERMISSION_KEYS.contactsView },
       { label: 'Add Contact', icon: 'pi-plus', path: '/app/contacts/new', permission: PERMISSION_KEYS.contactsManage }
-    ]
-  },
-  {
-    label: 'Supply Chain',
-    icon: 'pi-sitemap',
-    path: '/app/supply-chain',
-    pack: 'supply-chain',
-    children: [
-      {
-        label: 'Sourcing',
-        icon: 'pi-compass',
-        path: '/app/supply-chain/rfqs',
-        pack: 'supply-chain',
-        children: [
-          { label: 'RFQ', icon: 'pi-list', path: '/app/supply-chain/rfqs', pack: 'supply-chain', module: 'rfq' },
-          { label: 'RFQ Drafts', icon: 'pi-file-edit', path: '/app/supply-chain/rfqs/draft', pack: 'supply-chain', module: 'rfq' },
-          { label: 'RFQ History', icon: 'pi-history', path: '/app/supply-chain/rfqs/history', pack: 'supply-chain', module: 'rfq' },
-          { label: 'Compare RFQs', icon: 'pi-chart-bar', path: '/app/supply-chain/rfqs/compare', pack: 'supply-chain', module: 'rfq' },
-          { label: 'Quote Comparison', icon: 'pi-sliders-h', path: '/app/supply-chain/quotes', pack: 'supply-chain', module: 'quotes' },
-          { label: 'Awards', icon: 'pi-trophy', path: '/app/supply-chain/awards', pack: 'supply-chain', module: 'awards' }
-        ]
-      },
-      {
-        label: 'Supplier Management',
-        icon: 'pi-users',
-        path: '/app/supply-chain/suppliers',
-        pack: 'supply-chain',
-        module: 'suppliers',
-        children: [
-          { label: 'Supplier Directory', icon: 'pi-id-card', path: '/app/supply-chain/suppliers', pack: 'supply-chain', module: 'suppliers' },
-          { label: 'Compliance', icon: 'pi-shield', path: '/app/supply-chain/suppliers/compliance', pack: 'supply-chain', module: 'suppliers' },
-          { label: 'Performance', icon: 'pi-chart-line', path: '/app/supply-chain/suppliers/performance', pack: 'supply-chain', module: 'suppliers' }
-        ]
-      },
-      {
-        label: 'Catalog & Pricing',
-        icon: 'pi-tags',
-        path: '/app/supply-chain/catalog',
-        pack: 'supply-chain',
-        children: [
-          { label: 'Item Master', icon: 'pi-book', path: '/app/supply-chain/catalog', pack: 'supply-chain', module: 'catalog' },
-          { label: 'Price Lists', icon: 'pi-receipt', path: '/app/supply-chain/pricing', pack: 'supply-chain', module: 'pricing' },
-          { label: 'Contracts', icon: 'pi-file-check', path: '/app/supply-chain/contracts', pack: 'supply-chain', module: 'contracts' }
-        ]
-      },
-      {
-        label: 'Procurement',
-        icon: 'pi-briefcase',
-        path: '/app/supply-chain/po',
-        pack: 'supply-chain',
-        children: [
-          { label: 'Purchase Orders (POs)', icon: 'pi-file', path: '/app/supply-chain/po', pack: 'supply-chain' },
-          { label: 'Approvals', icon: 'pi-check-circle', path: '/app/supply-chain/approvals', pack: 'supply-chain' },
-          { label: 'Change Orders', icon: 'pi-refresh', path: '/app/supply-chain/change-orders', pack: 'supply-chain' }
-        ]
-      },
-      {
-        label: 'Logistics',
-        icon: 'pi-truck',
-        path: '/app/supply-chain/logistics',
-        pack: 'supply-chain',
-        module: 'logistics',
-        children: [
-          { label: 'Receiving', icon: 'pi-inbox', path: '/app/supply-chain/receiving', pack: 'supply-chain', module: 'logistics' },
-          { label: 'Shipments', icon: 'pi-send', path: '/app/supply-chain/shipments', pack: 'supply-chain', module: 'logistics' },
-          { label: 'Carrier Management', icon: 'pi-compass', path: '/app/supply-chain/carriers', pack: 'supply-chain', module: 'logistics' }
-        ]
-      },
-      {
-        label: 'Inventory',
-        icon: 'pi-box',
-        path: '/app/supply-chain/inventory',
-        pack: 'supply-chain',
-        children: [
-          { label: 'Stock Levels', icon: 'pi-database', path: '/app/supply-chain/inventory', pack: 'supply-chain', module: 'inventory' },
-          { label: 'Reorder', icon: 'pi-sync', path: '/app/supply-chain/replenishment', pack: 'supply-chain', module: 'inventory' },
-          { label: 'Warehousing', icon: 'pi-home', path: '/app/supply-chain/warehousing', pack: 'supply-chain', module: 'inventory' }
-        ]
-      },
-      {
-        label: 'Quality',
-        icon: 'pi-check-square',
-        path: '/app/supply-chain/quality',
-        pack: 'supply-chain',
-        children: [
-          { label: 'Inspections', icon: 'pi-search', path: '/app/supply-chain/quality/inspections', pack: 'supply-chain', module: 'quality' },
-          { label: 'Non-conformance', icon: 'pi-exclamation-triangle', path: '/app/supply-chain/quality/nonconformance', pack: 'supply-chain', module: 'quality' },
-          { label: 'Corrective Actions', icon: 'pi-wrench', path: '/app/supply-chain/quality/capa', pack: 'supply-chain', module: 'quality' }
-        ]
-      },
-      {
-        label: 'Analytics',
-        icon: 'pi-chart-bar',
-        path: '/app/supply-chain/analytics',
-        pack: 'supply-chain',
-        children: [
-          { label: 'Spend Analytics', icon: 'pi-chart-line', path: '/app/supply-chain/analytics/spend', pack: 'supply-chain', module: 'analytics' },
-          { label: 'Supplier Performance', icon: 'pi-star', path: '/app/supply-chain/analytics/suppliers', pack: 'supply-chain', module: 'analytics' },
-          { label: 'Savings Tracking', icon: 'pi-percentage', path: '/app/supply-chain/analytics/savings', pack: 'supply-chain', module: 'analytics' }
-        ]
-      }
     ]
   },
   {
@@ -321,20 +208,4 @@ export const NAV_LINKS: NavLink[] = [
       { label: 'Help Desk Settings', icon: 'pi-cog', path: '/app/helpdesk/settings', permission: PERMISSION_KEYS.helpDeskAdmin, featureFlag: 'helpdesk.cases' }
     ]
   }
-];
-
-export const SUPPLY_CHAIN_MODULES = [
-  'rfq',
-  'rfi',
-  'quotes',
-  'awards',
-  'suppliers',
-  'catalog',
-  'pricing',
-  'contracts',
-  'procurement',
-  'logistics',
-  'inventory',
-  'quality',
-  'analytics'
 ];

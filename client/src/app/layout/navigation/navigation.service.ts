@@ -7,7 +7,7 @@ import { TenantContext, TenantContextService } from '../../core/tenant/tenant-co
 import { CrmEventsService } from '../../core/realtime/crm-events.service';
 import { OpportunityApprovalService } from '../../crm/features/opportunities/services/opportunity-approval.service';
 import { NavLink } from './navigation.model';
-import { NAV_LINKS, SUPPLY_CHAIN_MODULES } from './navigation.config';
+import { NAV_LINKS } from './navigation.config';
 
 @Injectable({ providedIn: 'root' })
 export class NavigationService {
@@ -30,20 +30,10 @@ export class NavigationService {
 
   // Tenant context
   readonly tenantContext = signal<TenantContext | null>(null);
-  
-  readonly enabledSupplyChainModules = computed(() => {
-    const context = this.tenantContext();
-    if (!context) return [];
-    if (context.industryPreset === 'SupplyChain') {
-      return context.industryModules?.length ? context.industryModules : SUPPLY_CHAIN_MODULES;
-    }
-    return (context.industryModules?.length ?? 0) > 0 ? context.industryModules ?? [] : [];
-  });
 
   // Menu expansion state
   private readonly expandedMenus = signal<Set<string>>(new Set());
   private readonly expandedChildMenus = signal<Set<string>>(new Set());
-  private seededChildMenus = false;
   private readonly navVersion = signal(0);
   private readonly decisionPendingCount = signal(0);
 
@@ -53,7 +43,6 @@ export class NavigationService {
   readonly visibleNavLinks = computed(() => {
     this.navVersion();
     const context = readTokenContext();
-    const enabledModules = new Set(this.enabledSupplyChainModules());
 
     const hasPermission = (link: NavLink) => {
       if (!link.permission || !context) return true;
@@ -65,21 +54,11 @@ export class NavigationService {
       return this.tenantContext()?.featureFlags?.[link.featureFlag] === true;
     };
 
-    const hasPackAccess = (link: NavLink) => {
-      if (!link.pack) return true;
-      if (link.pack === 'supply-chain') {
-        if (enabledModules.size === 0) return false;
-        if (!link.module) return true;
-        return enabledModules.has(link.module);
-      }
-      return true;
-    };
-
     const filterChildren = (items?: NavLink[]) =>
       items?.reduce<NavLink[]>((acc, item) => {
         const nestedChildren = filterChildren(item.children);
         const hasAnyChildren = (nestedChildren?.length ?? 0) > 0;
-        const allowed = hasPermission(item) && hasFeatureFlag(item) && hasPackAccess(item);
+        const allowed = hasPermission(item) && hasFeatureFlag(item);
         if (!allowed && !hasAnyChildren) return acc;
         acc.push({ ...item, children: nestedChildren });
         return acc;
@@ -87,7 +66,7 @@ export class NavigationService {
 
     return this.navLinks().reduce<NavLink[]>((acc, link) => {
       const children = filterChildren(link.children);
-      if ((!hasPermission(link) || !hasFeatureFlag(link) || !hasPackAccess(link)) && children.length === 0) return acc;
+      if ((!hasPermission(link) || !hasFeatureFlag(link)) && children.length === 0) return acc;
       acc.push({ ...link, children });
       return acc;
     }, []);
@@ -100,7 +79,6 @@ export class NavigationService {
     ).subscribe(() => this.autoExpandActiveMenu());
     
     this.autoExpandActiveMenu();
-    this.seedSupplyChainChildren();
     this.loadTenantContext();
     this.refreshDecisionPendingCount();
     this.crmEventsService.events$
@@ -271,21 +249,6 @@ export class NavigationService {
 
   refreshNav() {
     this.navVersion.update((version) => version + 1);
-  }
-
-  private seedSupplyChainChildren() {
-    if (this.seededChildMenus) return;
-    const supplyChain = this.navLinks().find((link) => link.label === 'Supply Chain');
-    if (!supplyChain?.children?.length) return;
-    const next = new Set<string>();
-    const firstExpandable = supplyChain.children.find((child) => child.children?.length);
-    if (firstExpandable) {
-      next.add(this.childKey(supplyChain.label, firstExpandable.label));
-    }
-    if (next.size > 0) {
-      this.expandedChildMenus.set(next);
-    }
-    this.seededChildMenus = true;
   }
 
   private autoExpandActiveMenu() {

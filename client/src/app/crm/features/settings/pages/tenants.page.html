@@ -150,50 +150,7 @@
                     <p-tag value="Always on" severity="success"></p-tag>
                   </div>
                 </div>
-
-                <div class="pack-card pack-card--supply">
-                  <div class="pack-header">
-                    <div class="pack-icon pack-icon--supply">
-                      <i class="pi pi-sitemap"></i>
-                    </div>
-                    <div class="pack-meta">
-                      <h4>Supply Chain</h4>
-                    </div>
-                    <div class="pack-toggle">
-                      <p-toggleSwitch [(ngModel)]="activeSupplyChainEnabled" (onChange)="onActiveSupplyChainToggle($event)"></p-toggleSwitch>
-                    </div>
-                  </div>
-
-                  <p-listbox
-                    class="module-listbox"
-                    [options]="supplyChainModules"
-                    optionLabel="label"
-                    optionValue="key"
-                    [multiple]="true"
-                    [checkbox]="true"
-                    [disabled]="!activeSupplyChainEnabled"
-                    [(ngModel)]="activeModuleSelection"
-                    (onChange)="onModuleSelectionChange()"
-                  >
-                    <ng-template let-module pTemplate="item">
-                      <div class="module-option">
-                        <i class="pi" [ngClass]="[module.icon, module.iconClass]"></i>
-                        <span>{{ module.label }}</span>
-                      </div>
-                    </ng-template>
-                  </p-listbox>
-                </div>
               </div>
-              <button
-                type="button"
-                pButton
-                class="crm-button crm-button--primary save-industry-btn"
-                icon="pi pi-save"
-                label="Save industry packs"
-                [loading]="saving()"
-                [disabled]="!canManageTenants() || !activeTenant()"
-                (click)="saveActiveIndustrySettings()"
-              ></button>
             </div>
           </article>
         </section>
@@ -229,10 +186,7 @@
                   <span class="tenant-item-key">{{ tenant.key }}</span>
                 </div>
                 <div class="tenant-item-meta">
-                  <span class="tenant-item-preset" [ngClass]="{
-                    'preset--supply-chain': tenant.industryPreset === 'SupplyChain',
-                    'preset--core': tenant.industryPreset !== 'SupplyChain'
-                  }">
+                  <span class="tenant-item-preset preset--core">
                     {{ tenant.industryPreset || 'CoreCRM' }}
                   </span>
                   <span class="tenant-item-date">{{ tenant.createdAtUtc | date:'MMM d, y' }}</span>

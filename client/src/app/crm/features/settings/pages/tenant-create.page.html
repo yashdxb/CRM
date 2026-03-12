@@ -228,46 +228,8 @@
                     <p-tag value="Always on" severity="success"></p-tag>
                   </div>
                   <p class="pack-body">
-                    Core CRM is enabled for every tenant. You can layer Supply Chain modules for sourcing,
-                    procurement, logistics, and supplier workflows.
+                    Core CRM is enabled for every tenant.
                   </p>
-                </div>
-
-                <div class="pack-card pack-card--supply">
-                  <div class="pack-header">
-                    <div class="pack-icon pack-icon--supply">
-                      <i class="pi pi-sitemap"></i>
-                    </div>
-                    <div class="pack-meta">
-                      <h4>Supply Chain</h4>
-                      <p>Enable optional sourcing and supplier operations.</p>
-                    </div>
-                    <div class="pack-toggle">
-                      <p-toggleSwitch formControlName="supplyChainEnabled" (onChange)="onSupplyChainToggle()"></p-toggleSwitch>
-                    </div>
-                  </div>
-
-                  <div class="module-grid" formGroupName="modules" [class.is-disabled]="!tenantForm.controls.supplyChainEnabled.value">
-                    <label
-                      class="module-item"
-                      *ngFor="let module of supplyChainModules"
-                      [class.is-disabled]="!tenantForm.controls.supplyChainEnabled.value"
-                    >
-                      <p-checkbox
-                        [binary]="true"
-                        [formControlName]="module.key"
-                        [disabled]="!tenantForm.controls.supplyChainEnabled.value"
-                      ></p-checkbox>
-                      <div class="module-meta">
-                        <div class="module-title">
-                          <i class="pi" [ngClass]="[module.icon, module.iconClass]"></i>
-                          <span>{{ module.label }}</span>
-                        </div>
-                        <div class="module-desc">{{ module.description }}</div>
-                      </div>
-                    </label>
-                  </div>
-                  <small class="form-hint">Core CRM remains active. Toggle Supply Chain to select modules.</small>
                 </div>
               </div>
             </div>

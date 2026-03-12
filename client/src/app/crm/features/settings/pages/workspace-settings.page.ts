@@ -78,7 +78,6 @@ export class WorkspaceSettingsPage {
   protected currencyOptions: Option[] = [];
   protected readonly verticalPresetOptions: Option[] = [
     { label: 'Core CRM', value: 'CoreCRM' },
-    { label: 'Supply Chain', value: 'SupplyChain' },
     { label: 'Real Estate Brokerage', value: 'RealEstateBrokerage' }
   ];
   protected readonly activeVerticalPresetConfiguration = signal<VerticalPresetConfiguration | null>(null);

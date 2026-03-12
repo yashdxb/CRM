@@ -6,7 +6,6 @@ export interface NavLink {
   disabled?: boolean;
   permission?: string;
   featureFlag?: string;
-  pack?: 'supply-chain';
   module?: string;
   iconColor?: string;
   children?: NavLink[];
