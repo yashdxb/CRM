@@ -78,4 +78,4 @@ jobs:
             --resource-group rg-crm-dev-ca \
             --name crm-enterprise-api-dev-01122345 \
             --linux-fx-version "DOTNETCORE|10.0" \
-            --startup-file "./CRM.Enterprise.Api"
+            --startup-file ""

@@ -140,3 +140,28 @@ auth: {
 2. If needed, set backend `EntraId.Enabled=false`.
 3. Restart API app service.
 4. Verify standard login path still works.
+
+## Production Login Incident Note
+
+If Azure login fails for both standard email/password and Microsoft sign-in, do not assume Entra configuration is the root cause first.
+
+Check in this order:
+
+1. API health:
+   - `GET /health`
+   - `GET /api/auth/config`
+2. Azure App Service runtime config:
+   - `linuxFxVersion` should remain `.NET 10`
+   - `appCommandLine` must be empty for the current deployment model
+3. Azure SQL migration state:
+   - confirm latest EF migrations are applied before blaming auth logic
+
+Known live failure pattern:
+
+- A bad App Service startup command (`appCommandLine=./CRM.Enterprise.Api`) caused the API not to bind the expected HTTP port.
+- Browser login then surfaced timeout/CORS-style symptoms, but the root issue was API startup, not Entra configuration.
+- Separate recurring issue: schema-changing deploys can succeed while runtime login fails until Azure SQL migrations are applied.
+
+Operational rule:
+
+- Entra setup is required for SSO rollout, but it is **not** the first place to look when `/health` and `/api/auth/config` are failing.

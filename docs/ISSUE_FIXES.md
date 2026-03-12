@@ -258,6 +258,42 @@ This file tracks recurring UI/data issues and how to fix them quickly.
   - no page runtime errors on `/app/report-designer`.
 
 **Why this is safe**
+
+## 9) Azure login outage caused by App Service startup command and missing DB migrations
+**Symptoms**
+- Production login timed out or returned generic browser CORS-style failures.
+- Dashboard requests like `expansion-signals` also failed after login.
+- `GET /health` and `GET /api/auth/config` failed or returned `500/503`.
+
+**Root cause**
+- Primary cause: Azure App Service Linux had a bad custom startup command:
+  - `appCommandLine = ./CRM.Enterprise.Api`
+- The app then failed to bind the expected HTTP port, so Azure front-end forwarding hit `connection refused`.
+- Secondary recurring cause: schema-changing deploys succeeded without Azure SQL migrations being applied, and login then failed on newer user-field writes.
+
+**Fix pattern**
+1. Verify health before debugging auth logic:
+   - `/health`
+   - `/api/auth/config`
+2. Inspect Azure App Service config:
+   - keep `linuxFxVersion = DOTNETCORE|10.0`
+   - keep `appCommandLine = ""`
+3. Restart the web app after correcting startup config.
+4. Confirm latest EF migrations are applied in Azure SQL after schema changes.
+5. Only then debug auth-specific code paths.
+
+**Example implementation**
+- Workflow guardrail:
+  - `.github/workflows/deploy-api.yml`
+- Operational runbook:
+  - `docs/ENTRA_INTERNAL_AUTH_RUNBOOK.md`
+
+**Why this is safe**
+- It targets the actual hosted runtime failure, not superficial browser symptoms.
+- It prevents future deploys from reintroducing the same Azure startup misconfiguration.
+- It separates two real failure classes:
+  - API startup/bind failure
+  - DB schema drift after deploy
 - Does not alter report business logic.
 - Improves load determinism and error visibility.
 - Keeps existing auth and route contracts while stabilizing asset delivery.

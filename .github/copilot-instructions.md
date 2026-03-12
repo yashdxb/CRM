@@ -52,6 +52,19 @@
 - Backend lives under `server/src/CRM.Enterprise.Api`; use `dotnet build` then `dotnet run --project CRM.Enterprise.Api`.
 - `docker compose up -d sqlserver` starts the local SQL Server declared in the root compose file.
 
+## 3.1) Azure API Deployment Guardrails (Mandatory)
+- The Azure API deploy workflow must **not** set a custom Linux startup command for the App Service unless there is a verified runtime requirement.
+- For `crm-enterprise-api-dev-01122345`, the known-good state is:
+  - `linuxFxVersion = DOTNETCORE|10.0`
+  - `appCommandLine = ""`
+- Do **not** set `appCommandLine` to `./CRM.Enterprise.Api`; that caused live login outages because the App Service process failed to bind the expected HTTP port.
+- If Azure login suddenly fails with browser CORS noise, first verify:
+  1. `GET /health`
+  2. `GET /api/auth/config`
+  3. App Service `appCommandLine`
+  4. latest EF migrations applied in Azure SQL
+- Treat missing Azure DB migrations as a second recurring production risk after schema-changing pushes. Deployment success alone does not mean runtime success.
+
 ---
 
 ## 4) Frontend Workflow
