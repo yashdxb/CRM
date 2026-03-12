@@ -3293,6 +3293,75 @@ export class LeadFormPage implements OnInit, OnDestroy {
     return `Updated ${parsed.toLocaleString()}`;
   }
 
+  protected conversationSummaryDisplay(): string {
+    const aiSummary = this.conversationAiSummary()?.summary?.trim();
+    if (aiSummary) {
+      return aiSummary;
+    }
+
+    const stats = this.emailEngagementStats();
+    if (!stats?.total) {
+      return 'No linked email thread yet. Log outreach, replies, or meetings so the CRM can score engagement and suggest the next evidence to collect.';
+    }
+
+    if (!this.conversationSignalAvailable()) {
+      return 'Email activity is recorded, but the conversation signal is still too thin to score confidently. More two-way engagement will improve readiness guidance.';
+    }
+
+    return `This lead has ${stats.total} recorded email touchpoint${stats.total === 1 ? '' : 's'} and a ${this.conversationScoreDisplayLabel().toLowerCase()} conversation signal. Review the detected signals below before advancing the lead.`;
+  }
+
+  protected conversationNextActionDisplay(): string {
+    const aiAction = this.conversationAiSummary()?.nextAction?.trim();
+    if (aiAction) {
+      return aiAction;
+    }
+
+    const riskSignal = this.conversationRiskSignals()[0];
+    if (riskSignal) {
+      return `Address this gap next: ${riskSignal}.`;
+    }
+
+    const positiveSignal = this.conversationPositiveSignals()[0];
+    if (positiveSignal) {
+      return `Build on the current momentum: ${positiveSignal.toLowerCase()}.`;
+    }
+
+    return 'Add the next meaningful touchpoint or meeting outcome so the CRM can convert conversation activity into readiness guidance.';
+  }
+
+  protected conversationPositiveSignals(): string[] {
+    return this.conversationClassifiedSignals().positive;
+  }
+
+  protected conversationRiskSignals(): string[] {
+    return this.conversationClassifiedSignals().risk;
+  }
+
+  protected conversationNeutralSignals(): string[] {
+    return this.conversationClassifiedSignals().neutral;
+  }
+
+  private conversationClassifiedSignals(): { positive: string[]; risk: string[]; neutral: string[] } {
+    const deduped = Array.from(new Set(this.conversationScoreReasons().map((reason) => reason.trim()).filter(Boolean)));
+    const positive: string[] = [];
+    const risk: string[] = [];
+    const neutral: string[] = [];
+
+    for (const reason of deduped) {
+      const normalized = reason.toLowerCase();
+      if (/(no |not |missing|lack|stale|stalled|weak|risk|only outbound|unavailable|not engaged|no reply|no budget|no timeline|no buyer)/.test(normalized)) {
+        risk.push(reason);
+      } else if (/(recent|engaged|reply|replies|stakeholder|buyer|budget mentioned|timeline discussed|momentum|positive)/.test(normalized)) {
+        positive.push(reason);
+      } else {
+        neutral.push(reason);
+      }
+    }
+
+    return { positive, risk, neutral };
+  }
+
   protected conversionReadinessScoreLabel(): string {
     return `${this.conversionReadiness()?.score ?? 0} / 100`;
   }

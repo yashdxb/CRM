@@ -961,56 +961,99 @@
               </div>
             </div>
 
-            <div class="qualification-feedback qualification-feedback--summary" *ngIf="conversationScoreReasons().length">
-              <span class="feedback-title">Conversation score</span>
-              <div class="feedback-metrics">
-                <span class="feedback-item feedback-item--confidence">
-                  <i class="pi pi-comments feedback-icon" aria-hidden="true"></i>
-                  Score:
-                  <strong>{{ conversationScoreValueLabel() }}</strong>
-                </span>
-                <span class="feedback-item feedback-item--weakest">
-                  <i class="pi pi-chart-line feedback-icon" aria-hidden="true"></i>
-                  Band:
-                  <strong>{{ conversationScoreDisplayLabel() }}</strong>
-                </span>
-                <span class="feedback-item feedback-item--truth" *ngIf="conversationScoreUpdatedLabel() as updatedLabel">
-                  <i class="pi pi-clock feedback-icon" aria-hidden="true"></i>
-                  {{ updatedLabel }}
-                </span>
-              </div>
-              <div class="feedback-suggestions">
-                <span class="feedback-title">What the conversation is signaling</span>
-                <ul class="feedback-suggestions-list">
-                  <li *ngFor="let reason of conversationScoreReasons()">{{ reason }}</li>
-                </ul>
-              </div>
-            </div>
           </section>
 
-          <!-- ═══ Email engagement panel ═══ -->
-          <section class="email-engagement-panel" *ngIf="!leadEmailsLoading() || leadEmails().length">
-            <div class="email-engagement-panel__header">
-              <div class="email-engagement-panel__title">
-                <i class="pi pi-envelope" aria-hidden="true"></i>
+          <section class="conversation-intelligence-panel" *ngIf="isEditMode()">
+            <div class="conversation-intelligence-panel__header">
+              <div class="conversation-intelligence-panel__title">
+                <i class="pi pi-comments" aria-hidden="true"></i>
                 <div>
-                  <h3>Email Engagement</h3>
-                  <p>Email communication history with this lead</p>
+                  <h3>Conversation Intelligence</h3>
+                  <p>Summary, signals, and next action from the lead's live email thread</p>
                 </div>
               </div>
-              <div class="email-engagement-panel__stats" *ngIf="emailEngagementStats() as stats">
-                <span class="email-stat">
-                  <i class="pi pi-send" aria-hidden="true"></i>
-                  <strong>{{ stats.total }}</strong> emails
-                </span>
-                <span class="email-stat email-stat--open">
-                  <i class="pi pi-eye" aria-hidden="true"></i>
-                  <strong>{{ stats.openRate }}%</strong> opened
-                </span>
-                <span class="email-stat email-stat--date" *ngIf="stats.lastEmailDate">
+              <div class="conversation-intelligence-panel__actions">
+                <div class="conversation-intelligence-panel__stats" *ngIf="emailEngagementStats() as stats">
+                  <span class="email-stat">
+                    <i class="pi pi-send" aria-hidden="true"></i>
+                    <strong>{{ stats.total }}</strong> emails
+                  </span>
+                  <span class="email-stat email-stat--open">
+                    <i class="pi pi-eye" aria-hidden="true"></i>
+                    <strong>{{ stats.openRate }}%</strong> opened
+                  </span>
+                  <span class="email-stat email-stat--date" *ngIf="stats.lastEmailDate">
+                    <i class="pi pi-clock" aria-hidden="true"></i>
+                    Last: {{ stats.lastEmailDate | date:'MMM d, y' }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="action-btn action-btn--refresh ai-summary-card__generate"
+                  (click)="onGenerateConversationSummary()"
+                  [disabled]="conversationAiSummaryLoading()"
+                >
+                  <span class="action-btn__icon">
+                    <i class="pi" [ngClass]="conversationAiSummaryLoading() ? 'pi-spin pi-spinner' : 'pi-sparkles'" aria-hidden="true"></i>
+                  </span>
+                  <span>{{ conversationAiSummary() ? 'Refresh AI insight' : 'Generate AI insight' }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="conversation-intelligence-panel__overview">
+              <div class="conversation-intelligence-summary">
+                <div class="conversation-intelligence-summary__label">Summary</div>
+                <p>{{ conversationSummaryDisplay() }}</p>
+              </div>
+              <div class="conversation-intelligence-meta">
+                <div class="ai-summary-meta-item">
+                  <i class="pi pi-chart-line" aria-hidden="true"></i>
+                  <span class="ai-summary-meta-label">Conversation score</span>
+                  <strong>{{ conversationScoreValueLabel() }}</strong>
+                </div>
+                <div class="ai-summary-meta-item">
+                  <i class="pi pi-bolt" aria-hidden="true"></i>
+                  <span class="ai-summary-meta-label">Band</span>
+                  <strong>{{ conversationScoreDisplayLabel() }}</strong>
+                </div>
+                <div class="ai-summary-meta-item" [ngClass]="sentimentClass(conversationAiSummary()?.sentiment || 'neutral')" *ngIf="conversationAiSummary() as summary">
+                  <i class="pi" [ngClass]="sentimentIcon(summary.sentiment)" aria-hidden="true"></i>
+                  <span class="ai-summary-meta-label">Sentiment</span>
+                  <strong>{{ summary.sentiment }}</strong>
+                </div>
+                <div class="ai-summary-meta-item ai-summary-meta-item--time" *ngIf="conversationScoreUpdatedLabel() as updatedLabel">
                   <i class="pi pi-clock" aria-hidden="true"></i>
-                  Last: {{ stats.lastEmailDate | date:'MMM d, y' }}
-                </span>
+                  <span>{{ updatedLabel }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="conversation-intelligence-grid">
+              <div class="conversation-signal-card" *ngIf="conversationPositiveSignals().length">
+                <div class="conversation-signal-card__label">What we know</div>
+                <div class="conversation-signal-card__chips">
+                  <span class="conversation-signal-chip conversation-signal-chip--positive" *ngFor="let signal of conversationPositiveSignals()">{{ signal }}</span>
+                </div>
+              </div>
+
+              <div class="conversation-signal-card" *ngIf="conversationRiskSignals().length">
+                <div class="conversation-signal-card__label">What is still missing</div>
+                <div class="conversation-signal-card__chips">
+                  <span class="conversation-signal-chip conversation-signal-chip--risk" *ngFor="let signal of conversationRiskSignals()">{{ signal }}</span>
+                </div>
+              </div>
+
+              <div class="conversation-signal-card" *ngIf="conversationNeutralSignals().length">
+                <div class="conversation-signal-card__label">Other detected signals</div>
+                <div class="conversation-signal-card__chips">
+                  <span class="conversation-signal-chip conversation-signal-chip--neutral" *ngFor="let signal of conversationNeutralSignals()">{{ signal }}</span>
+                </div>
+              </div>
+
+              <div class="conversation-next-action-card">
+                <div class="conversation-next-action-card__label">Recommended next action</div>
+                <p>{{ conversationNextActionDisplay() }}</p>
               </div>
             </div>
 
@@ -1037,9 +1080,9 @@
               </div>
             </div>
 
-            <div class="email-engagement-panel__empty" *ngIf="!leadEmailsLoading() && !leadEmails().length">
+            <div class="email-engagement-panel__empty" *ngIf="!leadEmailsLoading() && !leadEmails().length && !conversationAiSummary()">
               <i class="pi pi-inbox" aria-hidden="true"></i>
-              <span>No email communication recorded for this lead</span>
+              <span>No email communication recorded for this lead yet.</span>
             </div>
 
             <div class="email-engagement-panel__loading" *ngIf="leadEmailsLoading() && !leadEmails().length">
@@ -1056,63 +1099,6 @@
               <i class="pi" [ngClass]="leadEmailsExpanded() ? 'pi-chevron-up' : 'pi-chevron-down'" aria-hidden="true"></i>
               {{ leadEmailsExpanded() ? 'Show fewer' : 'Show all ' + leadEmailsTotalCount() + ' emails' }}
             </button>
-          </section>
-
-          <!-- ═══ AI Conversation Summary ═══ -->
-          <section class="ai-summary-card" *ngIf="isEditMode()">
-            <div class="ai-summary-card__header">
-              <div class="ai-summary-card__title">
-                <i class="pi pi-sparkles" aria-hidden="true"></i>
-                <div>
-                  <h3>AI Conversation Summary</h3>
-                  <p>AI-powered analysis of your interactions with this lead</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                class="action-btn action-btn--refresh ai-summary-card__generate"
-                (click)="onGenerateConversationSummary()"
-                [disabled]="conversationAiSummaryLoading()"
-              >
-                <span class="action-btn__icon">
-                  <i class="pi" [ngClass]="conversationAiSummaryLoading() ? 'pi-spin pi-spinner' : 'pi-sparkles'" aria-hidden="true"></i>
-                </span>
-                <span>{{ conversationAiSummary() ? 'Refresh' : 'Generate' }}</span>
-              </button>
-            </div>
-
-            <div class="ai-summary-card__body" *ngIf="conversationAiSummary() as summary">
-              <div class="ai-summary-card__summary">
-                <div class="ai-summary-card__section-label">Summary</div>
-                <p>{{ summary.summary }}</p>
-              </div>
-              <div class="ai-summary-card__meta">
-                <div class="ai-summary-meta-item" [ngClass]="sentimentClass(summary.sentiment)">
-                  <i class="pi" [ngClass]="sentimentIcon(summary.sentiment)" aria-hidden="true"></i>
-                  <span class="ai-summary-meta-label">Sentiment</span>
-                  <strong>{{ summary.sentiment }}</strong>
-                </div>
-                <div class="ai-summary-meta-item ai-summary-meta-item--action">
-                  <i class="pi pi-arrow-right" aria-hidden="true"></i>
-                  <span class="ai-summary-meta-label">Next Action</span>
-                  <strong>{{ summary.nextAction }}</strong>
-                </div>
-                <div class="ai-summary-meta-item ai-summary-meta-item--time" *ngIf="summary.generatedAtUtc">
-                  <i class="pi pi-clock" aria-hidden="true"></i>
-                  <span>{{ summary.generatedAtUtc | date:'MMM d, h:mm a' }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="ai-summary-card__empty" *ngIf="!conversationAiSummary() && !conversationAiSummaryLoading()">
-              <i class="pi pi-sparkles" aria-hidden="true"></i>
-              <span>Click Generate to create an AI-powered summary of your conversations with this lead</span>
-            </div>
-
-            <div class="ai-summary-card__loading" *ngIf="conversationAiSummaryLoading() && !conversationAiSummary()">
-              <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-              <span>Analyzing conversation…</span>
-            </div>
           </section>
 
           <p-accordion

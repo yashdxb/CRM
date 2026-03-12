@@ -85,6 +85,52 @@ async function deleteLead(request, token: string, leadId: string) {
   expect([204, 404]).toContain(response.status());
 }
 
+async function deleteOpportunity(request, token: string, opportunityId: string) {
+  const response = await request.delete(`${API_BASE_URL}/api/opportunities/${opportunityId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  expect([204, 404]).toContain(response.status());
+}
+
+async function deleteContact(request, token: string, contactId: string) {
+  const response = await request.delete(`${API_BASE_URL}/api/contacts/${contactId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  expect([204, 404]).toContain(response.status());
+}
+
+async function deleteCustomer(request, token: string, customerId: string) {
+  const response = await request.delete(`${API_BASE_URL}/api/customers/${customerId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  expect([204, 404]).toContain(response.status());
+}
+
+async function getLeadDetailForCleanup(request, token: string, leadId: string) {
+  const response = await request.get(`${API_BASE_URL}/api/leads/${leadId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  expect(response.ok(), `lead detail should succeed for cleanup ${leadId}`).toBeTruthy();
+  return (await response.json()) as {
+    id: string;
+    accountId?: string | null;
+    contactId?: string | null;
+    convertedOpportunityId?: string | null;
+  };
+}
+
 async function cleanupLeadByName(request, token: string, name: string) {
   const response = await request.get(`${API_BASE_URL}/api/leads?search=${encodeURIComponent(name)}&page=1&pageSize=50`, {
     headers: {
@@ -97,8 +143,32 @@ async function cleanupLeadByName(request, token: string, name: string) {
   const matches = (payload?.items ?? []).filter(
     (item: { id: string; name?: string }) => (item.name ?? '').trim().toLowerCase() === name.toLowerCase()
   );
+
+  const accountIds = new Set<string>();
+  const contactIds = new Set<string>();
+  const opportunityIds = new Set<string>();
+
+  for (const match of matches) {
+    const detail = await getLeadDetailForCleanup(request, token, match.id);
+    if (detail.accountId) accountIds.add(detail.accountId);
+    if (detail.contactId) contactIds.add(detail.contactId);
+    if (detail.convertedOpportunityId) opportunityIds.add(detail.convertedOpportunityId);
+  }
+
+  for (const opportunityId of opportunityIds) {
+    await deleteOpportunity(request, token, opportunityId);
+  }
+
+  for (const contactId of contactIds) {
+    await deleteContact(request, token, contactId);
+  }
+
   for (const match of matches) {
     await deleteLead(request, token, match.id);
+  }
+
+  for (const accountId of accountIds) {
+    await deleteCustomer(request, token, accountId);
   }
 }
 

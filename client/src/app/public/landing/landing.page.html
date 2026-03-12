@@ -40,6 +40,7 @@
         <span class="hero-brand-wordmark">North Edge</span>
         <span class="hero-brand-crm">CRM</span>
       </div>
+      <span class="hero-proof-badge">Evidence-Based CRM for revenue teams that need defensible decisions</span>
       <h1 class="hero__title">
         <span class="hero__title-text" *ngFor="let slide of heroPreviewSlides; let i = index"
               [class.hero__title-text--active]="i === activeHeroPreview">
@@ -53,6 +54,11 @@
           {{ slide.subtitle }}
         </p>
       </div>
+      <ul class="hero-proof-points">
+        <li><i class="pi pi-check-circle"></i> CQVS qualification with evidence quality, not generic lead scoring</li>
+        <li><i class="pi pi-check-circle"></i> Conversation score and conversion readiness tied to real interactions</li>
+        <li><i class="pi pi-check-circle"></i> Approval workflows, report workspace, and tenant presets built into the operating model</li>
+      </ul>
       <div class="hero__cta">
         <button type="button" class="hero-btn hero-btn--primary" (click)="onWatchDemo()">
           <i class="pi pi-calendar"></i> Book a Demo
@@ -110,6 +116,21 @@
   <!-- Gradient Bridge -->
   <div class="gradient-bridge" aria-hidden="true"></div>
 
+  <!-- Proof / Differentiation -->
+  <section class="proof">
+    <div class="shell">
+      <span class="section-badge scroll-animate">Why This CRM Feels Different</span>
+      <h2 class="section-title scroll-animate">Built for teams that need evidence, not just activity tracking</h2>
+      <p class="section-subtitle scroll-animate">North Edge CRM is designed to surface what is strong, what is assumed, and what is blocked before revenue decisions are made.</p>
+      <div class="proof__grid">
+        <article class="proof-card scroll-animate" *ngFor="let pillar of proofPillars; let i = index" [style.animation-delay]="i * 0.1 + 's'">
+          <h3>{{ pillar.title }}</h3>
+          <p>{{ pillar.description }}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- Features -->
   <section id="features" class="features">
     <div class="shell">
@@ -150,22 +171,16 @@
   <section id="pricing" class="pricing">
     <div class="shell">
       <span class="section-badge scroll-animate">Simple Pricing</span>
-      <h2 class="section-title scroll-animate">One Price. Everything Included.</h2>
+      <h2 class="section-title scroll-animate">Commercially Simple, Operationally Flexible.</h2>
       <div class="pricing__card scroll-animate">
         <div class="pricing__badge">Most Popular</div>
         <h3 class="pricing__plan">Enterprise</h3>
         <div class="pricing__price">
           <span class="pricing__amount">One-Time Payment</span>
-          <span class="pricing__term">Lifetime access — no recurring fees</span>
+          <span class="pricing__term">Commercial scope is finalized during the demo based on deployment, rollout, and support needs.</span>
         </div>
         <ul class="pricing__features">
-          <li><i class="pi pi-check-circle"></i> Unlimited users</li>
-          <li><i class="pi pi-check-circle"></i> AI lead scoring &amp; pipeline intelligence</li>
-          <li><i class="pi pi-check-circle"></i> Real-time dashboards &amp; analytics</li>
-          <li><i class="pi pi-check-circle"></i> Risk register &amp; deal health monitor</li>
-          <li><i class="pi pi-check-circle"></i> Smart automation &amp; workflows</li>
-          <li><i class="pi pi-check-circle"></i> 360&deg; contact management</li>
-          <li><i class="pi pi-check-circle"></i> Priority support &amp; onboarding</li>
+          <li *ngFor="let note of commercialNotes"><i class="pi pi-check-circle"></i> {{ note }}</li>
         </ul>
         <button type="button" class="pricing__cta" (click)="onWatchDemo()">
           <i class="pi pi-calendar"></i> Book a Demo

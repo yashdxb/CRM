@@ -66,28 +66,50 @@ export class LandingPage implements OnInit, AfterViewInit {
   private lastHeroPreviewWheelAt = 0;
 
   readonly features = [
-    { icon: 'pi-bolt', color: 'primary', title: 'AI Lead Scoring', description: 'Predictive scoring powered by AI ranks every lead so your team focuses on the deals most likely to close.' },
-    { icon: 'pi-chart-bar', color: 'cyan', title: 'Verified Pipeline', description: 'Real-time pipeline view with evidence-based deal health — no guesswork, just facts.' },
-    { icon: 'pi-users', color: 'green', title: '360° Contact Management', description: 'Full relationship history, communication timeline, and engagement tracking in one place.' },
-    { icon: 'pi-chart-pie', color: 'purple', title: 'Real-Time Dashboards', description: 'Live KPIs, conversion funnels, and team performance dashboards with drill-down analytics.' },
-    { icon: 'pi-shield', color: 'orange', title: 'Risk Register', description: 'Proactive deal risk detection with SLA monitoring, stale deal alerts, and at-risk deal flagging.' },
-    { icon: 'pi-cog', color: 'slate', title: 'Smart Automation', description: 'Automated workflows for follow-ups, stage transitions, and notifications that keep deals moving.' }
+    { icon: 'pi-check-square', color: 'primary', title: 'Evidence-Based Qualification', description: 'CQVS-style qualification tracks factor scores, evidence quality, and proof gaps instead of relying on rep optimism alone.' },
+    { icon: 'pi-comments', color: 'cyan', title: 'Conversation-Driven Readiness', description: 'The CRM combines email, call, meeting, and activity signals into conversation score and conversion readiness.' },
+    { icon: 'pi-sitemap', color: 'green', title: 'Governed Conversion Decisions', description: 'Lead conversion and deal movement can be challenged, coached, approved, or blocked with visible reasons.' },
+    { icon: 'pi-chart-line', color: 'purple', title: 'Truth-Based Pipeline Visibility', description: 'Managers see pipeline backed by evidence, health gaps, and readiness signals instead of superficial stage reporting.' },
+    { icon: 'pi-file-edit', color: 'orange', title: 'Report Workspace and Library', description: 'Publish, filter, and govern reports through a dedicated workspace with CRM-safe metadata and report server integration.' },
+    { icon: 'pi-sliders-h', color: 'slate', title: 'Industry Presets with Tenant Control', description: 'Start from shared industry presets and let each customer customize catalogs, workflows, branding, and reporting without product forks.' }
   ];
 
   readonly stats = [
-    { icon: 'pi-users', value: 500, suffix: '+', label: 'Enterprise Users' },
-    { icon: 'pi-globe', value: 12, suffix: '', label: 'Countries' },
-    { icon: 'pi-shield', value: 99.9, suffix: '%', label: 'Uptime SLA' },
-    { icon: 'pi-headphones', value: 24, suffix: '/7', label: 'Support' }
+    { icon: 'pi-check-circle', value: 4, suffix: '', label: 'Core qualification layers' },
+    { icon: 'pi-chart-scatter', value: 6, suffix: '', label: 'Visual KPI report types' },
+    { icon: 'pi-sitemap', value: 1, suffix: '', label: 'Approval workflow engine' },
+    { icon: 'pi-building', value: 2, suffix: '', label: 'Current vertical preset tracks' }
   ];
   animatedStatValues: number[] = [0, 0, 0, 0];
   private statsAnimated = false;
   private scrollObserver: IntersectionObserver | null = null;
 
   readonly howItWorks = [
-    { title: 'Create Your Workspace', description: 'Set up your team workspace in minutes. Invite your sales reps and configure your pipeline stages.' },
-    { title: 'Import Your Pipeline', description: 'Bring your existing deals, contacts, and leads. Our import wizard maps your data automatically.' },
-    { title: 'Start Closing Deals', description: 'AI scores your leads, flags at-risk deals, and surfaces the next-best action for every opportunity.' }
+    { title: 'Stand Up Your Workspace', description: 'Configure your tenant, branding, catalogs, workflows, and report library around the way your team actually sells.' },
+    { title: 'Qualify with Evidence', description: 'Capture CQVS factors, conversation signals, and proof quality so readiness is visible before the team commits pipeline energy.' },
+    { title: 'Operate with Governance', description: 'Convert, approve, report, and coach from one CRM that shows why a lead or deal is strong, weak, blocked, or ready.' }
+  ];
+
+  readonly proofPillars = [
+    {
+      title: 'Generic CRMs store records',
+      description: 'North Edge CRM evaluates readiness, evidence, and conversation quality before teams act.'
+    },
+    {
+      title: 'Qualification is not just a score',
+      description: 'CQVS factors, evidence notes, readiness, and coaching gaps stay visible across the lifecycle.'
+    },
+    {
+      title: 'Managers get defensible pipeline truth',
+      description: 'Pipeline health, coaching queues, approvals, and reporting are tied to the same operating signals.'
+    }
+  ];
+
+  readonly commercialNotes = [
+    'Unlimited internal users under one commercial model',
+    'Tenant branding, workflow, and report customization included',
+    'Hosted deployment and implementation scope agreed during demo',
+    'Ongoing support and rollout model defined per customer engagement'
   ];
 
   readonly teamSizeOptions = [
