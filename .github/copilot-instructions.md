@@ -65,6 +65,29 @@
   4. latest EF migrations applied in Azure SQL
 - Treat missing Azure DB migrations as a second recurring production risk after schema-changing pushes. Deployment success alone does not mean runtime success.
 
+## 3.2) Azure Login Resilience Architecture (Mandatory)
+The login flow has built-in resilience for Azure App Service cold starts and post-deployment restarts:
+
+### Frontend resilience (`auth.service.ts` + `login.page.ts`):
+- **API warmup on page load**: `AuthService.warmUpApi()` hits `/health` when login page loads, waking cold App Service instances before the user submits credentials.
+- **30-second timeout**: Both RxJS `timeout()` and manual `setTimeout` use 30s to accommodate App Service cold starts (can take 10–30s on lower-tier plans).
+- **3 retries with exponential backoff**: Login and Entra login retry transient failures (status 0, 502, 503, 504) up to 3 times with 1s → 2s → 4s delays.
+- **Diagnostic health check on error**: On timeout or network errors, the login page calls `checkApiHealth()` and shows specific messages about API reachability (e.g., "The API server is not responding. It may be restarting after a deployment").
+- **`apiReachable` state tracking**: Login page tracks API reachability to display meaningful diagnostic status.
+
+### Deployment workflow health verification:
+- **API deploy workflow** (`deploy-api.yml`): After deployment, waits 30s for App Service restart, then retries `/health` up to 6 times (15s intervals). Also verifies `/api/auth/config` returns 200, checks `/healthz` for DB connectivity, and confirms `appCommandLine` is empty.
+- **SWA deploy workflow**: Post-deploy step verifies API `/health`, `/api/auth/config`, CORS preflight from SWA origin, and SWA content serving.
+
+### Troubleshooting Azure login failures:
+1. Verify API health: `curl https://crm-enterprise-api-dev-01122345.azurewebsites.net/health`
+2. Verify auth config: `curl https://crm-enterprise-api-dev-01122345.azurewebsites.net/api/auth/config`
+3. Verify DB health: `curl https://crm-enterprise-api-dev-01122345.azurewebsites.net/healthz`
+4. Verify CORS: `curl -X OPTIONS -H "Origin: https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net" -H "Access-Control-Request-Method: POST" https://crm-enterprise-api-dev-01122345.azurewebsites.net/api/auth/login`
+5. Check App Service `appCommandLine` is empty: `az webapp config show --resource-group rg-crm-dev-ca --name crm-enterprise-api-dev-01122345 --query appCommandLine`
+6. Check App Service logs: `az webapp log tail --resource-group rg-crm-dev-ca --name crm-enterprise-api-dev-01122345`
+7. If the API was just deployed, wait 30–60s for cold start to complete.
+
 ---
 
 ## 4) Frontend Workflow
@@ -1743,6 +1766,7 @@ public class SuppliersController : ControllerBase
 - Presence status requires a SignalR connection that includes the tenant header plus the stored JWT even before any user interaction.
 - Tenant keys persisted from login now survive returning to the root host, so the realtime connection always carries the proper `X-Tenant-Key`.
 - Presence service now treats the locally-authenticated user as online immediately so the green dot isn't erased while the hub snapshot finishes.
+- Azure login failures after deployment: App Service cold starts can take 10–30s. The login page now warms up the API on load (`warmUpApi()`), uses 30s timeout, retries 3× with exponential backoff, and shows diagnostic health-check results on error. Deploy workflows verify `/health`, `/api/auth/config`, `/healthz`, and CORS post-deploy.
 
 ---
 

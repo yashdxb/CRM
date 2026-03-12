@@ -40,6 +40,7 @@ export class LoginPage implements OnInit {
   showErrors = false;
   entraEnabled = !!environment.auth?.entra?.enabled;
   localLoginEnabled = true;
+  apiReachable: boolean | null = null;
   private entraClientId = environment.auth?.entra?.clientId ?? '';
   private entraAuthority = environment.auth?.entra?.authority ?? 'https://login.microsoftonline.com/organizations';
   private entraRedirectUri = environment.auth?.entra?.redirectUri ?? (typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login');
@@ -60,6 +61,11 @@ export class LoginPage implements OnInit {
   }
 
   ngOnInit(): void {
+    // Warm up the API to wake cold App Service instances before the user tries to sign in.
+    this.auth.warmUpApi().subscribe((ok) => {
+      this.apiReachable = ok;
+    });
+
     this.auth.getPublicAuthConfig().subscribe({
       next: (config) => {
         this.localLoginEnabled = config.localLoginEnabled;
@@ -103,15 +109,21 @@ export class LoginPage implements OnInit {
         timedOut = true;
         this.loading = false;
         this.showErrors = true;
-        this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
-        this.cdr.detectChanges();
+        // On manual timeout, check API health for diagnostics
+        this.auth.checkApiHealth().subscribe((ok) => {
+          this.apiReachable = ok;
+          this.error = ok
+            ? `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out but the server is reachable — please try again.`
+            : `Unable to sign in as ${normalizedEmail || 'the requested user'}. The API server is not responding. It may be restarting after a deployment — please wait a moment and try again.`;
+          this.cdr.detectChanges();
+        });
       });
-    }, 15000);
+    }, 30000);
 
     this.auth
       .login({ email: normalizedEmail, password: normalizedPassword })
       .pipe(
-        timeout(15000),
+        timeout(30000),
         finalize(() => {
           window.clearTimeout(timeoutId);
           this.loading = false;
@@ -147,14 +159,32 @@ export class LoginPage implements OnInit {
           }
           this.zone.run(() => {
             if ((err as { name?: string })?.name === 'TimeoutError') {
-              this.showErrors = true;
-              this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. Please try again.`;
-              this.cdr.detectChanges();
+              // On timeout, check if API is reachable to give a better error
+              this.auth.checkApiHealth().subscribe((ok) => {
+                this.apiReachable = ok;
+                this.showErrors = true;
+                this.error = ok
+                  ? `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. The server is reachable — please try again.`
+                  : `Unable to sign in as ${normalizedEmail || 'the requested user'}. The API server is not responding. It may be restarting after a deployment — please wait a moment and try again.`;
+                this.cdr.detectChanges();
+              });
               return;
             }
             const httpError = err as HttpErrorResponse | null;
+            const status = httpError?.status ?? 0;
             const messageBody = httpError?.error?.message || httpError?.error?.error || null;
             this.showErrors = true;
+            if (status === 0) {
+              // Network error — check API reachability for diagnostic
+              this.auth.checkApiHealth().subscribe((ok) => {
+                this.apiReachable = ok;
+                this.error = ok
+                  ? `Unable to sign in as ${normalizedEmail || 'the requested user'}. A network error occurred but the server is reachable. Please try again.`
+                  : `Unable to sign in as ${normalizedEmail || 'the requested user'}. Cannot reach the API server (${environment.apiUrl}). It may be restarting — please wait and retry.`;
+                this.cdr.detectChanges();
+              });
+              return;
+            }
             this.error = this.buildErrorText(normalizedEmail, messageBody, httpError?.status);
             this.cdr.detectChanges();
           });

@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { mergeMap, retryWhen, tap, throwError, timer } from 'rxjs';
+import { catchError, mergeMap, Observable, of, retryWhen, switchMap, tap, throwError, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { clearToken, saveToken } from './token.utils';
 import { getTenantKey, setTenantKey } from '../tenant/tenant.utils';
@@ -50,9 +50,39 @@ export class AuthService {
   private readonly currentUserSignal = signal<LoginResponse | null>(null);
   private readonly presenceService = inject(PresenceService);
   private readonly crmEventsService = inject(CrmEventsService);
+  private apiWarmedUp = false;
 
   get currentUser() {
     return this.currentUserSignal.asReadonly();
+  }
+
+  /**
+   * Warm up the API by hitting /health. Useful on login page load
+   * to wake up cold App Service instances before the user submits.
+   * Resolves immediately if already warmed up in this session.
+   */
+  warmUpApi(): Observable<boolean> {
+    if (this.apiWarmedUp) {
+      return of(true);
+    }
+    const url = `${environment.apiUrl}/health`;
+    return this.http.get<unknown>(url).pipe(
+      tap(() => { this.apiWarmedUp = true; }),
+      switchMap(() => of(true)),
+      catchError(() => of(false))
+    );
+  }
+
+  /**
+   * Quick connectivity check against the API health endpoint.
+   * Returns true if the API is reachable, false otherwise.
+   */
+  checkApiHealth(): Observable<boolean> {
+    const url = `${environment.apiUrl}/health`;
+    return this.http.get<unknown>(url).pipe(
+      switchMap(() => of(true)),
+      catchError(() => of(false))
+    );
   }
 
   login(payload: LoginRequest) {
@@ -66,10 +96,11 @@ export class AuthService {
       retryWhen((errors) =>
         errors.pipe(
           mergeMap((err, retryIndex) => {
-            if (retryIndex >= 2 || !this.isTransientAuthFailure(err)) {
+            if (retryIndex >= 3 || !this.isTransientAuthFailure(err)) {
               return throwError(() => err);
             }
-            const delayMs = 800 * (retryIndex + 1);
+            // Exponential backoff: 1s, 2s, 4s
+            const delayMs = 1000 * Math.pow(2, retryIndex);
             return timer(delayMs);
           })
         )
@@ -105,10 +136,10 @@ export class AuthService {
         retryWhen((errors) =>
           errors.pipe(
             mergeMap((err, retryIndex) => {
-              if (retryIndex >= 2 || !this.isTransientAuthFailure(err)) {
+              if (retryIndex >= 3 || !this.isTransientAuthFailure(err)) {
                 return throwError(() => err);
               }
-              const delayMs = 800 * (retryIndex + 1);
+              const delayMs = 1000 * Math.pow(2, retryIndex);
               return timer(delayMs);
             })
           )

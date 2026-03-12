@@ -28,6 +28,36 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 ### Summary for Project Master (If Verified)
 - 
 
+---
+
+**Date:** 2026-07-17  
+**Environment:** Dev (Azure)  
+**Owner:** Yasser / Copilot
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| — | Auth/Login | Unable to login in Azure environment (recurring) | Critical | Yasser |
+
+### Root Cause & Fixes
+| Issue | Root Cause | Fix Applied | Files / Systems | Verified By | Verification Notes |
+|-------|-----------|-------------|-----------------|-------------|--------------------|
+| Azure login failure | App Service cold starts (10–30s) + insufficient timeout (15s) + no warmup + non-diagnostic errors | Comprehensive login resilience: API warmup on page load, 30s timeout, 3 retries with exponential backoff (1s/2s/4s), diagnostic health-check errors | `auth.service.ts`, `login.page.ts`, `deploy-api.yml`, `azure-static-web-apps-*.yml`, `copilot-instructions.md` | curl API verification | `/health` → 200, `/healthz` → 200 (DB healthy), login POST → 200 with JWT, CORS preflight → 200 |
+
+### Changes Applied
+1. **`client/src/app/core/auth/auth.service.ts`**: Added `warmUpApi()` (hits `/health` on page load), `checkApiHealth()` (diagnostic on error), increased retries 2→3 with exponential backoff (1s, 2s, 4s)
+2. **`client/src/app/public/auth/login.page.ts`**: Added `apiReachable` tracking, `warmUpApi()` call in `ngOnInit`, timeout 15s→30s, diagnostic error messages showing API reachability status
+3. **`.github/workflows/deploy-api.yml`**: Added post-deploy health verification (waits 30s, retries `/health` 6×, checks `/api/auth/config`, `/healthz`, `appCommandLine`)
+4. **`.github/workflows/azure-static-web-apps-*.yml`**: Added post-deploy API connectivity check (health, auth config, CORS preflight, SWA content)
+5. **`.github/copilot-instructions.md`**: Added section 3.2 (Azure Login Resilience Architecture), updated section 13 with login resilience pattern
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Monitor next deployment for login success | Yasser | Next deploy | Verify warmup + retries prevent login failures |
+
+---
+
 **Date:** 2026-03-09  
 **Environment:** Dev (Azure)  
 **Owner:** Yasser / Copilot

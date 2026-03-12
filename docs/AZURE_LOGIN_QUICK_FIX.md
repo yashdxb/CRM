@@ -1,299 +1,142 @@
-# Azure Login Failure - Quick Fix Guide
+# Azure Login - Quick Fix & Troubleshooting Guide
 
-**Status:** 🚨 **Critical** - Login completely broken  
-**Root Cause:** Hardcoded invalid API endpoint + potential deployment issue  
-**Time to Fix:** 10-15 minutes (once actual API endpoint is identified)
+**Status:** Resilience architecture implemented  
+**Last Updated:** July 2026
 
 ---
 
-## ⚡ Step 1: Identify Your Actual API Endpoint (5 minutes)
+## Built-in Resilience (Automatic)
 
-Run this command to find your deployed Azure App Services:
+The login flow now handles Azure App Service cold starts automatically:
+
+1. **API Warmup**: Login page calls `/health` on load to wake cold instances
+2. **30s Timeout**: Accommodates cold starts (10–30s on Basic/Standard tiers)
+3. **3 Retries**: Exponential backoff (1s → 2s → 4s) for transient errors (502, 503, 504)
+4. **Diagnostic Errors**: Shows whether API is reachable when login fails
+5. **Deploy Verification**: CI/CD workflows verify `/health` after every deploy
+
+Most cold-start login failures should now resolve themselves automatically.
+
+---
+
+## Quick Diagnostic (When Login Still Fails)
+
+Run these commands in order:
 
 ```bash
-# Login to Azure
-az login
+API="https://crm-enterprise-api-dev-01122345.azurewebsites.net"
 
-# List all app services in your subscription
-az webapp list --query "[].{name:name, defaultHostName:defaultHostName}" -o table
+# 1. Basic health
+curl "$API/health"
+# Expected: 200 → API is running
 
-# Look for one that matches: crm-enterprise-api-*
-# Example output might be:
-# crm-enterprise-api-prod        crm-enterprise-api-prod.azurewebsites.net
-# crm-enterprise-api-staging     crm-enterprise-api-staging.azurewebsites.net
-```
+# 2. Auth config (login page needs this)
+curl "$API/api/auth/config"
+# Expected: 200 with JSON { localLoginEnabled, entra: {...} }
 
-**Write down your actual API endpoint:**
-```
-ACTUAL_API_ENDPOINT = https://_____________________________.azurewebsites.net
+# 3. DB connectivity
+curl "$API/healthz"
+# Expected: 200 with {"status":"Healthy",...}
+
+# 4. CORS preflight
+curl -X OPTIONS \
+  -H "Origin: https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net" \
+  -H "Access-Control-Request-Method: POST" \
+  "$API/api/auth/login"
+# Expected: 200 with Access-Control-Allow-Origin header
+
+# 5. Login attempt
+curl -X POST -H "Content-Type: application/json" \
+  -H "X-Tenant-Key: default" \
+  -d '{"email":"your.email@example.com","password":"YourPassword"}' \
+  "$API/api/auth/login"
+# Expected: 200 with JWT, or 401 if bad credentials
+
+# 6. App Service startup command (MUST be empty)
+az webapp config show \
+  --resource-group rg-crm-dev-ca \
+  --name crm-enterprise-api-dev-01122345 \
+  --query appCommandLine
+# Expected: "" (empty string)
 ```
 
 ---
 
-## ⚡ Step 2: Test API Connectivity (2 minutes)
+## Common Scenarios & Fixes
 
-Before changing configuration, verify the endpoint is working:
+### Scenario 1: API just deployed (most common)
+**Symptom**: Login fails within 60s of deployment  
+**Fix**: Wait 30–60s. The API auto-restarts after deploy; warmup handles this automatically.
 
+### Scenario 2: `/health` returns error or timeout
+**Symptom**: API is not responding at all  
+**Fix**:
 ```bash
-# Replace with your actual endpoint
-API_URL="https://YOUR_ACTUAL_API_ENDPOINT"
+# Check if app is running
+az webapp show -g rg-crm-dev-ca -n crm-enterprise-api-dev-01122345 --query state
+# Should be "Running"
 
-# Test health endpoint
-curl -v "${API_URL}/health"
+# If stopped, start it
+az webapp start -g rg-crm-dev-ca -n crm-enterprise-api-dev-01122345
 
-# Expected output: 200 OK
-# If you get connection error, timeout, or 404 → API not deployed/running
+# Check logs
+az webapp log tail -g rg-crm-dev-ca -n crm-enterprise-api-dev-01122345
 ```
 
----
-
-## ⚡ Step 3: Fix Production Environment Configuration
-
-### **Option A: Simple Fix (Quick, but not permanent)**
-
-Edit: `client/src/environments/environment.production.ts`
-
-```typescript
-// BEFORE (broken)
-const resolveApiUrl = () => {
-  return 'https://crm-enterprise-api-dev-01122345.azurewebsites.net';
-};
-
-// AFTER (fixed)
-const resolveApiUrl = () => {
-  return 'https://YOUR_ACTUAL_API_ENDPOINT.azurewebsites.net';
-};
-```
-
-**Replace `YOUR_ACTUAL_API_ENDPOINT` with the value from Step 1**
-
-### **Option B: Smart Fix (Recommended for production)**
-
-```typescript
-const resolveApiUrl = () => {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    
-    // If running on Azure Static Web App
-    if (host.includes('azurestaticapps.net')) {
-      // Use environment variable or deployment-specific endpoint
-      return 'https://YOUR_ACTUAL_API_ENDPOINT.azurewebsites.net';
-    }
-    
-    // Local development
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
-      return 'http://localhost:5014';
-    }
-  }
-  
-  // Fallback
-  return 'https://YOUR_ACTUAL_API_ENDPOINT.azurewebsites.net';
-};
-
-export const environment = {
-  production: true,
-  useMockApi: false,
-  apiUrl: resolveApiUrl(),
-  envLabel: 'PROD',
-  theme: 'graphite'
-};
-```
-
----
-
-## ⚡ Step 4: Update E2E Test Configuration
-
-Open: `client/playwright.config.ts`
-
-```typescript
-// BEFORE
-export default defineConfig({
-  // ... other config
-  env: {
-    E2E_API_URL: 'https://crm-enterprise-api-dev-01122345.azurewebsites.net',
-  },
-});
-
-// AFTER
-export default defineConfig({
-  // ... other config
-  env: {
-    E2E_API_URL: process.env.E2E_API_URL || 'https://YOUR_ACTUAL_API_ENDPOINT.azurewebsites.net',
-  },
-});
-```
-
----
-
-## ⚡ Step 5: Rebuild and Deploy
-
+### Scenario 3: `appCommandLine` is not empty
+**Symptom**: API process fails to bind HTTP port  
+**Fix**:
 ```bash
-# Build production Angular app
-cd client
-npm install
-npm run build
+az webapp config set \
+  --resource-group rg-crm-dev-ca \
+  --name crm-enterprise-api-dev-01122345 \
+  --startup-file ""
+```
+Then restart: `az webapp restart -g rg-crm-dev-ca -n crm-enterprise-api-dev-01122345`
 
-# Output: dist/ folder ready for deployment
-
-# If using Azure Static Web Apps:
-# Push to main branch or run manual deployment
-git add .
-git commit -m "fix: update API endpoint for production login"
-git push origin main
+### Scenario 4: `/healthz` returns unhealthy (DB issue)
+**Symptom**: API starts but DB queries fail  
+**Fix**: Check Azure SQL firewall rules and connection string in App Service config:
+```bash
+az webapp config appsettings list \
+  -g rg-crm-dev-ca \
+  -n crm-enterprise-api-dev-01122345 \
+  --query "[?name=='ConnectionStrings__SqlServer']"
 ```
 
----
+### Scenario 5: CORS error in browser console
+**Symptom**: `Access to XMLHttpRequest has been blocked by CORS policy`  
+**Fix**: Verify the frontend origin is in the backend's allowed origins list in `Program.cs`. All known origins are already whitelisted:
+- `https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net`
+- `https://northedgesystem.com`
+- `https://www.northedgesystem.com`
 
-## ⚛️ Step 6: Test the Fix
-
-1. **Wait for deployment** (~2-5 minutes)
-
-2. **Open the frontend:**
-   ```
-   https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net/login
-   ```
-
-3. **Check browser DevTools (F12):**
-   - **Console tab:** Should show no errors
-   - **Network tab:** Watch the POST to `/api/auth/login`
-   - Expected response: `200` (if valid credentials) or `401` (if invalid)
-   - NOT `0` (network error) or timeout
-
-4. **Test login with credentials:**
-   - Use a valid user email/password from your database
-   - If you don't have any, see "Seed Default Admin" below
-
----
-
-## 🗄️ Seed Default Admin User (if needed)
-
-If you have no users in the database, you need to run the seeding script:
-
+### Scenario 6: DB migrations not applied
+**Symptom**: 500 errors on login with EF Core migration errors in logs  
+**Fix**: Apply pending migrations:
 ```bash
-# From server directory
 cd server/src/CRM.Enterprise.Api
-
-# Run the project (applies migrations and seeds admin user)
-dotnet run
-
-# Look for output:
-# "Admin user created: admin@example.com"
-# Password: (generated or default)
-```
-
-Or check your database initialization code for default credentials.
-
----
-
-## 🔍 **Troubleshooting**
-
-### ❌ Still Getting "Network error"
-```
-Means: API endpoint is not responding
-
-Check:
-1. Is the API_ENDPOINT actually deployed? 
-   curl https://YOUR_API_ENDPOINT/health
-   
-2. Is it running?
-   az webapp show -n {app_name} --query state
-   Should return: "Running" not "Stopped"
-   
-3. Are permissions correct?
-   Check Azure App Service network/firewall rules
-```
-
-### ❌ Still Getting "Invalid email or password"
-```
-Means: API is responding but authentication failed
-
-Check:
-1. Email exists in database
-2. Password is correct
-3. User account is not deactivated
-4. JWT configuration in backend appsettings.json
-```
-
-### ❌ CORS Error in Browser Console
-```
-"Access to XMLHttpRequest has been blocked by CORS policy"
-
-Check:
-1. Is frontend origin whitelisted in backend CORS?
-   ✅ Already done in Program.cs (line 57)
-   
-2. Does backend CORS include your current frontend domain?
-   Look for: jolly-dune-0d9d1fe0f.2.azurestaticapps.net
-```
-
-### ❌ Still Getting Timeout After 15 Seconds
-```
-Means: API is not responding at all
-
-Check:
-1. API endpoint is correct
-2. API service is running
-3. Network connectivity (firewall, routing)
-4. Application Insights logs for backend errors
+dotnet ef database update --connection "your-azure-sql-connection-string"
 ```
 
 ---
 
-## 🩺 **Diagnostic Commands**
+## Infrastructure Reference
 
-Run these to understand your deployment:
-
-```bash
-# See all app services
-az webapp list -o table
-
-# Get specific app service details
-az webapp show -g {resource_group} -n {app_name}
-
-# View app service logs
-az webapp log tail -g {resource_group} -n {app_name}
-
-# Check app service configuration
-az webapp config appsettings list -g {resource_group} -n {app_name}
-
-# Test endpoint directly
-curl -v https://YOUR_API_ENDPOINT/api/auth/login \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@example.com","password":"password123"}'
-
-# Should return: either 200 (success) or 401 (invalid credentials)
-# NOT: connection error, timeout
-```
+| Component | Value |
+|-----------|-------|
+| API App Service | `crm-enterprise-api-dev-01122345` |
+| Resource Group | `rg-crm-dev-ca` |
+| SWA | `jolly-dune-0d9d1fe0f.2.azurestaticapps.net` |
+| Custom Domain | `www.northedgesystem.com` |
+| Azure SQL | `crm-sql-dev-01130044.database.windows.net` |
+| App Service Config | `linuxFxVersion=DOTNETCORE|10.0`, `appCommandLine=""` |
 
 ---
 
-## 📋 **Validation Checklist**
+## Related Documentation
 
-- [ ] Identified actual API endpoint from Azure
-- [ ] Verified API is running: `curl https://API/health` returns 200
-- [ ] Updated `environment.production.ts` with correct endpoint
-- [ ] Updated `playwright.config.ts` with correct endpoint
-- [ ] Rebuilt Angular app: `npm run build`
-- [ ] Deployed to Azure Static Web App
-- [ ] Waited 5 minutes for deployment
-- [ ] Tested login at: https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net/login
-- [ ] DevTools Network tab shows POST to `/api/auth/login` succeeds (200 or 401)
-- [ ] Successfully logged in with valid credentials
-
----
-
-## 🎯 **If All Else Fails**
-
-Contact Azure support with:
-1. Resource group name
-2. App Service names (frontend + backend)
-3. Network trace from browser DevTools
-4. Application Insights logs (if available)
-5. Date/time of login attempts
-
-Or check these documentation files:
-- `docs/LOGIN_FAILURE_ROOT_CAUSE_ANALYSIS.md` (detailed analysis)
-- `docs/PROJECT_MASTER.md` (architecture overview)
-- `server/src/CRM.Enterprise.Api/Program.cs` (CORS configuration)
+- [LOGIN_FAILURE_ROOT_CAUSE_ANALYSIS.md](LOGIN_FAILURE_ROOT_CAUSE_ANALYSIS.md) — Full root cause analysis and resilience architecture
+- [copilot-instructions.md](../.github/copilot-instructions.md) — Section 3.2 (Login Resilience Architecture)
+- [DAILY_OPERATIONS_LOG.md](DAILY_OPERATIONS_LOG.md) — Operational history
 

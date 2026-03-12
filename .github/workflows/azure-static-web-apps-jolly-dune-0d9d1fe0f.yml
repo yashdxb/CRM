@@ -49,6 +49,52 @@ jobs:
           api_location: ""
           skip_app_build: true
 
+      - name: Post-deploy API connectivity check
+        run: |
+          API_URL="https://crm-enterprise-api-dev-01122345.azurewebsites.net"
+          SWA_URL="https://jolly-dune-0d9d1fe0f.2.azurestaticapps.net"
+
+          echo "Verifying API is reachable from CI (simulates SWA → API connectivity)..."
+
+          # Check /health
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$API_URL/health" || echo "000")
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "✅ API /health returned 200"
+          else
+            echo "⚠️  API /health returned $HTTP_STATUS — the API may be restarting. Login might fail until the API is back."
+          fi
+
+          # Check /api/auth/config
+          CONFIG_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$API_URL/api/auth/config")
+          if [ "$CONFIG_STATUS" = "200" ]; then
+            echo "✅ API /api/auth/config returned 200"
+          else
+            echo "⚠️  API /api/auth/config returned $CONFIG_STATUS — login config may not load"
+          fi
+
+          # Check CORS headers
+          CORS_CHECK=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            -X OPTIONS \
+            -H "Origin: $SWA_URL" \
+            -H "Access-Control-Request-Method: POST" \
+            "$API_URL/api/auth/login")
+          if [ "$CORS_CHECK" = "200" ] || [ "$CORS_CHECK" = "204" ]; then
+            echo "✅ CORS preflight returned $CORS_CHECK"
+          else
+            echo "⚠️  CORS preflight returned $CORS_CHECK — CORS may be misconfigured"
+          fi
+
+          # Verify SWA is serving content
+          SWA_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$SWA_URL")
+          if [ "$SWA_STATUS" = "200" ]; then
+            echo "✅ SWA is serving content (HTTP $SWA_STATUS)"
+          else
+            echo "⚠️  SWA returned $SWA_STATUS"
+          fi
+
+          echo ""
+          echo "=== Post-deploy connectivity check complete ==="
+
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
     runs-on: ubuntu-latest
