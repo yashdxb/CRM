@@ -53,6 +53,11 @@ public class UserEmailConnection : AuditableEntity
     /// Last error message if sync failed.
     /// </summary>
     public string? LastError { get; set; }
+
+    /// <summary>
+    /// Provider-specific sync checkpoint payload (for example Graph delta links).
+    /// </summary>
+    public string? SyncStateJson { get; set; }
     
     /// <summary>
     /// Number of consecutive sync failures.

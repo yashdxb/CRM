@@ -34,6 +34,9 @@ public sealed class UserEmailConnectionConfiguration : IEntityTypeConfiguration<
         builder.Property(e => e.LastError)
             .HasMaxLength(2000);
 
+        builder.Property(e => e.SyncStateJson)
+            .HasColumnType("nvarchar(max)");
+
         builder.HasOne(e => e.User)
             .WithMany()
             .HasForeignKey(e => e.UserId)

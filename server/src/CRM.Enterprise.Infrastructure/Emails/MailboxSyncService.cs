@@ -20,6 +20,7 @@ public sealed class MailboxSyncService : IMailboxSyncService
 
     private const string DataProtectionPurpose = "EmailOAuthTokens";
     private const int MaxMessagesPerSync = 100;
+    private static readonly JsonSerializerOptions SyncStateJsonOptions = new(JsonSerializerDefaults.Web);
 
     public MailboxSyncService(
         CrmDbContext dbContext,
@@ -97,7 +98,7 @@ public sealed class MailboxSyncService : IMailboxSyncService
             SyncResult result;
             if (connection.Provider == EmailProvider.Microsoft365)
             {
-                result = await SyncMicrosoftMailboxAsync(connection.Id, token, cancellationToken);
+                result = await SyncMicrosoftMailboxAsync(connection, token, cancellationToken);
             }
             else
             {
@@ -119,7 +120,7 @@ public sealed class MailboxSyncService : IMailboxSyncService
     }
 
     private async Task<SyncResult> SyncMicrosoftMailboxAsync(
-        Guid connectionId,
+        UserEmailConnection connection,
         string accessToken,
         CancellationToken cancellationToken)
     {
@@ -128,40 +129,74 @@ public sealed class MailboxSyncService : IMailboxSyncService
 
         var newCount = 0;
         var updatedCount = 0;
+        var deletedCount = 0;
+        var syncState = ParseSyncState(connection.SyncStateJson);
 
-        // Sync each folder
         foreach (var (folderName, folder) in GetMicrosoftFolders())
         {
-            var url = $"https://graph.microsoft.com/v1.0/me/mailFolders/{folderName}/messages?" +
-                      $"$top={MaxMessagesPerSync}&$orderby=receivedDateTime desc" +
-                      $"&$select=id,conversationId,internetMessageId,subject,bodyPreview,from,toRecipients,ccRecipients,bccRecipients," +
-                      $"isRead,flag,importance,hasAttachments,receivedDateTime,sentDateTime,isDraft";
-
             try
             {
-                var response = await client.GetFromJsonAsync<JsonElement>(url, cancellationToken);
+                var pageUrl = syncState.FolderDeltaLinks.TryGetValue(folderName, out var deltaLink) &&
+                              !string.IsNullOrWhiteSpace(deltaLink)
+                    ? deltaLink
+                    : BuildMicrosoftInitialDeltaUrl(folderName);
 
-                if (!response.TryGetProperty("value", out var messages))
-                    continue;
+                string? latestDeltaLink = null;
 
-                foreach (var msg in messages.EnumerateArray())
+                while (!string.IsNullOrWhiteSpace(pageUrl))
                 {
-                    var externalId = msg.GetProperty("id").GetString()!;
-                    
-                    var existing = await _dbContext.UserMailMessages
-                        .FirstOrDefaultAsync(m => m.ConnectionId == connectionId && m.ExternalId == externalId, cancellationToken);
+                    var response = await client.GetFromJsonAsync<JsonElement>(pageUrl, cancellationToken);
 
-                    if (existing is null)
+                    if (response.TryGetProperty("value", out var messages))
                     {
-                        var newMessage = MapMicrosoftMessage(connectionId, msg, folder);
-                        _dbContext.UserMailMessages.Add(newMessage);
-                        newCount++;
+                        foreach (var msg in messages.EnumerateArray())
+                        {
+                            var externalId = msg.GetProperty("id").GetString()!;
+
+                            var existing = await _dbContext.UserMailMessages
+                                .FirstOrDefaultAsync(m => m.ConnectionId == connection.Id && m.ExternalId == externalId, cancellationToken);
+
+                            if (msg.TryGetProperty("@removed", out _))
+                            {
+                                if (existing is not null && !existing.IsDeleted)
+                                {
+                                    existing.IsDeleted = true;
+                                    existing.LastSyncAtUtc = DateTime.UtcNow;
+                                    deletedCount++;
+                                }
+
+                                continue;
+                            }
+
+                            if (existing is null)
+                            {
+                                var newMessage = MapMicrosoftMessage(connection.Id, msg, folder);
+                                _dbContext.UserMailMessages.Add(newMessage);
+                                newCount++;
+                            }
+                            else
+                            {
+                                UpdateMicrosoftMessage(existing, msg, folder);
+                                updatedCount++;
+                            }
+                        }
                     }
-                    else
+
+                    pageUrl = null;
+                    if (response.TryGetProperty("@odata.nextLink", out var nextLink))
                     {
-                        UpdateMicrosoftMessage(existing, msg, folder);
-                        updatedCount++;
+                        pageUrl = nextLink.GetString();
                     }
+
+                    if (response.TryGetProperty("@odata.deltaLink", out var deltaLinkProp))
+                    {
+                        latestDeltaLink = deltaLinkProp.GetString();
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(latestDeltaLink))
+                {
+                    syncState.FolderDeltaLinks[folderName] = latestDeltaLink;
                 }
             }
             catch (Exception ex)
@@ -170,8 +205,9 @@ public sealed class MailboxSyncService : IMailboxSyncService
             }
         }
 
+        connection.SyncStateJson = JsonSerializer.Serialize(syncState, SyncStateJsonOptions);
         await _dbContext.SaveChangesAsync(cancellationToken);
-        return new SyncResult(true, newCount, updatedCount, 0, null);
+        return new SyncResult(true, newCount, updatedCount, deletedCount, null);
     }
 
     private async Task<SyncResult> SyncGmailMailboxAsync(
@@ -660,7 +696,8 @@ public sealed class MailboxSyncService : IMailboxSyncService
             Importance = importance,
             ReceivedAtUtc = msg.TryGetProperty("receivedDateTime", out var rd) ? rd.GetDateTime() : DateTime.UtcNow,
             SentAtUtc = msg.TryGetProperty("sentDateTime", out var sd) ? sd.GetDateTime() : null,
-            LastSyncAtUtc = DateTime.UtcNow
+            LastSyncAtUtc = DateTime.UtcNow,
+            ChangeKey = msg.TryGetProperty("changeKey", out var ck) ? ck.GetString() : null
         };
     }
 
@@ -673,6 +710,8 @@ public sealed class MailboxSyncService : IMailboxSyncService
                        status.GetString() == "flagged";
         existing.IsStarred = isStarred;
         existing.Folder = folder;
+        existing.IsDeleted = false;
+        existing.ChangeKey = msg.TryGetProperty("changeKey", out var ck) ? ck.GetString() : existing.ChangeKey;
         existing.LastSyncAtUtc = DateTime.UtcNow;
     }
 
@@ -776,6 +815,30 @@ public sealed class MailboxSyncService : IMailboxSyncService
     }
 
     private static string TruncateBody(string body) => body.Length > 200 ? body[..200] : body;
+
+    private static string BuildMicrosoftInitialDeltaUrl(string folderName)
+    {
+        return $"https://graph.microsoft.com/v1.0/me/mailFolders/{folderName}/messages/delta?" +
+               $"$top={MaxMessagesPerSync}&$select=id,changeKey,conversationId,internetMessageId,subject,bodyPreview,from,toRecipients,ccRecipients,bccRecipients," +
+               $"isRead,flag,importance,hasAttachments,receivedDateTime,sentDateTime,isDraft";
+    }
+
+    private static EmailSyncState ParseSyncState(string? syncStateJson)
+    {
+        if (string.IsNullOrWhiteSpace(syncStateJson))
+        {
+            return new EmailSyncState();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<EmailSyncState>(syncStateJson, SyncStateJsonOptions) ?? new EmailSyncState();
+        }
+        catch
+        {
+            return new EmailSyncState();
+        }
+    }
 
     private async Task FetchFullBodyAsync(UserMailMessage message, CancellationToken cancellationToken)
     {
@@ -1151,5 +1214,10 @@ public sealed class MailboxSyncService : IMailboxSyncService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return MapToDetailDto(localMessage);
+    }
+
+    private sealed class EmailSyncState
+    {
+        public Dictionary<string, string> FolderDeltaLinks { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     }
 }

@@ -129,6 +129,7 @@ public sealed class EmailConnectionService : IEmailConnectionService
             existing.LastError = null;
             existing.FailureCount = 0;
             existing.LastSyncAtUtc = DateTime.UtcNow;
+            existing.SyncStateJson = null;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
             return MapToDto(existing);
@@ -151,7 +152,8 @@ public sealed class EmailConnectionService : IEmailConnectionService
             Scopes = tokenResponse.Scope,
             IsPrimary = !hasConnections, // First connection is primary
             IsActive = true,
-            LastSyncAtUtc = DateTime.UtcNow
+            LastSyncAtUtc = DateTime.UtcNow,
+            SyncStateJson = null
         };
 
         _dbContext.UserEmailConnections.Add(connection);
