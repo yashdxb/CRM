@@ -1,7 +1,6 @@
 import { Injectable, NgZone, inject } from '@angular/core';
 import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
-import { firstValueFrom } from 'rxjs';
-import { Subject } from 'rxjs';
+import { firstValueFrom, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { readTokenContext } from '../auth/token.utils';
 import { getTenantKey, resolveTenantKeyFromHost } from '../tenant/tenant.utils';
@@ -20,6 +19,7 @@ interface CrmEventEnvelope {
 type PresenceRegistration = { entityType: string; recordId: string };
 const GUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const IS_DEV = !environment.production;
 
 @Injectable({ providedIn: 'root' })
 export class CrmEventsService {
@@ -79,9 +79,14 @@ export class CrmEventsService {
       this.zone.run(() => this.handleEvent(envelope));
     });
 
-    console.debug('[CrmEvents] Starting SignalR connection...');
+    this.connection.onreconnected(() => {
+      if (IS_DEV) console.debug('[CrmEvents] SignalR reconnected — re-flushing presence');
+      this.flushPendingPresence();
+    });
+
+    if (IS_DEV) console.debug('[CrmEvents] Starting SignalR connection...');
     this.connection.start().then(() => {
-      console.debug('[CrmEvents] SignalR connected successfully');
+      if (IS_DEV) console.debug('[CrmEvents] SignalR connected successfully');
       this.flushPendingPresence();
     }).catch((err) => {
       console.warn('[CrmEvents] SignalR connection failed:', err);
@@ -99,13 +104,9 @@ export class CrmEventsService {
 
     const key = `${entityType.toLowerCase()}:${recordId}`;
     this.pendingPresence.set(key, { entityType, recordId });
-    console.debug('[CrmEvents] joinRecordPresence called:', { entityType, recordId, key });
+    if (IS_DEV) console.debug('[CrmEvents] joinRecordPresence called:', { entityType, recordId, key });
 
     this.flushPendingPresence();
-
-    void this.ensureFeatureFlagsLoaded(true).then(() => {
-      this.flushPendingPresence();
-    });
   }
 
   leaveRecordPresence(entityType: string, recordId: string) {
@@ -161,8 +162,7 @@ export class CrmEventsService {
       return;
     }
 
-    // Log presence events for debugging
-    if (envelope.eventType.startsWith('record.presence')) {
+    if (IS_DEV && envelope.eventType.startsWith('record.presence')) {
       console.debug('[CrmEvents] Received presence event:', envelope);
     }
 
@@ -257,25 +257,20 @@ export class CrmEventsService {
   }
 
   private flushPendingPresence() {
-    console.debug('[CrmEvents] flushPendingPresence called:', {
-      pendingCount: this.pendingPresence.size,
-      pendingKeys: [...this.pendingPresence.keys()],
-      connectionState: this.connection?.state ?? 'null'
-    });
-
     if (!this.connection || this.connection.state !== HubConnectionState.Connected) {
-      console.debug('[CrmEvents] flushPendingPresence: connection not ready, returning');
       return;
     }
 
-    for (const registration of this.pendingPresence.values()) {
+    for (const [key, registration] of this.pendingPresence.entries()) {
       if (!this.isValidRecordId(registration.recordId)) {
+        this.pendingPresence.delete(key);
         continue;
       }
 
-      console.debug('[CrmEvents] Invoking JoinRecordPresence:', registration);
       this.connection.invoke('JoinRecordPresence', registration.entityType, registration.recordId)
-        .then(() => console.debug('[CrmEvents] JoinRecordPresence succeeded:', registration))
+        .then(() => {
+          if (IS_DEV) console.debug('[CrmEvents] JoinRecordPresence succeeded:', registration);
+        })
         .catch((err) => console.warn('[CrmEvents] JoinRecordPresence failed:', registration, err));
     }
   }
