@@ -273,6 +273,32 @@ export const routes: Routes = [
           import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
       },
       {
+        path: 'properties',
+        canActivate: [roleGuard, tenantFeatureGuard],
+        data: { permission: PERMISSION_KEYS.propertiesView, featureFlag: 'properties', moduleName: 'Properties', breadcrumb: 'Properties', icon: 'pi-home' },
+        children: [
+          {
+            path: '',
+            loadComponent: () =>
+              import('./crm/features/properties/pages/properties.page').then((m) => m.PropertiesPage)
+          },
+          {
+            path: 'new',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.propertiesManage, breadcrumb: 'New Property' },
+            loadComponent: () =>
+              import('./crm/features/properties/pages/property-form.page').then((m) => m.PropertyFormPage)
+          },
+          {
+            path: ':id/edit',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.propertiesManage, breadcrumb: 'Edit Property' },
+            loadComponent: () =>
+              import('./crm/features/properties/pages/property-form.page').then((m) => m.PropertyFormPage)
+          }
+        ]
+      },
+      {
         path: 'marketing/campaigns',
         canActivate: [roleGuard, tenantFeatureGuard],
         data: { permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns', moduleName: 'Marketing', breadcrumb: 'Campaigns', icon: 'pi-megaphone' },

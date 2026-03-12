@@ -117,6 +117,7 @@ public class CrmDbContext : DbContext
     public DbSet<SupportSlaPolicy> SupportSlaPolicies => Set<SupportSlaPolicy>();
     public DbSet<SupportCaseEscalationEvent> SupportCaseEscalationEvents => Set<SupportCaseEscalationEvent>();
     public DbSet<SupportEmailBinding> SupportEmailBindings => Set<SupportEmailBinding>();
+    public DbSet<Property> Properties => Set<Property>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -309,6 +310,16 @@ public class CrmDbContext : DbContext
             .IsRequired();
         modelBuilder.Entity<CustomFieldDefinition>().ToTable("CustomFieldDefinitions", CrmSchema);
         modelBuilder.Entity<CustomFieldValue>().ToTable("CustomFieldValues", CrmSchema);
+        modelBuilder.Entity<Property>().ToTable("Properties", CrmSchema);
+        modelBuilder.Entity<Property>()
+            .Property(p => p.ListPrice)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Property>()
+            .Property(p => p.SalePrice)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Property>()
+            .HasIndex(p => new { p.TenantId, p.MlsNumber })
+            .HasFilter("[MlsNumber] IS NOT NULL AND [IsDeleted] = 0");
         modelBuilder.Entity<Supplier>().ToTable("Suppliers", SupplyChainSchema);
         modelBuilder.Entity<SupplierCertification>().ToTable("SupplierCertifications", SupplyChainSchema);
         modelBuilder.Entity<SupplierContact>().ToTable("SupplierContacts", SupplyChainSchema);
@@ -512,6 +523,21 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Opportunity>()
             .Property(o => o.ProposalLink)
             .HasMaxLength(1024);
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.ListingSidePercent)
+            .HasPrecision(5, 2);
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.BuyerSidePercent)
+            .HasPrecision(5, 2);
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.BrokerageSplitPercent)
+            .HasPrecision(5, 2);
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.DeskFee)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Opportunity>()
+            .Property(o => o.FranchiseFee)
+            .HasPrecision(18, 2);
 
         modelBuilder.Entity<PermissionCatalogEntry>()
             .HasIndex(entry => entry.Key)

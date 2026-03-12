@@ -27,7 +27,9 @@ export const PERMISSION_KEYS = {
   reportsDesign: 'Permissions.Reports.Design',
   auditView: 'Permissions.Audit.View',
   tenantsView: 'Permissions.Tenants.View',
-  tenantsManage: 'Permissions.Tenants.Manage'
+  tenantsManage: 'Permissions.Tenants.Manage',
+  propertiesView: 'Permissions.Properties.View',
+  propertiesManage: 'Permissions.Properties.Manage'
 } as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];

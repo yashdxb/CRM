@@ -50,6 +50,13 @@ public class Opportunity : AuditableEntity
     public string? DeliveryStatus { get; set; }
     public DateTime? DeliveryCompletedAtUtc { get; set; }
 
+    // Commission tracking (real-estate)
+    public decimal? ListingSidePercent { get; set; }
+    public decimal? BuyerSidePercent { get; set; }
+    public decimal? BrokerageSplitPercent { get; set; }
+    public decimal? DeskFee { get; set; }
+    public decimal? FranchiseFee { get; set; }
+
     public Account? Account { get; set; }
     public Contact? PrimaryContact { get; set; }
     public OpportunityStage? Stage { get; set; }

@@ -1,0 +1,40 @@
+namespace CRM.Enterprise.Application.Properties;
+
+public sealed record PropertySearchRequest(
+    string? Search,
+    string? Status,
+    string? PropertyType,
+    string? City,
+    string? SortBy,
+    int Page,
+    int PageSize);
+
+public sealed record PropertyUpsertRequest(
+    string? MlsNumber,
+    string Address,
+    string? City,
+    string? Province,
+    string? PostalCode,
+    string? Country,
+    decimal? ListPrice,
+    decimal? SalePrice,
+    string? Currency,
+    DateTime? ListingDateUtc,
+    DateTime? SoldDateUtc,
+    string? Status,
+    string? PropertyType,
+    int? Bedrooms,
+    int? Bathrooms,
+    decimal? SquareFeet,
+    decimal? LotSizeSqFt,
+    int? YearBuilt,
+    int? GarageSpaces,
+    string? Description,
+    string? Features,
+    string? PhotoUrls,
+    string? VirtualTourUrl,
+    Guid? OwnerId,
+    Guid? AccountId,
+    Guid? PrimaryContactId,
+    Guid? OpportunityId,
+    string? Neighborhood);

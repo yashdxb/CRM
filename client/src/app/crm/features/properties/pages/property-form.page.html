@@ -1,0 +1,363 @@
+<div class="property-form-page">
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- Page Header -->
+  <header class="page-header">
+    <div class="header-content">
+      <button pButton type="button" class="back-link p-button-text" routerLink="/app/properties">
+        <i class="pi pi-arrow-left"></i>
+        <span>Back to properties</span>
+      </button>
+      <div class="header-title">
+        <h1 class="hero-title">
+          <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
+          <span class="title-light">Property</span>
+        </h1>
+        <p>{{ isEditMode() ? 'Update property listing details' : 'Add a new property listing to your portfolio' }}</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Form Section -->
+  <main class="form-container">
+    <form class="property-form" (ngSubmit)="onSave()">
+      <fieldset class="form-fieldset" [disabled]="loading()">
+
+        <!-- Basic Information -->
+        <section class="form-section section--basic">
+          <h2 class="section-title">
+            <i class="pi pi-home"></i>
+            Property information
+          </h2>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="propertyAddress">Address <span class="required">*</span></label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--address">
+                  <i class="pi pi-map-marker"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyAddress" name="address" [(ngModel)]="form.address" required placeholder="Enter property address" />
+              </p-inputgroup>
+              <p class="field-error" *ngIf="addressError()">{{ addressError() }}</p>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyMls">MLS Number</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--info">
+                  <i class="pi pi-hashtag"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyMls" name="mlsNumber" [(ngModel)]="form.mlsNumber" placeholder="e.g., W1234567" />
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyCity">City</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--company">
+                  <i class="pi pi-building"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyCity" name="city" [(ngModel)]="form.city" placeholder="City" />
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyProvince">Province</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--company">
+                  <i class="pi pi-map"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyProvince" name="province" [(ngModel)]="form.province" placeholder="Province / State" />
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyPostalCode">Postal Code</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--info">
+                  <i class="pi pi-inbox"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyPostalCode" name="postalCode" [(ngModel)]="form.postalCode" placeholder="A1A 1A1" />
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyNeighborhood">Neighborhood</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--success">
+                  <i class="pi pi-compass"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyNeighborhood" name="neighborhood" [(ngModel)]="form.neighborhood" placeholder="Neighborhood" />
+              </p-inputgroup>
+            </div>
+          </div>
+        </section>
+
+        <!-- Listing & Pricing -->
+        <section class="form-section section--contact">
+          <h2 class="section-title">
+            <i class="pi pi-dollar"></i>
+            Listing &amp; pricing
+          </h2>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="propertyStatus">Listing Status</label>
+              <p-select
+                id="propertyStatus"
+                [options]="statusOptions"
+                optionLabel="label"
+                optionValue="value"
+                name="status"
+                [(ngModel)]="form.status"
+                placeholder="Select status"
+                appendTo="body"
+                styleClass="w-full"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                </ng-template>
+                <ng-template pTemplate="selectedItem" let-option>
+                  <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                </ng-template>
+              </p-select>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyType">Property Type</label>
+              <p-select
+                id="propertyType"
+                [options]="typeOptions"
+                optionLabel="label"
+                optionValue="value"
+                name="propertyType"
+                [(ngModel)]="form.propertyType"
+                placeholder="Select type"
+                appendTo="body"
+                styleClass="w-full"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                </ng-template>
+                <ng-template pTemplate="selectedItem" let-option>
+                  <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                </ng-template>
+              </p-select>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyListPrice">List Price</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--success">
+                  <i class="pi pi-dollar"></i>
+                </p-inputgroup-addon>
+                <p-inputNumber
+                  id="propertyListPrice"
+                  name="listPrice"
+                  [(ngModel)]="form.listPrice"
+                  mode="currency"
+                  currency="CAD"
+                  locale="en-CA"
+                  placeholder="0.00"
+                  [minFractionDigits]="0"
+                  [maxFractionDigits]="2"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertySalePrice">Sale Price</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--warning">
+                  <i class="pi pi-dollar"></i>
+                </p-inputgroup-addon>
+                <p-inputNumber
+                  id="propertySalePrice"
+                  name="salePrice"
+                  [(ngModel)]="form.salePrice"
+                  mode="currency"
+                  currency="CAD"
+                  locale="en-CA"
+                  placeholder="0.00"
+                  [minFractionDigits]="0"
+                  [maxFractionDigits]="2"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyCurrency">Currency</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--info">
+                  <i class="pi pi-money-bill"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyCurrency" name="currency" [(ngModel)]="form.currency" placeholder="CAD" />
+              </p-inputgroup>
+            </div>
+          </div>
+        </section>
+
+        <!-- Property Details -->
+        <section class="form-section section--additional">
+          <h2 class="section-title">
+            <i class="pi pi-list"></i>
+            Property details
+          </h2>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="propertyBedrooms">Bedrooms</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--industry">
+                  <i class="pi pi-moon"></i>
+                </p-inputgroup-addon>
+                <p-inputNumber
+                  id="propertyBedrooms"
+                  name="bedrooms"
+                  [(ngModel)]="form.bedrooms"
+                  [min]="0"
+                  [max]="99"
+                  placeholder="0"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyBathrooms">Bathrooms</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--email">
+                  <i class="pi pi-slack"></i>
+                </p-inputgroup-addon>
+                <p-inputNumber
+                  id="propertyBathrooms"
+                  name="bathrooms"
+                  [(ngModel)]="form.bathrooms"
+                  [min]="0"
+                  [max]="99"
+                  [minFractionDigits]="0"
+                  [maxFractionDigits]="1"
+                  placeholder="0"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertySquareFeet">Square Feet</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--company">
+                  <i class="pi pi-stop"></i>
+                </p-inputgroup-addon>
+                <p-inputNumber
+                  id="propertySquareFeet"
+                  name="squareFeet"
+                  [(ngModel)]="form.squareFeet"
+                  [min]="0"
+                  placeholder="0"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyLotSize">Lot Size (sqft)</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--success">
+                  <i class="pi pi-expand"></i>
+                </p-inputgroup-addon>
+                <p-inputNumber
+                  id="propertyLotSize"
+                  name="lotSizeSqFt"
+                  [(ngModel)]="form.lotSizeSqFt"
+                  [min]="0"
+                  placeholder="0"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyYearBuilt">Year Built</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--warning">
+                  <i class="pi pi-calendar"></i>
+                </p-inputgroup-addon>
+                <p-inputNumber
+                  id="propertyYearBuilt"
+                  name="yearBuilt"
+                  [(ngModel)]="form.yearBuilt"
+                  [min]="1800"
+                  [max]="2099"
+                  [useGrouping]="false"
+                  placeholder="e.g., 2020"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyGarage">Garage Spaces</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--name">
+                  <i class="pi pi-car"></i>
+                </p-inputgroup-addon>
+                <p-inputNumber
+                  id="propertyGarage"
+                  name="garageSpaces"
+                  [(ngModel)]="form.garageSpaces"
+                  [min]="0"
+                  [max]="20"
+                  placeholder="0"
+                  styleClass="w-full"
+                ></p-inputNumber>
+              </p-inputgroup>
+            </div>
+          </div>
+        </section>
+
+        <!-- Description -->
+        <section class="form-section section--workspace">
+          <h2 class="section-title">
+            <i class="pi pi-file-edit"></i>
+            Description
+          </h2>
+
+          <div class="form-field full-width">
+            <label for="propertyDescription">Property Description</label>
+            <textarea
+              pTextarea
+              id="propertyDescription"
+              name="description"
+              [(ngModel)]="form.description"
+              rows="5"
+              placeholder="Describe the property features, finishes, upgrades..."
+              class="w-full"
+            ></textarea>
+          </div>
+        </section>
+
+      </fieldset>
+
+      <footer class="form-actions">
+        <button
+          type="button"
+          pButton
+          label="Cancel"
+          class="crm-button crm-button--ghost"
+          routerLink="/app/properties">
+        </button>
+        <button
+          type="submit"
+          pButton
+          [label]="isEditMode() ? 'Update property' : 'Create property'"
+          class="crm-button crm-button--primary"
+          [disabled]="!form.address || saving() || loading()">
+        </button>
+      </footer>
+    </form>
+  </main>
+</div>

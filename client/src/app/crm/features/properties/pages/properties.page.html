@@ -1,0 +1,394 @@
+<div class="page-container">
+  <!-- Animated Background Orbs -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <!-- HERO SECTION -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        <span>Property Management Hub</span>
+      </div>
+
+      <h1 class="hero-title">
+        <span class="title-gradient">Property</span>
+        <span class="title-light">Workspace</span>
+      </h1>
+
+      <p class="hero-description">
+        Track listings, manage inventory, and close deals with real-time property intelligence
+      </p>
+
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().total || 0 }}</div>
+          <div class="stat-label">Total Properties</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill" style="width: 100%"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().active }}</div>
+          <div class="stat-label">Active Listings</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--leads" [style.width.%]="metrics().total ? (metrics().active / metrics().total) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().conditional }}</div>
+          <div class="stat-label">Conditional</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--prospects" [style.width.%]="metrics().total ? (metrics().conditional / metrics().total) * 100 : 0"></div>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <div class="stat-value">{{ metrics().sold }}</div>
+          <div class="stat-label">Sold</div>
+          <div class="stat-bar">
+            <div class="stat-bar-fill stat-bar-fill--success" [style.width.%]="metrics().total ? (metrics().sold / metrics().total) * 100 : 0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-actions">
+        <button type="button" class="action-btn action-btn--add" [disabled]="!canManage()" (click)="onCreate()">
+          <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+          <span>Add Property</span>
+        </button>
+        <button type="button" class="action-btn action-btn--refresh" (click)="load()">
+          <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon">
+          <i class="pi pi-home"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Active</span>
+          <strong class="card-value">{{ metrics().active }}</strong>
+          <span class="card-trend card-trend--up">
+            <i class="pi pi-arrow-up"></i> Listings
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+
+      <div class="visual-card visual-card--success">
+        <div class="card-icon">
+          <i class="pi pi-check-circle"></i>
+        </div>
+        <div class="card-content">
+          <span class="card-label">Sold</span>
+          <strong class="card-value">{{ metrics().sold }}</strong>
+          <span class="card-trend">
+            <i class="pi pi-dollar"></i> Closed
+          </span>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- METRICS DASHBOARD -->
+  <section class="metrics-section">
+    <div class="metric-card metric-card--total">
+      <div class="metric-icon">
+        <i class="pi pi-database"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Total Properties</span>
+        <strong class="metric-value">{{ metrics().total || '—' }}</strong>
+      </div>
+      <div class="metric-chart">
+        <svg viewBox="0 0 100 40" class="sparkline">
+          <path d="M0,35 Q25,30 50,20 T100,15" fill="none" stroke="url(#gradient-prop)" stroke-width="2"/>
+          <defs>
+            <linearGradient id="gradient-prop" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#667eea"/>
+              <stop offset="100%" stop-color="#764ba2"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--leads">
+      <div class="metric-icon">
+        <i class="pi pi-home"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Active</span>
+        <strong class="metric-value">{{ metrics().active }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--cyan"
+            [attr.stroke-dasharray]="(metrics().total ? (metrics().active / metrics().total) * 100 : 0) + ', 100'"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--prospects">
+      <div class="metric-icon">
+        <i class="pi pi-clock"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Conditional</span>
+        <strong class="metric-value">{{ metrics().conditional }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--purple"
+            [attr.stroke-dasharray]="(metrics().total ? (metrics().conditional / metrics().total) * 100 : 0) + ', 100'"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--customers">
+      <div class="metric-icon">
+        <i class="pi pi-check-circle"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Sold</span>
+        <strong class="metric-value">{{ metrics().sold }}</strong>
+      </div>
+      <div class="metric-ring">
+        <svg viewBox="0 0 36 36">
+          <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          <path class="ring-fill ring-fill--green"
+            [attr.stroke-dasharray]="(metrics().total ? (metrics().sold / metrics().total) * 100 : 0) + ', 100'"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="metric-card metric-card--new">
+      <div class="metric-icon">
+        <i class="pi pi-file-edit"></i>
+      </div>
+      <div class="metric-content">
+        <span class="metric-label">Drafts</span>
+        <strong class="metric-value">{{ metrics().draft }}</strong>
+      </div>
+      <div class="metric-badge">
+        <span>NEW</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FILTER BAR -->
+  <section class="filter-section">
+    <div class="filter-bar">
+      <div class="search-wrapper">
+        <i class="pi pi-search search-icon"></i>
+        <input
+          pInputText
+          type="search"
+          class="search-input"
+          placeholder="Search by address, MLS #, city..."
+          [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearch($event)"
+        />
+      </div>
+
+      <div class="filter-pills">
+        <div class="filter-pill">
+          <i class="pi pi-tag"></i>
+          <p-select appendTo="body"
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="statusFilter"
+            (ngModelChange)="onStatusChange($event)"
+            placeholder="Status"
+            styleClass="filter-select"
+          ></p-select>
+        </div>
+
+        <div class="filter-pill">
+          <i class="pi pi-home"></i>
+          <p-select appendTo="body"
+            [options]="typeOptions"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="typeFilter"
+            (ngModelChange)="onTypeChange($event)"
+            placeholder="Type"
+            styleClass="filter-select"
+          ></p-select>
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button type="button" class="action-btn action-btn--export" (click)="onExport()">
+          <span class="action-btn__icon"><i class="pi pi-download"></i></span>
+          <span>Export</span>
+        </button>
+
+        <button type="button" class="action-btn action-btn--settings" (click)="resetFilters()">
+          <span class="action-btn__icon"><i class="pi pi-times"></i></span>
+          <span>Clear</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="filter-summary" *ngIf="searchTerm || statusFilter !== 'all' || typeFilter !== 'all'">
+      <span class="summary-label">Active filters:</span>
+      <span class="filter-tag" *ngIf="searchTerm">
+        "{{ searchTerm }}"
+        <i class="pi pi-times" (click)="searchTerm = ''; onSearch('')"></i>
+      </span>
+      <span class="filter-tag" *ngIf="statusFilter !== 'all'">
+        {{ statusFilter }}
+        <i class="pi pi-times" (click)="statusFilter = 'all'; onStatusChange('all')"></i>
+      </span>
+      <span class="filter-tag" *ngIf="typeFilter !== 'all'">
+        {{ typeFilter }}
+        <i class="pi pi-times" (click)="typeFilter = 'all'; onTypeChange('all')"></i>
+      </span>
+    </div>
+  </section>
+
+  <!-- DATA TABLE -->
+  <section class="data-section">
+    <div class="data-card">
+      <header class="data-header">
+        <div class="header-title">
+          <h2>Property Listings</h2>
+          <span class="record-count">
+            {{ properties().length }} of {{ total() }} records
+          </span>
+        </div>
+      </header>
+
+      <!-- Loading State -->
+      <div class="loading-state" *ngIf="loading()">
+        <div class="skeleton-row" *ngFor="let _ of [1,2,3,4,5]">
+          <div class="skeleton skeleton-avatar"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text skeleton-short"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-actions"></div>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="!loading() && !properties().length">
+        <div class="empty-icon">
+          <i class="pi pi-home"></i>
+        </div>
+        <h3>No properties found</h3>
+        <p>Try adjusting your search or filters to find what you're looking for</p>
+        <button type="button" class="action-btn action-btn--refresh" (click)="resetFilters()">
+          <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+          <span>Reset Filters</span>
+        </button>
+      </div>
+
+      <!-- Table View -->
+      <div class="table-wrapper" *ngIf="!loading() && properties().length">
+        <p-table class="crm-table data-table" [value]="properties()">
+          <ng-template pTemplate="header">
+            <tr>
+              <th pSortableColumn="address">Property <p-sortIcon field="address"></p-sortIcon></th>
+              <th pSortableColumn="mlsNumber">MLS # <p-sortIcon field="mlsNumber"></p-sortIcon></th>
+              <th pSortableColumn="listPrice">List Price <p-sortIcon field="listPrice"></p-sortIcon></th>
+              <th pSortableColumn="status">Status <p-sortIcon field="status"></p-sortIcon></th>
+              <th pSortableColumn="propertyType">Type <p-sortIcon field="propertyType"></p-sortIcon></th>
+              <th>Details</th>
+              <th pSortableColumn="ownerName">Agent <p-sortIcon field="ownerName"></p-sortIcon></th>
+              <th class="th-actions">Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr class="table-row" (click)="onRowClick(row, $event)">
+              <td class="td-property">
+                <div class="customer-avatar">
+                  <i class="pi pi-home"></i>
+                </div>
+                <div class="customer-info">
+                  <span class="customer-name">{{ row.address }}</span>
+                  <span class="customer-date">{{ row.city }}{{ row.province ? ', ' + row.province : '' }}</span>
+                </div>
+              </td>
+              <td>
+                <span class="mls-number">{{ row.mlsNumber || '—' }}</span>
+              </td>
+              <td>
+                <span class="price-value" *ngIf="row.listPrice">{{ row.listPrice | currency:row.currency:'symbol':'1.0-0' }}</span>
+                <span *ngIf="!row.listPrice">—</span>
+              </td>
+              <td>
+                <p-tag [value]="row.status" [severity]="statusSeverity(row.status)"></p-tag>
+              </td>
+              <td>
+                <span class="type-label">{{ formatPropertyType(row.propertyType) }}</span>
+              </td>
+              <td>
+                <div class="property-details">
+                  <span *ngIf="row.bedrooms" class="detail-item" pTooltip="Bedrooms">
+                    <i class="pi pi-th-large"></i> {{ row.bedrooms }}
+                  </span>
+                  <span *ngIf="row.bathrooms" class="detail-item" pTooltip="Bathrooms">
+                    <i class="pi pi-box"></i> {{ row.bathrooms }}
+                  </span>
+                  <span *ngIf="row.squareFeet" class="detail-item" pTooltip="Square Feet">
+                    <i class="pi pi-expand"></i> {{ row.squareFeet | number:'1.0-0' }}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <span class="owner-name">{{ row.ownerName || '—' }}</span>
+              </td>
+              <td class="td-actions">
+                <div class="row-actions">
+                  <button
+                    type="button"
+                    class="row-action-btn row-action-btn--edit"
+                    [disabled]="!canManage()"
+                    (click)="onEdit(row); $event.stopPropagation()"
+                    title="Edit"
+                  >
+                    <i class="pi pi-pencil"></i>
+                  </button>
+                  <button
+                    type="button"
+                    class="row-action-btn row-action-btn--delete"
+                    [disabled]="!canManage()"
+                    (click)="onDelete(row); $event.stopPropagation()"
+                    title="Delete"
+                  >
+                    <i class="pi pi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+
+        <p-paginator
+          [rows]="rows"
+          [totalRecords]="total()"
+          [first]="pageIndex * rows"
+          [rowsPerPageOptions]="[10, 25, 50]"
+          (onPageChange)="onPageChange($event)"
+        ></p-paginator>
+      </div>
+    </div>
+  </section>
+</div>

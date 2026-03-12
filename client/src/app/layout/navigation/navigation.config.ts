@@ -69,6 +69,17 @@ export const NAV_LINKS: NavLink[] = [
       { label: 'Attribution', icon: 'pi-percentage', path: '/app/marketing/attribution', permission: PERMISSION_KEYS.marketingView, featureFlag: 'marketing.campaigns' }
     ]
   },
+  {
+    label: 'Properties',
+    icon: 'pi-home',
+    path: '/app/properties',
+    permission: PERMISSION_KEYS.propertiesView,
+    featureFlag: 'properties',
+    children: [
+      { label: 'All Properties', icon: 'pi-list', path: '/app/properties', permission: PERMISSION_KEYS.propertiesView, featureFlag: 'properties' },
+      { label: 'Add Property', icon: 'pi-plus', path: '/app/properties/new', permission: PERMISSION_KEYS.propertiesManage, featureFlag: 'properties' }
+    ]
+  },
   { 
     label: 'Activities', 
     icon: 'pi-calendar', 

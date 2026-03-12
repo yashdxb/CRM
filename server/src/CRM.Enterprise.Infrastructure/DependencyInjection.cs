@@ -29,6 +29,7 @@ using CRM.Enterprise.Application.Emails;
 using CRM.Enterprise.Application.DirectChat;
 using CRM.Enterprise.Application.HelpDesk;
 using CRM.Enterprise.Application.Workflows;
+using CRM.Enterprise.Application.Properties;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Notifications;
 using CRM.Enterprise.Infrastructure.Leads;
@@ -43,6 +44,7 @@ using CRM.Enterprise.Infrastructure.Contacts;
 using CRM.Enterprise.Infrastructure.DirectChat;
 using CRM.Enterprise.Infrastructure.HelpDesk;
 using CRM.Enterprise.Infrastructure.Approvals;
+using CRM.Enterprise.Infrastructure.Properties;
 using CRM.Enterprise.Infrastructure.Emails;
 using CRM.Enterprise.Application.Reporting;
 using CRM.Enterprise.Infrastructure.Reporting;
@@ -227,6 +229,7 @@ public static class DependencyInjection
         services.AddScoped<ISupportEmailIntakeService, HelpDeskService>();
         services.AddScoped<IWorkflowDefinitionService, WorkflowDefinitionService>();
         services.AddScoped<IWorkflowExecutionService, WorkflowExecutionService>();
+        services.AddScoped<IPropertyService, Infrastructure.Properties.PropertyService>();
         
         // Email OAuth connection service
         services.Configure<EmailOAuthOptions>(configuration.GetSection(EmailOAuthOptions.SectionName));

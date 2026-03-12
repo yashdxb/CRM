@@ -39,6 +39,8 @@ public static class Permissions
         public const string ReportsView = "Permissions.Reports.View";
         public const string ReportsManage = "Permissions.Reports.Manage";
         public const string ReportsDesign = "Permissions.Reports.Design";
+        public const string PropertiesView = "Permissions.Properties.View";
+        public const string PropertiesManage = "Permissions.Properties.Manage";
     }
 
     public static class RoleNames
@@ -95,7 +97,9 @@ public static class Permissions
         new(Policies.EmailsManage, "Emails (Manage)", "Send emails and manage email templates.", "Create & Manage Records"),
         new(Policies.ReportsView, "Reports (View)", "View and export reports.", "View & Analyze"),
         new(Policies.ReportsManage, "Reports (Manage)", "Create and manage report definitions.", "Create & Manage Records"),
-        new(Policies.ReportsDesign, "Reports (Design)", "Access the visual report designer.", "Configure System")
+        new(Policies.ReportsDesign, "Reports (Design)", "Access the visual report designer.", "Configure System"),
+        new(Policies.PropertiesView, "Properties (View)", "View property listings and details.", "View & Analyze"),
+        new(Policies.PropertiesManage, "Properties (Manage)", "Create, edit, and manage property listings.", "Create & Manage Records")
     };
 
     public static IReadOnlyList<PermissionDefinition> Definitions { get; } = Array.AsReadOnly(DefinitionsSource);
@@ -132,7 +136,9 @@ public static class Permissions
         Policies.ActivitiesView,
         Policies.ActivitiesManage,
         Policies.EmailsView,
-        Policies.EmailsManage
+        Policies.EmailsManage,
+        Policies.PropertiesView,
+        Policies.PropertiesManage
     };
 
     private static readonly string[] SalesManagerPermissions =
