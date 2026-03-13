@@ -223,6 +223,20 @@
     </div>
   </section>
 
+  <section class="trust">
+    <div class="shell">
+      <span class="section-badge scroll-animate">Operational Trust</span>
+      <h2 class="section-title scroll-animate">Proof that matters before a buyer commits</h2>
+      <p class="section-subtitle scroll-animate">This page does not depend on placeholder customer logos or inflated usage claims. The proof is in how the product is implemented, governed, and controlled once a team goes live.</p>
+      <div class="trust__grid">
+        <article class="trust-card scroll-animate" *ngFor="let signal of trustSignals; let i = index" [style.animation-delay]="i * 0.08 + 's'">
+          <h3>{{ signal.title }}</h3>
+          <p>{{ signal.description }}</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- How It Works -->
   <section id="how-it-works" class="how-it-works">
     <div class="shell">
@@ -260,11 +274,41 @@
     </div>
   </section>
 
+  <section class="commercial">
+    <div class="shell commercial__inner">
+      <div class="commercial__content">
+        <span class="section-badge scroll-animate">What Buyers Need To Know</span>
+        <h2 class="section-title scroll-animate">Commercial clarity before the sales cycle gets long</h2>
+        <p class="section-subtitle scroll-animate">The page should reduce buyer friction, not create it. These are the questions serious teams usually ask before they commit to a demo or rollout discussion.</p>
+
+        <div class="commercial__faq">
+          <article class="commercial-faq-card scroll-animate" *ngFor="let item of commercialFaq; let i = index" [style.animation-delay]="i * 0.08 + 's'">
+            <h3>{{ item.question }}</h3>
+            <p>{{ item.answer }}</p>
+          </article>
+        </div>
+      </div>
+
+      <aside class="commercial__sidebar scroll-animate">
+        <div class="commercial-checklist">
+          <span class="commercial-checklist__eyebrow">Demo expectations</span>
+          <h3>What a serious first conversation looks like</h3>
+          <ul>
+            <li *ngFor="let item of demoExpectations"><i class="pi pi-check-circle"></i> {{ item }}</li>
+          </ul>
+          <button type="button" class="hero-btn hero-btn--primary" (click)="onWatchDemo()">
+            <i class="pi pi-calendar"></i> Book a Demo
+          </button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
   <!-- Final CTA -->
   <section class="final-cta scroll-animate">
     <div class="shell final-cta__inner">
       <h2>Ready to Run Your Pipeline on Truth?</h2>
-      <p>Join forward-thinking sales teams who close more deals with AI-powered intelligence.</p>
+      <p>See the full signal-to-decision flow live, align the rollout model, and leave with a defensible path to implementation.</p>
       <button type="button" class="hero-btn hero-btn--primary hero-btn--lg" (click)="onWatchDemo()">
         <i class="pi pi-calendar"></i> Schedule Your Demo
       </button>

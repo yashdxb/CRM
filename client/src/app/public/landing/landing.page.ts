@@ -154,6 +154,47 @@ export class LandingPage implements OnInit, AfterViewInit {
     'Ongoing support and rollout model defined per customer engagement'
   ];
 
+  readonly trustSignals = [
+    {
+      title: 'Implementation is scoped before go-live',
+      description: 'Demo qualification, deployment path, rollout sequencing, report publishing, and workflow governance are agreed before the project starts.'
+    },
+    {
+      title: 'Governance is built into the operating model',
+      description: 'Approvals, readiness, report publishing, and workspace controls are part of the platform, not layered on after the fact.'
+    },
+    {
+      title: 'Each tenant keeps control without a product fork',
+      description: 'Vertical presets, configurable catalogs, branding, workflows, and reports stay tenant-specific while the product remains upgradeable.'
+    }
+  ];
+
+  readonly demoExpectations = [
+    'Map your current lead, deal, and approval flow',
+    'Review where CQVS, conversation score, and readiness fit your process',
+    'Agree the rollout scope, report set, and implementation model',
+    'Confirm whether a shared industry preset or deeper tenant tailoring is the better fit'
+  ];
+
+  readonly commercialFaq = [
+    {
+      question: 'What happens in the demo?',
+      answer: 'The demo is a working-product session, not a generic pitch. We review your current process, show the signal-to-decision workflow live, and leave with a scoped rollout direction.'
+    },
+    {
+      question: 'Is this a generic CRM with a few custom screens?',
+      answer: 'No. The operating model is different: evidence-based qualification, conversation-driven readiness, governed approvals, and report workspace administration are all part of the product.'
+    },
+    {
+      question: 'Can different customers in the same industry still customize it?',
+      answer: 'Yes. The product is built around shared industry presets with tenant-level configuration for workflows, catalogs, reports, branding, and operational vocabulary.'
+    },
+    {
+      question: 'How is pricing handled if the model is one-time payment?',
+      answer: 'Commercial scope is agreed during the demo based on deployment, rollout, support, and hosting expectations. The point is to avoid unpredictable per-seat expansion, not to hide scope.'
+    }
+  ];
+
   readonly teamSizeOptions = [
     { label: '1-10', value: '1-10' },
     { label: '11-50', value: '11-50' },
