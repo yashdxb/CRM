@@ -1410,3 +1410,29 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
         - `server/src/CRM.Enterprise.Domain/Entities/OpportunityContactRole.cs`
         - `server/src/CRM.Enterprise.Application/Opportunities/IOpportunityService.cs`
         - `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+
+## Public Site / Landing Direction
+
+- Landing Page | As a buyer, I want the public landing page to feel premium and differentiated without turning into an animation-heavy marketing page. (ClickUp: 86e0bjbtp, Status: NOT STARTED)
+  - Acceptance criteria:
+    - Hero copy is anchored to real CRM differentiators, not generic SaaS claims.
+    - Product frame/KPI preview is large enough to feel like a real product surface.
+    - Page includes one standout interactive `signal -> decision -> outcome` narrative section.
+    - Motion is purposeful and limited to:
+      - hero reveal
+      - KPI/chart transitions
+      - section reveal/stagger
+      - one narrative interaction
+    - Page adds stronger proof/trust structure and clearer commercial framing.
+    - Mobile experience stays balanced and responsive.
+    - Page respects `prefers-reduced-motion`.
+    - Decorative motion does not meaningfully regress performance.
+  - Product direction:
+    - Do not solve landing quality by adding more animations everywhere.
+    - Use motion to reinforce:
+      - evidence-based qualification
+      - conversation score
+      - conversion readiness
+      - approval workflows
+      - report workspace / report library
+      - vertical presets + tenant customization

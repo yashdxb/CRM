@@ -5,24 +5,24 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-11 01:08 UTC**
+- Synced at: **2026-03-13 10:10 UTC**
 - ClickUp list id: `901710720381`
-- Total tasks mirrored: **225**
-- Epics mirrored: **39**
-- Stories mirrored: **186**
+- Total tasks mirrored: **227**
+- Epics mirrored: **40**
+- Stories mirrored: **187**
 
 ## Status Summary
 - All tasks:
   - `done`: 134
-  - `backlog`: 88
+  - `backlog`: 90
   - `in progress`: 3
 - Epics:
-  - `backlog`: 21
+  - `backlog`: 22
   - `done`: 17
   - `in progress`: 1
 - Stories:
   - `done`: 117
-  - `backlog`: 67
+  - `backlog`: 68
   - `in progress`: 2
 
 ## Epic and Story Mirror
@@ -363,6 +363,12 @@
   - `86e042909` | `done` | Proposal activity timeline with resend action | tags: -
   - `86e042907` | `done` | Proposal preview and download panel | tags: -
   - `86e042906` | `done` | Quote proposal generation and delivery from opportunity workspace | tags: -
+
+### Public Website & Demo Conversion (`86e0bjbtn`)
+- Status: `backlog`
+- Tags: future, next
+- Stories:
+  - `86e0bjbtp` | `backlog` | Landing page redesign with stronger product story and restrained motion | tags: future, next
 
 ### Real-Time & Notifications (`86e041x2t`)
 - Status: `done`

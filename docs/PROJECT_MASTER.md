@@ -115,6 +115,38 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - **Auth screens parity:** All public auth pages (login, accept-invite, change-password, password reset) must match the login screen’s visual system: same background (orbs + grid + noise), glass card treatment, typography, spacing, and button styling.
 - **Auth shell component:** Public auth pages must use the shared `AuthShellComponent` to ensure visual parity and avoid style drift.
 
+### Public Landing Page Direction (Canonical)
+- The landing page must not be improved by adding more motion indiscriminately.
+- The correct direction is **stronger product storytelling with restrained motion**:
+  - clear hero positioning around real CRM differentiators
+  - larger, more credible product frame/KPI preview
+  - one standout interactive section that shows `signal -> decision -> outcome`
+  - better proof/trust structure
+  - a tighter motion hierarchy
+- Motion should be purposeful only:
+  - hero reveal on first load
+  - KPI card/chart transitions
+  - section reveal/stagger
+  - one interactive product narrative moment
+- Avoid:
+  - constant decorative motion on every section
+  - autoplay-heavy or noisy animations
+  - parallax and looping effects that compete with reading
+  - motion that degrades performance or mobile usability
+- The landing page should feel like a **credible product command center**, not a generic SaaS poster.
+- Product differentiators to emphasize in landing copy/visuals:
+  - evidence-based qualification
+  - conversation score
+  - conversion readiness
+  - governed approval workflows
+  - report workspace / report library
+  - vertical presets + tenant customization
+- Motion/performance rules:
+  - prefer `transform` and `opacity` based animation
+  - preserve mobile responsiveness
+  - respect `prefers-reduced-motion`
+  - do not regress LCP/TTI for decorative effects
+
 ### Mobile Responsive Guiding Principles (Mandatory)
 - Mobile responsiveness is a **core product requirement** for CRM pages (not a later polish item).
 - Preserve the premium CRM visual language on mobile: glass, gradients, shadows, and typography hierarchy should **adapt**, not be removed.
