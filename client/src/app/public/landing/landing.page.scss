@@ -245,7 +245,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.35fr);
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.42fr);
   gap: 3rem;
   padding-top: 7rem;
   padding-bottom: 4rem;
@@ -259,7 +259,7 @@
 }
 
 .hero__content {
-  max-width: 34rem;
+  max-width: 31.5rem;
 }
 
 .hero-brand {
@@ -1136,18 +1136,50 @@
 }
 
 .trust__grid {
+  display: none;
+}
+
+.trust__layout {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.15rem;
+  grid-template-columns: minmax(0, 0.76fr) minmax(0, 1.24fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.trust__intro {
+  position: sticky;
+  top: 6.5rem;
+}
+
+.trust__stream {
+  display: grid;
+  gap: 1rem;
 }
 
 .trust-card {
-  padding: 1.15rem 1.2rem;
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 1.2rem;
+  align-items: start;
+  padding: 1.2rem 1.25rem;
   border-radius: 1.15rem;
   background: rgba(255, 255, 255, 0.86);
   border: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+}
 
+.trust-card__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  color: #0f766e;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.trust-card__body {
   h3 {
     margin: 0 0 0.42rem;
     font-size: 0.98rem;
@@ -1160,16 +1192,6 @@
     line-height: 1.58;
     font-size: 0.91rem;
   }
-}
-
-.trust-card__eyebrow {
-  display: inline-block;
-  margin-bottom: 0.55rem;
-  color: #0f766e;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .features__grid {
@@ -1469,21 +1491,26 @@
 }
 
 .commercial__faq {
+  display: none;
+}
+
+.commercial__faq-list {
   display: grid;
   gap: 1rem;
 }
 
-.commercial-faq-card {
-  padding: 1.3rem 1.35rem;
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+.commercial-faq-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
+  gap: 1.35rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
 
   h3 {
-    margin: 0 0 0.45rem;
+    margin: 0;
     font-size: 1rem;
     color: #0f172a;
+    line-height: 1.45;
   }
 
   p {
@@ -1933,6 +1960,20 @@
     grid-template-columns: 1fr;
   }
 
+  .trust__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .trust__intro {
+    position: relative;
+    top: auto;
+  }
+
+  .trust-card {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
   .commercial__inner {
     grid-template-columns: 1fr;
   }
@@ -2103,6 +2144,11 @@
   .trust__grid,
   .journey-panel__metrics {
     grid-template-columns: 1fr;
+  }
+
+  .commercial-faq-row {
+    grid-template-columns: 1fr;
+    gap: 0.55rem;
   }
 
   .journey-step {

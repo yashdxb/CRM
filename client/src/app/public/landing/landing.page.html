@@ -242,15 +242,19 @@
   </section>
 
   <section class="trust">
-    <div class="shell">
-      <span class="section-badge scroll-animate">Operational Trust</span>
-      <h2 class="section-title scroll-animate">Proof that matters before a buyer commits</h2>
-      <p class="section-subtitle scroll-animate">This page does not depend on placeholder customer logos or inflated usage claims. The proof is in how the product is implemented, governed, and controlled once a team goes live.</p>
-      <div class="trust__grid">
+    <div class="shell trust__layout">
+      <div class="trust__intro">
+        <span class="section-badge scroll-animate">Operational Trust</span>
+        <h2 class="section-title scroll-animate">Proof that matters before a buyer commits</h2>
+        <p class="section-subtitle scroll-animate">This page does not depend on placeholder customer logos or inflated usage claims. The proof is in how the product is implemented, governed, and controlled once a team goes live.</p>
+      </div>
+      <div class="trust__stream">
         <article class="trust-card scroll-animate" *ngFor="let signal of trustSignals; let i = index" [style.animation-delay]="i * 0.08 + 's'">
           <span class="trust-card__eyebrow">Operational proof</span>
-          <h3>{{ signal.title }}</h3>
-          <p>{{ signal.description }}</p>
+          <div class="trust-card__body">
+            <h3>{{ signal.title }}</h3>
+            <p>{{ signal.description }}</p>
+          </div>
         </article>
       </div>
     </div>
@@ -300,8 +304,8 @@
         <h2 class="section-title scroll-animate">Commercial clarity before the sales cycle gets long</h2>
         <p class="section-subtitle scroll-animate">The page should reduce buyer friction, not create it. These are the questions serious teams usually ask before they commit to a demo or rollout discussion.</p>
 
-        <div class="commercial__faq">
-          <article class="commercial-faq-card scroll-animate" *ngFor="let item of commercialFaq; let i = index" [style.animation-delay]="i * 0.08 + 's'">
+        <div class="commercial__faq-list">
+          <article class="commercial-faq-row scroll-animate" *ngFor="let item of commercialFaq; let i = index" [style.animation-delay]="i * 0.08 + 's'">
             <h3>{{ item.question }}</h3>
             <p>{{ item.answer }}</p>
           </article>
