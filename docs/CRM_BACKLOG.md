@@ -13,23 +13,22 @@ Legend:
 ## Recent Delivery Updates (2026-03-13)
 
 - Properties & Real Estate Module (NEXT tier — 12 stories)
-  Status: IN PROGRESS (8/12 completed, 1 in progress, 3 not started)
+  Status: DONE (12/12 completed)
   ClickUp Epic: 86e0bjwbc ([NEXT] Properties & Real Estate Module)
-  - Delivered:
+  Commits: f9ad828 (NOW tier N1–N10), 9571958 (NEXT tier X2/X9/X10/X11)
+  - All stories delivered:
     - X1 (86e0bjwxb) | Document & attachment management | DONE
+    - X2 (86e0bjwxg) | Activity & task association | DONE
     - X3 (86e0bjwxn) | Showing/viewing log with visitor tracking | DONE
     - X4 (86e0bjwxr) | Price change history timeline | DONE
     - X5 (86e0bjwxv) | Photo upload with drag-drop | DONE
     - X6 (86e0bjwy2) | Reactive form migration | DONE
     - X7 (86e0bjwy4) | Commission tracking | DONE
     - X8 (86e0bjwy9) | Kanban board view | DONE
+    - X9 (86e0bjwyd) | SignalR real-time alerts | DONE
+    - X10 (86e0bjwyh) | Reverse navigation | DONE
+    - X11 (86e0bjwyn) | Bulk operations | DONE
     - X12 (86e0bjwyz) | Quick actions on detail page | DONE
-  - In progress:
-    - X2 (86e0bjwxg) | Activity & task association | IN PROGRESS
-  - Not started:
-    - X9 (86e0bjwyd) | SignalR real-time alerts | NOT STARTED
-    - X10 (86e0bjwyh) | Reverse navigation | NOT STARTED
-    - X11 (86e0bjwyn) | Bulk operations | NOT STARTED
   - Evidence:
     - Properties list page: `client/src/app/crm/features/properties/pages/properties.page.ts`
     - Property detail page: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
