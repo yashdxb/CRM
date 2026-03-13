@@ -69,8 +69,7 @@ jobs:
             --resource-group rg-crm-dev-ca \
             --name crm-enterprise-api-dev-01122345 \
             --settings \
-              ASPNETCORE_ENVIRONMENT=Production \
-              StartupInitialization__Enabled=true
+              ASPNETCORE_ENVIRONMENT=Production
 
       - name: Configure Azure Web App runtime and startup command
         run: |

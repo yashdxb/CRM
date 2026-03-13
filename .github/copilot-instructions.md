@@ -1624,9 +1624,10 @@ public class SuppliersController : ControllerBase
 
 ## Persistence + seeding
 - `CrmDbContext` applies `ApplyConfigurationsFromAssembly` and stamps audit columns in `SaveChanges`; set `CreatedAtUtc/UpdatedAtUtc` via this hook, not manually.
-- `DatabaseInitializer` runs on startup (see `Program.cs` scope) to apply migrations, seed roles, seed the admin user, and add canonical lead/opportunity stages.
-- **Production guard (MANDATORY):** never seed demo/test/sample data in Production by default.
-- Production test-data seeding is allowed only with explicit owner approval and an explicit runtime override (`Seeding:AllowProductionTestData=true`).
+- **Production startup runs `MigrateOnlyAsync()` only** — applies EF migrations, zero data seeding. `InitializeAsync()` throws `InvalidOperationException` if called in Production.
+- **Development startup runs `InitializeAsync()`** — applies migrations AND seeds structural data (roles, stages, permissions) plus demo users.
+- **Production guard (MANDATORY):** `InitializeAsync()` contains a hard `throw` for Production environments. There is no config flag to override this. To add structural data to production, use EF migrations or one-time SQL scripts.
+- **Never re-introduce `StartupInitialization__Enabled=true`** in the deploy workflow — this was the root cause of test data leaking into Azure SQL.
 - Update the connection string + JWT secrets in `CRM.Enterprise.Api/appsettings.Development.json`; identical names are required in Azure app settings later.
 
 ## Feature development checklist

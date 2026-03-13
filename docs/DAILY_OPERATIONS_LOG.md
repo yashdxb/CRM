@@ -4,6 +4,55 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ---
 
+## 2026-03-13 — Production Data Seeding Safety Fix
+
+**Date:** 2026-03-13  
+**Environment:** Production (Azure SQL)  
+**Owner:** Development  
+
+### Issues Reported
+| Time | Area | Summary | Severity | Reporter |
+|------|------|---------|----------|----------|
+| - | DatabaseInitializer | Test/demo data being written to Azure SQL (production) despite repeated instructions to avoid it | Critical | Owner |
+
+### Root Cause & Fixes
+
+**Root Cause:** The deploy workflow (`deploy-api.yml`) set `StartupInitialization__Enabled=true` on the Azure App Service, which forced `DatabaseInitializer.InitializeAsync()` to run on **every production startup/restart**. While a `ShouldSeedProductionTestData()` guard blocked demo users and sample items, it depended on config flags that could be overridden. Any of these scenarios would leak test data into production:
+1. `ASPNETCORE_ENVIRONMENT` briefly set to non-`Production` during deployment
+2. `Seeding:AllowProductionTestData=true` set temporarily for debugging
+3. Guard added after data was already seeded in earlier deployments
+
+**Fix Applied (3-layer defense):**
+
+| Layer | Change | File |
+|-------|--------|------|
+| **Deploy workflow** | Removed `StartupInitialization__Enabled=true` from Azure App Settings — production no longer enables the old seeding flag | `.github/workflows/deploy-api.yml` |
+| **Program.cs** | Replaced conditional `StartupInitialization:Enabled` gate with environment-based split: **Production** always runs `MigrateOnlyAsync()` (migrations only, zero seeding); **Development** runs `InitializeAsync()` (migrations + full seeding) | `server/src/CRM.Enterprise.Api/Program.cs` |
+| **DatabaseInitializer** | Added `MigrateOnlyAsync()` method (applies EF migrations only). Added hard `throw` in `InitializeAsync()` if `IsProduction()` — makes it impossible to accidentally seed in production even if called directly | `server/src/CRM.Enterprise.Infrastructure/Persistence/DatabaseInitializer.cs` |
+| **IDatabaseInitializer** | Added `MigrateOnlyAsync` to interface contract | `server/src/CRM.Enterprise.Infrastructure/Persistence/IDatabaseInitializer.cs` |
+
+### Production Behavior After Fix
+| Startup Action | Development | Production |
+|----------------|-------------|------------|
+| Apply EF migrations | ✅ | ✅ |
+| Seed roles, stages, permissions | ✅ | ❌ |
+| Seed demo users | ✅ | ❌ |
+| Seed sample data | ✅ | ❌ |
+| Create essential admin user | ✅ | ❌ |
+
+> **Note:** Structural data (roles, stages, permissions, security levels, etc.) must now be delivered via EF migrations or one-time SQL scripts for production. They are no longer auto-seeded on production startup.
+
+### Follow-ups / Open Items
+| Item | Owner | Due Date | Notes |
+|------|-------|----------|-------|
+| Clean up any existing test/demo data in Azure SQL | Dev | TBD | Demo users (`*@crmenterprise.demo`), fake audit events, sample ItemMaster SKUs may exist from prior seedings |
+| Create EF migration for structural data if needed | Dev | TBD | Roles, stages, permissions — verify they exist in Azure SQL; if missing after next deploy, add via migration |
+
+### Summary for Project Master (If Verified)
+✅ **Production data seeding permanently disabled.** `DatabaseInitializer.InitializeAsync()` now throws in Production. `MigrateOnlyAsync()` handles production startups (migrations only). Deploy workflow no longer sets `StartupInitialization__Enabled`. 3-layer defense: workflow removal + environment split in Program.cs + hard throw guard in initializer.
+
+---
+
 ## Template (Copy per day)
 
 **Date:** YYYY-MM-DD  

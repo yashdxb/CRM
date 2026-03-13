@@ -1698,8 +1698,21 @@ public class DatabaseInitializer : IDatabaseInitializer
 
     private static readonly HashSet<string> PermissionCatalog = new(Permissions.AllKeys, StringComparer.OrdinalIgnoreCase);
 
+    public async Task MigrateOnlyAsync(CancellationToken cancellationToken = default)
+    {
+        await _dbContext.Database.MigrateAsync(cancellationToken);
+    }
+
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
+        if (_hostEnvironment.IsProduction())
+        {
+            throw new InvalidOperationException(
+                "InitializeAsync must not run in Production. " +
+                "Use MigrateOnlyAsync for production deployments. " +
+                "If you need to seed structural data, run a dedicated migration or script.");
+        }
+
         var allowTestDataSeed = ShouldSeedProductionTestData();
 
         await _dbContext.Database.MigrateAsync(cancellationToken);

@@ -345,33 +345,34 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
     }
 }).AllowAnonymous();
 
-var runStartupInitialization = app.Environment.IsDevelopment() ||
-    builder.Configuration.GetValue<bool>("StartupInitialization:Enabled");
-
-if (runStartupInitialization)
+// Production: apply migrations only (no data seeding).
+// Development: apply migrations + seed structural & demo data.
+app.Lifetime.ApplicationStarted.Register(() =>
 {
-    app.Lifetime.ApplicationStarted.Register(() =>
+    _ = Task.Run(async () =>
     {
-        _ = Task.Run(async () =>
+        try
         {
-            try
+            using var scope = app.Services.CreateScope();
+            var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
+
+            if (app.Environment.IsDevelopment())
             {
-                using var scope = app.Services.CreateScope();
-                var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
                 await initializer.InitializeAsync();
-                app.Logger.LogInformation("Database initialization completed.");
+                app.Logger.LogInformation("Database initialization completed (Development — migrations + seeding).");
             }
-            catch (Exception ex)
+            else
             {
-                app.Logger.LogError(ex, "Database initialization failed after application startup.");
+                await initializer.MigrateOnlyAsync();
+                app.Logger.LogInformation("Database migration completed (Production — migrations only, no seeding).");
             }
-        });
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogError(ex, "Database startup task failed.");
+        }
     });
-}
-else
-{
-    app.Logger.LogInformation("Startup database initialization is disabled for this environment.");
-}
+});
 
 await app.RunAsync();
 
