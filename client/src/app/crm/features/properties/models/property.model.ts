@@ -33,7 +33,11 @@ export interface Property {
   yearBuilt?: number;
   garageSpaces?: number;
   description?: string;
+  features?: string;
   neighborhood?: string;
+  country?: string;
+  listingDateUtc?: string;
+  soldDateUtc?: string;
   ownerName?: string;
   ownerId?: string;
   accountId?: string;

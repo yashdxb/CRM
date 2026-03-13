@@ -9,11 +9,20 @@ import { SelectModule } from 'primeng/select';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { DatePickerModule } from 'primeng/datepicker';
 
 import { PropertyStatus, PropertyType } from '../models/property.model';
 import { PropertyDataService, SavePropertyRequest } from '../services/property-data.service';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
+import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
+import { UserLookupItem } from '../../settings/models/user-admin.model';
+import { CustomerDataService } from '../../customers/services/customer-data.service';
+import { Customer } from '../../customers/models/customer.model';
+import { ContactDataService } from '../../contacts/services/contact-data.service';
+import { Contact } from '../../contacts/models/contact.model';
+import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
+import { Opportunity } from '../../opportunities/models/opportunity.model';
 
 interface StatusOption {
   label: string;
@@ -41,6 +50,7 @@ interface TypeOption {
     InputGroupModule,
     InputGroupAddonModule,
     InputNumberModule,
+    DatePickerModule,
     BreadcrumbsComponent
   ],
   templateUrl: './property-form.page.html',
@@ -79,6 +89,16 @@ export class PropertyFormPage implements OnInit {
   private readonly toastService = inject(AppToastService);
   protected propertyId: string | null = null;
 
+  // Relationship lookup data
+  protected readonly users = signal<UserLookupItem[]>([]);
+  protected readonly customers = signal<Customer[]>([]);
+  protected readonly contacts = signal<Contact[]>([]);
+  protected readonly opportunities = signal<Opportunity[]>([]);
+
+  // Date objects for DatePicker binding
+  protected listingDate: Date | undefined = undefined;
+  protected soldDate: Date | undefined = undefined;
+
   protected form: SavePropertyRequest = {
     mlsNumber: '',
     address: '',
@@ -97,7 +117,11 @@ export class PropertyFormPage implements OnInit {
     yearBuilt: undefined,
     garageSpaces: undefined,
     description: '',
+    features: '',
     neighborhood: '',
+    country: 'Canada',
+    listingDateUtc: undefined,
+    soldDateUtc: undefined,
     photoUrls: '',
     virtualTourUrl: ''
   };
@@ -105,7 +129,11 @@ export class PropertyFormPage implements OnInit {
   constructor(
     private readonly router: Router,
     private readonly route: ActivatedRoute,
-    private readonly propertyData: PropertyDataService
+    private readonly propertyData: PropertyDataService,
+    private readonly userService: UserAdminDataService,
+    private readonly customerService: CustomerDataService,
+    private readonly contactService: ContactDataService,
+    private readonly opportunityService: OpportunityDataService
   ) {}
 
   ngOnInit() {
@@ -114,6 +142,22 @@ export class PropertyFormPage implements OnInit {
       this.isEditMode.set(true);
       this.loadProperty();
     }
+    this.loadLookups();
+  }
+
+  private loadLookups() {
+    this.userService.lookupActive().subscribe({
+      next: (items) => this.users.set(items)
+    });
+    this.customerService.search({ page: 1, pageSize: 200 }).subscribe({
+      next: (res) => this.customers.set(res.items)
+    });
+    this.contactService.search({ page: 1, pageSize: 200 }).subscribe({
+      next: (res) => this.contacts.set(res.items)
+    });
+    this.opportunityService.search({ page: 1, pageSize: 200 }).subscribe({
+      next: (res) => this.opportunities.set(res.items)
+    });
   }
 
   private loadProperty() {
@@ -139,7 +183,11 @@ export class PropertyFormPage implements OnInit {
           yearBuilt: property.yearBuilt,
           garageSpaces: property.garageSpaces,
           description: property.description || '',
+          features: property.features || '',
           neighborhood: property.neighborhood || '',
+          country: property.country || 'Canada',
+          listingDateUtc: property.listingDateUtc,
+          soldDateUtc: property.soldDateUtc,
           ownerId: property.ownerId,
           accountId: property.accountId,
           primaryContactId: property.primaryContactId,
@@ -148,6 +196,9 @@ export class PropertyFormPage implements OnInit {
           virtualTourUrl: property.virtualTourUrl || ''
         };
         this.loading.set(false);
+        // Parse dates for DatePicker
+        this.listingDate = property.listingDateUtc ? new Date(property.listingDateUtc) : undefined;
+        this.soldDate = property.soldDateUtc ? new Date(property.soldDateUtc) : undefined;
       },
       error: () => {
         this.loading.set(false);
@@ -164,7 +215,11 @@ export class PropertyFormPage implements OnInit {
     }
 
     this.saving.set(true);
-    const payload: SavePropertyRequest = { ...this.form };
+    const payload: SavePropertyRequest = {
+      ...this.form,
+      listingDateUtc: this.listingDate?.toISOString(),
+      soldDateUtc: this.soldDate?.toISOString()
+    };
 
     if (this.propertyId) {
       this.propertyData.update(this.propertyId, payload).subscribe({

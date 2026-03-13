@@ -36,8 +36,26 @@ export class PropertyDetailPage implements OnInit {
   protected daysSinceListed = computed(() => {
     const prop = this.property();
     if (!prop) return 0;
-    const diffMs = Date.now() - new Date(prop.createdAtUtc).getTime();
+    const ref = prop.listingDateUtc || prop.createdAtUtc;
+    const diffMs = Date.now() - new Date(ref).getTime();
     return Math.max(Math.round(diffMs / 86_400_000), 0);
+  });
+
+  protected timelineEvents = computed<{ label: string; date: string; icon: string; variant: string }[]>(() => {
+    const prop = this.property();
+    if (!prop) return [];
+    const events: { label: string; date: string; icon: string; variant: string; ts: number }[] = [];
+    events.push({ label: 'Record Created', date: prop.createdAtUtc, icon: 'pi-plus-circle', variant: 'created', ts: new Date(prop.createdAtUtc).getTime() });
+    if (prop.listingDateUtc) {
+      events.push({ label: 'Listed on Market', date: prop.listingDateUtc, icon: 'pi-megaphone', variant: 'listed', ts: new Date(prop.listingDateUtc).getTime() });
+    }
+    if (prop.updatedAtUtc && prop.updatedAtUtc !== prop.createdAtUtc) {
+      events.push({ label: 'Last Updated', date: prop.updatedAtUtc, icon: 'pi-pencil', variant: 'updated', ts: new Date(prop.updatedAtUtc).getTime() });
+    }
+    if (prop.soldDateUtc) {
+      events.push({ label: 'Sold', date: prop.soldDateUtc, icon: 'pi-check-circle', variant: 'sold', ts: new Date(prop.soldDateUtc).getTime() });
+    }
+    return events.sort((a, b) => a.ts - b.ts);
   });
 
   protected pricePerSqFt = computed(() => {

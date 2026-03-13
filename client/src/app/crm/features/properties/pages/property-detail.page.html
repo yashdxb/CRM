@@ -129,6 +129,10 @@
                 <span class="field-label">Postal Code</span>
                 <span class="field-value">{{ prop.postalCode }}</span>
               </div>
+              <div class="detail-field" *ngIf="prop.country">
+                <span class="field-label">Country</span>
+                <span class="field-value">{{ prop.country }}</span>
+              </div>
               <div class="detail-field" *ngIf="prop.neighborhood">
                 <span class="field-label">Neighborhood</span>
                 <span class="field-value">{{ prop.neighborhood }}</span>
@@ -179,6 +183,11 @@
                 <span class="field-value">{{ prop.garageSpaces }}</span>
               </div>
             </div>
+            <!-- Features text -->
+            <div class="features-text" *ngIf="prop.features">
+              <span class="field-label">Features &amp; Amenities</span>
+              <p class="field-value">{{ prop.features }}</p>
+            </div>
             <div class="empty-state-cta" *ngIf="prop.bedrooms == null && prop.bathrooms == null && prop.squareFeet == null">
               <p class="empty-text">No feature details available.</p>
               <button *ngIf="canEdit" type="button" class="cta-link" [routerLink]="['/app/properties', prop.id, 'edit']">
@@ -225,15 +234,18 @@
             <div class="detail-fields">
               <div class="detail-field" *ngIf="prop.ownerName">
                 <span class="field-label">Owner</span>
-                <span class="field-value">{{ prop.ownerName }}</span>
+                <a *ngIf="prop.ownerId" class="field-link" [routerLink]="['/app/settings/users', prop.ownerId]">{{ prop.ownerName }}</a>
+                <span *ngIf="!prop.ownerId" class="field-value">{{ prop.ownerName }}</span>
               </div>
               <div class="detail-field" *ngIf="prop.accountName">
                 <span class="field-label">Account</span>
-                <span class="field-value">{{ prop.accountName }}</span>
+                <a *ngIf="prop.accountId" class="field-link" [routerLink]="['/app/customers', prop.accountId]">{{ prop.accountName }}</a>
+                <span *ngIf="!prop.accountId" class="field-value">{{ prop.accountName }}</span>
               </div>
               <div class="detail-field" *ngIf="prop.primaryContactName">
                 <span class="field-label">Primary Contact</span>
-                <span class="field-value">{{ prop.primaryContactName }}</span>
+                <a *ngIf="prop.primaryContactId" class="field-link" [routerLink]="['/app/contacts', prop.primaryContactId]">{{ prop.primaryContactName }}</a>
+                <span *ngIf="!prop.primaryContactId" class="field-value">{{ prop.primaryContactName }}</span>
               </div>
             </div>
             <div class="empty-state-cta" *ngIf="!prop.ownerName && !prop.accountName && !prop.primaryContactName">
@@ -244,22 +256,27 @@
             </div>
           </section>
 
-          <!-- Timestamps -->
+          <!-- Status Timeline -->
           <section class="detail-card">
             <h2 class="card-title"><i class="pi pi-calendar"></i> Timeline</h2>
-            <div class="detail-fields">
-              <div class="detail-field">
-                <span class="field-label">Created</span>
-                <span class="field-value">{{ prop.createdAtUtc | date:'MMM d, yyyy' }}</span>
+
+            <div class="status-timeline">
+              <div class="timeline-event" *ngFor="let evt of timelineEvents(); let last = last"
+                   [class]="'timeline-event timeline-event--' + evt.variant">
+                <div class="timeline-marker">
+                  <span class="marker-dot"><i class="pi" [ngClass]="evt.icon"></i></span>
+                  <span class="marker-line" *ngIf="!last"></span>
+                </div>
+                <div class="timeline-body">
+                  <span class="timeline-label">{{ evt.label }}</span>
+                  <span class="timeline-date">{{ evt.date | date:'MMM d, yyyy' }}</span>
+                </div>
               </div>
-              <div class="detail-field" *ngIf="prop.updatedAtUtc">
-                <span class="field-label">Last Updated</span>
-                <span class="field-value">{{ prop.updatedAtUtc | date:'MMM d, yyyy' }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="field-label">Days on Market</span>
-                <span class="field-value">{{ daysSinceListed() }} days</span>
-              </div>
+            </div>
+
+            <div class="days-on-market">
+              <i class="pi pi-clock"></i>
+              <span><strong>{{ daysSinceListed() }}</strong> days on market</span>
             </div>
           </section>
         </div>

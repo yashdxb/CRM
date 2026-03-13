@@ -21,7 +21,11 @@ export interface SavePropertyRequest {
   yearBuilt?: number;
   garageSpaces?: number;
   description?: string;
+  features?: string;
   neighborhood?: string;
+  country?: string;
+  listingDateUtc?: string;
+  soldDateUtc?: string;
   ownerId?: string;
   accountId?: string;
   primaryContactId?: string;

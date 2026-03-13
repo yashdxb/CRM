@@ -37,7 +37,8 @@ import {
   getPropertyById,
   createProperty,
   updateProperty,
-  deleteProperty
+  deleteProperty,
+  searchContacts
 } from './mock-db';
 
 const toNumber = (value: string | null, fallback: number) => {
@@ -161,6 +162,16 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
       const ok = deleteOpportunity(match[1]);
       return respond(ok ? null : { message: 'Not found' }, ok ? 204 : 404, 120);
     }
+  }
+
+  // ── Contacts ──
+  if (req.method === 'GET' && path === '/api/contacts') {
+    const page = toNumber(req.params.get('page'), 1);
+    const pageSize = toNumber(req.params.get('pageSize'), 200);
+    const search = req.params.get('search') ?? undefined;
+    const accountId = req.params.get('accountId') ?? undefined;
+    const result = searchContacts({ page, pageSize, search, accountId });
+    return respond(result, 200, 120);
   }
 
   // ── Properties ──

@@ -5,6 +5,7 @@ import { DashboardSummary } from '../crm/features/dashboard/models/dashboard.mod
 import { PERMISSION_KEYS } from '../core/auth/permission.constants';
 import { Opportunity, OpportunitySearchRequest, OpportunitySearchResponse } from '../crm/features/opportunities/models/opportunity.model';
 import { SaveOpportunityRequest } from '../crm/features/opportunities/services/opportunity-data.service';
+import { Contact, ContactSearchRequest, ContactSearchResponse } from '../crm/features/contacts/models/contact.model';
 import { Property, PropertySearchRequest, PropertySearchResponse } from '../crm/features/properties/models/property.model';
 import { SavePropertyRequest } from '../crm/features/properties/services/property-data.service';
 import { UpdateWorkspaceSettingsRequest, VerticalPresetConfiguration, WorkspaceSettings } from '../crm/features/settings/models/workspace-settings.model';
@@ -1390,6 +1391,35 @@ export const deleteUser = (id: string): boolean => {
 
 export const resetUserPassword = (_id: string): boolean => true;
 
+// ── Contact Mock Data ──
+
+const mockContacts: Contact[] = [
+  { id: 'cnt-001', name: 'Sarah Chen', email: 'sarah.chen@apexdynamics.ca', phone: '416-555-0101', jobTitle: 'VP Operations', accountId: 'c-001', accountName: 'Apex Dynamics', ownerId: 'u-001', owner: 'Yasser Ahmed', lifecycleStage: 'Customer', createdAt: addDays(today, -90) },
+  { id: 'cnt-002', name: 'James Miller', email: 'james.m@stellarsolutions.ca', phone: '905-555-0202', jobTitle: 'CEO', accountId: 'c-002', accountName: 'Stellar Solutions', ownerId: 'u-003', owner: 'Leah Singh', lifecycleStage: 'Customer', createdAt: addDays(today, -80) },
+  { id: 'cnt-003', name: 'Anita Patel', email: 'anita.p@quantuminnovations.ca', phone: '647-555-0303', jobTitle: 'CFO', accountId: 'c-003', accountName: 'Quantum Innovations', ownerId: 'u-002', owner: 'Mia Khalid', lifecycleStage: 'Prospect', createdAt: addDays(today, -70) },
+  { id: 'cnt-004', name: 'Michael Ross', email: 'michael.r@horizonenterprises.ca', phone: '416-555-0404', jobTitle: 'Director', accountId: 'c-004', accountName: 'Horizon Enterprises', ownerId: 'u-007', owner: 'Marcus Vega', lifecycleStage: 'Lead', createdAt: addDays(today, -60) },
+  { id: 'cnt-005', name: 'Diana Wong', email: 'diana.w@pinnaclegroup.ca', phone: '416-555-0505', jobTitle: 'Managing Partner', accountId: 'c-005', accountName: 'Pinnacle Group', ownerId: 'u-005', owner: 'Priya Desai', lifecycleStage: 'Customer', createdAt: addDays(today, -50) },
+  { id: 'cnt-006', name: 'Robert Kim', email: 'robert.k@metrologistics.ca', phone: '905-555-0606', jobTitle: 'Procurement Manager', accountId: 'c-006', accountName: 'Metro Logistics', ownerId: 'u-006', owner: 'Owen Miles', lifecycleStage: 'Prospect', createdAt: addDays(today, -40) },
+  { id: 'cnt-007', name: 'Emily Zhang', email: 'emily.z@summitcapital.ca', phone: '416-555-0707', jobTitle: 'Investment Analyst', accountId: 'c-007', accountName: 'Summit Capital', ownerId: 'u-001', owner: 'Yasser Ahmed', lifecycleStage: 'Customer', createdAt: addDays(today, -30) },
+  { id: 'cnt-008', name: 'David Okafor', email: 'david.o@gmail.com', phone: '647-555-0808', jobTitle: 'Private Buyer', accountId: undefined, accountName: undefined, ownerId: 'u-004', owner: 'Omar Ali', lifecycleStage: 'Lead', createdAt: addDays(today, -20) }
+];
+
+export function searchContacts(query: ContactSearchRequest): ContactSearchResponse {
+  const searchTerm = (query.search ?? '').toLowerCase();
+  let result = [...mockContacts];
+  if (query.accountId) {
+    result = result.filter((c) => c.accountId === query.accountId);
+  }
+  if (searchTerm) {
+    result = result.filter((c) =>
+      [c.name, c.email, c.accountName].filter(Boolean).some((f) => f!.toLowerCase().includes(searchTerm))
+    );
+  }
+  const total = result.length;
+  const items = paginate(result, query.page ?? 1, query.pageSize ?? 200);
+  return { items, total };
+}
+
 // ── Property Mock Data ──
 
 const mockProperties: Property[] = [
@@ -1398,7 +1428,10 @@ const mockProperties: Property[] = [
     listPrice: 1295000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Detached',
     bedrooms: 4, bathrooms: 3, squareFeet: 2650, lotSizeSqFt: 5200, yearBuilt: 2018, garageSpaces: 2,
     description: 'Stunning detached home in a quiet cul-de-sac with open-concept living, chef\'s kitchen, and finished basement.',
-    neighborhood: 'High Park', ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-001', accountName: 'Apex Dynamics', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: 'Hardwood floors, quartz countertops, smart home, heated garage, landscaped backyard',
+    neighborhood: 'High Park', country: 'Canada',
+    listingDateUtc: addDays(today, -42), soldDateUtc: undefined,
+    ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-001', accountName: 'Apex Dynamics', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     photoUrls: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800,https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800,https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800',
     virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-001',
     createdAtUtc: addDays(today, -45), updatedAtUtc: addDays(today, -3)
@@ -1408,7 +1441,10 @@ const mockProperties: Property[] = [
     listPrice: 725000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Condo',
     bedrooms: 2, bathrooms: 2, squareFeet: 1100, lotSizeSqFt: undefined, yearBuilt: 2021, garageSpaces: 1,
     description: 'Modern 2-bedroom condo in the heart of Yorkville with panoramic city views and premium amenities.',
-    neighborhood: 'Yorkville', ownerName: 'Mia Khalid', ownerId: 'u-002', accountId: 'c-003', accountName: 'Quantum Innovations', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: 'Floor-to-ceiling windows, concierge, gym, rooftop pool, in-suite laundry',
+    neighborhood: 'Yorkville', country: 'Canada',
+    listingDateUtc: addDays(today, -35), soldDateUtc: undefined,
+    ownerName: 'Mia Khalid', ownerId: 'u-002', accountId: 'c-003', accountName: 'Quantum Innovations', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     photoUrls: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800,https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
     virtualTourUrl: undefined,
     createdAtUtc: addDays(today, -38), updatedAtUtc: addDays(today, -7)
@@ -1418,7 +1454,10 @@ const mockProperties: Property[] = [
     listPrice: 899000, salePrice: 875000, currency: 'CAD', status: 'Sold', propertyType: 'Townhouse',
     bedrooms: 3, bathrooms: 3, squareFeet: 1850, lotSizeSqFt: 2800, yearBuilt: 2019, garageSpaces: 1,
     description: 'End-unit freehold townhome with lake views, rooftop terrace, and walkout basement.',
-    neighborhood: 'Port Credit', ownerName: 'Leah Singh', ownerId: 'u-003', accountId: 'c-002', accountName: 'Stellar Solutions', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-001',
+    features: 'Lake views, rooftop terrace, walkout basement, attached garage, stone countertops',
+    neighborhood: 'Port Credit', country: 'Canada',
+    listingDateUtc: addDays(today, -55), soldDateUtc: addDays(today, -14),
+    ownerName: 'Leah Singh', ownerId: 'u-003', accountId: 'c-002', accountName: 'Stellar Solutions', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-001',
     createdAtUtc: addDays(today, -60), updatedAtUtc: addDays(today, -12)
   },
   {
@@ -1426,7 +1465,10 @@ const mockProperties: Property[] = [
     listPrice: 489000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Condo',
     bedrooms: 1, bathrooms: 1, squareFeet: 680, lotSizeSqFt: undefined, yearBuilt: 2022, garageSpaces: 1,
     description: 'Stylish 1-bedroom in the James Street North arts district with exposed brick and modern finishes.',
-    neighborhood: 'James North', ownerName: 'Omar Ali', ownerId: 'u-004', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: 'Exposed brick, modern finishes, stainless steel appliances, in-suite laundry',
+    neighborhood: 'James North', country: 'Canada',
+    listingDateUtc: addDays(today, -28), soldDateUtc: undefined,
+    ownerName: 'Omar Ali', ownerId: 'u-004', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     createdAtUtc: addDays(today, -30), updatedAtUtc: addDays(today, -5)
   },
   {
@@ -1434,7 +1476,10 @@ const mockProperties: Property[] = [
     listPrice: 2150000, salePrice: undefined, currency: 'CAD', status: 'Draft', propertyType: 'Bungalow',
     bedrooms: 3, bathrooms: 2, squareFeet: 2200, lotSizeSqFt: 43560, yearBuilt: 2005, garageSpaces: 2,
     description: 'Premium bungalow on 1-acre lot in wine country with wrap-around porch and detached workshop.',
-    neighborhood: 'Old Town', ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: 'Wrap-around porch, detached workshop, wine cellar, radiant floor heating',
+    neighborhood: 'Old Town', country: 'Canada',
+    listingDateUtc: undefined, soldDateUtc: undefined,
+    ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     createdAtUtc: addDays(today, -5), updatedAtUtc: undefined
   },
   {
@@ -1442,7 +1487,10 @@ const mockProperties: Property[] = [
     listPrice: 3450000, salePrice: undefined, currency: 'CAD', status: 'Conditional', propertyType: 'Condo',
     bedrooms: 3, bathrooms: 3, squareFeet: 2800, lotSizeSqFt: undefined, yearBuilt: 2020, garageSpaces: 2,
     description: 'Penthouse suite with 270-degree city views, private elevator access, and designer finishes throughout.',
-    neighborhood: 'Financial District', ownerName: 'Priya Desai', ownerId: 'u-005', accountId: 'c-005', accountName: 'Pinnacle Group', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-003',
+    features: 'Private elevator, 270-degree views, designer finishes, wine fridge, smart home',
+    neighborhood: 'Financial District', country: 'Canada',
+    listingDateUtc: addDays(today, -18), soldDateUtc: undefined,
+    ownerName: 'Priya Desai', ownerId: 'u-005', accountId: 'c-005', accountName: 'Pinnacle Group', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-003',
     photoUrls: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800,https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800,https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=800,https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800',
     virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-006',
     createdAtUtc: addDays(today, -20), updatedAtUtc: addDays(today, -2)
@@ -1452,7 +1500,10 @@ const mockProperties: Property[] = [
     listPrice: 1050000, salePrice: 1020000, currency: 'CAD', status: 'Sold', propertyType: 'SemiDetached',
     bedrooms: 4, bathrooms: 3, squareFeet: 2100, lotSizeSqFt: 3200, yearBuilt: 2016, garageSpaces: 1,
     description: 'Semi-detached family home with finished basement apartment, ideal for multi-generational living.',
-    neighborhood: 'Unionville', ownerName: 'Marcus Vega', ownerId: 'u-007', accountId: 'c-004', accountName: 'Horizon Enterprises', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-002',
+    features: 'Finished basement apartment, separate entrance, updated kitchen, fenced yard',
+    neighborhood: 'Unionville', country: 'Canada',
+    listingDateUtc: addDays(today, -85), soldDateUtc: addDays(today, -28),
+    ownerName: 'Marcus Vega', ownerId: 'u-007', accountId: 'c-004', accountName: 'Horizon Enterprises', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-002',
     createdAtUtc: addDays(today, -90), updatedAtUtc: addDays(today, -25)
   },
   {
@@ -1460,7 +1511,10 @@ const mockProperties: Property[] = [
     listPrice: 580000, salePrice: undefined, currency: 'CAD', status: 'Expired', propertyType: 'Condo',
     bedrooms: 2, bathrooms: 1, squareFeet: 850, lotSizeSqFt: undefined, yearBuilt: 2015, garageSpaces: 1,
     description: 'Bright 2-bedroom near North York Centre subway with updated kitchen and in-suite laundry.',
-    neighborhood: 'North York Centre', ownerName: 'Sasha Reed', ownerId: 'u-008', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: 'Updated kitchen, in-suite laundry, locker, parking, near subway',
+    neighborhood: 'North York Centre', country: 'Canada',
+    listingDateUtc: addDays(today, -115), soldDateUtc: undefined,
+    ownerName: 'Sasha Reed', ownerId: 'u-008', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     createdAtUtc: addDays(today, -120), updatedAtUtc: addDays(today, -35)
   },
   {
@@ -1468,7 +1522,10 @@ const mockProperties: Property[] = [
     listPrice: 4200000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Commercial',
     bedrooms: 0, bathrooms: 4, squareFeet: 12500, lotSizeSqFt: 32000, yearBuilt: 2010, garageSpaces: 0,
     description: 'Class A industrial/flex space with 22-foot clear heights, 3 loading docks, and 2000 sq ft of office.',
-    neighborhood: 'Industrial Park', ownerName: 'Owen Miles', ownerId: 'u-006', accountId: 'c-006', accountName: 'Metro Logistics', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: '22-foot clear heights, 3 loading docks, 2000 sqft office, sprinklered',
+    neighborhood: 'Industrial Park', country: 'Canada',
+    listingDateUtc: addDays(today, -12), soldDateUtc: undefined,
+    ownerName: 'Owen Miles', ownerId: 'u-006', accountId: 'c-006', accountName: 'Metro Logistics', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     createdAtUtc: addDays(today, -15), updatedAtUtc: addDays(today, -1)
   },
   {
@@ -1476,7 +1533,10 @@ const mockProperties: Property[] = [
     listPrice: 5900000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Detached',
     bedrooms: 6, bathrooms: 5, squareFeet: 5500, lotSizeSqFt: 9800, yearBuilt: 2023, garageSpaces: 3,
     description: 'Newly built luxury estate in Forest Hill with indoor pool, home theatre, and smart home automation.',
-    neighborhood: 'Forest Hill', ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-007', accountName: 'Summit Capital', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: 'Indoor pool, home theatre, smart home, chef kitchen, wine cellar, elevator',
+    neighborhood: 'Forest Hill', country: 'Canada',
+    listingDateUtc: addDays(today, -6), soldDateUtc: undefined,
+    ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-007', accountName: 'Summit Capital', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     photoUrls: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800,https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800,https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800',
     virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-010',
     createdAtUtc: addDays(today, -8), updatedAtUtc: addDays(today, -1)
@@ -1486,7 +1546,10 @@ const mockProperties: Property[] = [
     listPrice: 1680000, salePrice: undefined, currency: 'CAD', status: 'Terminated', propertyType: 'Detached',
     bedrooms: 5, bathrooms: 4, squareFeet: 3200, lotSizeSqFt: 6400, yearBuilt: 2014, garageSpaces: 2,
     description: 'Waterfront executive home with heated pool, cabana, and private dock access.',
-    neighborhood: 'Bronte Creek', ownerName: 'Mia Khalid', ownerId: 'u-002', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: 'Heated pool, cabana, private dock, waterfront, landscaped garden',
+    neighborhood: 'Bronte Creek', country: 'Canada',
+    listingDateUtc: addDays(today, -70), soldDateUtc: undefined,
+    ownerName: 'Mia Khalid', ownerId: 'u-002', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     createdAtUtc: addDays(today, -75), updatedAtUtc: addDays(today, -40)
   },
   {
@@ -1494,7 +1557,10 @@ const mockProperties: Property[] = [
     listPrice: 750000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Land',
     bedrooms: 0, bathrooms: 0, squareFeet: 0, lotSizeSqFt: 130680, yearBuilt: undefined, garageSpaces: 0,
     description: '3-acre building lot in Caledon with mature trees, rolling terrain, and approved building permit.',
-    neighborhood: 'Caledon Village', ownerName: 'Omar Ali', ownerId: 'u-004', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    features: 'Mature trees, rolling terrain, approved building permit, well and septic ready',
+    neighborhood: 'Caledon Village', country: 'Canada',
+    listingDateUtc: addDays(today, -8), soldDateUtc: undefined,
+    ownerName: 'Omar Ali', ownerId: 'u-004', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     createdAtUtc: addDays(today, -10), updatedAtUtc: undefined
   }
 ];
@@ -1531,6 +1597,8 @@ export function getPropertyById(id: string): Property | null {
 }
 
 export function createProperty(payload: SavePropertyRequest): Property {
+  const ownerUser = mockUsers.find((u) => u.id === payload.ownerId);
+  const contact = mockContacts.find((c) => c.id === payload.primaryContactId);
   const record: Property = {
     id: `prop-${Math.random().toString(36).slice(2, 8)}`,
     mlsNumber: payload.mlsNumber,
@@ -1550,13 +1618,17 @@ export function createProperty(payload: SavePropertyRequest): Property {
     yearBuilt: payload.yearBuilt,
     garageSpaces: payload.garageSpaces,
     description: payload.description,
+    features: payload.features,
     neighborhood: payload.neighborhood,
-    ownerName: 'Yasser Ahmed',
+    country: payload.country || 'Canada',
+    listingDateUtc: payload.listingDateUtc,
+    soldDateUtc: payload.soldDateUtc,
+    ownerName: ownerUser?.fullName ?? 'Yasser Ahmed',
     ownerId: payload.ownerId || 'u-001',
     accountId: payload.accountId,
     accountName: payload.accountId ? (mockCustomers.find((c) => c.id === payload.accountId)?.name ?? undefined) : undefined,
     primaryContactId: payload.primaryContactId,
-    primaryContactName: undefined,
+    primaryContactName: contact?.name,
     opportunityId: payload.opportunityId,
     photoUrls: payload.photoUrls,
     virtualTourUrl: payload.virtualTourUrl,
@@ -1588,7 +1660,24 @@ export function updateProperty(id: string, payload: SavePropertyRequest): Proper
   target.yearBuilt = payload.yearBuilt ?? target.yearBuilt;
   target.garageSpaces = payload.garageSpaces ?? target.garageSpaces;
   target.description = payload.description ?? target.description;
+  target.features = payload.features ?? target.features;
   target.neighborhood = payload.neighborhood ?? target.neighborhood;
+  target.country = payload.country ?? target.country;
+  target.listingDateUtc = payload.listingDateUtc ?? target.listingDateUtc;
+  target.soldDateUtc = payload.soldDateUtc ?? target.soldDateUtc;
+  if (payload.ownerId) {
+    target.ownerId = payload.ownerId;
+    target.ownerName = mockUsers.find((u) => u.id === payload.ownerId)?.fullName ?? target.ownerName;
+  }
+  if (payload.accountId !== undefined) {
+    target.accountId = payload.accountId;
+    target.accountName = payload.accountId ? (mockCustomers.find((c) => c.id === payload.accountId)?.name ?? undefined) : undefined;
+  }
+  if (payload.primaryContactId !== undefined) {
+    target.primaryContactId = payload.primaryContactId;
+    target.primaryContactName = payload.primaryContactId ? (mockContacts.find((c) => c.id === payload.primaryContactId)?.name ?? undefined) : undefined;
+  }
+  target.opportunityId = payload.opportunityId ?? target.opportunityId;
   target.photoUrls = payload.photoUrls ?? target.photoUrls;
   target.virtualTourUrl = payload.virtualTourUrl ?? target.virtualTourUrl;
   target.updatedAtUtc = new Date().toISOString();

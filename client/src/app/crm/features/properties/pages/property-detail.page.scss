@@ -398,6 +398,35 @@
   }
 }
 
+.field-link {
+  font-size: $font-size-md;
+  font-weight: 500;
+  color: #667eea;
+  text-decoration: none;
+  transition: color 200ms;
+
+  &:hover {
+    color: #764ba2;
+    text-decoration: underline;
+  }
+}
+
+.features-text {
+  padding: $space-3 0 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  margin-top: $space-2;
+
+  .field-label {
+    display: block;
+    margin-bottom: $space-1;
+  }
+
+  .field-value {
+    white-space: pre-line;
+    line-height: 1.6;
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATUS PILL
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -586,6 +615,98 @@
 @keyframes fade-in-up {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATUS TIMELINE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.status-timeline {
+  display: flex;
+  flex-direction: column;
+  padding: $space-2 0;
+}
+
+.timeline-event {
+  display: flex;
+  gap: $space-3;
+  min-height: 56px;
+
+  .timeline-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 32px;
+    flex-shrink: 0;
+  }
+
+  .marker-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-size-sm;
+    color: white;
+    flex-shrink: 0;
+    z-index: 1;
+    transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .marker-line {
+    flex: 1;
+    width: 2px;
+    background: $gray-200;
+    margin: 4px 0;
+  }
+
+  .timeline-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: $space-3;
+  }
+
+  .timeline-label {
+    font-size: $font-size-md;
+    font-weight: 600;
+    color: $gray-800;
+  }
+
+  .timeline-date {
+    font-size: $font-size-xs;
+    color: $gray-500;
+  }
+
+  &:hover .marker-dot {
+    transform: scale(1.15);
+  }
+
+  // Variants
+  &--created .marker-dot { background: $primary-gradient; }
+  &--listed .marker-dot  { background: $cyan-gradient; }
+  &--updated .marker-dot { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+  &--sold .marker-dot    { background: $success-gradient; }
+
+  &--created .marker-line { background: linear-gradient(180deg, rgba(102, 126, 234, 0.3), $gray-200); }
+  &--listed .marker-line  { background: linear-gradient(180deg, rgba(6, 182, 212, 0.3), $gray-200); }
+  &--updated .marker-line { background: linear-gradient(180deg, rgba(245, 158, 11, 0.3), $gray-200); }
+}
+
+.days-on-market {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  margin-top: $space-2;
+  padding: $space-2 $space-3;
+  background: rgba(102, 126, 234, 0.06);
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: $gray-600;
+
+  i { color: #667eea; }
+  strong { color: $gray-800; }
 }
 
 @keyframes slide-in-right {

@@ -91,6 +91,16 @@
                 <input pInputText id="propertyNeighborhood" name="neighborhood" [(ngModel)]="form.neighborhood" placeholder="Neighborhood" />
               </p-inputgroup>
             </div>
+
+            <div class="form-field">
+              <label for="propertyCountry">Country</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--info">
+                  <i class="pi pi-globe"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyCountry" name="country" [(ngModel)]="form.country" placeholder="Country" />
+              </p-inputgroup>
+            </div>
           </div>
         </section>
 
@@ -196,6 +206,34 @@
                 </p-inputgroup-addon>
                 <input pInputText id="propertyCurrency" name="currency" [(ngModel)]="form.currency" placeholder="CAD" />
               </p-inputgroup>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyListingDate">Listing Date</label>
+              <p-datepicker
+                id="propertyListingDate"
+                name="listingDate"
+                [(ngModel)]="listingDate"
+                [showIcon]="true"
+                dateFormat="M dd, yy"
+                placeholder="Select listing date"
+                appendTo="body"
+                styleClass="w-full"
+              ></p-datepicker>
+            </div>
+
+            <div class="form-field">
+              <label for="propertySoldDate">Sold Date</label>
+              <p-datepicker
+                id="propertySoldDate"
+                name="soldDate"
+                [(ngModel)]="soldDate"
+                [showIcon]="true"
+                dateFormat="M dd, yy"
+                placeholder="Select sold date"
+                appendTo="body"
+                styleClass="w-full"
+              ></p-datepicker>
             </div>
           </div>
         </section>
@@ -338,6 +376,19 @@
               class="w-full"
             ></textarea>
           </div>
+
+          <div class="form-field full-width">
+            <label for="propertyFeatures">Features &amp; Amenities</label>
+            <textarea
+              pTextarea
+              id="propertyFeatures"
+              name="features"
+              [(ngModel)]="form.features"
+              rows="3"
+              placeholder="Pool, hardwood floors, smart home, heated garage..."
+              class="w-full"
+            ></textarea>
+          </div>
         </section>
 
         <!-- Media -->
@@ -369,6 +420,116 @@
                 placeholder="Paste image URLs separated by commas"
                 class="w-full"
               ></textarea>
+            </div>
+          </div>
+        </section>
+
+        <!-- Relationships -->
+        <section class="form-section section--basic">
+          <h2 class="section-title">
+            <i class="pi pi-link"></i>
+            Relationships
+          </h2>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="propertyOwner">Owner / Agent</label>
+              <p-select
+                id="propertyOwner"
+                [options]="users()"
+                optionLabel="fullName"
+                optionValue="id"
+                name="ownerId"
+                [(ngModel)]="form.ownerId"
+                placeholder="Select owner"
+                appendTo="body"
+                [filter]="true"
+                filterBy="fullName,email"
+                [showClear]="true"
+                styleClass="w-full"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option"><i class="pi pi-user" style="color:#6366f1"></i><span>{{ option.fullName }}</span></div>
+                </ng-template>
+                <ng-template pTemplate="selectedItem" let-option>
+                  <div class="select-option" *ngIf="option"><i class="pi pi-user" style="color:#6366f1"></i><span>{{ option.fullName }}</span></div>
+                </ng-template>
+              </p-select>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyAccount">Account</label>
+              <p-select
+                id="propertyAccount"
+                [options]="customers()"
+                optionLabel="name"
+                optionValue="id"
+                name="accountId"
+                [(ngModel)]="form.accountId"
+                placeholder="Select account"
+                appendTo="body"
+                [filter]="true"
+                filterBy="name,company"
+                [showClear]="true"
+                styleClass="w-full"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option"><i class="pi pi-building" style="color:#3b82f6"></i><span>{{ option.name }}</span></div>
+                </ng-template>
+                <ng-template pTemplate="selectedItem" let-option>
+                  <div class="select-option" *ngIf="option"><i class="pi pi-building" style="color:#3b82f6"></i><span>{{ option.name }}</span></div>
+                </ng-template>
+              </p-select>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyContact">Primary Contact</label>
+              <p-select
+                id="propertyContact"
+                [options]="contacts()"
+                optionLabel="name"
+                optionValue="id"
+                name="primaryContactId"
+                [(ngModel)]="form.primaryContactId"
+                placeholder="Select contact"
+                appendTo="body"
+                [filter]="true"
+                filterBy="name,email"
+                [showClear]="true"
+                styleClass="w-full"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option"><i class="pi pi-id-card" style="color:#22c55e"></i><span>{{ option.name }}</span></div>
+                </ng-template>
+                <ng-template pTemplate="selectedItem" let-option>
+                  <div class="select-option" *ngIf="option"><i class="pi pi-id-card" style="color:#22c55e"></i><span>{{ option.name }}</span></div>
+                </ng-template>
+              </p-select>
+            </div>
+
+            <div class="form-field">
+              <label for="propertyOpportunity">Opportunity</label>
+              <p-select
+                id="propertyOpportunity"
+                [options]="opportunities()"
+                optionLabel="name"
+                optionValue="id"
+                name="opportunityId"
+                [(ngModel)]="form.opportunityId"
+                placeholder="Select opportunity"
+                appendTo="body"
+                [filter]="true"
+                filterBy="name"
+                [showClear]="true"
+                styleClass="w-full"
+              >
+                <ng-template pTemplate="item" let-option>
+                  <div class="select-option"><i class="pi pi-chart-line" style="color:#a855f7"></i><span>{{ option.name }}</span></div>
+                </ng-template>
+                <ng-template pTemplate="selectedItem" let-option>
+                  <div class="select-option" *ngIf="option"><i class="pi pi-chart-line" style="color:#a855f7"></i><span>{{ option.name }}</span></div>
+                </ng-template>
+              </p-select>
             </div>
           </div>
         </section>
