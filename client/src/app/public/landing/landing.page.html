@@ -67,9 +67,19 @@
           Sign In <i class="pi pi-arrow-right"></i>
         </button>
       </div>
+      <div class="hero__cta-note">
+        <span class="hero__cta-kicker">Working-product demo</span>
+        <p>We walk through your actual signal, decision, and rollout model. No stock CRM deck.</p>
+      </div>
     </div>
     <div class="hero__visual">
       <div class="kpi-carousel" (wheel)="onHeroPreviewWheel($event)">
+        <div class="kpi-carousel__frame" aria-hidden="true">
+          <span class="kpi-carousel__frame-pill">Live workflow preview</span>
+          <div class="kpi-carousel__frame-controls">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
         <div class="kpi-carousel__track" [style.transform]="'translateX(-' + activeHeroPreview * 100 + '%)'">
           <div class="kpi-carousel__slide" *ngFor="let slide of heroPreviewSlides; let i = index">
             <img [src]="slide.image" [alt]="slide.label" loading="eager" />
@@ -139,64 +149,72 @@
         <p class="section-subtitle scroll-animate">Instead of treating email, meetings, and qualification as separate screens, North Edge CRM turns them into one operating story: signal, decision, and outcome.</p>
 
         <div class="journey__steps scroll-animate">
-          <button
-            *ngFor="let step of journeySteps; let i = index"
-            type="button"
-            class="journey-step"
-            [class.journey-step--active]="i === activeJourneyStep"
-            (click)="goToJourneyStep(i)"
-          >
-            <span class="journey-step__index">0{{ i + 1 }}</span>
-            <span class="journey-step__eyebrow">{{ step.eyebrow }}</span>
-            <strong>{{ step.title }}</strong>
-            <small>{{ step.outcome }}</small>
-          </button>
+          <p class="journey__guide">
+            Scroll the narrative to see how the CRM turns raw activity into a visible operating decision.
+          </p>
+          <div class="journey__story">
+            <article
+              *ngFor="let step of journeySteps; let i = index"
+              class="journey-step journey-step-anchor"
+              [class.journey-step--active]="i === activeJourneyStep"
+              [attr.data-index]="i"
+              (click)="goToJourneyStep(i)"
+            >
+              <span class="journey-step__index">0{{ i + 1 }}</span>
+              <span class="journey-step__eyebrow">{{ step.eyebrow }}</span>
+              <strong>{{ step.title }}</strong>
+              <p>{{ step.summary }}</p>
+              <small>{{ step.outcome }}</small>
+            </article>
+          </div>
         </div>
       </div>
 
       <div class="journey__visual scroll-animate">
-        <div class="journey-panel" *ngFor="let step of journeySteps; let i = index" [class.journey-panel--active]="i === activeJourneyStep">
-          <div class="journey-panel__header">
-            <span class="journey-panel__badge">{{ step.eyebrow }}</span>
-            <span class="journey-panel__status">Lead intelligence in motion</span>
-          </div>
-
-          <div class="journey-panel__body">
-            <div class="journey-panel__summary">
-              <h3>{{ step.title }}</h3>
-              <p>{{ step.summary }}</p>
+        <div class="journey__visual-shell">
+          <div class="journey-panel" *ngFor="let step of journeySteps; let i = index" [class.journey-panel--active]="i === activeJourneyStep">
+            <div class="journey-panel__header">
+              <span class="journey-panel__badge">{{ step.eyebrow }}</span>
+              <span class="journey-panel__status">Lead intelligence in motion</span>
             </div>
 
-            <div class="journey-panel__signals">
-              <span class="journey-panel__label">Detected signals</span>
-              <div class="journey-panel__chips">
-                <span class="journey-chip" *ngFor="let signal of step.signals">{{ signal }}</span>
+            <div class="journey-panel__body">
+              <div class="journey-panel__summary">
+                <h3>{{ step.title }}</h3>
+                <p>{{ step.summary }}</p>
+              </div>
+
+              <div class="journey-panel__signals">
+                <span class="journey-panel__label">Detected signals</span>
+                <div class="journey-panel__chips">
+                  <span class="journey-chip" *ngFor="let signal of step.signals">{{ signal }}</span>
+                </div>
+              </div>
+
+              <div class="journey-panel__metrics">
+                <article *ngFor="let metric of step.metrics" class="journey-metric" [class.journey-metric--strong]="metric.tone === 'strong'" [class.journey-metric--risk]="metric.tone === 'risk'">
+                  <span class="journey-metric__label">{{ metric.label }}</span>
+                  <strong>{{ metric.value }}</strong>
+                </article>
+              </div>
+
+              <div class="journey-panel__outcome">
+                <span class="journey-panel__label">Why it matters</span>
+                <p>{{ step.outcome }}</p>
               </div>
             </div>
-
-            <div class="journey-panel__metrics">
-              <article *ngFor="let metric of step.metrics" class="journey-metric" [class.journey-metric--strong]="metric.tone === 'strong'" [class.journey-metric--risk]="metric.tone === 'risk'">
-                <span class="journey-metric__label">{{ metric.label }}</span>
-                <strong>{{ metric.value }}</strong>
-              </article>
-            </div>
-
-            <div class="journey-panel__outcome">
-              <span class="journey-panel__label">Why it matters</span>
-              <p>{{ step.outcome }}</p>
-            </div>
           </div>
-        </div>
 
-        <div class="journey__indicators" aria-hidden="true">
-          <button
-            *ngFor="let step of journeySteps; let i = index"
-            type="button"
-            class="journey__dot"
-            [class.journey__dot--active]="i === activeJourneyStep"
-            [attr.aria-label]="'View ' + step.eyebrow + ' step'"
-            (click)="goToJourneyStep(i)"
-          ></button>
+          <div class="journey__indicators" aria-hidden="true">
+            <button
+              *ngFor="let step of journeySteps; let i = index"
+              type="button"
+              class="journey__dot"
+              [class.journey__dot--active]="i === activeJourneyStep"
+              [attr.aria-label]="'View ' + step.eyebrow + ' step'"
+              (click)="goToJourneyStep(i)"
+            ></button>
+          </div>
         </div>
       </div>
     </div>
@@ -230,6 +248,7 @@
       <p class="section-subtitle scroll-animate">This page does not depend on placeholder customer logos or inflated usage claims. The proof is in how the product is implemented, governed, and controlled once a team goes live.</p>
       <div class="trust__grid">
         <article class="trust-card scroll-animate" *ngFor="let signal of trustSignals; let i = index" [style.animation-delay]="i * 0.08 + 's'">
+          <span class="trust-card__eyebrow">Operational proof</span>
           <h3>{{ signal.title }}</h3>
           <p>{{ signal.description }}</p>
         </article>
@@ -312,6 +331,7 @@
       <button type="button" class="hero-btn hero-btn--primary hero-btn--lg" (click)="onWatchDemo()">
         <i class="pi pi-calendar"></i> Schedule Your Demo
       </button>
+      <span class="final-cta__confidence">Designed for teams that need qualification discipline, manager visibility, and rollout control.</span>
     </div>
   </section>
 

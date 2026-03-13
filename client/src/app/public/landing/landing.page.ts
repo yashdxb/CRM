@@ -36,7 +36,6 @@ import { AppToastService } from '../../core/app-toast.service';
 export class LandingPage implements OnInit, AfterViewInit {
   private readonly torontoZone = 'America/Toronto';
   private readonly heroPreviewIntervalMs = 4200;
-  private readonly journeyIntervalMs = 4600;
   private readonly svc = inject(CrmLandingService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -64,9 +63,9 @@ export class LandingPage implements OnInit, AfterViewInit {
   readonly timezoneOptions = this.buildTimeZoneOptions();
   private readonly detectedTimeZone = this.detectBrowserTimeZone();
   private heroPreviewIntervalId: number | null = null;
-  private journeyIntervalId: number | null = null;
   private lastHeroPreviewWheelAt = 0;
   activeJourneyStep = 0;
+  private journeyObserver: IntersectionObserver | null = null;
 
   readonly features = [
     { icon: 'pi-check-square', color: 'primary', title: 'Evidence-Based Qualification', description: 'CQVS-style qualification tracks factor scores, evidence quality, and proof gaps instead of relying on rep optimism alone.' },
@@ -217,7 +216,6 @@ export class LandingPage implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.startHeroPreviewCarousel();
-    this.startJourneyCarousel();
     this.demoForm.controls.timezone.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -227,6 +225,7 @@ export class LandingPage implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     this.initScrollAnimations();
+    this.initJourneyObserver();
   }
 
   onCardMouseMove(event: MouseEvent): void {
@@ -346,9 +345,11 @@ export class LandingPage implements OnInit, AfterViewInit {
     if (!this.journeySteps.length) {
       return;
     }
-    this.activeJourneyStep = Math.max(0, Math.min(index, this.journeySteps.length - 1));
+    const nextIndex = Math.max(0, Math.min(index, this.journeySteps.length - 1));
+    this.activeJourneyStep = nextIndex;
     this.cdr.markForCheck();
-    this.restartJourneyCarousel();
+    const target = this.elRef.nativeElement.querySelector(`.journey-step-anchor[data-index="${nextIndex}"]`) as HTMLElement | null;
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   advanceHeroPreview(): void {
@@ -612,20 +613,37 @@ export class LandingPage implements OnInit, AfterViewInit {
     this.startHeroPreviewCarousel();
   }
 
-  private startJourneyCarousel(): void {
-    if (typeof window === 'undefined' || this.journeySteps.length <= 1) {
+  private initJourneyObserver(): void {
+    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') {
       return;
     }
-    this.stopJourneyCarousel();
-    this.journeyIntervalId = window.setInterval(() => {
-      this.activeJourneyStep = (this.activeJourneyStep + 1) % this.journeySteps.length;
-      this.cdr.markForCheck();
-    }, this.journeyIntervalMs);
-    this.destroyRef.onDestroy(() => this.stopJourneyCarousel());
-  }
-
-  private restartJourneyCarousel(): void {
-    this.startJourneyCarousel();
+    if (!window.matchMedia('(min-width: 1025px)').matches) {
+      return;
+    }
+    const anchors = this.elRef.nativeElement.querySelectorAll('.journey-step-anchor');
+    if (!anchors.length) {
+      return;
+    }
+    this.journeyObserver?.disconnect();
+    this.journeyObserver = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) {
+        return;
+      }
+      const index = Number((visible.target as HTMLElement).dataset['index'] ?? '0');
+      if (!Number.isNaN(index) && index !== this.activeJourneyStep) {
+        this.activeJourneyStep = index;
+        this.cdr.markForCheck();
+      }
+    }, {
+      root: null,
+      threshold: [0.35, 0.6, 0.85],
+      rootMargin: '-12% 0px -30% 0px'
+    });
+    anchors.forEach((anchor: Element) => this.journeyObserver?.observe(anchor));
+    this.destroyRef.onDestroy(() => this.journeyObserver?.disconnect());
   }
 
   private stopHeroPreviewCarousel(): void {
@@ -635,10 +653,4 @@ export class LandingPage implements OnInit, AfterViewInit {
     }
   }
 
-  private stopJourneyCarousel(): void {
-    if (this.journeyIntervalId !== null && typeof window !== 'undefined') {
-      window.clearInterval(this.journeyIntervalId);
-      this.journeyIntervalId = null;
-    }
-  }
 }
