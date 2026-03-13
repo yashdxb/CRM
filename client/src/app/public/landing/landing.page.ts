@@ -36,6 +36,7 @@ import { AppToastService } from '../../core/app-toast.service';
 export class LandingPage implements OnInit, AfterViewInit {
   private readonly torontoZone = 'America/Toronto';
   private readonly heroPreviewIntervalMs = 4200;
+  private readonly journeyIntervalMs = 4600;
   private readonly svc = inject(CrmLandingService);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -63,7 +64,9 @@ export class LandingPage implements OnInit, AfterViewInit {
   readonly timezoneOptions = this.buildTimeZoneOptions();
   private readonly detectedTimeZone = this.detectBrowserTimeZone();
   private heroPreviewIntervalId: number | null = null;
+  private journeyIntervalId: number | null = null;
   private lastHeroPreviewWheelAt = 0;
+  activeJourneyStep = 0;
 
   readonly features = [
     { icon: 'pi-check-square', color: 'primary', title: 'Evidence-Based Qualification', description: 'CQVS-style qualification tracks factor scores, evidence quality, and proof gaps instead of relying on rep optimism alone.' },
@@ -105,6 +108,45 @@ export class LandingPage implements OnInit, AfterViewInit {
     }
   ];
 
+  readonly journeySteps = [
+    {
+      eyebrow: 'Signal',
+      title: 'Conversations become evidence, not just activity',
+      summary: 'Inbound replies, discovery notes, and stakeholder participation are turned into visible buyer signals instead of staying buried in the thread.',
+      outcome: 'The rep sees what is real, what is missing, and whether momentum is healthy.',
+      signals: ['Budget signal detected', 'Finance stakeholder replied', 'Timeline still unclear'],
+      metrics: [
+        { label: 'Conversation score', value: '78', tone: 'strong' },
+        { label: 'Stakeholders engaged', value: '3', tone: 'supporting' },
+        { label: 'Days since inbound reply', value: '1', tone: 'supporting' }
+      ]
+    },
+    {
+      eyebrow: 'Decision',
+      title: 'CQVS qualification shows what is validated versus assumed',
+      summary: 'Qualification factors stay tied to evidence quality, so the team can tell whether a deal is truly ready or only optimistic on paper.',
+      outcome: 'Managers can challenge weak assumptions before the pipeline absorbs bad opportunities.',
+      signals: ['Budget only partially validated', 'Economic buyer identified', 'Problem severity confirmed'],
+      metrics: [
+        { label: 'CQVS score', value: '64', tone: 'supporting' },
+        { label: 'Validated factors', value: '4/6', tone: 'supporting' },
+        { label: 'Primary gap', value: 'Budget proof', tone: 'risk' }
+      ]
+    },
+    {
+      eyebrow: 'Outcome',
+      title: 'Conversion readiness turns evidence into the next action',
+      summary: 'The CRM combines qualification quality and conversation strength into one clear operating decision: ready, monitor, coach, or at risk.',
+      outcome: 'The rep gets one next action, and the manager gets a defensible reason if review is needed.',
+      signals: ['Readiness moved from Coach to Ready', 'Manager review no longer required', 'Convert lead now recommended'],
+      metrics: [
+        { label: 'Readiness', value: 'Ready', tone: 'strong' },
+        { label: 'Manager review', value: 'Not required', tone: 'supporting' },
+        { label: 'Next action', value: 'Convert lead', tone: 'strong' }
+      ]
+    }
+  ];
+
   readonly commercialNotes = [
     'Unlimited internal users under one commercial model',
     'Tenant branding, workflow, and report customization included',
@@ -134,6 +176,7 @@ export class LandingPage implements OnInit, AfterViewInit {
 
   ngOnInit(): void {
     this.startHeroPreviewCarousel();
+    this.startJourneyCarousel();
     this.demoForm.controls.timezone.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -256,6 +299,15 @@ export class LandingPage implements OnInit, AfterViewInit {
     this.activeHeroPreview = Math.max(0, Math.min(index, this.heroPreviewSlides.length - 1));
     this.cdr.markForCheck();
     this.restartHeroPreviewCarousel();
+  }
+
+  goToJourneyStep(index: number): void {
+    if (!this.journeySteps.length) {
+      return;
+    }
+    this.activeJourneyStep = Math.max(0, Math.min(index, this.journeySteps.length - 1));
+    this.cdr.markForCheck();
+    this.restartJourneyCarousel();
   }
 
   advanceHeroPreview(): void {
@@ -519,10 +571,33 @@ export class LandingPage implements OnInit, AfterViewInit {
     this.startHeroPreviewCarousel();
   }
 
+  private startJourneyCarousel(): void {
+    if (typeof window === 'undefined' || this.journeySteps.length <= 1) {
+      return;
+    }
+    this.stopJourneyCarousel();
+    this.journeyIntervalId = window.setInterval(() => {
+      this.activeJourneyStep = (this.activeJourneyStep + 1) % this.journeySteps.length;
+      this.cdr.markForCheck();
+    }, this.journeyIntervalMs);
+    this.destroyRef.onDestroy(() => this.stopJourneyCarousel());
+  }
+
+  private restartJourneyCarousel(): void {
+    this.startJourneyCarousel();
+  }
+
   private stopHeroPreviewCarousel(): void {
     if (this.heroPreviewIntervalId !== null && typeof window !== 'undefined') {
       window.clearInterval(this.heroPreviewIntervalId);
       this.heroPreviewIntervalId = null;
+    }
+  }
+
+  private stopJourneyCarousel(): void {
+    if (this.journeyIntervalId !== null && typeof window !== 'undefined') {
+      window.clearInterval(this.journeyIntervalId);
+      this.journeyIntervalId = null;
     }
   }
 }
