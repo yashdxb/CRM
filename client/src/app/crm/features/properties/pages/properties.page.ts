@@ -1,4 +1,4 @@
-import { CurrencyPipe, DecimalPipe, NgFor, NgIf } from '@angular/common';
+import { CurrencyPipe, DatePipe, DecimalPipe, NgFor, NgIf } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -13,7 +13,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { forkJoin } from 'rxjs';
 
-import { Property, PropertyStatus, PropertyType } from '../models/property.model';
+import { Property, PropertyStatus, PropertyType, MlsFeedConfig, MlsImportJob } from '../models/property.model';
 import { PropertyDataService, SavePropertyRequest } from '../services/property-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CsvColumn, exportToCsv } from '../../../../shared/utils/csv';
@@ -31,6 +31,7 @@ interface TypeOption { label: string; value: PropertyType | 'all'; }
     NgIf,
     NgFor,
     CurrencyPipe,
+    DatePipe,
     DecimalPipe,
     FormsModule,
     TableModule,
@@ -98,7 +99,7 @@ export class PropertiesPage {
   protected typeFilter: TypeOption['value'] = 'all';
   protected pageIndex = 0;
   protected rows = 10;
-  protected viewMode: 'table' | 'kanban' = 'table';
+  protected viewMode: 'table' | 'kanban' | 'map' = 'table';
   protected readonly Math = Math;
 
   /* ── Bulk Operations (X11) ── */
@@ -329,5 +330,47 @@ export class PropertiesPage {
       case 'Delisted': return '#6b7280';
       default: return '#9ca3af';
     }
+  }
+
+  /* ── MLS / IDX Feed Integration (G1) ── */
+  protected readonly mlsFeeds = signal<MlsFeedConfig[]>([]);
+  protected readonly mlsImportHistory = signal<MlsImportJob[]>([]);
+  protected readonly showMlsDialog = signal(false);
+  protected readonly mlsImporting = signal(false);
+
+  protected readonly mapNeighborhoods = computed(() => {
+    const groups = new Map<string, Property[]>();
+    for (const p of this.properties()) {
+      const key = p.neighborhood || p.city || 'Other';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(p);
+    }
+    return Array.from(groups.entries()).map(([name, items]) => ({ name, items }));
+  });
+
+  protected onShowMlsDialog(): void {
+    this.showMlsDialog.set(true);
+    this.propertyData.getMlsFeeds().subscribe({ next: (d) => this.mlsFeeds.set(d) });
+    this.propertyData.getMlsImportHistory().subscribe({ next: (d) => this.mlsImportHistory.set(d) });
+  }
+
+  protected triggerMlsImport(feedId: string): void {
+    this.mlsImporting.set(true);
+    this.propertyData.triggerMlsImport(feedId).subscribe({
+      next: () => {
+        this.mlsImporting.set(false);
+        this.toastService.show('success', 'MLS import started.', 3000);
+        this.propertyData.getMlsImportHistory().subscribe({ next: (d) => this.mlsImportHistory.set(d) });
+      },
+      error: () => this.mlsImporting.set(false)
+    });
+  }
+
+  protected mlsFeedStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (status) { case 'Active': return 'success'; case 'Paused': return 'warn'; case 'Error': return 'danger'; default: return 'secondary'; }
+  }
+
+  protected mlsJobStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (status) { case 'Completed': return 'success'; case 'Running': return 'info'; case 'Failed': return 'danger'; default: return 'secondary'; }
   }
 }

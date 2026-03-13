@@ -14,10 +14,14 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { TagModule } from 'primeng/tag';
+import { TableModule } from 'primeng/table';
 
 import { PropertyDataService } from '../services/property-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { Property, PriceChange, Showing, PropertyDocument, PropertyActivity } from '../models/property.model';
+import {
+  Property, PriceChange, Showing, PropertyDocument, PropertyActivity,
+  CmaReport, ComparableProperty, SignatureRequest, PropertyAlertRule, PropertyAlertNotification
+} from '../models/property.model';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
@@ -52,6 +56,7 @@ export interface LiveAlert {
     InputGroupModule,
     InputGroupAddonModule,
     TagModule,
+    TableModule,
     BreadcrumbsComponent
   ]
 })
@@ -71,13 +76,26 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
 
   protected property = signal<Property | null>(null);
   protected loading = signal(true);
-  protected activeTab = signal<'details' | 'showings' | 'documents' | 'priceHistory' | 'activities'>('details');
+  protected activeTab = signal<'details' | 'showings' | 'documents' | 'priceHistory' | 'activities' | 'cma' | 'esign' | 'alerts'>('details');
 
   // Sub-resource data
   protected priceHistory = signal<PriceChange[]>([]);
   protected showings = signal<Showing[]>([]);
   protected documents = signal<PropertyDocument[]>([]);
   protected activities = signal<PropertyActivity[]>([]);
+
+  // CMA (G3)
+  protected cmaReport = signal<CmaReport | null>(null);
+  protected cmaLoading = signal(false);
+
+  // E-Signature (G4)
+  protected signatureRequests = signal<SignatureRequest[]>([]);
+  protected showSignatureDialog = signal(false);
+
+  // Alerts (G5)
+  protected alertRules = signal<PropertyAlertRule[]>([]);
+  protected alertNotifications = signal<PropertyAlertNotification[]>([]);
+  protected showAlertDialog = signal(false);
 
   // Dialogs
   protected showShowingDialog = signal(false);
@@ -106,6 +124,26 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     description: [''],
     dueDate: [null as Date | null],
     priority: ['Medium']
+  });
+
+  // E-Signature form (G4)
+  protected signatureForm: FormGroup = this.fb.group({
+    documentName: ['', Validators.required],
+    documentType: ['ListingAgreement'],
+    provider: ['DocuSign'],
+    signerName: ['', Validators.required],
+    signerEmail: ['', [Validators.required, Validators.email]],
+    signerRole: ['Buyer']
+  });
+
+  // Alert rule form (G5)
+  protected alertForm: FormGroup = this.fb.group({
+    clientName: ['', Validators.required],
+    clientEmail: ['', [Validators.required, Validators.email]],
+    frequency: ['Daily'],
+    minPrice: [null as number | null],
+    maxPrice: [null as number | null],
+    minBedrooms: [null as number | null]
   });
 
   protected readonly statusOptions = [
@@ -142,6 +180,34 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     { label: 'Medium', value: 'Medium', icon: 'pi-equals' },
     { label: 'High', value: 'High', icon: 'pi-exclamation-triangle' },
     { label: 'Urgent', value: 'Urgent', icon: 'pi-bolt' }
+  ];
+
+  protected readonly signatureDocTypes = [
+    { label: 'Purchase Agreement', value: 'PurchaseAgreement', icon: 'pi-file' },
+    { label: 'Listing Agreement', value: 'ListingAgreement', icon: 'pi-list' },
+    { label: 'Amendment', value: 'Amendment', icon: 'pi-pencil' },
+    { label: 'Disclosure', value: 'Disclosure', icon: 'pi-info-circle' },
+    { label: 'Other', value: 'Other', icon: 'pi-paperclip' }
+  ];
+
+  protected readonly signatureProviders = [
+    { label: 'DocuSign', value: 'DocuSign', icon: 'pi-verified' },
+    { label: 'HelloSign', value: 'HelloSign', icon: 'pi-check-circle' },
+    { label: 'Adobe Sign', value: 'AdobeSign', icon: 'pi-file-pdf' }
+  ];
+
+  protected readonly signerRoles = [
+    { label: 'Buyer', value: 'Buyer', icon: 'pi-user' },
+    { label: 'Seller', value: 'Seller', icon: 'pi-user' },
+    { label: 'Agent', value: 'Agent', icon: 'pi-briefcase' },
+    { label: 'Lawyer', value: 'Lawyer', icon: 'pi-shield' },
+    { label: 'Witness', value: 'Witness', icon: 'pi-eye' }
+  ];
+
+  protected readonly alertFrequencies = [
+    { label: 'Instant', value: 'Instant', icon: 'pi-bolt' },
+    { label: 'Daily', value: 'Daily', icon: 'pi-calendar' },
+    { label: 'Weekly', value: 'Weekly', icon: 'pi-calendar-clock' }
   ];
 
   protected selectedStatus = signal<string>('');
@@ -313,10 +379,16 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     this.propertyData.getShowings(id).subscribe({ next: (data) => this.showings.set(data) });
     this.propertyData.getDocuments(id).subscribe({ next: (data) => this.documents.set(data) });
     this.propertyData.getActivities(id).subscribe({ next: (data) => this.activities.set(data) });
+    this.propertyData.getSignatureRequests(id).subscribe({ next: (data) => this.signatureRequests.set(data) });
+    this.propertyData.getAlertRules(id).subscribe({ next: (data) => this.alertRules.set(data) });
+    this.propertyData.getAlertNotifications(id).subscribe({ next: (data) => this.alertNotifications.set(data) });
   }
 
-  protected setTab(tab: 'details' | 'showings' | 'documents' | 'priceHistory' | 'activities') {
+  protected setTab(tab: 'details' | 'showings' | 'documents' | 'priceHistory' | 'activities' | 'cma' | 'esign' | 'alerts') {
     this.activeTab.set(tab);
+    if (tab === 'cma' && !this.cmaReport()) {
+      this.loadCmaReport();
+    }
   }
 
   // Quick Actions (X12)
@@ -486,5 +558,113 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
       MultiFamily: 'Multi-Family'
     };
     return map[type] || type;
+  }
+
+  // ── CMA (G3) ──
+  private loadCmaReport(): void {
+    const prop = this.property();
+    if (!prop) return;
+    this.cmaLoading.set(true);
+    this.propertyData.getCmaReport(prop.id).subscribe({
+      next: (r) => { this.cmaReport.set(r); this.cmaLoading.set(false); },
+      error: () => this.cmaLoading.set(false)
+    });
+  }
+
+  protected generateCma(): void {
+    const prop = this.property();
+    if (!prop) return;
+    this.cmaLoading.set(true);
+    this.propertyData.generateCmaReport(prop.id, 5).subscribe({
+      next: (r) => { this.cmaReport.set(r); this.cmaLoading.set(false); this.toast.show('success', 'CMA report generated.', 3000); },
+      error: () => this.cmaLoading.set(false)
+    });
+  }
+
+  protected marketTrendSeverity(trend: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (trend) { case 'Rising': return 'success'; case 'Declining': return 'danger'; default: return 'info'; }
+  }
+
+  protected cmaStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (status) { case 'Sold': return 'success'; case 'Active': return 'info'; case 'Pending': return 'warn'; default: return 'secondary'; }
+  }
+
+  // ── E-Signature (G4) ──
+  protected onAddSignatureRequest(): void {
+    this.signatureForm.reset({ documentName: '', documentType: 'PurchaseAgreement', provider: 'DocuSign', signerName: '', signerEmail: '', signerRole: 'Buyer' });
+    this.showSignatureDialog.set(true);
+  }
+
+  protected submitSignatureRequest(): void {
+    this.signatureForm.markAllAsTouched();
+    if (this.signatureForm.invalid) return;
+    const prop = this.property();
+    if (!prop) return;
+    const v = this.signatureForm.getRawValue();
+    this.propertyData.createSignatureRequest(prop.id, {
+      documentName: v.documentName,
+      documentType: v.documentType,
+      provider: v.provider,
+      signers: [{ name: v.signerName, email: v.signerEmail, role: v.signerRole, status: 'Pending' as const }]
+    }).subscribe({
+      next: () => {
+        this.showSignatureDialog.set(false);
+        this.propertyData.getSignatureRequests(prop.id).subscribe({ next: (d) => this.signatureRequests.set(d) });
+        this.toast.show('success', 'Signature request sent.', 3000);
+      }
+    });
+  }
+
+  protected signatureStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (status) {
+      case 'Signed': return 'success'; case 'Sent': case 'Viewed': return 'info';
+      case 'Draft': return 'secondary'; case 'Declined': return 'danger'; case 'Expired': return 'warn';
+      default: return 'secondary';
+    }
+  }
+
+  // ── Property Alerts (G5) ──
+  protected onAddAlertRule(): void {
+    this.alertForm.reset({ clientName: '', clientEmail: '', frequency: 'Daily', minPrice: null, maxPrice: null, minBedrooms: null });
+    this.showAlertDialog.set(true);
+  }
+
+  protected submitAlertRule(): void {
+    this.alertForm.markAllAsTouched();
+    if (this.alertForm.invalid) return;
+    const prop = this.property();
+    if (!prop) return;
+    const v = this.alertForm.getRawValue();
+    this.propertyData.createAlertRule(prop.id, {
+      clientName: v.clientName,
+      clientEmail: v.clientEmail,
+      frequency: v.frequency,
+      criteria: {
+        minPrice: v.minPrice || undefined,
+        maxPrice: v.maxPrice || undefined,
+        minBedrooms: v.minBedrooms || undefined
+      }
+    }).subscribe({
+      next: () => {
+        this.showAlertDialog.set(false);
+        this.propertyData.getAlertRules(prop.id).subscribe({ next: (d) => this.alertRules.set(d) });
+        this.toast.show('success', 'Alert rule created.', 3000);
+      }
+    });
+  }
+
+  protected toggleAlertRule(ruleId: string, isActive: boolean): void {
+    const prop = this.property();
+    if (!prop) return;
+    this.propertyData.toggleAlertRule(prop.id, ruleId, isActive).subscribe({
+      next: () => {
+        this.alertRules.set(this.alertRules().map(r => r.id === ruleId ? { ...r, isActive } : r));
+        this.toast.show('success', isActive ? 'Alert activated.' : 'Alert paused.', 3000);
+      }
+    });
+  }
+
+  protected alertNotifStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    switch (status) { case 'Clicked': return 'success'; case 'Opened': case 'Sent': return 'info'; case 'Bounced': return 'danger'; default: return 'secondary'; }
   }
 }

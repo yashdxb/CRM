@@ -1506,3 +1506,341 @@
     box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
   }
 }
+
+/* ═══ CMA TAB (G3) ═══ */
+.cma-loading { padding: $space-4; }
+
+.cma-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: $space-3;
+  padding: $space-4;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.cma-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $space-3;
+  background: $glass-bg-subtle;
+  border-radius: $radius-lg;
+  border: 1px solid $glass-border;
+  text-align: center;
+
+  &__label {
+    font-size: $font-size-xs;
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+
+  &__value {
+    font-size: $font-size-2xl;
+    font-weight: 700;
+    color: $gray-800;
+
+    &--primary {
+      background: $primary-gradient;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+}
+
+.cma-table-wrap {
+  padding: $space-3;
+
+  .comp-address {
+    font-weight: 600;
+    color: $gray-800;
+    display: block;
+  }
+
+  .comp-city {
+    font-size: $font-size-xs;
+    color: $gray-400;
+  }
+}
+
+/* ═══ E-SIGNATURE TAB (G4) ═══ */
+.esign-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-4;
+}
+
+.esign-card {
+  background: $glass-bg-subtle;
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  padding: $space-4;
+  transition: all 250ms;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-hover;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $space-3;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-3;
+    font-size: $font-size-xs;
+    color: $gray-500;
+    margin-bottom: $space-3;
+
+    i { margin-right: 4px; }
+  }
+}
+
+.esign-doc-info {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+}
+
+.esign-doc-icon {
+  font-size: 1.5rem;
+  color: #ef4444;
+}
+
+.esign-doc-name {
+  display: block;
+  font-size: $font-size-md;
+  color: $gray-800;
+}
+
+.esign-doc-type {
+  font-size: $font-size-xs;
+  color: $gray-400;
+}
+
+.esign-signers {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: $space-3;
+
+  &__title {
+    font-size: $font-size-xs;
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin: 0 0 $space-2;
+  }
+}
+
+.signer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-2 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+
+  &:last-child { border-bottom: none; }
+}
+
+.signer-info {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+}
+
+.signer-name {
+  font-weight: 600;
+  font-size: $font-size-sm;
+  color: $gray-800;
+}
+
+.signer-email {
+  font-size: $font-size-xs;
+  color: $gray-400;
+}
+
+.signer-role {
+  font-size: $font-size-xs;
+  color: $gray-500;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 1px 8px;
+  border-radius: $radius-full;
+}
+
+/* ═══ ALERTS TAB (G5) ═══ */
+.alert-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-4;
+}
+
+.alert-rule-card {
+  background: $glass-bg-subtle;
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  padding: $space-4;
+  transition: all 250ms;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $glass-shadow-hover;
+  }
+
+  &--inactive {
+    opacity: 0.6;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: $space-3;
+  }
+
+  &__client {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+  }
+
+  &__avatar {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $primary-gradient;
+    color: white;
+    font-weight: 700;
+    border-radius: 50%;
+    font-size: $font-size-sm;
+  }
+
+  &__email {
+    display: block;
+    font-size: $font-size-xs;
+    color: $gray-400;
+  }
+
+  &__criteria {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-3;
+    font-size: $font-size-sm;
+    color: $gray-600;
+
+    i {
+      margin-right: 4px;
+      color: $gray-400;
+    }
+  }
+
+  &__footer {
+    margin-top: $space-3;
+    padding-top: $space-2;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  &__last-notified {
+    font-size: $font-size-xs;
+    color: $gray-400;
+  }
+}
+
+/* Toggle switch */
+.toggle-btn {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  background: $gray-300;
+  cursor: pointer;
+  transition: background 250ms;
+  padding: 0;
+
+  &--active {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  }
+
+  &__slider {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+    transition: transform 250ms;
+  }
+
+  &--active &__slider {
+    transform: translateX(20px);
+  }
+}
+
+/* Notification History */
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-4;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3;
+  background: $glass-bg-subtle;
+  border-radius: $radius-md;
+  border: 1px solid $glass-border;
+}
+
+.notification-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 50%;
+  color: #3b82f6;
+  font-size: $font-size-sm;
+  flex-shrink: 0;
+}
+
+.notification-body {
+  flex: 1;
+  min-width: 0;
+
+  strong {
+    display: block;
+    font-size: $font-size-sm;
+    color: $gray-800;
+  }
+}
+
+.notification-meta {
+  display: block;
+  font-size: $font-size-xs;
+  color: $gray-500;
+}
+
+.notification-date {
+  display: block;
+  font-size: $font-size-xs;
+  color: $gray-400;
+}
+
+.mt-4 { margin-top: $space-4; }

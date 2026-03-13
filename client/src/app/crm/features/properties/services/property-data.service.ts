@@ -1,6 +1,10 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Property, PriceChange, PropertyActivity, PropertySearchRequest, PropertySearchResponse, Showing, PropertyDocument } from '../models/property.model';
+import {
+  Property, PriceChange, PropertyActivity, PropertySearchRequest, PropertySearchResponse,
+  Showing, PropertyDocument, MlsFeedConfig, MlsImportJob, CmaReport,
+  SignatureRequest, PropertyAlertRule, PropertyAlertNotification
+} from '../models/property.model';
 import { environment } from '../../../../../environments/environment';
 
 export interface SavePropertyRequest {
@@ -120,5 +124,57 @@ export class PropertyDataService {
 
   updateActivity(propertyId: string, activityId: string, payload: Partial<PropertyActivity>) {
     return this.http.put<PropertyActivity>(`${this.baseUrl}/api/properties/${propertyId}/activities/${activityId}`, payload);
+  }
+
+  // MLS/IDX Feeds (G1)
+  getMlsFeeds() {
+    return this.http.get<MlsFeedConfig[]>(`${this.baseUrl}/api/properties/mls-feeds`);
+  }
+
+  createMlsFeed(payload: Partial<MlsFeedConfig>) {
+    return this.http.post<MlsFeedConfig>(`${this.baseUrl}/api/properties/mls-feeds`, payload);
+  }
+
+  triggerMlsImport(feedId: string) {
+    return this.http.post<MlsImportJob>(`${this.baseUrl}/api/properties/mls-feeds/${feedId}/import`, {});
+  }
+
+  getMlsImportHistory() {
+    return this.http.get<MlsImportJob[]>(`${this.baseUrl}/api/properties/mls-imports`);
+  }
+
+  // Comparable Market Analysis (G3)
+  getCmaReport(propertyId: string) {
+    return this.http.get<CmaReport>(`${this.baseUrl}/api/properties/${propertyId}/cma`);
+  }
+
+  generateCmaReport(propertyId: string, radiusMiles: number = 2) {
+    return this.http.post<CmaReport>(`${this.baseUrl}/api/properties/${propertyId}/cma`, { radiusMiles });
+  }
+
+  // E-Signature (G4)
+  getSignatureRequests(propertyId: string) {
+    return this.http.get<SignatureRequest[]>(`${this.baseUrl}/api/properties/${propertyId}/signatures`);
+  }
+
+  createSignatureRequest(propertyId: string, payload: Partial<SignatureRequest>) {
+    return this.http.post<SignatureRequest>(`${this.baseUrl}/api/properties/${propertyId}/signatures`, payload);
+  }
+
+  // Property Alerts (G5)
+  getAlertRules(propertyId: string) {
+    return this.http.get<PropertyAlertRule[]>(`${this.baseUrl}/api/properties/${propertyId}/alerts`);
+  }
+
+  createAlertRule(propertyId: string, payload: Partial<PropertyAlertRule>) {
+    return this.http.post<PropertyAlertRule>(`${this.baseUrl}/api/properties/${propertyId}/alerts`, payload);
+  }
+
+  toggleAlertRule(propertyId: string, ruleId: string, isActive: boolean) {
+    return this.http.put<PropertyAlertRule>(`${this.baseUrl}/api/properties/${propertyId}/alerts/${ruleId}`, { isActive });
+  }
+
+  getAlertNotifications(propertyId: string) {
+    return this.http.get<PropertyAlertNotification[]>(`${this.baseUrl}/api/properties/${propertyId}/alert-notifications`);
   }
 }

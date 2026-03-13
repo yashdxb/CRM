@@ -139,3 +139,147 @@ export interface PropertySearchResponse {
   items: Property[];
   total: number;
 }
+
+// ── MLS/IDX Feed Integration (G1) ──
+
+export type MlsFeedProvider = 'CREA' | 'RETS' | 'RESO' | 'IDX' | 'Custom';
+export type MlsFeedStatus = 'Active' | 'Paused' | 'Error';
+export type MlsImportJobStatus = 'Running' | 'Completed' | 'Failed';
+
+export interface MlsFeedConfig {
+  id: string;
+  feedName: string;
+  feedUrl: string;
+  provider: MlsFeedProvider;
+  autoSync: boolean;
+  syncIntervalMinutes: number;
+  lastSyncAtUtc?: string;
+  status: MlsFeedStatus;
+  totalImported: number;
+  createdAtUtc: string;
+}
+
+export interface MlsImportJob {
+  id: string;
+  feedId: string;
+  feedName: string;
+  startedAtUtc: string;
+  completedAtUtc?: string;
+  status: MlsImportJobStatus;
+  totalRecords: number;
+  imported: number;
+  updated: number;
+  skipped: number;
+  errors: number;
+}
+
+// ── Comparable Market Analysis (G3) ──
+
+export type CmaPropertyStatus = 'Active' | 'Sold' | 'Pending';
+export type CmaSource = 'MLS' | 'Internal' | 'Public';
+export type MarketTrend = 'Rising' | 'Stable' | 'Declining';
+
+export interface ComparableProperty {
+  id: string;
+  address: string;
+  city?: string;
+  neighborhood?: string;
+  propertyType: PropertyType;
+  listPrice: number;
+  salePrice?: number;
+  squareFeet?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  yearBuilt?: number;
+  status: CmaPropertyStatus;
+  soldDateUtc?: string;
+  daysOnMarket: number;
+  pricePerSqFt?: number;
+  distanceMiles: number;
+  source: CmaSource;
+}
+
+export interface CmaSummary {
+  avgListPrice: number;
+  avgSalePrice: number;
+  avgPricePerSqFt: number;
+  avgDaysOnMarket: number;
+  medianPrice: number;
+  priceRangeLow: number;
+  priceRangeHigh: number;
+  suggestedPrice: number;
+  marketTrend: MarketTrend;
+}
+
+export interface CmaReport {
+  propertyId: string;
+  generatedAtUtc: string;
+  comparables: ComparableProperty[];
+  summary: CmaSummary;
+}
+
+// ── E-Signature Integration (G4) ──
+
+export type SignatureProvider = 'DocuSign' | 'HelloSign' | 'AdobeSign';
+export type SignatureDocType = 'PurchaseAgreement' | 'ListingAgreement' | 'Amendment' | 'Disclosure' | 'Other';
+export type SignatureStatus = 'Draft' | 'Sent' | 'Viewed' | 'Signed' | 'Declined' | 'Expired';
+export type SignerRole = 'Buyer' | 'Seller' | 'Agent' | 'Lawyer' | 'Witness';
+export type SignerStatus = 'Pending' | 'Sent' | 'Viewed' | 'Signed' | 'Declined';
+
+export interface SignatureRequestSigner {
+  name: string;
+  email: string;
+  role: SignerRole;
+  status: SignerStatus;
+  signedAtUtc?: string;
+}
+
+export interface SignatureRequest {
+  id: string;
+  propertyId: string;
+  documentName: string;
+  documentType: SignatureDocType;
+  provider: SignatureProvider;
+  status: SignatureStatus;
+  signers: SignatureRequestSigner[];
+  sentAtUtc?: string;
+  completedAtUtc?: string;
+  expiresAtUtc?: string;
+  createdByName: string;
+  createdAtUtc: string;
+}
+
+// ── Automated Property Alerts (G5) ──
+
+export type AlertFrequency = 'Instant' | 'Daily' | 'Weekly';
+export type AlertNotificationStatus = 'Sent' | 'Opened' | 'Clicked' | 'Bounced';
+
+export interface PropertyAlertRule {
+  id: string;
+  propertyId?: string;
+  clientName: string;
+  clientEmail: string;
+  criteria: {
+    minPrice?: number;
+    maxPrice?: number;
+    propertyTypes?: PropertyType[];
+    minBedrooms?: number;
+    cities?: string[];
+    neighborhoods?: string[];
+  };
+  frequency: AlertFrequency;
+  isActive: boolean;
+  matchCount: number;
+  lastNotifiedAtUtc?: string;
+  createdAtUtc: string;
+}
+
+export interface PropertyAlertNotification {
+  id: string;
+  ruleId: string;
+  clientName: string;
+  clientEmail: string;
+  matchedProperties: number;
+  sentAtUtc: string;
+  status: AlertNotificationStatus;
+}

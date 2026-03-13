@@ -6,7 +6,11 @@ import { PERMISSION_KEYS } from '../core/auth/permission.constants';
 import { Opportunity, OpportunitySearchRequest, OpportunitySearchResponse } from '../crm/features/opportunities/models/opportunity.model';
 import { SaveOpportunityRequest } from '../crm/features/opportunities/services/opportunity-data.service';
 import { Contact, ContactSearchRequest, ContactSearchResponse } from '../crm/features/contacts/models/contact.model';
-import { PriceChange, Property, PropertyActivity, PropertyDocument, PropertySearchRequest, PropertySearchResponse, Showing } from '../crm/features/properties/models/property.model';
+import {
+  PriceChange, Property, PropertyActivity, PropertyDocument, PropertySearchRequest, PropertySearchResponse,
+  Showing, MlsFeedConfig, MlsImportJob, ComparableProperty, CmaReport, SignatureRequest,
+  PropertyAlertRule, PropertyAlertNotification
+} from '../crm/features/properties/models/property.model';
 import { SavePropertyRequest } from '../crm/features/properties/services/property-data.service';
 import { UpdateWorkspaceSettingsRequest, VerticalPresetConfiguration, WorkspaceSettings } from '../crm/features/settings/models/workspace-settings.model';
 import {
@@ -1840,4 +1844,247 @@ export function updateActivity(id: string, updates: Partial<PropertyActivity>): 
   if (!target) return null;
   Object.assign(target, updates);
   return { ...target };
+}
+
+// ────────────────── MLS/IDX Feed Integration (G1) ──────────────────
+
+const mockMlsFeeds: MlsFeedConfig[] = [
+  { id: 'mls-001', feedName: 'CREA DDF National Feed', feedUrl: 'https://data.crea.ca/ddf/v2', provider: 'CREA', autoSync: true, syncIntervalMinutes: 60, lastSyncAtUtc: addDays(today, -0.1), status: 'Active', totalImported: 1842, createdAtUtc: addDays(today, -90) },
+  { id: 'mls-002', feedName: 'Toronto RETS Feed', feedUrl: 'https://rets.torontomls.ca/rets', provider: 'RETS', autoSync: true, syncIntervalMinutes: 120, lastSyncAtUtc: addDays(today, -0.5), status: 'Active', totalImported: 3274, createdAtUtc: addDays(today, -60) },
+  { id: 'mls-003', feedName: 'Vancouver IDX Feed', feedUrl: 'https://idx.rebgv.org/listings', provider: 'IDX', autoSync: false, syncIntervalMinutes: 360, lastSyncAtUtc: addDays(today, -5), status: 'Paused', totalImported: 726, createdAtUtc: addDays(today, -30) },
+];
+
+const mockMlsImportJobs: MlsImportJob[] = [
+  { id: 'imp-001', feedId: 'mls-001', feedName: 'CREA DDF National Feed', startedAtUtc: addDays(today, -0.1), completedAtUtc: addDays(today, -0.08), status: 'Completed', totalRecords: 245, imported: 12, updated: 228, skipped: 3, errors: 2 },
+  { id: 'imp-002', feedId: 'mls-002', feedName: 'Toronto RETS Feed', startedAtUtc: addDays(today, -0.5), completedAtUtc: addDays(today, -0.48), status: 'Completed', totalRecords: 189, imported: 8, updated: 175, skipped: 6, errors: 0 },
+  { id: 'imp-003', feedId: 'mls-001', feedName: 'CREA DDF National Feed', startedAtUtc: addDays(today, -1), completedAtUtc: addDays(today, -0.98), status: 'Completed', totalRecords: 230, imported: 5, updated: 220, skipped: 5, errors: 0 },
+  { id: 'imp-004', feedId: 'mls-003', feedName: 'Vancouver IDX Feed', startedAtUtc: addDays(today, -5), completedAtUtc: addDays(today, -4.97), status: 'Failed', totalRecords: 0, imported: 0, updated: 0, skipped: 0, errors: 1 },
+];
+
+export function getMlsFeeds(): MlsFeedConfig[] {
+  return [...mockMlsFeeds];
+}
+
+export function createMlsFeed(feed: Partial<MlsFeedConfig>): MlsFeedConfig {
+  const record: MlsFeedConfig = {
+    id: `mls-${Math.random().toString(36).slice(2, 8)}`,
+    feedName: feed.feedName || 'New Feed',
+    feedUrl: feed.feedUrl || '',
+    provider: feed.provider || 'Custom',
+    autoSync: feed.autoSync ?? false,
+    syncIntervalMinutes: feed.syncIntervalMinutes ?? 120,
+    status: 'Active',
+    totalImported: 0,
+    createdAtUtc: new Date().toISOString()
+  };
+  mockMlsFeeds.unshift(record);
+  return { ...record };
+}
+
+export function triggerMlsImport(feedId: string): MlsImportJob {
+  const feed = mockMlsFeeds.find(f => f.id === feedId);
+  const job: MlsImportJob = {
+    id: `imp-${Math.random().toString(36).slice(2, 8)}`,
+    feedId,
+    feedName: feed?.feedName || 'Unknown Feed',
+    startedAtUtc: new Date().toISOString(),
+    completedAtUtc: new Date().toISOString(),
+    status: 'Completed',
+    totalRecords: Math.floor(Math.random() * 200) + 50,
+    imported: Math.floor(Math.random() * 15) + 1,
+    updated: Math.floor(Math.random() * 150) + 30,
+    skipped: Math.floor(Math.random() * 10),
+    errors: Math.floor(Math.random() * 3)
+  };
+  mockMlsImportJobs.unshift(job);
+  if (feed) {
+    feed.lastSyncAtUtc = job.completedAtUtc;
+    feed.totalImported += job.imported;
+  }
+  return { ...job };
+}
+
+export function getMlsImportHistory(): MlsImportJob[] {
+  return [...mockMlsImportJobs].sort((a, b) => new Date(b.startedAtUtc).getTime() - new Date(a.startedAtUtc).getTime());
+}
+
+// ────────────────── Comparable Market Analysis (G3) ──────────────────
+
+const mockComparables: Record<string, ComparableProperty[]> = {
+  'prop-001': [
+    { id: 'comp-001', address: '42 Maple Grove Dr', city: 'Toronto', neighborhood: 'Willowdale', propertyType: 'Detached', listPrice: 1350000, salePrice: 1310000, squareFeet: 2100, bedrooms: 4, bathrooms: 3, yearBuilt: 2005, status: 'Sold', soldDateUtc: addDays(today, -20), daysOnMarket: 18, pricePerSqFt: 624, distanceMiles: 0.4, source: 'MLS' },
+    { id: 'comp-002', address: '88 Birchwood Lane', city: 'Toronto', neighborhood: 'North York', propertyType: 'Detached', listPrice: 1420000, squareFeet: 2300, bedrooms: 4, bathrooms: 3, yearBuilt: 2008, status: 'Active', daysOnMarket: 12, pricePerSqFt: 617, distanceMiles: 0.8, source: 'MLS' },
+    { id: 'comp-003', address: '15 Sunset Blvd', city: 'Toronto', neighborhood: 'Willowdale', propertyType: 'Detached', listPrice: 1280000, salePrice: 1295000, squareFeet: 1950, bedrooms: 3, bathrooms: 2, yearBuilt: 1998, status: 'Sold', soldDateUtc: addDays(today, -35), daysOnMarket: 25, pricePerSqFt: 664, distanceMiles: 0.3, source: 'MLS' },
+    { id: 'comp-004', address: '201 Pinecrest Ave', city: 'Toronto', neighborhood: 'North York', propertyType: 'SemiDetached', listPrice: 1100000, salePrice: 1075000, squareFeet: 1800, bedrooms: 3, bathrooms: 2, yearBuilt: 2001, status: 'Sold', soldDateUtc: addDays(today, -42), daysOnMarket: 30, pricePerSqFt: 597, distanceMiles: 1.2, source: 'MLS' },
+    { id: 'comp-005', address: '567 Oakridge Terr', city: 'Toronto', neighborhood: 'Willowdale', propertyType: 'Detached', listPrice: 1550000, squareFeet: 2600, bedrooms: 5, bathrooms: 4, yearBuilt: 2012, status: 'Pending', daysOnMarket: 8, pricePerSqFt: 596, distanceMiles: 0.6, source: 'Internal' },
+  ],
+};
+
+function generateCmaComparables(propertyId: string): ComparableProperty[] {
+  return mockComparables[propertyId] || mockComparables['prop-001']!;
+}
+
+function buildCmaSummary(comps: ComparableProperty[]): CmaReport['summary'] {
+  const prices = comps.map(c => c.salePrice || c.listPrice);
+  const sorted = [...prices].sort((a, b) => a - b);
+  const avg = (arr: number[]) => arr.reduce((s, v) => s + v, 0) / arr.length;
+  const soldComps = comps.filter(c => c.salePrice);
+  return {
+    avgListPrice: Math.round(avg(comps.map(c => c.listPrice))),
+    avgSalePrice: Math.round(avg(soldComps.length ? soldComps.map(c => c.salePrice!) : prices)),
+    avgPricePerSqFt: Math.round(avg(comps.filter(c => c.pricePerSqFt).map(c => c.pricePerSqFt!))),
+    avgDaysOnMarket: Math.round(avg(comps.map(c => c.daysOnMarket))),
+    medianPrice: sorted[Math.floor(sorted.length / 2)],
+    priceRangeLow: sorted[0],
+    priceRangeHigh: sorted[sorted.length - 1],
+    suggestedPrice: Math.round(avg(prices) * 1.02),
+    marketTrend: 'Rising'
+  };
+}
+
+export function getCmaReport(propertyId: string): CmaReport {
+  const comps = generateCmaComparables(propertyId);
+  return {
+    propertyId,
+    generatedAtUtc: new Date().toISOString(),
+    comparables: comps,
+    summary: buildCmaSummary(comps)
+  };
+}
+
+// ────────────────── E-Signature Integration (G4) ──────────────────
+
+const mockSignatureRequests: SignatureRequest[] = [
+  {
+    id: 'sig-001', propertyId: 'prop-001', documentName: 'Listing Agreement - 123 Main St',
+    documentType: 'ListingAgreement', provider: 'DocuSign', status: 'Signed',
+    signers: [
+      { name: 'Yasser Ahmed', email: 'yasser@northedge.ca', role: 'Agent', status: 'Signed', signedAtUtc: addDays(today, -30) },
+      { name: 'John Morrison', email: 'john.m@email.com', role: 'Seller', status: 'Signed', signedAtUtc: addDays(today, -29) }
+    ],
+    sentAtUtc: addDays(today, -31), completedAtUtc: addDays(today, -29),
+    createdByName: 'Yasser Ahmed', createdAtUtc: addDays(today, -32)
+  },
+  {
+    id: 'sig-002', propertyId: 'prop-001', documentName: 'Purchase Agreement - Offer #1',
+    documentType: 'PurchaseAgreement', provider: 'DocuSign', status: 'Sent',
+    signers: [
+      { name: 'David Chen', email: 'david.chen@email.com', role: 'Buyer', status: 'Viewed' },
+      { name: 'John Morrison', email: 'john.m@email.com', role: 'Seller', status: 'Pending' },
+      { name: 'Yasser Ahmed', email: 'yasser@northedge.ca', role: 'Agent', status: 'Signed', signedAtUtc: addDays(today, -2) }
+    ],
+    sentAtUtc: addDays(today, -3), expiresAtUtc: addDays(today, 11),
+    createdByName: 'Yasser Ahmed', createdAtUtc: addDays(today, -3)
+  },
+  {
+    id: 'sig-003', propertyId: 'prop-002', documentName: 'Seller Disclosure - 456 Oak Ave',
+    documentType: 'Disclosure', provider: 'HelloSign', status: 'Draft',
+    signers: [
+      { name: 'Mia Khalid', email: 'mia@northedge.ca', role: 'Agent', status: 'Pending' },
+      { name: 'Sarah Lin', email: 'sarah.lin@email.com', role: 'Seller', status: 'Pending' }
+    ],
+    createdByName: 'Mia Khalid', createdAtUtc: addDays(today, -1)
+  },
+  {
+    id: 'sig-004', propertyId: 'prop-006', documentName: 'Amendment - Price Adjustment',
+    documentType: 'Amendment', provider: 'AdobeSign', status: 'Expired',
+    signers: [
+      { name: 'Robert Kingston', email: 'rkingston@email.com', role: 'Buyer', status: 'Declined' },
+      { name: 'Priya Desai', email: 'priya@northedge.ca', role: 'Agent', status: 'Signed', signedAtUtc: addDays(today, -20) }
+    ],
+    sentAtUtc: addDays(today, -25), expiresAtUtc: addDays(today, -5),
+    createdByName: 'Priya Desai', createdAtUtc: addDays(today, -26)
+  },
+];
+
+export function getSignatureRequests(propertyId: string): SignatureRequest[] {
+  return mockSignatureRequests
+    .filter(s => s.propertyId === propertyId)
+    .sort((a, b) => new Date(b.createdAtUtc).getTime() - new Date(a.createdAtUtc).getTime());
+}
+
+export function createSignatureRequest(req: Partial<SignatureRequest> & { propertyId: string }): SignatureRequest {
+  const record: SignatureRequest = {
+    id: `sig-${Math.random().toString(36).slice(2, 8)}`,
+    propertyId: req.propertyId,
+    documentName: req.documentName || 'Untitled Document',
+    documentType: req.documentType || 'Other',
+    provider: req.provider || 'DocuSign',
+    status: 'Draft',
+    signers: req.signers || [],
+    createdByName: req.createdByName || 'Current User',
+    createdAtUtc: new Date().toISOString()
+  };
+  mockSignatureRequests.unshift(record);
+  return { ...record };
+}
+
+// ────────────────── Automated Property Alerts (G5) ──────────────────
+
+const mockAlertRules: PropertyAlertRule[] = [
+  {
+    id: 'alert-001', propertyId: 'prop-001', clientName: 'David Chen', clientEmail: 'david.chen@email.com',
+    criteria: { minPrice: 1100000, maxPrice: 1500000, propertyTypes: ['Detached', 'SemiDetached'], minBedrooms: 3, cities: ['Toronto'] },
+    frequency: 'Daily', isActive: true, matchCount: 14, lastNotifiedAtUtc: addDays(today, -1), createdAtUtc: addDays(today, -20)
+  },
+  {
+    id: 'alert-002', propertyId: 'prop-001', clientName: 'Sarah Park', clientEmail: 'sarah.park@email.com',
+    criteria: { minPrice: 900000, maxPrice: 1300000, propertyTypes: ['Detached', 'Townhouse'], minBedrooms: 3, neighborhoods: ['Willowdale', 'North York'] },
+    frequency: 'Weekly', isActive: true, matchCount: 8, lastNotifiedAtUtc: addDays(today, -6), createdAtUtc: addDays(today, -15)
+  },
+  {
+    id: 'alert-003', propertyId: 'prop-002', clientName: 'Michael Torres', clientEmail: 'mtorres@email.com',
+    criteria: { minPrice: 500000, maxPrice: 800000, propertyTypes: ['Condo'], cities: ['Toronto', 'Mississauga'] },
+    frequency: 'Instant', isActive: false, matchCount: 22, lastNotifiedAtUtc: addDays(today, -10), createdAtUtc: addDays(today, -30)
+  },
+  {
+    id: 'alert-004', propertyId: 'prop-006', clientName: 'Robert Kingston', clientEmail: 'rkingston@email.com',
+    criteria: { minPrice: 2000000, maxPrice: 5000000, propertyTypes: ['Condo'], minBedrooms: 2, neighborhoods: ['Yorkville', 'King West'] },
+    frequency: 'Instant', isActive: true, matchCount: 3, lastNotifiedAtUtc: addDays(today, -2), createdAtUtc: addDays(today, -12)
+  },
+];
+
+const mockAlertNotifications: PropertyAlertNotification[] = [
+  { id: 'notif-001', ruleId: 'alert-001', clientName: 'David Chen', clientEmail: 'david.chen@email.com', matchedProperties: 3, sentAtUtc: addDays(today, -1), status: 'Opened' },
+  { id: 'notif-002', ruleId: 'alert-001', clientName: 'David Chen', clientEmail: 'david.chen@email.com', matchedProperties: 5, sentAtUtc: addDays(today, -2), status: 'Clicked' },
+  { id: 'notif-003', ruleId: 'alert-002', clientName: 'Sarah Park', clientEmail: 'sarah.park@email.com', matchedProperties: 4, sentAtUtc: addDays(today, -6), status: 'Sent' },
+  { id: 'notif-004', ruleId: 'alert-003', clientName: 'Michael Torres', clientEmail: 'mtorres@email.com', matchedProperties: 7, sentAtUtc: addDays(today, -10), status: 'Opened' },
+  { id: 'notif-005', ruleId: 'alert-004', clientName: 'Robert Kingston', clientEmail: 'rkingston@email.com', matchedProperties: 1, sentAtUtc: addDays(today, -2), status: 'Clicked' },
+  { id: 'notif-006', ruleId: 'alert-001', clientName: 'David Chen', clientEmail: 'david.chen@email.com', matchedProperties: 6, sentAtUtc: addDays(today, -3), status: 'Bounced' },
+];
+
+export function getAlertRules(propertyId: string): PropertyAlertRule[] {
+  return mockAlertRules
+    .filter(r => r.propertyId === propertyId)
+    .sort((a, b) => new Date(b.createdAtUtc).getTime() - new Date(a.createdAtUtc).getTime());
+}
+
+export function createAlertRule(rule: Partial<PropertyAlertRule> & { propertyId: string }): PropertyAlertRule {
+  const record: PropertyAlertRule = {
+    id: `alert-${Math.random().toString(36).slice(2, 8)}`,
+    propertyId: rule.propertyId,
+    clientName: rule.clientName || '',
+    clientEmail: rule.clientEmail || '',
+    criteria: rule.criteria || {},
+    frequency: rule.frequency || 'Daily',
+    isActive: true,
+    matchCount: 0,
+    createdAtUtc: new Date().toISOString()
+  };
+  mockAlertRules.unshift(record);
+  return { ...record };
+}
+
+export function toggleAlertRule(id: string, isActive: boolean): PropertyAlertRule | null {
+  const target = mockAlertRules.find(r => r.id === id);
+  if (!target) return null;
+  target.isActive = isActive;
+  return { ...target };
+}
+
+export function getAlertNotifications(propertyId: string): PropertyAlertNotification[] {
+  const ruleIds = new Set(mockAlertRules.filter(r => r.propertyId === propertyId).map(r => r.id));
+  return mockAlertNotifications
+    .filter(n => ruleIds.has(n.ruleId))
+    .sort((a, b) => new Date(b.sentAtUtc).getTime() - new Date(a.sentAtUtc).getTime());
 }

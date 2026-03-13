@@ -169,6 +169,17 @@
           <i class="pi pi-list-check"></i> Activities
           <span class="tab-count" *ngIf="activities().length">{{ activities().length }}</span>
         </button>
+        <button type="button" class="tab-btn" [class.tab-btn--active]="activeTab() === 'cma'" (click)="setTab('cma')">
+          <i class="pi pi-chart-bar"></i> CMA
+        </button>
+        <button type="button" class="tab-btn" [class.tab-btn--active]="activeTab() === 'esign'" (click)="setTab('esign')">
+          <i class="pi pi-pen-to-square"></i> E-Signature
+          <span class="tab-count" *ngIf="signatureRequests().length">{{ signatureRequests().length }}</span>
+        </button>
+        <button type="button" class="tab-btn" [class.tab-btn--active]="activeTab() === 'alerts'" (click)="setTab('alerts')">
+          <i class="pi pi-bell"></i> Alerts
+          <span class="tab-count" *ngIf="alertRules().length">{{ alertRules().length }}</span>
+        </button>
       </nav>
 
       <!-- ═══ TAB: DETAILS (original main grid) ═══ -->
@@ -575,6 +586,227 @@
           </ng-template>
         </div>
       </section>
+
+      <!-- ═══ TAB: CMA (G3) ═══ -->
+      <section class="tab-panel" *ngIf="activeTab() === 'cma'">
+        <div class="detail-card">
+          <div class="card-header-bar">
+            <h2 class="card-title"><i class="pi pi-chart-bar"></i> Comparable Market Analysis</h2>
+            <button type="button" class="action-btn action-btn--refresh" (click)="generateCma()">
+              <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+              <span>Generate CMA</span>
+            </button>
+          </div>
+
+          <div *ngIf="cmaLoading()" class="cma-loading">
+            <p-skeleton width="100%" height="5rem" styleClass="mb-3"></p-skeleton>
+            <p-skeleton width="100%" height="12rem"></p-skeleton>
+          </div>
+
+          <ng-container *ngIf="!cmaLoading() && cmaReport() as report">
+            <!-- Summary KPIs -->
+            <div class="cma-summary">
+              <div class="cma-kpi">
+                <span class="cma-kpi__label">Suggested Price</span>
+                <strong class="cma-kpi__value cma-kpi__value--primary">{{ formatCurrency(report.summary.suggestedPrice, 'CAD') }}</strong>
+              </div>
+              <div class="cma-kpi">
+                <span class="cma-kpi__label">Avg Sale Price</span>
+                <strong class="cma-kpi__value">{{ formatCurrency(report.summary.avgSalePrice, 'CAD') }}</strong>
+              </div>
+              <div class="cma-kpi">
+                <span class="cma-kpi__label">Avg $/sqft</span>
+                <strong class="cma-kpi__value">{{ formatCurrency(report.summary.avgPricePerSqFt, 'CAD') }}</strong>
+              </div>
+              <div class="cma-kpi">
+                <span class="cma-kpi__label">Avg Days on Market</span>
+                <strong class="cma-kpi__value">{{ report.summary.avgDaysOnMarket }}</strong>
+              </div>
+              <div class="cma-kpi">
+                <span class="cma-kpi__label">Market Trend</span>
+                <p-tag [value]="report.summary.marketTrend" [severity]="marketTrendSeverity(report.summary.marketTrend)"></p-tag>
+              </div>
+            </div>
+
+            <!-- Comparables Table -->
+            <div class="cma-table-wrap">
+              <p-table [value]="report.comparables" [rows]="10" styleClass="p-datatable-sm" responsiveLayout="scroll">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Address</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>List Price</th>
+                    <th>Sale Price</th>
+                    <th>Sqft</th>
+                    <th>$/Sqft</th>
+                    <th>Bed/Bath</th>
+                    <th>Days</th>
+                    <th>Dist</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-comp>
+                  <tr>
+                    <td>
+                      <span class="comp-address">{{ comp.address }}</span>
+                      <span class="comp-city" *ngIf="comp.city">{{ comp.city }}</span>
+                    </td>
+                    <td>{{ typeLabel(comp.propertyType) }}</td>
+                    <td><p-tag [value]="comp.status" [severity]="cmaStatusSeverity(comp.status)" [rounded]="true"></p-tag></td>
+                    <td>{{ formatCurrency(comp.listPrice, 'CAD') }}</td>
+                    <td>{{ comp.salePrice ? formatCurrency(comp.salePrice, 'CAD') : '—' }}</td>
+                    <td>{{ comp.squareFeet | number:'1.0-0' }}</td>
+                    <td>{{ comp.pricePerSqFt ? formatCurrency(comp.pricePerSqFt, 'CAD') : '—' }}</td>
+                    <td>{{ comp.bedrooms }}/{{ comp.bathrooms }}</td>
+                    <td>{{ comp.daysOnMarket }}</td>
+                    <td>{{ comp.distanceMiles | number:'1.1-1' }} mi</td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr><td colspan="10" class="text-center p-4">No comparables found.</td></tr>
+                </ng-template>
+              </p-table>
+            </div>
+          </ng-container>
+
+          <div *ngIf="!cmaLoading() && !cmaReport()" class="empty-state">
+            <i class="pi pi-chart-bar empty-icon"></i>
+            <p>No CMA report generated yet.</p>
+            <button type="button" class="action-btn action-btn--add" (click)="generateCma()">
+              <span class="action-btn__icon"><i class="pi pi-chart-bar"></i></span>
+              <span>Generate CMA Report</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ TAB: E-SIGNATURE (G4) ═══ -->
+      <section class="tab-panel" *ngIf="activeTab() === 'esign'">
+        <div class="detail-card">
+          <div class="card-header-bar">
+            <h2 class="card-title"><i class="pi pi-pen-to-square"></i> E-Signature Requests</h2>
+            <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onAddSignatureRequest()">
+              <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+              <span>Send for Signature</span>
+            </button>
+          </div>
+
+          <div class="esign-list" *ngIf="signatureRequests().length; else noSignatures">
+            <div class="esign-card" *ngFor="let req of signatureRequests()">
+              <div class="esign-card__header">
+                <div class="esign-doc-info">
+                  <i class="pi pi-file-pdf esign-doc-icon"></i>
+                  <div>
+                    <strong class="esign-doc-name">{{ req.documentName }}</strong>
+                    <span class="esign-doc-type">{{ req.documentType }}</span>
+                  </div>
+                </div>
+                <p-tag [value]="req.status" [severity]="signatureStatusSeverity(req.status)" [rounded]="true"></p-tag>
+              </div>
+              <div class="esign-card__meta">
+                <span><i class="pi pi-building"></i> {{ req.provider }}</span>
+                <span *ngIf="req.sentAtUtc"><i class="pi pi-send"></i> Sent {{ req.sentAtUtc | date:'MMM d, yyyy' }}</span>
+                <span *ngIf="req.completedAtUtc"><i class="pi pi-check-circle"></i> Completed {{ req.completedAtUtc | date:'MMM d, yyyy' }}</span>
+                <span><i class="pi pi-user"></i> {{ req.createdByName }}</span>
+              </div>
+              <div class="esign-signers">
+                <h4 class="esign-signers__title">Signers</h4>
+                <div class="signer-row" *ngFor="let signer of req.signers">
+                  <div class="signer-info">
+                    <span class="signer-name">{{ signer.name }}</span>
+                    <span class="signer-email">{{ signer.email }}</span>
+                    <span class="signer-role">{{ signer.role }}</span>
+                  </div>
+                  <p-tag [value]="signer.status" [severity]="signatureStatusSeverity(signer.status)" [rounded]="true" class="signer-status"></p-tag>
+                </div>
+              </div>
+            </div>
+          </div>
+          <ng-template #noSignatures>
+            <div class="empty-state">
+              <i class="pi pi-pen-to-square empty-icon"></i>
+              <p>No signature requests yet.</p>
+              <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onAddSignatureRequest()">
+                <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+                <span>Send First Document</span>
+              </button>
+            </div>
+          </ng-template>
+        </div>
+      </section>
+
+      <!-- ═══ TAB: ALERTS (G5) ═══ -->
+      <section class="tab-panel" *ngIf="activeTab() === 'alerts'">
+        <div class="detail-card">
+          <div class="card-header-bar">
+            <h2 class="card-title"><i class="pi pi-bell"></i> Property Alert Rules</h2>
+            <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onAddAlertRule()">
+              <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+              <span>Add Alert Rule</span>
+            </button>
+          </div>
+
+          <div class="alert-rules-list" *ngIf="alertRules().length; else noAlertRules">
+            <div class="alert-rule-card" *ngFor="let rule of alertRules()" [class.alert-rule-card--inactive]="!rule.isActive">
+              <div class="alert-rule__header">
+                <div class="alert-rule__client">
+                  <div class="alert-rule__avatar">{{ rule.clientName.charAt(0) }}</div>
+                  <div>
+                    <strong>{{ rule.clientName }}</strong>
+                    <span class="alert-rule__email">{{ rule.clientEmail }}</span>
+                  </div>
+                </div>
+                <div class="alert-rule__toggle">
+                  <button type="button" class="toggle-btn" [class.toggle-btn--active]="rule.isActive"
+                          (click)="toggleAlertRule(rule.id, !rule.isActive)" title="Toggle alert">
+                    <span class="toggle-btn__slider"></span>
+                  </button>
+                </div>
+              </div>
+              <div class="alert-rule__criteria">
+                <span *ngIf="rule.criteria.minPrice || rule.criteria.maxPrice">
+                  <i class="pi pi-dollar"></i>
+                  {{ rule.criteria.minPrice ? formatCurrency(rule.criteria.minPrice, 'CAD') : 'Any' }}
+                  –
+                  {{ rule.criteria.maxPrice ? formatCurrency(rule.criteria.maxPrice, 'CAD') : 'Any' }}
+                </span>
+                <span *ngIf="rule.criteria.minBedrooms"><i class="pi pi-th-large"></i> {{ rule.criteria.minBedrooms }}+ beds</span>
+                <span><i class="pi pi-clock"></i> {{ rule.frequency }}</span>
+                <span><i class="pi pi-bell"></i> {{ rule.matchCount }} matches</span>
+              </div>
+              <div class="alert-rule__footer" *ngIf="rule.lastNotifiedAtUtc">
+                <span class="alert-rule__last-notified">Last sent {{ rule.lastNotifiedAtUtc | date:'MMM d, yyyy h:mm a' }}</span>
+              </div>
+            </div>
+          </div>
+          <ng-template #noAlertRules>
+            <div class="empty-state">
+              <i class="pi pi-bell empty-icon"></i>
+              <p>No alert rules configured.</p>
+              <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onAddAlertRule()">
+                <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+                <span>Create First Alert Rule</span>
+              </button>
+            </div>
+          </ng-template>
+        </div>
+
+        <!-- Alert Notifications History -->
+        <div class="detail-card mt-4" *ngIf="alertNotifications().length">
+          <h2 class="card-title"><i class="pi pi-inbox"></i> Notification History</h2>
+          <div class="notification-list">
+            <div class="notification-item" *ngFor="let notif of alertNotifications()">
+              <div class="notification-icon"><i class="pi pi-envelope"></i></div>
+              <div class="notification-body">
+                <strong>{{ notif.clientName }}</strong>
+                <span class="notification-meta">{{ notif.clientEmail }} · {{ notif.matchedProperties }} properties matched</span>
+                <span class="notification-date">{{ notif.sentAtUtc | date:'MMM d, yyyy h:mm a' }}</span>
+              </div>
+              <p-tag [value]="notif.status" [severity]="alertNotifStatusSeverity(notif.status)" [rounded]="true"></p-tag>
+            </div>
+          </div>
+        </div>
+      </section>
     </ng-container>
   </div>
 
@@ -753,6 +985,140 @@
     <button type="button" class="action-btn action-btn--add" (click)="submitActivity()">
       <span class="action-btn__icon"><i class="pi pi-check"></i></span>
       <span>Create</span>
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ═══ DIALOG: SEND FOR SIGNATURE (G4) ═══ -->
+<p-dialog header="Send for Signature" [visible]="showSignatureDialog()" (visibleChange)="showSignatureDialog.set($event)" [modal]="true" [style]="{ width: '520px' }">
+  <form [formGroup]="signatureForm" class="dialog-body">
+    <div class="form-field">
+      <label for="sig-doc-name">Document Name <span class="required">*</span></label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--name"><i class="pi pi-file"></i></p-inputgroup-addon>
+        <input pInputText id="sig-doc-name" formControlName="documentName" placeholder="e.g. Purchase Agreement" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="sig-doc-type">Document Type</label>
+      <p-select id="sig-doc-type" [options]="signatureDocTypes" optionLabel="label" optionValue="value"
+                formControlName="documentType" class="w-full" appendTo="body">
+        <ng-template pTemplate="item" let-option>
+          <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+        <ng-template pTemplate="selectedItem" let-option>
+          <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+      </p-select>
+    </div>
+    <div class="form-field">
+      <label for="sig-provider">Provider</label>
+      <p-select id="sig-provider" [options]="signatureProviders" optionLabel="label" optionValue="value"
+                formControlName="provider" class="w-full" appendTo="body">
+        <ng-template pTemplate="item" let-option>
+          <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+        <ng-template pTemplate="selectedItem" let-option>
+          <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+      </p-select>
+    </div>
+    <div class="form-field">
+      <label for="sig-signer-name">Signer Name <span class="required">*</span></label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--company"><i class="pi pi-user"></i></p-inputgroup-addon>
+        <input pInputText id="sig-signer-name" formControlName="signerName" placeholder="Full name" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="sig-signer-email">Signer Email <span class="required">*</span></label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--email"><i class="pi pi-envelope"></i></p-inputgroup-addon>
+        <input pInputText id="sig-signer-email" formControlName="signerEmail" type="email" placeholder="email@example.com" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="sig-signer-role">Role</label>
+      <p-select id="sig-signer-role" [options]="signerRoles" optionLabel="label" optionValue="value"
+                formControlName="signerRole" class="w-full" appendTo="body">
+        <ng-template pTemplate="item" let-option>
+          <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+        <ng-template pTemplate="selectedItem" let-option>
+          <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+      </p-select>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <button type="button" class="action-btn action-btn--settings" (click)="showSignatureDialog.set(false)">
+      <span>Cancel</span>
+    </button>
+    <button type="button" class="action-btn action-btn--add" (click)="submitSignatureRequest()">
+      <span class="action-btn__icon"><i class="pi pi-send"></i></span>
+      <span>Send</span>
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ═══ DIALOG: ADD ALERT RULE (G5) ═══ -->
+<p-dialog header="Create Alert Rule" [visible]="showAlertDialog()" (visibleChange)="showAlertDialog.set($event)" [modal]="true" [style]="{ width: '520px' }">
+  <form [formGroup]="alertForm" class="dialog-body">
+    <div class="form-field">
+      <label for="alert-client-name">Client Name <span class="required">*</span></label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--company"><i class="pi pi-user"></i></p-inputgroup-addon>
+        <input pInputText id="alert-client-name" formControlName="clientName" placeholder="Client full name" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="alert-client-email">Client Email <span class="required">*</span></label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--email"><i class="pi pi-envelope"></i></p-inputgroup-addon>
+        <input pInputText id="alert-client-email" formControlName="clientEmail" type="email" placeholder="email@example.com" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="alert-frequency">Frequency</label>
+      <p-select id="alert-frequency" [options]="alertFrequencies" optionLabel="label" optionValue="value"
+                formControlName="frequency" class="w-full" appendTo="body">
+        <ng-template pTemplate="item" let-option>
+          <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+        <ng-template pTemplate="selectedItem" let-option>
+          <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+      </p-select>
+    </div>
+    <div class="form-field">
+      <label for="alert-min-price">Min Price</label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--success"><i class="pi pi-dollar"></i></p-inputgroup-addon>
+        <p-inputNumber id="alert-min-price" formControlName="minPrice" mode="currency" currency="CAD" [maxFractionDigits]="0" placeholder="Minimum price"></p-inputNumber>
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="alert-max-price">Max Price</label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--warning"><i class="pi pi-dollar"></i></p-inputgroup-addon>
+        <p-inputNumber id="alert-max-price" formControlName="maxPrice" mode="currency" currency="CAD" [maxFractionDigits]="0" placeholder="Maximum price"></p-inputNumber>
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="alert-bedrooms">Min Bedrooms</label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--industry"><i class="pi pi-th-large"></i></p-inputgroup-addon>
+        <p-inputNumber id="alert-bedrooms" formControlName="minBedrooms" [min]="0" [max]="10" placeholder="Min bedrooms"></p-inputNumber>
+      </p-inputgroup>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <button type="button" class="action-btn action-btn--settings" (click)="showAlertDialog.set(false)">
+      <span>Cancel</span>
+    </button>
+    <button type="button" class="action-btn action-btn--add" (click)="submitAlertRule()">
+      <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+      <span>Create Rule</span>
     </button>
   </ng-template>
 </p-dialog>

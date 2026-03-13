@@ -49,6 +49,17 @@ import {
   getActivities,
   createActivity,
   updateActivity,
+  getMlsFeeds,
+  createMlsFeed,
+  triggerMlsImport,
+  getMlsImportHistory,
+  getCmaReport,
+  getSignatureRequests,
+  createSignatureRequest,
+  getAlertRules,
+  createAlertRule,
+  toggleAlertRule,
+  getAlertNotifications,
   searchContacts
 } from './mock-db';
 
@@ -186,6 +197,22 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   // ── Properties ──
+
+  // MLS/IDX Feeds (G1) — must come before generic property routes
+  if (req.method === 'GET' && path === '/api/properties/mls-feeds') {
+    return respond(getMlsFeeds(), 200, 120);
+  }
+  if (req.method === 'POST' && path === '/api/properties/mls-feeds') {
+    return respond(createMlsFeed(req.body as any), 201, 140);
+  }
+  if (req.method === 'POST' && /^\/api\/properties\/mls-feeds\/[^/]+\/import$/.test(path)) {
+    const feedId = path.split('/')[4];
+    return respond(triggerMlsImport(feedId), 200, 800);
+  }
+  if (req.method === 'GET' && path === '/api/properties/mls-imports') {
+    return respond(getMlsImportHistory(), 200, 120);
+  }
+
   if (req.method === 'GET' && /^\/api\/properties\/[^/]+$/.test(path)) {
     const id = path.split('/').pop() ?? '';
     const property = getPropertyById(id);
@@ -288,6 +315,50 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const actId = path.split('/')[5];
     const updated = updateActivity(actId, req.body as any);
     return respond(updated ?? { message: 'Not found' }, updated ? 200 : 404, 100);
+  }
+
+  // ── CMA Reports (G3) ──
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+\/cma$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getCmaReport(id), 200, 200);
+  }
+  if (req.method === 'POST' && /^\/api\/properties\/[^/]+\/cma$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getCmaReport(id), 201, 500);
+  }
+
+  // ── E-Signature Requests (G4) ──
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+\/signatures$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getSignatureRequests(id), 200, 120);
+  }
+  if (req.method === 'POST' && /^\/api\/properties\/[^/]+\/signatures$/.test(path)) {
+    const id = path.split('/')[3];
+    const body = req.body as any;
+    body.propertyId = id;
+    return respond(createSignatureRequest(body), 201, 140);
+  }
+
+  // ── Property Alerts (G5) ──
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+\/alerts$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getAlertRules(id), 200, 100);
+  }
+  if (req.method === 'POST' && /^\/api\/properties\/[^/]+\/alerts$/.test(path)) {
+    const id = path.split('/')[3];
+    const body = req.body as any;
+    body.propertyId = id;
+    return respond(createAlertRule(body), 201, 140);
+  }
+  if (req.method === 'PUT' && /^\/api\/properties\/[^/]+\/alerts\/[^/]+$/.test(path)) {
+    const ruleId = path.split('/')[5];
+    const body = req.body as any;
+    const updated = toggleAlertRule(ruleId, body.isActive);
+    return respond(updated ?? { message: 'Not found' }, updated ? 200 : 404, 100);
+  }
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+\/alert-notifications$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getAlertNotifications(id), 200, 120);
   }
 
   // ── Opportunity Contact Roles (Stakeholders) ──

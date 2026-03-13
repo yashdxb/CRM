@@ -241,7 +241,15 @@
           <button type="button" class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Board View" aria-label="Switch to board view">
             <i class="pi pi-objects-column"></i>
           </button>
+          <button type="button" class="toggle-btn" [class.active]="viewMode === 'map'" (click)="viewMode = 'map'" title="Map View" aria-label="Switch to map view">
+            <i class="pi pi-map"></i>
+          </button>
         </div>
+
+        <button type="button" class="action-btn action-btn--import" (click)="onShowMlsDialog()" *ngIf="canManage()">
+          <span class="action-btn__icon"><i class="pi pi-cloud-download"></i></span>
+          <span>MLS Import</span>
+        </button>
 
         <button type="button" class="action-btn action-btn--export" (click)="onExport()">
           <span class="action-btn__icon"><i class="pi pi-download"></i></span>
@@ -475,6 +483,95 @@
       </div>
     </div>
   </section>
+
+  <!-- MAP / NEIGHBORHOOD VIEW (G2) -->
+  <section class="map-view" *ngIf="viewMode === 'map'">
+    <div class="map-neighborhoods" *ngIf="mapNeighborhoods().length; else noMapData">
+      <div class="neighborhood-group" *ngFor="let hood of mapNeighborhoods()">
+        <div class="neighborhood-header">
+          <i class="pi pi-map-marker"></i>
+          <h3 class="neighborhood-name">{{ hood.name }}</h3>
+          <span class="neighborhood-count">{{ hood.items.length }} {{ hood.items.length === 1 ? 'property' : 'properties' }}</span>
+        </div>
+        <div class="neighborhood-cards">
+          <div class="map-property-card" *ngFor="let prop of hood.items" (click)="onRowClick(prop, $event)">
+            <div class="map-card-top">
+              <div class="map-card-avatar" [style.background]="'linear-gradient(135deg, ' + statusColor(prop.status) + ' 0%, ' + statusColor(prop.status) + 'cc 100%)'">
+                <i class="pi pi-home"></i>
+              </div>
+              <p-tag [value]="prop.status" [severity]="statusSeverity(prop.status)" [rounded]="true" class="map-card-tag"></p-tag>
+            </div>
+            <strong class="map-card-address">{{ prop.address }}</strong>
+            <span class="map-card-price" *ngIf="prop.listPrice">{{ prop.listPrice | currency:prop.currency:'symbol':'1.0-0' }}</span>
+            <div class="map-card-specs">
+              <span *ngIf="prop.bedrooms"><i class="pi pi-th-large"></i> {{ prop.bedrooms }} bed</span>
+              <span *ngIf="prop.bathrooms"><i class="pi pi-box"></i> {{ prop.bathrooms }} bath</span>
+              <span *ngIf="prop.squareFeet">{{ prop.squareFeet | number:'1.0-0' }} sqft</span>
+            </div>
+            <span class="map-card-type">{{ formatPropertyType(prop.propertyType) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <ng-template #noMapData>
+      <div class="empty-state">
+        <i class="pi pi-map empty-icon"></i>
+        <p>No properties to display on map.</p>
+      </div>
+    </ng-template>
+  </section>
+
+  <!-- MLS / IDX FEED DIALOG (G1) -->
+  <p-dialog header="MLS / IDX Feed Management" [visible]="showMlsDialog()" (visibleChange)="showMlsDialog.set($event)" [modal]="true" [style]="{ width: '700px' }">
+    <div class="mls-dialog-body">
+      <h3 class="mls-section-title"><i class="pi pi-database"></i> Connected Feeds</h3>
+      <div class="mls-feeds-list" *ngIf="mlsFeeds().length; else noMlsFeeds">
+        <div class="mls-feed-card" *ngFor="let feed of mlsFeeds()">
+          <div class="mls-feed-info">
+            <strong class="mls-feed-name">{{ feed.feedName }}</strong>
+            <span class="mls-feed-url">{{ feed.feedUrl }}</span>
+            <span class="mls-feed-meta">
+              <span>Provider: {{ feed.provider }}</span>
+              <span>Imported: {{ feed.totalImported }}</span>
+              <span *ngIf="feed.lastSyncAtUtc">Last sync: {{ feed.lastSyncAtUtc | date:'MMM d h:mm a' }}</span>
+            </span>
+          </div>
+          <div class="mls-feed-actions">
+            <p-tag [value]="feed.status" [severity]="mlsFeedStatusSeverity(feed.status)" [rounded]="true"></p-tag>
+            <button type="button" class="action-btn action-btn--import" [disabled]="mlsImporting() || feed.status === 'Error'" (click)="triggerMlsImport(feed.id)">
+              <span class="action-btn__icon"><i class="pi pi-sync"></i></span>
+              <span>Import</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <ng-template #noMlsFeeds>
+        <p class="mls-empty">No MLS feeds configured.</p>
+      </ng-template>
+
+      <h3 class="mls-section-title mt-4"><i class="pi pi-history"></i> Recent Import Jobs</h3>
+      <div class="mls-history" *ngIf="mlsImportHistory().length">
+        <div class="mls-job" *ngFor="let job of mlsImportHistory()">
+          <div class="mls-job-info">
+            <strong>{{ job.feedName }}</strong>
+            <span class="mls-job-date">{{ job.startedAtUtc | date:'MMM d, yyyy h:mm a' }}</span>
+          </div>
+          <div class="mls-job-stats">
+            <span title="Imported">{{ job.imported }} new</span>
+            <span title="Updated">{{ job.updated }} updated</span>
+            <span title="Skipped">{{ job.skipped }} skipped</span>
+            <span *ngIf="job.errors" title="Errors" class="mls-job-errors">{{ job.errors }} errors</span>
+          </div>
+          <p-tag [value]="job.status" [severity]="mlsJobStatusSeverity(job.status)" [rounded]="true"></p-tag>
+        </div>
+      </div>
+    </div>
+    <ng-template pTemplate="footer">
+      <button type="button" class="action-btn action-btn--settings" (click)="showMlsDialog.set(false)">
+        <span>Close</span>
+      </button>
+    </ng-template>
+  </p-dialog>
 
   <!-- BULK STATUS CHANGE DIALOG (X11) -->
   <p-dialog header="Change Status" [visible]="showBulkStatusDialog()" (visibleChange)="showBulkStatusDialog.set($event)" [modal]="true" [style]="{ width: '400px' }">

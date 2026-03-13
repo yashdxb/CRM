@@ -1417,3 +1417,239 @@
   align-items: center;
   gap: $space-2;
 }
+
+/* ═══ MAP / NEIGHBORHOOD VIEW (G2) ═══ */
+.map-view {
+  position: relative;
+  z-index: 1;
+  animation: fade-in-up 0.5s ease-out;
+}
+
+.map-neighborhoods {
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+.neighborhood-group {
+  background: $glass-bg;
+  backdrop-filter: blur(20px);
+  border: 1px solid $glass-border;
+  border-radius: $radius-2xl;
+  box-shadow: $glass-shadow;
+  overflow: hidden;
+}
+
+.neighborhood-header {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
+  border-bottom: 2px solid rgba(59, 130, 246, 0.15);
+
+  i {
+    color: #3b82f6;
+    font-size: $font-size-lg;
+  }
+}
+
+.neighborhood-name {
+  margin: 0;
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $gray-800;
+}
+
+.neighborhood-count {
+  margin-left: auto;
+  font-size: $font-size-sm;
+  color: $gray-500;
+  font-weight: 500;
+}
+
+.neighborhood-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: $space-3;
+  padding: $space-4;
+}
+
+.map-property-card {
+  background: $glass-bg-subtle;
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  padding: $space-3;
+  cursor: pointer;
+  transition: all 250ms;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: $glass-shadow-hover;
+    border-color: rgba(102, 126, 234, 0.3);
+  }
+}
+
+.map-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-2;
+}
+
+.map-card-avatar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: white;
+  font-size: $font-size-sm;
+}
+
+.map-card-address {
+  display: block;
+  font-size: $font-size-sm;
+  color: $gray-800;
+  margin-bottom: 2px;
+}
+
+.map-card-price {
+  display: block;
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $gray-800;
+  margin-bottom: $space-1;
+}
+
+.map-card-specs {
+  display: flex;
+  gap: $space-3;
+  font-size: $font-size-xs;
+  color: $gray-500;
+  margin-bottom: $space-1;
+
+  i { margin-right: 2px; }
+}
+
+.map-card-type {
+  font-size: $font-size-xs;
+  color: $gray-400;
+}
+
+/* ═══ MLS / IDX FEED DIALOG (G1) ═══ */
+.mls-dialog-body {
+  padding: $space-3 0;
+}
+
+.mls-section-title {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-size-md;
+  font-weight: 700;
+  color: $gray-800;
+  margin: 0 0 $space-3;
+
+  i { color: #06b6d4; }
+}
+
+.mls-feeds-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.mls-feed-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-3 $space-4;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+}
+
+.mls-feed-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mls-feed-name {
+  font-size: $font-size-md;
+  color: $gray-800;
+}
+
+.mls-feed-url {
+  font-size: $font-size-xs;
+  color: $gray-400;
+  word-break: break-all;
+}
+
+.mls-feed-meta {
+  display: flex;
+  gap: $space-3;
+  font-size: $font-size-xs;
+  color: $gray-500;
+  margin-top: 2px;
+}
+
+.mls-feed-actions {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+}
+
+.mls-empty {
+  color: $gray-400;
+  font-size: $font-size-sm;
+  padding: $space-3;
+}
+
+.mls-history {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.mls-job {
+  display: flex;
+  align-items: center;
+  gap: $space-4;
+  padding: $space-2 $space-3;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: $radius-md;
+  border: 1px solid $glass-border;
+}
+
+.mls-job-info {
+  flex: 1;
+  min-width: 0;
+
+  strong {
+    display: block;
+    font-size: $font-size-sm;
+    color: $gray-800;
+  }
+}
+
+.mls-job-date {
+  font-size: $font-size-xs;
+  color: $gray-400;
+}
+
+.mls-job-stats {
+  display: flex;
+  gap: $space-3;
+  font-size: $font-size-xs;
+  color: $gray-500;
+}
+
+.mls-job-errors {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.mt-4 { margin-top: $space-4; }
