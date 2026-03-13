@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import { UpsertRoleRequest, UpsertUserRequest } from '../crm/features/settings/models/user-admin.model';
 import { SaveOpportunityRequest } from '../crm/features/opportunities/services/opportunity-data.service';
 import { PERMISSION_KEYS } from '../core/auth/permission.constants';
+import { SavePropertyRequest } from '../crm/features/properties/services/property-data.service';
 import {
   buildDashboardSummary,
   createRole,
@@ -31,7 +32,12 @@ import {
   createOpportunity,
   getOpportunityById,
   updateOpportunity,
-  deleteOpportunity
+  deleteOpportunity,
+  searchProperties,
+  getPropertyById,
+  createProperty,
+  updateProperty,
+  deleteProperty
 } from './mock-db';
 
 const toNumber = (value: string | null, fallback: number) => {
@@ -153,6 +159,47 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const match = path.match(/^\/api\/opportunities\/([^/]+)$/);
     if (match) {
       const ok = deleteOpportunity(match[1]);
+      return respond(ok ? null : { message: 'Not found' }, ok ? 204 : 404, 120);
+    }
+  }
+
+  // ── Properties ──
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+$/.test(path)) {
+    const id = path.split('/').pop() ?? '';
+    const property = getPropertyById(id);
+    return respond(property ?? { message: 'Not found' }, property ? 200 : 404, 120);
+  }
+
+  if (req.method === 'GET' && path.startsWith('/api/properties')) {
+    const page = toNumber(req.params.get('page'), 1);
+    const pageSize = toNumber(req.params.get('pageSize'), 10);
+    const status = req.params.get('status') ?? undefined;
+    const propertyType = req.params.get('propertyType') ?? undefined;
+    const city = req.params.get('city') ?? undefined;
+    const search = req.params.get('search') ?? undefined;
+    const result = searchProperties({ page, pageSize, status: status as any, propertyType: propertyType as any, city, search });
+    return respond(result, 200, 140);
+  }
+
+  if (req.method === 'POST' && path === '/api/properties') {
+    const payload = req.body as SavePropertyRequest;
+    const created = createProperty(payload);
+    return respond(created, 201, 140);
+  }
+
+  if (req.method === 'PUT' && /^\/api\/properties\/.+/.test(path)) {
+    const match = path.match(/^\/api\/properties\/([^/]+)$/);
+    if (match) {
+      const payload = req.body as SavePropertyRequest;
+      const updated = updateProperty(match[1], payload);
+      return respond(updated ? null : { message: 'Not found' }, updated ? 204 : 404, 140);
+    }
+  }
+
+  if (req.method === 'DELETE' && /^\/api\/properties\/.+/.test(path)) {
+    const match = path.match(/^\/api\/properties\/([^/]+)$/);
+    if (match) {
+      const ok = deleteProperty(match[1]);
       return respond(ok ? null : { message: 'Not found' }, ok ? 204 : 404, 120);
     }
   }

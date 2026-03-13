@@ -5,6 +5,8 @@ import { DashboardSummary } from '../crm/features/dashboard/models/dashboard.mod
 import { PERMISSION_KEYS } from '../core/auth/permission.constants';
 import { Opportunity, OpportunitySearchRequest, OpportunitySearchResponse } from '../crm/features/opportunities/models/opportunity.model';
 import { SaveOpportunityRequest } from '../crm/features/opportunities/services/opportunity-data.service';
+import { Property, PropertySearchRequest, PropertySearchResponse } from '../crm/features/properties/models/property.model';
+import { SavePropertyRequest } from '../crm/features/properties/services/property-data.service';
 import { UpdateWorkspaceSettingsRequest, VerticalPresetConfiguration, WorkspaceSettings } from '../crm/features/settings/models/workspace-settings.model';
 import {
   PermissionDefinition,
@@ -1387,3 +1389,204 @@ export const deleteUser = (id: string): boolean => {
 };
 
 export const resetUserPassword = (_id: string): boolean => true;
+
+// ── Property Mock Data ──
+
+const mockProperties: Property[] = [
+  {
+    id: 'prop-001', mlsNumber: 'W6108234', address: '45 Maple Ridge Drive', city: 'Toronto', province: 'ON', postalCode: 'M5V 3K1',
+    listPrice: 1295000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Detached',
+    bedrooms: 4, bathrooms: 3, squareFeet: 2650, lotSizeSqFt: 5200, yearBuilt: 2018, garageSpaces: 2,
+    description: 'Stunning detached home in a quiet cul-de-sac with open-concept living, chef\'s kitchen, and finished basement.',
+    neighborhood: 'High Park', ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-001', accountName: 'Apex Dynamics', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -45), updatedAtUtc: addDays(today, -3)
+  },
+  {
+    id: 'prop-002', mlsNumber: 'C5987612', address: '1200 Bay Street, Unit 2408', city: 'Toronto', province: 'ON', postalCode: 'M5R 2A5',
+    listPrice: 725000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Condo',
+    bedrooms: 2, bathrooms: 2, squareFeet: 1100, lotSizeSqFt: undefined, yearBuilt: 2021, garageSpaces: 1,
+    description: 'Modern 2-bedroom condo in the heart of Yorkville with panoramic city views and premium amenities.',
+    neighborhood: 'Yorkville', ownerName: 'Mia Khalid', ownerId: 'u-002', accountId: 'c-003', accountName: 'Quantum Innovations', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -38), updatedAtUtc: addDays(today, -7)
+  },
+  {
+    id: 'prop-003', mlsNumber: 'E6201455', address: '88 Lakeshore Boulevard East', city: 'Mississauga', province: 'ON', postalCode: 'L5G 1E3',
+    listPrice: 899000, salePrice: 875000, currency: 'CAD', status: 'Sold', propertyType: 'Townhouse',
+    bedrooms: 3, bathrooms: 3, squareFeet: 1850, lotSizeSqFt: 2800, yearBuilt: 2019, garageSpaces: 1,
+    description: 'End-unit freehold townhome with lake views, rooftop terrace, and walkout basement.',
+    neighborhood: 'Port Credit', ownerName: 'Leah Singh', ownerId: 'u-003', accountId: 'c-002', accountName: 'Stellar Solutions', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-001',
+    createdAtUtc: addDays(today, -60), updatedAtUtc: addDays(today, -12)
+  },
+  {
+    id: 'prop-004', mlsNumber: 'N6034521', address: '320 King Street West, Suite 506', city: 'Hamilton', province: 'ON', postalCode: 'L8P 1B1',
+    listPrice: 489000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Condo',
+    bedrooms: 1, bathrooms: 1, squareFeet: 680, lotSizeSqFt: undefined, yearBuilt: 2022, garageSpaces: 1,
+    description: 'Stylish 1-bedroom in the James Street North arts district with exposed brick and modern finishes.',
+    neighborhood: 'James North', ownerName: 'Omar Ali', ownerId: 'u-004', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -30), updatedAtUtc: addDays(today, -5)
+  },
+  {
+    id: 'prop-005', mlsNumber: undefined, address: '15 Vineyard Crescent', city: 'Niagara-on-the-Lake', province: 'ON', postalCode: 'L0S 1J0',
+    listPrice: 2150000, salePrice: undefined, currency: 'CAD', status: 'Draft', propertyType: 'Bungalow',
+    bedrooms: 3, bathrooms: 2, squareFeet: 2200, lotSizeSqFt: 43560, yearBuilt: 2005, garageSpaces: 2,
+    description: 'Premium bungalow on 1-acre lot in wine country with wrap-around porch and detached workshop.',
+    neighborhood: 'Old Town', ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -5), updatedAtUtc: undefined
+  },
+  {
+    id: 'prop-006', mlsNumber: 'W5876443', address: '200 University Avenue, PH1', city: 'Toronto', province: 'ON', postalCode: 'M5H 3C6',
+    listPrice: 3450000, salePrice: undefined, currency: 'CAD', status: 'Conditional', propertyType: 'Condo',
+    bedrooms: 3, bathrooms: 3, squareFeet: 2800, lotSizeSqFt: undefined, yearBuilt: 2020, garageSpaces: 2,
+    description: 'Penthouse suite with 270-degree city views, private elevator access, and designer finishes throughout.',
+    neighborhood: 'Financial District', ownerName: 'Priya Desai', ownerId: 'u-005', accountId: 'c-005', accountName: 'Pinnacle Group', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-003',
+    createdAtUtc: addDays(today, -20), updatedAtUtc: addDays(today, -2)
+  },
+  {
+    id: 'prop-007', mlsNumber: 'E5798321', address: '62 Main Street', city: 'Markham', province: 'ON', postalCode: 'L3P 1X5',
+    listPrice: 1050000, salePrice: 1020000, currency: 'CAD', status: 'Sold', propertyType: 'SemiDetached',
+    bedrooms: 4, bathrooms: 3, squareFeet: 2100, lotSizeSqFt: 3200, yearBuilt: 2016, garageSpaces: 1,
+    description: 'Semi-detached family home with finished basement apartment, ideal for multi-generational living.',
+    neighborhood: 'Unionville', ownerName: 'Marcus Vega', ownerId: 'u-007', accountId: 'c-004', accountName: 'Horizon Enterprises', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-002',
+    createdAtUtc: addDays(today, -90), updatedAtUtc: addDays(today, -25)
+  },
+  {
+    id: 'prop-008', mlsNumber: 'C6112087', address: '5500 Yonge Street, Unit 1811', city: 'North York', province: 'ON', postalCode: 'M2N 5S3',
+    listPrice: 580000, salePrice: undefined, currency: 'CAD', status: 'Expired', propertyType: 'Condo',
+    bedrooms: 2, bathrooms: 1, squareFeet: 850, lotSizeSqFt: undefined, yearBuilt: 2015, garageSpaces: 1,
+    description: 'Bright 2-bedroom near North York Centre subway with updated kitchen and in-suite laundry.',
+    neighborhood: 'North York Centre', ownerName: 'Sasha Reed', ownerId: 'u-008', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -120), updatedAtUtc: addDays(today, -35)
+  },
+  {
+    id: 'prop-009', mlsNumber: undefined, address: '1400 Industrial Parkway', city: 'Aurora', province: 'ON', postalCode: 'L4G 3V8',
+    listPrice: 4200000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Commercial',
+    bedrooms: 0, bathrooms: 4, squareFeet: 12500, lotSizeSqFt: 32000, yearBuilt: 2010, garageSpaces: 0,
+    description: 'Class A industrial/flex space with 22-foot clear heights, 3 loading docks, and 2000 sq ft of office.',
+    neighborhood: 'Industrial Park', ownerName: 'Owen Miles', ownerId: 'u-006', accountId: 'c-006', accountName: 'Metro Logistics', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -15), updatedAtUtc: addDays(today, -1)
+  },
+  {
+    id: 'prop-010', mlsNumber: 'W6045890', address: '78 Forest Hill Road', city: 'Toronto', province: 'ON', postalCode: 'M4V 2L5',
+    listPrice: 5900000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Detached',
+    bedrooms: 6, bathrooms: 5, squareFeet: 5500, lotSizeSqFt: 9800, yearBuilt: 2023, garageSpaces: 3,
+    description: 'Newly built luxury estate in Forest Hill with indoor pool, home theatre, and smart home automation.',
+    neighborhood: 'Forest Hill', ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-007', accountName: 'Summit Capital', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -8), updatedAtUtc: addDays(today, -1)
+  },
+  {
+    id: 'prop-011', mlsNumber: 'N5934210', address: '25 Harbourfront Drive', city: 'Oakville', province: 'ON', postalCode: 'L6J 4Z5',
+    listPrice: 1680000, salePrice: undefined, currency: 'CAD', status: 'Terminated', propertyType: 'Detached',
+    bedrooms: 5, bathrooms: 4, squareFeet: 3200, lotSizeSqFt: 6400, yearBuilt: 2014, garageSpaces: 2,
+    description: 'Waterfront executive home with heated pool, cabana, and private dock access.',
+    neighborhood: 'Bronte Creek', ownerName: 'Mia Khalid', ownerId: 'u-002', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -75), updatedAtUtc: addDays(today, -40)
+  },
+  {
+    id: 'prop-012', mlsNumber: undefined, address: 'Lot 14, Concession Road 3', city: 'Caledon', province: 'ON', postalCode: 'L7K 0C3',
+    listPrice: 750000, salePrice: undefined, currency: 'CAD', status: 'Active', propertyType: 'Land',
+    bedrooms: 0, bathrooms: 0, squareFeet: 0, lotSizeSqFt: 130680, yearBuilt: undefined, garageSpaces: 0,
+    description: '3-acre building lot in Caledon with mature trees, rolling terrain, and approved building permit.',
+    neighborhood: 'Caledon Village', ownerName: 'Omar Ali', ownerId: 'u-004', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    createdAtUtc: addDays(today, -10), updatedAtUtc: undefined
+  }
+];
+
+export function searchProperties(query: PropertySearchRequest): PropertySearchResponse {
+  const searchTerm = (query.search ?? '').toLowerCase();
+  let result = [...mockProperties];
+
+  if (query.status) {
+    result = result.filter((p) => p.status === query.status);
+  }
+  if (query.propertyType) {
+    result = result.filter((p) => p.propertyType === query.propertyType);
+  }
+  if (query.city) {
+    result = result.filter((p) => (p.city ?? '').toLowerCase().includes(query.city!.toLowerCase()));
+  }
+  if (searchTerm) {
+    result = result.filter((p) =>
+      [p.address, p.city, p.mlsNumber, p.neighborhood, p.ownerName, p.accountName]
+        .filter(Boolean)
+        .some((f) => f!.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  const total = result.length;
+  const items = paginate(result, query.page ?? 1, query.pageSize ?? 10);
+  return { items, total };
+}
+
+export function getPropertyById(id: string): Property | null {
+  const target = mockProperties.find((p) => p.id === id);
+  return target ? { ...target } : null;
+}
+
+export function createProperty(payload: SavePropertyRequest): Property {
+  const record: Property = {
+    id: `prop-${Math.random().toString(36).slice(2, 8)}`,
+    mlsNumber: payload.mlsNumber,
+    address: payload.address,
+    city: payload.city,
+    province: payload.province,
+    postalCode: payload.postalCode,
+    listPrice: payload.listPrice,
+    salePrice: payload.salePrice,
+    currency: payload.currency || 'CAD',
+    status: (payload.status as Property['status']) || 'Draft',
+    propertyType: (payload.propertyType as Property['propertyType']) || 'Detached',
+    bedrooms: payload.bedrooms,
+    bathrooms: payload.bathrooms,
+    squareFeet: payload.squareFeet,
+    lotSizeSqFt: payload.lotSizeSqFt,
+    yearBuilt: payload.yearBuilt,
+    garageSpaces: payload.garageSpaces,
+    description: payload.description,
+    neighborhood: payload.neighborhood,
+    ownerName: 'Yasser Ahmed',
+    ownerId: payload.ownerId || 'u-001',
+    accountId: payload.accountId,
+    accountName: payload.accountId ? (mockCustomers.find((c) => c.id === payload.accountId)?.name ?? undefined) : undefined,
+    primaryContactId: payload.primaryContactId,
+    primaryContactName: undefined,
+    opportunityId: payload.opportunityId,
+    createdAtUtc: new Date().toISOString(),
+    updatedAtUtc: undefined
+  };
+  mockProperties.unshift(record);
+  return { ...record };
+}
+
+export function updateProperty(id: string, payload: SavePropertyRequest): Property | null {
+  const target = mockProperties.find((p) => p.id === id);
+  if (!target) return null;
+
+  target.mlsNumber = payload.mlsNumber ?? target.mlsNumber;
+  target.address = payload.address ?? target.address;
+  target.city = payload.city ?? target.city;
+  target.province = payload.province ?? target.province;
+  target.postalCode = payload.postalCode ?? target.postalCode;
+  target.listPrice = payload.listPrice ?? target.listPrice;
+  target.salePrice = payload.salePrice ?? target.salePrice;
+  target.currency = payload.currency || target.currency;
+  target.status = (payload.status as Property['status']) || target.status;
+  target.propertyType = (payload.propertyType as Property['propertyType']) || target.propertyType;
+  target.bedrooms = payload.bedrooms ?? target.bedrooms;
+  target.bathrooms = payload.bathrooms ?? target.bathrooms;
+  target.squareFeet = payload.squareFeet ?? target.squareFeet;
+  target.lotSizeSqFt = payload.lotSizeSqFt ?? target.lotSizeSqFt;
+  target.yearBuilt = payload.yearBuilt ?? target.yearBuilt;
+  target.garageSpaces = payload.garageSpaces ?? target.garageSpaces;
+  target.description = payload.description ?? target.description;
+  target.neighborhood = payload.neighborhood ?? target.neighborhood;
+  target.updatedAtUtc = new Date().toISOString();
+  return { ...target };
+}
+
+export function deleteProperty(id: string): boolean {
+  const countBefore = mockProperties.length;
+  const next = mockProperties.filter((p) => p.id !== id);
+  mockProperties.length = 0;
+  mockProperties.push(...next);
+  return next.length !== countBefore;
+}
