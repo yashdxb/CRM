@@ -10,6 +10,38 @@ Legend:
 - NOT STARTED: no evidence yet
 - UNKNOWN: needs confirmation / no clear evidence found
 
+## Recent Delivery Updates (2026-03-13)
+
+- Properties & Real Estate Module (NEXT tier — 12 stories)
+  Status: IN PROGRESS (8/12 completed, 1 in progress, 3 not started)
+  ClickUp Epic: 86e0bjwbc ([NEXT] Properties & Real Estate Module)
+  - Delivered:
+    - X1 (86e0bjwxb) | Document & attachment management | DONE
+    - X3 (86e0bjwxn) | Showing/viewing log with visitor tracking | DONE
+    - X4 (86e0bjwxr) | Price change history timeline | DONE
+    - X5 (86e0bjwxv) | Photo upload with drag-drop | DONE
+    - X6 (86e0bjwy2) | Reactive form migration | DONE
+    - X7 (86e0bjwy4) | Commission tracking | DONE
+    - X8 (86e0bjwy9) | Kanban board view | DONE
+    - X12 (86e0bjwyz) | Quick actions on detail page | DONE
+  - In progress:
+    - X2 (86e0bjwxg) | Activity & task association | IN PROGRESS
+  - Not started:
+    - X9 (86e0bjwyd) | SignalR real-time alerts | NOT STARTED
+    - X10 (86e0bjwyh) | Reverse navigation | NOT STARTED
+    - X11 (86e0bjwyn) | Bulk operations | NOT STARTED
+  - Evidence:
+    - Properties list page: `client/src/app/crm/features/properties/pages/properties.page.ts`
+    - Property detail page: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
+    - Property form page: `client/src/app/crm/features/properties/pages/property-form.page.ts`
+    - Property models: `client/src/app/crm/features/properties/models/property.model.ts`
+    - Property data service: `client/src/app/crm/features/properties/services/property-data.service.ts`
+    - Mock data: `client/src/app/mocks/mock-db.ts`
+    - Mock API routes: `client/src/app/mocks/mock-api.interceptor.ts`
+    - Route: `client/src/app/app.routes.ts` (`/app/properties`, `/app/properties/:id`, `/app/properties/new`, `/app/properties/:id/edit`)
+
+---
+
 ## Recent Delivery Updates (2026-03-08)
 
 - Entra ID SSO Login (SPA App Registration & Full Enablement)
@@ -436,6 +468,181 @@ MoSCoW: Should
   - Templates define visible cards and order.
   - One template can be marked as default.
   - Default template applies when no role-level pack is configured.
+
+### Next: Properties & Real Estate Module
+
+Epic: [NEXT] Properties & Real Estate Module (ClickUp: 86e0bjwbc, Status: IN PROGRESS)
+
+Full-featured real estate property management module with CRUD, detail page tabs (Details, Showings, Documents, Price History, Activities), Kanban board view, photo upload drag-drop, commission tracking, reactive forms, quick actions, bulk operations, reverse navigation, and SignalR alerts.
+
+X1) Document & attachment management on property detail page
+MoSCoW: Must
+- Status: DONE
+- ClickUp: 86e0bjwxb
+- Evidence:
+  - Detail page: `client/src/app/crm/features/properties/pages/property-detail.page.html`
+  - Detail logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
+  - Models: `client/src/app/crm/features/properties/models/property.model.ts`
+  - Mock DB: `client/src/app/mocks/mock-db.ts`
+  - Mock interceptor: `client/src/app/mocks/mock-api.interceptor.ts`
+- Acceptance criteria:
+  - Document list shows name, category, file size, upload date.
+  - Upload dialog with category selection and file picker.
+  - Delete with confirmation.
+  - Mock API layer with CRUD operations.
+
+X2) Activity & task association on property detail page
+MoSCoW: Must
+- Status: IN PROGRESS
+- ClickUp: 86e0bjwxg
+- Evidence:
+  - Detail page: `client/src/app/crm/features/properties/pages/property-detail.page.html`
+  - Detail logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
+  - Models: `client/src/app/crm/features/properties/models/property.model.ts`
+  - Mock DB: `client/src/app/mocks/mock-db.ts`
+  - Mock interceptor: `client/src/app/mocks/mock-api.interceptor.ts`
+- Acceptance criteria:
+  - Activities tab on property detail page.
+  - Activity list shows type icon, subject, due date, priority, status.
+  - Create activity dialog with type/subject/description/dueDate/priority.
+  - Mark activity as complete from the list.
+  - Mock API layer with CRUD operations.
+
+X3) Showing/viewing log with visitor tracking
+MoSCoW: Must
+- Status: DONE
+- ClickUp: 86e0bjwxn
+- Evidence:
+  - Detail page: `client/src/app/crm/features/properties/pages/property-detail.page.html`
+  - Detail logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
+  - Models: `client/src/app/crm/features/properties/models/property.model.ts`
+  - Mock DB: `client/src/app/mocks/mock-db.ts`
+- Acceptance criteria:
+  - Showings tab on property detail page.
+  - Showing table with visitor, date, duration, status badge, rating stars, feedback.
+  - Schedule showing dialog with visitor name/date/duration.
+  - Mock API layer with CRUD.
+
+X4) Price change history timeline
+MoSCoW: Should
+- Status: DONE
+- ClickUp: 86e0bjwxr
+- Evidence:
+  - Detail page: `client/src/app/crm/features/properties/pages/property-detail.page.html`
+  - Detail logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
+  - Models: `client/src/app/crm/features/properties/models/property.model.ts`
+  - Mock DB: `client/src/app/mocks/mock-db.ts`
+- Acceptance criteria:
+  - Price History tab on property detail page.
+  - Timeline with date, old price, new price, direction arrow, percentage change.
+  - Color-coded increase/decrease indicators.
+  - Mock API layer with historical data.
+
+X5) Photo upload with drag-drop on property form
+MoSCoW: Should
+- Status: DONE
+- ClickUp: 86e0bjwxv
+- Evidence:
+  - Form page: `client/src/app/crm/features/properties/pages/property-form.page.html`
+  - Form logic: `client/src/app/crm/features/properties/pages/property-form.page.ts`
+  - Form styles: `client/src/app/crm/features/properties/pages/property-form.page.scss`
+- Acceptance criteria:
+  - Drag-and-drop zone on property create/edit form.
+  - Photo preview grid with thumbnails.
+  - Remove individual photos.
+  - File type and size validation.
+  - Visual feedback during drag hover.
+
+X6) Reactive form migration for property create/edit
+MoSCoW: Must
+- Status: DONE
+- ClickUp: 86e0bjwy2
+- Evidence:
+  - Form page: `client/src/app/crm/features/properties/pages/property-form.page.ts`
+  - Form template: `client/src/app/crm/features/properties/pages/property-form.page.html`
+- Acceptance criteria:
+  - Property form uses FormGroup with FormControls.
+  - Validation messages for required fields.
+  - Form populates correctly in edit mode.
+  - Submit creates/updates property via service.
+
+X7) Commission tracking fields and display
+MoSCoW: Should
+- Status: DONE
+- ClickUp: 86e0bjwy4
+- Evidence:
+  - Detail page: `client/src/app/crm/features/properties/pages/property-detail.page.html`
+  - Detail logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
+  - Models: `client/src/app/crm/features/properties/models/property.model.ts`
+- Acceptance criteria:
+  - Commission rate field on property form.
+  - Computed commission amount displayed on detail page.
+  - Commission shown in pricing section with KPI cards.
+  - Price per sqft calculated and displayed.
+
+X8) Kanban board view by property status
+MoSCoW: Should
+- Status: DONE
+- ClickUp: 86e0bjwy9
+- Evidence:
+  - List page: `client/src/app/crm/features/properties/pages/properties.page.html`
+  - List logic: `client/src/app/crm/features/properties/pages/properties.page.ts`
+  - List styles: `client/src/app/crm/features/properties/pages/properties.page.scss`
+- Acceptance criteria:
+  - Toggle between table and kanban view on properties list page.
+  - Kanban columns for each property status.
+  - Cards show property name, price, address, type, date.
+  - Column headers with count badges.
+  - Consistent glass UI styling.
+
+X9) SignalR real-time property alerts (placeholder)
+MoSCoW: Could
+- Status: NOT STARTED
+- ClickUp: 86e0bjwyd
+- Evidence: Not implemented yet.
+- Acceptance criteria:
+  - SignalR hub integration for property events.
+  - Toast notifications for status changes.
+  - Live updates on property detail page.
+  - Uses existing CrmEventsHub infrastructure.
+
+X10) Reverse navigation from Account/Contact to Properties
+MoSCoW: Could
+- Status: NOT STARTED
+- ClickUp: 86e0bjwyh
+- Evidence: Not implemented yet.
+- Acceptance criteria:
+  - Account detail page shows related properties section.
+  - Contact detail page shows related properties section.
+  - Click navigates to property detail.
+  - Properties linked via owner/account relationship.
+
+X11) Bulk operations on properties list page
+MoSCoW: Should
+- Status: NOT STARTED
+- ClickUp: 86e0bjwyn
+- Evidence: Not implemented yet.
+- Acceptance criteria:
+  - Multi-select checkboxes on properties table.
+  - Bulk action toolbar appears when items selected.
+  - Bulk status change, bulk assign, bulk delete with confirmation.
+  - Partial failure reporting.
+
+X12) Quick actions on property detail page
+MoSCoW: Must
+- Status: DONE
+- ClickUp: 86e0bjwyz
+- Evidence:
+  - Detail page: `client/src/app/crm/features/properties/pages/property-detail.page.html`
+  - Detail logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
+- Acceptance criteria:
+  - Quick action buttons in hero section.
+  - Change status dialog with confirmation.
+  - Schedule showing quick action.
+  - Upload document quick action.
+  - Actions update the property state immediately.
+
+---
 
 ### Next: Integrations
 

@@ -27,6 +27,8 @@ import { Activity } from '../../activities/models/activity.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
 import { Opportunity } from '../../opportunities/models/opportunity.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
+import { PropertyDataService } from '../../properties/services/property-data.service';
+import { Property } from '../../properties/models/property.model';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { readUserId } from '../../../../core/auth/token.utils';
 
@@ -85,6 +87,7 @@ export class ContactFormPage implements OnInit, OnDestroy {
   protected readonly accountHistory = signal<Activity[]>([]);
   protected readonly accountHistoryLoading = signal(false);
   protected readonly attachments = signal<AttachmentItem[]>([]);
+  protected readonly relatedProperties = signal<Property[]>([]);
   protected readonly timelineLoading = signal(false);
   protected readonly noteSaving = signal(false);
   protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string; isEditing: boolean }>>([]);
@@ -97,6 +100,7 @@ export class ContactFormPage implements OnInit, OnDestroy {
   private readonly activityData = inject(ActivityDataService);
   private readonly opportunityData = inject(OpportunityDataService);
   private readonly attachmentData = inject(AttachmentDataService);
+  private readonly propertyData = inject(PropertyDataService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   private readonly crmEvents = inject(CrmEventsService);
@@ -528,6 +532,11 @@ export class ContactFormPage implements OnInit, OnDestroy {
     this.attachmentData.list('Contact', this.editingId).subscribe({
       next: (items) => this.attachments.set(items),
       error: () => this.raiseToast('error', 'Unable to load attachments.')
+    });
+
+    this.propertyData.search({ contactId: this.editingId, page: 1, pageSize: 20 }).subscribe({
+      next: (res) => this.relatedProperties.set(res.items),
+      error: () => this.raiseToast('error', 'Unable to load related properties.')
     });
   }
 }

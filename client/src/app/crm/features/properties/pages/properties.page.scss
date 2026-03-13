@@ -1101,3 +1101,319 @@
   border: none;
   padding: $space-3 $space-4;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KANBAN BOARD VIEW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(200px, 1fr));
+  gap: $space-3;
+  min-height: 500px;
+  overflow-x: auto;
+  padding-bottom: $space-4;
+  position: relative;
+  z-index: 1;
+  animation: fade-in-up 0.5s ease-out 0.4s both;
+
+  @media (max-width: 1400px) {
+    grid-template-columns: repeat(7, minmax(180px, 1fr));
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(7, 220px);
+  }
+}
+
+.kanban-column {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  border-radius: $radius-xl;
+  border: 1px solid $glass-border;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $space-3 $space-3;
+  border-bottom: 3px solid;
+  border-radius: $radius-xl $radius-xl 0 0;
+
+  .column-title {
+    font-size: $font-size-sm;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: $gray-700;
+  }
+
+  .column-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 $space-1;
+    background: rgba(0, 0, 0, 0.07);
+    border-radius: $radius-full;
+    font-size: $font-size-xs;
+    font-weight: 700;
+    color: $gray-600;
+  }
+}
+
+.column-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: $space-2;
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: $radius-full;
+  }
+}
+
+.column-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  padding: $space-6 $space-3;
+  color: $gray-400;
+  font-size: $font-size-sm;
+
+  i {
+    font-size: 1.5rem;
+    opacity: 0.5;
+  }
+}
+
+// ── Property Card ────────────────────────────────────────────────────────────
+
+.property-card {
+  background: white;
+  border-radius: $radius-lg;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: $space-3;
+  cursor: pointer;
+  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    border-color: rgba($primary, 0.2);
+  }
+}
+
+.property-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-2;
+  margin-bottom: $space-2;
+
+  .prop-avatar {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $radius-md;
+    color: white;
+    font-size: $font-size-sm;
+    flex-shrink: 0;
+  }
+
+  .prop-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+
+    .prop-address {
+      font-size: $font-size-sm;
+      font-weight: 600;
+      color: $gray-800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .prop-location {
+      font-size: $font-size-xs;
+      color: $gray-500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+}
+
+.property-card-body {
+  margin-bottom: $space-2;
+
+  .prop-price {
+    font-size: $font-size-lg;
+    font-weight: 700;
+    color: $gray-800;
+    margin-bottom: $space-1;
+  }
+
+  .prop-details-row {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    flex-wrap: wrap;
+    margin-bottom: $space-1;
+
+    .prop-type {
+      font-size: $font-size-xs;
+      color: $primary;
+      font-weight: 600;
+      background: rgba($primary, 0.08);
+      padding: 1px $space-1;
+      border-radius: $radius-sm;
+    }
+
+    .prop-specs {
+      display: flex;
+      align-items: center;
+      gap: $space-2;
+      font-size: $font-size-xs;
+      color: $gray-500;
+
+      span {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+
+      i {
+        font-size: 0.65rem;
+      }
+    }
+  }
+
+  .prop-mls {
+    font-size: $font-size-xs;
+    color: $gray-400;
+    font-family: monospace;
+  }
+}
+
+.property-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: $space-2;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+
+  .prop-agent {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    font-size: $font-size-xs;
+    color: $gray-500;
+
+    i {
+      font-size: 0.65rem;
+    }
+  }
+
+  .prop-actions {
+    display: flex;
+    gap: $space-1;
+  }
+}
+
+/* ==========================================
+   BULK OPERATIONS (X11)
+   ========================================== */
+.bulk-toolbar {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-3;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: $radius-lg;
+  animation: fade-in-up 0.3s ease-out;
+}
+
+.bulk-count {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: #6366f1;
+  white-space: nowrap;
+}
+
+.th-checkbox,
+.td-checkbox {
+  width: 40px;
+  text-align: center;
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #667eea;
+  }
+}
+
+.row-selected {
+  background: rgba(99, 102, 241, 0.06) !important;
+}
+
+.bulk-dialog-desc {
+  font-size: $font-size-md;
+  color: $gray-600;
+  margin-bottom: $space-4;
+}
+
+.dialog-body {
+  padding: $space-3 0;
+
+  .form-field {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+
+    > label {
+      font-size: $font-size-sm;
+      font-weight: 600;
+      color: #475569;
+      min-width: 90px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    > p-select {
+      flex: 1;
+      min-width: 0;
+    }
+
+    &:focus-within > label {
+      color: #4f46e5;
+    }
+  }
+}
+
+.select-option {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+}

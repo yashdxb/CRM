@@ -6,7 +6,7 @@ import { PERMISSION_KEYS } from '../core/auth/permission.constants';
 import { Opportunity, OpportunitySearchRequest, OpportunitySearchResponse } from '../crm/features/opportunities/models/opportunity.model';
 import { SaveOpportunityRequest } from '../crm/features/opportunities/services/opportunity-data.service';
 import { Contact, ContactSearchRequest, ContactSearchResponse } from '../crm/features/contacts/models/contact.model';
-import { Property, PropertySearchRequest, PropertySearchResponse } from '../crm/features/properties/models/property.model';
+import { PriceChange, Property, PropertyActivity, PropertyDocument, PropertySearchRequest, PropertySearchResponse, Showing } from '../crm/features/properties/models/property.model';
 import { SavePropertyRequest } from '../crm/features/properties/services/property-data.service';
 import { UpdateWorkspaceSettingsRequest, VerticalPresetConfiguration, WorkspaceSettings } from '../crm/features/settings/models/workspace-settings.model';
 import {
@@ -1434,6 +1434,7 @@ const mockProperties: Property[] = [
     ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-001', accountName: 'Apex Dynamics', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     photoUrls: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800,https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800,https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800',
     virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-001',
+    commissionRate: 5, buyerAgentCommission: 2.5, sellerAgentCommission: 2.5, coListingAgentId: 'u-002', coListingAgentName: 'Mia Khalid',
     createdAtUtc: addDays(today, -45), updatedAtUtc: addDays(today, -3)
   },
   {
@@ -1447,6 +1448,7 @@ const mockProperties: Property[] = [
     ownerName: 'Mia Khalid', ownerId: 'u-002', accountId: 'c-003', accountName: 'Quantum Innovations', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     photoUrls: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800,https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
     virtualTourUrl: undefined,
+    commissionRate: 4.5, buyerAgentCommission: 2.5, sellerAgentCommission: 2,
     createdAtUtc: addDays(today, -38), updatedAtUtc: addDays(today, -7)
   },
   {
@@ -1458,6 +1460,7 @@ const mockProperties: Property[] = [
     neighborhood: 'Port Credit', country: 'Canada',
     listingDateUtc: addDays(today, -55), soldDateUtc: addDays(today, -14),
     ownerName: 'Leah Singh', ownerId: 'u-003', accountId: 'c-002', accountName: 'Stellar Solutions', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-001',
+    commissionRate: 5, buyerAgentCommission: 2.5, sellerAgentCommission: 2.5,
     createdAtUtc: addDays(today, -60), updatedAtUtc: addDays(today, -12)
   },
   {
@@ -1469,6 +1472,7 @@ const mockProperties: Property[] = [
     neighborhood: 'James North', country: 'Canada',
     listingDateUtc: addDays(today, -28), soldDateUtc: undefined,
     ownerName: 'Omar Ali', ownerId: 'u-004', accountId: undefined, accountName: undefined, primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    commissionRate: 4, buyerAgentCommission: 2, sellerAgentCommission: 2,
     createdAtUtc: addDays(today, -30), updatedAtUtc: addDays(today, -5)
   },
   {
@@ -1493,6 +1497,7 @@ const mockProperties: Property[] = [
     ownerName: 'Priya Desai', ownerId: 'u-005', accountId: 'c-005', accountName: 'Pinnacle Group', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-003',
     photoUrls: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800,https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800,https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=800,https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800',
     virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-006',
+    commissionRate: 4, buyerAgentCommission: 2, sellerAgentCommission: 2, coListingAgentId: 'u-001', coListingAgentName: 'Yasser Ahmed',
     createdAtUtc: addDays(today, -20), updatedAtUtc: addDays(today, -2)
   },
   {
@@ -1504,6 +1509,7 @@ const mockProperties: Property[] = [
     neighborhood: 'Unionville', country: 'Canada',
     listingDateUtc: addDays(today, -85), soldDateUtc: addDays(today, -28),
     ownerName: 'Marcus Vega', ownerId: 'u-007', accountId: 'c-004', accountName: 'Horizon Enterprises', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-002',
+    commissionRate: 5, buyerAgentCommission: 2.5, sellerAgentCommission: 2.5,
     createdAtUtc: addDays(today, -90), updatedAtUtc: addDays(today, -25)
   },
   {
@@ -1539,6 +1545,7 @@ const mockProperties: Property[] = [
     ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-007', accountName: 'Summit Capital', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
     photoUrls: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800,https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800,https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800',
     virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-010',
+    commissionRate: 3.5, buyerAgentCommission: 2, sellerAgentCommission: 1.5,
     createdAtUtc: addDays(today, -8), updatedAtUtc: addDays(today, -1)
   },
   {
@@ -1577,6 +1584,12 @@ export function searchProperties(query: PropertySearchRequest): PropertySearchRe
   }
   if (query.city) {
     result = result.filter((p) => (p.city ?? '').toLowerCase().includes(query.city!.toLowerCase()));
+  }
+  if (query.accountId) {
+    result = result.filter((p) => p.accountId === query.accountId);
+  }
+  if (query.contactId) {
+    result = result.filter((p) => p.primaryContactId === query.contactId);
   }
   if (searchTerm) {
     result = result.filter((p) =>
@@ -1632,6 +1645,11 @@ export function createProperty(payload: SavePropertyRequest): Property {
     opportunityId: payload.opportunityId,
     photoUrls: payload.photoUrls,
     virtualTourUrl: payload.virtualTourUrl,
+    commissionRate: payload.commissionRate,
+    buyerAgentCommission: payload.buyerAgentCommission,
+    sellerAgentCommission: payload.sellerAgentCommission,
+    coListingAgentId: payload.coListingAgentId,
+    coListingAgentName: payload.coListingAgentId ? (mockUsers.find((u) => u.id === payload.coListingAgentId)?.fullName ?? undefined) : undefined,
     createdAtUtc: new Date().toISOString(),
     updatedAtUtc: undefined
   };
@@ -1680,6 +1698,13 @@ export function updateProperty(id: string, payload: SavePropertyRequest): Proper
   target.opportunityId = payload.opportunityId ?? target.opportunityId;
   target.photoUrls = payload.photoUrls ?? target.photoUrls;
   target.virtualTourUrl = payload.virtualTourUrl ?? target.virtualTourUrl;
+  target.commissionRate = payload.commissionRate ?? target.commissionRate;
+  target.buyerAgentCommission = payload.buyerAgentCommission ?? target.buyerAgentCommission;
+  target.sellerAgentCommission = payload.sellerAgentCommission ?? target.sellerAgentCommission;
+  if (payload.coListingAgentId !== undefined) {
+    target.coListingAgentId = payload.coListingAgentId;
+    target.coListingAgentName = payload.coListingAgentId ? (mockUsers.find((u) => u.id === payload.coListingAgentId)?.fullName ?? undefined) : undefined;
+  }
   target.updatedAtUtc = new Date().toISOString();
   return { ...target };
 }
@@ -1690,4 +1715,129 @@ export function deleteProperty(id: string): boolean {
   mockProperties.length = 0;
   mockProperties.push(...next);
   return next.length !== countBefore;
+}
+
+// ────────────────── Price Change History (X4) ──────────────────
+const mockPriceChanges: PriceChange[] = [
+  { id: 'pc-001', propertyId: 'prop-001', previousPrice: 1350000, newPrice: 1295000, changedAtUtc: addDays(today, -20), changedBy: 'Yasser Ahmed', reason: 'Market adjustment' },
+  { id: 'pc-002', propertyId: 'prop-001', previousPrice: 1395000, newPrice: 1350000, changedAtUtc: addDays(today, -30), changedBy: 'Yasser Ahmed', reason: 'Comparable sales analysis' },
+  { id: 'pc-003', propertyId: 'prop-002', previousPrice: 749000, newPrice: 725000, changedAtUtc: addDays(today, -15), changedBy: 'Mia Khalid', reason: 'Price reduction strategy' },
+  { id: 'pc-004', propertyId: 'prop-003', previousPrice: 925000, newPrice: 899000, changedAtUtc: addDays(today, -40), changedBy: 'Leah Singh', reason: 'Buyer negotiation' },
+  { id: 'pc-005', propertyId: 'prop-003', previousPrice: 899000, newPrice: 875000, changedAtUtc: addDays(today, -16), changedBy: 'Leah Singh', reason: 'Final sale price' },
+  { id: 'pc-006', propertyId: 'prop-006', previousPrice: 3200000, newPrice: 3450000, changedAtUtc: addDays(today, -10), changedBy: 'Priya Desai', reason: 'Appraisal increase' },
+  { id: 'pc-007', propertyId: 'prop-007', previousPrice: 1080000, newPrice: 1050000, changedAtUtc: addDays(today, -60), changedBy: 'Marcus Vega', reason: 'Market correction' },
+  { id: 'pc-008', propertyId: 'prop-007', previousPrice: 1050000, newPrice: 1020000, changedAtUtc: addDays(today, -30), changedBy: 'Marcus Vega', reason: 'Sale negotiation' },
+  { id: 'pc-009', propertyId: 'prop-010', previousPrice: 5500000, newPrice: 5900000, changedAtUtc: addDays(today, -4), changedBy: 'Yasser Ahmed', reason: 'Premium listing upgrade' },
+  { id: 'pc-010', propertyId: 'prop-008', previousPrice: 615000, newPrice: 580000, changedAtUtc: addDays(today, -80), changedBy: 'Sasha Reed', reason: 'Time on market reduction' },
+  { id: 'pc-011', propertyId: 'prop-011', previousPrice: 1750000, newPrice: 1680000, changedAtUtc: addDays(today, -50), changedBy: 'Mia Khalid', reason: 'Seasonal adjustment' },
+];
+
+export function getPriceHistory(propertyId: string): PriceChange[] {
+  return mockPriceChanges
+    .filter((pc) => pc.propertyId === propertyId)
+    .sort((a, b) => new Date(b.changedAtUtc).getTime() - new Date(a.changedAtUtc).getTime());
+}
+
+export function addPriceChange(pc: Omit<PriceChange, 'id'>): PriceChange {
+  const record: PriceChange = { id: `pc-${Math.random().toString(36).slice(2, 8)}`, ...pc };
+  mockPriceChanges.unshift(record);
+  return { ...record };
+}
+
+// ────────────────── Showings / Viewings (X3) ──────────────────
+const mockShowings: Showing[] = [
+  { id: 'sh-001', propertyId: 'prop-001', agentId: 'u-001', agentName: 'Yasser Ahmed', visitorName: 'David Chen', visitorEmail: 'david.chen@email.com', visitorPhone: '416-555-0101', scheduledAtUtc: addDays(today, -5), durationMinutes: 30, feedback: 'Loved the kitchen and backyard. Considering an offer.', rating: 5, status: 'Completed', createdAtUtc: addDays(today, -7) },
+  { id: 'sh-002', propertyId: 'prop-001', agentId: 'u-002', agentName: 'Mia Khalid', visitorName: 'Sarah Park', visitorEmail: 'sarah.park@email.com', scheduledAtUtc: addDays(today, -2), durationMinutes: 45, feedback: 'Good layout but concerned about traffic noise.', rating: 3, status: 'Completed', createdAtUtc: addDays(today, -4) },
+  { id: 'sh-003', propertyId: 'prop-001', agentId: 'u-001', agentName: 'Yasser Ahmed', visitorName: 'James Wilson', visitorEmail: 'james.w@email.com', visitorPhone: '905-555-0202', scheduledAtUtc: addDays(today, 2), durationMinutes: 30, status: 'Scheduled', createdAtUtc: addDays(today, -1) },
+  { id: 'sh-004', propertyId: 'prop-002', agentId: 'u-002', agentName: 'Mia Khalid', visitorName: 'Michael Torres', visitorEmail: 'mtorres@email.com', scheduledAtUtc: addDays(today, -8), durationMinutes: 30, feedback: 'Great views, but too small for family.', rating: 3, status: 'Completed', createdAtUtc: addDays(today, -10) },
+  { id: 'sh-005', propertyId: 'prop-002', agentId: 'u-002', agentName: 'Mia Khalid', visitorName: 'Lisa Huang', scheduledAtUtc: addDays(today, -3), durationMinutes: 30, status: 'NoShow', createdAtUtc: addDays(today, -5) },
+  { id: 'sh-006', propertyId: 'prop-006', agentId: 'u-005', agentName: 'Priya Desai', visitorName: 'Robert Kingston', visitorEmail: 'rkingston@email.com', visitorPhone: '416-555-0505', scheduledAtUtc: addDays(today, -1), durationMinutes: 60, feedback: 'Stunning penthouse. Ready to submit offer.', rating: 5, status: 'Completed', createdAtUtc: addDays(today, -3) },
+  { id: 'sh-007', propertyId: 'prop-006', agentId: 'u-005', agentName: 'Priya Desai', visitorName: 'Amanda Frost', scheduledAtUtc: addDays(today, 3), durationMinutes: 45, status: 'Scheduled', createdAtUtc: addDays(today, 0) },
+  { id: 'sh-008', propertyId: 'prop-010', agentId: 'u-001', agentName: 'Yasser Ahmed', visitorName: 'Chris Bennett', visitorEmail: 'cbennett@email.com', scheduledAtUtc: addDays(today, -1), durationMinutes: 90, feedback: 'Exceptional estate. Interior exceeds listing photos.', rating: 5, status: 'Completed', createdAtUtc: addDays(today, -2) },
+  { id: 'sh-009', propertyId: 'prop-004', agentId: 'u-004', agentName: 'Omar Ali', visitorName: 'Natalie Cooper', scheduledAtUtc: addDays(today, -12), durationMinutes: 30, status: 'Cancelled', createdAtUtc: addDays(today, -15) },
+  { id: 'sh-010', propertyId: 'prop-009', agentId: 'u-006', agentName: 'Owen Miles', visitorName: 'Global Logistics Inc.', visitorEmail: 'realestate@globallogistics.com', scheduledAtUtc: addDays(today, 1), durationMinutes: 60, status: 'Scheduled', createdAtUtc: addDays(today, -1) },
+];
+
+export function getShowings(propertyId: string): Showing[] {
+  return mockShowings
+    .filter((s) => s.propertyId === propertyId)
+    .sort((a, b) => new Date(b.scheduledAtUtc).getTime() - new Date(a.scheduledAtUtc).getTime());
+}
+
+export function createShowing(s: Omit<Showing, 'id' | 'createdAtUtc'>): Showing {
+  const record: Showing = { id: `sh-${Math.random().toString(36).slice(2, 8)}`, ...s, createdAtUtc: new Date().toISOString() };
+  mockShowings.unshift(record);
+  return { ...record };
+}
+
+export function updateShowing(id: string, updates: Partial<Showing>): Showing | null {
+  const target = mockShowings.find((s) => s.id === id);
+  if (!target) return null;
+  Object.assign(target, updates);
+  return { ...target };
+}
+
+// ────────────────── Documents / Attachments (X1) ──────────────────
+const mockDocuments: PropertyDocument[] = [
+  { id: 'doc-001', propertyId: 'prop-001', fileName: 'listing-agreement.pdf', fileUrl: '/assets/mock/listing-agreement.pdf', fileSize: 245000, mimeType: 'application/pdf', category: 'Contract', uploadedBy: 'Yasser Ahmed', uploadedAtUtc: addDays(today, -44) },
+  { id: 'doc-002', propertyId: 'prop-001', fileName: 'home-inspection-report.pdf', fileUrl: '/assets/mock/inspection.pdf', fileSize: 1200000, mimeType: 'application/pdf', category: 'Inspection', uploadedBy: 'Yasser Ahmed', uploadedAtUtc: addDays(today, -35) },
+  { id: 'doc-003', propertyId: 'prop-001', fileName: 'floor-plan-main.jpg', fileUrl: '/assets/mock/floor-plan.jpg', fileSize: 850000, mimeType: 'image/jpeg', category: 'FloorPlan', uploadedBy: 'Yasser Ahmed', uploadedAtUtc: addDays(today, -42) },
+  { id: 'doc-004', propertyId: 'prop-003', fileName: 'property-disclosure.pdf', fileUrl: '/assets/mock/disclosure.pdf', fileSize: 180000, mimeType: 'application/pdf', category: 'Disclosure', uploadedBy: 'Leah Singh', uploadedAtUtc: addDays(today, -50) },
+  { id: 'doc-005', propertyId: 'prop-003', fileName: 'appraisal-report.pdf', fileUrl: '/assets/mock/appraisal.pdf', fileSize: 320000, mimeType: 'application/pdf', category: 'Appraisal', uploadedBy: 'Leah Singh', uploadedAtUtc: addDays(today, -18) },
+  { id: 'doc-006', propertyId: 'prop-006', fileName: 'condo-status-certificate.pdf', fileUrl: '/assets/mock/status-cert.pdf', fileSize: 540000, mimeType: 'application/pdf', category: 'Disclosure', uploadedBy: 'Priya Desai', uploadedAtUtc: addDays(today, -16) },
+  { id: 'doc-007', propertyId: 'prop-006', fileName: 'penthouse-floorplan.pdf', fileUrl: '/assets/mock/ph-floorplan.pdf', fileSize: 920000, mimeType: 'application/pdf', category: 'FloorPlan', uploadedBy: 'Priya Desai', uploadedAtUtc: addDays(today, -17) },
+  { id: 'doc-008', propertyId: 'prop-010', fileName: 'building-permit.pdf', fileUrl: '/assets/mock/permit.pdf', fileSize: 410000, mimeType: 'application/pdf', category: 'Contract', uploadedBy: 'Yasser Ahmed', uploadedAtUtc: addDays(today, -6) },
+];
+
+export function getDocuments(propertyId: string): PropertyDocument[] {
+  return mockDocuments
+    .filter((d) => d.propertyId === propertyId)
+    .sort((a, b) => new Date(b.uploadedAtUtc).getTime() - new Date(a.uploadedAtUtc).getTime());
+}
+
+export function addDocument(doc: Omit<PropertyDocument, 'id'>): PropertyDocument {
+  const record: PropertyDocument = { id: `doc-${Math.random().toString(36).slice(2, 8)}`, ...doc };
+  mockDocuments.unshift(record);
+  return { ...record };
+}
+
+export function deleteDocument(id: string): boolean {
+  const countBefore = mockDocuments.length;
+  const next = mockDocuments.filter((d) => d.id !== id);
+  mockDocuments.length = 0;
+  mockDocuments.push(...next);
+  return next.length !== countBefore;
+}
+
+// ────────────────── Activities / Tasks (X2) ──────────────────
+const mockPropertyActivities: PropertyActivity[] = [
+  { id: 'act-001', propertyId: 'prop-001', type: 'Task', subject: 'Schedule home inspection', description: 'Arrange certified inspector for pre-listing inspection.', dueDate: addDays(today, 3), status: 'Open', priority: 'High', assignedToId: 'u-001', assignedToName: 'Yasser Ahmed', createdByName: 'Yasser Ahmed', createdAtUtc: addDays(today, -5) },
+  { id: 'act-002', propertyId: 'prop-001', type: 'Call', subject: 'Follow up with David Chen', description: 'Called about potential offer after showing.', dueDate: addDays(today, -1), completedDate: addDays(today, -1), status: 'Completed', priority: 'High', assignedToId: 'u-001', assignedToName: 'Yasser Ahmed', createdByName: 'Yasser Ahmed', createdAtUtc: addDays(today, -3) },
+  { id: 'act-003', propertyId: 'prop-001', type: 'FollowUp', subject: 'Send comparable sales report', description: 'Prepare and email CMA report to seller.', dueDate: addDays(today, 5), status: 'Open', priority: 'Medium', assignedToId: 'u-001', assignedToName: 'Yasser Ahmed', createdByName: 'Yasser Ahmed', createdAtUtc: addDays(today, -2) },
+  { id: 'act-004', propertyId: 'prop-001', type: 'Note', subject: 'Seller prefers evening showings only', status: 'Completed', priority: 'Low', createdByName: 'Yasser Ahmed', createdAtUtc: addDays(today, -10) },
+  { id: 'act-005', propertyId: 'prop-002', type: 'Meeting', subject: 'Price reduction discussion with seller', description: 'Meet at the property to discuss lowering the list price by 5%.', dueDate: addDays(today, 2), status: 'Open', priority: 'High', assignedToId: 'u-002', assignedToName: 'Mia Khalid', createdByName: 'Mia Khalid', createdAtUtc: addDays(today, -1) },
+  { id: 'act-006', propertyId: 'prop-002', type: 'Email', subject: 'Send updated listing photos', description: 'Email high-res photos to MLS listing service.', dueDate: addDays(today, -3), completedDate: addDays(today, -3), status: 'Completed', priority: 'Medium', assignedToId: 'u-002', assignedToName: 'Mia Khalid', createdByName: 'Mia Khalid', createdAtUtc: addDays(today, -5) },
+  { id: 'act-007', propertyId: 'prop-006', type: 'Task', subject: 'Prepare offer presentation package', description: 'Compile all offers received for seller review.', dueDate: addDays(today, 1), status: 'InProgress', priority: 'Urgent', assignedToId: 'u-005', assignedToName: 'Priya Desai', createdByName: 'Priya Desai', createdAtUtc: addDays(today, -2) },
+  { id: 'act-008', propertyId: 'prop-006', type: 'Call', subject: 'Confirm showing with Amanda Frost', dueDate: addDays(today, 2), status: 'Open', priority: 'Medium', assignedToId: 'u-005', assignedToName: 'Priya Desai', createdByName: 'Priya Desai', createdAtUtc: addDays(today, 0) },
+  { id: 'act-009', propertyId: 'prop-010', type: 'Meeting', subject: 'Open house coordination', description: 'Plan and schedule weekend open house event.', dueDate: addDays(today, 7), status: 'Open', priority: 'Medium', assignedToId: 'u-001', assignedToName: 'Yasser Ahmed', createdByName: 'Yasser Ahmed', createdAtUtc: addDays(today, -1) },
+  { id: 'act-010', propertyId: 'prop-003', type: 'Task', subject: 'Finalize closing paperwork', completedDate: addDays(today, -10), status: 'Completed', priority: 'High', assignedToId: 'u-003', assignedToName: 'Leah Singh', createdByName: 'Leah Singh', createdAtUtc: addDays(today, -20) },
+];
+
+export function getActivities(propertyId: string): PropertyActivity[] {
+  return mockPropertyActivities
+    .filter((a) => a.propertyId === propertyId)
+    .sort((a, b) => new Date(b.createdAtUtc).getTime() - new Date(a.createdAtUtc).getTime());
+}
+
+export function createActivity(a: Omit<PropertyActivity, 'id' | 'createdAtUtc'>): PropertyActivity {
+  const record: PropertyActivity = { id: `act-${Math.random().toString(36).slice(2, 8)}`, ...a, createdAtUtc: new Date().toISOString() };
+  mockPropertyActivities.unshift(record);
+  return { ...record };
+}
+
+export function updateActivity(id: string, updates: Partial<PropertyActivity>): PropertyActivity | null {
+  const target = mockPropertyActivities.find((a) => a.id === id);
+  if (!target) return null;
+  Object.assign(target, updates);
+  return { ...target };
 }

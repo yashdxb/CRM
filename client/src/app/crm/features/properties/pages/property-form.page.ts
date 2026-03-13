@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -41,7 +41,7 @@ interface TypeOption {
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     RouterLink,
     ButtonModule,
     InputTextModule,
@@ -57,6 +57,8 @@ interface TypeOption {
   styleUrls: ['./property-form.page.scss']
 })
 export class PropertyFormPage implements OnInit {
+  private readonly fb = inject(FormBuilder);
+
   protected readonly statusOptions: StatusOption[] = [
     { label: 'Draft', value: 'Draft', icon: 'pi-file-edit' },
     { label: 'Active', value: 'Active', icon: 'pi-check-circle' },
@@ -85,9 +87,12 @@ export class PropertyFormPage implements OnInit {
   protected readonly isEditMode = signal(false);
   protected readonly saving = signal(false);
   protected readonly loading = signal(false);
-  protected readonly addressError = signal<string | null>(null);
   private readonly toastService = inject(AppToastService);
   protected propertyId: string | null = null;
+
+  // Photo upload (X5)
+  protected readonly photoFiles = signal<{ file: File; preview: string }[]>([]);
+  protected readonly dragging = signal(false);
 
   // Relationship lookup data
   protected readonly users = signal<UserLookupItem[]>([]);
@@ -95,36 +100,41 @@ export class PropertyFormPage implements OnInit {
   protected readonly contacts = signal<Contact[]>([]);
   protected readonly opportunities = signal<Opportunity[]>([]);
 
-  // Date objects for DatePicker binding
-  protected listingDate: Date | undefined = undefined;
-  protected soldDate: Date | undefined = undefined;
-
-  protected form: SavePropertyRequest = {
-    mlsNumber: '',
-    address: '',
-    city: '',
-    province: '',
-    postalCode: '',
-    listPrice: undefined,
-    salePrice: undefined,
-    currency: 'CAD',
-    status: 'Draft',
-    propertyType: 'Detached',
-    bedrooms: undefined,
-    bathrooms: undefined,
-    squareFeet: undefined,
-    lotSizeSqFt: undefined,
-    yearBuilt: undefined,
-    garageSpaces: undefined,
-    description: '',
-    features: '',
-    neighborhood: '',
-    country: 'Canada',
-    listingDateUtc: undefined,
-    soldDateUtc: undefined,
-    photoUrls: '',
-    virtualTourUrl: ''
-  };
+  protected readonly formGroup: FormGroup = this.fb.group({
+    address: ['', Validators.required],
+    mlsNumber: [''],
+    city: [''],
+    province: [''],
+    postalCode: [''],
+    neighborhood: [''],
+    country: ['Canada'],
+    status: ['Draft'],
+    propertyType: ['Detached'],
+    listPrice: [null as number | null],
+    salePrice: [null as number | null],
+    currency: ['CAD'],
+    listingDate: [null as Date | null],
+    soldDate: [null as Date | null],
+    bedrooms: [null as number | null],
+    bathrooms: [null as number | null],
+    squareFeet: [null as number | null],
+    lotSizeSqFt: [null as number | null],
+    yearBuilt: [null as number | null],
+    garageSpaces: [null as number | null],
+    description: [''],
+    features: [''],
+    virtualTourUrl: [''],
+    photoUrls: [''],
+    ownerId: [null as string | null],
+    accountId: [null as string | null],
+    primaryContactId: [null as string | null],
+    opportunityId: [null as string | null],
+    // Commission fields (X7)
+    commissionRate: [null as number | null],
+    buyerAgentCommission: [null as number | null],
+    sellerAgentCommission: [null as number | null],
+    coListingAgentId: [null as string | null]
+  });
 
   constructor(
     private readonly router: Router,
@@ -165,40 +175,42 @@ export class PropertyFormPage implements OnInit {
     this.loading.set(true);
     this.propertyData.getById(this.propertyId).subscribe({
       next: (property) => {
-        this.form = {
+        this.formGroup.patchValue({
           mlsNumber: property.mlsNumber || '',
           address: property.address,
           city: property.city || '',
           province: property.province || '',
           postalCode: property.postalCode || '',
-          listPrice: property.listPrice,
-          salePrice: property.salePrice,
+          listPrice: property.listPrice ?? null,
+          salePrice: property.salePrice ?? null,
           currency: property.currency || 'CAD',
           status: property.status,
           propertyType: property.propertyType,
-          bedrooms: property.bedrooms,
-          bathrooms: property.bathrooms,
-          squareFeet: property.squareFeet,
-          lotSizeSqFt: property.lotSizeSqFt,
-          yearBuilt: property.yearBuilt,
-          garageSpaces: property.garageSpaces,
+          bedrooms: property.bedrooms ?? null,
+          bathrooms: property.bathrooms ?? null,
+          squareFeet: property.squareFeet ?? null,
+          lotSizeSqFt: property.lotSizeSqFt ?? null,
+          yearBuilt: property.yearBuilt ?? null,
+          garageSpaces: property.garageSpaces ?? null,
           description: property.description || '',
           features: property.features || '',
           neighborhood: property.neighborhood || '',
           country: property.country || 'Canada',
-          listingDateUtc: property.listingDateUtc,
-          soldDateUtc: property.soldDateUtc,
-          ownerId: property.ownerId,
-          accountId: property.accountId,
-          primaryContactId: property.primaryContactId,
-          opportunityId: property.opportunityId,
+          listingDate: property.listingDateUtc ? new Date(property.listingDateUtc) : null,
+          soldDate: property.soldDateUtc ? new Date(property.soldDateUtc) : null,
+          ownerId: property.ownerId ?? null,
+          accountId: property.accountId ?? null,
+          primaryContactId: property.primaryContactId ?? null,
+          opportunityId: property.opportunityId ?? null,
           photoUrls: property.photoUrls || '',
-          virtualTourUrl: property.virtualTourUrl || ''
-        };
+          virtualTourUrl: property.virtualTourUrl || '',
+          commissionRate: property.commissionRate ?? null,
+          buyerAgentCommission: property.buyerAgentCommission ?? null,
+          sellerAgentCommission: property.sellerAgentCommission ?? null,
+          coListingAgentId: property.coListingAgentId ?? null
+        });
+        this.formGroup.markAsPristine();
         this.loading.set(false);
-        // Parse dates for DatePicker
-        this.listingDate = property.listingDateUtc ? new Date(property.listingDateUtc) : undefined;
-        this.soldDate = property.soldDateUtc ? new Date(property.soldDateUtc) : undefined;
       },
       error: () => {
         this.loading.set(false);
@@ -208,17 +220,47 @@ export class PropertyFormPage implements OnInit {
   }
 
   protected onSave() {
-    this.addressError.set(!this.form.address ? 'Property address is required.' : null);
-    if (this.addressError()) {
+    this.formGroup.markAllAsTouched();
+    if (this.formGroup.invalid) {
       this.raiseToast('error', 'Please fix the highlighted errors before saving.');
       return;
     }
 
     this.saving.set(true);
+    const v = this.formGroup.getRawValue();
     const payload: SavePropertyRequest = {
-      ...this.form,
-      listingDateUtc: this.listingDate?.toISOString(),
-      soldDateUtc: this.soldDate?.toISOString()
+      mlsNumber: v.mlsNumber,
+      address: v.address,
+      city: v.city,
+      province: v.province,
+      postalCode: v.postalCode,
+      listPrice: v.listPrice ?? undefined,
+      salePrice: v.salePrice ?? undefined,
+      currency: v.currency,
+      status: v.status,
+      propertyType: v.propertyType,
+      bedrooms: v.bedrooms ?? undefined,
+      bathrooms: v.bathrooms ?? undefined,
+      squareFeet: v.squareFeet ?? undefined,
+      lotSizeSqFt: v.lotSizeSqFt ?? undefined,
+      yearBuilt: v.yearBuilt ?? undefined,
+      garageSpaces: v.garageSpaces ?? undefined,
+      description: v.description,
+      features: v.features,
+      neighborhood: v.neighborhood,
+      country: v.country,
+      listingDateUtc: v.listingDate?.toISOString(),
+      soldDateUtc: v.soldDate?.toISOString(),
+      ownerId: v.ownerId ?? undefined,
+      accountId: v.accountId ?? undefined,
+      primaryContactId: v.primaryContactId ?? undefined,
+      opportunityId: v.opportunityId ?? undefined,
+      photoUrls: v.photoUrls,
+      virtualTourUrl: v.virtualTourUrl,
+      commissionRate: v.commissionRate ?? undefined,
+      buyerAgentCommission: v.buyerAgentCommission ?? undefined,
+      sellerAgentCommission: v.sellerAgentCommission ?? undefined,
+      coListingAgentId: v.coListingAgentId ?? undefined
     };
 
     if (this.propertyId) {
@@ -247,5 +289,64 @@ export class PropertyFormPage implements OnInit {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, tone === 'error' ? 5000 : 3000);
+  }
+
+  // ── Photo drag-drop (X5) ─────────────────────────────────────────────
+  protected onDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragging.set(true);
+  }
+
+  protected onDragLeave(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragging.set(false);
+  }
+
+  protected onDrop(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragging.set(false);
+    const files = event.dataTransfer?.files;
+    if (files) this.addPhotoFiles(files);
+  }
+
+  protected onPhotoSelect(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files) this.addPhotoFiles(input.files);
+    input.value = '';
+  }
+
+  private addPhotoFiles(fileList: FileList) {
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const maxSize = 10 * 1024 * 1024; // 10 MB
+    const current = this.photoFiles();
+
+    Array.from(fileList).forEach(file => {
+      if (!allowed.includes(file.type)) {
+        this.raiseToast('error', `${file.name} is not a supported image type.`);
+        return;
+      }
+      if (file.size > maxSize) {
+        this.raiseToast('error', `${file.name} exceeds the 10 MB limit.`);
+        return;
+      }
+      if (current.length >= 20) {
+        this.raiseToast('error', 'Maximum 20 photos allowed.');
+        return;
+      }
+      const preview = URL.createObjectURL(file);
+      current.push({ file, preview });
+    });
+
+    this.photoFiles.set([...current]);
+  }
+
+  protected removePhoto(index: number) {
+    const current = this.photoFiles();
+    URL.revokeObjectURL(current[index].preview);
+    current.splice(index, 1);
+    this.photoFiles.set([...current]);
   }
 }

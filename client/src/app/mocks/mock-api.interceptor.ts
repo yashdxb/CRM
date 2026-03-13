@@ -38,6 +38,17 @@ import {
   createProperty,
   updateProperty,
   deleteProperty,
+  getPriceHistory,
+  addPriceChange,
+  getShowings,
+  createShowing,
+  updateShowing,
+  getDocuments,
+  addDocument,
+  deleteDocument,
+  getActivities,
+  createActivity,
+  updateActivity,
   searchContacts
 } from './mock-db';
 
@@ -213,6 +224,70 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
       const ok = deleteProperty(match[1]);
       return respond(ok ? null : { message: 'Not found' }, ok ? 204 : 404, 120);
     }
+  }
+
+  // ── Property Price History (X4) ──
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+\/price-history$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getPriceHistory(id), 200, 100);
+  }
+  if (req.method === 'POST' && /^\/api\/properties\/[^/]+\/price-history$/.test(path)) {
+    const id = path.split('/')[3];
+    const body = req.body as any;
+    const record = addPriceChange({ propertyId: id, previousPrice: body.previousPrice, newPrice: body.newPrice, changedAtUtc: new Date().toISOString(), changedBy: body.changedBy, reason: body.reason });
+    return respond(record, 201, 100);
+  }
+
+  // ── Property Showings (X3) ──
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+\/showings$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getShowings(id), 200, 100);
+  }
+  if (req.method === 'POST' && /^\/api\/properties\/[^/]+\/showings$/.test(path)) {
+    const id = path.split('/')[3];
+    const body = req.body as any;
+    const record = createShowing({ propertyId: id, agentId: body.agentId, agentName: body.agentName, visitorName: body.visitorName, visitorEmail: body.visitorEmail, visitorPhone: body.visitorPhone, scheduledAtUtc: body.scheduledAtUtc, durationMinutes: body.durationMinutes, feedback: body.feedback, rating: body.rating, status: body.status || 'Scheduled' });
+    return respond(record, 201, 100);
+  }
+  if (req.method === 'PUT' && /^\/api\/properties\/[^/]+\/showings\/[^/]+$/.test(path)) {
+    const parts = path.split('/');
+    const showingId = parts[5];
+    const updated = updateShowing(showingId, req.body as any);
+    return respond(updated ?? { message: 'Not found' }, updated ? 200 : 404, 100);
+  }
+
+  // ── Property Documents (X1) ──
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+\/documents$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getDocuments(id), 200, 100);
+  }
+  if (req.method === 'POST' && /^\/api\/properties\/[^/]+\/documents$/.test(path)) {
+    const id = path.split('/')[3];
+    const body = req.body as any;
+    const record = addDocument({ propertyId: id, fileName: body.fileName, fileUrl: body.fileUrl || '/assets/mock/uploaded.pdf', fileSize: body.fileSize, mimeType: body.mimeType, category: body.category || 'Other', uploadedBy: body.uploadedBy, uploadedAtUtc: new Date().toISOString() });
+    return respond(record, 201, 100);
+  }
+  if (req.method === 'DELETE' && /^\/api\/properties\/[^/]+\/documents\/[^/]+$/.test(path)) {
+    const docId = path.split('/')[5];
+    const ok = deleteDocument(docId);
+    return respond(ok ? null : { message: 'Not found' }, ok ? 204 : 404, 100);
+  }
+
+  // ── Property Activities (X2) ──
+  if (req.method === 'GET' && /^\/api\/properties\/[^/]+\/activities$/.test(path)) {
+    const id = path.split('/')[3];
+    return respond(getActivities(id), 200, 100);
+  }
+  if (req.method === 'POST' && /^\/api\/properties\/[^/]+\/activities$/.test(path)) {
+    const id = path.split('/')[3];
+    const body = req.body as any;
+    const record = createActivity({ propertyId: id, type: body.type || 'Task', subject: body.subject, description: body.description, dueDate: body.dueDate, status: body.status || 'Open', priority: body.priority || 'Medium', assignedToId: body.assignedToId, assignedToName: body.assignedToName, createdByName: body.createdByName });
+    return respond(record, 201, 100);
+  }
+  if (req.method === 'PUT' && /^\/api\/properties\/[^/]+\/activities\/[^/]+$/.test(path)) {
+    const actId = path.split('/')[5];
+    const updated = updateActivity(actId, req.body as any);
+    return respond(updated ?? { message: 'Not found' }, updated ? 200 : 404, 100);
   }
 
   // ── Opportunity Contact Roles (Stakeholders) ──

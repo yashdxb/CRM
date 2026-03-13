@@ -10,9 +10,11 @@ import { ButtonModule } from 'primeng/button';
 import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
+import { DialogModule } from 'primeng/dialog';
+import { forkJoin } from 'rxjs';
 
 import { Property, PropertyStatus, PropertyType } from '../models/property.model';
-import { PropertyDataService } from '../services/property-data.service';
+import { PropertyDataService, SavePropertyRequest } from '../services/property-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CsvColumn, exportToCsv } from '../../../../shared/utils/csv';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
@@ -39,6 +41,7 @@ interface TypeOption { label: string; value: PropertyType | 'all'; }
     PaginatorModule,
     SkeletonModule,
     TooltipModule,
+    DialogModule,
     BreadcrumbsComponent
   ],
   templateUrl: './properties.page.html',
@@ -95,7 +98,33 @@ export class PropertiesPage {
   protected typeFilter: TypeOption['value'] = 'all';
   protected pageIndex = 0;
   protected rows = 10;
+  protected viewMode: 'table' | 'kanban' = 'table';
   protected readonly Math = Math;
+
+  /* ── Bulk Operations (X11) ── */
+  protected readonly selectedIds = signal(new Set<string>());
+  protected readonly hasSelection = computed(() => this.selectedIds().size > 0);
+  protected readonly selectionCount = computed(() => this.selectedIds().size);
+  protected readonly isAllSelected = computed(() => {
+    const rows = this.properties();
+    return rows.length > 0 && this.selectedIds().size === rows.length;
+  });
+  protected showBulkStatusDialog = signal(false);
+  protected bulkStatus: PropertyStatus = 'Active';
+
+  protected readonly bulkStatusOptions: StatusOption[] = [
+    { label: 'Draft', value: 'Draft' },
+    { label: 'Active', value: 'Active' },
+    { label: 'Conditional', value: 'Conditional' },
+    { label: 'Sold', value: 'Sold' },
+    { label: 'Terminated', value: 'Terminated' },
+    { label: 'Expired', value: 'Expired' },
+    { label: 'Delisted', value: 'Delisted' }
+  ];
+
+  protected readonly kanbanStatuses: PropertyStatus[] = [
+    'Draft', 'Active', 'Conditional', 'Sold', 'Terminated', 'Expired', 'Delisted'
+  ];
 
   constructor(
     private readonly propertyData: PropertyDataService,
@@ -218,6 +247,87 @@ export class PropertiesPage {
       case 'SemiDetached': return 'Semi-Detached';
       case 'MultiFamily': return 'Multi-Family';
       default: return type;
+    }
+  }
+
+  /* ── Bulk selection helpers (X11) ── */
+  protected toggleSelect(id: string) {
+    const s = new Set(this.selectedIds());
+    s.has(id) ? s.delete(id) : s.add(id);
+    this.selectedIds.set(s);
+  }
+
+  protected toggleSelectAll() {
+    if (this.isAllSelected()) {
+      this.selectedIds.set(new Set());
+    } else {
+      this.selectedIds.set(new Set(this.properties().map(p => p.id)));
+    }
+  }
+
+  protected isSelected(id: string): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  protected clearSelection() {
+    this.selectedIds.set(new Set());
+  }
+
+  protected bulkDelete() {
+    const count = this.selectedIds().size;
+    if (!confirm(`Delete ${count} selected properties?`)) return;
+    const obs = Array.from(this.selectedIds()).map(id => this.propertyData.delete(id));
+    forkJoin(obs).subscribe({
+      next: () => {
+        this.selectedIds.set(new Set());
+        this.load();
+        this.toastService.show('success', `${count} properties deleted.`, 3000);
+      },
+      error: () => {
+        this.selectedIds.set(new Set());
+        this.load();
+        this.toastService.show('error', 'Some properties could not be deleted.', 3000);
+      }
+    });
+  }
+
+  protected bulkChangeStatus() {
+    const ids = Array.from(this.selectedIds());
+    const obs = ids.map(id => {
+      const prop = this.properties().find(p => p.id === id);
+      if (!prop) return this.propertyData.delete(id); // fallback – shouldn't happen
+      return this.propertyData.update(id, { ...prop, status: this.bulkStatus } as SavePropertyRequest);
+    });
+    forkJoin(obs).subscribe({
+      next: () => {
+        this.selectedIds.set(new Set());
+        this.showBulkStatusDialog.set(false);
+        this.load();
+        this.toastService.show('success', `${ids.length} properties updated.`, 3000);
+      },
+      error: () => {
+        this.selectedIds.set(new Set());
+        this.showBulkStatusDialog.set(false);
+        this.load();
+        this.toastService.show('error', 'Some properties could not be updated.', 3000);
+      }
+    });
+  }
+
+  protected getPropertiesByStatus(status: PropertyStatus): Property[] {
+    return this.properties().filter(p => p.status === status);
+  }
+
+  protected statusColor(status: PropertyStatus): string {
+    switch (status) {
+      case 'Active': return '#22c55e';
+      case 'Conditional': return '#f59e0b';
+      case 'Sold': return '#3b82f6';
+      case 'Draft': return '#9ca3af';
+      case 'Terminated': return '#ef4444';
+      case 'Expired': return '#f97316';
+      case 'Delisted': return '#6b7280';
+      default: return '#9ca3af';
     }
   }
 }

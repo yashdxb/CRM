@@ -234,6 +234,15 @@
       </div>
 
       <div class="filter-actions">
+        <div class="view-toggle">
+          <button type="button" class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View" aria-label="Switch to table view">
+            <i class="pi pi-list"></i>
+          </button>
+          <button type="button" class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Board View" aria-label="Switch to board view">
+            <i class="pi pi-objects-column"></i>
+          </button>
+        </div>
+
         <button type="button" class="action-btn action-btn--export" (click)="onExport()">
           <span class="action-btn__icon"><i class="pi pi-download"></i></span>
           <span>Export</span>
@@ -264,7 +273,7 @@
   </section>
 
   <!-- DATA TABLE -->
-  <section class="data-section">
+  <section class="data-section" *ngIf="viewMode === 'table'">
     <div class="data-card">
       <header class="data-header">
         <div class="header-title">
@@ -272,6 +281,22 @@
           <span class="record-count">
             {{ properties().length }} of {{ total() }} records
           </span>
+        </div>
+        <!-- Bulk Toolbar (X11) -->
+        <div class="bulk-toolbar" *ngIf="hasSelection()">
+          <span class="bulk-count">{{ selectionCount() }} selected</span>
+          <button type="button" class="action-btn action-btn--settings" (click)="showBulkStatusDialog.set(true)">
+            <span class="action-btn__icon"><i class="pi pi-tag"></i></span>
+            <span>Change Status</span>
+          </button>
+          <button type="button" class="action-btn action-btn--export" style="--btn-gradient: linear-gradient(135deg, #f87171 0%, #ef4444 100%)" (click)="bulkDelete()">
+            <span class="action-btn__icon"><i class="pi pi-trash"></i></span>
+            <span>Delete</span>
+          </button>
+          <button type="button" class="action-btn action-btn--settings" (click)="clearSelection()">
+            <span class="action-btn__icon"><i class="pi pi-times"></i></span>
+            <span>Clear</span>
+          </button>
         </div>
       </header>
 
@@ -305,6 +330,9 @@
         <p-table class="crm-table data-table" [value]="properties()">
           <ng-template pTemplate="header">
             <tr>
+              <th class="th-checkbox">
+                <input type="checkbox" [checked]="isAllSelected()" (change)="toggleSelectAll()" title="Select all" />
+              </th>
               <th pSortableColumn="address">Property <p-sortIcon field="address"></p-sortIcon></th>
               <th pSortableColumn="mlsNumber">MLS # <p-sortIcon field="mlsNumber"></p-sortIcon></th>
               <th pSortableColumn="listPrice">List Price <p-sortIcon field="listPrice"></p-sortIcon></th>
@@ -316,7 +344,10 @@
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-row>
-            <tr class="table-row" (click)="onRowClick(row, $event)">
+            <tr class="table-row" [class.row-selected]="isSelected(row.id)" (click)="onRowClick(row, $event)">
+              <td class="td-checkbox">
+                <input type="checkbox" [checked]="isSelected(row.id)" (change)="toggleSelect(row.id)" (click)="$event.stopPropagation()" />
+              </td>
               <td class="td-property">
                 <div class="customer-avatar">
                   <i class="pi pi-home"></i>
@@ -391,4 +422,85 @@
       </div>
     </div>
   </section>
+
+  <!-- KANBAN BOARD VIEW -->
+  <section class="kanban-board" *ngIf="viewMode === 'kanban'">
+    <div class="kanban-column" *ngFor="let status of kanbanStatuses">
+      <div class="column-header" [style.border-color]="statusColor(status)">
+        <span class="column-title">{{ status }}</span>
+        <span class="column-count">{{ getPropertiesByStatus(status).length }}</span>
+      </div>
+      <div class="column-body">
+        <div class="property-card" *ngFor="let prop of getPropertiesByStatus(status)" (click)="onRowClick(prop, $event)">
+          <div class="property-card-header">
+            <div class="prop-avatar" [style.background]="'linear-gradient(135deg, ' + statusColor(prop.status) + ' 0%, ' + statusColor(prop.status) + 'cc 100%)'">
+              <i class="pi pi-home"></i>
+            </div>
+            <div class="prop-meta">
+              <span class="prop-address">{{ prop.address }}</span>
+              <span class="prop-location">{{ prop.city }}{{ prop.province ? ', ' + prop.province : '' }}</span>
+            </div>
+          </div>
+          <div class="property-card-body">
+            <div class="prop-price" *ngIf="prop.listPrice">
+              {{ prop.listPrice | currency:prop.currency:'symbol':'1.0-0' }}
+            </div>
+            <div class="prop-details-row">
+              <span class="prop-type">{{ formatPropertyType(prop.propertyType) }}</span>
+              <span class="prop-specs" *ngIf="prop.bedrooms || prop.bathrooms">
+                <span *ngIf="prop.bedrooms"><i class="pi pi-th-large"></i> {{ prop.bedrooms }}</span>
+                <span *ngIf="prop.bathrooms"><i class="pi pi-box"></i> {{ prop.bathrooms }}</span>
+              </span>
+            </div>
+            <div class="prop-mls" *ngIf="prop.mlsNumber">MLS# {{ prop.mlsNumber }}</div>
+          </div>
+          <div class="property-card-footer">
+            <span class="prop-agent" *ngIf="prop.ownerName">
+              <i class="pi pi-user"></i> {{ prop.ownerName }}
+            </span>
+            <div class="prop-actions">
+              <button type="button" class="mini-action-btn mini-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(prop)" title="Edit">
+                <i class="pi pi-pencil"></i>
+              </button>
+              <button type="button" class="mini-action-btn mini-action-btn--delete" [disabled]="!canManage()" (click)="$event.stopPropagation(); onDelete(prop)" title="Delete">
+                <i class="pi pi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="column-empty" *ngIf="!getPropertiesByStatus(status).length">
+          <i class="pi pi-inbox"></i>
+          <span>No properties</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BULK STATUS CHANGE DIALOG (X11) -->
+  <p-dialog header="Change Status" [visible]="showBulkStatusDialog()" (visibleChange)="showBulkStatusDialog.set($event)" [modal]="true" [style]="{ width: '400px' }">
+    <div class="dialog-body">
+      <p class="bulk-dialog-desc">Update <strong>{{ selectionCount() }}</strong> selected properties to:</p>
+      <div class="form-field">
+        <label for="bulk-status">New Status</label>
+        <p-select id="bulk-status" [options]="bulkStatusOptions" optionLabel="label" optionValue="value"
+                  [(ngModel)]="bulkStatus" placeholder="Select status" class="w-full" appendTo="body">
+          <ng-template pTemplate="item" let-option>
+            <div class="select-option"><i class="pi pi-tag"></i><span>{{ option.label }}</span></div>
+          </ng-template>
+          <ng-template pTemplate="selectedItem" let-option>
+            <div class="select-option" *ngIf="option"><i class="pi pi-tag"></i><span>{{ option.label }}</span></div>
+          </ng-template>
+        </p-select>
+      </div>
+    </div>
+    <ng-template pTemplate="footer">
+      <button type="button" class="action-btn action-btn--settings" (click)="showBulkStatusDialog.set(false)">
+        <span>Cancel</span>
+      </button>
+      <button type="button" class="action-btn action-btn--add" (click)="bulkChangeStatus()">
+        <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+        <span>Apply</span>
+      </button>
+    </ng-template>
+  </p-dialog>
 </div>

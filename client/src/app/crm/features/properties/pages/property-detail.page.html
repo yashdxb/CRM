@@ -34,6 +34,21 @@
               <i class="pi pi-map-marker"></i> {{ prop.city }}<ng-container *ngIf="prop.province">, {{ prop.province }}</ng-container>
             </span>
           </div>
+          <!-- Quick Actions (X12) -->
+          <div class="hero-actions" *ngIf="canEdit">
+            <button type="button" class="action-btn action-btn--add" (click)="onChangeStatus()">
+              <span class="action-btn__icon"><i class="pi pi-sync"></i></span>
+              <span>Change Status</span>
+            </button>
+            <button type="button" class="action-btn action-btn--import" (click)="onLogShowing()">
+              <span class="action-btn__icon"><i class="pi pi-calendar-plus"></i></span>
+              <span>Log Showing</span>
+            </button>
+            <button type="button" class="action-btn action-btn--export" (click)="onUploadDocument()">
+              <span class="action-btn__icon"><i class="pi pi-upload"></i></span>
+              <span>Upload Document</span>
+            </button>
+          </div>
         </div>
         <div class="hero-right">
           <div class="hero-price">
@@ -46,6 +61,34 @@
           </div>
         </div>
       </header>
+
+      <!-- ═══ LIVE ALERTS (X9 – SignalR) ═══ -->
+      <section class="live-alerts-section" *ngIf="showLiveBanner()">
+        <div class="live-alerts-card">
+          <div class="live-alerts-header">
+            <span class="live-dot"></span>
+            <span class="live-label">Live Updates</span>
+            <span class="live-count">{{ liveAlerts().length }}</span>
+            <button type="button" class="live-clear" (click)="clearAllAlerts()" title="Dismiss all">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="live-alerts-list">
+            <div *ngFor="let alert of liveAlerts()" class="live-alert" [ngClass]="'live-alert--' + alert.type">
+              <div class="alert-icon" [ngClass]="alertTypeIcon(alert.type)">
+                <i class="pi" [ngClass]="alert.icon"></i>
+              </div>
+              <div class="alert-body">
+                <span class="alert-message">{{ alert.message }}</span>
+                <span class="alert-time">{{ alert.timestamp | date:'shortTime' }}</span>
+              </div>
+              <button type="button" class="alert-dismiss" (click)="dismissAlert(alert.id)" title="Dismiss">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <!-- ═══ PHOTO GALLERY ═══ -->
       <section class="gallery-section" *ngIf="photoUrlList().length > 0 || prop.virtualTourUrl">
@@ -105,8 +148,31 @@
         </div>
       </section>
 
-      <!-- ═══ MAIN GRID ═══ -->
-      <div class="detail-grid">
+      <!-- ═══ TABS NAVIGATION ═══ -->
+      <nav class="tab-nav">
+        <button type="button" class="tab-btn" [class.tab-btn--active]="activeTab() === 'details'" (click)="setTab('details')">
+          <i class="pi pi-home"></i> Details
+        </button>
+        <button type="button" class="tab-btn" [class.tab-btn--active]="activeTab() === 'showings'" (click)="setTab('showings')">
+          <i class="pi pi-calendar"></i> Showings
+          <span class="tab-count" *ngIf="showings().length">{{ showings().length }}</span>
+        </button>
+        <button type="button" class="tab-btn" [class.tab-btn--active]="activeTab() === 'documents'" (click)="setTab('documents')">
+          <i class="pi pi-file"></i> Documents
+          <span class="tab-count" *ngIf="documents().length">{{ documents().length }}</span>
+        </button>
+        <button type="button" class="tab-btn" [class.tab-btn--active]="activeTab() === 'priceHistory'" (click)="setTab('priceHistory')">
+          <i class="pi pi-chart-line"></i> Price History
+          <span class="tab-count" *ngIf="priceHistory().length">{{ priceHistory().length }}</span>
+        </button>
+        <button type="button" class="tab-btn" [class.tab-btn--active]="activeTab() === 'activities'" (click)="setTab('activities')">
+          <i class="pi pi-list-check"></i> Activities
+          <span class="tab-count" *ngIf="activities().length">{{ activities().length }}</span>
+        </button>
+      </nav>
+
+      <!-- ═══ TAB: DETAILS (original main grid) ═══ -->
+      <div class="detail-grid" *ngIf="activeTab() === 'details'">
         <!-- LEFT COLUMN -->
         <div class="detail-col">
           <!-- Property Details -->
@@ -205,9 +271,9 @@
 
         <!-- RIGHT COLUMN -->
         <div class="detail-col">
-          <!-- Pricing -->
+          <!-- Pricing + Commission -->
           <section class="detail-card">
-            <h2 class="card-title"><i class="pi pi-dollar"></i> Pricing</h2>
+            <h2 class="card-title"><i class="pi pi-dollar"></i> Pricing &amp; Commission</h2>
             <div class="detail-fields">
               <div class="detail-field">
                 <span class="field-label">List Price</span>
@@ -224,6 +290,33 @@
               <div class="detail-field">
                 <span class="field-label">Currency</span>
                 <span class="field-value">{{ prop.currency }}</span>
+              </div>
+            </div>
+            <!-- Commission section (X7) -->
+            <div class="commission-block" *ngIf="prop.commissionRate != null">
+              <h3 class="commission-title"><i class="pi pi-percentage"></i> Commission Split</h3>
+              <div class="detail-fields">
+                <div class="detail-field">
+                  <span class="field-label">Total Rate</span>
+                  <span class="field-value field-value--commission">{{ prop.commissionRate }}%</span>
+                </div>
+                <div class="detail-field" *ngIf="prop.buyerAgentCommission != null">
+                  <span class="field-label">Buyer Agent</span>
+                  <span class="field-value">{{ prop.buyerAgentCommission }}%</span>
+                </div>
+                <div class="detail-field" *ngIf="prop.sellerAgentCommission != null">
+                  <span class="field-label">Seller Agent</span>
+                  <span class="field-value">{{ prop.sellerAgentCommission }}%</span>
+                </div>
+                <div class="detail-field" *ngIf="prop.coListingAgentName">
+                  <span class="field-label">Co-Listing Agent</span>
+                  <span class="field-value">{{ prop.coListingAgentName }}</span>
+                </div>
+              </div>
+              <!-- Commission dollar estimate -->
+              <div class="commission-estimate" *ngIf="prop.listPrice && prop.commissionRate">
+                <span class="estimate-label">Est. Total Commission</span>
+                <span class="estimate-value">{{ formatCurrency(prop.listPrice * prop.commissionRate / 100, prop.currency) }}</span>
               </div>
             </div>
           </section>
@@ -259,7 +352,6 @@
           <!-- Status Timeline -->
           <section class="detail-card">
             <h2 class="card-title"><i class="pi pi-calendar"></i> Timeline</h2>
-
             <div class="status-timeline">
               <div class="timeline-event" *ngFor="let evt of timelineEvents(); let last = last"
                    [class]="'timeline-event timeline-event--' + evt.variant">
@@ -273,7 +365,6 @@
                 </div>
               </div>
             </div>
-
             <div class="days-on-market">
               <i class="pi pi-clock"></i>
               <span><strong>{{ daysSinceListed() }}</strong> days on market</span>
@@ -281,6 +372,209 @@
           </section>
         </div>
       </div>
+
+      <!-- ═══ TAB: SHOWINGS (X3) ═══ -->
+      <section class="tab-panel" *ngIf="activeTab() === 'showings'">
+        <div class="detail-card">
+          <div class="card-header-bar">
+            <h2 class="card-title"><i class="pi pi-calendar"></i> Showing Log</h2>
+            <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onLogShowing()">
+              <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+              <span>Schedule Showing</span>
+            </button>
+          </div>
+          <div class="showings-table" *ngIf="showings().length; else noShowings">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Visitor</th>
+                  <th>Date &amp; Time</th>
+                  <th>Duration</th>
+                  <th>Status</th>
+                  <th>Rating</th>
+                  <th>Feedback</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let s of showings()" class="table-row">
+                  <td>
+                    <div class="visitor-info">
+                      <span class="visitor-name">{{ s.visitorName }}</span>
+                      <span class="visitor-email" *ngIf="s.visitorEmail">{{ s.visitorEmail }}</span>
+                    </div>
+                  </td>
+                  <td>{{ s.scheduledAtUtc | date:'MMM d, yyyy h:mm a' }}</td>
+                  <td>{{ s.durationMinutes ? s.durationMinutes + ' min' : '—' }}</td>
+                  <td>
+                    <p-tag [value]="s.status" [severity]="showingSeverity(s.status)"></p-tag>
+                  </td>
+                  <td>
+                    <span class="rating-stars" *ngIf="s.rating">
+                      <i class="pi pi-star-fill" *ngFor="let star of [1,2,3,4,5]; let i = index"
+                         [class.star-active]="i < (s.rating || 0)"></i>
+                    </span>
+                    <span *ngIf="!s.rating">—</span>
+                  </td>
+                  <td>
+                    <span class="feedback-text" *ngIf="s.feedback">{{ s.feedback }}</span>
+                    <span *ngIf="!s.feedback">—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #noShowings>
+            <div class="empty-state">
+              <i class="pi pi-calendar empty-icon"></i>
+              <p>No showings scheduled yet.</p>
+              <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onLogShowing()">
+                <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+                <span>Schedule First Showing</span>
+              </button>
+            </div>
+          </ng-template>
+        </div>
+      </section>
+
+      <!-- ═══ TAB: DOCUMENTS (X1) ═══ -->
+      <section class="tab-panel" *ngIf="activeTab() === 'documents'">
+        <div class="detail-card">
+          <div class="card-header-bar">
+            <h2 class="card-title"><i class="pi pi-file"></i> Documents &amp; Attachments</h2>
+            <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onUploadDocument()">
+              <span class="action-btn__icon"><i class="pi pi-upload"></i></span>
+              <span>Upload Document</span>
+            </button>
+          </div>
+          <div class="documents-grid" *ngIf="documents().length; else noDocs">
+            <div class="document-card" *ngFor="let doc of documents()">
+              <div class="doc-icon">
+                <i class="pi" [ngClass]="docCategoryIcon(doc.category)"></i>
+              </div>
+              <div class="doc-info">
+                <span class="doc-name">{{ doc.fileName }}</span>
+                <div class="doc-meta">
+                  <span class="doc-category">{{ doc.category }}</span>
+                  <span class="doc-size" *ngIf="doc.fileSize">{{ formatFileSize(doc.fileSize) }}</span>
+                  <span class="doc-date">{{ doc.uploadedAtUtc | date:'MMM d, yyyy' }}</span>
+                </div>
+                <span class="doc-uploader" *ngIf="doc.uploadedBy">By {{ doc.uploadedBy }}</span>
+              </div>
+              <div class="doc-actions">
+                <button *ngIf="canEdit" type="button" class="row-action-btn row-action-btn--delete" title="Delete"
+                        (click)="onDeleteDocument(doc.id)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <ng-template #noDocs>
+            <div class="empty-state">
+              <i class="pi pi-file empty-icon"></i>
+              <p>No documents uploaded yet.</p>
+              <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onUploadDocument()">
+                <span class="action-btn__icon"><i class="pi pi-upload"></i></span>
+                <span>Upload First Document</span>
+              </button>
+            </div>
+          </ng-template>
+        </div>
+      </section>
+
+      <!-- ═══ TAB: PRICE HISTORY (X4) ═══ -->
+      <section class="tab-panel" *ngIf="activeTab() === 'priceHistory'">
+        <div class="detail-card">
+          <div class="card-header-bar">
+            <h2 class="card-title"><i class="pi pi-chart-line"></i> Price Change History</h2>
+          </div>
+          <div class="price-timeline" *ngIf="priceHistory().length; else noPriceHistory">
+            <div class="price-event" *ngFor="let pc of priceHistory(); let last = last"
+                 [class.price-event--up]="priceChangeDirection(pc) === 'up'"
+                 [class.price-event--down]="priceChangeDirection(pc) === 'down'">
+              <div class="price-marker">
+                <span class="price-dot">
+                  <i class="pi" [ngClass]="priceChangeDirection(pc) === 'up' ? 'pi-arrow-up' : 'pi-arrow-down'"></i>
+                </span>
+                <span class="price-line" *ngIf="!last"></span>
+              </div>
+              <div class="price-body">
+                <div class="price-change-row">
+                  <span class="price-from">{{ formatCurrency(pc.previousPrice, prop.currency) }}</span>
+                  <i class="pi pi-arrow-right"></i>
+                  <span class="price-to">{{ formatCurrency(pc.newPrice, prop.currency) }}</span>
+                  <span class="price-pct" [class.pct-up]="priceChangeDirection(pc) === 'up'" [class.pct-down]="priceChangeDirection(pc) === 'down'">
+                    {{ priceChangeDirection(pc) === 'up' ? '+' : '-' }}{{ priceChangePct(pc) }}%
+                  </span>
+                </div>
+                <div class="price-meta">
+                  <span class="price-date">{{ pc.changedAtUtc | date:'MMM d, yyyy' }}</span>
+                  <span class="price-by" *ngIf="pc.changedBy">by {{ pc.changedBy }}</span>
+                </div>
+                <span class="price-reason" *ngIf="pc.reason">{{ pc.reason }}</span>
+              </div>
+            </div>
+          </div>
+          <ng-template #noPriceHistory>
+            <div class="empty-state">
+              <i class="pi pi-chart-line empty-icon"></i>
+              <p>No price changes recorded.</p>
+            </div>
+          </ng-template>
+        </div>
+      </section>
+
+      <!-- ═══ TAB: ACTIVITIES (X2) ═══ -->
+      <section class="tab-panel" *ngIf="activeTab() === 'activities'">
+        <div class="detail-card">
+          <div class="card-header-bar">
+            <h2 class="card-title"><i class="pi pi-list-check"></i> Activities &amp; Tasks</h2>
+            <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onAddActivity()">
+              <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+              <span>Add Activity</span>
+            </button>
+          </div>
+          <div class="activities-list" *ngIf="activities().length; else noActivities">
+            <div class="activity-item" *ngFor="let act of activities()"
+                 [class.activity-item--completed]="act.status === 'Completed'">
+              <div class="activity-icon" [ngClass]="'activity-icon--' + act.type.toLowerCase()">
+                <i class="pi" [ngClass]="activityTypeIcon(act.type)"></i>
+              </div>
+              <div class="activity-body">
+                <div class="activity-header">
+                  <span class="activity-subject">{{ act.subject }}</span>
+                  <p-tag [value]="act.priority" [severity]="prioritySeverity(act.priority)" class="activity-priority"></p-tag>
+                </div>
+                <div class="activity-meta">
+                  <span class="activity-type"><i class="pi" [ngClass]="activityTypeIcon(act.type)"></i> {{ act.type }}</span>
+                  <span class="activity-date" *ngIf="act.dueDate">
+                    <i class="pi pi-calendar"></i> Due {{ act.dueDate | date:'MMM d, yyyy' }}
+                  </span>
+                  <span class="activity-status">
+                    <i class="pi" [ngClass]="act.status === 'Completed' ? 'pi-check-circle' : 'pi-clock'"></i> {{ act.status }}
+                  </span>
+                </div>
+                <p class="activity-description" *ngIf="act.description">{{ act.description }}</p>
+              </div>
+              <div class="activity-actions" *ngIf="canEdit && act.status !== 'Completed'">
+                <button type="button" class="row-action-btn row-action-btn--complete" title="Mark Complete"
+                        (click)="completeActivity(act.id)">
+                  <i class="pi pi-check"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <ng-template #noActivities>
+            <div class="empty-state">
+              <i class="pi pi-list-check empty-icon"></i>
+              <p>No activities logged yet.</p>
+              <button *ngIf="canEdit" type="button" class="action-btn action-btn--add" (click)="onAddActivity()">
+                <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+                <span>Add First Activity</span>
+              </button>
+            </div>
+          </ng-template>
+        </div>
+      </section>
     </ng-container>
   </div>
 
@@ -298,3 +592,167 @@
     </div>
   </ng-template>
 </div>
+
+<!-- ═══ DIALOG: CHANGE STATUS (X12) ═══ -->
+<p-dialog header="Change Property Status" [visible]="showStatusDialog()" (visibleChange)="showStatusDialog.set($event)" [modal]="true" [style]="{ width: '400px' }">
+  <div class="dialog-body">
+    <div class="form-field">
+      <label for="status-select">New Status</label>
+      <p-select id="status-select" [options]="statusOptions" optionLabel="label" optionValue="value"
+                [ngModel]="selectedStatus()" (ngModelChange)="selectedStatus.set($event)" placeholder="Select status" class="w-full" appendTo="body">
+        <ng-template pTemplate="item" let-option>
+          <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+        <ng-template pTemplate="selectedItem" let-option>
+          <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+      </p-select>
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <button type="button" class="action-btn action-btn--settings" (click)="showStatusDialog.set(false)">
+      <span>Cancel</span>
+    </button>
+    <button type="button" class="action-btn action-btn--add" (click)="confirmStatusChange()">
+      <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+      <span>Confirm</span>
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ═══ DIALOG: SCHEDULE SHOWING (X3) ═══ -->
+<p-dialog header="Schedule Showing" [visible]="showShowingDialog()" (visibleChange)="showShowingDialog.set($event)" [modal]="true" [style]="{ width: '500px' }">
+  <form [formGroup]="showingForm" class="dialog-body">
+    <div class="form-field">
+      <label for="showing-visitor">Visitor Name <span class="required">*</span></label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--name"><i class="pi pi-user"></i></p-inputgroup-addon>
+        <input pInputText id="showing-visitor" formControlName="visitorName" placeholder="Enter visitor name" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="showing-email">Email</label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--email"><i class="pi pi-envelope"></i></p-inputgroup-addon>
+        <input pInputText id="showing-email" formControlName="visitorEmail" placeholder="visitor@email.com" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="showing-phone">Phone</label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--phone"><i class="pi pi-phone"></i></p-inputgroup-addon>
+        <input pInputText id="showing-phone" formControlName="visitorPhone" placeholder="+1 (555) 000-0000" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="showing-date">Date &amp; Time <span class="required">*</span></label>
+      <p-datepicker id="showing-date" formControlName="scheduledAtUtc" [showTime]="true" [hourFormat]="'12'" appendTo="body"
+                    placeholder="Select date and time" class="w-full"></p-datepicker>
+    </div>
+    <div class="form-field">
+      <label for="showing-duration">Duration (min)</label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--info"><i class="pi pi-clock"></i></p-inputgroup-addon>
+        <input pInputText id="showing-duration" formControlName="durationMinutes" type="number" placeholder="30" />
+      </p-inputgroup>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <button type="button" class="action-btn action-btn--settings" (click)="showShowingDialog.set(false)">
+      <span>Cancel</span>
+    </button>
+    <button type="button" class="action-btn action-btn--add" (click)="submitShowing()">
+      <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+      <span>Schedule</span>
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ═══ DIALOG: UPLOAD DOCUMENT (X1) ═══ -->
+<p-dialog header="Upload Document" [visible]="showDocumentDialog()" (visibleChange)="showDocumentDialog.set($event)" [modal]="true" [style]="{ width: '500px' }">
+  <form [formGroup]="documentForm" class="dialog-body">
+    <div class="form-field">
+      <label for="doc-name">File Name <span class="required">*</span></label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--name"><i class="pi pi-file"></i></p-inputgroup-addon>
+        <input pInputText id="doc-name" formControlName="fileName" placeholder="Enter file name" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="doc-category">Category</label>
+      <p-select id="doc-category" [options]="documentCategories" optionLabel="label" optionValue="value"
+                formControlName="category" placeholder="Select category" class="w-full" appendTo="body"></p-select>
+    </div>
+    <div class="form-field">
+      <label for="doc-url">File URL</label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--website"><i class="pi pi-link"></i></p-inputgroup-addon>
+        <input pInputText id="doc-url" formControlName="fileUrl" placeholder="https://..." />
+      </p-inputgroup>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <button type="button" class="action-btn action-btn--settings" (click)="showDocumentDialog.set(false)">
+      <span>Cancel</span>
+    </button>
+    <button type="button" class="action-btn action-btn--add" (click)="submitDocument()">
+      <span class="action-btn__icon"><i class="pi pi-upload"></i></span>
+      <span>Upload</span>
+    </button>
+  </ng-template>
+</p-dialog>
+
+<!-- ═══ DIALOG: ADD ACTIVITY (X2) ═══ -->
+<p-dialog header="Add Activity" [visible]="showActivityDialog()" (visibleChange)="showActivityDialog.set($event)" [modal]="true" [style]="{ width: '500px' }">
+  <form [formGroup]="activityForm" class="dialog-body">
+    <div class="form-field">
+      <label for="activity-type">Type</label>
+      <p-select id="activity-type" [options]="activityTypes" optionLabel="label" optionValue="value"
+                formControlName="type" placeholder="Select type" class="w-full" appendTo="body">
+        <ng-template pTemplate="item" let-option>
+          <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+        <ng-template pTemplate="selectedItem" let-option>
+          <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+      </p-select>
+    </div>
+    <div class="form-field">
+      <label for="activity-subject">Subject <span class="required">*</span></label>
+      <p-inputgroup>
+        <p-inputgroup-addon class="icon-addon icon-addon--name"><i class="pi pi-pencil"></i></p-inputgroup-addon>
+        <input pInputText id="activity-subject" formControlName="subject" placeholder="Enter subject" />
+      </p-inputgroup>
+    </div>
+    <div class="form-field">
+      <label for="activity-description">Description</label>
+      <textarea pTextarea id="activity-description" formControlName="description" rows="3" placeholder="Optional details..."></textarea>
+    </div>
+    <div class="form-field">
+      <label for="activity-due">Due Date</label>
+      <p-datepicker id="activity-due" formControlName="dueDate" [showTime]="false" appendTo="body"
+                    placeholder="Select due date" class="w-full"></p-datepicker>
+    </div>
+    <div class="form-field">
+      <label for="activity-priority">Priority</label>
+      <p-select id="activity-priority" [options]="activityPriorities" optionLabel="label" optionValue="value"
+                formControlName="priority" placeholder="Select priority" class="w-full" appendTo="body">
+        <ng-template pTemplate="item" let-option>
+          <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+        <ng-template pTemplate="selectedItem" let-option>
+          <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+        </ng-template>
+      </p-select>
+    </div>
+  </form>
+  <ng-template pTemplate="footer">
+    <button type="button" class="action-btn action-btn--settings" (click)="showActivityDialog.set(false)">
+      <span>Cancel</span>
+    </button>
+    <button type="button" class="action-btn action-btn--add" (click)="submitActivity()">
+      <span class="action-btn__icon"><i class="pi pi-check"></i></span>
+      <span>Create</span>
+    </button>
+  </ng-template>
+</p-dialog>

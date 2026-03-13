@@ -326,6 +326,36 @@
                   </div>
                 </div>
 
+                <!-- Related Properties (X10) -->
+                <div class="related-section">
+                  <h3>Properties</h3>
+                  <p-table [value]="relatedProperties()" [paginator]="false" [rows]="5" styleClass="compact-table">
+                    <ng-template pTemplate="header">
+                      <tr>
+                        <th>Address</th>
+                        <th>Status</th>
+                        <th>Type</th>
+                        <th>Price</th>
+                        <th>MLS #</th>
+                      </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-row>
+                      <tr class="clickable-row" [routerLink]="['/app/properties', row.id]">
+                        <td><span class="related-link">{{ row.address }}</span></td>
+                        <td><p-tag [value]="row.status" severity="info"></p-tag></td>
+                        <td>{{ row.propertyType }}</td>
+                        <td>{{ row.listPrice | currency:row.currency:'symbol':'1.0-0' }}</td>
+                        <td>{{ row.mlsNumber || '—' }}</td>
+                      </tr>
+                    </ng-template>
+                  </p-table>
+                  <div class="empty-state" *ngIf="!relatedProperties().length">
+                    <i class="pi pi-home"></i>
+                    <span>No properties linked.</span>
+                    <a class="empty-state-link" routerLink="/app/properties/new">+ Add property</a>
+                  </div>
+                </div>
+
                 <div class="related-section">
                   <h3>Related accounts</h3>
                   <p-table [value]="relatedAccountsSorted()" [paginator]="false" [rows]="5" styleClass="compact-table">

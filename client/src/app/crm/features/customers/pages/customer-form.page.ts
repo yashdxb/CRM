@@ -26,6 +26,8 @@ import { Contact } from '../../contacts/models/contact.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
 import { Opportunity } from '../../opportunities/models/opportunity.model';
 import { AttachmentDataService, AttachmentItem } from '../../../../shared/services/attachment-data.service';
+import { PropertyDataService } from '../../properties/services/property-data.service';
+import { Property } from '../../properties/models/property.model';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { readUserId } from '../../../../core/auth/token.utils';
 
@@ -73,6 +75,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   private readonly contactData = inject(ContactDataService);
   private readonly opportunityData = inject(OpportunityDataService);
   private readonly attachmentData = inject(AttachmentDataService);
+  private readonly propertyData = inject(PropertyDataService);
   private readonly crmEvents = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly currentUserId = readUserId();
@@ -83,6 +86,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   protected readonly relatedContacts = signal<Contact[]>([]);
   protected readonly relatedOpportunities = signal<Opportunity[]>([]);
   protected readonly attachments = signal<AttachmentItem[]>([]);
+  protected readonly relatedProperties = signal<Property[]>([]);
   protected readonly timelineLoading = signal(false);
   protected readonly noteSaving = signal(false);
   protected readonly parentAccountOptions = signal<{ label: string; value: string }[]>([]);
@@ -347,6 +351,11 @@ export class CustomerFormPage implements OnInit, OnDestroy {
       next: (items) => this.attachments.set(items),
       error: () => this.raiseToast('error', 'Unable to load attachments.')
     });
+
+    this.propertyData.search({ accountId: this.customerId, page: 1, pageSize: 20 }).subscribe({
+      next: (res) => this.relatedProperties.set(res.items),
+      error: () => this.raiseToast('error', 'Unable to load related properties.')
+    });
   }
 
   protected relatedContactsSorted() {
@@ -357,6 +366,12 @@ export class CustomerFormPage implements OnInit, OnDestroy {
 
   protected relatedOpportunitiesSorted() {
     return [...this.relatedOpportunities()].sort((a, b) =>
+      (a.createdAtUtc ?? '').localeCompare(b.createdAtUtc ?? '')
+    );
+  }
+
+  protected relatedPropertiesSorted() {
+    return [...this.relatedProperties()].sort((a, b) =>
       (a.createdAtUtc ?? '').localeCompare(b.createdAtUtc ?? '')
     );
   }

@@ -631,3 +631,163 @@
     font-size: 1.5rem;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PHOTO DRAG & DROP (X5)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.photo-drop-zone {
+  position: relative;
+  border: 2px dashed rgba(var(--apple-gray-3), 0.5);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.4);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  min-height: 160px;
+
+  &:hover {
+    border-color: rgba(var(--apple-blue), 0.4);
+    background: rgba(255, 255, 255, 0.6);
+  }
+
+  &.drag-active {
+    border-color: rgba(var(--apple-blue), 0.6);
+    background: rgba(var(--apple-blue), 0.06);
+    box-shadow: 0 0 0 4px rgba(var(--apple-blue), 0.1);
+    transform: scale(1.01);
+  }
+}
+
+.drop-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 2.5rem 1.5rem;
+  cursor: pointer;
+  position: relative;
+
+  i {
+    font-size: 2rem;
+    color: rgba(var(--apple-blue), 0.5);
+    margin-bottom: 0.25rem;
+  }
+
+  .drop-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .drop-hint {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+  }
+}
+
+.drop-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.photo-thumb {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: rgba(0, 0, 0, 0.04);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+
+  &:hover img {
+    transform: scale(1.05);
+  }
+
+  .photo-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.85);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.65rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover .photo-remove {
+    opacity: 1;
+  }
+
+  .photo-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 2px 6px;
+    background: rgba(0, 0, 0, 0.55);
+    color: white;
+    font-size: 0.6875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  &:hover .photo-name {
+    opacity: 1;
+  }
+}
+
+.photo-add-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border: 2px dashed rgba(var(--apple-gray-3), 0.5);
+  border-radius: 10px;
+  aspect-ratio: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  font-weight: 600;
+
+  i {
+    font-size: 1.25rem;
+  }
+
+  input {
+    display: none;
+  }
+
+  &:hover {
+    border-color: rgba(var(--apple-blue), 0.4);
+    color: rgba(var(--apple-blue), 1);
+    background: rgba(var(--apple-blue), 0.04);
+  }
+}
