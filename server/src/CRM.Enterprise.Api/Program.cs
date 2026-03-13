@@ -281,6 +281,10 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ReportsManage));
     options.AddPolicy(Permissions.Policies.ReportsDesign, policy =>
         policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.ReportsDesign));
+    options.AddPolicy(Permissions.Policies.PropertiesView, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.PropertiesView));
+    options.AddPolicy(Permissions.Policies.PropertiesManage, policy =>
+        policy.RequireClaim(Permissions.ClaimType, Permissions.Policies.PropertiesManage));
 
     // Configurable Report Designer policy - reads required permission from appsettings.json
     options.AddPolicy("ReportDesigner", policy =>

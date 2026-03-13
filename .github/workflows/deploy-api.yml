@@ -83,13 +83,13 @@ jobs:
       - name: Post-deploy health verification
         run: |
           API_URL="https://crm-enterprise-api-dev-01122345.azurewebsites.net"
-          echo "Waiting 30s for App Service to restart after deployment..."
-          sleep 30
+          echo "Waiting 45s for App Service to restart after deployment..."
+          sleep 45
 
-          # Retry /health up to 6 times (every 15s = 90s total wait)
-          for i in 1 2 3 4 5 6; do
-            echo "Health check attempt $i/6..."
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$API_URL/health" || echo "000")
+          # Retry /health up to 10 times (every 15s = 150s total wait)
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            echo "Health check attempt $i/10..."
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$API_URL/health" || echo "000")
             if [ "$HTTP_STATUS" = "200" ]; then
               echo "✅ /health returned 200"
               break
@@ -98,7 +98,7 @@ jobs:
             sleep 15
           done
           if [ "$HTTP_STATUS" != "200" ]; then
-            echo "❌ /health did not return 200 after 6 attempts (last: $HTTP_STATUS)"
+            echo "❌ /health did not return 200 after 10 attempts (last: $HTTP_STATUS)"
             exit 1
           fi
 

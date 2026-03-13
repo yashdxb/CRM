@@ -318,6 +318,12 @@ public class CrmDbContext : DbContext
             .Property(p => p.SalePrice)
             .HasPrecision(18, 2);
         modelBuilder.Entity<Property>()
+            .Property(p => p.SquareFeet)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Property>()
+            .Property(p => p.LotSizeSqFt)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Property>()
             .HasIndex(p => new { p.TenantId, p.MlsNumber })
             .HasFilter("[MlsNumber] IS NOT NULL AND [IsDeleted] = 0");
         modelBuilder.Entity<Supplier>().ToTable("Suppliers", SupplyChainSchema);
