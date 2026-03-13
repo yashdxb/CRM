@@ -69,6 +69,16 @@
       </div>
     </section>
 
+    <!-- Data Load Retry Banner -->
+    <div class="data-retry-banner" *ngIf="dataLoadFailed()">
+      <i class="pi pi-exclamation-circle"></i>
+      <span>Dashboard data failed to load. The API may still be starting up.</span>
+      <button type="button" class="retry-btn" (click)="retryLoadData()">
+        <i class="pi pi-refresh"></i>
+        Retry
+      </button>
+    </div>
+
     <!-- Key Metrics Row -->
     <section class="metrics-dashboard">
       <div class="metrics-header">

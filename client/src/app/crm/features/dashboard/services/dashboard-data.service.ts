@@ -1,8 +1,25 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, of } from 'rxjs';
+import { catchError, Observable, of, retry, timer } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { AssistantActionExecutionResult, AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth } from '../models/dashboard.model';
+
+/** Retry transient failures (0 = network error, 502, 503, 504) up to 2 times with exponential backoff. */
+function retryTransient<T>() {
+  return (source: Observable<T>) =>
+    source.pipe(
+      retry({
+        count: 2,
+        delay: (error: HttpErrorResponse, retryIndex: number) => {
+          const status = error?.status ?? 0;
+          if (status === 0 || status === 502 || status === 503 || status === 504) {
+            return timer(retryIndex * 2000);
+          }
+          throw error;
+        }
+      })
+    );
+}
 
 @Injectable({ providedIn: 'root' })
 export class DashboardDataService {
@@ -63,10 +80,13 @@ export class DashboardDataService {
       forecastScenarios: []
     };
 
-    return this.http.get<DashboardSummary>(url).pipe(catchError((err) => {
-      console.error('Failed to load dashboard summary', err);
-      return of(empty);
-    }));
+    return this.http.get<DashboardSummary>(url).pipe(
+      retryTransient(),
+      catchError((err) => {
+        console.error('Failed to load dashboard summary', err);
+        return of(empty);
+      })
+    );
   }
 
   getManagerPipelineHealth() {
@@ -92,10 +112,13 @@ export class DashboardDataService {
       topTruthGaps: [],
       reviewQueue: []
     };
-    return this.http.get<ManagerPipelineHealth>(url).pipe(catchError((err) => {
-      console.error('Failed to load manager pipeline health', err);
-      return of(empty);
-    }));
+    return this.http.get<ManagerPipelineHealth>(url).pipe(
+      retryTransient(),
+      catchError((err) => {
+        console.error('Failed to load manager pipeline health', err);
+        return of(empty);
+      })
+    );
   }
 
   getAssistantInsights() {
@@ -106,10 +129,13 @@ export class DashboardDataService {
       actions: [],
       generatedAtUtc: new Date().toISOString()
     };
-    return this.http.get<AssistantInsights>(url).pipe(catchError((err) => {
-      console.error('Failed to load assistant insights', err);
-      return of(empty);
-    }));
+    return this.http.get<AssistantInsights>(url).pipe(
+      retryTransient(),
+      catchError((err) => {
+        console.error('Failed to load assistant insights', err);
+        return of(empty);
+      })
+    );
   }
 
   executeAssistantAction(action: AssistantInsightsAction, note?: string) {
@@ -165,10 +191,13 @@ export class DashboardDataService {
         roleLevel?: number | null;
         packName?: string | null;
       }>(url)
-      .pipe(catchError((err) => {
-        console.error('Failed to load dashboard layout', err);
-        return of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], roleLevel: null, packName: null });
-      }));
+      .pipe(
+        retryTransient(),
+        catchError((err) => {
+          console.error('Failed to load dashboard layout', err);
+          return of({ cardOrder: [], sizes: {}, dimensions: {}, hiddenCards: [], roleLevel: null, packName: null });
+        })
+      );
   }
 
   saveLayout(payload: {
@@ -197,7 +226,7 @@ export class DashboardDataService {
       hiddenCards?: string[];
       roleLevel?: number | null;
       packName?: string | null;
-    }>(url);
+    }>(url).pipe(retryTransient());
   }
 
   getDefaultLayoutForLevel(level: number) {
@@ -209,7 +238,7 @@ export class DashboardDataService {
       hiddenCards?: string[];
       roleLevel?: number | null;
       packName?: string | null;
-    }>(url, { params: { level } });
+    }>(url, { params: { level } }).pipe(retryTransient());
   }
 
   resetLayout() {

@@ -206,6 +206,7 @@ export class DashboardPage implements OnInit {
 
   // Realtime update tracking
   protected readonly realtimeUpdating = signal(false);
+  protected readonly dataLoadFailed = signal(false);
   private realtimeUpdateTimeout: ReturnType<typeof setTimeout> | null = null;
 
   protected readonly greeting = this.getGreeting();
@@ -653,33 +654,7 @@ export class DashboardPage implements OnInit {
   }
 
   ngOnInit(): void {
-    this.dashboardData.getSummary()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(summary => {
-        const resolvedSummary = summary ?? this.emptySummary;
-        this.summarySignal.set(resolvedSummary);
-        this.emitRiskAlerts(resolvedSummary);
-      });
-
-    this.dashboardData.getAssistantInsights()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((insights) => {
-        this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
-        this.assistantExpandedActionIds.set([]);
-      });
-
-    this.loadExpansionSignals();
-    this.loadPendingDecisionInbox();
-
-    this.managerHealthRefresh$
-      .pipe(
-        startWith(void 0),
-        switchMap(() => this.dashboardData.getManagerPipelineHealth()),
-        takeUntilDestroyed(this.destroyRef)
-      )
-      .subscribe(health => {
-        this.managerHealthSignal.set(health ?? this.emptyManagerHealth);
-      });
+    this.loadAllDashboardData();
 
     this.crmEventsService.events$
       .pipe(
@@ -759,6 +734,47 @@ export class DashboardPage implements OnInit {
       }
     });
 
+  }
+
+  private loadAllDashboardData(): void {
+    this.dataLoadFailed.set(false);
+
+    this.dashboardData.getSummary()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (summary) => {
+          const resolvedSummary = summary ?? this.emptySummary;
+          this.summarySignal.set(resolvedSummary);
+          this.emitRiskAlerts(resolvedSummary);
+        },
+        error: () => {
+          this.dataLoadFailed.set(true);
+        }
+      });
+
+    this.dashboardData.getAssistantInsights()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((insights) => {
+        this.assistantInsightsSignal.set(insights ?? this.emptyAssistantInsights);
+        this.assistantExpandedActionIds.set([]);
+      });
+
+    this.loadExpansionSignals();
+    this.loadPendingDecisionInbox();
+
+    this.managerHealthRefresh$
+      .pipe(
+        startWith(void 0),
+        switchMap(() => this.dashboardData.getManagerPipelineHealth()),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(health => {
+        this.managerHealthSignal.set(health ?? this.emptyManagerHealth);
+      });
+  }
+
+  protected retryLoadData(): void {
+    this.loadAllDashboardData();
   }
 
   protected onQuickAdd(): void {

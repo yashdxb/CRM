@@ -387,6 +387,60 @@
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// DATA RETRY BANNER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.data-retry-banner {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-3 $space-4;
+  margin-bottom: $space-4;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: $radius-lg;
+  animation: fade-in-up 0.3s ease-out;
+
+  > i {
+    font-size: 1.125rem;
+    color: #ef4444;
+    flex-shrink: 0;
+  }
+
+  > span {
+    flex: 1;
+    font-size: $font-size-sm;
+    font-weight: 500;
+    color: #991b1b;
+  }
+
+  .retry-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-1;
+    padding: $space-1 $space-3;
+    background: $primary-gradient;
+    color: white;
+    border: none;
+    border-radius: $radius-md;
+    font-size: $font-size-sm;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 200ms, box-shadow 200ms;
+    white-space: nowrap;
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    i {
+      font-size: $font-size-sm;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // METRICS DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 
