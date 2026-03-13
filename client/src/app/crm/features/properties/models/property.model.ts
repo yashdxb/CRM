@@ -41,6 +41,8 @@ export interface Property {
   primaryContactId?: string;
   primaryContactName?: string;
   opportunityId?: string;
+  photoUrls?: string;
+  virtualTourUrl?: string;
   createdAtUtc: string;
   updatedAtUtc?: string;
 }

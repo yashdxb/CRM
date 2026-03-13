@@ -1,0 +1,283 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="page-content" *ngIf="!loading(); else pageLoading">
+    <ng-container *ngIf="property() as prop">
+      <!-- ═══ HERO ═══ -->
+      <header class="hero-section">
+        <div class="hero-left">
+          <app-breadcrumbs></app-breadcrumbs>
+          <div class="hero-nav">
+            <a class="back-link" routerLink="/app/properties">
+              <i class="pi pi-arrow-left"></i> Properties
+            </a>
+            <a *ngIf="canEdit" class="edit-link" [routerLink]="'/app/properties/' + prop.id + '/edit'">
+              <i class="pi pi-pencil"></i> Edit
+            </a>
+          </div>
+          <h1 class="hero-title">
+            <span class="title-gradient">{{ prop.address }}</span>
+          </h1>
+          <div class="hero-meta">
+            <span class="hero-badge" [ngClass]="statusClass(prop.status)">{{ prop.status }}</span>
+            <span class="hero-type">
+              <i class="pi pi-home"></i> {{ typeLabel(prop.propertyType) }}
+            </span>
+            <span class="hero-mls" *ngIf="prop.mlsNumber">
+              <i class="pi pi-hashtag"></i> MLS {{ prop.mlsNumber }}
+            </span>
+            <span class="hero-location" *ngIf="prop.city">
+              <i class="pi pi-map-marker"></i> {{ prop.city }}<ng-container *ngIf="prop.province">, {{ prop.province }}</ng-container>
+            </span>
+          </div>
+        </div>
+        <div class="hero-right">
+          <div class="hero-price">
+            <span class="hero-price-value">{{ formatCurrency(prop.listPrice, prop.currency) }}</span>
+            <span class="hero-price-label">List Price</span>
+          </div>
+          <div class="hero-sale-price" *ngIf="prop.salePrice">
+            <span class="hero-sale-value">{{ formatCurrency(prop.salePrice, prop.currency) }}</span>
+            <span class="hero-sale-label">Sale Price</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══ PHOTO GALLERY ═══ -->
+      <section class="gallery-section" *ngIf="photoUrlList().length > 0 || prop.virtualTourUrl">
+        <div class="gallery-card">
+          <h2 class="card-title"><i class="pi pi-images"></i> Photos &amp; Media</h2>
+          <div class="gallery-grid" *ngIf="photoUrlList().length > 0">
+            <div class="gallery-item" *ngFor="let url of photoUrlList(); let i = index">
+              <img [src]="url" [alt]="'Photo ' + (i + 1) + ' of ' + prop.address" loading="lazy" />
+            </div>
+          </div>
+          <div class="virtual-tour" *ngIf="prop.virtualTourUrl">
+            <a [href]="prop.virtualTourUrl" target="_blank" rel="noopener noreferrer" class="tour-link">
+              <i class="pi pi-video"></i>
+              <span>View Virtual Tour</span>
+              <i class="pi pi-external-link"></i>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ KPI CARDS ═══ -->
+      <section class="kpi-section">
+        <div class="kpi-card kpi-card--sqft">
+          <div class="kpi-icon"><i class="pi pi-expand"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Square Feet</span>
+            <strong class="kpi-value">{{ prop.squareFeet ? (prop.squareFeet | number) : '—' }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--beds">
+          <div class="kpi-icon"><i class="pi pi-inbox"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Bedrooms</span>
+            <strong class="kpi-value">{{ prop.bedrooms ?? '—' }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--baths">
+          <div class="kpi-icon"><i class="pi pi-sun"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Bathrooms</span>
+            <strong class="kpi-value">{{ prop.bathrooms ?? '—' }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--age">
+          <div class="kpi-icon"><i class="pi pi-stopwatch"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Days Listed</span>
+            <strong class="kpi-value">{{ daysSinceListed() }}d</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--ppsqft">
+          <div class="kpi-icon"><i class="pi pi-dollar"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Price/SqFt</span>
+            <strong class="kpi-value">{{ pricePerSqFt() !== null ? (formatCurrency(pricePerSqFt()!, prop.currency)) : '—' }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ MAIN GRID ═══ -->
+      <div class="detail-grid">
+        <!-- LEFT COLUMN -->
+        <div class="detail-col">
+          <!-- Property Details -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-home"></i> Property Details</h2>
+            <div class="detail-fields">
+              <div class="detail-field">
+                <span class="field-label">Address</span>
+                <span class="field-value">{{ prop.address }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.city">
+                <span class="field-label">City</span>
+                <span class="field-value">{{ prop.city }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.province">
+                <span class="field-label">Province</span>
+                <span class="field-value">{{ prop.province }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.postalCode">
+                <span class="field-label">Postal Code</span>
+                <span class="field-value">{{ prop.postalCode }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.neighborhood">
+                <span class="field-label">Neighborhood</span>
+                <span class="field-value">{{ prop.neighborhood }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.mlsNumber">
+                <span class="field-label">MLS #</span>
+                <span class="field-value">{{ prop.mlsNumber }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Property Type</span>
+                <span class="field-value">{{ typeLabel(prop.propertyType) }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Status</span>
+                <span class="field-value">
+                  <span class="status-pill" [ngClass]="statusClass(prop.status)">{{ prop.status }}</span>
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Features & Specs -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-sliders-h"></i> Features &amp; Specs</h2>
+            <div class="detail-fields">
+              <div class="detail-field" *ngIf="prop.bedrooms != null">
+                <span class="field-label">Bedrooms</span>
+                <span class="field-value">{{ prop.bedrooms }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.bathrooms != null">
+                <span class="field-label">Bathrooms</span>
+                <span class="field-value">{{ prop.bathrooms }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.squareFeet != null">
+                <span class="field-label">Square Feet</span>
+                <span class="field-value">{{ prop.squareFeet | number }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.lotSizeSqFt != null">
+                <span class="field-label">Lot Size</span>
+                <span class="field-value">{{ prop.lotSizeSqFt | number }} sqft</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.yearBuilt != null">
+                <span class="field-label">Year Built</span>
+                <span class="field-value">{{ prop.yearBuilt }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.garageSpaces != null">
+                <span class="field-label">Garage Spaces</span>
+                <span class="field-value">{{ prop.garageSpaces }}</span>
+              </div>
+            </div>
+            <div class="empty-state-cta" *ngIf="prop.bedrooms == null && prop.bathrooms == null && prop.squareFeet == null">
+              <p class="empty-text">No feature details available.</p>
+              <button *ngIf="canEdit" type="button" class="cta-link" [routerLink]="['/app/properties', prop.id, 'edit']">
+                <i class="pi pi-pencil"></i> Add Details
+              </button>
+            </div>
+          </section>
+
+          <!-- Description -->
+          <section class="detail-card" *ngIf="prop.description">
+            <h2 class="card-title"><i class="pi pi-align-left"></i> Description</h2>
+            <p class="description-text">{{ prop.description }}</p>
+          </section>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="detail-col">
+          <!-- Pricing -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-dollar"></i> Pricing</h2>
+            <div class="detail-fields">
+              <div class="detail-field">
+                <span class="field-label">List Price</span>
+                <span class="field-value field-value--price">{{ formatCurrency(prop.listPrice, prop.currency) }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.salePrice != null">
+                <span class="field-label">Sale Price</span>
+                <span class="field-value field-value--price">{{ formatCurrency(prop.salePrice, prop.currency) }}</span>
+              </div>
+              <div class="detail-field" *ngIf="pricePerSqFt() !== null">
+                <span class="field-label">Price / SqFt</span>
+                <span class="field-value">{{ formatCurrency(pricePerSqFt()!, prop.currency) }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Currency</span>
+                <span class="field-value">{{ prop.currency }}</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Ownership -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-user"></i> Ownership &amp; Links</h2>
+            <div class="detail-fields">
+              <div class="detail-field" *ngIf="prop.ownerName">
+                <span class="field-label">Owner</span>
+                <span class="field-value">{{ prop.ownerName }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.accountName">
+                <span class="field-label">Account</span>
+                <span class="field-value">{{ prop.accountName }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.primaryContactName">
+                <span class="field-label">Primary Contact</span>
+                <span class="field-value">{{ prop.primaryContactName }}</span>
+              </div>
+            </div>
+            <div class="empty-state-cta" *ngIf="!prop.ownerName && !prop.accountName && !prop.primaryContactName">
+              <p class="empty-text">No owner or contact linked.</p>
+              <button *ngIf="canEdit" type="button" class="cta-link" [routerLink]="['/app/properties', prop.id, 'edit']">
+                <i class="pi pi-link"></i> Link Contact
+              </button>
+            </div>
+          </section>
+
+          <!-- Timestamps -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-calendar"></i> Timeline</h2>
+            <div class="detail-fields">
+              <div class="detail-field">
+                <span class="field-label">Created</span>
+                <span class="field-value">{{ prop.createdAtUtc | date:'MMM d, yyyy' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="prop.updatedAtUtc">
+                <span class="field-label">Last Updated</span>
+                <span class="field-value">{{ prop.updatedAtUtc | date:'MMM d, yyyy' }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Days on Market</span>
+                <span class="field-value">{{ daysSinceListed() }} days</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <ng-template #pageLoading>
+    <div class="page-loading">
+      <p-skeleton width="60%" height="2rem" styleClass="mb-3"></p-skeleton>
+      <p-skeleton width="40%" height="1.5rem" styleClass="mb-4"></p-skeleton>
+      <div class="kpi-skeleton">
+        <p-skeleton width="100%" height="5rem" *ngFor="let i of [1,2,3,4,5]"></p-skeleton>
+      </div>
+      <div class="grid-skeleton">
+        <p-skeleton width="100%" height="20rem"></p-skeleton>
+        <p-skeleton width="100%" height="20rem"></p-skeleton>
+      </div>
+    </div>
+  </ng-template>
+</div>

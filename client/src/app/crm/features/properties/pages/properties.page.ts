@@ -136,10 +136,9 @@ export class PropertiesPage {
   }
 
   protected onRowClick(row: Property, event: MouseEvent) {
-    if (!this.canManage()) return;
     const target = event.target as HTMLElement;
     if (target.closest('button, a, p-select, .p-select, .row-actions')) return;
-    this.onEdit(row);
+    this.router.navigate(['/app/properties', row.id]);
   }
 
   protected onDelete(row: Property) {

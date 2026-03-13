@@ -97,7 +97,9 @@ export class PropertyFormPage implements OnInit {
     yearBuilt: undefined,
     garageSpaces: undefined,
     description: '',
-    neighborhood: ''
+    neighborhood: '',
+    photoUrls: '',
+    virtualTourUrl: ''
   };
 
   constructor(
@@ -141,7 +143,9 @@ export class PropertyFormPage implements OnInit {
           ownerId: property.ownerId,
           accountId: property.accountId,
           primaryContactId: property.primaryContactId,
-          opportunityId: property.opportunityId
+          opportunityId: property.opportunityId,
+          photoUrls: property.photoUrls || '',
+          virtualTourUrl: property.virtualTourUrl || ''
         };
         this.loading.set(false);
       },

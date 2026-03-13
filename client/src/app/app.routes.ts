@@ -295,6 +295,12 @@ export const routes: Routes = [
             data: { permission: PERMISSION_KEYS.propertiesManage, breadcrumb: 'Edit Property' },
             loadComponent: () =>
               import('./crm/features/properties/pages/property-form.page').then((m) => m.PropertyFormPage)
+          },
+          {
+            path: ':id',
+            data: { breadcrumb: 'Property Details', icon: 'pi-eye' },
+            loadComponent: () =>
+              import('./crm/features/properties/pages/property-detail.page').then((m) => m.PropertyDetailPage)
           }
         ]
       },

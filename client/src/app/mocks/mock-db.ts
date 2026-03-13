@@ -1399,6 +1399,8 @@ const mockProperties: Property[] = [
     bedrooms: 4, bathrooms: 3, squareFeet: 2650, lotSizeSqFt: 5200, yearBuilt: 2018, garageSpaces: 2,
     description: 'Stunning detached home in a quiet cul-de-sac with open-concept living, chef\'s kitchen, and finished basement.',
     neighborhood: 'High Park', ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-001', accountName: 'Apex Dynamics', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    photoUrls: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800,https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800,https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800',
+    virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-001',
     createdAtUtc: addDays(today, -45), updatedAtUtc: addDays(today, -3)
   },
   {
@@ -1407,6 +1409,8 @@ const mockProperties: Property[] = [
     bedrooms: 2, bathrooms: 2, squareFeet: 1100, lotSizeSqFt: undefined, yearBuilt: 2021, garageSpaces: 1,
     description: 'Modern 2-bedroom condo in the heart of Yorkville with panoramic city views and premium amenities.',
     neighborhood: 'Yorkville', ownerName: 'Mia Khalid', ownerId: 'u-002', accountId: 'c-003', accountName: 'Quantum Innovations', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    photoUrls: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800,https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800',
+    virtualTourUrl: undefined,
     createdAtUtc: addDays(today, -38), updatedAtUtc: addDays(today, -7)
   },
   {
@@ -1439,6 +1443,8 @@ const mockProperties: Property[] = [
     bedrooms: 3, bathrooms: 3, squareFeet: 2800, lotSizeSqFt: undefined, yearBuilt: 2020, garageSpaces: 2,
     description: 'Penthouse suite with 270-degree city views, private elevator access, and designer finishes throughout.',
     neighborhood: 'Financial District', ownerName: 'Priya Desai', ownerId: 'u-005', accountId: 'c-005', accountName: 'Pinnacle Group', primaryContactId: undefined, primaryContactName: undefined, opportunityId: 'opp-003',
+    photoUrls: 'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800,https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800,https://images.unsplash.com/photo-1600573472550-8090b5e0745e?w=800,https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=800',
+    virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-006',
     createdAtUtc: addDays(today, -20), updatedAtUtc: addDays(today, -2)
   },
   {
@@ -1471,6 +1477,8 @@ const mockProperties: Property[] = [
     bedrooms: 6, bathrooms: 5, squareFeet: 5500, lotSizeSqFt: 9800, yearBuilt: 2023, garageSpaces: 3,
     description: 'Newly built luxury estate in Forest Hill with indoor pool, home theatre, and smart home automation.',
     neighborhood: 'Forest Hill', ownerName: 'Yasser Ahmed', ownerId: 'u-001', accountId: 'c-007', accountName: 'Summit Capital', primaryContactId: undefined, primaryContactName: undefined, opportunityId: undefined,
+    photoUrls: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800,https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=800,https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800',
+    virtualTourUrl: 'https://my.matterport.com/show/?m=sample-tour-010',
     createdAtUtc: addDays(today, -8), updatedAtUtc: addDays(today, -1)
   },
   {
@@ -1550,6 +1558,8 @@ export function createProperty(payload: SavePropertyRequest): Property {
     primaryContactId: payload.primaryContactId,
     primaryContactName: undefined,
     opportunityId: payload.opportunityId,
+    photoUrls: payload.photoUrls,
+    virtualTourUrl: payload.virtualTourUrl,
     createdAtUtc: new Date().toISOString(),
     updatedAtUtc: undefined
   };
@@ -1579,6 +1589,8 @@ export function updateProperty(id: string, payload: SavePropertyRequest): Proper
   target.garageSpaces = payload.garageSpaces ?? target.garageSpaces;
   target.description = payload.description ?? target.description;
   target.neighborhood = payload.neighborhood ?? target.neighborhood;
+  target.photoUrls = payload.photoUrls ?? target.photoUrls;
+  target.virtualTourUrl = payload.virtualTourUrl ?? target.virtualTourUrl;
   target.updatedAtUtc = new Date().toISOString();
   return { ...target };
 }

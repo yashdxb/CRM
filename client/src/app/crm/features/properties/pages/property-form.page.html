@@ -340,6 +340,39 @@
           </div>
         </section>
 
+        <!-- Media -->
+        <section class="form-section section--contact">
+          <h2 class="section-title">
+            <i class="pi pi-images"></i>
+            Media
+          </h2>
+
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="propertyVirtualTour">Virtual Tour URL</label>
+              <p-inputgroup>
+                <p-inputgroup-addon class="icon-addon icon-addon--industry">
+                  <i class="pi pi-video"></i>
+                </p-inputgroup-addon>
+                <input pInputText id="propertyVirtualTour" name="virtualTourUrl" [(ngModel)]="form.virtualTourUrl" placeholder="https://my.matterport.com/..." />
+              </p-inputgroup>
+            </div>
+
+            <div class="form-field full-width">
+              <label for="propertyPhotoUrls">Photo URLs</label>
+              <textarea
+                pTextarea
+                id="propertyPhotoUrls"
+                name="photoUrls"
+                [(ngModel)]="form.photoUrls"
+                rows="3"
+                placeholder="Paste image URLs separated by commas"
+                class="w-full"
+              ></textarea>
+            </div>
+          </div>
+        </section>
+
       </fieldset>
 
       <footer class="form-actions">

@@ -26,6 +26,8 @@ export interface SavePropertyRequest {
   accountId?: string;
   primaryContactId?: string;
   opportunityId?: string;
+  photoUrls?: string;
+  virtualTourUrl?: string;
 }
 
 @Injectable({ providedIn: 'root' })
