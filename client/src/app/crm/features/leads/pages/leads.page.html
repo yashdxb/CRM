@@ -416,6 +416,7 @@
                   <th class="th-contact">Contact</th>
                   <th class="th-score" pSortableColumn="score">Lead Score <p-sortIcon field="score"></p-sortIcon></th>
                   <th class="th-owner" pSortableColumn="ownerId">Owner <p-sortIcon field="ownerId"></p-sortIcon></th>
+                  <th class="th-created" pSortableColumn="createdAt">Created <p-sortIcon field="createdAt"></p-sortIcon></th>
                   <th class="th-actions"></th>
                 </tr>
               </ng-template>
@@ -557,6 +558,9 @@
                       styleClass="inline-select"
                       [disabled]="!canEditOwnerAssignment()"
                     ></p-select>
+                  </td>
+                  <td class="td-created">
+                    <span class="created-date">{{ lead.createdAt | date: 'MMM d, yyyy' }}</span>
                   </td>
                   <td class="td-actions">
                     <div class="row-actions">

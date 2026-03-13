@@ -1,4 +1,4 @@
-import { NgFor, NgIf } from '@angular/common';
+import { NgFor, NgIf, DatePipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -44,6 +44,7 @@ interface LifecycleOption {
   imports: [
     NgIf,
     NgFor,
+    DatePipe,
     FormsModule,
     CardModule,
     CheckboxModule,

@@ -440,9 +440,13 @@
                 Status
                 <p-sortIcon field="status"></p-sortIcon>
               </th>
-              <th pSortableColumn="owner" pResizableColumn>
+              <th pSortableColumn="ownerId" pResizableColumn>
                 Owner
-                <p-sortIcon field="owner"></p-sortIcon>
+                <p-sortIcon field="ownerId"></p-sortIcon>
+              </th>
+              <th pSortableColumn="createdAtUtc" pResizableColumn>
+                Created
+                <p-sortIcon field="createdAtUtc"></p-sortIcon>
               </th>
               <th class="th-actions" pResizableColumn>Actions</th>
             </tr>
@@ -514,6 +518,9 @@
                   placeholder="Owner"
                   styleClass="inline-select"
                 ></p-select>
+              </td>
+              <td class="td-created">
+                <span class="created-date">{{ row.createdAtUtc | date: 'MMM d, yyyy' }}</span>
               </td>
               <td class="td-actions">
                 <div class="row-actions">
