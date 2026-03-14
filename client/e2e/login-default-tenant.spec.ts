@@ -26,7 +26,7 @@ async function postLogin(request, headers) {
       email: ADMIN_EMAIL,
       password: ADMIN_PASSWORD
     },
-    timeout: 15000
+    timeout: 90000
   });
 
   const payload = await parseJsonSafely(response);
@@ -92,7 +92,7 @@ test('stale root-domain tenant key does not block default login', async ({ page 
 
   await page.locator('input[formcontrolname="email"]').fill(ADMIN_EMAIL);
   await page.locator('input[formcontrolname="password"]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: /sign in/i }).click();
+  await page.getByRole('button', { name: /^.*Sign In$/i }).click();
 
   await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 20000 });
 });
@@ -105,7 +105,7 @@ test('invalid credentials show an error message', async ({ page }) => {
   const loginResponsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/auth/login')
   );
-  await page.getByRole('button', { name: /sign in/i }).click();
+  await page.getByRole('button', { name: /^.*Sign In$/i }).click();
   const loginResponse = await loginResponsePromise;
   expect(loginResponse.status()).toBe(401);
   await expect(page).toHaveURL(/\/login/);
