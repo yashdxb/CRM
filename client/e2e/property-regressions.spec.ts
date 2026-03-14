@@ -200,4 +200,125 @@ test.describe('Property UAT regressions', () => {
       await deleteProperty(repToken, property.id);
     }
   });
+
+  test('showing subresource persists and manager can review it', async ({ browser, page }) => {
+    test.setTimeout(120_000);
+    attachDiagnostics(page);
+
+    const repToken = await apiLogin(SALES_REP_EMAIL, SALES_REP_PASSWORD);
+    const managerToken = await apiLogin(SALES_MANAGER_EMAIL, SALES_MANAGER_PASSWORD);
+    const property = await createProperty(repToken, 'Showing Regression', 805000);
+
+    try {
+      await loginUi(page, repToken, `/app/properties/${property.id}`);
+      await expect(page.getByRole('heading', { name: property.address })).toBeVisible();
+
+      await page.getByRole('button', { name: /Showings/i }).click();
+      await page.getByRole('button', { name: /Schedule Showing/i }).click();
+      await page.locator('#showing-visitor').fill('Emma Clarke');
+      await page.locator('#showing-email').fill('emma.clarke@example.com');
+      await page.locator('#showing-phone').fill('+1 (416) 555-0138');
+      await page.locator('#showing-date').fill('2026-03-16T10:30');
+      await page.locator('#showing-duration').fill('45');
+      await page.locator('.p-dialog:has(#showing-visitor) .p-dialog-footer .action-btn--add').click();
+
+      const repShowingRow = page.locator('.showings-table .table-row', { hasText: 'Emma Clarke' }).first();
+      await expect(repShowingRow).toBeVisible();
+      await expect(repShowingRow.getByText('Scheduled')).toBeVisible();
+
+      const managerContext = await browser.newContext();
+      const managerPage = await managerContext.newPage();
+      attachDiagnostics(managerPage);
+      await loginUi(managerPage, managerToken, `/app/properties/${property.id}`);
+      await managerPage.getByRole('button', { name: /Showings 1/i }).click();
+      const managerShowingRow = managerPage.locator('.showings-table .table-row', { hasText: 'Emma Clarke' }).first();
+      await expect(managerShowingRow).toBeVisible();
+      await expect(managerShowingRow.getByText('Scheduled')).toBeVisible();
+      await managerContext.close();
+    } finally {
+      await deleteProperty(repToken, property.id);
+    }
+  });
+
+  test('document subresource persists and manager can review it', async ({ browser, page }) => {
+    test.setTimeout(120_000);
+    attachDiagnostics(page);
+
+    const repToken = await apiLogin(SALES_REP_EMAIL, SALES_REP_PASSWORD);
+    const managerToken = await apiLogin(SALES_MANAGER_EMAIL, SALES_MANAGER_PASSWORD);
+    const property = await createProperty(repToken, 'Document Regression', 795000);
+
+    try {
+      await loginUi(page, repToken, `/app/properties/${property.id}`);
+      await expect(page.getByRole('heading', { name: property.address })).toBeVisible();
+
+      await page.getByRole('button', { name: /Documents/i }).click();
+      await page.getByRole('button', { name: /Upload Document/i }).click();
+      await page.locator('#doc-name').fill('listing-agreement.pdf');
+      await page.locator('#doc-category .p-select-dropdown, #doc-category button[aria-label=\"dropdown trigger\"]').click();
+      await page.getByRole('option', { name: /Contract/i }).click();
+      await page.locator('#doc-url').fill('https://example.com/docs/listing-agreement.pdf');
+      await page.locator('.p-dialog:has(#doc-name) .p-dialog-footer .action-btn--add').click();
+
+      await expect(page.getByRole('button', { name: /Documents 1/i })).toBeVisible();
+      const repDocumentCard = page.locator('.document-card', { hasText: 'listing-agreement.pdf' }).first();
+      await expect(repDocumentCard).toBeVisible();
+      await expect(repDocumentCard.getByText('Contract')).toBeVisible();
+
+      const managerContext = await browser.newContext();
+      const managerPage = await managerContext.newPage();
+      attachDiagnostics(managerPage);
+      await loginUi(managerPage, managerToken, `/app/properties/${property.id}`);
+      await managerPage.getByRole('button', { name: /Documents 1/i }).click();
+      const managerDocumentCard = managerPage.locator('.document-card', { hasText: 'listing-agreement.pdf' }).first();
+      await expect(managerDocumentCard).toBeVisible();
+      await expect(managerDocumentCard.getByText('Contract')).toBeVisible();
+      await managerContext.close();
+    } finally {
+      await deleteProperty(repToken, property.id);
+    }
+  });
+
+  test('alert rule subresource persists and manager can review it', async ({ browser, page }) => {
+    test.setTimeout(120_000);
+    attachDiagnostics(page);
+
+    const repToken = await apiLogin(SALES_REP_EMAIL, SALES_REP_PASSWORD);
+    const managerToken = await apiLogin(SALES_MANAGER_EMAIL, SALES_MANAGER_PASSWORD);
+    const property = await createProperty(repToken, 'Alert Regression', 775000);
+
+    try {
+      await loginUi(page, repToken, `/app/properties/${property.id}`);
+      await expect(page.getByRole('heading', { name: property.address })).toBeVisible();
+
+      await page.getByRole('button', { name: /Alerts/i }).click();
+      await page.getByRole('button', { name: /Add Alert Rule/i }).click();
+      await page.locator('#alert-client-name').fill('Sophia Turner');
+      await page.locator('#alert-client-email').fill('sophia.turner@example.com');
+      await page.locator('#alert-min-price input').fill('700000');
+      await page.locator('#alert-max-price input').fill('800000');
+      await page.locator('#alert-bedrooms input').fill('2');
+      await page.getByRole('button', { name: /Create Rule/i }).click();
+
+      const repRuleCard = page.locator('.alert-rule-card', { hasText: 'Sophia Turner' }).first();
+      await expect(repRuleCard).toBeVisible();
+      await expect(repRuleCard.getByText('sophia.turner@example.com')).toBeVisible();
+      await expect(repRuleCard.getByText('1 matches')).toBeVisible();
+      await expect(page.getByText('Notification History')).toBeVisible();
+      await expect(page.locator('.notification-item', { hasText: 'Sophia Turner' }).first()).toBeVisible();
+
+      const managerContext = await browser.newContext();
+      const managerPage = await managerContext.newPage();
+      attachDiagnostics(managerPage);
+      await loginUi(managerPage, managerToken, `/app/properties/${property.id}`);
+      await managerPage.getByRole('button', { name: /Alerts/i }).click();
+      const managerRuleCard = managerPage.locator('.alert-rule-card', { hasText: 'Sophia Turner' }).first();
+      await expect(managerRuleCard).toBeVisible();
+      await expect(managerRuleCard.getByText('sophia.turner@example.com')).toBeVisible();
+      await expect(managerPage.locator('.notification-item', { hasText: 'Sophia Turner' }).first()).toBeVisible();
+      await managerContext.close();
+    } finally {
+      await deleteProperty(repToken, property.id);
+    }
+  });
 });

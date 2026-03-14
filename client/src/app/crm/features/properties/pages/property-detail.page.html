@@ -940,8 +940,14 @@
     </div>
     <div class="form-field">
       <label for="showing-date">Date &amp; Time <span class="required">*</span></label>
-      <p-datepicker id="showing-date" formControlName="scheduledAtUtc" [showTime]="true" [hourFormat]="'12'" appendTo="body"
-                    placeholder="Select date and time" class="w-full"></p-datepicker>
+      <input
+        pInputText
+        id="showing-date"
+        type="datetime-local"
+        class="w-full"
+        [ngModel]="showingScheduledAtLocal"
+        (ngModelChange)="onShowingScheduledAtChange($event)"
+        [ngModelOptions]="{ standalone: true }" />
     </div>
     <div class="form-field">
       <label for="showing-duration">Duration (min)</label>

@@ -104,6 +104,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
   protected showDocumentDialog = signal(false);
   protected showStatusDialog = signal(false);
   protected showActivityDialog = signal(false);
+  protected showingScheduledAtLocal = '';
 
   // Quick action forms
   protected showingForm: FormGroup = this.fb.group({
@@ -405,10 +406,16 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
 
   protected onLogShowing() {
     this.showingForm.reset({ visitorName: '', visitorEmail: '', visitorPhone: '', scheduledAtUtc: null, durationMinutes: 30 });
+    this.showingScheduledAtLocal = '';
     this.showShowingDialog.set(true);
   }
 
   protected submitShowing() {
+    const scheduledAt = this.parseLocalDateTime(this.showingScheduledAtLocal) ?? this.resolveShowingScheduledAt();
+    if (scheduledAt) {
+      this.showingForm.patchValue({ scheduledAtUtc: scheduledAt }, { emitEvent: false });
+    }
+
     this.showingForm.markAllAsTouched();
     if (this.showingForm.invalid) return;
     const prop = this.property();
@@ -428,6 +435,80 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
         this.toast.show('success', 'Showing scheduled.', 3000);
       }
     });
+  }
+
+  protected onShowingScheduledAtChange(value: string): void {
+    this.showingScheduledAtLocal = value;
+    const scheduledAt = this.parseLocalDateTime(value);
+    this.showingForm.patchValue({ scheduledAtUtc: scheduledAt }, { emitEvent: false });
+    this.showingForm.get('scheduledAtUtc')?.markAsDirty();
+    this.showingForm.get('scheduledAtUtc')?.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private resolveShowingScheduledAt(): Date | null {
+    const controlValue = this.showingForm.get('scheduledAtUtc')?.value;
+    if (controlValue instanceof Date && !Number.isNaN(controlValue.getTime())) {
+      return controlValue;
+    }
+
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    const rawValue = (document.querySelector('#showing-date input') as HTMLInputElement | null)?.value?.trim();
+    if (!rawValue) {
+      return null;
+    }
+
+    const directParse = new Date(rawValue);
+    if (!Number.isNaN(directParse.getTime())) {
+      return directParse;
+    }
+
+    const match = rawValue.match(
+      /^(?<month>\d{1,2})\/(?<day>\d{1,2})\/(?<year>\d{4})(?:,\s*|\s+)(?<hour>\d{1,2}):(?<minute>\d{2})\s*(?<meridiem>AM|PM)$/i
+    );
+    if (!match?.groups) {
+      return null;
+    }
+
+    const month = Number(match.groups['month']);
+    const day = Number(match.groups['day']);
+    const year = Number(match.groups['year']);
+    let hour = Number(match.groups['hour']);
+    const minute = Number(match.groups['minute']);
+    const meridiem = match.groups['meridiem'].toUpperCase();
+
+    if (meridiem === 'PM' && hour < 12) {
+      hour += 12;
+    } else if (meridiem === 'AM' && hour === 12) {
+      hour = 0;
+    }
+
+    const parsed = new Date(year, month - 1, day, hour, minute, 0, 0);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private parseLocalDateTime(rawValue: string | null | undefined): Date | null {
+    if (!rawValue) {
+      return null;
+    }
+
+    const match = rawValue.match(
+      /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})T(?<hour>\d{2}):(?<minute>\d{2})$/
+    );
+    if (!match?.groups) {
+      return null;
+    }
+
+    const year = Number(match.groups['year']);
+    const month = Number(match.groups['month']);
+    const day = Number(match.groups['day']);
+    const hour = Number(match.groups['hour']);
+    const minute = Number(match.groups['minute']);
+    const parsed = new Date(year, month - 1, day, hour, minute, 0, 0);
+
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
 
   protected onUploadDocument() {
