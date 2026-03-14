@@ -29,12 +29,23 @@ public sealed class LoginLocationService
 
     public async Task<LoginContextInfo> ResolveAsync(CancellationToken cancellationToken)
     {
+        var contextInfo = CaptureRequestContext();
+        return await ResolveLocationAsync(contextInfo, cancellationToken);
+    }
+
+    public LoginContextInfo CaptureRequestContext()
+    {
         var ip = GetClientIp();
         var userAgent = GetUserAgent();
         var (deviceType, platform) = ClassifyClient(userAgent);
-        if (string.IsNullOrWhiteSpace(ip) || IsPrivateIp(ip))
+        return new LoginContextInfo(ip, null, deviceType, platform);
+    }
+
+    public async Task<LoginContextInfo> ResolveLocationAsync(LoginContextInfo contextInfo, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(contextInfo.Ip) || IsPrivateIp(contextInfo.Ip))
         {
-            return new LoginContextInfo(ip, null, deviceType, platform);
+            return contextInfo;
         }
 
         try
@@ -42,18 +53,18 @@ public sealed class LoginLocationService
             using var lookupToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             lookupToken.CancelAfter(ProviderTimeout);
             var response = await _httpClient.GetFromJsonAsync<IpWhoIsResponse>(
-                $"https://ipwho.is/{ip}?fields=success,city,region,country",
+                $"https://ipwho.is/{contextInfo.Ip}?fields=success,city,region,country",
                 lookupToken.Token);
 
             var location = BuildLocation(response?.City, response?.Region, response?.Country);
             if (response is not null && response.Success && !string.IsNullOrWhiteSpace(location))
             {
-                return new LoginContextInfo(ip, location, deviceType, platform);
+                return contextInfo with { Location = location };
             }
         }
         catch (Exception ex)
         {
-            _logger.LogDebug("Primary geo lookup failed for IP {Ip}: {Reason}", ip, ex.Message);
+            _logger.LogDebug("Primary geo lookup failed for IP {Ip}: {Reason}", contextInfo.Ip, ex.Message);
         }
 
         try
@@ -61,16 +72,16 @@ public sealed class LoginLocationService
             using var lookupToken = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             lookupToken.CancelAfter(ProviderTimeout);
             var response = await _httpClient.GetFromJsonAsync<IpApiResponse>(
-                $"https://ipapi.co/{ip}/json/",
+                $"https://ipapi.co/{contextInfo.Ip}/json/",
                 lookupToken.Token);
 
             var location = BuildLocation(response?.City, response?.Region, response?.CountryName);
-            return new LoginContextInfo(ip, location, deviceType, platform);
+            return contextInfo with { Location = location };
         }
         catch (Exception ex)
         {
-            _logger.LogDebug("Fallback geo lookup failed for IP {Ip}: {Reason}", ip, ex.Message);
-            return new LoginContextInfo(ip, null, deviceType, platform);
+            _logger.LogDebug("Fallback geo lookup failed for IP {Ip}: {Reason}", contextInfo.Ip, ex.Message);
+            return contextInfo;
         }
     }
 

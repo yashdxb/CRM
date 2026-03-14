@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
 namespace CRM.Enterprise.Infrastructure.Auth;
@@ -29,6 +30,7 @@ public class AuthService : IAuthService
     private readonly IAuditEventService _auditEventService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public AuthService(
         CrmDbContext dbContext,
@@ -39,6 +41,7 @@ public class AuthService : IAuthService
         LoginLocationService loginLocationService,
         IEntraTokenValidator entraTokenValidator,
         IAuditEventService auditEventService,
+        IServiceScopeFactory scopeFactory,
         ILogger<AuthService> logger)
     {
         _dbContext = dbContext;
@@ -51,6 +54,7 @@ public class AuthService : IAuthService
         _entraTokenValidator = entraTokenValidator;
         _auditEventService = auditEventService;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<AuthResult?> SignInAsync(string email, string password, CancellationToken cancellationToken = default)
@@ -552,26 +556,72 @@ public class AuthService : IAuthService
             .Select(t => t.Key)
             .FirstOrDefaultAsync(cancellationToken) ?? string.Empty;
 
-        var loginInfo = await _loginLocationService.ResolveAsync(cancellationToken);
-        user.LastLoginAtUtc = DateTime.UtcNow;
-        user.LastLoginIp = loginInfo.Ip;
-        user.LastLoginLocation = loginInfo.Location;
-        user.LastLoginDeviceType = loginInfo.DeviceType;
-        user.LastLoginPlatform = loginInfo.Platform;
-        await _auditEventService.TrackAsync(
-            new AuditEventEntry(
-                nameof(User),
-                user.Id,
-                authMethod.Equals("entra", StringComparison.OrdinalIgnoreCase) ? "EntraLoginSucceeded" : "LocalLoginSucceeded",
-                "AuthMethod",
-                null,
-                authMethod,
-                user.Id,
-                user.FullName),
-            cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var capturedLoginInfo = _loginLocationService.CaptureRequestContext();
+        QueueLoginTelemetryPersistence(user.Id, user.TenantId, tenantKey, user.FullName, authMethod, capturedLoginInfo);
 
         return new AuthResult(accessToken, expiresAtUtc, user.Email, user.FullName, roleNames, permissionKeys, tenantKey, user.MustChangePassword);
+    }
+
+    private void QueueLoginTelemetryPersistence(
+        Guid userId,
+        Guid tenantId,
+        string tenantKey,
+        string fullName,
+        string authMethod,
+        LoginContextInfo capturedLoginInfo)
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+                using var scope = _scopeFactory.CreateScope();
+                var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
+                tenantProvider.SetTenant(tenantId, tenantKey);
+
+                var dbContext = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
+                var auditEventService = scope.ServiceProvider.GetRequiredService<IAuditEventService>();
+                var loginLocationService = scope.ServiceProvider.GetRequiredService<LoginLocationService>();
+
+                var loginInfo = await loginLocationService.ResolveLocationAsync(capturedLoginInfo, timeout.Token);
+                var user = await dbContext.Users
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(
+                        u => u.Id == userId &&
+                             u.TenantId == tenantId &&
+                             !u.IsDeleted,
+                        timeout.Token);
+
+                if (user is null)
+                {
+                    return;
+                }
+
+                user.LastLoginAtUtc = DateTime.UtcNow;
+                user.LastLoginIp = loginInfo.Ip;
+                user.LastLoginLocation = loginInfo.Location;
+                user.LastLoginDeviceType = loginInfo.DeviceType;
+                user.LastLoginPlatform = loginInfo.Platform;
+
+                await auditEventService.TrackAsync(
+                    new AuditEventEntry(
+                        nameof(User),
+                        user.Id,
+                        authMethod.Equals("entra", StringComparison.OrdinalIgnoreCase) ? "EntraLoginSucceeded" : "LocalLoginSucceeded",
+                        "AuthMethod",
+                        null,
+                        authMethod,
+                        user.Id,
+                        fullName),
+                    timeout.Token);
+
+                await dbContext.SaveChangesAsync(timeout.Token);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Best-effort login telemetry persistence failed for user {UserId}.", userId);
+            }
+        });
     }
 
     private bool ResolveEntraAvailabilityForTenant()
