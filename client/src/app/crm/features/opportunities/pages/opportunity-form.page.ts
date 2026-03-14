@@ -1659,7 +1659,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         }
       },
       error: () => {
-        this.router.navigate(['/app/opportunities']);
+        this.router.navigate(['/app/deals']);
       }
     });
   }

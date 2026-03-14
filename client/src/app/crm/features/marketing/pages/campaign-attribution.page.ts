@@ -227,7 +227,7 @@ export class CampaignAttributionPage {
 
   protected openOpportunityWorklist(recommendation: CampaignRecommendation): void {
     const campaignName = this.selectedCampaign()?.campaignName ?? 'campaign';
-    this.router.navigate(['/app/opportunities'], {
+    this.router.navigate(['/app/deals'], {
       queryParams: {
         search: campaignName,
         focus: recommendation.type.replaceAll('_', ' ')
@@ -236,7 +236,7 @@ export class CampaignAttributionPage {
   }
 
   protected openCampaignImpactWorklist(campaignId: string, campaignName: string, direction: 'positive' | 'negative'): void {
-    const navigate = () => this.router.navigate(['/app/opportunities'], {
+    const navigate = () => this.router.navigate(['/app/deals'], {
       queryParams: {
         search: campaignName,
         focus: direction === 'positive' ? 'model gain' : 'model loss'

@@ -335,7 +335,7 @@ export class ActivityFormPage implements OnInit {
       case 'Contact':
         return `/app/contacts/${id}/edit`;
       case 'Opportunity':
-        return `/app/opportunities/${id}/edit`;
+        return `/app/deals/${id}/edit`;
       case 'Lead':
         return `/app/leads/${id}/edit`;
       default:

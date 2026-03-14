@@ -194,7 +194,7 @@ export class CampaignDetailPage {
   protected openOpportunityWorklist(recommendation: CampaignRecommendation): void {
     const campaignName = this.campaign()?.campaign.name ?? 'campaign';
     const focusTag = recommendation.type.replaceAll('_', ' ');
-    this.router.navigate(['/app/opportunities'], {
+    this.router.navigate(['/app/deals'], {
       queryParams: {
         search: campaignName,
         focus: focusTag

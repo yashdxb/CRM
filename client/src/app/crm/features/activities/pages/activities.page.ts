@@ -346,7 +346,7 @@ export class ActivitiesPage {
       case 'Contact':
         return `/app/contacts/${activity.relatedEntityId}/edit`;
       case 'Opportunity':
-        return `/app/opportunities/${activity.relatedEntityId}/edit`;
+        return `/app/deals/${activity.relatedEntityId}/edit`;
       default:
         return null;
     }

@@ -231,7 +231,7 @@ export class LeadsPage {
   }
 
   protected leadOpportunityLink(lead: Lead): string[] | null {
-    return lead.convertedOpportunityId ? ['/app/opportunities', lead.convertedOpportunityId, 'edit'] : null;
+    return lead.convertedOpportunityId ? ['/app/deals', lead.convertedOpportunityId, 'edit'] : null;
   }
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
   protected readonly dispositionReport = signal<LeadDispositionReport | null>(null);

@@ -310,7 +310,7 @@
                       </tr>
                     </ng-template>
                     <ng-template pTemplate="body" let-row>
-                      <tr class="clickable-row" [routerLink]="['/app/opportunities', row.id, 'edit']">
+                      <tr class="clickable-row" [routerLink]="['/app/deals', row.id, 'edit']">
                         <td><span class="related-link">{{ row.name }}</span></td>
                         <td><p-tag [value]="row.stage" severity="info"></p-tag></td>
                         <td>{{ row.amount | currency: row.currency : 'symbol' : '1.0-0' }}</td>
@@ -322,7 +322,7 @@
                   <div class="empty-state" *ngIf="!relatedOpportunities().length">
                     <i class="pi pi-chart-line"></i>
                     <span>No opportunities yet.</span>
-                    <a class="empty-state-link" routerLink="/app/opportunities/new">+ Create opportunity</a>
+                    <a class="empty-state-link" routerLink="/app/deals/new">+ Create deal</a>
                   </div>
                 </div>
 

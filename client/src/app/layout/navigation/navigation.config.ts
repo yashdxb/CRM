@@ -47,13 +47,13 @@ export const NAV_LINKS: NavLink[] = [
     ]
   },
   { 
-    label: 'Deal', 
+    label: 'Deals', 
     icon: 'pi-chart-line', 
-    path: '/app/opportunities', 
+    path: '/app/deals', 
     permission: PERMISSION_KEYS.opportunitiesView,
     children: [
-      { label: 'All Deals', icon: 'pi-list', path: '/app/opportunities', permission: PERMISSION_KEYS.opportunitiesView },
-      { label: 'Add Deal', icon: 'pi-plus', path: '/app/opportunities/new', permission: PERMISSION_KEYS.opportunitiesManage }
+      { label: 'All Deals', icon: 'pi-list', path: '/app/deals', permission: PERMISSION_KEYS.opportunitiesView },
+      { label: 'Add Deal', icon: 'pi-plus', path: '/app/deals/new', permission: PERMISSION_KEYS.opportunitiesManage }
     ]
   },
   {

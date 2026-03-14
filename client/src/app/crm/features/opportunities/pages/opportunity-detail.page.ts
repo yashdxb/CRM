@@ -86,7 +86,7 @@ export class OpportunityDetailPage implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
-      this.router.navigate(['/app/opportunities']);
+      this.router.navigate(['/app/deals']);
       return;
     }
     this.loadOpportunity(id);
@@ -105,7 +105,7 @@ export class OpportunityDetailPage implements OnInit {
         this.loading.set(false);
       },
       error: () => {
-        this.router.navigate(['/app/opportunities']);
+        this.router.navigate(['/app/deals']);
       }
     });
   }

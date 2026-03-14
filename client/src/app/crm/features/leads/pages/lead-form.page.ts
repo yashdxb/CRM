@@ -1198,7 +1198,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
   protected linkedOpportunityLink(): string | null {
     const id = this.linkedOpportunityId();
-    return id ? `/app/opportunities/${id}/edit` : null;
+    return id ? `/app/deals/${id}/edit` : null;
   }
 
   protected onConvertLead(): void {

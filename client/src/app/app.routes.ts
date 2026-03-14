@@ -240,44 +240,74 @@ export const routes: Routes = [
         loadComponent: () => import('./crm/features/leads/pages/lead-convert.page').then((m) => m.LeadConvertPage)
       },
       {
-        path: 'opportunities/new',
+        path: 'deals/new',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'New Deal', icon: 'pi-plus' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
       },
       {
-        path: 'opportunities/approvals',
+        path: 'deals/approvals',
         redirectTo: 'decisions/pending-action',
         pathMatch: 'full'
       },
       {
-        path: 'opportunities/:id/edit',
+        path: 'deals/:id/edit',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Edit Deal', icon: 'pi-pencil' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
       },
       {
-        path: 'opportunities/:id',
+        path: 'deals/:id',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Deal Details', icon: 'pi-eye' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-detail.page').then((m) => m.OpportunityDetailPage)
       },
       {
-        path: 'opportunities',
+        path: 'deals',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Deals', icon: 'pi-chart-line' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
       },
       {
-        path: 'opportunities/pipeline',
+        path: 'deals/pipeline',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Deal Pipeline', icon: 'pi-objects-column' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunities.page').then((m) => m.OpportunitiesPage)
+      },
+      {
+        path: 'opportunities',
+        pathMatch: 'full',
+        redirectTo: 'deals'
+      },
+      {
+        path: 'opportunities/new',
+        pathMatch: 'full',
+        redirectTo: 'deals/new'
+      },
+      {
+        path: 'opportunities/approvals',
+        pathMatch: 'full',
+        redirectTo: 'deals/approvals'
+      },
+      {
+        path: 'opportunities/pipeline',
+        pathMatch: 'full',
+        redirectTo: 'deals/pipeline'
+      },
+      {
+        path: 'opportunities/:id/edit',
+        pathMatch: 'full',
+        redirectTo: 'deals/:id/edit'
+      },
+      {
+        path: 'opportunities/:id',
+        pathMatch: 'full',
+        redirectTo: 'deals/:id'
       },
       {
         path: 'properties',

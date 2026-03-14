@@ -230,7 +230,7 @@ export class OpportunityApprovalsPage {
   }
 
   protected openOpportunity(item: OpportunityApprovalInboxItem) {
-    this.router.navigate(['/app/opportunities', item.opportunityId, 'edit'], {
+    this.router.navigate(['/app/deals', item.opportunityId, 'edit'], {
       queryParams: {
         reviewMode: 'decision',
         decisionId: item.id,

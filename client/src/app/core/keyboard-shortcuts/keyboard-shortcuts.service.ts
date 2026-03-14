@@ -22,7 +22,7 @@ export class KeyboardShortcutsService {
     { keys: 'g d', description: 'Go to Dashboard', category: 'navigation', action: () => this.navigate('/app/dashboard') },
     { keys: 'g c', description: 'Go to Customers', category: 'navigation', action: () => this.navigate('/app/customers') },
     { keys: 'g l', description: 'Go to Leads', category: 'navigation', action: () => this.navigate('/app/leads') },
-    { keys: 'g o', description: 'Go to Opportunities', category: 'navigation', action: () => this.navigate('/app/opportunities') },
+    { keys: 'g o', description: 'Go to Deals', category: 'navigation', action: () => this.navigate('/app/deals') },
     { keys: 'g a', description: 'Go to Activities', category: 'navigation', action: () => this.navigate('/app/activities') },
     { keys: 'g s', description: 'Go to Settings', category: 'navigation', action: () => this.navigate('/app/settings') },
 

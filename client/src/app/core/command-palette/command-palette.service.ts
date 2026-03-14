@@ -34,7 +34,7 @@ export class CommandPaletteService {
     { id: 'nav-dashboard', label: 'Go to Dashboard', icon: 'pi-chart-bar', category: 'navigation', keywords: ['home', 'overview'], action: () => this.navigate('/app/dashboard'), shortcut: 'G D' },
     { id: 'nav-customers', label: 'Go to Customers', icon: 'pi-building', category: 'navigation', keywords: ['accounts', 'clients'], action: () => this.navigate('/app/customers'), shortcut: 'G C' },
     { id: 'nav-leads', label: 'Go to Leads', icon: 'pi-bullseye', category: 'navigation', keywords: ['prospects', 'pipeline'], action: () => this.navigate('/app/leads'), shortcut: 'G L' },
-    { id: 'nav-opportunities', label: 'Go to Opportunities', icon: 'pi-chart-line', category: 'navigation', keywords: ['deals', 'sales'], action: () => this.navigate('/app/opportunities'), shortcut: 'G O' },
+    { id: 'nav-opportunities', label: 'Go to Deals', icon: 'pi-chart-line', category: 'navigation', keywords: ['deals', 'sales', 'opportunities'], action: () => this.navigate('/app/deals'), shortcut: 'G O' },
     { id: 'nav-activities', label: 'Go to Activities', icon: 'pi-calendar', category: 'navigation', keywords: ['tasks', 'events'], action: () => this.navigate('/app/activities'), shortcut: 'G A' },
     { id: 'nav-settings', label: 'Go to Settings', icon: 'pi-cog', category: 'navigation', keywords: ['config', 'admin'], action: () => this.navigate('/app/settings'), shortcut: 'G S' },
     

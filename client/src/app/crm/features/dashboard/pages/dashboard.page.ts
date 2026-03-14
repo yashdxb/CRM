@@ -1040,7 +1040,7 @@ export class DashboardPage implements OnInit {
       return;
     }
     if (entityType === 'opportunity') {
-      this.router.navigate(['/app/opportunities']);
+      this.router.navigate(['/app/deals']);
       return;
     }
     if (entityType === 'activity') {

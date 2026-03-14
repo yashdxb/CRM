@@ -147,11 +147,11 @@ export class OpportunitiesPage {
   }
 
   protected onCreate() {
-    this.router.navigate(['/app/opportunities/new']);
+    this.router.navigate(['/app/deals/new']);
   }
 
   protected onEdit(row: Opportunity) {
-    this.router.navigate(['/app/opportunities', row.id, 'edit']);
+    this.router.navigate(['/app/deals', row.id, 'edit']);
   }
 
   protected onRowClick(row: Opportunity, event: MouseEvent): void {
