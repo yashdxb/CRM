@@ -502,8 +502,18 @@
                 <div class="drop-prompt" *ngIf="!photoFiles().length">
                   <i class="pi pi-cloud-upload"></i>
                   <span class="drop-title">Drag &amp; drop photos here</span>
-                  <span class="drop-hint">or click to browse &bull; JPG, PNG, WebP up to 10 MB</span>
+                  <span class="drop-hint">Files upload after save &bull; JPG, PNG, WebP up to 10 MB</span>
                   <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple (change)="onPhotoSelect($event)" class="drop-input" />
+                </div>
+
+                <div class="photo-grid" *ngIf="existingPhotos().length">
+                  <div class="photo-thumb" *ngFor="let photo of existingPhotos()">
+                    <img [src]="resolveMediaUrl(photo.fileUrl)" [alt]="photo.fileName" />
+                    <button type="button" class="photo-remove" (click)="removeExistingPhoto(photo.id)" title="Remove">
+                      <i class="pi pi-times"></i>
+                    </button>
+                    <span class="photo-name">{{ photo.fileName }}</span>
+                  </div>
                 </div>
 
                 <div class="photo-grid" *ngIf="photoFiles().length">
@@ -530,7 +540,7 @@
                 id="propertyPhotoUrls"
                 formControlName="photoUrls"
                 rows="2"
-                placeholder="Or paste image URLs separated by commas"
+                placeholder="Optional external image URLs separated by commas"
                 class="w-full"
               ></textarea>
             </div>
@@ -656,9 +666,9 @@
         <button
           type="submit"
           pButton
-          [label]="isEditMode() ? 'Update property' : 'Create property'"
+          [label]="photoUploading() ? 'Uploading photos…' : (saving() ? 'Saving…' : (isEditMode() ? 'Update property' : 'Create property'))"
           class="crm-button crm-button--primary"
-          [disabled]="formGroup.invalid || saving() || loading()">
+          [disabled]="formGroup.invalid || saving() || loading() || photoUploading()">
         </button>
       </footer>
     </form>

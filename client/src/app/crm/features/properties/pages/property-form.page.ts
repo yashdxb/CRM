@@ -10,8 +10,9 @@ import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DatePickerModule } from 'primeng/datepicker';
+import { forkJoin } from 'rxjs';
 
-import { PropertyStatus, PropertyType } from '../models/property.model';
+import { PropertyDocument, PropertyStatus, PropertyType } from '../models/property.model';
 import { PropertyDataService, SavePropertyRequest } from '../services/property-data.service';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -23,6 +24,7 @@ import { ContactDataService } from '../../contacts/services/contact-data.service
 import { Contact } from '../../contacts/models/contact.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
 import { Opportunity } from '../../opportunities/models/opportunity.model';
+import { environment } from '../../../../../environments/environment';
 
 interface StatusOption {
   label: string;
@@ -86,12 +88,14 @@ export class PropertyFormPage implements OnInit {
 
   protected readonly isEditMode = signal(false);
   protected readonly saving = signal(false);
+  protected readonly photoUploading = signal(false);
   protected readonly loading = signal(false);
   private readonly toastService = inject(AppToastService);
   protected propertyId: string | null = null;
 
   // Photo upload (X5)
   protected readonly photoFiles = signal<{ file: File; preview: string }[]>([]);
+  protected readonly existingPhotos = signal<PropertyDocument[]>([]);
   protected readonly dragging = signal(false);
 
   // Relationship lookup data
@@ -210,12 +214,20 @@ export class PropertyFormPage implements OnInit {
           coListingAgentId: property.coListingAgentId ?? null
         });
         this.formGroup.markAsPristine();
+        this.loadExistingPhotos(property.id);
         this.loading.set(false);
       },
       error: () => {
         this.loading.set(false);
         this.raiseToast('error', 'Unable to load property.');
       }
+    });
+  }
+
+  private loadExistingPhotos(propertyId: string) {
+    this.propertyData.getDocuments(propertyId).subscribe({
+      next: (docs) => this.existingPhotos.set(docs.filter((doc) => doc.category === 'Photo')),
+      error: () => this.existingPhotos.set([])
     });
   }
 
@@ -265,7 +277,7 @@ export class PropertyFormPage implements OnInit {
 
     if (this.propertyId) {
       this.propertyData.update(this.propertyId, payload).subscribe({
-        next: () => this.navigateWithToast('Property updated.'),
+        next: () => this.finishSave(this.propertyId!, 'Property updated.'),
         error: () => {
           this.saving.set(false);
           this.raiseToast('error', 'Unable to update property.');
@@ -273,13 +285,36 @@ export class PropertyFormPage implements OnInit {
       });
     } else {
       this.propertyData.create(payload).subscribe({
-        next: () => this.navigateWithToast('Property created.'),
+        next: (property) => this.finishSave(property.id, 'Property created.'),
         error: () => {
           this.saving.set(false);
           this.raiseToast('error', 'Unable to create property.');
         }
       });
     }
+  }
+
+  private finishSave(propertyId: string, message: string) {
+    const pendingPhotos = this.photoFiles();
+    if (!pendingPhotos.length) {
+      this.navigateWithToast(message);
+      return;
+    }
+
+    this.photoUploading.set(true);
+    forkJoin(pendingPhotos.map((item) => this.propertyData.uploadPhoto(propertyId, item.file))).subscribe({
+      next: () => {
+        pendingPhotos.forEach((item) => URL.revokeObjectURL(item.preview));
+        this.photoFiles.set([]);
+        this.photoUploading.set(false);
+        this.navigateWithToast(`${message} Photos uploaded.`);
+      },
+      error: () => {
+        this.photoUploading.set(false);
+        this.saving.set(false);
+        this.raiseToast('error', 'Property saved, but one or more photos failed to upload.');
+      }
+    });
   }
 
   private navigateWithToast(message: string) {
@@ -348,5 +383,34 @@ export class PropertyFormPage implements OnInit {
     URL.revokeObjectURL(current[index].preview);
     current.splice(index, 1);
     this.photoFiles.set([...current]);
+  }
+
+  protected removeExistingPhoto(docId: string) {
+    if (!this.propertyId) {
+      return;
+    }
+
+    this.propertyData.deleteDocument(this.propertyId, docId).subscribe({
+      next: () => {
+        const remaining = this.existingPhotos().filter((photo) => photo.id !== docId);
+        this.existingPhotos.set(remaining);
+        const nextUrls = remaining.map((photo) => photo.fileUrl).join(', ');
+        this.formGroup.patchValue({ photoUrls: nextUrls });
+        this.raiseToast('success', 'Photo removed.');
+      },
+      error: () => this.raiseToast('error', 'Unable to remove photo.')
+    });
+  }
+
+  protected resolveMediaUrl(url?: string | null): string {
+    if (!url) {
+      return '';
+    }
+
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+
+    return `${environment.apiUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   }
 }

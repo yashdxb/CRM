@@ -4,6 +4,7 @@ using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Properties;
 using CRM.Enterprise.Application.Tenants;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ApiUpsertPropertyRequest = CRM.Enterprise.Api.Contracts.Properties.UpsertPropertyRequest;
@@ -20,6 +21,12 @@ using ApiUpdateActivityRequest = CRM.Enterprise.Api.Contracts.Properties.UpdateA
 using AppUpdateActivityRequest = CRM.Enterprise.Application.Properties.UpdatePropertyActivityRequest;
 using ApiAddPriceChangeRequest = CRM.Enterprise.Api.Contracts.Properties.AddPriceChangeRequest;
 using AppAddPriceChangeRequest = CRM.Enterprise.Application.Properties.AddPriceChangeRequest;
+using ApiCreateAlertRuleRequest = CRM.Enterprise.Api.Contracts.Properties.CreateAlertRuleRequest;
+using AppCreateAlertRuleRequest = CRM.Enterprise.Application.Properties.CreatePropertyAlertRuleRequest;
+using AppAlertCriteriaRequest = CRM.Enterprise.Application.Properties.PropertyAlertCriteriaRequest;
+using ApiToggleAlertRuleRequest = CRM.Enterprise.Api.Contracts.Properties.ToggleAlertRuleRequest;
+using AppToggleAlertRuleRequest = CRM.Enterprise.Application.Properties.TogglePropertyAlertRuleRequest;
+using AppRegisterPropertyPhotoRequest = CRM.Enterprise.Application.Properties.RegisterPropertyPhotoRequest;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -31,15 +38,18 @@ public class PropertiesController : ControllerBase
     private readonly IPropertyService _propertyService;
     private readonly ICrmRealtimePublisher _realtimePublisher;
     private readonly ITenantProvider _tenantProvider;
+    private readonly IWebHostEnvironment _environment;
 
     public PropertiesController(
         IPropertyService propertyService,
         ICrmRealtimePublisher realtimePublisher,
-        ITenantProvider tenantProvider)
+        ITenantProvider tenantProvider,
+        IWebHostEnvironment environment)
     {
         _propertyService = propertyService;
         _realtimePublisher = realtimePublisher;
         _tenantProvider = tenantProvider;
+        _environment = environment;
     }
 
     [HttpGet]
@@ -90,6 +100,18 @@ public class PropertiesController : ControllerBase
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
         await PublishPropertyRealtimeAsync("updated", id, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(request.Status))
+        {
+            await PublishTenantEventAsync(
+                "property.status.changed",
+                new
+                {
+                    entityId = id,
+                    newStatus = request.Status,
+                    occurredAtUtc = DateTime.UtcNow
+                },
+                cancellationToken);
+        }
         return NoContent();
     }
 
@@ -128,6 +150,15 @@ public class PropertiesController : ControllerBase
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
         var s = result.Value!;
+        await PublishTenantEventAsync(
+            "property.showing.scheduled",
+            new
+            {
+                entityId = propertyId,
+                visitorName = s.VisitorName,
+                scheduledAtUtc = s.ScheduledAtUtc
+            },
+            ct);
         return Created($"api/properties/{propertyId}/showings/{s.Id}", new ShowingListItem(
             s.Id, s.PropertyId, s.AgentId, s.AgentName,
             s.VisitorName, s.VisitorEmail, s.VisitorPhone,
@@ -173,6 +204,16 @@ public class PropertiesController : ControllerBase
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
         var d = result.Value!;
+        await PublishTenantEventAsync(
+            "property.document.uploaded",
+            new
+            {
+                entityId = propertyId,
+                fileName = d.FileName,
+                category = d.Category,
+                occurredAtUtc = d.UploadedAtUtc
+            },
+            ct);
         return Created($"api/properties/{propertyId}/documents/{d.Id}", new DocumentListItem(
             d.Id, d.PropertyId, d.FileName, d.FileUrl,
             d.FileSize, d.MimeType, d.Category, d.UploadedBy, d.UploadedAtUtc));
@@ -210,6 +251,15 @@ public class PropertiesController : ControllerBase
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
         var a = result.Value!;
+        await PublishTenantEventAsync(
+            "property.activity.created",
+            new
+            {
+                entityId = propertyId,
+                subject = a.Subject,
+                occurredAtUtc = a.CreatedAtUtc
+            },
+            ct);
         return Created($"api/properties/{propertyId}/activities/{a.Id}", new ActivityListItem(
             a.Id, a.PropertyId, a.Type, a.Subject, a.Description,
             a.DueDate, a.CompletedDate, a.Status, a.Priority,
@@ -253,9 +303,130 @@ public class PropertiesController : ControllerBase
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
         var pc = result.Value!;
+        await PublishTenantEventAsync(
+            "property.price.changed",
+            new
+            {
+                entityId = propertyId,
+                newPrice = pc.NewPrice,
+                previousPrice = pc.PreviousPrice,
+                occurredAtUtc = pc.ChangedAtUtc
+            },
+            ct);
         return Created($"api/properties/{propertyId}/price-history/{pc.Id}", new PriceChangeListItem(
             pc.Id, pc.PropertyId, pc.PreviousPrice, pc.NewPrice,
             pc.ChangedAtUtc, pc.ChangedBy, pc.Reason));
+    }
+
+    [HttpGet("{propertyId:guid}/timeline")]
+    public async Task<ActionResult<IEnumerable<TimelineEventListItem>>> GetTimeline(Guid propertyId, CancellationToken ct)
+    {
+        var items = await _propertyService.GetTimelineAsync(propertyId, ct);
+        return Ok(items.Select(i => new TimelineEventListItem(
+            i.Id, i.PropertyId, i.EventType, i.Label, i.Description, i.Icon, i.Variant, i.OccurredAtUtc)));
+    }
+
+    [HttpPost("{propertyId:guid}/photos")]
+    [Authorize(Policy = Permissions.Policies.PropertiesManage)]
+    [RequestSizeLimit(10 * 1024 * 1024)]
+    public async Task<ActionResult<DocumentListItem>> UploadPhoto(Guid propertyId, [FromForm] IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return BadRequest("Photo file is required.");
+        }
+
+        var mimeType = file.ContentType?.Trim().ToLowerInvariant() ?? string.Empty;
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/gif"
+        };
+        if (!allowed.Contains(mimeType))
+        {
+            return BadRequest("Unsupported image type.");
+        }
+
+        var tenantKey = _tenantProvider.TenantKey
+            ?? Request.Headers["X-Tenant-Key"].FirstOrDefault()
+            ?? "default";
+        var storageRoot = Path.Combine(_environment.ContentRootPath, "uploads", tenantKey.ToLowerInvariant(), "properties", propertyId.ToString("N"));
+        Directory.CreateDirectory(storageRoot);
+
+        var extension = Path.GetExtension(file.FileName ?? string.Empty);
+        var safeStem = Regex.Replace(Path.GetFileNameWithoutExtension(file.FileName ?? "photo"), "[^A-Za-z0-9_-]+", "-").Trim('-');
+        if (string.IsNullOrWhiteSpace(safeStem))
+        {
+            safeStem = "photo";
+        }
+
+        var storedName = $"{Guid.NewGuid():N}_{safeStem}{extension}";
+        var absolutePath = Path.Combine(storageRoot, storedName);
+        await using (var stream = System.IO.File.Create(absolutePath))
+        {
+            await file.CopyToAsync(stream, ct);
+        }
+
+        var relativeUrl = $"/api/properties/{propertyId}/photos/{storedName}";
+        var result = await _propertyService.RegisterPhotoAsync(
+            propertyId,
+            new AppRegisterPropertyPhotoRequest(
+                Path.GetFileName(file.FileName) ?? "photo",
+                relativeUrl,
+                file.Length,
+                file.ContentType ?? "application/octet-stream"),
+            GetActor(),
+            ct);
+
+        if (result.NotFound)
+        {
+            return NotFound();
+        }
+        if (!result.Success)
+        {
+            return BadRequest(result.Error);
+        }
+
+        var doc = result.Value!;
+        await PublishTenantEventAsync(
+            "property.document.uploaded",
+            new
+            {
+                entityId = propertyId,
+                fileName = doc.FileName,
+                category = doc.Category,
+                occurredAtUtc = doc.UploadedAtUtc
+            },
+            ct);
+
+        return Created(doc.FileUrl, new DocumentListItem(
+            doc.Id, doc.PropertyId, doc.FileName, doc.FileUrl, doc.FileSize, doc.MimeType, doc.Category, doc.UploadedBy, doc.UploadedAtUtc));
+    }
+
+    [AllowAnonymous]
+    [HttpGet("{propertyId:guid}/photos/{storedName}")]
+    public IActionResult DownloadPhoto(Guid propertyId, string storedName)
+    {
+        var tenantKey = _tenantProvider.TenantKey
+            ?? Request.Headers["X-Tenant-Key"].FirstOrDefault()
+            ?? "default";
+        var absolutePath = Path.Combine(_environment.ContentRootPath, "uploads", tenantKey.ToLowerInvariant(), "properties", propertyId.ToString("N"), storedName);
+        if (!System.IO.File.Exists(absolutePath))
+        {
+            return NotFound();
+        }
+
+        var contentType = Path.GetExtension(storedName).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".webp" => "image/webp",
+            ".gif" => "image/gif",
+            _ => "image/jpeg"
+        };
+
+        return PhysicalFile(absolutePath, contentType);
     }
 
     // ── Integration Stubs (MLS, CMA, Signatures, Alerts) ──
@@ -294,20 +465,69 @@ public class PropertiesController : ControllerBase
         Created($"api/properties/{propertyId}/signatures/{Guid.NewGuid()}", new { id = Guid.NewGuid(), propertyId, status = "Draft", signers = Array.Empty<object>(), createdAtUtc = DateTime.UtcNow });
 
     [HttpGet("{propertyId:guid}/alerts")]
-    public IActionResult GetAlertRules(Guid propertyId) => Ok(Array.Empty<object>());
+    public async Task<ActionResult<IEnumerable<PropertyAlertRuleListItem>>> GetAlertRules(Guid propertyId, CancellationToken ct)
+    {
+        var items = await _propertyService.GetAlertRulesAsync(propertyId, ct);
+        return Ok(items.Select(ToApiAlertRule));
+    }
 
     [HttpPost("{propertyId:guid}/alerts")]
     [Authorize(Policy = Permissions.Policies.PropertiesManage)]
-    public IActionResult CreateAlertRule(Guid propertyId, [FromBody] object request) =>
-        Created($"api/properties/{propertyId}/alerts/{Guid.NewGuid()}", new { id = Guid.NewGuid(), propertyId, isActive = true, matchCount = 0, createdAtUtc = DateTime.UtcNow });
+    public async Task<ActionResult<PropertyAlertRuleListItem>> CreateAlertRule(Guid propertyId, [FromBody] ApiCreateAlertRuleRequest request, CancellationToken ct)
+    {
+        var result = await _propertyService.CreateAlertRuleAsync(propertyId, new AppCreateAlertRuleRequest(
+            request.ClientName,
+            request.ClientEmail,
+            new AppAlertCriteriaRequest(
+                request.Criteria.MinPrice,
+                request.Criteria.MaxPrice,
+                request.Criteria.PropertyTypes,
+                request.Criteria.MinBedrooms,
+                request.Criteria.Cities,
+                request.Criteria.Neighborhoods),
+            request.Frequency), GetActor(), ct);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+
+        var rule = result.Value!;
+        await PublishTenantEventAsync(
+            "property.alert.rule.created",
+            new
+            {
+                entityId = propertyId,
+                ruleId = rule.Id,
+                clientName = rule.ClientName,
+                occurredAtUtc = rule.CreatedAtUtc
+            },
+            ct);
+        return Created($"api/properties/{propertyId}/alerts/{rule.Id}", ToApiAlertRule(rule));
+    }
 
     [HttpPut("{propertyId:guid}/alerts/{ruleId:guid}")]
     [Authorize(Policy = Permissions.Policies.PropertiesManage)]
-    public IActionResult ToggleAlertRule(Guid propertyId, Guid ruleId, [FromBody] object request) =>
-        Ok(new { id = ruleId, propertyId, isActive = true, matchCount = 0, createdAtUtc = DateTime.UtcNow });
+    public async Task<ActionResult<PropertyAlertRuleListItem>> ToggleAlertRule(Guid propertyId, Guid ruleId, [FromBody] ApiToggleAlertRuleRequest request, CancellationToken ct)
+    {
+        var result = await _propertyService.ToggleAlertRuleAsync(propertyId, ruleId, new AppToggleAlertRuleRequest(request.IsActive), GetActor(), ct);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        return Ok(ToApiAlertRule(result.Value!));
+    }
 
     [HttpGet("{propertyId:guid}/alert-notifications")]
-    public IActionResult GetAlertNotifications(Guid propertyId) => Ok(Array.Empty<object>());
+    public async Task<ActionResult<IEnumerable<PropertyAlertNotificationListItem>>> GetAlertNotifications(Guid propertyId, CancellationToken ct)
+    {
+        var items = await _propertyService.GetAlertNotificationsAsync(propertyId, ct);
+        return Ok(items.Select(n => new PropertyAlertNotificationListItem(
+            n.Id,
+            n.PropertyId,
+            n.RuleId,
+            n.ClientName,
+            n.ClientEmail,
+            n.MatchedProperties,
+            n.SentAtUtc,
+            n.Status,
+            n.TriggeredBy)));
+    }
 
     private static PropertyListItem ToApiItem(PropertyListItemDto dto)
     {
@@ -399,14 +619,7 @@ public class PropertiesController : ControllerBase
 
     private Task PublishPropertyRealtimeAsync(string action, Guid propertyId, CancellationToken cancellationToken)
     {
-        var tenantId = _tenantProvider.TenantId;
-        if (tenantId == Guid.Empty)
-        {
-            return Task.CompletedTask;
-        }
-
-        return _realtimePublisher.PublishTenantEventAsync(
-            tenantId,
+        return PublishTenantEventAsync(
             "entity.crud.changed",
             new
             {
@@ -419,4 +632,34 @@ public class PropertiesController : ControllerBase
             },
             cancellationToken);
     }
+
+    private Task PublishTenantEventAsync(string eventType, object payload, CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _realtimePublisher.PublishTenantEventAsync(tenantId, eventType, payload, cancellationToken);
+    }
+
+    private static PropertyAlertRuleListItem ToApiAlertRule(PropertyAlertRuleDto dto)
+        => new(
+            dto.Id,
+            dto.PropertyId,
+            dto.ClientName,
+            dto.ClientEmail,
+            new PropertyAlertCriteria(
+                dto.Criteria.MinPrice,
+                dto.Criteria.MaxPrice,
+                dto.Criteria.PropertyTypes,
+                dto.Criteria.MinBedrooms,
+                dto.Criteria.Cities,
+                dto.Criteria.Neighborhoods),
+            dto.Frequency,
+            dto.IsActive,
+            dto.MatchCount,
+            dto.LastNotifiedAtUtc,
+            dto.CreatedAtUtc);
 }

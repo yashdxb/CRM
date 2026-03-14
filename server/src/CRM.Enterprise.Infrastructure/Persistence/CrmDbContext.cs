@@ -122,6 +122,9 @@ public class CrmDbContext : DbContext
     public DbSet<PropertyDocument> PropertyDocuments => Set<PropertyDocument>();
     public DbSet<PropertyActivity> PropertyActivities => Set<PropertyActivity>();
     public DbSet<PropertyPriceChange> PropertyPriceChanges => Set<PropertyPriceChange>();
+    public DbSet<PropertyEvent> PropertyEvents => Set<PropertyEvent>();
+    public DbSet<PropertyAlertRule> PropertyAlertRules => Set<PropertyAlertRule>();
+    public DbSet<PropertyAlertNotification> PropertyAlertNotifications => Set<PropertyAlertNotification>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -257,6 +260,37 @@ public class CrmDbContext : DbContext
             .Property(a => a.ActorName).HasMaxLength(200);
         modelBuilder.Entity<DecisionActionLog>()
             .Property(a => a.Field).HasMaxLength(120);
+        modelBuilder.Entity<PropertyEvent>().ToTable("PropertyEvents", CrmSchema);
+        modelBuilder.Entity<PropertyEvent>()
+            .Property(e => e.EventType).HasMaxLength(64).IsRequired();
+        modelBuilder.Entity<PropertyEvent>()
+            .Property(e => e.Label).HasMaxLength(160).IsRequired();
+        modelBuilder.Entity<PropertyEvent>()
+            .Property(e => e.Icon).HasMaxLength(64).IsRequired();
+        modelBuilder.Entity<PropertyEvent>()
+            .Property(e => e.Variant).HasMaxLength(64).IsRequired();
+        modelBuilder.Entity<PropertyEvent>()
+            .HasIndex(e => new { e.TenantId, e.PropertyId, e.OccurredAtUtc });
+        modelBuilder.Entity<PropertyAlertRule>().ToTable("PropertyAlertRules", CrmSchema);
+        modelBuilder.Entity<PropertyAlertRule>()
+            .Property(r => r.ClientName).HasMaxLength(200).IsRequired();
+        modelBuilder.Entity<PropertyAlertRule>()
+            .Property(r => r.ClientEmail).HasMaxLength(320).IsRequired();
+        modelBuilder.Entity<PropertyAlertRule>()
+            .Property(r => r.Frequency).HasMaxLength(24).IsRequired();
+        modelBuilder.Entity<PropertyAlertRule>()
+            .HasIndex(r => new { r.TenantId, r.PropertyId, r.IsActive });
+        modelBuilder.Entity<PropertyAlertNotification>().ToTable("PropertyAlertNotifications", CrmSchema);
+        modelBuilder.Entity<PropertyAlertNotification>()
+            .Property(n => n.ClientName).HasMaxLength(200).IsRequired();
+        modelBuilder.Entity<PropertyAlertNotification>()
+            .Property(n => n.ClientEmail).HasMaxLength(320).IsRequired();
+        modelBuilder.Entity<PropertyAlertNotification>()
+            .Property(n => n.Status).HasMaxLength(24).IsRequired();
+        modelBuilder.Entity<PropertyAlertNotification>()
+            .Property(n => n.TriggeredBy).HasMaxLength(64);
+        modelBuilder.Entity<PropertyAlertNotification>()
+            .HasIndex(n => new { n.TenantId, n.PropertyId, n.SentAtUtc });
         modelBuilder.Entity<DecisionActionLog>()
             .Property(a => a.OldValue).HasMaxLength(2000);
         modelBuilder.Entity<DecisionActionLog>()
@@ -363,6 +397,18 @@ public class CrmDbContext : DbContext
             .Property(pc => pc.PreviousPrice).HasPrecision(18, 2);
         modelBuilder.Entity<PropertyPriceChange>()
             .Property(pc => pc.NewPrice).HasPrecision(18, 2);
+        modelBuilder.Entity<PropertyEvent>()
+            .HasOne(e => e.Property).WithMany()
+            .HasForeignKey(e => e.PropertyId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<PropertyAlertRule>()
+            .HasOne(r => r.Property).WithMany()
+            .HasForeignKey(r => r.PropertyId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<PropertyAlertNotification>()
+            .HasOne(n => n.Property).WithMany()
+            .HasForeignKey(n => n.PropertyId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<PropertyAlertNotification>()
+            .HasOne(n => n.Rule).WithMany()
+            .HasForeignKey(n => n.RuleId).OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<Supplier>().ToTable("Suppliers", SupplyChainSchema);
         modelBuilder.Entity<SupplierCertification>().ToTable("SupplierCertifications", SupplyChainSchema);

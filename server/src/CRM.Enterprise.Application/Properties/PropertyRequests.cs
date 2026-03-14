@@ -100,3 +100,25 @@ public sealed record AddPriceChangeRequest(
     decimal NewPrice,
     string? ChangedBy,
     string? Reason);
+
+public sealed record PropertyAlertCriteriaRequest(
+    decimal? MinPrice,
+    decimal? MaxPrice,
+    IReadOnlyList<string>? PropertyTypes,
+    int? MinBedrooms,
+    IReadOnlyList<string>? Cities,
+    IReadOnlyList<string>? Neighborhoods);
+
+public sealed record CreatePropertyAlertRuleRequest(
+    string ClientName,
+    string ClientEmail,
+    PropertyAlertCriteriaRequest Criteria,
+    string? Frequency);
+
+public sealed record TogglePropertyAlertRuleRequest(bool IsActive);
+
+public sealed record RegisterPropertyPhotoRequest(
+    string FileName,
+    string FileUrl,
+    long FileSize,
+    string MimeType);

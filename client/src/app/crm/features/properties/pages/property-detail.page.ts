@@ -20,12 +20,13 @@ import { PropertyDataService } from '../services/property-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import {
   Property, PriceChange, Showing, PropertyDocument, PropertyActivity,
-  CmaReport, ComparableProperty, SignatureRequest, PropertyAlertRule, PropertyAlertNotification
+  CmaReport, ComparableProperty, SignatureRequest, PropertyAlertRule, PropertyAlertNotification, PropertyTimelineEvent
 } from '../models/property.model';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
+import { environment } from '../../../../../environments/environment';
 
 export interface LiveAlert {
   id: string;
@@ -83,6 +84,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
   protected showings = signal<Showing[]>([]);
   protected documents = signal<PropertyDocument[]>([]);
   protected activities = signal<PropertyActivity[]>([]);
+  protected timeline = signal<PropertyTimelineEvent[]>([]);
 
   // CMA (G3)
   protected cmaReport = signal<CmaReport | null>(null);
@@ -222,22 +224,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     return Math.max(Math.round(diffMs / 86_400_000), 0);
   });
 
-  protected timelineEvents = computed<{ label: string; date: string; icon: string; variant: string }[]>(() => {
-    const prop = this.property();
-    if (!prop) return [];
-    const events: { label: string; date: string; icon: string; variant: string; ts: number }[] = [];
-    events.push({ label: 'Record Created', date: prop.createdAtUtc, icon: 'pi-plus-circle', variant: 'created', ts: new Date(prop.createdAtUtc).getTime() });
-    if (prop.listingDateUtc) {
-      events.push({ label: 'Listed on Market', date: prop.listingDateUtc, icon: 'pi-megaphone', variant: 'listed', ts: new Date(prop.listingDateUtc).getTime() });
-    }
-    if (prop.updatedAtUtc && prop.updatedAtUtc !== prop.createdAtUtc) {
-      events.push({ label: 'Last Updated', date: prop.updatedAtUtc, icon: 'pi-pencil', variant: 'updated', ts: new Date(prop.updatedAtUtc).getTime() });
-    }
-    if (prop.soldDateUtc) {
-      events.push({ label: 'Sold', date: prop.soldDateUtc, icon: 'pi-check-circle', variant: 'sold', ts: new Date(prop.soldDateUtc).getTime() });
-    }
-    return events.sort((a, b) => a.ts - b.ts);
-  });
+  protected timelineEvents = computed(() => this.timeline());
 
   protected pricePerSqFt = computed(() => {
     const prop = this.property();
@@ -247,8 +234,14 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
 
   protected photoUrlList = computed(() => {
     const prop = this.property();
-    if (!prop?.photoUrls) return [];
-    return prop.photoUrls.split(',').map(u => u.trim()).filter(u => u.length > 0);
+    const manualUrls = (prop?.photoUrls ?? '')
+      .split(',')
+      .map((u) => u.trim())
+      .filter((u) => u.length > 0);
+    const uploadedUrls = this.documents()
+      .filter((doc) => doc.category === 'Photo' && !!doc.fileUrl)
+      .map((doc) => this.resolveMediaUrl(doc.fileUrl));
+    return Array.from(new Set([...uploadedUrls, ...manualUrls.map((url) => this.resolveMediaUrl(url))]));
   });
 
   protected priceChangeDirection = (pc: PriceChange) => pc.newPrice > pc.previousPrice ? 'up' : 'down';
@@ -323,7 +316,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     const id = crypto.randomUUID();
     switch (eventType) {
       case 'entity.crud.changed':
-        if (payload?.['entityType'] !== 'property') return null;
+        if (String(payload?.['entityType'] ?? '').toLowerCase() !== 'property') return null;
         return { id, type: 'info', message: `Property record updated by ${payload?.['userName'] || 'another user'}`, timestamp: occurredAt, icon: 'pi-refresh' };
       case 'property.price.changed':
         return { id, type: 'price', message: `Price changed to ${payload?.['newPrice'] || 'a new value'}`, timestamp: occurredAt, icon: 'pi-dollar' };
@@ -375,6 +368,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
   }
 
   private loadSubResources(id: string): void {
+    this.propertyData.getTimeline(id).subscribe({ next: (data) => this.timeline.set(data) });
     this.propertyData.getPriceHistory(id).subscribe({ next: (data) => this.priceHistory.set(data) });
     this.propertyData.getShowings(id).subscribe({ next: (data) => this.showings.set(data) });
     this.propertyData.getDocuments(id).subscribe({ next: (data) => this.documents.set(data) });
@@ -402,6 +396,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     this.propertyData.update(prop.id, { address: prop.address, status: this.selectedStatus() }).subscribe({
       next: () => {
         this.property.set({ ...prop, status: this.selectedStatus() as any });
+        this.loadSubResources(prop.id);
         this.showStatusDialog.set(false);
         this.toast.show('success', 'Status updated.', 3000);
       }
@@ -466,6 +461,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     this.propertyData.deleteDocument(prop.id, docId).subscribe({
       next: () => {
         this.documents.set(this.documents().filter(d => d.id !== docId));
+        this.propertyData.getTimeline(prop.id).subscribe({ next: (data) => this.timeline.set(data) });
         this.toast.show('success', 'Document deleted.', 3000);
       }
     });
@@ -503,6 +499,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
       next: () => {
         this.showActivityDialog.set(false);
         this.propertyData.getActivities(prop.id).subscribe({ next: (data) => this.activities.set(data) });
+        this.propertyData.getTimeline(prop.id).subscribe({ next: (data) => this.timeline.set(data) });
         this.toast.show('success', 'Activity created.', 3000);
       }
     });
@@ -514,6 +511,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     this.propertyData.updateActivity(prop.id, activityId, { status: 'Completed', completedDate: new Date().toISOString() }).subscribe({
       next: () => {
         this.activities.set(this.activities().map(a => a.id === activityId ? { ...a, status: 'Completed' as const, completedDate: new Date().toISOString() } : a));
+        this.propertyData.getTimeline(prop.id).subscribe({ next: (data) => this.timeline.set(data) });
         this.toast.show('success', 'Activity completed.', 3000);
       }
     });
@@ -648,6 +646,8 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
       next: () => {
         this.showAlertDialog.set(false);
         this.propertyData.getAlertRules(prop.id).subscribe({ next: (d) => this.alertRules.set(d) });
+        this.propertyData.getAlertNotifications(prop.id).subscribe({ next: (d) => this.alertNotifications.set(d) });
+        this.propertyData.getTimeline(prop.id).subscribe({ next: (data) => this.timeline.set(data) });
         this.toast.show('success', 'Alert rule created.', 3000);
       }
     });
@@ -659,6 +659,7 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     this.propertyData.toggleAlertRule(prop.id, ruleId, isActive).subscribe({
       next: () => {
         this.alertRules.set(this.alertRules().map(r => r.id === ruleId ? { ...r, isActive } : r));
+        this.propertyData.getTimeline(prop.id).subscribe({ next: (data) => this.timeline.set(data) });
         this.toast.show('success', isActive ? 'Alert activated.' : 'Alert paused.', 3000);
       }
     });
@@ -666,5 +667,17 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
 
   protected alertNotifStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (status) { case 'Clicked': return 'success'; case 'Opened': case 'Sent': return 'info'; case 'Bounced': return 'danger'; default: return 'secondary'; }
+  }
+
+  protected resolveMediaUrl(url?: string | null): string {
+    if (!url) {
+      return '';
+    }
+
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+
+    return `${environment.apiUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   }
 }

@@ -372,7 +372,8 @@
                 </div>
                 <div class="timeline-body">
                   <span class="timeline-label">{{ evt.label }}</span>
-                  <span class="timeline-date">{{ evt.date | date:'MMM d, yyyy' }}</span>
+                  <span class="timeline-date">{{ evt.occurredAtUtc | date:'MMM d, yyyy' }}</span>
+                  <span class="timeline-note" *ngIf="evt.description">{{ evt.description }}</span>
                 </div>
               </div>
             </div>

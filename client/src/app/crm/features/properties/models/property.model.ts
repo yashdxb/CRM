@@ -68,6 +68,17 @@ export interface PriceChange {
   reason?: string;
 }
 
+export interface PropertyTimelineEvent {
+  id: string;
+  propertyId: string;
+  eventType: string;
+  label: string;
+  description?: string;
+  icon: string;
+  variant: string;
+  occurredAtUtc: string;
+}
+
 /** Showing / viewing log entry (X3) */
 export interface Showing {
   id: string;

@@ -50,6 +50,47 @@ public record PriceChangeListItem(
     string? ChangedBy,
     string? Reason);
 
+public record TimelineEventListItem(
+    Guid Id,
+    Guid PropertyId,
+    string EventType,
+    string Label,
+    string? Description,
+    string Icon,
+    string Variant,
+    DateTime OccurredAtUtc);
+
+public record PropertyAlertCriteria(
+    decimal? MinPrice,
+    decimal? MaxPrice,
+    IReadOnlyList<string>? PropertyTypes,
+    int? MinBedrooms,
+    IReadOnlyList<string>? Cities,
+    IReadOnlyList<string>? Neighborhoods);
+
+public record PropertyAlertRuleListItem(
+    Guid Id,
+    Guid PropertyId,
+    string ClientName,
+    string ClientEmail,
+    PropertyAlertCriteria Criteria,
+    string Frequency,
+    bool IsActive,
+    int MatchCount,
+    DateTime? LastNotifiedAtUtc,
+    DateTime CreatedAtUtc);
+
+public record PropertyAlertNotificationListItem(
+    Guid Id,
+    Guid PropertyId,
+    Guid RuleId,
+    string ClientName,
+    string ClientEmail,
+    int MatchedProperties,
+    DateTime SentAtUtc,
+    string Status,
+    string? TriggeredBy);
+
 // ── Create/Update request contracts ──
 
 public class CreateShowingRequest
@@ -118,4 +159,17 @@ public class AddPriceChangeRequest
     public decimal NewPrice { get; set; }
     public string? ChangedBy { get; set; }
     public string? Reason { get; set; }
+}
+
+public class CreateAlertRuleRequest
+{
+    public string ClientName { get; set; } = string.Empty;
+    public string ClientEmail { get; set; } = string.Empty;
+    public PropertyAlertCriteria Criteria { get; set; } = new(null, null, null, null, null, null);
+    public string? Frequency { get; set; }
+}
+
+public class ToggleAlertRuleRequest
+{
+    public bool IsActive { get; set; }
 }

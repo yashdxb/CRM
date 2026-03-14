@@ -28,4 +28,16 @@ public interface IPropertyService
     // ── Price History ──
     Task<IReadOnlyList<PriceChangeDto>> GetPriceHistoryAsync(Guid propertyId, CancellationToken ct = default);
     Task<PropertyOperationResult<PriceChangeDto>> AddPriceChangeAsync(Guid propertyId, AddPriceChangeRequest request, ActorContext actor, CancellationToken ct = default);
+
+    // ── Timeline ──
+    Task<IReadOnlyList<PropertyTimelineEventDto>> GetTimelineAsync(Guid propertyId, CancellationToken ct = default);
+
+    // ── Photos ──
+    Task<PropertyOperationResult<PropertyDocumentDto>> RegisterPhotoAsync(Guid propertyId, RegisterPropertyPhotoRequest request, ActorContext actor, CancellationToken ct = default);
+
+    // ── Alerts ──
+    Task<IReadOnlyList<PropertyAlertRuleDto>> GetAlertRulesAsync(Guid propertyId, CancellationToken ct = default);
+    Task<PropertyOperationResult<PropertyAlertRuleDto>> CreateAlertRuleAsync(Guid propertyId, CreatePropertyAlertRuleRequest request, ActorContext actor, CancellationToken ct = default);
+    Task<PropertyOperationResult<PropertyAlertRuleDto>> ToggleAlertRuleAsync(Guid propertyId, Guid ruleId, TogglePropertyAlertRuleRequest request, ActorContext actor, CancellationToken ct = default);
+    Task<IReadOnlyList<PropertyAlertNotificationDto>> GetAlertNotificationsAsync(Guid propertyId, CancellationToken ct = default);
 }

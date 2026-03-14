@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import {
   Property, PriceChange, PropertyActivity, PropertySearchRequest, PropertySearchResponse,
   Showing, PropertyDocument, MlsFeedConfig, MlsImportJob, CmaReport,
+  PropertyTimelineEvent,
   SignatureRequest, PropertyAlertRule, PropertyAlertNotification
 } from '../models/property.model';
 import { environment } from '../../../../../environments/environment';
@@ -87,6 +88,10 @@ export class PropertyDataService {
     return this.http.post<PriceChange>(`${this.baseUrl}/api/properties/${propertyId}/price-history`, payload);
   }
 
+  getTimeline(propertyId: string) {
+    return this.http.get<PropertyTimelineEvent[]>(`${this.baseUrl}/api/properties/${propertyId}/timeline`);
+  }
+
   // Showings (X3)
   getShowings(propertyId: string) {
     return this.http.get<Showing[]>(`${this.baseUrl}/api/properties/${propertyId}/showings`);
@@ -107,6 +112,12 @@ export class PropertyDataService {
 
   uploadDocument(propertyId: string, payload: Partial<PropertyDocument>) {
     return this.http.post<PropertyDocument>(`${this.baseUrl}/api/properties/${propertyId}/documents`, payload);
+  }
+
+  uploadPhoto(propertyId: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<PropertyDocument>(`${this.baseUrl}/api/properties/${propertyId}/photos`, formData);
   }
 
   deleteDocument(propertyId: string, docId: string) {

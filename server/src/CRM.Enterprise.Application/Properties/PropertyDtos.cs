@@ -100,3 +100,44 @@ public sealed record PriceChangeDto(
     DateTime ChangedAtUtc,
     string? ChangedBy,
     string? Reason);
+
+public sealed record PropertyTimelineEventDto(
+    Guid Id,
+    Guid PropertyId,
+    string EventType,
+    string Label,
+    string? Description,
+    string Icon,
+    string Variant,
+    DateTime OccurredAtUtc);
+
+public sealed record PropertyAlertCriteriaDto(
+    decimal? MinPrice,
+    decimal? MaxPrice,
+    IReadOnlyList<string>? PropertyTypes,
+    int? MinBedrooms,
+    IReadOnlyList<string>? Cities,
+    IReadOnlyList<string>? Neighborhoods);
+
+public sealed record PropertyAlertRuleDto(
+    Guid Id,
+    Guid PropertyId,
+    string ClientName,
+    string ClientEmail,
+    PropertyAlertCriteriaDto Criteria,
+    string Frequency,
+    bool IsActive,
+    int MatchCount,
+    DateTime? LastNotifiedAtUtc,
+    DateTime CreatedAtUtc);
+
+public sealed record PropertyAlertNotificationDto(
+    Guid Id,
+    Guid PropertyId,
+    Guid RuleId,
+    string ClientName,
+    string ClientEmail,
+    int MatchedProperties,
+    DateTime SentAtUtc,
+    string Status,
+    string? TriggeredBy);
