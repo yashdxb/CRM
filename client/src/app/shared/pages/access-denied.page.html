@@ -1,0 +1,25 @@
+<section class="page-background access-denied-page">
+  <div class="animated-orb orb-1"></div>
+  <div class="animated-orb orb-2"></div>
+  <div class="animated-orb orb-3"></div>
+
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <section class="glass-card denied-card">
+    <span class="denied-kicker">Permission Boundary</span>
+    <h1 class="hero-title">Access denied</h1>
+    <p class="hero-subtitle">
+      You are signed in, but you do not have permission to open {{ moduleName() }}.
+    </p>
+
+    <div class="details">
+      <p><strong>Required permission:</strong> {{ permissionKey() }}</p>
+      <p>Ask an administrator to update your role or assign the correct permission pack.</p>
+    </div>
+
+    <div class="actions">
+      <a class="crm-button crm-button--primary" routerLink="/app/dashboard">Back to Dashboard</a>
+      <a class="crm-button crm-button--ghost" routerLink="/app/settings/users">Review Access</a>
+    </div>
+  </section>
+</section>

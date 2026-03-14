@@ -28,5 +28,13 @@ export const roleGuard: CanActivateFn = (route, state): boolean | UrlTree => {
     return true;
   }
 
-  return router.createUrlTree(['/landing']);
+  const moduleName = route.data?.['moduleName'] as string | undefined;
+  const permissionForRoute = requiredPermissions[0];
+  return router.createUrlTree(['/app/access-denied'], {
+    queryParams: {
+      module: moduleName ?? 'This area',
+      permission: permissionForRoute ?? 'unknown.permission',
+      redirectTo: state?.url ?? '/app/dashboard'
+    }
+  });
 };

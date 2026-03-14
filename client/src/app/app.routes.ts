@@ -79,6 +79,13 @@ export const routes: Routes = [
           import('./shared/pages/module-disabled.page').then((m) => m.ModuleDisabledPage)
       },
       {
+        path: 'access-denied',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.dashboardView, breadcrumb: 'Access Denied', icon: 'pi-lock' },
+        loadComponent: () =>
+          import('./shared/pages/access-denied.page').then((m) => m.AccessDeniedPage)
+      },
+      {
         path: 'decisions',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesView, breadcrumb: 'Decision Inbox', icon: 'pi-inbox' },

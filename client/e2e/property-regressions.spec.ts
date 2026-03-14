@@ -474,7 +474,9 @@ test.describe('Property UAT regressions', () => {
       await expect(page.getByRole('link', { name: /^Properties$/i })).toHaveCount(0);
 
       await page.goto(`${UI_BASE_URL}/app/properties`);
-      await expect(page).toHaveURL(/\/landing$/);
+      await expect(page).toHaveURL(/\/app\/access-denied/);
+      await expect(page.getByRole('heading', { name: /Access denied/i })).toBeVisible();
+      await expect(page.getByText(/You are signed in, but you do not have permission to open Properties/i)).toBeVisible();
     } finally {
       await deleteUser(adminToken, restrictedUser.id);
     }
