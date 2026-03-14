@@ -3,6 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
+import { PERMISSION_KEYS } from '../auth/permission.constants';
+import { readTokenContext, tokenHasPermission } from '../auth/token.utils';
 import { environment } from '../../../environments/environment';
 
 export interface CurrencyReference {
@@ -36,6 +38,11 @@ export class ReferenceDataService {
   ];
 
   getCurrencies(): Observable<CurrencyReference[]> {
+    const context = readTokenContext();
+    if (!tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.administrationView)) {
+      return of(this.currencies.slice());
+    }
+
     return this.http.get<CurrencyReference[]>(`${this.baseUrl}/api/system/currencies`).pipe(
       catchError(() => of(this.currencies.slice()))
     );

@@ -188,9 +188,23 @@
         <div class="detail-col">
           <!-- Property Details -->
           <section class="detail-card">
-            <h2 class="card-title"><i class="pi pi-home"></i> Property Details</h2>
+            <div class="card-shell">
+              <div class="card-header-detail">
+                <div class="card-header-copy">
+                  <span class="card-kicker">Property Snapshot</span>
+                  <h2 class="card-title"><i class="pi pi-home"></i> Property Details</h2>
+                  <p class="card-subtitle">Core listing identity, location, and market-facing details.</p>
+                </div>
+                <div class="card-badge-stack">
+                  <span class="mini-badge" *ngIf="prop.listingDateUtc || prop.createdAtUtc">
+                    Listed {{ (prop.listingDateUtc || prop.createdAtUtc) | date:'MMM d, yyyy' }}
+                  </span>
+                  <span class="mini-badge" *ngIf="prop.yearBuilt">Built {{ prop.yearBuilt }}</span>
+                </div>
+              </div>
+            </div>
             <div class="detail-fields">
-              <div class="detail-field">
+              <div class="detail-field detail-field--span-2 detail-field--spotlight">
                 <span class="field-label">Address</span>
                 <span class="field-value">{{ prop.address }}</span>
               </div>
@@ -233,8 +247,16 @@
 
           <!-- Features & Specs -->
           <section class="detail-card">
-            <h2 class="card-title"><i class="pi pi-sliders-h"></i> Features &amp; Specs</h2>
-            <div class="detail-fields">
+            <div class="card-shell">
+              <div class="card-header-detail">
+                <div class="card-header-copy">
+                  <span class="card-kicker">Interior & Exterior</span>
+                  <h2 class="card-title"><i class="pi pi-sliders-h"></i> Features &amp; Specs</h2>
+                  <p class="card-subtitle">Physical characteristics and buyer-facing highlights for the home.</p>
+                </div>
+              </div>
+            </div>
+            <div class="detail-fields detail-fields--specs">
               <div class="detail-field" *ngIf="prop.bedrooms != null">
                 <span class="field-label">Bedrooms</span>
                 <span class="field-value">{{ prop.bedrooms }}</span>
@@ -275,7 +297,15 @@
 
           <!-- Description -->
           <section class="detail-card" *ngIf="prop.description">
-            <h2 class="card-title"><i class="pi pi-align-left"></i> Description</h2>
+            <div class="card-shell">
+              <div class="card-header-detail">
+                <div class="card-header-copy">
+                  <span class="card-kicker">Story</span>
+                  <h2 class="card-title"><i class="pi pi-align-left"></i> Description</h2>
+                  <p class="card-subtitle">The narrative the agent uses to position the property.</p>
+                </div>
+              </div>
+            </div>
             <p class="description-text">{{ prop.description }}</p>
           </section>
         </div>
@@ -284,23 +314,33 @@
         <div class="detail-col">
           <!-- Pricing + Commission -->
           <section class="detail-card">
-            <h2 class="card-title"><i class="pi pi-dollar"></i> Pricing &amp; Commission</h2>
-            <div class="detail-fields">
-              <div class="detail-field">
-                <span class="field-label">List Price</span>
-                <span class="field-value field-value--price">{{ formatCurrency(prop.listPrice, prop.currency) }}</span>
+            <div class="card-shell">
+              <div class="card-header-detail">
+                <div class="card-header-copy">
+                  <span class="card-kicker">Commercials</span>
+                  <h2 class="card-title"><i class="pi pi-dollar"></i> Pricing &amp; Commission</h2>
+                  <p class="card-subtitle">Listing value, sale outcome, pricing context, and commission structure.</p>
+                </div>
               </div>
-              <div class="detail-field" *ngIf="prop.salePrice != null">
-                <span class="field-label">Sale Price</span>
-                <span class="field-value field-value--price">{{ formatCurrency(prop.salePrice, prop.currency) }}</span>
+            </div>
+            <div class="pricing-hero">
+              <div class="pricing-hero__item">
+                <span class="pricing-hero__label">List Price</span>
+                <strong class="pricing-hero__value">{{ formatCurrency(prop.listPrice, prop.currency) }}</strong>
+              </div>
+              <div class="pricing-hero__item" *ngIf="prop.salePrice != null">
+                <span class="pricing-hero__label">Sale Price</span>
+                <strong class="pricing-hero__value pricing-hero__value--success">{{ formatCurrency(prop.salePrice, prop.currency) }}</strong>
+              </div>
+            </div>
+            <div class="detail-fields detail-fields--pricing">
+              <div class="detail-field">
+                <span class="field-label">Currency</span>
+                <span class="field-value">{{ prop.currency }}</span>
               </div>
               <div class="detail-field" *ngIf="pricePerSqFt() !== null">
                 <span class="field-label">Price / SqFt</span>
                 <span class="field-value">{{ formatCurrency(pricePerSqFt()!, prop.currency) }}</span>
-              </div>
-              <div class="detail-field">
-                <span class="field-label">Currency</span>
-                <span class="field-value">{{ prop.currency }}</span>
               </div>
             </div>
             <!-- Commission section (X7) -->
@@ -334,8 +374,16 @@
 
           <!-- Ownership -->
           <section class="detail-card">
-            <h2 class="card-title"><i class="pi pi-user"></i> Ownership &amp; Links</h2>
-            <div class="detail-fields">
+            <div class="card-shell">
+              <div class="card-header-detail">
+                <div class="card-header-copy">
+                  <span class="card-kicker">CRM Relationships</span>
+                  <h2 class="card-title"><i class="pi pi-user"></i> Ownership &amp; Links</h2>
+                  <p class="card-subtitle">Who owns the record and which account and contact records it is tied to.</p>
+                </div>
+              </div>
+            </div>
+            <div class="detail-fields detail-fields--links">
               <div class="detail-field" *ngIf="prop.ownerName">
                 <span class="field-label">Owner</span>
                 <a *ngIf="prop.ownerId" class="field-link" [routerLink]="['/app/settings/users', prop.ownerId]">{{ prop.ownerName }}</a>
@@ -362,7 +410,20 @@
 
           <!-- Status Timeline -->
           <section class="detail-card">
-            <h2 class="card-title"><i class="pi pi-calendar"></i> Timeline</h2>
+            <div class="card-shell">
+              <div class="card-header-detail">
+                <div class="card-header-copy">
+                  <span class="card-kicker">Lifecycle</span>
+                  <h2 class="card-title"><i class="pi pi-calendar"></i> Timeline</h2>
+                  <p class="card-subtitle">Track the operational history of the listing from creation through status changes.</p>
+                </div>
+                <div class="card-badge-stack">
+                  <span class="mini-badge mini-badge--accent">
+                    {{ daysSinceListed() }} days on market
+                  </span>
+                </div>
+              </div>
+            </div>
             <div class="status-timeline">
               <div class="timeline-event" *ngFor="let evt of timelineEvents(); let last = last"
                    [class]="'timeline-event timeline-event--' + evt.variant">

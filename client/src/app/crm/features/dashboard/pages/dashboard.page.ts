@@ -2563,6 +2563,11 @@ export class DashboardPage implements OnInit {
         }
       });
 
+    const tokenContext = readTokenContext();
+    if (!tokenHasPermission(tokenContext?.payload ?? null, PERMISSION_KEYS.administrationView)) {
+      return;
+    }
+
     this.settingsService
       .getSettings()
       .pipe(takeUntilDestroyed(this.destroyRef))

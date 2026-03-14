@@ -341,6 +341,43 @@
   }
 }
 
+.card-shell {
+  margin-bottom: $space-4;
+}
+
+.card-header-detail {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+  padding-bottom: $space-3;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.card-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.card-kicker {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.35rem 0.7rem;
+  border-radius: $radius-full;
+  background: rgba(14, 116, 144, 0.1);
+  color: #0f766e;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .card-title {
   display: flex;
   align-items: center;
@@ -348,13 +385,49 @@
   font-size: $font-size-lg;
   font-weight: 600;
   color: $gray-800;
-  margin: 0 0 $space-4;
-  padding-bottom: $space-3;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  margin: 0;
 
   i {
     font-size: $font-size-base;
     color: #06b6d4;
+  }
+}
+
+.card-subtitle {
+  margin: 0;
+  max-width: 46rem;
+  font-size: $font-size-sm;
+  line-height: 1.55;
+  color: $gray-500;
+}
+
+.card-badge-stack {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $space-2;
+
+  @media (max-width: 768px) {
+    justify-content: flex-start;
+  }
+}
+
+.mini-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  border-radius: $radius-full;
+  background: rgba(102, 126, 234, 0.08);
+  border: 1px solid rgba(102, 126, 234, 0.14);
+  color: #4f46e5;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+
+  &--accent {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.18);
+    color: #15803d;
   }
 }
 
@@ -375,7 +448,27 @@
 .detail-field {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: $space-1;
+  min-height: 5rem;
+  padding: $space-3;
+  border-radius: $radius-lg;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.46));
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  &--span-2 {
+    grid-column: span 2;
+
+    @media (max-width: 600px) {
+      grid-column: span 1;
+    }
+  }
+
+  &--spotlight {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(6, 182, 212, 0.08));
+    border-color: rgba(102, 126, 234, 0.2);
+  }
 }
 
 .field-label {
@@ -388,8 +481,9 @@
 
 .field-value {
   font-size: $font-size-md;
-  font-weight: 500;
-  color: $gray-800;
+  font-weight: 600;
+  color: $gray-900;
+  line-height: 1.4;
 
   &--price {
     font-size: $font-size-lg;
@@ -400,7 +494,7 @@
 
 .field-link {
   font-size: $font-size-md;
-  font-weight: 500;
+  font-weight: 600;
   color: #667eea;
   text-decoration: none;
   transition: color 200ms;
@@ -412,9 +506,11 @@
 }
 
 .features-text {
-  padding: $space-3 0 0;
+  padding: $space-4;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   margin-top: $space-2;
+  border-radius: $radius-lg;
+  background: rgba(255, 255, 255, 0.4);
 
   .field-label {
     display: block;
@@ -424,6 +520,55 @@
   .field-value {
     white-space: pre-line;
     line-height: 1.6;
+  }
+}
+
+.detail-fields--pricing {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-fields--links,
+.detail-fields--specs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pricing-hero {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-3;
+  margin-bottom: $space-3;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pricing-hero__item {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  padding: $space-3 $space-4;
+  border-radius: $radius-xl;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(6, 182, 212, 0.09));
+  border: 1px solid rgba(102, 126, 234, 0.16);
+}
+
+.pricing-hero__label {
+  font-size: $font-size-xs;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $gray-500;
+}
+
+.pricing-hero__value {
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  line-height: 1.1;
+  font-weight: 800;
+  color: #1f2937;
+
+  &--success {
+    color: #15803d;
   }
 }
 
