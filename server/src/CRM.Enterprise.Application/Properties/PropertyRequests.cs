@@ -38,3 +38,61 @@ public sealed record PropertyUpsertRequest(
     Guid? PrimaryContactId,
     Guid? OpportunityId,
     string? Neighborhood);
+
+// ── Sub-resource Requests ──
+
+public sealed record CreateShowingRequest(
+    Guid? AgentId,
+    string? AgentName,
+    string VisitorName,
+    string? VisitorEmail,
+    string? VisitorPhone,
+    DateTime ScheduledAtUtc,
+    int? DurationMinutes,
+    string? Status);
+
+public sealed record UpdateShowingRequest(
+    Guid? AgentId,
+    string? AgentName,
+    string? VisitorName,
+    string? VisitorEmail,
+    string? VisitorPhone,
+    DateTime? ScheduledAtUtc,
+    int? DurationMinutes,
+    string? Feedback,
+    int? Rating,
+    string? Status);
+
+public sealed record CreateDocumentRequest(
+    string FileName,
+    string FileUrl,
+    long? FileSize,
+    string? MimeType,
+    string? Category);
+
+public sealed record CreatePropertyActivityRequest(
+    string? Type,
+    string Subject,
+    string? Description,
+    DateTime? DueDate,
+    string? Status,
+    string? Priority,
+    Guid? AssignedToId,
+    string? AssignedToName);
+
+public sealed record UpdatePropertyActivityRequest(
+    string? Type,
+    string? Subject,
+    string? Description,
+    DateTime? DueDate,
+    DateTime? CompletedDate,
+    string? Status,
+    string? Priority,
+    Guid? AssignedToId,
+    string? AssignedToName);
+
+public sealed record AddPriceChangeRequest(
+    decimal PreviousPrice,
+    decimal NewPrice,
+    string? ChangedBy,
+    string? Reason);

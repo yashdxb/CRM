@@ -118,6 +118,10 @@ public class CrmDbContext : DbContext
     public DbSet<SupportCaseEscalationEvent> SupportCaseEscalationEvents => Set<SupportCaseEscalationEvent>();
     public DbSet<SupportEmailBinding> SupportEmailBindings => Set<SupportEmailBinding>();
     public DbSet<Property> Properties => Set<Property>();
+    public DbSet<PropertyShowing> PropertyShowings => Set<PropertyShowing>();
+    public DbSet<PropertyDocument> PropertyDocuments => Set<PropertyDocument>();
+    public DbSet<PropertyActivity> PropertyActivities => Set<PropertyActivity>();
+    public DbSet<PropertyPriceChange> PropertyPriceChanges => Set<PropertyPriceChange>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
@@ -326,6 +330,31 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<Property>()
             .HasIndex(p => new { p.TenantId, p.MlsNumber })
             .HasFilter("[MlsNumber] IS NOT NULL AND [IsDeleted] = 0");
+
+        modelBuilder.Entity<PropertyShowing>().ToTable("PropertyShowings", CrmSchema);
+        modelBuilder.Entity<PropertyShowing>()
+            .HasOne(s => s.Property).WithMany()
+            .HasForeignKey(s => s.PropertyId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PropertyDocument>().ToTable("PropertyDocuments", CrmSchema);
+        modelBuilder.Entity<PropertyDocument>()
+            .HasOne(d => d.Property).WithMany()
+            .HasForeignKey(d => d.PropertyId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PropertyActivity>().ToTable("PropertyActivities", CrmSchema);
+        modelBuilder.Entity<PropertyActivity>()
+            .HasOne(a => a.Property).WithMany()
+            .HasForeignKey(a => a.PropertyId).OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<PropertyPriceChange>().ToTable("PropertyPriceChanges", CrmSchema);
+        modelBuilder.Entity<PropertyPriceChange>()
+            .HasOne(pc => pc.Property).WithMany()
+            .HasForeignKey(pc => pc.PropertyId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<PropertyPriceChange>()
+            .Property(pc => pc.PreviousPrice).HasPrecision(18, 2);
+        modelBuilder.Entity<PropertyPriceChange>()
+            .Property(pc => pc.NewPrice).HasPrecision(18, 2);
+
         modelBuilder.Entity<Supplier>().ToTable("Suppliers", SupplyChainSchema);
         modelBuilder.Entity<SupplierCertification>().ToTable("SupplierCertifications", SupplyChainSchema);
         modelBuilder.Entity<SupplierContact>().ToTable("SupplierContacts", SupplyChainSchema);

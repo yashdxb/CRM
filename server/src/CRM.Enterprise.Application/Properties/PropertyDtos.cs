@@ -42,3 +42,55 @@ public sealed record PropertyOperationResult<T>(bool Success, T? Value, string? 
     public static PropertyOperationResult<T> Fail(string error) => new(false, default, error, false);
     public static PropertyOperationResult<T> NotFoundResult() => new(false, default, null, true);
 }
+
+// ── Sub-resource DTOs ──
+
+public sealed record ShowingDto(
+    Guid Id,
+    Guid PropertyId,
+    Guid? AgentId,
+    string? AgentName,
+    string VisitorName,
+    string? VisitorEmail,
+    string? VisitorPhone,
+    DateTime ScheduledAtUtc,
+    int? DurationMinutes,
+    string? Feedback,
+    int? Rating,
+    string Status,
+    DateTime CreatedAtUtc);
+
+public sealed record PropertyDocumentDto(
+    Guid Id,
+    Guid PropertyId,
+    string FileName,
+    string FileUrl,
+    long? FileSize,
+    string? MimeType,
+    string Category,
+    string? UploadedBy,
+    DateTime UploadedAtUtc);
+
+public sealed record PropertyActivityDto(
+    Guid Id,
+    Guid PropertyId,
+    string Type,
+    string Subject,
+    string? Description,
+    DateTime? DueDate,
+    DateTime? CompletedDate,
+    string Status,
+    string Priority,
+    Guid? AssignedToId,
+    string? AssignedToName,
+    string? CreatedByName,
+    DateTime CreatedAtUtc);
+
+public sealed record PriceChangeDto(
+    Guid Id,
+    Guid PropertyId,
+    decimal PreviousPrice,
+    decimal NewPrice,
+    DateTime ChangedAtUtc,
+    string? ChangedBy,
+    string? Reason);
