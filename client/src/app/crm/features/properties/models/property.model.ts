@@ -252,6 +252,7 @@ export interface SignatureRequest {
   documentType: SignatureDocType;
   provider: SignatureProvider;
   status: SignatureStatus;
+  envelopeId?: string;
   signers: SignatureRequestSigner[];
   sentAtUtc?: string;
   completedAtUtc?: string;

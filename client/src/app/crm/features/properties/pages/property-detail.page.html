@@ -782,6 +782,33 @@
                   <p-tag [value]="signer.status" [severity]="signatureStatusSeverity(signer.status)" [rounded]="true" class="signer-status"></p-tag>
                 </div>
               </div>
+              <!-- DocuSign action buttons -->
+              <div class="esign-card__actions" *ngIf="canEdit">
+                <!-- Send: only for Draft status -->
+                <button *ngIf="req.status === 'Draft'" type="button"
+                        class="row-action-btn row-action-btn--complete" title="Send via DocuSign"
+                        [disabled]="sigActionLoading() === req.id" (click)="sendEnvelope(req.id)">
+                  <i class="pi pi-send"></i>
+                </button>
+                <!-- Refresh status: for Sent or Viewed -->
+                <button *ngIf="req.status === 'Sent' || req.status === 'Viewed'" type="button"
+                        class="row-action-btn row-action-btn--view" title="Refresh Status"
+                        [disabled]="sigActionLoading() === req.id" (click)="refreshSignatureStatus(req.id)">
+                  <i class="pi pi-refresh"></i>
+                </button>
+                <!-- Void: for Sent or Viewed (not already completed/declined) -->
+                <button *ngIf="req.status === 'Sent' || req.status === 'Viewed'" type="button"
+                        class="row-action-btn row-action-btn--delete" title="Void Envelope"
+                        [disabled]="sigActionLoading() === req.id" (click)="openVoidDialog(req.id)">
+                  <i class="pi pi-ban"></i>
+                </button>
+                <!-- Download: for Signed status -->
+                <button *ngIf="req.status === 'Signed'" type="button"
+                        class="row-action-btn row-action-btn--view" title="Download Signed Document"
+                        [disabled]="sigActionLoading() === req.id" (click)="downloadSignedDocument(req.id, req.documentName)">
+                  <i class="pi pi-download"></i>
+                </button>
+              </div>
             </div>
           </div>
           <ng-template #noSignatures>
@@ -795,6 +822,25 @@
             </div>
           </ng-template>
         </div>
+
+        <!-- Void confirmation dialog -->
+        <p-dialog [visible]="showVoidDialog()" (visibleChange)="showVoidDialog.set($event)"
+                  header="Void Envelope" [modal]="true" [style]="{width: '420px'}" [closable]="true">
+          <p class="void-dialog-text">Are you sure you want to void this envelope? This will cancel the signature request for all signers.</p>
+          <div class="form-field" style="margin-top: 1rem;">
+            <label for="void-reason">Reason</label>
+            <input pInputText id="void-reason" [ngModel]="voidReason()" (ngModelChange)="voidReason.set($event)" placeholder="Enter reason for voiding" style="width: 100%;" />
+          </div>
+          <ng-template pTemplate="footer">
+            <button type="button" class="action-btn action-btn--back" (click)="showVoidDialog.set(false)">
+              <span>Cancel</span>
+            </button>
+            <button type="button" class="action-btn action-btn--delete" (click)="confirmVoid()" [disabled]="!voidReason()">
+              <span class="action-btn__icon"><i class="pi pi-ban"></i></span>
+              <span>Void Envelope</span>
+            </button>
+          </ng-template>
+        </p-dialog>
       </section>
 
       <!-- ═══ TAB: ALERTS (G5) ═══ -->

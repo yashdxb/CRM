@@ -4,6 +4,42 @@ Purpose: Capture day-to-day operational issues, resolutions, and verification. T
 
 ---
 
+## 2026-03-14 — Property Module Growth Features (G3/G4/G5) Completion
+
+**Date:** 2026-03-14  
+**Environment:** Development  
+**Owner:** Development  
+
+### Work Completed
+
+| Feature | Summary | Status |
+|---------|---------|--------|
+| G3 — CMA | Comparable Market Analysis tab on property detail page. Full-stack: comparables grid, summary metrics, generate report with configurable radius. Backend analytics pipeline. | DONE |
+| G4 — E-Sign/DocuSign | E-Signature tab with DocuSign REST API integration. Full lifecycle: create, send, refresh status, void with reason, download signed PDF. JWT OAuth auth. Frontend action buttons conditional on envelope status. | DONE |
+| G5 — Alerts | Property alerts & subscription notifications tab. Alert rules with criteria (type, price range, bedrooms, location) and frequency (Instant/Daily/Weekly). Toggle on/off. Notification history. 2 domain entities. | DONE |
+
+### Files Modified (DocuSign Frontend Wiring — Final Piece)
+
+| File | Changes |
+|------|---------|
+| `client/src/app/crm/features/properties/services/property-data.service.ts` | Added 4 HTTP methods: `sendSignatureRequest()`, `refreshSignatureStatus()`, `voidSignatureRequest()`, `downloadSignedDocument()` |
+| `client/src/app/crm/features/properties/models/property.model.ts` | Added `envelopeId?: string` to `SignatureRequest` interface |
+| `client/src/app/crm/features/properties/pages/property-detail.page.ts` | Added 5 signals + 5 action methods for DocuSign envelope lifecycle |
+| `client/src/app/crm/features/properties/pages/property-detail.page.html` | Added `.esign-card__actions` div with conditional buttons + void confirmation dialog |
+| `client/src/app/crm/features/properties/pages/property-detail.page.scss` | Added `.esign-card__actions` and `.void-dialog-text` styles |
+
+### Documentation Updates
+
+| Document | Changes |
+|----------|---------|
+| `docs/CRM_BACKLOG.md` | Added G3/G4/G5 stories with full evidence and acceptance criteria. Updated epic description and status to DONE. Added delivery updates header entry. |
+| ClickUp | Created 3 tasks (G3: `86e0c7wmw`, G4: `86e0c7wmx`, G5: `86e0c7wmy`) under Property epic (`86e0bjwbc`). Updated epic status to done. |
+
+### Build Verification
+- `npx ng build` — 0 errors (pre-existing warnings only)
+
+---
+
 ## 2026-03-13 — Production Data Seeding Safety Fix
 
 **Date:** 2026-03-13  

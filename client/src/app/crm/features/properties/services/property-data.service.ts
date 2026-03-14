@@ -172,6 +172,24 @@ export class PropertyDataService {
     return this.http.post<SignatureRequest>(`${this.baseUrl}/api/properties/${propertyId}/signatures`, payload);
   }
 
+  sendSignatureRequest(propertyId: string, signatureId: string) {
+    return this.http.post<SignatureRequest>(`${this.baseUrl}/api/properties/${propertyId}/signatures/${signatureId}/send`, {});
+  }
+
+  refreshSignatureStatus(propertyId: string, signatureId: string) {
+    return this.http.post<SignatureRequest>(`${this.baseUrl}/api/properties/${propertyId}/signatures/${signatureId}/refresh`, {});
+  }
+
+  voidSignatureRequest(propertyId: string, signatureId: string, reason: string) {
+    return this.http.post<void>(`${this.baseUrl}/api/properties/${propertyId}/signatures/${signatureId}/void`, { reason });
+  }
+
+  downloadSignedDocument(propertyId: string, signatureId: string) {
+    return this.http.get(`${this.baseUrl}/api/properties/${propertyId}/signatures/${signatureId}/download`, {
+      responseType: 'blob'
+    });
+  }
+
   // Property Alerts (G5)
   getAlertRules(propertyId: string) {
     return this.http.get<PropertyAlertRule[]>(`${this.baseUrl}/api/properties/${propertyId}/alerts`);

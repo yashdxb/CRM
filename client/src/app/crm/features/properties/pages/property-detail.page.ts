@@ -93,6 +93,10 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
   // E-Signature (G4)
   protected signatureRequests = signal<SignatureRequest[]>([]);
   protected showSignatureDialog = signal(false);
+  protected showVoidDialog = signal(false);
+  protected voidTargetId = signal<string | null>(null);
+  protected voidReason = signal('');
+  protected sigActionLoading = signal<string | null>(null); // tracks which signature action is loading
 
   // Alerts (G5)
   protected alertRules = signal<PropertyAlertRule[]>([]);
@@ -739,6 +743,75 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
       case 'Draft': return 'secondary'; case 'Declined': return 'danger'; case 'Expired': return 'warn';
       default: return 'secondary';
     }
+  }
+
+  protected sendEnvelope(signatureId: string): void {
+    const prop = this.property();
+    if (!prop) return;
+    this.sigActionLoading.set(signatureId);
+    this.propertyData.sendSignatureRequest(prop.id, signatureId).subscribe({
+      next: () => {
+        this.propertyData.getSignatureRequests(prop.id).subscribe({ next: (d) => this.signatureRequests.set(d) });
+        this.sigActionLoading.set(null);
+        this.toast.show('success', 'Envelope sent via DocuSign.', 3000);
+      },
+      error: () => { this.sigActionLoading.set(null); this.toast.show('error', 'Failed to send envelope.', 3000); }
+    });
+  }
+
+  protected refreshSignatureStatus(signatureId: string): void {
+    const prop = this.property();
+    if (!prop) return;
+    this.sigActionLoading.set(signatureId);
+    this.propertyData.refreshSignatureStatus(prop.id, signatureId).subscribe({
+      next: () => {
+        this.propertyData.getSignatureRequests(prop.id).subscribe({ next: (d) => this.signatureRequests.set(d) });
+        this.sigActionLoading.set(null);
+        this.toast.show('success', 'Signature status refreshed.', 3000);
+      },
+      error: () => { this.sigActionLoading.set(null); this.toast.show('error', 'Failed to refresh status.', 3000); }
+    });
+  }
+
+  protected openVoidDialog(signatureId: string): void {
+    this.voidTargetId.set(signatureId);
+    this.voidReason.set('');
+    this.showVoidDialog.set(true);
+  }
+
+  protected confirmVoid(): void {
+    const prop = this.property();
+    const sigId = this.voidTargetId();
+    if (!prop || !sigId) return;
+    this.sigActionLoading.set(sigId);
+    this.propertyData.voidSignatureRequest(prop.id, sigId, this.voidReason()).subscribe({
+      next: () => {
+        this.showVoidDialog.set(false);
+        this.propertyData.getSignatureRequests(prop.id).subscribe({ next: (d) => this.signatureRequests.set(d) });
+        this.sigActionLoading.set(null);
+        this.toast.show('success', 'Envelope voided.', 3000);
+      },
+      error: () => { this.sigActionLoading.set(null); this.toast.show('error', 'Failed to void envelope.', 3000); }
+    });
+  }
+
+  protected downloadSignedDocument(signatureId: string, documentName: string): void {
+    const prop = this.property();
+    if (!prop) return;
+    this.sigActionLoading.set(signatureId);
+    this.propertyData.downloadSignedDocument(prop.id, signatureId).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${documentName}-signed.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        this.sigActionLoading.set(null);
+        this.toast.show('success', 'Document downloaded.', 3000);
+      },
+      error: () => { this.sigActionLoading.set(null); this.toast.show('error', 'Failed to download document.', 3000); }
+    });
   }
 
   // ── Property Alerts (G5) ──

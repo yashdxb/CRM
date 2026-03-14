@@ -10,6 +10,27 @@ Legend:
 - NOT STARTED: no evidence yet
 - UNKNOWN: needs confirmation / no clear evidence found
 
+## Recent Delivery Updates (2026-03-14)
+
+- Property Module Growth Features (G3, G4, G5 — 3 stories)
+  Status: DONE (3/3 completed)
+  ClickUp Epic: 86e0bjwbc ([NEXT] Properties & Real Estate Module)
+  Commits: c42e1db (G3 CMA + G4 E-Sign backend + G5 Alerts), 20bf652 (G4 DocuSign REST API backend)
+  - All growth stories delivered:
+    - G3 (86e0c7wmw) | Comparable Market Analysis (CMA) tab | DONE — full-stack: CMA tab with comparables grid, summary metrics, generate report with configurable radius. Backend analytics pipeline.
+    - G4 (86e0c7wmx) | E-Signature / DocuSign integration | DONE — full-stack: create/send/void/refresh/download signature envelopes. DocuSign REST API with JWT OAuth. Frontend action buttons per envelope status.
+    - G5 (86e0c7wmy) | Property alerts & subscription notifications | DONE — full-stack: alert rules with criteria/frequency, toggle on/off, notification history. 2 domain entities (PropertyAlertRule, PropertyAlertNotification).
+  - Evidence:
+    - Property detail page: `client/src/app/crm/features/properties/pages/property-detail.page.ts` (3 new tabs: CMA, E-Signature, Alerts)
+    - Property data service: `client/src/app/crm/features/properties/services/property-data.service.ts` (12 new methods)
+    - Property models: `client/src/app/crm/features/properties/models/property.model.ts` (14 new interfaces/enums)
+    - Backend service: `server/src/CRM.Enterprise.Infrastructure/Properties/PropertyService.cs` (CMA, Signatures, Alerts)
+    - DocuSign integration: `server/src/CRM.Enterprise.Infrastructure/DocuSign/DocuSignService.cs` (REST API, JWT OAuth)
+    - Domain entities: `server/src/CRM.Enterprise.Domain/Entities/SignatureRequest.cs`, `PropertyAlertRule.cs`, `PropertyAlertNotification.cs`
+    - Controller: `server/src/CRM.Enterprise.Api/Controllers/PropertiesController.cs` (12 new endpoints)
+
+---
+
 ## Recent Delivery Updates (2026-03-13)
 
 - Properties & Real Estate Module (NEXT tier — 12 stories)
@@ -470,9 +491,9 @@ MoSCoW: Should
 
 ### Next: Properties & Real Estate Module
 
-Epic: [NEXT] Properties & Real Estate Module (ClickUp: 86e0bjwbc, Status: IN PROGRESS)
+Epic: [NEXT] Properties & Real Estate Module (ClickUp: 86e0bjwbc, Status: DONE)
 
-Full-featured real estate property management module with CRUD, detail page tabs (Details, Showings, Documents, Price History, Activities), Kanban board view, photo upload drag-drop, commission tracking, reactive forms, quick actions, bulk operations, reverse navigation, and SignalR alerts.
+Full-featured real estate property management module with CRUD, detail page tabs (Details, Showings, Documents, Price History, Activities, CMA, E-Signature, Alerts), Kanban board view, photo upload drag-drop, commission tracking, reactive forms, quick actions, bulk operations, reverse navigation, SignalR alerts, Comparable Market Analysis, DocuSign e-signature integration, and property alert subscriptions. Core stories (X1–X12) plus growth features (G3–G5) all delivered.
 
 X1) Document & attachment management on property detail page
 MoSCoW: Must
@@ -652,6 +673,95 @@ MoSCoW: Must
   - Schedule showing quick action.
   - Upload document quick action.
   - Actions update the property state immediately.
+
+#### Growth Features (Property Module)
+
+G3) Comparable Market Analysis (CMA) tab on property detail page
+MoSCoW: Should
+- Status: DONE
+- ClickUp: 86e0c7wmw
+- Evidence:
+  - Frontend models: `client/src/app/crm/features/properties/models/property.model.ts` (`ComparableProperty`, `CmaSummary`, `CmaReport`, `CmaPropertyStatus`, `CmaSource`, `MarketTrend`)
+  - Frontend service: `client/src/app/crm/features/properties/services/property-data.service.ts` (`getCmaReport()`, `generateCmaReport()`)
+  - Detail page logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts` (`cmaReport` signal, `cmaLoading` signal, `loadCmaReport()`)
+  - Detail page template: `client/src/app/crm/features/properties/pages/property-detail.page.html` (CMA tab, comparables grid, summary metrics)
+  - Mock data: `client/src/app/mocks/mock-db.ts` (`mockComparables`, `generateCmaComparables()`, `getCmaReport()`)
+  - Mock interceptor: `client/src/app/mocks/mock-api.interceptor.ts` (GET/POST `/api/properties/{id}/cma`)
+  - Backend DTOs: `server/src/CRM.Enterprise.Application/Properties/PropertyDtos.cs` (`CmaReportDto`, `CmaSummaryDto`, `ComparablePropertyDto`)
+  - Backend requests: `server/src/CRM.Enterprise.Application/Properties/PropertyRequests.cs` (`GenerateCmaRequest`)
+  - Backend interface: `server/src/CRM.Enterprise.Application/Properties/IPropertyService.cs` (`GetCmaReportAsync()`, `GenerateCmaReportAsync()`)
+  - Backend implementation: `server/src/CRM.Enterprise.Infrastructure/Properties/PropertyService.cs` (CMA generation logic with analytics)
+  - Controller: `server/src/CRM.Enterprise.Api/Controllers/PropertiesController.cs` (`GetCmaReport()`, `GenerateCmaReport()`)
+  - API contracts: `server/src/CRM.Enterprise.Api/Contracts/Properties/SubResourceContracts.cs` (`CmaReportResponse`, `ComparablePropertyItem`, `CmaSummaryItem`)
+- Acceptance criteria:
+  - CMA tab on property detail page with comparables grid.
+  - Summary metrics: median price, avg price/sqft, days on market, comparable count.
+  - Generate CMA report with configurable radius.
+  - Comparable properties show address, price, sqft, beds/baths, status, distance.
+  - Backend CMA generation with full analytics pipeline.
+  - Mock API layer with realistic comparable data.
+
+G4) E-Signature / DocuSign integration on property detail page
+MoSCoW: Should
+- Status: DONE
+- ClickUp: 86e0c7wmx
+- Evidence:
+  - Frontend models: `client/src/app/crm/features/properties/models/property.model.ts` (`SignatureRequest`, `SignatureRequestSigner`, `SignatureProvider`, `SignatureStatus`, `SignatureDocType`, `SignerRole`, `SignerStatus`)
+  - Frontend service: `client/src/app/crm/features/properties/services/property-data.service.ts` (`getSignatureRequests()`, `createSignatureRequest()`, `sendSignatureRequest()`, `voidSignatureRequest()`, `refreshSignatureStatus()`, `downloadSignedDocument()`)
+  - Detail page logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts` (`signatureRequests` signal, void dialog, send/refresh/void/download action methods)
+  - Detail page template: `client/src/app/crm/features/properties/pages/property-detail.page.html` (E-Signature tab, esign cards, signer status badges, action buttons per status)
+  - Detail page styles: `client/src/app/crm/features/properties/pages/property-detail.page.scss` (`.esign-card__actions`, `.void-dialog-text`)
+  - Mock data: `client/src/app/mocks/mock-db.ts` (`mockSignatureRequests`, `getSignatureRequests()`, `createSignatureRequest()`)
+  - Mock interceptor: `client/src/app/mocks/mock-api.interceptor.ts` (GET/POST `/api/properties/{id}/signatures`, send/void/refresh)
+  - Domain entity: `server/src/CRM.Enterprise.Domain/Entities/SignatureRequest.cs` (`PropertyId`, `Status`, `EnvelopeId`, `SignersJson`)
+  - DocuSign interface: `server/src/CRM.Enterprise.Application/DocuSign/IDocuSignService.cs` (`SendEnvelopeAsync()`, `GetEnvelopeStatusAsync()`, `DownloadDocumentAsync()`, `VoidEnvelopeAsync()`)
+  - DocuSign service: `server/src/CRM.Enterprise.Infrastructure/DocuSign/DocuSignService.cs` (REST API integration: OAuth JWT token, envelope management)
+  - DocuSign config: `server/src/CRM.Enterprise.Infrastructure/DocuSign/DocuSignOptions.cs` (IntegrationKey, UserId, AccountId, RsaPrivateKey, BaseUri)
+  - Backend DTOs: `server/src/CRM.Enterprise.Application/Properties/PropertyDtos.cs` (`SignatureRequestDto`, `SignatureRequestSignerDto`)
+  - Backend requests: `server/src/CRM.Enterprise.Application/Properties/PropertyRequests.cs` (`CreateSignatureRequestRequest`, `SignatureRequestSignerInput`)
+  - Backend interface: `server/src/CRM.Enterprise.Application/Properties/IPropertyService.cs` (6 signature methods)
+  - Backend implementation: `server/src/CRM.Enterprise.Infrastructure/Properties/PropertyService.cs` (full signature lifecycle management)
+  - Controller: `server/src/CRM.Enterprise.Api/Controllers/PropertiesController.cs` (6 signature endpoints: list, create, send, void, refresh, download)
+  - API contracts: `server/src/CRM.Enterprise.Api/Contracts/Properties/SubResourceContracts.cs` (`SignatureRequestListItem`, `CreateSignatureApiRequest`, `VoidSignatureApiRequest`, `SignerItem`, `SignerInput`)
+- Acceptance criteria:
+  - E-Signature tab on property detail page with signature request cards.
+  - Create signature request with document type, signers (name, email, role).
+  - Send envelope to DocuSign (Draft → Sent status transition).
+  - Refresh envelope status from DocuSign in real-time.
+  - Void envelope with reason (Sent/Viewed → Voided).
+  - Download signed documents as PDF when status is Signed/Completed.
+  - Signer status badges showing per-signer completion state.
+  - Backend DocuSign REST API integration with JWT OAuth authentication.
+  - Action buttons conditional on envelope status (Send for Draft, Refresh/Void for Sent/Viewed, Download for Signed).
+  - Void confirmation dialog with reason input.
+
+G5) Property alerts and subscription notifications
+MoSCoW: Should
+- Status: DONE
+- ClickUp: 86e0c7wmy
+- Evidence:
+  - Frontend models: `client/src/app/crm/features/properties/models/property.model.ts` (`PropertyAlertRule`, `PropertyAlertNotification`, `AlertFrequency`, `AlertNotificationStatus`)
+  - Frontend service: `client/src/app/crm/features/properties/services/property-data.service.ts` (`getAlertRules()`, `createAlertRule()`, `toggleAlertRule()`, `getAlertNotifications()`)
+  - Detail page logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts` (`alertRules` signal, `alertNotifications` signal, CRUD methods)
+  - Detail page template: `client/src/app/crm/features/properties/pages/property-detail.page.html` (Alerts tab, rule list, notification history, criteria editor, frequency selector)
+  - Mock data: `client/src/app/mocks/mock-db.ts` (`mockAlertRules`, `mockAlertNotifications`, `getAlertRules()`, `createAlertRule()`, `toggleAlertRule()`, `getAlertNotifications()`)
+  - Mock interceptor: `client/src/app/mocks/mock-api.interceptor.ts` (GET/POST `/api/properties/{id}/alerts`, PUT toggle, GET notifications)
+  - Domain entities: `server/src/CRM.Enterprise.Domain/Entities/PropertyAlertRule.cs` (`PropertyId`, `ClientName/Email`, `CriteriaJson`, `Frequency`, `IsActive`, `MatchCount`, `LastNotifiedAtUtc`)
+  - Domain entities: `server/src/CRM.Enterprise.Domain/Entities/PropertyAlertNotification.cs` (`RuleId` FK, `ClientName/Email`, `MatchedProperties`, `SentAtUtc`, `Status`)
+  - Backend DTOs: `server/src/CRM.Enterprise.Application/Properties/PropertyDtos.cs` (`PropertyAlertRuleDto`, `PropertyAlertNotificationDto`, `PropertyAlertCriteriaDto`)
+  - Backend requests: `server/src/CRM.Enterprise.Application/Properties/PropertyRequests.cs` (`CreatePropertyAlertRuleRequest`, `TogglePropertyAlertRuleRequest`, `PropertyAlertCriteriaRequest`)
+  - Backend interface: `server/src/CRM.Enterprise.Application/Properties/IPropertyService.cs` (4 alert methods)
+  - Backend implementation: `server/src/CRM.Enterprise.Infrastructure/Properties/PropertyService.cs` (alert rule CRUD + notification query logic)
+  - Controller: `server/src/CRM.Enterprise.Api/Controllers/PropertiesController.cs` (4 alert endpoints)
+  - API contracts: `server/src/CRM.Enterprise.Api/Contracts/Properties/SubResourceContracts.cs` (`CreateAlertRuleRequest`, `ToggleAlertRuleRequest`, `PropertyAlertRuleListItem`, `PropertyAlertNotificationItem`)
+- Acceptance criteria:
+  - Alerts tab on property detail page with alert rules and notification history.
+  - Create alert rule with criteria (property type, min/max price, min bedrooms, location) and frequency (Instant, Daily, Weekly).
+  - Toggle alert rules on/off.
+  - Notification history with matched properties, send date, delivery status.
+  - Backend alert rule CRUD with criteria JSON storage.
+  - Backend notification tracking with match count and last notified timestamp.
+  - Mock API layer with realistic alert data.
 
 ---
 
