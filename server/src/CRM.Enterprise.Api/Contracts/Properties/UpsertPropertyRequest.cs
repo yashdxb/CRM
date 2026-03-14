@@ -9,6 +9,7 @@ public class UpsertPropertyRequest
     public string? City { get; set; }
     public string? Province { get; set; }
     public string? PostalCode { get; set; }
+    public string? Country { get; set; }
     public decimal? ListPrice { get; set; }
     public decimal? SalePrice { get; set; }
     public string Currency { get; set; } = "CAD";
@@ -26,6 +27,10 @@ public class UpsertPropertyRequest
     public string? Features { get; set; }
     public string? PhotoUrls { get; set; }
     public string? VirtualTourUrl { get; set; }
+    public decimal? CommissionRate { get; set; }
+    public decimal? BuyerAgentCommission { get; set; }
+    public decimal? SellerAgentCommission { get; set; }
+    public Guid? CoListingAgentId { get; set; }
     public Guid? OwnerId { get; set; }
     public Guid? AccountId { get; set; }
     public Guid? PrimaryContactId { get; set; }

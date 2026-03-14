@@ -28,6 +28,10 @@ public class Property : AuditableEntity
     public string? Features { get; set; }
     public string? PhotoUrls { get; set; }
     public string? VirtualTourUrl { get; set; }
+    public decimal? CommissionRate { get; set; }
+    public decimal? BuyerAgentCommission { get; set; }
+    public decimal? SellerAgentCommission { get; set; }
+    public Guid? CoListingAgentId { get; set; }
     public Guid OwnerId { get; set; }
     public Guid? AccountId { get; set; }
     public Guid? PrimaryContactId { get; set; }

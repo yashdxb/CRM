@@ -73,6 +73,7 @@ public sealed class PropertyService : IPropertyService
                 p.City,
                 p.Province,
                 p.PostalCode,
+                p.Country,
                 p.ListPrice,
                 p.SalePrice,
                 p.Currency,
@@ -90,6 +91,10 @@ public sealed class PropertyService : IPropertyService
                 p.Features,
                 p.PhotoUrls,
                 p.VirtualTourUrl,
+                p.CommissionRate,
+                p.BuyerAgentCommission,
+                p.SellerAgentCommission,
+                p.CoListingAgentId,
                 p.OwnerId,
                 p.AccountId,
                 AccountName = p.Account != null ? p.Account.Name : null,
@@ -103,9 +108,13 @@ public sealed class PropertyService : IPropertyService
             })
             .ToListAsync(cancellationToken);
 
-        var ownerIds = items.Select(i => i.OwnerId).Distinct().ToList();
+        var userIds = items
+            .SelectMany(i => new[] { i.OwnerId, i.CoListingAgentId ?? Guid.Empty })
+            .Where(id => id != Guid.Empty)
+            .Distinct()
+            .ToList();
         var owners = await _dbContext.Users
-            .Where(u => ownerIds.Contains(u.Id))
+            .Where(u => userIds.Contains(u.Id))
             .Select(u => new { u.Id, u.FullName })
             .ToListAsync(cancellationToken);
 
@@ -119,6 +128,7 @@ public sealed class PropertyService : IPropertyService
                 i.City,
                 i.Province,
                 i.PostalCode,
+                i.Country,
                 i.ListPrice,
                 i.SalePrice,
                 i.Currency,
@@ -136,6 +146,11 @@ public sealed class PropertyService : IPropertyService
                 i.Features,
                 i.PhotoUrls,
                 i.VirtualTourUrl,
+                i.CommissionRate,
+                i.BuyerAgentCommission,
+                i.SellerAgentCommission,
+                i.CoListingAgentId,
+                owners.FirstOrDefault(o => o.Id == i.CoListingAgentId)?.FullName,
                 i.OwnerId,
                 ownerName,
                 i.AccountId,
@@ -164,6 +179,12 @@ public sealed class PropertyService : IPropertyService
             .Where(u => u.Id == property.OwnerId)
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
+        var coListingAgentName = property.CoListingAgentId.HasValue
+            ? await _dbContext.Users
+                .Where(u => u.Id == property.CoListingAgentId.Value)
+                .Select(u => u.FullName)
+                .FirstOrDefaultAsync(cancellationToken)
+            : null;
 
         return new PropertyListItemDto(
             property.Id,
@@ -172,6 +193,7 @@ public sealed class PropertyService : IPropertyService
             property.City,
             property.Province,
             property.PostalCode,
+            property.Country,
             property.ListPrice,
             property.SalePrice,
             property.Currency,
@@ -189,6 +211,11 @@ public sealed class PropertyService : IPropertyService
             property.Features,
             property.PhotoUrls,
             property.VirtualTourUrl,
+            property.CommissionRate,
+            property.BuyerAgentCommission,
+            property.SellerAgentCommission,
+            property.CoListingAgentId,
+            coListingAgentName,
             property.OwnerId,
             ownerName,
             property.AccountId,
@@ -231,6 +258,10 @@ public sealed class PropertyService : IPropertyService
             Features = request.Features,
             PhotoUrls = request.PhotoUrls,
             VirtualTourUrl = request.VirtualTourUrl,
+            CommissionRate = request.CommissionRate,
+            BuyerAgentCommission = request.BuyerAgentCommission,
+            SellerAgentCommission = request.SellerAgentCommission,
+            CoListingAgentId = request.CoListingAgentId,
             OwnerId = ownerId,
             AccountId = request.AccountId,
             PrimaryContactId = request.PrimaryContactId,
@@ -275,6 +306,10 @@ public sealed class PropertyService : IPropertyService
         property.Features = request.Features;
         property.PhotoUrls = request.PhotoUrls;
         property.VirtualTourUrl = request.VirtualTourUrl;
+        property.CommissionRate = request.CommissionRate;
+        property.BuyerAgentCommission = request.BuyerAgentCommission;
+        property.SellerAgentCommission = request.SellerAgentCommission;
+        property.CoListingAgentId = request.CoListingAgentId;
         property.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
         property.AccountId = request.AccountId;
         property.PrimaryContactId = request.PrimaryContactId;

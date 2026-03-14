@@ -73,14 +73,14 @@ export class LandingPage implements OnInit, AfterViewInit {
     { icon: 'pi-sitemap', color: 'green', title: 'Governed Conversion Decisions', description: 'Lead conversion and deal movement can be challenged, coached, approved, or blocked with visible reasons.' },
     { icon: 'pi-chart-line', color: 'purple', title: 'Truth-Based Pipeline Visibility', description: 'Managers see pipeline backed by evidence, health gaps, and readiness signals instead of superficial stage reporting.' },
     { icon: 'pi-file-edit', color: 'orange', title: 'Report Workspace and Library', description: 'Publish, filter, and govern reports through a dedicated workspace with CRM-safe metadata and report server integration.' },
-    { icon: 'pi-sliders-h', color: 'slate', title: 'Industry Presets with Tenant Control', description: 'Start from shared industry presets and let each customer customize catalogs, workflows, branding, and reporting without product forks.' }
+    { icon: 'pi-sliders-h', color: 'slate', title: 'CRM Vertical Presets with Tenant Control', description: 'Start from shared CRM vertical presets and let each customer customize catalogs, workflows, branding, and reporting without product forks.' }
   ];
 
   readonly stats = [
     { icon: 'pi-check-circle', value: 4, suffix: '', label: 'Core qualification layers' },
     { icon: 'pi-chart-scatter', value: 6, suffix: '', label: 'Visual KPI report types' },
     { icon: 'pi-sitemap', value: 1, suffix: '', label: 'Approval workflow engine' },
-    { icon: 'pi-building', value: 2, suffix: '', label: 'Current vertical preset tracks' }
+    { icon: 'pi-building', value: 1, suffix: '', label: 'Current CRM vertical preset track' }
   ];
   animatedStatValues: number[] = [0, 0, 0, 0];
   private statsAnimated = false;

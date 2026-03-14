@@ -322,6 +322,15 @@ public class CrmDbContext : DbContext
             .Property(p => p.SalePrice)
             .HasPrecision(18, 2);
         modelBuilder.Entity<Property>()
+            .Property(p => p.CommissionRate)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Property>()
+            .Property(p => p.BuyerAgentCommission)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Property>()
+            .Property(p => p.SellerAgentCommission)
+            .HasPrecision(18, 2);
+        modelBuilder.Entity<Property>()
             .Property(p => p.SquareFeet)
             .HasPrecision(18, 2);
         modelBuilder.Entity<Property>()

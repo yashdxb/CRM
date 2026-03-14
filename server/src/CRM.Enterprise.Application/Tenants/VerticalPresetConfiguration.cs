@@ -6,7 +6,6 @@ namespace CRM.Enterprise.Application.Tenants;
 public static class VerticalPresetIds
 {
     public const string CoreCrm = "CoreCRM";
-    public const string SupplyChain = "SupplyChain";
     public const string RealEstateBrokerage = "RealEstateBrokerage";
 
     public static string Normalize(string? presetId)
@@ -14,7 +13,6 @@ public static class VerticalPresetIds
         var value = string.IsNullOrWhiteSpace(presetId) ? CoreCrm : presetId.Trim();
         return value switch
         {
-            SupplyChain => SupplyChain,
             RealEstateBrokerage => RealEstateBrokerage,
             _ => CoreCrm
         };
