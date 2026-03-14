@@ -10,6 +10,8 @@ const SALES_REP_EMAIL = process.env.E2E_SALES_REP_EMAIL ?? 'yasser0503@outlook.c
 const SALES_REP_PASSWORD = process.env.E2E_SALES_REP_PASSWORD ?? 'P@ssw0rd!';
 const SALES_MANAGER_EMAIL = process.env.E2E_SALES_MANAGER_EMAIL ?? 'yasser.ahamed@gmail.com';
 const SALES_MANAGER_PASSWORD = process.env.E2E_SALES_MANAGER_PASSWORD ?? 'P@ssw0rd!';
+const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'yasser.ahamed@live.com';
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
 
 type PropertyRecord = {
   id: string;
@@ -17,6 +19,12 @@ type PropertyRecord = {
   city?: string;
   province?: string;
   currency?: string;
+};
+
+type UserRecord = {
+  id: string;
+  email: string;
+  temporaryPassword: string;
 };
 
 async function apiLogin(email: string, password: string): Promise<string> {
@@ -85,6 +93,78 @@ async function deleteProperty(token: string, propertyId: string) {
     method: 'DELETE',
     headers: {
       Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+
+  expect([204, 404]).toContain(response.status);
+}
+
+async function expectCreatePropertyForbidden(token: string) {
+  const response = await fetch(`${API_BASE_URL}/api/properties`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({
+      address: `401 Forbidden Property Lane`,
+      city: 'Toronto',
+      province: 'Ontario',
+      country: 'Canada',
+      currency: 'CAD',
+      status: 'Draft',
+      propertyType: 'Detached',
+      listPrice: 500000
+    })
+  });
+
+  expect(response.status).toBe(403);
+}
+
+async function getRoleIdByName(token: string, roleName: string): Promise<string> {
+  const response = await fetch(`${API_BASE_URL}/api/roles`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  expect(response.ok).toBeTruthy();
+  const roles = await response.json() as Array<{ id: string; name: string }>;
+  const role = roles.find((item) => item.name === roleName);
+  expect(role, `Role ${roleName} should exist`).toBeTruthy();
+  return role!.id;
+}
+
+async function createRestrictedUser(adminToken: string): Promise<UserRecord> {
+  const supportRoleId = await getRoleIdByName(adminToken, 'Support');
+  const unique = Date.now();
+  const temporaryPassword = 'TempSup!123';
+  const email = `uat.support.${unique}@example.com`;
+
+  const response = await fetch(`${API_BASE_URL}/api/users`, {
+    method: 'POST',
+    headers: authHeaders(adminToken),
+    body: JSON.stringify({
+      fullName: `UAT Support ${unique}`,
+      email,
+      userAudience: 'Internal',
+      timeZone: 'UTC',
+      locale: 'en-US',
+      monthlyQuota: null,
+      isActive: true,
+      roleIds: [supportRoleId],
+      temporaryPassword
+    })
+  });
+
+  expect(response.ok).toBeTruthy();
+  const user = await response.json() as { id: string; email: string };
+  return { id: user.id, email: user.email, temporaryPassword };
+}
+
+async function deleteUser(adminToken: string, userId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
       'X-Tenant-Key': 'default'
     }
   });
@@ -362,6 +442,40 @@ test.describe('Property UAT regressions', () => {
       await managerContext.close();
     } finally {
       await deleteProperty(repToken, property.id);
+    }
+  });
+
+  test('restricted role cannot access property module in UI', async ({ page }) => {
+    test.setTimeout(120_000);
+    attachDiagnostics(page);
+
+    const adminToken = await apiLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const restrictedUser = await createRestrictedUser(adminToken);
+
+    try {
+      const restrictedToken = await apiLogin(restrictedUser.email, restrictedUser.temporaryPassword);
+
+      await loginUi(page, restrictedToken, '/app/dashboard');
+      await expect(page.getByRole('heading', { name: 'Command Center' })).toBeVisible();
+      await expect(page.getByRole('link', { name: /^Properties$/i })).toHaveCount(0);
+
+      await page.goto(`${UI_BASE_URL}/app/properties`);
+      await expect(page).toHaveURL(/\/landing$/);
+    } finally {
+      await deleteUser(adminToken, restrictedUser.id);
+    }
+  });
+
+  test('restricted role cannot create property via API', async () => {
+    test.setTimeout(120_000);
+    const adminToken = await apiLogin(ADMIN_EMAIL, ADMIN_PASSWORD);
+    const restrictedUser = await createRestrictedUser(adminToken);
+
+    try {
+      const restrictedToken = await apiLogin(restrictedUser.email, restrictedUser.temporaryPassword);
+      await expectCreatePropertyForbidden(restrictedToken);
+    } finally {
+      await deleteUser(adminToken, restrictedUser.id);
     }
   });
 });

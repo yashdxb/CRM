@@ -141,3 +141,64 @@ public sealed record PropertyAlertNotificationDto(
     DateTime SentAtUtc,
     string Status,
     string? TriggeredBy);
+
+// ── CMA (G3) ──
+
+public sealed record ComparablePropertyDto(
+    Guid Id,
+    string Address,
+    string? City,
+    string? Neighborhood,
+    string PropertyType,
+    decimal ListPrice,
+    decimal? SalePrice,
+    decimal? SquareFeet,
+    int? Bedrooms,
+    int? Bathrooms,
+    int? YearBuilt,
+    string Status,
+    DateTime? SoldDateUtc,
+    int DaysOnMarket,
+    decimal? PricePerSqFt,
+    double DistanceMiles,
+    string Source);
+
+public sealed record CmaSummaryDto(
+    decimal AvgListPrice,
+    decimal AvgSalePrice,
+    decimal AvgPricePerSqFt,
+    int AvgDaysOnMarket,
+    decimal MedianPrice,
+    decimal PriceRangeLow,
+    decimal PriceRangeHigh,
+    decimal SuggestedPrice,
+    string MarketTrend);
+
+public sealed record CmaReportDto(
+    Guid PropertyId,
+    DateTime GeneratedAtUtc,
+    IReadOnlyList<ComparablePropertyDto> Comparables,
+    CmaSummaryDto Summary);
+
+// ── E-Signature (G4) ──
+
+public sealed record SignatureRequestSignerDto(
+    string Name,
+    string Email,
+    string Role,
+    string Status,
+    DateTime? SignedAtUtc);
+
+public sealed record SignatureRequestDto(
+    Guid Id,
+    Guid PropertyId,
+    string DocumentName,
+    string DocumentType,
+    string Provider,
+    string Status,
+    IReadOnlyList<SignatureRequestSignerDto> Signers,
+    DateTime? SentAtUtc,
+    DateTime? CompletedAtUtc,
+    DateTime? ExpiresAtUtc,
+    string? CreatedByName,
+    DateTime CreatedAtUtc);

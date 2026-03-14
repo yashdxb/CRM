@@ -448,21 +448,48 @@ public class PropertiesController : ControllerBase
     public IActionResult GetMlsImportHistory() => Ok(Array.Empty<object>());
 
     [HttpGet("{propertyId:guid}/cma")]
-    public IActionResult GetCmaReport(Guid propertyId) =>
-        Ok(new { propertyId, generatedAtUtc = DateTime.UtcNow, comparables = Array.Empty<object>(), summary = new { avgListPrice = 0, avgSalePrice = 0, avgPricePerSqFt = 0, avgDaysOnMarket = 0, medianPrice = 0, priceRangeLow = 0, priceRangeHigh = 0, suggestedPrice = 0, marketTrend = "Stable" } });
+    public async Task<ActionResult<CmaReportResponse>> GetCmaReport(Guid propertyId, CancellationToken ct)
+    {
+        var report = await _propertyService.GetCmaReportAsync(propertyId, ct);
+        return Ok(ToCmaResponse(report));
+    }
 
     [HttpPost("{propertyId:guid}/cma")]
     [Authorize(Policy = Permissions.Policies.PropertiesManage)]
-    public IActionResult GenerateCmaReport(Guid propertyId, [FromBody] object request) =>
-        Ok(new { propertyId, generatedAtUtc = DateTime.UtcNow, comparables = Array.Empty<object>(), summary = new { avgListPrice = 0, avgSalePrice = 0, avgPricePerSqFt = 0, avgDaysOnMarket = 0, medianPrice = 0, priceRangeLow = 0, priceRangeHigh = 0, suggestedPrice = 0, marketTrend = "Stable" } });
+    public async Task<ActionResult<CmaReportResponse>> GenerateCmaReport(Guid propertyId, [FromBody] GenerateCmaReportApiRequest request, CancellationToken ct)
+    {
+        var actor = GetActor();
+        var appRequest = new Application.Properties.GenerateCmaRequest(request.RadiusMiles ?? 2);
+        var report = await _propertyService.GenerateCmaReportAsync(propertyId, appRequest, actor, ct);
+        return Ok(ToCmaResponse(report));
+    }
 
     [HttpGet("{propertyId:guid}/signatures")]
-    public IActionResult GetSignatureRequests(Guid propertyId) => Ok(Array.Empty<object>());
+    public async Task<ActionResult<IEnumerable<SignatureRequestListItem>>> GetSignatureRequests(Guid propertyId, CancellationToken ct)
+    {
+        var items = await _propertyService.GetSignatureRequestsAsync(propertyId, ct);
+        return Ok(items.Select(ToApiSignatureRequest));
+    }
 
     [HttpPost("{propertyId:guid}/signatures")]
     [Authorize(Policy = Permissions.Policies.PropertiesManage)]
-    public IActionResult CreateSignatureRequest(Guid propertyId, [FromBody] object request) =>
-        Created($"api/properties/{propertyId}/signatures/{Guid.NewGuid()}", new { id = Guid.NewGuid(), propertyId, status = "Draft", signers = Array.Empty<object>(), createdAtUtc = DateTime.UtcNow });
+    public async Task<ActionResult<SignatureRequestListItem>> CreateSignatureRequest(Guid propertyId, [FromBody] CreateSignatureApiRequest request, CancellationToken ct)
+    {
+        var actor = GetActor();
+        var appSigners = request.Signers?.Select(s =>
+            new Application.Properties.SignatureRequestSignerInput(s.Name, s.Email, s.Role)).ToList();
+        var appRequest = new Application.Properties.CreateSignatureRequestRequest(
+            request.DocumentName,
+            request.DocumentType,
+            request.Provider,
+            appSigners);
+        var result = await _propertyService.CreateSignatureRequestAsync(propertyId, appRequest, actor, ct);
+
+        if (!result.Success) return result.NotFound ? NotFound() : BadRequest(result.Error);
+
+        await PublishTenantEventAsync($"property.{propertyId}.signature.created", new { propertyId, signatureId = result.Value!.Id }, ct);
+        return Created($"api/properties/{propertyId}/signatures/{result.Value.Id}", ToApiSignatureRequest(result.Value));
+    }
 
     [HttpGet("{propertyId:guid}/alerts")]
     public async Task<ActionResult<IEnumerable<PropertyAlertRuleListItem>>> GetAlertRules(Guid propertyId, CancellationToken ct)
@@ -662,4 +689,23 @@ public class PropertiesController : ControllerBase
             dto.MatchCount,
             dto.LastNotifiedAtUtc,
             dto.CreatedAtUtc);
+
+    private static CmaReportResponse ToCmaResponse(CmaReportDto dto)
+        => new(
+            dto.PropertyId,
+            dto.GeneratedAtUtc,
+            dto.Comparables.Select(c => new ComparablePropertyItem(
+                c.Id, c.Address, c.City, c.Neighborhood, c.PropertyType,
+                c.ListPrice, c.SalePrice, c.SquareFeet, c.Bedrooms, c.Bathrooms, c.YearBuilt,
+                c.Status, c.SoldDateUtc, c.DaysOnMarket, c.PricePerSqFt, c.DistanceMiles, c.Source)).ToList(),
+            new CmaSummaryItem(
+                dto.Summary.AvgListPrice, dto.Summary.AvgSalePrice, dto.Summary.AvgPricePerSqFt,
+                dto.Summary.AvgDaysOnMarket, dto.Summary.MedianPrice, dto.Summary.PriceRangeLow,
+                dto.Summary.PriceRangeHigh, dto.Summary.SuggestedPrice, dto.Summary.MarketTrend));
+
+    private static SignatureRequestListItem ToApiSignatureRequest(SignatureRequestDto dto)
+        => new(
+            dto.Id, dto.PropertyId, dto.DocumentName, dto.DocumentType, dto.Provider, dto.Status,
+            dto.Signers.Select(s => new SignerItem(s.Name, s.Email, s.Role, s.Status, s.SignedAtUtc)).ToList(),
+            dto.SentAtUtc, dto.CompletedAtUtc, dto.ExpiresAtUtc, dto.CreatedByName, dto.CreatedAtUtc);
 }

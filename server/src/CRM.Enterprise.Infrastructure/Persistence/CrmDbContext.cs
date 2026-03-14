@@ -125,6 +125,7 @@ public class CrmDbContext : DbContext
     public DbSet<PropertyEvent> PropertyEvents => Set<PropertyEvent>();
     public DbSet<PropertyAlertRule> PropertyAlertRules => Set<PropertyAlertRule>();
     public DbSet<PropertyAlertNotification> PropertyAlertNotifications => Set<PropertyAlertNotification>();
+    public DbSet<SignatureRequest> SignatureRequests => Set<SignatureRequest>();
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

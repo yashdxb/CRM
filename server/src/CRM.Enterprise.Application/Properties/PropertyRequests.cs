@@ -122,3 +122,20 @@ public sealed record RegisterPropertyPhotoRequest(
     string FileUrl,
     long FileSize,
     string MimeType);
+
+// ── CMA (G3) ──
+
+public sealed record GenerateCmaRequest(double RadiusMiles = 2);
+
+// ── E-Signature (G4) ──
+
+public sealed record SignatureRequestSignerInput(
+    string Name,
+    string Email,
+    string? Role);
+
+public sealed record CreateSignatureRequestRequest(
+    string DocumentName,
+    string? DocumentType,
+    string? Provider,
+    IReadOnlyList<SignatureRequestSignerInput>? Signers);

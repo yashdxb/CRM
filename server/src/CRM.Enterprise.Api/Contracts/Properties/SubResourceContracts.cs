@@ -173,3 +173,84 @@ public class ToggleAlertRuleRequest
 {
     public bool IsActive { get; set; }
 }
+
+// ── CMA (G3) contracts ──
+
+public record ComparablePropertyItem(
+    Guid Id,
+    string Address,
+    string? City,
+    string? Neighborhood,
+    string PropertyType,
+    decimal ListPrice,
+    decimal? SalePrice,
+    decimal? SquareFeet,
+    int? Bedrooms,
+    int? Bathrooms,
+    int? YearBuilt,
+    string Status,
+    DateTime? SoldDateUtc,
+    int DaysOnMarket,
+    decimal? PricePerSqFt,
+    double DistanceMiles,
+    string Source);
+
+public record CmaSummaryItem(
+    decimal AvgListPrice,
+    decimal AvgSalePrice,
+    decimal AvgPricePerSqFt,
+    int AvgDaysOnMarket,
+    decimal MedianPrice,
+    decimal PriceRangeLow,
+    decimal PriceRangeHigh,
+    decimal SuggestedPrice,
+    string MarketTrend);
+
+public record CmaReportResponse(
+    Guid PropertyId,
+    DateTime GeneratedAtUtc,
+    IReadOnlyList<ComparablePropertyItem> Comparables,
+    CmaSummaryItem Summary);
+
+public class GenerateCmaReportApiRequest
+{
+    public double? RadiusMiles { get; set; }
+}
+
+// ── E-Signature (G4) contracts ──
+
+public record SignerItem(
+    string Name,
+    string Email,
+    string Role,
+    string Status,
+    DateTime? SignedAtUtc);
+
+public record SignatureRequestListItem(
+    Guid Id,
+    Guid PropertyId,
+    string DocumentName,
+    string DocumentType,
+    string Provider,
+    string Status,
+    IReadOnlyList<SignerItem> Signers,
+    DateTime? SentAtUtc,
+    DateTime? CompletedAtUtc,
+    DateTime? ExpiresAtUtc,
+    string? CreatedByName,
+    DateTime CreatedAtUtc);
+
+public class CreateSignatureApiRequest
+{
+    public string DocumentName { get; set; } = string.Empty;
+    public string? DocumentType { get; set; }
+    public string? Provider { get; set; }
+    public List<SignerInput>? Signers { get; set; }
+}
+
+public class SignerInput
+{
+    public string Name { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string? Role { get; set; }
+}

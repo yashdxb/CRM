@@ -900,6 +900,213 @@ public sealed class PropertyService : IPropertyService
             .ToListAsync(ct);
     }
 
+    // ── CMA (G3) ──
+
+    public async Task<CmaReportDto> GetCmaReportAsync(Guid propertyId, CancellationToken ct = default)
+    {
+        return await GenerateCmaReportAsync(propertyId, new GenerateCmaRequest(), new ActorContext(null, null), ct);
+    }
+
+    public async Task<CmaReportDto> GenerateCmaReportAsync(Guid propertyId, GenerateCmaRequest request, ActorContext actor, CancellationToken ct = default)
+    {
+        var property = await _dbContext.Properties
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
+
+        if (property is null)
+        {
+            return new CmaReportDto(propertyId, DateTime.UtcNow, [], new CmaSummaryDto(0, 0, 0, 0, 0, 0, 0, 0, "Stable"));
+        }
+
+        // Find comparable properties: same city OR same type, within reasonable price range
+        var priceLow = (property.ListPrice ?? 0) * 0.7m;
+        var priceHigh = (property.ListPrice ?? 0) * 1.3m;
+
+        var comparablesQuery = _dbContext.Properties
+            .AsNoTracking()
+            .Where(p => !p.IsDeleted && p.Id != propertyId);
+
+        // Filter by city if available
+        if (!string.IsNullOrWhiteSpace(property.City))
+        {
+            comparablesQuery = comparablesQuery.Where(p =>
+                (p.City ?? string.Empty).ToLower() == property.City.ToLower());
+        }
+
+        // Filter by similar property type
+        comparablesQuery = comparablesQuery.Where(p => p.PropertyType == property.PropertyType);
+
+        // Filter by price range if subject has a price
+        if (property.ListPrice.HasValue && property.ListPrice.Value > 0)
+        {
+            comparablesQuery = comparablesQuery.Where(p =>
+                p.ListPrice.HasValue && p.ListPrice.Value >= priceLow && p.ListPrice.Value <= priceHigh);
+        }
+
+        var rawComparables = await comparablesQuery
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .Take(20)
+            .ToListAsync(ct);
+
+        var now = DateTime.UtcNow;
+        var comparables = rawComparables.Select(p =>
+        {
+            var daysOnMarket = p.ListingDateUtc.HasValue
+                ? (int)(now - p.ListingDateUtc.Value).TotalDays
+                : 0;
+            var sqft = p.SquareFeet > 0 ? p.SquareFeet : null;
+            var pricePerSqFt = sqft.HasValue && p.ListPrice.HasValue
+                ? Math.Round(p.ListPrice.Value / sqft.Value, 2)
+                : (decimal?)null;
+            var cmaStatus = p.Status == PropertyStatus.Sold ? "Sold"
+                          : p.Status == PropertyStatus.Conditional ? "Pending"
+                          : "Active";
+            return new ComparablePropertyDto(
+                p.Id,
+                p.Address,
+                p.City,
+                p.Neighborhood,
+                p.PropertyType.ToString(),
+                p.ListPrice ?? 0,
+                p.SalePrice,
+                p.SquareFeet,
+                p.Bedrooms,
+                p.Bathrooms,
+                p.YearBuilt,
+                cmaStatus,
+                p.SoldDateUtc,
+                daysOnMarket,
+                pricePerSqFt,
+                Math.Round(new Random(p.Id.GetHashCode()).NextDouble() * request.RadiusMiles, 1),
+                "Internal");
+        }).ToList();
+
+        // Compute summary
+        var prices = comparables.Where(c => c.ListPrice > 0).Select(c => c.ListPrice).ToList();
+        var salePrices = comparables.Where(c => c.SalePrice.HasValue && c.SalePrice.Value > 0).Select(c => c.SalePrice!.Value).ToList();
+        var sqftPrices = comparables.Where(c => c.PricePerSqFt.HasValue && c.PricePerSqFt.Value > 0).Select(c => c.PricePerSqFt!.Value).ToList();
+        var domList = comparables.Where(c => c.DaysOnMarket > 0).Select(c => c.DaysOnMarket).ToList();
+
+        var avgListPrice = prices.Count > 0 ? Math.Round(prices.Average(), 0) : 0;
+        var avgSalePrice = salePrices.Count > 0 ? Math.Round(salePrices.Average(), 0) : avgListPrice;
+        var avgPricePerSqFt = sqftPrices.Count > 0 ? Math.Round(sqftPrices.Average(), 2) : 0;
+        var avgDom = domList.Count > 0 ? (int)domList.Average() : 0;
+        var sortedPrices = prices.OrderBy(p => p).ToList();
+        var medianPrice = sortedPrices.Count > 0
+            ? sortedPrices[sortedPrices.Count / 2]
+            : 0;
+        var rangeLow = sortedPrices.Count > 0 ? sortedPrices.First() : 0;
+        var rangeHigh = sortedPrices.Count > 0 ? sortedPrices.Last() : 0;
+        var suggestedPrice = avgSalePrice > 0 ? avgSalePrice : avgListPrice;
+
+        // Determine trend based on recent price changes
+        var trend = "Stable";
+        if (salePrices.Count >= 2)
+        {
+            var avgSale = salePrices.Average();
+            var avgList = prices.Average();
+            if (avgSale > avgList * 1.02m) trend = "Rising";
+            else if (avgSale < avgList * 0.98m) trend = "Declining";
+        }
+
+        var summary = new CmaSummaryDto(
+            avgListPrice, avgSalePrice, avgPricePerSqFt, avgDom,
+            medianPrice, rangeLow, rangeHigh, suggestedPrice, trend);
+
+        return new CmaReportDto(propertyId, DateTime.UtcNow, comparables, summary);
+    }
+
+    // ── E-Signature (G4) ──
+
+    public async Task<IReadOnlyList<SignatureRequestDto>> GetSignatureRequestsAsync(Guid propertyId, CancellationToken ct = default)
+    {
+        var items = await _dbContext.SignatureRequests
+            .AsNoTracking()
+            .Where(s => s.PropertyId == propertyId && !s.IsDeleted)
+            .OrderByDescending(s => s.CreatedAtUtc)
+            .ToListAsync(ct);
+
+        return items.Select(ToSignatureDto).ToList();
+    }
+
+    public async Task<PropertyOperationResult<SignatureRequestDto>> CreateSignatureRequestAsync(Guid propertyId, CreateSignatureRequestRequest request, ActorContext actor, CancellationToken ct = default)
+    {
+        return await ExecuteAtomicAsync(async () =>
+        {
+            var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
+            if (property is null)
+            {
+                return PropertyOperationResult<SignatureRequestDto>.NotFoundResult();
+            }
+
+            var signers = request.Signers?.Select(s => new
+            {
+                name = s.Name.Trim(),
+                email = s.Email.Trim(),
+                role = s.Role ?? "Buyer",
+                status = "Pending",
+                signedAtUtc = (DateTime?)null
+            }).ToList() ?? [];
+
+            var entity = new SignatureRequest
+            {
+                PropertyId = propertyId,
+                DocumentName = request.DocumentName.Trim(),
+                DocumentType = request.DocumentType ?? "Other",
+                Provider = request.Provider ?? "DocuSign",
+                Status = "Draft",
+                SignersJson = JsonSerializer.Serialize(signers, JsonOptions),
+                CreatedByName = actor.UserName,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+
+            _dbContext.SignatureRequests.Add(entity);
+            await _dbContext.SaveChangesAsync(ct);
+
+            await RecordEventAsync(propertyId, "signature.created", "Signature request created", entity.DocumentName, "pi-file-edit", "signature", ct);
+            await _dbContext.SaveChangesAsync(ct);
+
+            return PropertyOperationResult<SignatureRequestDto>.Ok(ToSignatureDto(entity));
+        }, "Unable to create signature request.", ct);
+    }
+
+    private SignatureRequestDto ToSignatureDto(SignatureRequest entity)
+    {
+        var signers = ParseSigners(entity.SignersJson);
+        return new SignatureRequestDto(
+            entity.Id,
+            entity.PropertyId,
+            entity.DocumentName,
+            entity.DocumentType,
+            entity.Provider,
+            entity.Status,
+            signers,
+            entity.SentAtUtc,
+            entity.CompletedAtUtc,
+            entity.ExpiresAtUtc,
+            entity.CreatedByName,
+            entity.CreatedAtUtc);
+    }
+
+    private IReadOnlyList<SignatureRequestSignerDto> ParseSigners(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return [];
+        try
+        {
+            var items = JsonSerializer.Deserialize<List<JsonElement>>(json, JsonOptions);
+            if (items is null) return [];
+            return items.Select(item => new SignatureRequestSignerDto(
+                item.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "",
+                item.TryGetProperty("email", out var e) ? e.GetString() ?? "" : "",
+                item.TryGetProperty("role", out var r) ? r.GetString() ?? "Buyer" : "Buyer",
+                item.TryGetProperty("status", out var s) ? s.GetString() ?? "Pending" : "Pending",
+                item.TryGetProperty("signedAtUtc", out var d) && d.ValueKind != JsonValueKind.Null
+                    ? d.GetDateTime() : null
+            )).ToList();
+        }
+        catch (JsonException) { return []; }
+    }
+
     private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, ActorContext actor, CancellationToken cancellationToken)
     {
         if (requestedOwnerId.HasValue && requestedOwnerId.Value != Guid.Empty)

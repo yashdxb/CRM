@@ -69,3 +69,4 @@ client/client/output/
 output/
 server/src/CRM.Enterprise.Api/App_Data/TelerikReportingCache/
 server/src/CRM.Enterprise.Api/appsettings.Development.json
+nohup.out

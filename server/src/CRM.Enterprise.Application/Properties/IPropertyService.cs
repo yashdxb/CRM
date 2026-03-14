@@ -40,4 +40,12 @@ public interface IPropertyService
     Task<PropertyOperationResult<PropertyAlertRuleDto>> CreateAlertRuleAsync(Guid propertyId, CreatePropertyAlertRuleRequest request, ActorContext actor, CancellationToken ct = default);
     Task<PropertyOperationResult<PropertyAlertRuleDto>> ToggleAlertRuleAsync(Guid propertyId, Guid ruleId, TogglePropertyAlertRuleRequest request, ActorContext actor, CancellationToken ct = default);
     Task<IReadOnlyList<PropertyAlertNotificationDto>> GetAlertNotificationsAsync(Guid propertyId, CancellationToken ct = default);
+
+    // ── CMA (G3) ──
+    Task<CmaReportDto> GetCmaReportAsync(Guid propertyId, CancellationToken ct = default);
+    Task<CmaReportDto> GenerateCmaReportAsync(Guid propertyId, GenerateCmaRequest request, ActorContext actor, CancellationToken ct = default);
+
+    // ── E-Signature (G4) ──
+    Task<IReadOnlyList<SignatureRequestDto>> GetSignatureRequestsAsync(Guid propertyId, CancellationToken ct = default);
+    Task<PropertyOperationResult<SignatureRequestDto>> CreateSignatureRequestAsync(Guid propertyId, CreateSignatureRequestRequest request, ActorContext actor, CancellationToken ct = default);
 }
