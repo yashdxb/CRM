@@ -31,6 +31,21 @@
           aria-hidden="true"
         ></div>
 
+        @if (loadingOverlay.activityVisible()) {
+          <div class="global-loading-indicator" role="status" aria-live="polite" aria-atomic="true">
+            <p-progressSpinner
+              styleClass="global-loading-indicator__spinner"
+              strokeWidth="7"
+              animationDuration=".8s"
+              [style]="{ width: '20px', height: '20px' }"
+            ></p-progressSpinner>
+            <div class="global-loading-indicator__copy">
+              <strong>Loading data</strong>
+              <span>Refreshing your workspace</span>
+            </div>
+          </div>
+        }
+
         <main class="content">
           <router-outlet />
         </main>
