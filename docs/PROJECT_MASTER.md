@@ -237,6 +237,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
   - `/api/hubs/presence` (online/offline user presence)
   - `/api/hubs/crm-events` (tenant/user-targeted CRM realtime events: decision, notifications, stage changes, renewals, email delivery)
   Both use the same CORS policy and JWT query-token handling for websocket connections.
+  SPA realtime clients connect with direct WebSocket transport and `skipNegotiation` to avoid noisy negotiate failures during normal app startup.
 - **Deployment gate:** before any deploy, verify both client and API builds succeed.
 - **Deployment method:** push to `master` triggers GitHub Actions for both client and API.
   - Client workflow: `.github/workflows/azure-static-web-apps-jolly-dune-0d9d1fe0f.yml`

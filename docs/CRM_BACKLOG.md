@@ -492,14 +492,15 @@ MoSCoW: Must
 
 X2) Activity & task association on property detail page
 MoSCoW: Must
-- Status: IN PROGRESS
+- Status: DONE
 - ClickUp: 86e0bjwxg
 - Evidence:
   - Detail page: `client/src/app/crm/features/properties/pages/property-detail.page.html`
   - Detail logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
   - Models: `client/src/app/crm/features/properties/models/property.model.ts`
-  - Mock DB: `client/src/app/mocks/mock-db.ts`
-  - Mock interceptor: `client/src/app/mocks/mock-api.interceptor.ts`
+  - Service: `client/src/app/crm/features/properties/services/property-data.service.ts`
+  - API contracts: `server/src/CRM.Enterprise.Api/Contracts/Properties/SubResourceContracts.cs`
+  - Playwright regression: `client/e2e/property-regressions.spec.ts`
 - Acceptance criteria:
   - Activities tab on property detail page.
   - Activity list shows type icon, subject, due date, priority, status.
@@ -596,9 +597,14 @@ MoSCoW: Should
 
 X9) SignalR real-time property alerts (placeholder)
 MoSCoW: Could
-- Status: NOT STARTED
+- Status: DONE
 - ClickUp: 86e0bjwyd
-- Evidence: Not implemented yet.
+- Evidence:
+  - Detail page: `client/src/app/crm/features/properties/pages/property-detail.page.html`
+  - Detail logic: `client/src/app/crm/features/properties/pages/property-detail.page.ts`
+  - Realtime client: `client/src/app/core/realtime/crm-events.service.ts`
+  - API contracts: `server/src/CRM.Enterprise.Api/Contracts/Properties/SubResourceContracts.cs`
+  - Playwright regression: `client/e2e/property-regressions.spec.ts`
 - Acceptance criteria:
   - SignalR hub integration for property events.
   - Toast notifications for status changes.
@@ -607,9 +613,12 @@ MoSCoW: Could
 
 X10) Reverse navigation from Account/Contact to Properties
 MoSCoW: Could
-- Status: NOT STARTED
+- Status: DONE
 - ClickUp: 86e0bjwyh
-- Evidence: Not implemented yet.
+- Evidence:
+  - Customer detail: `client/src/app/crm/features/customers/pages/customer-detail.page.html`
+  - Contact detail: `client/src/app/crm/features/contacts/pages/contact-detail.page.html`
+  - Property routing: `client/src/app/app.routes.ts`
 - Acceptance criteria:
   - Account detail page shows related properties section.
   - Contact detail page shows related properties section.
@@ -618,9 +627,12 @@ MoSCoW: Could
 
 X11) Bulk operations on properties list page
 MoSCoW: Should
-- Status: NOT STARTED
+- Status: DONE
 - ClickUp: 86e0bjwyn
-- Evidence: Not implemented yet.
+- Evidence:
+  - List page: `client/src/app/crm/features/properties/pages/properties.page.html`
+  - List logic: `client/src/app/crm/features/properties/pages/properties.page.ts`
+  - Playwright regression/UAT coverage: `client/e2e/property-regressions.spec.ts`
 - Acceptance criteria:
   - Multi-select checkboxes on properties table.
   - Bulk action toolbar appears when items selected.

@@ -1,5 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
-import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { HubConnection, HubConnectionBuilder, HubConnectionState, HttpTransportType, LogLevel } from '@microsoft/signalr';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { readTokenContext, readUserId } from '../auth/token.utils';
@@ -56,14 +56,17 @@ export class PresenceService {
       ? `${environment.apiUrl}/api/hubs/presence?tenantKey=${encodeURIComponent(resolvedTenantKey)}`
       : `${environment.apiUrl}/api/hubs/presence`;
 
+    this.connectionStateSubject.next('connecting');
     this.connection = new HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: () => readTokenContext()?.token ?? '',
         withCredentials: false,
-        headers
+        headers,
+        skipNegotiation: true,
+        transport: HttpTransportType.WebSockets
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Error)
+      .configureLogging(LogLevel.None)
       .build();
 
     this.connection.onreconnecting(() => {
@@ -114,7 +117,6 @@ export class PresenceService {
       });
     });
 
-    this.connectionStateSubject.next('connecting');
     this.connection.start()
       .then(() => {
         this.zone.run(() => {
@@ -122,6 +124,7 @@ export class PresenceService {
         });
       })
       .catch(() => {
+        this.connection = null;
         this.zone.run(() => {
           this.connectionStateSubject.next('disconnected');
         });
@@ -153,4 +156,5 @@ export class PresenceService {
         return 'disconnected';
     }
   }
+
 }

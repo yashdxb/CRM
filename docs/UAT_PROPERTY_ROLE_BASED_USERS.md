@@ -46,6 +46,23 @@ Excluded:
 - e-sign production provider integration
 - map/geocoding validation
 
+## 2.1 Latest Executed Result
+
+Latest local Playwright validation on `2026-03-14`:
+- `client/e2e/property-regressions.spec.ts` -> `5 passed`
+- `client/e2e/smoke.spec.ts` -> `1 passed`
+
+Validated flows:
+- price edit creates persisted price history and manager can review it
+- follow-up activity persists correctly and manager can review it
+- showing subresource persists and manager can review it
+- document subresource persists and manager can review it
+- alert rule plus notification history persist and manager can review them
+
+Implementation notes tied to this UAT pass:
+- showing dialog date/time input was hardened to a deterministic local `datetime-local` path
+- realtime client startup now uses direct WebSocket transport to avoid noisy failed negotiate loops during local startup
+
 ## 3. Test Roles
 
 | Role | Full Name | Email | Expected Access |

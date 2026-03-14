@@ -1,5 +1,5 @@
 import { Injectable, NgZone, inject } from '@angular/core';
-import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { HubConnection, HubConnectionBuilder, HubConnectionState, HttpTransportType, LogLevel } from '@microsoft/signalr';
 import { firstValueFrom, Subject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { readTokenContext } from '../auth/token.utils';
@@ -69,10 +69,12 @@ export class CrmEventsService {
       .withUrl(hubUrl, {
         accessTokenFactory: () => readTokenContext()?.token ?? '',
         withCredentials: false,
-        headers
+        headers,
+        skipNegotiation: true,
+        transport: HttpTransportType.WebSockets
       })
       .withAutomaticReconnect()
-      .configureLogging(LogLevel.Error)
+      .configureLogging(LogLevel.None)
       .build();
 
     this.connection.on('crmEvent', (envelope: CrmEventEnvelope) => {
@@ -89,6 +91,7 @@ export class CrmEventsService {
       if (IS_DEV) console.debug('[CrmEvents] SignalR connected successfully');
       this.flushPendingPresence();
     }).catch((err) => {
+      this.connection = null;
       console.warn('[CrmEvents] SignalR connection failed:', err);
     });
   }
