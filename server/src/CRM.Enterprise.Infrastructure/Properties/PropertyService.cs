@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.DocuSign;
 using CRM.Enterprise.Application.Properties;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
@@ -13,10 +14,12 @@ public sealed class PropertyService : IPropertyService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly CrmDbContext _dbContext;
+    private readonly IDocuSignService _docuSign;
 
-    public PropertyService(CrmDbContext dbContext)
+    public PropertyService(CrmDbContext dbContext, IDocuSignService docuSign)
     {
         _dbContext = dbContext;
+        _docuSign = docuSign;
     }
 
     public async Task<PropertySearchResultDto> SearchAsync(PropertySearchRequest request, CancellationToken cancellationToken = default)
@@ -1070,6 +1073,127 @@ public sealed class PropertyService : IPropertyService
         }, "Unable to create signature request.", ct);
     }
 
+    public async Task<PropertyOperationResult<SignatureRequestDto>> SendSignatureRequestAsync(Guid propertyId, Guid signatureId, ActorContext actor, CancellationToken ct = default)
+    {
+        return await ExecuteAtomicAsync(async () =>
+        {
+            var entity = await _dbContext.SignatureRequests
+                .FirstOrDefaultAsync(s => s.Id == signatureId && s.PropertyId == propertyId && !s.IsDeleted, ct);
+            if (entity is null) return PropertyOperationResult<SignatureRequestDto>.NotFoundResult();
+
+            if (entity.Status != "Draft")
+                return PropertyOperationResult<SignatureRequestDto>.Fail("Only Draft signature requests can be sent.");
+
+            var signers = ParseSigners(entity.SignersJson);
+            var envelopeSigners = signers.Select(s => new EnvelopeSignerInput(s.Name, s.Email, s.Role)).ToList();
+
+            var result = await _docuSign.SendEnvelopeAsync(new SendEnvelopeRequest(
+                entity.DocumentName,
+                $"Please sign: {entity.DocumentName}",
+                envelopeSigners), ct);
+
+            if (!result.Success)
+                return PropertyOperationResult<SignatureRequestDto>.Fail(result.Error ?? "DocuSign send failed.");
+
+            entity.EnvelopeId = result.EnvelopeId;
+            entity.Status = "Sent";
+            entity.SentAtUtc = DateTime.UtcNow;
+            entity.ExpiresAtUtc = DateTime.UtcNow.AddDays(30);
+
+            await _dbContext.SaveChangesAsync(ct);
+            await RecordEventAsync(propertyId, "signature.sent", "Signature request sent via DocuSign", entity.DocumentName, "pi-send", "signature", ct);
+            await _dbContext.SaveChangesAsync(ct);
+
+            return PropertyOperationResult<SignatureRequestDto>.Ok(ToSignatureDto(entity));
+        }, "Unable to send signature request.", ct);
+    }
+
+    public async Task<PropertyOperationResult<SignatureRequestDto>> RefreshSignatureStatusAsync(Guid propertyId, Guid signatureId, CancellationToken ct = default)
+    {
+        var entity = await _dbContext.SignatureRequests
+            .FirstOrDefaultAsync(s => s.Id == signatureId && s.PropertyId == propertyId && !s.IsDeleted, ct);
+        if (entity is null) return PropertyOperationResult<SignatureRequestDto>.NotFoundResult();
+
+        if (string.IsNullOrEmpty(entity.EnvelopeId))
+            return PropertyOperationResult<SignatureRequestDto>.Ok(ToSignatureDto(entity));
+
+        var status = await _docuSign.GetEnvelopeStatusAsync(entity.EnvelopeId, ct);
+
+        var updatedSigners = status.Signers.Select(s => new
+        {
+            name = s.Name,
+            email = s.Email,
+            role = "Signer",
+            status = MapDocuSignStatus(s.Status),
+            signedAtUtc = s.SignedAtUtc
+        }).ToList();
+
+        entity.Status = MapDocuSignStatus(status.Status);
+        entity.SignersJson = JsonSerializer.Serialize(updatedSigners, JsonOptions);
+        if (status.CompletedAtUtc.HasValue) entity.CompletedAtUtc = status.CompletedAtUtc;
+
+        await _dbContext.SaveChangesAsync(ct);
+
+        if (entity.Status == "Completed")
+        {
+            await RecordEventAsync(propertyId, "signature.completed", "All signers have signed", entity.DocumentName, "pi-check-circle", "signature", ct);
+            await _dbContext.SaveChangesAsync(ct);
+        }
+
+        return PropertyOperationResult<SignatureRequestDto>.Ok(ToSignatureDto(entity));
+    }
+
+    public async Task<PropertyOperationResult<bool>> VoidSignatureRequestAsync(Guid propertyId, Guid signatureId, string reason, ActorContext actor, CancellationToken ct = default)
+    {
+        var entity = await _dbContext.SignatureRequests
+            .FirstOrDefaultAsync(s => s.Id == signatureId && s.PropertyId == propertyId && !s.IsDeleted, ct);
+        if (entity is null) return PropertyOperationResult<bool>.NotFoundResult();
+
+        if (!string.IsNullOrEmpty(entity.EnvelopeId) && entity.Status == "Sent")
+        {
+            var voided = await _docuSign.VoidEnvelopeAsync(entity.EnvelopeId, reason, ct);
+            if (!voided) return PropertyOperationResult<bool>.Fail("Failed to void envelope in DocuSign.");
+        }
+
+        entity.Status = "Voided";
+        await _dbContext.SaveChangesAsync(ct);
+
+        await RecordEventAsync(propertyId, "signature.voided", "Signature request voided", entity.DocumentName, "pi-times-circle", "signature", ct);
+        await _dbContext.SaveChangesAsync(ct);
+
+        return PropertyOperationResult<bool>.Ok(true);
+    }
+
+    public async Task<PropertyOperationResult<byte[]>> DownloadSignedDocumentAsync(Guid propertyId, Guid signatureId, CancellationToken ct = default)
+    {
+        var entity = await _dbContext.SignatureRequests
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == signatureId && s.PropertyId == propertyId && !s.IsDeleted, ct);
+        if (entity is null) return PropertyOperationResult<byte[]>.NotFoundResult();
+
+        if (string.IsNullOrEmpty(entity.EnvelopeId))
+            return PropertyOperationResult<byte[]>.Fail("No DocuSign envelope associated with this request.");
+
+        var download = await _docuSign.DownloadDocumentAsync(entity.EnvelopeId, ct);
+        if (download is null)
+            return PropertyOperationResult<byte[]>.Fail("Failed to download document from DocuSign.");
+
+        return PropertyOperationResult<byte[]>.Ok(download.Content);
+    }
+
+    private static string MapDocuSignStatus(string docuSignStatus) => docuSignStatus.ToLowerInvariant() switch
+    {
+        "sent" => "Sent",
+        "delivered" => "Sent",
+        "completed" => "Completed",
+        "signed" => "Completed",
+        "declined" => "Declined",
+        "voided" => "Voided",
+        "created" => "Draft",
+        "pending" => "Pending",
+        _ => docuSignStatus
+    };
+
     private SignatureRequestDto ToSignatureDto(SignatureRequest entity)
     {
         var signers = ParseSigners(entity.SignersJson);
@@ -1080,6 +1204,7 @@ public sealed class PropertyService : IPropertyService
             entity.DocumentType,
             entity.Provider,
             entity.Status,
+            entity.EnvelopeId,
             signers,
             entity.SentAtUtc,
             entity.CompletedAtUtc,

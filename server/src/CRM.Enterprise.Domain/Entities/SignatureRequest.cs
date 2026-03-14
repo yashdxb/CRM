@@ -9,6 +9,7 @@ public class SignatureRequest : AuditableEntity
     public string DocumentType { get; set; } = "Other";
     public string Provider { get; set; } = "DocuSign";
     public string Status { get; set; } = "Draft";
+    public string? EnvelopeId { get; set; }
     public string SignersJson { get; set; } = "[]";
     public DateTime? SentAtUtc { get; set; }
     public DateTime? CompletedAtUtc { get; set; }

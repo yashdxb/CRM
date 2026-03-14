@@ -491,6 +491,46 @@ public class PropertiesController : ControllerBase
         return Created($"api/properties/{propertyId}/signatures/{result.Value.Id}", ToApiSignatureRequest(result.Value));
     }
 
+    [HttpPost("{propertyId:guid}/signatures/{signatureId:guid}/send")]
+    [Authorize(Policy = Permissions.Policies.PropertiesManage)]
+    public async Task<ActionResult<SignatureRequestListItem>> SendSignatureRequest(Guid propertyId, Guid signatureId, CancellationToken ct)
+    {
+        var actor = GetActor();
+        var result = await _propertyService.SendSignatureRequestAsync(propertyId, signatureId, actor, ct);
+        if (!result.Success) return result.NotFound ? NotFound() : BadRequest(result.Error);
+
+        await PublishTenantEventAsync($"property.{propertyId}.signature.sent", new { propertyId, signatureId }, ct);
+        return Ok(ToApiSignatureRequest(result.Value!));
+    }
+
+    [HttpPost("{propertyId:guid}/signatures/{signatureId:guid}/refresh")]
+    public async Task<ActionResult<SignatureRequestListItem>> RefreshSignatureStatus(Guid propertyId, Guid signatureId, CancellationToken ct)
+    {
+        var result = await _propertyService.RefreshSignatureStatusAsync(propertyId, signatureId, ct);
+        if (!result.Success) return result.NotFound ? NotFound() : BadRequest(result.Error);
+        return Ok(ToApiSignatureRequest(result.Value!));
+    }
+
+    [HttpPost("{propertyId:guid}/signatures/{signatureId:guid}/void")]
+    [Authorize(Policy = Permissions.Policies.PropertiesManage)]
+    public async Task<ActionResult> VoidSignatureRequest(Guid propertyId, Guid signatureId, [FromBody] VoidSignatureApiRequest request, CancellationToken ct)
+    {
+        var actor = GetActor();
+        var result = await _propertyService.VoidSignatureRequestAsync(propertyId, signatureId, request.Reason, actor, ct);
+        if (!result.Success) return result.NotFound ? NotFound() : BadRequest(result.Error);
+
+        await PublishTenantEventAsync($"property.{propertyId}.signature.voided", new { propertyId, signatureId }, ct);
+        return Ok();
+    }
+
+    [HttpGet("{propertyId:guid}/signatures/{signatureId:guid}/download")]
+    public async Task<ActionResult> DownloadSignedDocument(Guid propertyId, Guid signatureId, CancellationToken ct)
+    {
+        var result = await _propertyService.DownloadSignedDocumentAsync(propertyId, signatureId, ct);
+        if (!result.Success) return result.NotFound ? NotFound() : BadRequest(result.Error);
+        return File(result.Value!, "application/pdf", $"signed_document_{signatureId}.pdf");
+    }
+
     [HttpGet("{propertyId:guid}/alerts")]
     public async Task<ActionResult<IEnumerable<PropertyAlertRuleListItem>>> GetAlertRules(Guid propertyId, CancellationToken ct)
     {
@@ -705,7 +745,7 @@ public class PropertiesController : ControllerBase
 
     private static SignatureRequestListItem ToApiSignatureRequest(SignatureRequestDto dto)
         => new(
-            dto.Id, dto.PropertyId, dto.DocumentName, dto.DocumentType, dto.Provider, dto.Status,
+            dto.Id, dto.PropertyId, dto.DocumentName, dto.DocumentType, dto.Provider, dto.Status, dto.EnvelopeId,
             dto.Signers.Select(s => new SignerItem(s.Name, s.Email, s.Role, s.Status, s.SignedAtUtc)).ToList(),
             dto.SentAtUtc, dto.CompletedAtUtc, dto.ExpiresAtUtc, dto.CreatedByName, dto.CreatedAtUtc);
 }

@@ -233,6 +233,7 @@ public record SignatureRequestListItem(
     string DocumentType,
     string Provider,
     string Status,
+    string? EnvelopeId,
     IReadOnlyList<SignerItem> Signers,
     DateTime? SentAtUtc,
     DateTime? CompletedAtUtc,
@@ -246,6 +247,11 @@ public class CreateSignatureApiRequest
     public string? DocumentType { get; set; }
     public string? Provider { get; set; }
     public List<SignerInput>? Signers { get; set; }
+}
+
+public class VoidSignatureApiRequest
+{
+    public string Reason { get; set; } = string.Empty;
 }
 
 public class SignerInput

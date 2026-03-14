@@ -48,4 +48,8 @@ public interface IPropertyService
     // ── E-Signature (G4) ──
     Task<IReadOnlyList<SignatureRequestDto>> GetSignatureRequestsAsync(Guid propertyId, CancellationToken ct = default);
     Task<PropertyOperationResult<SignatureRequestDto>> CreateSignatureRequestAsync(Guid propertyId, CreateSignatureRequestRequest request, ActorContext actor, CancellationToken ct = default);
+    Task<PropertyOperationResult<SignatureRequestDto>> SendSignatureRequestAsync(Guid propertyId, Guid signatureId, ActorContext actor, CancellationToken ct = default);
+    Task<PropertyOperationResult<SignatureRequestDto>> RefreshSignatureStatusAsync(Guid propertyId, Guid signatureId, CancellationToken ct = default);
+    Task<PropertyOperationResult<bool>> VoidSignatureRequestAsync(Guid propertyId, Guid signatureId, string reason, ActorContext actor, CancellationToken ct = default);
+    Task<PropertyOperationResult<byte[]>> DownloadSignedDocumentAsync(Guid propertyId, Guid signatureId, CancellationToken ct = default);
 }

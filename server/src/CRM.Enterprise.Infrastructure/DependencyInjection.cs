@@ -30,6 +30,8 @@ using CRM.Enterprise.Application.DirectChat;
 using CRM.Enterprise.Application.HelpDesk;
 using CRM.Enterprise.Application.Workflows;
 using CRM.Enterprise.Application.Properties;
+using CRM.Enterprise.Application.DocuSign;
+using CRM.Enterprise.Infrastructure.DocuSign;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Infrastructure.Notifications;
 using CRM.Enterprise.Infrastructure.Leads;
@@ -231,6 +233,11 @@ public static class DependencyInjection
         services.AddScoped<IWorkflowExecutionService, WorkflowExecutionService>();
         services.AddScoped<IPropertyService, Infrastructure.Properties.PropertyService>();
         
+        // DocuSign integration
+        services.Configure<DocuSignOptions>(configuration.GetSection(DocuSignOptions.SectionName));
+        services.AddHttpClient<DocuSignService>();
+        services.AddScoped<IDocuSignService, DocuSignService>();
+
         // Email OAuth connection service
         services.Configure<EmailOAuthOptions>(configuration.GetSection(EmailOAuthOptions.SectionName));
         services.AddHttpClient<EmailConnectionService>();

@@ -196,6 +196,7 @@ public sealed record SignatureRequestDto(
     string DocumentType,
     string Provider,
     string Status,
+    string? EnvelopeId,
     IReadOnlyList<SignatureRequestSignerDto> Signers,
     DateTime? SentAtUtc,
     DateTime? CompletedAtUtc,
