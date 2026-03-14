@@ -211,15 +211,21 @@
               </div>
               <div class="form-field form-field--actions">
                 <label>Apply preset</label>
-                <div class="button-row">
-                  <button pButton type="button" class="btn btn-secondary" [disabled]="presetApplying()" (click)="applyVerticalPreset(false)">
-                    <i class="pi pi-sparkles"></i>
-                    <span>Apply Missing Defaults</span>
+                <div class="preset-actions">
+                  <button type="button" class="action-btn action-btn--add" [disabled]="presetApplying()" (click)="applyVerticalPreset(false)">
+                    <span class="action-btn__icon"><i class="pi pi-sparkles"></i></span>
+                    <span>Apply Preset</span>
                   </button>
-                  <button pButton type="button" class="btn btn-ghost" [disabled]="presetApplying()" (click)="applyVerticalPreset(true)">
-                    <i class="pi pi-refresh"></i>
+                  <button type="button" class="action-btn action-btn--refresh" [disabled]="presetApplying()" (click)="applyVerticalPreset(true)">
+                    <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
                     <span>Reset to Preset</span>
                   </button>
+                  <span class="preset-status" *ngIf="presetApplied() && !presetApplying()">
+                    <i class="pi pi-check-circle"></i> In effect
+                  </span>
+                  <span class="preset-status preset-status--applying" *ngIf="presetApplying()">
+                    <i class="pi pi-spinner pi-spin"></i> Applying…
+                  </span>
                 </div>
               </div>
             </div>
@@ -244,15 +250,6 @@
               </div>
             </div>
 
-            <div class="form-grid" *ngIf="activeVerticalPresetConfiguration() as preset">
-              <div class="form-field">
-                <label>Pack summary</label>
-                <div class="token-list">
-                  <span class="token-pill" *ngFor="let item of verticalPackSummary(preset)">{{ item }}</span>
-                </div>
-                <small class="field-hint">This summarizes the CRM content the selected preset is designed to enable and seed.</small>
-              </div>
-            </div>
           </section>
 
           <section class="form-card">

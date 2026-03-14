@@ -1,5 +1,5 @@
 import { NgFor, NgIf } from '@angular/common';
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
@@ -82,6 +82,7 @@ export class WorkspaceSettingsPage {
   ];
   protected readonly activeVerticalPresetConfiguration = signal<VerticalPresetConfiguration | null>(null);
   protected readonly presetApplying = signal(false);
+  protected readonly presetApplied = computed(() => !!this.activeVerticalPresetConfiguration());
 
   protected readonly reportDesignerPermissionOptions: Option[] = [
     { label: 'Admins Only (Administration Manage)', value: 'Permissions.Administration.Manage' },
@@ -258,23 +259,6 @@ export class WorkspaceSettingsPage {
       reportDesignerRequiredPermission: settings.reportDesignerRequiredPermission || 'Permissions.Administration.Manage'
     });
     this.activeVerticalPresetConfiguration.set(settings.verticalPresetConfiguration ?? null);
-  }
-
-  protected verticalPackSummary(preset: VerticalPresetConfiguration): string[] {
-    const summary = [
-      preset.presetId === 'RealEstateBrokerage' ? 'Properties module' : 'Core CRM workflow pack',
-      `${preset.vocabulary.leadQualificationLabel} language`,
-      `${preset.vocabulary.opportunityPluralLabel} pipeline vocabulary`,
-      ...preset.dashboardPackDefaults.map((item) => `${item} dashboard`),
-      ...preset.reportLibraryHighlights.map((item) => `${item} report`),
-      ...preset.workflowTemplateHighlights.map((item) => `${item} workflow`)
-    ];
-
-    if (preset.presetId === 'RealEstateBrokerage') {
-      summary.splice(3, 0, 'Brokerage lead profile catalog');
-    }
-
-    return Array.from(new Set(summary));
   }
 
   protected applyVerticalPreset(resetExisting: boolean) {
