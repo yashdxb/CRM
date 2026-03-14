@@ -735,4 +735,51 @@ test.describe('Property UAT regressions', () => {
       await deleteProperty(repToken, propertyB.id);
     }
   });
+
+  test('photo media lifecycle stays consistent after upload and removal for rep and manager', async ({ browser, page }) => {
+    test.setTimeout(120_000);
+    attachDiagnostics(page);
+
+    const repToken = await apiLogin(SALES_REP_EMAIL, SALES_REP_PASSWORD);
+    const managerToken = await apiLogin(SALES_MANAGER_EMAIL, SALES_MANAGER_PASSWORD);
+    const property = await createProperty(repToken, `Photo Lifecycle ${Date.now()}`, 712000);
+
+    try {
+      await loginUi(page, repToken, `/app/properties/${property.id}/edit`);
+      await expect(page.getByRole('heading', { name: /Edit Property/i })).toBeVisible();
+
+      await page.locator('.photo-drop-zone .drop-input').setInputFiles([SAMPLE_PHOTO_PATH, SAMPLE_PHOTO_PATH]);
+      await expect(page.locator('.photo-grid').last().locator('.photo-thumb')).toHaveCount(2);
+      await page.getByRole('button', { name: /Update property/i }).click();
+      await expect(page).toHaveURL(/\/app\/properties$/);
+
+      await page.getByRole('row', { name: new RegExp(property.address) }).click();
+      await expect(page.locator('.gallery-item')).toHaveCount(2);
+
+      const managerContext = await browser.newContext();
+      const managerPage = await managerContext.newPage();
+      attachDiagnostics(managerPage);
+      await loginUi(managerPage, managerToken, `/app/properties/${property.id}`);
+      await expect(managerPage.locator('.gallery-item')).toHaveCount(2);
+      await managerContext.close();
+
+      await page.getByRole('link', { name: /Edit/i }).click();
+      await expect(page.locator('.photo-grid').first().locator('.photo-thumb')).toHaveCount(2);
+      await page.locator('.photo-grid').first().locator('.photo-thumb').first().locator('.photo-remove').click();
+      await expect(page.getByText(/Photo removed\./i)).toBeVisible();
+      await expect(page.locator('.photo-grid').first().locator('.photo-thumb')).toHaveCount(1);
+
+      await page.goto(`${UI_BASE_URL}/app/properties/${property.id}`);
+      await expect(page.locator('.gallery-item')).toHaveCount(1);
+
+      const managerContextAfterRemoval = await browser.newContext();
+      const managerPageAfterRemoval = await managerContextAfterRemoval.newPage();
+      attachDiagnostics(managerPageAfterRemoval);
+      await loginUi(managerPageAfterRemoval, managerToken, `/app/properties/${property.id}`);
+      await expect(managerPageAfterRemoval.locator('.gallery-item')).toHaveCount(1);
+      await managerContextAfterRemoval.close();
+    } finally {
+      await deleteProperty(repToken, property.id);
+    }
+  });
 });
