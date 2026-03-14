@@ -6,5 +6,6 @@ public enum ActivityType
     Email = 2,
     Meeting = 3,
     Task = 4,
-    Note = 5
+    Note = 5,
+    FollowUp = 6
 }

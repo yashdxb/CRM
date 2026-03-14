@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Properties;
@@ -336,6 +337,19 @@ public sealed class PropertyService : IPropertyService
             property.UpdatedAtUtc = DateTime.UtcNow;
 
             await _dbContext.SaveChangesAsync(cancellationToken);
+
+            if (previousSnapshot.ListPrice != property.ListPrice
+                && previousSnapshot.ListPrice.HasValue
+                && property.ListPrice.HasValue)
+            {
+                await RecordPriceChangeAsync(
+                    property,
+                    previousSnapshot.ListPrice.Value,
+                    property.ListPrice.Value,
+                    actor.UserName ?? "System",
+                    null,
+                    cancellationToken);
+            }
 
             await EnsureLifecycleEventsAsync(property, previousSnapshot, actor, cancellationToken);
             if (HasAlertRelevantChanges(previousSnapshot, property))
@@ -716,24 +730,16 @@ public sealed class PropertyService : IPropertyService
                 return PropertyOperationResult<PriceChangeDto>.NotFoundResult();
             }
 
-            var entity = new PropertyPriceChange
-            {
-                PropertyId = propertyId,
-                PreviousPrice = request.PreviousPrice,
-                NewPrice = request.NewPrice,
-                ChangedAtUtc = DateTime.UtcNow,
-                ChangedBy = request.ChangedBy ?? actor.UserName,
-                Reason = request.Reason,
-                CreatedAtUtc = DateTime.UtcNow
-            };
-
-            _dbContext.PropertyPriceChanges.Add(entity);
             property.ListPrice = request.NewPrice;
             property.UpdatedAtUtc = DateTime.UtcNow;
 
-            await _dbContext.SaveChangesAsync(ct);
-
-            await RecordEventAsync(propertyId, "price.changed", "Price updated", request.Reason, "pi-dollar", "price", ct);
+            var entity = await RecordPriceChangeAsync(
+                property,
+                request.PreviousPrice,
+                request.NewPrice,
+                request.ChangedBy ?? actor.UserName ?? "System",
+                request.Reason,
+                ct);
             await EvaluateAlertRulesAsync(property, "property.price.changed", ct);
             await _dbContext.SaveChangesAsync(ct);
 
@@ -957,6 +963,51 @@ public sealed class PropertyService : IPropertyService
         {
             await RecordEventAsync(property.Id, "sold", "Sold", null, "pi-check-circle", "sold", ct, property.SoldDateUtc.Value);
         }
+    }
+
+    private async Task<PropertyPriceChange> RecordPriceChangeAsync(
+        Property property,
+        decimal previousPrice,
+        decimal newPrice,
+        string changedBy,
+        string? reason,
+        CancellationToken ct)
+    {
+        var entity = new PropertyPriceChange
+        {
+            PropertyId = property.Id,
+            PreviousPrice = previousPrice,
+            NewPrice = newPrice,
+            ChangedAtUtc = DateTime.UtcNow,
+            ChangedBy = changedBy,
+            Reason = reason,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _dbContext.PropertyPriceChanges.Add(entity);
+        var description = $"{FormatCurrency(previousPrice, property.Currency)} -> {FormatCurrency(newPrice, property.Currency)}";
+        if (!string.IsNullOrWhiteSpace(reason))
+        {
+            description = $"{description} ({reason.Trim()})";
+        }
+
+        await RecordEventAsync(property.Id, "property.price.changed", "Price updated", description, "pi-dollar", "price", ct);
+        return entity;
+    }
+
+    private static string FormatCurrency(decimal amount, string? currency)
+    {
+        var currencyCode = string.IsNullOrWhiteSpace(currency) ? "CAD" : currency.Trim().ToUpperInvariant();
+        var symbol = currencyCode switch
+        {
+            "USD" => "$",
+            "CAD" => "CA$",
+            _ => $"{currencyCode} "
+        };
+
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{symbol}{decimal.Round(amount, 0):N0}");
     }
 
     private async Task RecordEventAsync(

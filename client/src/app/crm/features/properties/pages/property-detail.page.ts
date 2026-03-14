@@ -529,6 +529,13 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
     }
   }
 
+  protected activityTypeLabel(type: string): string {
+    switch (type) {
+      case 'FollowUp': return 'Follow Up';
+      default: return type;
+    }
+  }
+
   protected prioritySeverity(priority: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (priority) {
       case 'Urgent': return 'danger';

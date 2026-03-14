@@ -258,6 +258,103 @@ Validate the dedicated showing workflow in the property detail UI from rep entry
 
 ### PROP-05 Upload documents
 
+### PROP-05A Focus UAT: Document Workflow
+
+**Goal**
+Validate that a realtor can attach a listing document from the property detail page and that the same document is visible to the manager on review.
+
+**Role coverage**
+- Sales Rep uploads the document
+- Sales Manager validates cross-role visibility
+
+**Steps**
+1. Sign in as `yasser0503@outlook.com`.
+2. Open the target property detail page.
+3. Open the `Documents` tab.
+4. Click `Upload Document`.
+5. Enter:
+   - file name = `listing-agreement.pdf`
+   - category = `Contract`
+   - file URL = `https://example.com/docs/listing-agreement.pdf`
+6. Save the document.
+7. Confirm the document appears in `Documents`.
+8. Return to `Details` and confirm the timeline includes a document event.
+9. Sign out and sign in as `yasser.ahamed@gmail.com`.
+10. Open the same property and open `Documents`.
+11. Confirm the same document is visible.
+
+**Expected result**
+- The document dialog saves successfully.
+- The document appears in the `Documents` tab with category and upload date.
+- The property timeline records the upload event.
+- Sales Manager can see the same document on review.
+
+### PROP-06A Focus UAT: Price Change Workflow
+
+**Goal**
+Validate that a realtor can change the listing price through the standard edit flow and that price history plus timeline events are recorded correctly.
+
+**Role coverage**
+- Sales Rep updates the list price
+- Sales Manager validates cross-role visibility
+
+**Steps**
+1. Sign in as `yasser0503@outlook.com`.
+2. Open the target property detail page.
+3. Click `Edit`.
+4. Change list price from `845000` to `829000`.
+5. Save the property.
+6. Return to the property detail page.
+7. Confirm the hero and pricing card show `CA$829,000`.
+8. Open `Price History` and confirm a new price-change row exists.
+9. Return to `Details` and confirm the timeline includes a price-change event.
+10. Sign out and sign in as `yasser.ahamed@gmail.com`.
+11. Open the same property.
+12. Confirm the current list price is `CA$829,000`.
+13. Open `Price History` and confirm the same entry is visible.
+
+**Expected result**
+- The edited list price saves successfully.
+- Price history shows the old and new values.
+- The timeline records the price update.
+- Sales Manager sees the same updated price and history.
+
+### PROP-07A Focus UAT: Activity Workflow
+
+**Goal**
+Validate that a realtor can create and complete a property activity from the detail page and that the manager can review the same activity state.
+
+**Role coverage**
+- Sales Rep creates and completes the activity
+- Sales Manager validates cross-role visibility
+
+**Steps**
+1. Sign in as `yasser0503@outlook.com`.
+2. Open the target property detail page.
+3. Open the `Activities` tab.
+4. Click `Add Activity`.
+5. Enter:
+   - type = `Follow Up`
+   - subject = `Confirm offer review window`
+   - description = `Call seller to confirm deadline for reviewing incoming offers.`
+   - due date = a future date
+   - priority = `High`
+6. Save the activity.
+7. Confirm the activity appears in `Activities`.
+8. Mark the activity complete.
+9. Confirm the activity state updates to completed.
+10. Return to `Details` and confirm the timeline includes an activity event.
+11. Sign out and sign in as `yasser.ahamed@gmail.com`.
+12. Open the same property and open `Activities`.
+13. Confirm the same activity is visible in its completed state.
+
+**Expected result**
+- The activity dialog saves successfully.
+- The activity appears in the `Activities` tab with type, priority, and status.
+- The activity can be completed from the detail view.
+- The property timeline records the activity event.
+- Sales Manager can see the same completed activity.
+
 **Goal**
 Validate document workflow for listing operations.
 

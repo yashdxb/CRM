@@ -618,7 +618,7 @@
                   <p-tag [value]="act.priority" [severity]="prioritySeverity(act.priority)" class="activity-priority"></p-tag>
                 </div>
                 <div class="activity-meta">
-                  <span class="activity-type"><i class="pi" [ngClass]="activityTypeIcon(act.type)"></i> {{ act.type }}</span>
+                  <span class="activity-type"><i class="pi" [ngClass]="activityTypeIcon(act.type)"></i> {{ activityTypeLabel(act.type) }}</span>
                   <span class="activity-date" *ngIf="act.dueDate">
                     <i class="pi pi-calendar"></i> Due {{ act.dueDate | date:'MMM d, yyyy' }}
                   </span>
