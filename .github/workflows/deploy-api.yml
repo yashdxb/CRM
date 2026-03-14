@@ -46,11 +46,7 @@ jobs:
           rm -rf ./artifacts/publish
           dotnet publish server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj \
             --configuration Release \
-            --runtime linux-x64 \
-            --self-contained true \
-            /p:UseAppHost=true \
             --output ./artifacts/publish
-          chmod +x ./artifacts/publish/CRM.Enterprise.Api
 
       - name: Azure Login
         uses: azure/login@v2
@@ -82,22 +78,22 @@ jobs:
       - name: Post-deploy health verification
         run: |
           API_URL="https://crm-enterprise-api-dev-01122345.azurewebsites.net"
-          echo "Waiting 45s for App Service to restart after deployment..."
-          sleep 45
+          echo "Waiting 90s for App Service to restart after deployment..."
+          sleep 90
 
-          # Retry /health up to 10 times (every 15s = 150s total wait)
-          for i in 1 2 3 4 5 6 7 8 9 10; do
-            echo "Health check attempt $i/10..."
+          # Retry /health up to 20 times (every 20s = 400s total wait after initial delay)
+          for i in $(seq 1 20); do
+            echo "Health check attempt $i/20..."
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$API_URL/health" || echo "000")
             if [ "$HTTP_STATUS" = "200" ]; then
               echo "✅ /health returned 200"
               break
             fi
-            echo "  /health returned $HTTP_STATUS — retrying in 15s..."
-            sleep 15
+            echo "  /health returned $HTTP_STATUS — retrying in 20s..."
+            sleep 20
           done
           if [ "$HTTP_STATUS" != "200" ]; then
-            echo "❌ /health did not return 200 after 10 attempts (last: $HTTP_STATUS)"
+            echo "❌ /health did not return 200 after 20 attempts (last: $HTTP_STATUS)"
             exit 1
           fi
 
