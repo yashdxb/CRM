@@ -70,3 +70,6 @@ output/
 server/src/CRM.Enterprise.Api/App_Data/TelerikReportingCache/
 server/src/CRM.Enterprise.Api/appsettings.Development.json
 nohup.out
+
+# Runtime file uploads (dev testing artifacts)
+server/src/CRM.Enterprise.Api/uploads/
