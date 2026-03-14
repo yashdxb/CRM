@@ -681,4 +681,58 @@ test.describe('Property UAT regressions', () => {
     await expect(await getPropertyResponseStatus(repToken, property.id)).toBe(404);
     await expect(await getPropertyResponseStatus(managerToken, property.id)).toBe(404);
   });
+
+  test('bulk status change stays consistent across table and board views for rep and manager', async ({ browser, page }) => {
+    test.setTimeout(120_000);
+    attachDiagnostics(page);
+
+    const repToken = await apiLogin(SALES_REP_EMAIL, SALES_REP_PASSWORD);
+    const managerToken = await apiLogin(SALES_MANAGER_EMAIL, SALES_MANAGER_PASSWORD);
+    const propertyA = await createProperty(repToken, `Bulk Status A ${Date.now()}`, 721000);
+    const propertyB = await createProperty(repToken, `Bulk Status B ${Date.now()}`, 731000);
+
+    try {
+      await loginUi(page, repToken, '/app/properties');
+      await expect(page.getByRole('heading', { name: /Property Workspace/i })).toBeVisible();
+
+      const rowA = page.getByRole('row', { name: new RegExp(propertyA.address) });
+      const rowB = page.getByRole('row', { name: new RegExp(propertyB.address) });
+      await expect(rowA).toBeVisible();
+      await expect(rowB).toBeVisible();
+
+      await rowA.locator('input[type="checkbox"]').check();
+      await rowB.locator('input[type="checkbox"]').check();
+      await expect(page.locator('.bulk-count')).toHaveText('2 selected');
+
+      await page.getByRole('button', { name: /Change Status/i }).click();
+      await page.locator('#bulk-status .p-select-dropdown, #bulk-status button[aria-label=\"dropdown trigger\"]').click();
+      await page.getByRole('option', { name: /^Conditional$/ }).click();
+      await page.locator('.p-dialog:has(#bulk-status) .action-btn--add').click();
+
+      await expect(page.getByText(/2 properties updated\./i)).toBeVisible();
+      await expect(page.locator('.bulk-toolbar')).toHaveCount(0);
+      await expect(rowA.getByText('Conditional')).toBeVisible();
+      await expect(rowB.getByText('Conditional')).toBeVisible();
+
+      await page.getByRole('button', { name: /Switch to board view/i }).click();
+      const conditionalColumn = page.locator('.kanban-column', { hasText: /^Conditional/s });
+      await expect(conditionalColumn.locator('.property-card', { hasText: propertyA.address })).toBeVisible();
+      await expect(conditionalColumn.locator('.property-card', { hasText: propertyB.address })).toBeVisible();
+
+      const managerContext = await browser.newContext();
+      const managerPage = await managerContext.newPage();
+      attachDiagnostics(managerPage);
+      await loginUi(managerPage, managerToken, '/app/properties');
+      await expect(managerPage.getByRole('row', { name: new RegExp(propertyA.address) }).getByText('Conditional')).toBeVisible();
+      await expect(managerPage.getByRole('row', { name: new RegExp(propertyB.address) }).getByText('Conditional')).toBeVisible();
+      await managerPage.getByRole('button', { name: /Switch to board view/i }).click();
+      const managerConditionalColumn = managerPage.locator('.kanban-column', { hasText: /^Conditional/s });
+      await expect(managerConditionalColumn.locator('.property-card', { hasText: propertyA.address })).toBeVisible();
+      await expect(managerConditionalColumn.locator('.property-card', { hasText: propertyB.address })).toBeVisible();
+      await managerContext.close();
+    } finally {
+      await deleteProperty(repToken, propertyA.id);
+      await deleteProperty(repToken, propertyB.id);
+    }
+  });
 });

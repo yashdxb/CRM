@@ -13,7 +13,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ConfirmationService } from 'primeng/api';
-import { forkJoin } from 'rxjs';
+import { forkJoin, switchMap } from 'rxjs';
 
 import { Property, PropertyStatus, PropertyType, MlsFeedConfig, MlsImportJob } from '../models/property.model';
 import { PropertyDataService, SavePropertyRequest } from '../services/property-data.service';
@@ -319,9 +319,9 @@ export class PropertiesPage {
   protected bulkChangeStatus() {
     const ids = Array.from(this.selectedIds());
     const obs = ids.map(id => {
-      const prop = this.properties().find(p => p.id === id);
-      if (!prop) return this.propertyData.delete(id); // fallback – shouldn't happen
-      return this.propertyData.update(id, { ...prop, status: this.bulkStatus } as SavePropertyRequest);
+      return this.propertyData.getById(id).pipe(
+        switchMap((prop) => this.propertyData.update(id, { ...prop, status: this.bulkStatus } as SavePropertyRequest))
+      );
     });
     forkJoin(obs).subscribe({
       next: () => {
