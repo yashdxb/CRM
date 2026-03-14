@@ -119,7 +119,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         principalSchema: "crm",
                         principalTable: "PropertyAlertRules",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(

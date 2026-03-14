@@ -408,7 +408,7 @@ public class CrmDbContext : DbContext
             .HasForeignKey(n => n.PropertyId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<PropertyAlertNotification>()
             .HasOne(n => n.Rule).WithMany()
-            .HasForeignKey(n => n.RuleId).OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(n => n.RuleId).OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<Supplier>().ToTable("Suppliers", SupplyChainSchema);
         modelBuilder.Entity<SupplierCertification>().ToTable("SupplierCertifications", SupplyChainSchema);

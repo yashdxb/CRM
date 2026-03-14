@@ -236,110 +236,116 @@ public sealed class PropertyService : IPropertyService
 
     public async Task<PropertyOperationResult<PropertyListItemDto>> CreateAsync(PropertyUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
-        var ownerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
-
-        var property = new Property
+        return await ExecuteAtomicAsync(async () =>
         {
-            MlsNumber = request.MlsNumber,
-            Address = request.Address,
-            City = request.City,
-            Province = request.Province,
-            PostalCode = request.PostalCode,
-            Country = request.Country,
-            ListPrice = request.ListPrice,
-            SalePrice = request.SalePrice,
-            Currency = request.Currency ?? "CAD",
-            ListingDateUtc = request.ListingDateUtc,
-            SoldDateUtc = request.SoldDateUtc,
-            Status = ParseStatus(request.Status),
-            PropertyType = ParsePropertyType(request.PropertyType),
-            Bedrooms = request.Bedrooms,
-            Bathrooms = request.Bathrooms,
-            SquareFeet = request.SquareFeet,
-            LotSizeSqFt = request.LotSizeSqFt,
-            YearBuilt = request.YearBuilt,
-            GarageSpaces = request.GarageSpaces,
-            Description = request.Description,
-            Features = request.Features,
-            PhotoUrls = NormalizePhotoUrls(request.PhotoUrls),
-            VirtualTourUrl = request.VirtualTourUrl,
-            CommissionRate = request.CommissionRate,
-            BuyerAgentCommission = request.BuyerAgentCommission,
-            SellerAgentCommission = request.SellerAgentCommission,
-            CoListingAgentId = request.CoListingAgentId,
-            OwnerId = ownerId,
-            AccountId = request.AccountId,
-            PrimaryContactId = request.PrimaryContactId,
-            OpportunityId = request.OpportunityId,
-            Neighborhood = request.Neighborhood,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+            var ownerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
 
-        _dbContext.Properties.Add(property);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+            var property = new Property
+            {
+                MlsNumber = request.MlsNumber,
+                Address = request.Address,
+                City = request.City,
+                Province = request.Province,
+                PostalCode = request.PostalCode,
+                Country = request.Country,
+                ListPrice = request.ListPrice,
+                SalePrice = request.SalePrice,
+                Currency = request.Currency ?? "CAD",
+                ListingDateUtc = request.ListingDateUtc,
+                SoldDateUtc = request.SoldDateUtc,
+                Status = ParseStatus(request.Status),
+                PropertyType = ParsePropertyType(request.PropertyType),
+                Bedrooms = request.Bedrooms,
+                Bathrooms = request.Bathrooms,
+                SquareFeet = request.SquareFeet,
+                LotSizeSqFt = request.LotSizeSqFt,
+                YearBuilt = request.YearBuilt,
+                GarageSpaces = request.GarageSpaces,
+                Description = request.Description,
+                Features = request.Features,
+                PhotoUrls = NormalizePhotoUrls(request.PhotoUrls),
+                VirtualTourUrl = request.VirtualTourUrl,
+                CommissionRate = request.CommissionRate,
+                BuyerAgentCommission = request.BuyerAgentCommission,
+                SellerAgentCommission = request.SellerAgentCommission,
+                CoListingAgentId = request.CoListingAgentId,
+                OwnerId = ownerId,
+                AccountId = request.AccountId,
+                PrimaryContactId = request.PrimaryContactId,
+                OpportunityId = request.OpportunityId,
+                Neighborhood = request.Neighborhood,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-        await EnsureLifecycleEventsAsync(property, null, actor, cancellationToken);
-        await EvaluateAlertRulesAsync(property, "property.created", cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+            _dbContext.Properties.Add(property);
+            await _dbContext.SaveChangesAsync(cancellationToken);
 
-        var dto = await GetAsync(property.Id, cancellationToken);
-        return PropertyOperationResult<PropertyListItemDto>.Ok(dto!);
+            await EnsureLifecycleEventsAsync(property, null, actor, cancellationToken);
+            await EvaluateAlertRulesAsync(property, "property.created", cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            var dto = await GetAsync(property.Id, cancellationToken);
+            return PropertyOperationResult<PropertyListItemDto>.Ok(dto!);
+        }, "Unable to create property.", cancellationToken);
     }
 
     public async Task<PropertyOperationResult<bool>> UpdateAsync(Guid id, PropertyUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
-        var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
-        if (property is null)
+        return await ExecuteAtomicAsync(async () =>
         {
-            return PropertyOperationResult<bool>.NotFoundResult();
-        }
+            var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted, cancellationToken);
+            if (property is null)
+            {
+                return PropertyOperationResult<bool>.NotFoundResult();
+            }
 
-        var previousSnapshot = CaptureSnapshot(property);
+            var previousSnapshot = CaptureSnapshot(property);
 
-        property.MlsNumber = request.MlsNumber;
-        property.Address = request.Address;
-        property.City = request.City;
-        property.Province = request.Province;
-        property.PostalCode = request.PostalCode;
-        property.Country = request.Country;
-        property.ListPrice = request.ListPrice;
-        property.SalePrice = request.SalePrice;
-        property.Currency = request.Currency ?? property.Currency;
-        property.ListingDateUtc = request.ListingDateUtc;
-        property.SoldDateUtc = request.SoldDateUtc;
-        property.Status = ParseStatus(request.Status);
-        property.PropertyType = ParsePropertyType(request.PropertyType);
-        property.Bedrooms = request.Bedrooms;
-        property.Bathrooms = request.Bathrooms;
-        property.SquareFeet = request.SquareFeet;
-        property.LotSizeSqFt = request.LotSizeSqFt;
-        property.YearBuilt = request.YearBuilt;
-        property.GarageSpaces = request.GarageSpaces;
-        property.Description = request.Description;
-        property.Features = request.Features;
-        property.PhotoUrls = NormalizePhotoUrls(request.PhotoUrls);
-        property.VirtualTourUrl = request.VirtualTourUrl;
-        property.CommissionRate = request.CommissionRate;
-        property.BuyerAgentCommission = request.BuyerAgentCommission;
-        property.SellerAgentCommission = request.SellerAgentCommission;
-        property.CoListingAgentId = request.CoListingAgentId;
-        property.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
-        property.AccountId = request.AccountId;
-        property.PrimaryContactId = request.PrimaryContactId;
-        property.OpportunityId = request.OpportunityId;
-        property.Neighborhood = request.Neighborhood;
-        property.UpdatedAtUtc = DateTime.UtcNow;
+            property.MlsNumber = request.MlsNumber;
+            property.Address = request.Address;
+            property.City = request.City;
+            property.Province = request.Province;
+            property.PostalCode = request.PostalCode;
+            property.Country = request.Country;
+            property.ListPrice = request.ListPrice;
+            property.SalePrice = request.SalePrice;
+            property.Currency = request.Currency ?? property.Currency;
+            property.ListingDateUtc = request.ListingDateUtc;
+            property.SoldDateUtc = request.SoldDateUtc;
+            property.Status = ParseStatus(request.Status);
+            property.PropertyType = ParsePropertyType(request.PropertyType);
+            property.Bedrooms = request.Bedrooms;
+            property.Bathrooms = request.Bathrooms;
+            property.SquareFeet = request.SquareFeet;
+            property.LotSizeSqFt = request.LotSizeSqFt;
+            property.YearBuilt = request.YearBuilt;
+            property.GarageSpaces = request.GarageSpaces;
+            property.Description = request.Description;
+            property.Features = request.Features;
+            property.PhotoUrls = NormalizePhotoUrls(request.PhotoUrls);
+            property.VirtualTourUrl = request.VirtualTourUrl;
+            property.CommissionRate = request.CommissionRate;
+            property.BuyerAgentCommission = request.BuyerAgentCommission;
+            property.SellerAgentCommission = request.SellerAgentCommission;
+            property.CoListingAgentId = request.CoListingAgentId;
+            property.OwnerId = await ResolveOwnerIdAsync(request.OwnerId, actor, cancellationToken);
+            property.AccountId = request.AccountId;
+            property.PrimaryContactId = request.PrimaryContactId;
+            property.OpportunityId = request.OpportunityId;
+            property.Neighborhood = request.Neighborhood;
+            property.UpdatedAtUtc = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+            await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await EnsureLifecycleEventsAsync(property, previousSnapshot, actor, cancellationToken);
-        if (HasAlertRelevantChanges(previousSnapshot, property))
-        {
-            await EvaluateAlertRulesAsync(property, "property.updated", cancellationToken);
-        }
+            await EnsureLifecycleEventsAsync(property, previousSnapshot, actor, cancellationToken);
+            if (HasAlertRelevantChanges(previousSnapshot, property))
+            {
+                await EvaluateAlertRulesAsync(property, "property.updated", cancellationToken);
+            }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return PropertyOperationResult<bool>.Ok(true);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return PropertyOperationResult<bool>.Ok(true);
+        }, "Unable to update property.", cancellationToken);
     }
 
     public async Task<PropertyOperationResult<bool>> DeleteAsync(Guid id, ActorContext actor, CancellationToken cancellationToken = default)
@@ -373,38 +379,41 @@ public sealed class PropertyService : IPropertyService
 
     public async Task<PropertyOperationResult<ShowingDto>> CreateShowingAsync(Guid propertyId, CreateShowingRequest request, ActorContext actor, CancellationToken ct = default)
     {
-        var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
-        if (property is null)
+        return await ExecuteAtomicAsync(async () =>
         {
-            return PropertyOperationResult<ShowingDto>.NotFoundResult();
-        }
+            var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
+            if (property is null)
+            {
+                return PropertyOperationResult<ShowingDto>.NotFoundResult();
+            }
 
-        var entity = new PropertyShowing
-        {
-            PropertyId = propertyId,
-            AgentId = request.AgentId,
-            AgentName = request.AgentName,
-            VisitorName = request.VisitorName,
-            VisitorEmail = request.VisitorEmail,
-            VisitorPhone = request.VisitorPhone,
-            ScheduledAtUtc = request.ScheduledAtUtc,
-            DurationMinutes = request.DurationMinutes,
-            Status = Enum.TryParse<ShowingStatus>(request.Status, true, out var st) ? st : ShowingStatus.Scheduled,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+            var entity = new PropertyShowing
+            {
+                PropertyId = propertyId,
+                AgentId = request.AgentId,
+                AgentName = request.AgentName,
+                VisitorName = request.VisitorName,
+                VisitorEmail = request.VisitorEmail,
+                VisitorPhone = request.VisitorPhone,
+                ScheduledAtUtc = request.ScheduledAtUtc,
+                DurationMinutes = request.DurationMinutes,
+                Status = Enum.TryParse<ShowingStatus>(request.Status, true, out var st) ? st : ShowingStatus.Scheduled,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-        _dbContext.PropertyShowings.Add(entity);
-        await _dbContext.SaveChangesAsync(ct);
+            _dbContext.PropertyShowings.Add(entity);
+            await _dbContext.SaveChangesAsync(ct);
 
-        await RecordEventAsync(propertyId, "showing.scheduled", "Showing scheduled", request.VisitorName, "pi-calendar", "showing", ct);
-        await EvaluateAlertRulesAsync(property, "property.showing.scheduled", ct);
-        await _dbContext.SaveChangesAsync(ct);
+            await RecordEventAsync(propertyId, "showing.scheduled", "Showing scheduled", request.VisitorName, "pi-calendar", "showing", ct);
+            await EvaluateAlertRulesAsync(property, "property.showing.scheduled", ct);
+            await _dbContext.SaveChangesAsync(ct);
 
-        return PropertyOperationResult<ShowingDto>.Ok(new ShowingDto(
-            entity.Id, entity.PropertyId, entity.AgentId, entity.AgentName,
-            entity.VisitorName, entity.VisitorEmail, entity.VisitorPhone,
-            entity.ScheduledAtUtc, entity.DurationMinutes, entity.Feedback, entity.Rating,
-            entity.Status.ToString(), entity.CreatedAtUtc));
+            return PropertyOperationResult<ShowingDto>.Ok(new ShowingDto(
+                entity.Id, entity.PropertyId, entity.AgentId, entity.AgentName,
+                entity.VisitorName, entity.VisitorEmail, entity.VisitorPhone,
+                entity.ScheduledAtUtc, entity.DurationMinutes, entity.Feedback, entity.Rating,
+                entity.Status.ToString(), entity.CreatedAtUtc));
+        }, "Unable to create showing.", ct);
     }
 
     public async Task<PropertyOperationResult<ShowingDto>> UpdateShowingAsync(Guid propertyId, Guid showingId, UpdateShowingRequest request, ActorContext actor, CancellationToken ct = default)
@@ -485,46 +494,49 @@ public sealed class PropertyService : IPropertyService
 
     public async Task<PropertyOperationResult<PropertyDocumentDto>> CreateDocumentAsync(Guid propertyId, CreateDocumentRequest request, ActorContext actor, CancellationToken ct = default)
     {
-        var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
-        if (property is null)
+        return await ExecuteAtomicAsync(async () =>
         {
-            return PropertyOperationResult<PropertyDocumentDto>.NotFoundResult();
-        }
+            var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
+            if (property is null)
+            {
+                return PropertyOperationResult<PropertyDocumentDto>.NotFoundResult();
+            }
 
-        var category = Enum.TryParse<DocumentCategory>(request.Category, true, out var cat) ? cat : DocumentCategory.Other;
-        var entity = new PropertyDocument
-        {
-            PropertyId = propertyId,
-            FileName = request.FileName,
-            FileUrl = request.FileUrl,
-            FileSize = request.FileSize,
-            MimeType = request.MimeType,
-            Category = category,
-            UploadedBy = actor.UserName,
-            UploadedAtUtc = DateTime.UtcNow,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+            var category = Enum.TryParse<DocumentCategory>(request.Category, true, out var cat) ? cat : DocumentCategory.Other;
+            var entity = new PropertyDocument
+            {
+                PropertyId = propertyId,
+                FileName = request.FileName,
+                FileUrl = request.FileUrl,
+                FileSize = request.FileSize,
+                MimeType = request.MimeType,
+                Category = category,
+                UploadedBy = actor.UserName,
+                UploadedAtUtc = DateTime.UtcNow,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-        _dbContext.PropertyDocuments.Add(entity);
-        if (category == DocumentCategory.Photo)
-        {
-            property.PhotoUrls = AppendPhotoUrl(property.PhotoUrls, entity.FileUrl);
-        }
+            _dbContext.PropertyDocuments.Add(entity);
+            if (category == DocumentCategory.Photo)
+            {
+                property.PhotoUrls = AppendPhotoUrl(property.PhotoUrls, entity.FileUrl);
+            }
 
-        await _dbContext.SaveChangesAsync(ct);
+            await _dbContext.SaveChangesAsync(ct);
 
-        await RecordEventAsync(
-            propertyId,
-            category == DocumentCategory.Photo ? "photo.uploaded" : "document.uploaded",
-            category == DocumentCategory.Photo ? "Photo uploaded" : "Document uploaded",
-            entity.FileName,
-            category == DocumentCategory.Photo ? "pi-image" : "pi-file",
-            category == DocumentCategory.Photo ? "media" : "document",
-            ct);
-        await EvaluateAlertRulesAsync(property, category == DocumentCategory.Photo ? "property.photo.uploaded" : "property.document.uploaded", ct);
-        await _dbContext.SaveChangesAsync(ct);
+            await RecordEventAsync(
+                propertyId,
+                category == DocumentCategory.Photo ? "photo.uploaded" : "document.uploaded",
+                category == DocumentCategory.Photo ? "Photo uploaded" : "Document uploaded",
+                entity.FileName,
+                category == DocumentCategory.Photo ? "pi-image" : "pi-file",
+                category == DocumentCategory.Photo ? "media" : "document",
+                ct);
+            await EvaluateAlertRulesAsync(property, category == DocumentCategory.Photo ? "property.photo.uploaded" : "property.document.uploaded", ct);
+            await _dbContext.SaveChangesAsync(ct);
 
-        return PropertyOperationResult<PropertyDocumentDto>.Ok(ToDocumentDto(entity));
+            return PropertyOperationResult<PropertyDocumentDto>.Ok(ToDocumentDto(entity));
+        }, "Unable to create document.", ct);
     }
 
     public async Task<PropertyOperationResult<PropertyDocumentDto>> RegisterPhotoAsync(Guid propertyId, RegisterPropertyPhotoRequest request, ActorContext actor, CancellationToken ct = default)
@@ -696,36 +708,39 @@ public sealed class PropertyService : IPropertyService
 
     public async Task<PropertyOperationResult<PriceChangeDto>> AddPriceChangeAsync(Guid propertyId, AddPriceChangeRequest request, ActorContext actor, CancellationToken ct = default)
     {
-        var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
-        if (property is null)
+        return await ExecuteAtomicAsync(async () =>
         {
-            return PropertyOperationResult<PriceChangeDto>.NotFoundResult();
-        }
+            var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
+            if (property is null)
+            {
+                return PropertyOperationResult<PriceChangeDto>.NotFoundResult();
+            }
 
-        var entity = new PropertyPriceChange
-        {
-            PropertyId = propertyId,
-            PreviousPrice = request.PreviousPrice,
-            NewPrice = request.NewPrice,
-            ChangedAtUtc = DateTime.UtcNow,
-            ChangedBy = request.ChangedBy ?? actor.UserName,
-            Reason = request.Reason,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+            var entity = new PropertyPriceChange
+            {
+                PropertyId = propertyId,
+                PreviousPrice = request.PreviousPrice,
+                NewPrice = request.NewPrice,
+                ChangedAtUtc = DateTime.UtcNow,
+                ChangedBy = request.ChangedBy ?? actor.UserName,
+                Reason = request.Reason,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-        _dbContext.PropertyPriceChanges.Add(entity);
-        property.ListPrice = request.NewPrice;
-        property.UpdatedAtUtc = DateTime.UtcNow;
+            _dbContext.PropertyPriceChanges.Add(entity);
+            property.ListPrice = request.NewPrice;
+            property.UpdatedAtUtc = DateTime.UtcNow;
 
-        await _dbContext.SaveChangesAsync(ct);
+            await _dbContext.SaveChangesAsync(ct);
 
-        await RecordEventAsync(propertyId, "price.changed", "Price updated", request.Reason, "pi-dollar", "price", ct);
-        await EvaluateAlertRulesAsync(property, "property.price.changed", ct);
-        await _dbContext.SaveChangesAsync(ct);
+            await RecordEventAsync(propertyId, "price.changed", "Price updated", request.Reason, "pi-dollar", "price", ct);
+            await EvaluateAlertRulesAsync(property, "property.price.changed", ct);
+            await _dbContext.SaveChangesAsync(ct);
 
-        return PropertyOperationResult<PriceChangeDto>.Ok(new PriceChangeDto(
-            entity.Id, entity.PropertyId, entity.PreviousPrice, entity.NewPrice,
-            entity.ChangedAtUtc, entity.ChangedBy, entity.Reason));
+            return PropertyOperationResult<PriceChangeDto>.Ok(new PriceChangeDto(
+                entity.Id, entity.PropertyId, entity.PreviousPrice, entity.NewPrice,
+                entity.ChangedAtUtc, entity.ChangedBy, entity.Reason));
+        }, "Unable to record price change.", ct);
     }
 
     public async Task<IReadOnlyList<PropertyTimelineEventDto>> GetTimelineAsync(Guid propertyId, CancellationToken ct = default)
@@ -771,58 +786,93 @@ public sealed class PropertyService : IPropertyService
 
     public async Task<PropertyOperationResult<PropertyAlertRuleDto>> CreateAlertRuleAsync(Guid propertyId, CreatePropertyAlertRuleRequest request, ActorContext actor, CancellationToken ct = default)
     {
-        var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
-        if (property is null)
+        return await ExecuteAtomicAsync(async () =>
         {
-            return PropertyOperationResult<PropertyAlertRuleDto>.NotFoundResult();
-        }
+            var property = await _dbContext.Properties.FirstOrDefaultAsync(p => p.Id == propertyId && !p.IsDeleted, ct);
+            if (property is null)
+            {
+                return PropertyOperationResult<PropertyAlertRuleDto>.NotFoundResult();
+            }
 
-        var entity = new PropertyAlertRule
-        {
-            PropertyId = propertyId,
-            ClientName = request.ClientName.Trim(),
-            ClientEmail = request.ClientEmail.Trim(),
-            CriteriaJson = JsonSerializer.Serialize(request.Criteria, JsonOptions),
-            Frequency = NormalizeFrequency(request.Frequency),
-            IsActive = true,
-            MatchCount = 0,
-            CreatedAtUtc = DateTime.UtcNow
-        };
+            var entity = new PropertyAlertRule
+            {
+                PropertyId = propertyId,
+                ClientName = request.ClientName.Trim(),
+                ClientEmail = request.ClientEmail.Trim(),
+                CriteriaJson = JsonSerializer.Serialize(request.Criteria, JsonOptions),
+                Frequency = NormalizeFrequency(request.Frequency),
+                IsActive = true,
+                MatchCount = 0,
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-        _dbContext.PropertyAlertRules.Add(entity);
-        await _dbContext.SaveChangesAsync(ct);
+            _dbContext.PropertyAlertRules.Add(entity);
+            await _dbContext.SaveChangesAsync(ct);
 
-        await RecordEventAsync(propertyId, "alert.created", "Alert rule created", entity.ClientName, "pi-bell", "alert", ct);
-        await CreateAlertNotificationIfMatchedAsync(property, entity, "property.alert.created", ct);
-        await _dbContext.SaveChangesAsync(ct);
+            await RecordEventAsync(propertyId, "alert.created", "Alert rule created", entity.ClientName, "pi-bell", "alert", ct);
+            await CreateAlertNotificationIfMatchedAsync(property, entity, "property.alert.created", ct);
+            await _dbContext.SaveChangesAsync(ct);
 
-        return PropertyOperationResult<PropertyAlertRuleDto>.Ok(ToAlertRuleDto(entity));
+            return PropertyOperationResult<PropertyAlertRuleDto>.Ok(ToAlertRuleDto(entity));
+        }, "Unable to create alert rule.", ct);
     }
 
     public async Task<PropertyOperationResult<PropertyAlertRuleDto>> ToggleAlertRuleAsync(Guid propertyId, Guid ruleId, TogglePropertyAlertRuleRequest request, ActorContext actor, CancellationToken ct = default)
     {
-        var entity = await _dbContext.PropertyAlertRules
-            .FirstOrDefaultAsync(r => r.Id == ruleId && r.PropertyId == propertyId && !r.IsDeleted, ct);
-        if (entity is null)
+        return await ExecuteAtomicAsync(async () =>
         {
-            return PropertyOperationResult<PropertyAlertRuleDto>.NotFoundResult();
-        }
+            var entity = await _dbContext.PropertyAlertRules
+                .FirstOrDefaultAsync(r => r.Id == ruleId && r.PropertyId == propertyId && !r.IsDeleted, ct);
+            if (entity is null)
+            {
+                return PropertyOperationResult<PropertyAlertRuleDto>.NotFoundResult();
+            }
 
-        entity.IsActive = request.IsActive;
-        entity.UpdatedAtUtc = DateTime.UtcNow;
-        await _dbContext.SaveChangesAsync(ct);
+            entity.IsActive = request.IsActive;
+            entity.UpdatedAtUtc = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(ct);
 
-        await RecordEventAsync(
-            propertyId,
-            request.IsActive ? "alert.activated" : "alert.paused",
-            request.IsActive ? "Alert activated" : "Alert paused",
-            entity.ClientName,
-            "pi-bell",
-            "alert",
-            ct);
-        await _dbContext.SaveChangesAsync(ct);
+            await RecordEventAsync(
+                propertyId,
+                request.IsActive ? "alert.activated" : "alert.paused",
+                request.IsActive ? "Alert activated" : "Alert paused",
+                entity.ClientName,
+                "pi-bell",
+                "alert",
+                ct);
+            await _dbContext.SaveChangesAsync(ct);
 
-        return PropertyOperationResult<PropertyAlertRuleDto>.Ok(ToAlertRuleDto(entity));
+            return PropertyOperationResult<PropertyAlertRuleDto>.Ok(ToAlertRuleDto(entity));
+        }, "Unable to update alert rule.", ct);
+    }
+
+    private async Task<PropertyOperationResult<T>> ExecuteAtomicAsync<T>(
+        Func<Task<PropertyOperationResult<T>>> operation,
+        string errorMessage,
+        CancellationToken cancellationToken)
+    {
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var result = await operation();
+                if (!result.Success || result.NotFound)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return result;
+                }
+
+                await transaction.CommitAsync(cancellationToken);
+                return result;
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return PropertyOperationResult<T>.Fail(errorMessage);
+            }
+        });
     }
 
     public async Task<IReadOnlyList<PropertyAlertNotificationDto>> GetAlertNotificationsAsync(Guid propertyId, CancellationToken ct = default)
