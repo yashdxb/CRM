@@ -321,4 +321,47 @@ test.describe('Property UAT regressions', () => {
       await deleteProperty(repToken, property.id);
     }
   });
+
+  test('status progression persists across lifecycle stages and manager can review it', async ({ browser, page }) => {
+    test.setTimeout(120_000);
+    attachDiagnostics(page);
+
+    const repToken = await apiLogin(SALES_REP_EMAIL, SALES_REP_PASSWORD);
+    const managerToken = await apiLogin(SALES_MANAGER_EMAIL, SALES_MANAGER_PASSWORD);
+    const property = await createProperty(repToken, 'Status Regression', 765000);
+
+    const changeStatus = async (statusLabel: 'Active' | 'Conditional' | 'Sold') => {
+      await page.getByRole('button', { name: /Change Status/i }).click();
+      await page.locator('#status-select .p-select-dropdown, #status-select button[aria-label=\"dropdown trigger\"]').click();
+      await page.getByRole('option', { name: new RegExp(`^${statusLabel}$`) }).click();
+      await page.locator('.p-dialog:has(#status-select) .p-dialog-footer .action-btn--add').click();
+      await expect(page.locator('.hero-badge')).toHaveText(statusLabel);
+    };
+
+    try {
+      await loginUi(page, repToken, `/app/properties/${property.id}`);
+      await expect(page.getByRole('heading', { name: property.address })).toBeVisible();
+      await expect(page.locator('.hero-badge')).toHaveText('Draft');
+
+      await changeStatus('Active');
+      await changeStatus('Conditional');
+      await changeStatus('Sold');
+
+      await expect(page.locator('.timeline-label', { hasText: 'Status changed to Active' }).first()).toBeVisible();
+      await expect(page.locator('.timeline-label', { hasText: 'Status changed to Conditional' }).first()).toBeVisible();
+      await expect(page.locator('.timeline-label', { hasText: 'Status changed to Sold' }).first()).toBeVisible();
+
+      const managerContext = await browser.newContext();
+      const managerPage = await managerContext.newPage();
+      attachDiagnostics(managerPage);
+      await loginUi(managerPage, managerToken, `/app/properties/${property.id}`);
+      await expect(managerPage.locator('.hero-badge')).toHaveText('Sold');
+      await expect(managerPage.locator('.timeline-label', { hasText: 'Status changed to Active' }).first()).toBeVisible();
+      await expect(managerPage.locator('.timeline-label', { hasText: 'Status changed to Conditional' }).first()).toBeVisible();
+      await expect(managerPage.locator('.timeline-label', { hasText: 'Status changed to Sold' }).first()).toBeVisible();
+      await managerContext.close();
+    } finally {
+      await deleteProperty(repToken, property.id);
+    }
+  });
 });
