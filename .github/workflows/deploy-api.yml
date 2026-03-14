@@ -47,6 +47,9 @@ jobs:
           dotnet publish server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj \
             --configuration Release \
             --output ./artifacts/publish
+          rm -f ./artifacts/api.zip
+          cd ./artifacts/publish
+          zip -r ../api.zip .
 
       - name: Azure Login
         uses: azure/login@v2
@@ -54,10 +57,17 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: crm-enterprise-api-dev-01122345
-          package: ./artifacts/publish
+        run: |
+          az webapp deploy \
+            --resource-group rg-crm-dev-ca \
+            --name crm-enterprise-api-dev-01122345 \
+            --src-path ./artifacts/api.zip \
+            --type zip \
+            --clean true \
+            --restart true \
+            --enable-kudu-warmup true \
+            --track-status false \
+            --timeout 1800000
 
       - name: Set Azure Web App environment to Production
         run: |
