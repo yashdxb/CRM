@@ -5,24 +5,26 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-13 10:10 UTC**
+- Synced at: **2026-03-14 22:10 UTC**
 - ClickUp list id: `901710720381`
-- Total tasks mirrored: **227**
-- Epics mirrored: **40**
-- Stories mirrored: **187**
+- Total tasks mirrored: **247**
+- Epics mirrored: **41**
+- Stories mirrored: **206**
 
 ## Status Summary
 - All tasks:
-  - `done`: 134
-  - `backlog`: 90
+  - `done`: 140
+  - `backlog`: 96
+  - `completed`: 8
   - `in progress`: 3
 - Epics:
   - `backlog`: 22
-  - `done`: 17
+  - `done`: 18
   - `in progress`: 1
 - Stories:
-  - `done`: 117
-  - `backlog`: 68
+  - `done`: 122
+  - `backlog`: 74
+  - `completed`: 8
   - `in progress`: 2
 
 ## Epic and Story Mirror
@@ -61,6 +63,7 @@
   - `86e06pbr3` | `done` | Help Desk | Saved views + bulk actions for case triage | tags: -
   - `86e06pbr9` | `done` | Help Desk | SLA cockpit and breach prevention UX | tags: -
   - `86e041x9m` | `done` | Support case tracking | tags: -
+  - `86e0c7v5x` | `backlog` | UAT - Help Desk / Case Management | tags: module:helpdesk, uat
 
 ### [LATER] Marketing Automation Suite (`86e041x95`)
 - Status: `backlog`
@@ -132,6 +135,24 @@
 - Stories:
   - `86e041x7x` | `backlog` | File attachments | tags: -
   - `86e041x7u` | `backlog` | Notes on CRM records | tags: -
+
+### [NEXT] Properties & Real Estate Module (`86e0bjwbc`)
+- Status: `done`
+- Tags: module:properties, next
+- Stories:
+  - `86e0bjwxb` | `completed` | Module: Properties | X1 - Document & attachment management on property detail page | tags: module:properties, next
+  - `86e0bjwyh` | `done` | Module: Properties | X10 - Reverse navigation from Account/Contact to Properties | tags: module:properties, next
+  - `86e0bjwyn` | `done` | Module: Properties | X11 - Bulk operations on properties list page | tags: module:properties, next
+  - `86e0bjwyz` | `completed` | Module: Properties | X12 - Quick actions on property detail page | tags: module:properties, next
+  - `86e0bjwxg` | `done` | Module: Properties | X2 - Activity & task association on property detail page | tags: module:properties, next
+  - `86e0bjwxn` | `completed` | Module: Properties | X3 - Showing/viewing log with visitor tracking | tags: module:properties, next
+  - `86e0bjwxr` | `completed` | Module: Properties | X4 - Price change history timeline | tags: module:properties, next
+  - `86e0bjwxv` | `completed` | Module: Properties | X5 - Photo upload with drag-drop on property form | tags: module:properties, next
+  - `86e0bjwy2` | `completed` | Module: Properties | X6 - Reactive form migration for property create/edit | tags: module:properties, next
+  - `86e0bjwy4` | `completed` | Module: Properties | X7 - Commission tracking fields and display | tags: module:properties, next
+  - `86e0bjwy9` | `completed` | Module: Properties | X8 - Kanban board view by property status | tags: module:properties, next
+  - `86e0bjwyd` | `done` | Module: Properties | X9 - SignalR real-time property alerts (placeholder) | tags: module:properties, next
+  - `86e0c7v5r` | `done` | UAT - Properties & Real Estate Module | tags: module:properties, uat
 
 ### [NEXT] Real-Time Entity Sync & Collaboration (`86e042ewg`)
 - Status: `backlog`
@@ -209,6 +230,7 @@
   - `86e041wzu` | `done` | Create new activity | tags: -
   - `86e041wzv` | `done` | Edit existing activity | tags: -
   - `86e041wzn` | `done` | Task management view | tags: -
+  - `86e0c7v56` | `backlog` | UAT - Activity Management | tags: module:activities, uat
 
 ### AI Assistant & Intelligence (`86e041x0w`)
 - Status: `done`
@@ -244,6 +266,7 @@
   - `86e041wxb` | `done` | Contact list with search and pagination | tags: -
   - `86e041wxd` | `done` | Create new contact | tags: -
   - `86e041wxk` | `done` | Edit existing contact | tags: -
+  - `86e0c7v5g` | `backlog` | UAT - Contact Management | tags: module:contacts, uat
 
 ### Customer Management (`86e041wxv`)
 - Status: `done`
@@ -254,6 +277,7 @@
   - `86e041wy7` | `done` | Customer status lifecycle management | tags: -
   - `86e041wxy` | `done` | Customer workspace with search and pagination | tags: -
   - `86e041wy5` | `done` | Edit existing customer | tags: -
+  - `86e0c7v5c` | `backlog` | UAT - Customer Management | tags: module:customers, uat
 
 ### Dashboard & Analytics (`86e041wwf`)
 - Status: `done`
@@ -294,6 +318,7 @@
   - `86e09xd2x` | `done` | Module: Leads | Remove dead .field CSS from lead form | tags: done, module:leads, now
   - `86e09xd3v` | `done` | Module: Leads | Replace pButton with unified button standard | tags: done, module:leads, now
   - `86e041wwv` | `done` | Pipeline (Kanban) view for leads | tags: -
+  - `86e0c7v4v` | `backlog` | UAT - Lead Management | tags: module:leads, uat
 
 ### Marketing & Campaigns (`86e041wzy`)
 - Status: `done`
@@ -342,6 +367,7 @@
   - `86e041wyx` | `done` | Opportunity onboarding workflow | tags: -
   - `86e041wyq` | `done` | Opportunity pipeline stages | tags: -
   - `86e041wyr` | `done` | Opportunity quotes (CPQ) | tags: -
+  - `86e0c7v50` | `backlog` | UAT - Opportunity & Deal Management | tags: module:opportunities, uat
 
 ### Platform Infrastructure (`86e041x34`)
 - Status: `done`
