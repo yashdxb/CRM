@@ -15,6 +15,80 @@ import { finalize } from 'rxjs';
 import { CrmLandingService } from './services/crm-landing.service';
 import { AppToastService } from '../../core/app-toast.service';
 
+type PipelinePreviewSlide = {
+  type: 'pipeline';
+  label: string;
+  title: string;
+  titleAccent: string;
+  subtitle: string;
+  boardTitle: string;
+  boardSubtitle: string;
+  headlineMetric: { label: string; value: string; delta: string };
+  stageSummary: Array<{ stage: string; value: string; deals: number; tone: 'rose' | 'amber' | 'cyan' | 'violet' }>;
+  metrics: Array<{ label: string; value: string; delta: string }>;
+};
+
+type LeadPreviewSlide = {
+  type: 'lead';
+  label: string;
+  title: string;
+  titleAccent: string;
+  subtitle: string;
+  score: number;
+  profileName: string;
+  profileRole: string;
+  readiness: string;
+  factors: Array<{ label: string; value: string; tone: 'strong' | 'watch' | 'supporting' }>;
+};
+
+type DealPreviewSlide = {
+  type: 'deal';
+  label: string;
+  title: string;
+  titleAccent: string;
+  subtitle: string;
+  dealName: string;
+  dealAmount: string;
+  dealStage: string;
+  dealHealth: string;
+  timeline: Array<{ label: string; meta: string }>;
+};
+
+type PropertyPreviewSlide = {
+  type: 'property';
+  label: string;
+  title: string;
+  titleAccent: string;
+  subtitle: string;
+  propertyName: string;
+  propertyStatus: string;
+  propertyPrice: string;
+  propertyStats: Array<{ label: string; value: string }>;
+  propertyFeed: string[];
+};
+
+type OrchestrationPreviewSlide = {
+  type: 'orchestration';
+  label: string;
+  title: string;
+  titleAccent: string;
+  subtitle: string;
+  boardTitle: string;
+  boardSubtitle: string;
+  topMetrics: Array<{ label: string; value: string; delta: string; icon: string }>;
+  actions: Array<{
+    severity: 'critical' | 'important' | 'low';
+    rank: string;
+    title: string;
+    summary: string;
+    chips: string[];
+    primaryAction: string;
+    secondaryAction?: string;
+  }>;
+};
+
+type HeroPreviewSlide = PipelinePreviewSlide | LeadPreviewSlide | DealPreviewSlide | PropertyPreviewSlide | OrchestrationPreviewSlide;
+
 @Component({
   selector: 'app-landing-page',
   standalone: true,
@@ -54,11 +128,118 @@ export class LandingPage implements OnInit, AfterViewInit {
   isScrolled = false;
   mobileMenuOpen = false;
   activeHeroPreview = 0;
-  readonly heroPreviewSlides = [
-    { label: 'Pipeline Overview', image: '/assets/landing/kpi-pipeline.png', title: 'Close More Deals with', titleAccent: 'AI-Powered Pipeline Intelligence', subtitle: 'North Edge CRM gives your sales team real-time pipeline visibility, AI-driven lead scoring, and evidence-based forecasting — so every deal in your pipeline is defensible.' },
-    { label: 'AI Lead Score', image: '/assets/landing/kpi-lead-score.png', title: 'Focus on Leads that', titleAccent: 'Actually Convert', subtitle: 'Predictive AI scoring ranks every lead so your team spends time on deals most likely to close.' },
-    { label: 'Win Rate Summary', image: '/assets/landing/kpi-winrate.png', title: 'Track Win Rates with', titleAccent: 'Precision Analytics', subtitle: 'Evidence-based win rate tracking with drill-down analytics — know exactly what drives your wins.' },
-    { label: 'AI Execution Orchestration', image: '/assets/landing/kpi-ai-execution.png', title: 'Automate Actions with', titleAccent: 'AI Execution Orchestration', subtitle: 'Intelligent workflow orchestration powered by AI — automate follow-ups, approvals, and next-best-actions across your pipeline.' }
+  readonly heroPreviewSlides: HeroPreviewSlide[] = [
+    {
+      type: 'pipeline',
+      label: 'Pipeline Command',
+      title: 'Close More Deals with',
+      titleAccent: 'AI-Powered Pipeline Intelligence',
+      subtitle: 'Sales pipeline by stage with real top-line metrics, commercial movement, and zero reliance on sliced mockup images.',
+      boardTitle: 'Pipeline Overview',
+      boardSubtitle: 'Sales pipeline by stage',
+      headlineMetric: { label: 'This month', value: '$2.4M', delta: '+18.8%' },
+      stageSummary: [
+        { stage: 'Prospecting', value: '$820K', deals: 58, tone: 'rose' },
+        { stage: 'Qualified', value: '$1.2M', deals: 42, tone: 'amber' },
+        { stage: 'Proposal', value: '$300K', deals: 18, tone: 'cyan' },
+        { stage: 'Negotiation', value: '$30K', deals: 6, tone: 'violet' }
+      ],
+      metrics: [
+        { label: 'New Deals', value: '24', delta: '+9.2%' },
+        { label: 'Conversion Rate', value: '58.5%', delta: '+5.7%' },
+        { label: 'Avg. Deal Size', value: '551.2K', delta: '+12.4%' },
+        { label: 'Forecast Confidence', value: '82%', delta: 'Evidence-backed' }
+      ]
+    },
+    {
+      type: 'lead',
+      label: 'Lead Intelligence',
+      title: 'Focus on Leads that',
+      titleAccent: 'Actually Convert',
+      subtitle: 'AI scoring, stakeholder engagement, and evidence quality stay in one narrative so reps know what to work next.',
+      score: 84,
+      profileName: 'Sterling Harbour Realty',
+      profileRole: 'Brokerage prospect',
+      readiness: 'Ready for conversion',
+      factors: [
+        { label: 'Conversation signal', value: 'Strong', tone: 'strong' },
+        { label: 'Budget proof', value: 'Partial', tone: 'watch' },
+        { label: 'Stakeholders engaged', value: '4', tone: 'supporting' }
+      ]
+    },
+    {
+      type: 'deal',
+      label: 'Deal Execution',
+      title: 'Track Win Rates with',
+      titleAccent: 'Precision Analytics',
+      subtitle: 'Deals move with visible owner, confidence, risk, and next-best-action instead of vague pipeline optimism.',
+      dealName: 'South Bay Tower Portfolio',
+      dealAmount: '$1.24M',
+      dealStage: 'Conditional',
+      dealHealth: 'Manager attention',
+      timeline: [
+        { label: 'Offer submitted', meta: 'Today, 10:20' },
+        { label: 'Legal review complete', meta: 'Yesterday' },
+        { label: 'Pricing approved', meta: '2 days ago' }
+      ]
+    },
+    {
+      type: 'orchestration',
+      label: 'AI Execution',
+      title: 'Automate Actions with',
+      titleAccent: 'AI Execution Orchestration',
+      subtitle: 'Priority-driven action queues resolve sales risk with clear severity, review paths, and auto-execute options inside the CRM.',
+      boardTitle: 'AI Execution Orchestration',
+      boardSubtitle: 'Priority-driven AI actions to resolve sales risks',
+      topMetrics: [
+        { label: 'AI-Risk Deals', value: '31', delta: '14 today', icon: 'pi pi-chart-line' },
+        { label: 'Lead SLA Breaches', value: '2', delta: 'now', icon: 'pi pi-shield' },
+        { label: 'Pending Approvals', value: '1', delta: 'live', icon: 'pi pi-verified' }
+      ],
+      actions: [
+        {
+          severity: 'critical',
+          rank: '#100',
+          title: 'Reactivate stale opportunities',
+          summary: 'No activity for 7 days on deal worth 3320K',
+          chips: ['AI Insight', 'Impact High', 'Urgency Immediate', 'Risk High'],
+          primaryAction: 'Review',
+          secondaryAction: 'Auto resolve'
+        },
+        {
+          severity: 'important',
+          rank: '#88',
+          title: 'Clear overdue activity backlog',
+          summary: '6 activities overdue across 5 deals',
+          chips: ['AI Insight', 'Impact High', 'Urgency Immediate', 'Risk Medium'],
+          primaryAction: 'Review'
+        },
+        {
+          severity: 'low',
+          rank: '#28',
+          title: 'Recover breached first-touch SLAs',
+          summary: '3 leads missing first response window',
+          chips: ['AI Insight', 'Impact Low', 'Urgency Planned', 'Risk Low'],
+          primaryAction: 'Execute'
+        }
+      ]
+    },
+    {
+      type: 'property',
+      label: 'Property Workspace',
+      title: 'Operate Listings with',
+      titleAccent: 'Connected Property Execution',
+      subtitle: 'Property, deal, document, showing, and alert data live in one CRM workspace that managers can actually review.',
+      propertyName: '12 Lakeview Crescent',
+      propertyStatus: 'Active',
+      propertyPrice: '$829,000',
+      propertyStats: [
+        { label: 'Showings', value: '11' },
+        { label: 'Documents', value: '6' },
+        { label: 'Alerts', value: '2' }
+      ],
+      propertyFeed: ['Price reduced 2.1%', 'Showing booked for Saturday', 'Listing agreement signed']
+    }
   ];
   readonly timezoneOptions = this.buildTimeZoneOptions();
   private readonly detectedTimeZone = this.detectBrowserTimeZone();
@@ -319,6 +500,26 @@ export class LandingPage implements OnInit, AfterViewInit {
 
   onGetStarted(): void {
     console.log('Get Started');
+  }
+
+  asPipelineSlide(slide: HeroPreviewSlide): PipelinePreviewSlide {
+    return slide as PipelinePreviewSlide;
+  }
+
+  asLeadSlide(slide: HeroPreviewSlide): LeadPreviewSlide {
+    return slide as LeadPreviewSlide;
+  }
+
+  asDealSlide(slide: HeroPreviewSlide): DealPreviewSlide {
+    return slide as DealPreviewSlide;
+  }
+
+  asPropertySlide(slide: HeroPreviewSlide): PropertyPreviewSlide {
+    return slide as PropertyPreviewSlide;
+  }
+
+  asOrchestrationSlide(slide: HeroPreviewSlide): OrchestrationPreviewSlide {
+    return slide as OrchestrationPreviewSlide;
   }
 
   onWatchDemo(): void {

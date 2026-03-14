@@ -75,14 +75,156 @@
     <div class="hero__visual">
       <div class="kpi-carousel" (wheel)="onHeroPreviewWheel($event)">
         <div class="kpi-carousel__frame" aria-hidden="true">
-          <span class="kpi-carousel__frame-pill">Live workflow preview</span>
+          <span class="kpi-carousel__frame-pill">Revenue command center</span>
           <div class="kpi-carousel__frame-controls">
             <span></span><span></span><span></span>
           </div>
         </div>
         <div class="kpi-carousel__track" [style.transform]="'translateX(-' + activeHeroPreview * 100 + '%)'">
           <div class="kpi-carousel__slide" *ngFor="let slide of heroPreviewSlides; let i = index">
-            <img [src]="slide.image" [alt]="slide.label" loading="eager" />
+            <div class="preview-slide" [ngSwitch]="slide.type">
+              <ng-container *ngSwitchCase="'pipeline'">
+                <div class="preview-shell preview-shell--pipeline">
+                  <div class="preview-kpi-board__header">
+                    <div>
+                      <span class="preview-shell__eyebrow">{{ asPipelineSlide(slide).boardTitle }}</span>
+                      <h3>{{ asPipelineSlide(slide).boardSubtitle }}</h3>
+                    </div>
+                    <div class="preview-kpi-board__total">
+                      <strong>{{ asPipelineSlide(slide).headlineMetric.value }}</strong>
+                      <span>{{ asPipelineSlide(slide).headlineMetric.delta }} {{ asPipelineSlide(slide).headlineMetric.label }}</span>
+                    </div>
+                  </div>
+                  <div class="preview-kpi-stage-row">
+                    <article class="preview-kpi-stage" *ngFor="let row of asPipelineSlide(slide).stageSummary" [class.preview-kpi-stage--rose]="row.tone === 'rose'" [class.preview-kpi-stage--amber]="row.tone === 'amber'" [class.preview-kpi-stage--cyan]="row.tone === 'cyan'" [class.preview-kpi-stage--violet]="row.tone === 'violet'">
+                      <strong>{{ row.value }}</strong>
+                      <span>{{ row.stage }}</span>
+                      <small>{{ row.deals }} deals</small>
+                    </article>
+                  </div>
+                  <div class="preview-kpi-metrics">
+                    <article *ngFor="let metric of asPipelineSlide(slide).metrics">
+                      <span>{{ metric.label }}</span>
+                      <strong>{{ metric.value }}</strong>
+                      <small>{{ metric.delta }}</small>
+                    </article>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchCase="'lead'">
+                <div class="preview-shell preview-shell--lead">
+                  <div class="preview-score">
+                    <div class="preview-score__ring">
+                      <strong>{{ asLeadSlide(slide).score }}</strong>
+                      <span>AI score</span>
+                    </div>
+                    <div class="preview-score__summary">
+                      <span class="preview-shell__eyebrow">{{ asLeadSlide(slide).profileRole }}</span>
+                      <h3>{{ asLeadSlide(slide).profileName }}</h3>
+                      <p>{{ asLeadSlide(slide).readiness }}</p>
+                    </div>
+                  </div>
+                  <div class="preview-factor-list">
+                    <article class="preview-factor" *ngFor="let factor of asLeadSlide(slide).factors" [class.preview-factor--strong]="factor.tone === 'strong'" [class.preview-factor--watch]="factor.tone === 'watch'">
+                      <span>{{ factor.label }}</span>
+                      <strong>{{ factor.value }}</strong>
+                    </article>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchCase="'deal'">
+                <div class="preview-shell preview-shell--deal">
+                  <div class="preview-deal-header">
+                    <div>
+                      <span class="preview-shell__eyebrow">Deal desk</span>
+                      <h3>{{ asDealSlide(slide).dealName }}</h3>
+                    </div>
+                    <div class="preview-deal-pill">{{ asDealSlide(slide).dealStage }}</div>
+                  </div>
+                  <div class="preview-deal-grid">
+                    <article>
+                      <span>Amount</span>
+                      <strong>{{ asDealSlide(slide).dealAmount }}</strong>
+                    </article>
+                    <article>
+                      <span>Health</span>
+                      <strong>{{ asDealSlide(slide).dealHealth }}</strong>
+                    </article>
+                  </div>
+                  <div class="preview-feed">
+                    <article *ngFor="let item of asDealSlide(slide).timeline">
+                      <strong>{{ item.label }}</strong>
+                      <span>{{ item.meta }}</span>
+                    </article>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchCase="'property'">
+                <div class="preview-shell preview-shell--property">
+                  <div class="preview-property-hero">
+                    <div>
+                      <span class="preview-shell__eyebrow">Realtor workspace</span>
+                      <h3>{{ asPropertySlide(slide).propertyName }}</h3>
+                    </div>
+                    <div class="preview-property-pill">{{ asPropertySlide(slide).propertyStatus }}</div>
+                  </div>
+                  <div class="preview-property-price">{{ asPropertySlide(slide).propertyPrice }}</div>
+                  <div class="preview-property-metrics">
+                    <article *ngFor="let stat of asPropertySlide(slide).propertyStats">
+                      <span>{{ stat.label }}</span>
+                      <strong>{{ stat.value }}</strong>
+                    </article>
+                  </div>
+                  <div class="preview-note-list preview-note-list--property">
+                    <span *ngFor="let item of asPropertySlide(slide).propertyFeed">{{ item }}</span>
+                  </div>
+                </div>
+              </ng-container>
+
+              <ng-container *ngSwitchCase="'orchestration'">
+                <div class="preview-shell preview-shell--orchestration">
+                  <div class="preview-kpi-board__header preview-kpi-board__header--orchestration">
+                    <div>
+                      <span class="preview-shell__eyebrow">{{ asOrchestrationSlide(slide).boardTitle }}</span>
+                      <h3>{{ asOrchestrationSlide(slide).boardSubtitle }}</h3>
+                    </div>
+                  </div>
+                  <div class="preview-orchestration-metrics">
+                    <article *ngFor="let metric of asOrchestrationSlide(slide).topMetrics">
+                      <div>
+                        <span>{{ metric.label }}</span>
+                        <strong>{{ metric.value }}</strong>
+                      </div>
+                      <small>{{ metric.delta }}</small>
+                    </article>
+                  </div>
+                  <div class="preview-orchestration-list">
+                    <article class="preview-orchestration-card" *ngFor="let action of asOrchestrationSlide(slide).actions" [class.preview-orchestration-card--critical]="action.severity === 'critical'" [class.preview-orchestration-card--important]="action.severity === 'important'" [class.preview-orchestration-card--low]="action.severity === 'low'">
+                      <div class="preview-orchestration-rank">
+                        <strong>{{ action.rank }}</strong>
+                        <span>{{ action.severity }}</span>
+                      </div>
+                      <div class="preview-orchestration-body">
+                        <div class="preview-orchestration-copy">
+                          <h4>{{ action.title }}</h4>
+                          <p>{{ action.summary }}</p>
+                        </div>
+                        <div class="preview-orchestration-chips">
+                          <span *ngFor="let chip of action.chips">{{ chip }}</span>
+                        </div>
+                      </div>
+                      <div class="preview-orchestration-actions">
+                        <button type="button">{{ action.primaryAction }}</button>
+                        <button type="button" *ngIf="action.secondaryAction" class="preview-orchestration-actions__accent">{{ action.secondaryAction }}</button>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
           </div>
         </div>
         <div class="kpi-carousel__indicators">
