@@ -63,6 +63,7 @@ jobs:
             --name crm-enterprise-api-dev-01122345 \
             --src-path ./artifacts/api.zip \
             --type zip \
+            --async true \
             --clean true \
             --restart true \
             --enable-kudu-warmup true \
