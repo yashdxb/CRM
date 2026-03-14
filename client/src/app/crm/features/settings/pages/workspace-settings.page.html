@@ -243,6 +243,16 @@
                 </div>
               </div>
             </div>
+
+            <div class="form-grid" *ngIf="activeVerticalPresetConfiguration() as preset">
+              <div class="form-field">
+                <label>Pack summary</label>
+                <div class="token-list">
+                  <span class="token-pill" *ngFor="let item of verticalPackSummary(preset)">{{ item }}</span>
+                </div>
+                <small class="field-hint">This summarizes the CRM content the selected preset is designed to enable and seed.</small>
+              </div>
+            </div>
           </section>
 
           <section class="form-card">
@@ -383,6 +393,24 @@
                   styleClass="w-full"
                 ></p-inputNumber>
                 <small class="field-hint">Allowed formats are PDF, Office documents, and images.</small>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
+            <h3 class="section-title section-title--info">
+              <i class="pi pi-home"></i>
+              CRM Modules
+            </h3>
+            <p class="section-description">Control CRM module availability for this workspace.</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureProperties" [binary]="true"></p-checkbox>
+                  <span>Enable Properties module</span>
+                </label>
+                <small class="field-hint">Real Estate Brokerage presets enable this by default, but you can override it here per tenant.</small>
               </div>
             </div>
           </section>

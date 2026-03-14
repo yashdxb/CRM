@@ -21,6 +21,7 @@ public class TenantContextController : ControllerBase
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
     {
+        "properties",
         "auth.entra",
         "marketing.campaigns",
         "helpdesk.cases",
@@ -78,6 +79,7 @@ public class TenantContextController : ControllerBase
 
         var featureFlags = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
         {
+            ["properties"] = string.Equals(tenant.IndustryPreset, VerticalPresetIds.RealEstateBrokerage, StringComparison.OrdinalIgnoreCase),
             ["marketing.campaigns"] = marketingEnabled,
             ["helpdesk.cases"] = helpDeskEnabled,
             ["helpdesk.emailIntake"] = helpDeskEnabled,

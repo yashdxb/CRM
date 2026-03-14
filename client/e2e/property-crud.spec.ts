@@ -21,6 +21,31 @@ async function login(page, request) {
     localStorage.setItem('auth_token', token as string);
     localStorage.setItem('tenant_key', 'default');
   }, payload.accessToken);
+
+  return payload.accessToken as string;
+}
+
+async function createProperty(request, token, addressSuffix) {
+  const response = await request.post(`${API_BASE_URL}/api/properties`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'X-Tenant-Key': 'default'
+    },
+    data: {
+      address: `E2E Seed ${addressSuffix} Test Ave`,
+      city: 'Toronto',
+      province: 'Ontario',
+      postalCode: 'M5V 2T6',
+      country: 'Canada',
+      currency: 'CAD',
+      status: 'Draft',
+      description: 'Seed property for CRUD UI validation.'
+    }
+  });
+
+  expect(response.ok()).toBeTruthy();
+  return await response.json();
 }
 
 function attachDiagnostics(page) {
@@ -44,7 +69,9 @@ test.describe('Property Module CRUD', () => {
     await login(page, request);
   });
 
-  test('list page loads and shows properties', async ({ page }) => {
+  test('list page loads and shows properties', async ({ page, request }) => {
+    const token = await login(page, request);
+    await createProperty(request, token, 'List');
     await page.goto('/app/properties');
     await expect(page.locator('h1.hero-title')).toContainText('Property');
     // Table should load with at least one row
@@ -69,12 +96,14 @@ test.describe('Property Module CRUD', () => {
     await expect(page).toHaveURL(/\/app\/properties/, { timeout: 10_000 });
   });
 
-  test('navigate to property detail', async ({ page }) => {
+  test('navigate to property detail', async ({ page, request }) => {
+    const token = await login(page, request);
+    const property = await createProperty(request, token, 'Detail');
     await page.goto('/app/properties');
-    await expect(page.locator('.p-datatable-tbody tr').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(`text=${property.address}`)).toBeVisible({ timeout: 15_000 });
 
-    // Click first row to navigate to detail
-    await page.locator('.p-datatable-tbody tr').first().click();
+    // Click the seeded row to navigate to detail
+    await page.locator('.p-datatable-tbody tr', { hasText: property.address }).first().click();
     await expect(page.locator('h1.hero-title')).toBeVisible({ timeout: 10_000 });
 
     // Detail page should show timeline section
@@ -86,12 +115,14 @@ test.describe('Property Module CRUD', () => {
     await expect(page.locator('.days-on-market')).toBeVisible();
   });
 
-  test('edit an existing property', async ({ page }) => {
+  test('edit an existing property', async ({ page, request }) => {
+    const token = await login(page, request);
+    const property = await createProperty(request, token, 'Edit');
     await page.goto('/app/properties');
-    await expect(page.locator('.p-datatable-tbody tr').first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator(`text=${property.address}`)).toBeVisible({ timeout: 15_000 });
 
-    // Click row-level edit button on first row
-    await page.locator('.row-action-btn--edit').first().click();
+    // Click row-level edit button on the seeded row
+    await page.locator('.p-datatable-tbody tr', { hasText: property.address }).locator('.row-action-btn--edit').click();
     await expect(page.locator('h1.hero-title')).toContainText('Edit', { timeout: 10_000 });
 
     // Modify address field
@@ -105,15 +136,18 @@ test.describe('Property Module CRUD', () => {
     await expect(page).toHaveURL(/\/app\/properties/, { timeout: 10_000 });
   });
 
-  test('delete a property via row action', async ({ page }) => {
+  test('delete a property via row action', async ({ page, request }) => {
+    const token = await login(page, request);
+    const property = await createProperty(request, token, 'Delete');
     await page.goto('/app/properties');
-    await expect(page.locator('.p-datatable-tbody tr').first()).toBeVisible({ timeout: 15_000 });
+    const targetRow = page.locator('.p-datatable-tbody tr', { hasText: property.address }).first();
+    await expect(targetRow).toBeVisible({ timeout: 15_000 });
 
     // Count rows before delete
     const rowsBefore = await page.locator('.p-datatable-tbody tr').count();
 
-    // Click delete on last row
-    await page.locator('.row-action-btn--delete').last().click();
+    // Delete the seeded row
+    await targetRow.locator('.row-action-btn--delete').click();
 
     // Confirm dialog
     const confirmBtn = page.locator('.p-dialog button:has-text("Yes"), .p-dialog button:has-text("Delete"), .p-dialog button:has-text("Confirm"), .p-confirmdialog-accept-button');

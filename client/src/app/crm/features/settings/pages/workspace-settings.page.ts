@@ -111,6 +111,7 @@ export class WorkspaceSettingsPage {
     scoreImmediateUrgencyFrom: [80, [Validators.min(5), Validators.max(99)]],
     supportingDocsMaxPerRecord: [10, [Validators.min(1), Validators.max(100)]],
     supportingDocsMaxFileSizeMb: [10, [Validators.min(1), Validators.max(100)]],
+    featureProperties: [false],
     featureAuthEntra: [false],
     featureRealtimeDashboard: [false],
     featureRealtimePipeline: [false],
@@ -190,6 +191,7 @@ export class WorkspaceSettingsPage {
         allowedExtensions: ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.png', '.jpg', '.jpeg', '.webp']
       },
       featureFlags: {
+        properties: !!payload.featureProperties,
         'auth.entra': !!payload.featureAuthEntra,
         'realtime.dashboard': !!payload.featureRealtimeDashboard,
         'realtime.pipeline': !!payload.featureRealtimePipeline,
@@ -241,6 +243,7 @@ export class WorkspaceSettingsPage {
       scoreImmediateUrgencyFrom: settings.assistantActionScoringPolicy?.thresholds?.immediateUrgencyFrom ?? 80,
       supportingDocsMaxPerRecord: settings.supportingDocumentPolicy?.maxDocumentsPerRecord ?? 10,
       supportingDocsMaxFileSizeMb: settings.supportingDocumentPolicy?.maxFileSizeMb ?? 10,
+      featureProperties: this.resolveFeatureFlag(settings.featureFlags, 'properties'),
       featureAuthEntra: this.resolveFeatureFlag(settings.featureFlags, 'auth.entra'),
       featureRealtimeDashboard: this.resolveFeatureFlag(settings.featureFlags, 'realtime.dashboard'),
       featureRealtimePipeline: this.resolveFeatureFlag(settings.featureFlags, 'realtime.pipeline'),
@@ -255,6 +258,23 @@ export class WorkspaceSettingsPage {
       reportDesignerRequiredPermission: settings.reportDesignerRequiredPermission || 'Permissions.Administration.Manage'
     });
     this.activeVerticalPresetConfiguration.set(settings.verticalPresetConfiguration ?? null);
+  }
+
+  protected verticalPackSummary(preset: VerticalPresetConfiguration): string[] {
+    const summary = [
+      preset.presetId === 'RealEstateBrokerage' ? 'Properties module' : 'Core CRM workflow pack',
+      `${preset.vocabulary.leadQualificationLabel} language`,
+      `${preset.vocabulary.opportunityPluralLabel} pipeline vocabulary`,
+      ...preset.dashboardPackDefaults.map((item) => `${item} dashboard`),
+      ...preset.reportLibraryHighlights.map((item) => `${item} report`),
+      ...preset.workflowTemplateHighlights.map((item) => `${item} workflow`)
+    ];
+
+    if (preset.presetId === 'RealEstateBrokerage') {
+      summary.splice(3, 0, 'Brokerage lead profile catalog');
+    }
+
+    return Array.from(new Set(summary));
   }
 
   protected applyVerticalPreset(resetExisting: boolean) {

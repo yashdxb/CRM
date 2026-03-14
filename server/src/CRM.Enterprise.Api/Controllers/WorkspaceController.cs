@@ -26,6 +26,7 @@ public class WorkspaceController : ControllerBase
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private static readonly HashSet<string> SupportedFeatureFlags = new(StringComparer.OrdinalIgnoreCase)
     {
+        "properties",
         "auth.entra",
         "marketing.campaigns",
         "helpdesk.cases",
@@ -361,9 +362,15 @@ public class WorkspaceController : ControllerBase
 
     private static IReadOnlyDictionary<string, bool>? ResolveFeatureFlags(Tenant tenant)
     {
+        var defaults = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        if (string.Equals(tenant.IndustryPreset, VerticalPresetIds.RealEstateBrokerage, StringComparison.OrdinalIgnoreCase))
+        {
+            defaults["properties"] = true;
+        }
+
         if (string.IsNullOrWhiteSpace(tenant.FeatureFlagsJson))
         {
-            return null;
+            return defaults.Count == 0 ? null : defaults;
         }
 
         try
@@ -371,14 +378,19 @@ public class WorkspaceController : ControllerBase
             var parsed = JsonSerializer.Deserialize<Dictionary<string, bool>>(tenant.FeatureFlagsJson, JsonOptions);
             if (parsed is null || parsed.Count == 0)
             {
-                return null;
+                return defaults.Count == 0 ? null : defaults;
+            }
+
+            foreach (var (key, value) in defaults)
+            {
+                parsed[key] = value;
             }
 
             return NormalizeFeatureFlags(parsed);
         }
         catch (JsonException)
         {
-            return null;
+            return defaults.Count == 0 ? null : defaults;
         }
     }
 

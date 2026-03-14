@@ -53,9 +53,9 @@ test('real estate preset updates workspace preview and lead form catalogs', asyn
     await page.goto('/app/settings/workspace');
     await page.waitForLoadState('networkidle');
     await expect(page.getByRole('combobox', { name: 'Real Estate Brokerage' })).toBeVisible();
-    await expect(page.getByText('Buyer readiness')).toBeVisible();
-    await expect(page.getByText('Offer Pipeline Summary')).toBeVisible();
-    await expect(page.getByText('Showing Follow-up Automation')).toBeVisible();
+    await expect(page.locator('.field-preview').getByText('Buyer readiness')).toBeVisible();
+    await expect(page.locator('.token-list').getByText('Offer Pipeline Summary', { exact: true })).toBeVisible();
+    await expect(page.locator('.token-list').getByText('Showing Follow-up Automation', { exact: true })).toBeVisible();
 
     await page.goto('/app/leads/new');
     await page.waitForLoadState('networkidle');
