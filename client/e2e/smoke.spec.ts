@@ -52,13 +52,13 @@ test('core screens smoke', async ({ page, request }) => {
   await expect(page.locator('h1.hero-title')).toContainText('Contact');
 
   await page.goto('/app/leads');
-  await expect(page.getByRole('heading', { name: /Leads/i })).toBeVisible();
+  await expect(page.locator('h1.hero-title')).toContainText('Leads');
 
   await page.goto('/app/opportunities');
-  await expect(page.getByRole('heading', { name: /Deal|Opportunity/i, level: 1 })).toBeVisible();
+  await expect(page.locator('h1.hero-title, h1.page-title').first()).toContainText(/Deal|Opportunity/);
 
   await page.goto('/app/activities');
-  await expect(page.getByRole('heading', { name: /Activities/i })).toBeVisible();
+  await expect(page.locator('h1.page-title')).toContainText('Activities');
 
   await page.goto('/app/settings/users');
   await expect(page.getByRole('heading', { name: /People & Access|Team & Access Management/i }).first()).toBeVisible();

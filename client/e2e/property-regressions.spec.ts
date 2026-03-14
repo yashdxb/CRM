@@ -101,6 +101,48 @@ async function deleteProperty(token: string, propertyId: string) {
   expect([204, 404]).toContain(response.status);
 }
 
+async function getPropertyResponseStatus(token: string, propertyId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+
+  return response.status;
+}
+
+async function createPropertyShowing(token: string, propertyId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/showings`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({
+      visitorName: 'Delete Flow Visitor',
+      visitorEmail: 'delete.flow.visitor@example.com',
+      visitorPhone: '+1 (416) 555-0177',
+      scheduledAtUtc: '2026-03-21T14:00:00.000Z',
+      durationMinutes: 30,
+      status: 'Scheduled'
+    })
+  });
+
+  expect(response.ok).toBeTruthy();
+}
+
+async function createPropertyDocument(token: string, propertyId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/properties/${propertyId}/documents`, {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: JSON.stringify({
+      fileName: 'delete-flow-contract.pdf',
+      category: 'Contract',
+      fileUrl: 'https://example.com/docs/delete-flow-contract.pdf'
+    })
+  });
+
+  expect(response.ok).toBeTruthy();
+}
+
 async function expectCreatePropertyForbidden(token: string) {
   const response = await fetch(`${API_BASE_URL}/api/properties`, {
     method: 'POST',
@@ -599,5 +641,44 @@ test.describe('Property UAT regressions', () => {
     } finally {
       await deleteProperty(repToken, property.id);
     }
+  });
+
+  test('delete flow archives property and removes access for rep and manager', async ({ browser, page }) => {
+    test.setTimeout(120_000);
+    attachDiagnostics(page);
+
+    const repToken = await apiLogin(SALES_REP_EMAIL, SALES_REP_PASSWORD);
+    const managerToken = await apiLogin(SALES_MANAGER_EMAIL, SALES_MANAGER_PASSWORD);
+    const property = await createProperty(repToken, `Delete Flow ${Date.now()}`, 745000);
+
+    await createPropertyShowing(repToken, property.id);
+    await createPropertyDocument(repToken, property.id);
+
+    await loginUi(page, repToken, '/app/properties');
+    await expect(page.getByRole('heading', { name: /Property Workspace/i })).toBeVisible();
+
+    const propertyRow = page.getByRole('row', { name: new RegExp(property.address) });
+    await expect(propertyRow).toBeVisible();
+
+    await propertyRow.locator('.row-action-btn--delete').click({ force: true });
+    await page.locator('.p-confirmdialog .p-confirmdialog-accept-button, .p-confirmdialog .p-confirm-dialog-accept').click();
+
+    await expect(page.getByText(/Property deleted\./i)).toBeVisible();
+    await expect(page.getByRole('row', { name: new RegExp(property.address) })).toHaveCount(0);
+
+    await page.goto(`${UI_BASE_URL}/app/properties/${property.id}`);
+    await expect(page).toHaveURL(/\/app\/properties$/);
+
+    const managerContext = await browser.newContext();
+    const managerPage = await managerContext.newPage();
+    attachDiagnostics(managerPage);
+    await loginUi(managerPage, managerToken, '/app/properties');
+    await expect(managerPage.getByRole('row', { name: new RegExp(property.address) })).toHaveCount(0);
+    await managerPage.goto(`${UI_BASE_URL}/app/properties/${property.id}`);
+    await expect(managerPage).toHaveURL(/\/app\/properties$/);
+    await managerContext.close();
+
+    await expect(await getPropertyResponseStatus(repToken, property.id)).toBe(404);
+    await expect(await getPropertyResponseStatus(managerToken, property.id)).toBe(404);
   });
 });

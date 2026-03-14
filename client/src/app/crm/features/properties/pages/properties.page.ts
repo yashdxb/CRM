@@ -11,6 +11,8 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TooltipModule } from 'primeng/tooltip';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService } from 'primeng/api';
 import { forkJoin } from 'rxjs';
 
 import { Property, PropertyStatus, PropertyType, MlsFeedConfig, MlsImportJob } from '../models/property.model';
@@ -43,8 +45,10 @@ interface TypeOption { label: string; value: PropertyType | 'all'; }
     SkeletonModule,
     TooltipModule,
     DialogModule,
+    ConfirmDialogModule,
     BreadcrumbsComponent
   ],
+  providers: [ConfirmationService],
   templateUrl: './properties.page.html',
   styleUrl: './properties.page.scss'
 })
@@ -130,7 +134,8 @@ export class PropertiesPage {
   constructor(
     private readonly propertyData: PropertyDataService,
     private readonly router: Router,
-    private readonly toastService: AppToastService
+    private readonly toastService: AppToastService,
+    private readonly confirmationService: ConfirmationService
   ) {
     const toast = history.state?.toast as { tone: 'success' | 'error'; message: string } | undefined;
     if (toast) this.toastService.show(toast.tone, toast.message, 3000);
@@ -172,11 +177,19 @@ export class PropertiesPage {
   }
 
   protected onDelete(row: Property) {
-    const confirmed = confirm(`Delete property at ${row.address}?`);
-    if (!confirmed) return;
-    this.propertyData.delete(row.id).subscribe({
-      next: () => { this.load(); this.toastService.show('success', 'Property deleted.', 3000); },
-      error: () => this.toastService.show('error', 'Unable to delete property.', 3000)
+    this.confirmationService.confirm({
+      message: `Delete property at ${row.address}?`,
+      header: 'Delete Property',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.propertyData.delete(row.id).subscribe({
+          next: () => { this.load(); this.toastService.show('success', 'Property deleted.', 3000); },
+          error: () => this.toastService.show('error', 'Unable to delete property.', 3000)
+        });
+      }
     });
   }
 
@@ -276,18 +289,29 @@ export class PropertiesPage {
 
   protected bulkDelete() {
     const count = this.selectedIds().size;
-    if (!confirm(`Delete ${count} selected properties?`)) return;
-    const obs = Array.from(this.selectedIds()).map(id => this.propertyData.delete(id));
-    forkJoin(obs).subscribe({
-      next: () => {
-        this.selectedIds.set(new Set());
-        this.load();
-        this.toastService.show('success', `${count} properties deleted.`, 3000);
-      },
-      error: () => {
-        this.selectedIds.set(new Set());
-        this.load();
-        this.toastService.show('error', 'Some properties could not be deleted.', 3000);
+    if (!count) return;
+
+    this.confirmationService.confirm({
+      message: `Delete ${count} selected properties?`,
+      header: 'Delete Properties',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        const obs = Array.from(this.selectedIds()).map(id => this.propertyData.delete(id));
+        forkJoin(obs).subscribe({
+          next: () => {
+            this.selectedIds.set(new Set());
+            this.load();
+            this.toastService.show('success', `${count} properties deleted.`, 3000);
+          },
+          error: () => {
+            this.selectedIds.set(new Set());
+            this.load();
+            this.toastService.show('error', 'Some properties could not be deleted.', 3000);
+          }
+        });
       }
     });
   }
