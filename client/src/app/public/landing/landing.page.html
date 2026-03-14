@@ -127,6 +127,9 @@
                   </div>
                   <div class="preview-factor-list">
                     <article class="preview-factor" *ngFor="let factor of asLeadSlide(slide).factors" [class.preview-factor--strong]="factor.tone === 'strong'" [class.preview-factor--watch]="factor.tone === 'watch'">
+                      <div class="preview-factor__meter" aria-hidden="true">
+                        <span [style.height.%]="factor.fill"></span>
+                      </div>
                       <span>{{ factor.label }}</span>
                       <strong>{{ factor.value }}</strong>
                     </article>
@@ -140,6 +143,7 @@
                     <div>
                       <span class="preview-shell__eyebrow">Deal desk</span>
                       <h3>{{ asDealSlide(slide).dealName }}</h3>
+                      <p>{{ asDealSlide(slide).riskNote }}</p>
                     </div>
                     <div class="preview-deal-pill">{{ asDealSlide(slide).dealStage }}</div>
                   </div>
@@ -152,6 +156,27 @@
                       <span>Health</span>
                       <strong>{{ asDealSlide(slide).dealHealth }}</strong>
                     </article>
+                    <article>
+                      <span>Owner</span>
+                      <strong>{{ asDealSlide(slide).dealOwner }}</strong>
+                    </article>
+                    <article>
+                      <span>Approval</span>
+                      <strong>{{ asDealSlide(slide).approvalStatus }}</strong>
+                    </article>
+                  </div>
+                  <div class="preview-deal-confidence">
+                    <div class="preview-deal-confidence__top">
+                      <span>{{ asDealSlide(slide).confidenceLabel }}</span>
+                      <strong>{{ asDealSlide(slide).confidence }}%</strong>
+                    </div>
+                    <div class="preview-deal-confidence__bar" aria-hidden="true">
+                      <span [style.width.%]="asDealSlide(slide).confidence"></span>
+                    </div>
+                  </div>
+                  <div class="preview-deal-next">
+                    <span>Next best action</span>
+                    <strong>{{ asDealSlide(slide).nextAction }}</strong>
                   </div>
                   <div class="preview-feed">
                     <article *ngFor="let item of asDealSlide(slide).timeline">
@@ -173,13 +198,18 @@
                   </div>
                   <div class="preview-property-price">{{ asPropertySlide(slide).propertyPrice }}</div>
                   <div class="preview-property-metrics">
-                    <article *ngFor="let stat of asPropertySlide(slide).propertyStats">
+                    <article *ngFor="let stat of asPropertySlide(slide).propertyStats" [class.preview-property-metric--blue]="stat.tone === 'blue'" [class.preview-property-metric--green]="stat.tone === 'green'" [class.preview-property-metric--amber]="stat.tone === 'amber'" [class.preview-property-metric--violet]="stat.tone === 'violet'">
+                      <div class="preview-property-metric__icon"><i [class]="stat.icon" aria-hidden="true"></i></div>
                       <span>{{ stat.label }}</span>
                       <strong>{{ stat.value }}</strong>
                     </article>
                   </div>
                   <div class="preview-note-list preview-note-list--property">
-                    <span *ngFor="let item of asPropertySlide(slide).propertyFeed">{{ item }}</span>
+                    <span *ngFor="let item of asPropertySlide(slide).propertyFeed">
+                      <i [class]="item.icon" aria-hidden="true"></i>
+                      <em>{{ item.label }}</em>
+                      <strong>{{ item.value }}</strong>
+                    </span>
                   </div>
                 </div>
               </ng-container>
@@ -254,12 +284,13 @@
   <section class="stats-bar scroll-animate">
     <div class="shell stats-bar__inner">
       <div class="stat-item" *ngFor="let stat of stats; let i = index" [style.animation-delay]="i * 0.1 + 's'">
-        <div class="stat-item__icon">
+        <div class="stat-item__icon" [ngClass]="'stat-item__icon--' + stat.color">
           <i class="pi" [ngClass]="stat.icon"></i>
         </div>
         <div class="stat-item__content">
-          <span class="stat-item__value">{{ animatedStatValues[i] }}{{ stat.suffix }}</span>
+          <span class="stat-item__value">{{ stat.prefix }}{{ animatedStatValues[i] }}{{ stat.suffix }}</span>
           <span class="stat-item__label">{{ stat.label }}</span>
+          <span class="stat-item__description">{{ stat.description }}</span>
         </div>
       </div>
     </div>

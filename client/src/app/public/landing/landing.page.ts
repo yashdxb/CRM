@@ -38,7 +38,7 @@ type LeadPreviewSlide = {
   profileName: string;
   profileRole: string;
   readiness: string;
-  factors: Array<{ label: string; value: string; tone: 'strong' | 'watch' | 'supporting' }>;
+  factors: Array<{ label: string; value: string; tone: 'strong' | 'watch' | 'supporting'; fill: number }>;
 };
 
 type DealPreviewSlide = {
@@ -51,6 +51,12 @@ type DealPreviewSlide = {
   dealAmount: string;
   dealStage: string;
   dealHealth: string;
+  dealOwner: string;
+  confidence: number;
+  confidenceLabel: string;
+  nextAction: string;
+  approvalStatus: string;
+  riskNote: string;
   timeline: Array<{ label: string; meta: string }>;
 };
 
@@ -63,8 +69,8 @@ type PropertyPreviewSlide = {
   propertyName: string;
   propertyStatus: string;
   propertyPrice: string;
-  propertyStats: Array<{ label: string; value: string }>;
-  propertyFeed: string[];
+  propertyStats: Array<{ label: string; value: string; icon: string; tone: 'blue' | 'green' | 'amber' | 'violet' }>;
+  propertyFeed: Array<{ label: string; value: string; icon: string }>;
 };
 
 type OrchestrationPreviewSlide = {
@@ -162,9 +168,9 @@ export class LandingPage implements OnInit, AfterViewInit {
       profileRole: 'Brokerage prospect',
       readiness: 'Ready for conversion',
       factors: [
-        { label: 'Conversation signal', value: 'Strong', tone: 'strong' },
-        { label: 'Budget proof', value: 'Partial', tone: 'watch' },
-        { label: 'Stakeholders engaged', value: '4', tone: 'supporting' }
+        { label: 'Conversation signal', value: 'Strong', tone: 'strong', fill: 84 },
+        { label: 'Budget proof', value: 'Partial', tone: 'watch', fill: 46 },
+        { label: 'Stakeholders engaged', value: '4', tone: 'supporting', fill: 72 }
       ]
     },
     {
@@ -177,6 +183,12 @@ export class LandingPage implements OnInit, AfterViewInit {
       dealAmount: '$1.24M',
       dealStage: 'Conditional',
       dealHealth: 'Manager attention',
+      dealOwner: 'Robert Lambke',
+      confidence: 82,
+      confidenceLabel: 'Forecast confidence',
+      nextAction: 'Review financing condition before buyer call',
+      approvalStatus: '3 approvals complete',
+      riskNote: 'One financing document outstanding before closing review',
       timeline: [
         { label: 'Offer submitted', meta: 'Today, 10:20' },
         { label: 'Legal review complete', meta: 'Yesterday' },
@@ -234,11 +246,16 @@ export class LandingPage implements OnInit, AfterViewInit {
       propertyStatus: 'Active',
       propertyPrice: '$829,000',
       propertyStats: [
-        { label: 'Showings', value: '11' },
-        { label: 'Documents', value: '6' },
-        { label: 'Alerts', value: '2' }
+        { label: 'Showings', value: '11', icon: 'pi pi-calendar', tone: 'blue' },
+        { label: 'Documents', value: '6', icon: 'pi pi-file', tone: 'amber' },
+        { label: 'Alerts', value: '2', icon: 'pi pi-bell', tone: 'violet' },
+        { label: 'Qualified buyers', value: '4', icon: 'pi pi-users', tone: 'green' }
       ],
-      propertyFeed: ['Price reduced 2.1%', 'Showing booked for Saturday', 'Listing agreement signed']
+      propertyFeed: [
+        { label: 'Price movement', value: 'Reduced 2.1% this week', icon: 'pi pi-chart-line' },
+        { label: 'Next showing', value: 'Saturday, 11:00 AM', icon: 'pi pi-clock' },
+        { label: 'Document status', value: 'Listing agreement signed', icon: 'pi pi-check-circle' }
+      ]
     }
   ];
   readonly timezoneOptions = this.buildTimeZoneOptions();
@@ -258,10 +275,42 @@ export class LandingPage implements OnInit, AfterViewInit {
   ];
 
   readonly stats = [
-    { icon: 'pi-check-circle', value: 4, suffix: '', label: 'Core qualification layers' },
-    { icon: 'pi-chart-scatter', value: 6, suffix: '', label: 'Visual KPI report types' },
-    { icon: 'pi-sitemap', value: 1, suffix: '', label: 'Approval workflow engine' },
-    { icon: 'pi-building', value: 1, suffix: '', label: 'Current CRM vertical preset track' }
+    {
+      icon: 'pi-chart-line',
+      color: 'azure',
+      prefix: '',
+      value: 82,
+      suffix: '%',
+      label: 'Forecast confidence',
+      description: 'Evidence-backed pipeline confidence instead of stage optimism.'
+    },
+    {
+      icon: 'pi-home',
+      color: 'emerald',
+      prefix: '',
+      value: 11,
+      suffix: '',
+      label: 'Showings scheduled',
+      description: 'Live listing activity, buyer follow-up, and property momentum in one workspace.'
+    },
+    {
+      icon: 'pi-verified',
+      color: 'amber',
+      prefix: '',
+      value: 3,
+      suffix: '',
+      label: 'Deals need review',
+      description: 'Manager approvals, blocked decisions, and risk queues stay visible.'
+    },
+    {
+      icon: 'pi-file-edit',
+      color: 'rose',
+      prefix: '',
+      value: 6,
+      suffix: '',
+      label: 'Listing documents tracked',
+      description: 'Media, agreements, and transaction paperwork stay attached to the record.'
+    }
   ];
   animatedStatValues: number[] = [0, 0, 0, 0];
   private statsAnimated = false;
