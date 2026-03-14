@@ -83,6 +83,20 @@ test('login without tenant header still resolves default tenant', async ({ page,
   expect(tenantContext?.id).toBeTruthy();
 });
 
+test('stale root-domain tenant key does not block default login', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('tenant_key', 'demo');
+  });
+
+  await page.goto('/login');
+
+  await page.locator('input[formcontrolname="email"]').fill(ADMIN_EMAIL);
+  await page.locator('input[formcontrolname="password"]').fill(ADMIN_PASSWORD);
+  await page.getByRole('button', { name: /sign in/i }).click();
+
+  await expect(page).toHaveURL(/\/app\/dashboard/, { timeout: 20000 });
+});
+
 test('invalid credentials show an error message', async ({ page }) => {
   await page.goto('/login');
 

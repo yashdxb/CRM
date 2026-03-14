@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { catchError, mergeMap, Observable, of, retryWhen, switchMap, tap, throwError, timer } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { clearToken, saveToken } from './token.utils';
-import { getTenantKey, setTenantKey } from '../tenant/tenant.utils';
+import { getTenantKeyForAuthBootstrap, setTenantKey } from '../tenant/tenant.utils';
 import { PresenceService } from '../realtime/presence.service';
 import { CrmEventsService } from '../realtime/crm-events.service';
 
@@ -87,7 +87,7 @@ export class AuthService {
 
   login(payload: LoginRequest) {
     const url = `${environment.apiUrl}/api/auth/login`;
-    const tenantKey = getTenantKey();
+    const tenantKey = getTenantKeyForAuthBootstrap();
     return this.http
       .post<LoginResponse>(url, payload, {
         headers: tenantKey ? { 'X-Tenant-Key': tenantKey } : undefined
@@ -122,12 +122,15 @@ export class AuthService {
 
   getPublicAuthConfig() {
     const url = `${environment.apiUrl}/api/auth/config`;
-    return this.http.get<PublicAuthConfig>(url);
+    const tenantKey = getTenantKeyForAuthBootstrap();
+    return this.http.get<PublicAuthConfig>(url, {
+      headers: tenantKey ? { 'X-Tenant-Key': tenantKey } : undefined
+    });
   }
 
   loginWithEntra(payload: EntraLoginRequest) {
     const url = `${environment.apiUrl}/api/auth/login/entra`;
-    const tenantKey = getTenantKey();
+    const tenantKey = getTenantKeyForAuthBootstrap();
     return this.http
       .post<LoginResponse>(url, payload, {
         headers: tenantKey ? { 'X-Tenant-Key': tenantKey } : undefined

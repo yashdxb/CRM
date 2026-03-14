@@ -43,6 +43,26 @@ export function resolveTenantKeyFromHost(hostname: string): string | null {
   return null;
 }
 
+export function getTenantKeyForAuthBootstrap(): string | null {
+  if (typeof window === 'undefined') {
+    return DEFAULT_TENANT;
+  }
+
+  const hostKey = resolveTenantKeyFromHost(window.location.hostname);
+  if (hostKey) {
+    return hostKey;
+  }
+
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (!stored || stored === DEFAULT_TENANT) {
+    return DEFAULT_TENANT;
+  }
+
+  // On root domains, ignore stale tenant selections during login/config bootstrap
+  // so the API can fall back to the configured default tenant.
+  return null;
+}
+
 export function initTenantFromHost() {
   if (typeof window === 'undefined') {
     return;
