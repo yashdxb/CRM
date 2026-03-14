@@ -232,6 +232,27 @@ export class PropertyFormPage implements OnInit {
   }
 
   protected onSave() {
+    if (this.saving() || this.photoUploading() || this.loading()) {
+      return;
+    }
+
+    // PrimeNG InputNumber commits/parses on blur. Blur the active control and
+    // defer the save by one tick so currency edits are committed before route navigation.
+    const activeElement = typeof document !== 'undefined' ? document.activeElement as HTMLElement | null : null;
+    activeElement?.blur();
+
+    setTimeout(() => this.commitSave(), 0);
+  }
+
+  protected prepareForSave(event?: Event) {
+    const target = event?.target as EventTarget | null;
+    const activeElement = typeof document !== 'undefined' ? document.activeElement as HTMLElement | null : null;
+    if (activeElement && activeElement !== target) {
+      activeElement.blur();
+    }
+  }
+
+  private commitSave() {
     this.formGroup.markAllAsTouched();
     if (this.formGroup.invalid) {
       this.raiseToast('error', 'Please fix the highlighted errors before saving.');

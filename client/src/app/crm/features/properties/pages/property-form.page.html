@@ -666,6 +666,7 @@
         <button
           type="submit"
           pButton
+          (mousedown)="prepareForSave($event)"
           [label]="photoUploading() ? 'Uploading photos…' : (saving() ? 'Saving…' : (isEditMode() ? 'Update property' : 'Create property'))"
           class="crm-button crm-button--primary"
           [disabled]="formGroup.invalid || saving() || loading() || photoUploading()">

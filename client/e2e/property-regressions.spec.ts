@@ -12,6 +12,7 @@ const SALES_MANAGER_EMAIL = process.env.E2E_SALES_MANAGER_EMAIL ?? 'yasser.ahame
 const SALES_MANAGER_PASSWORD = process.env.E2E_SALES_MANAGER_PASSWORD ?? 'P@ssw0rd!';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
+const SAMPLE_PHOTO_PATH = process.env.E2E_PROPERTY_PHOTO_PATH ?? '/Users/yasserahmed/Desktop/Development Projects/CRM-Enterprise/client/src/assets/avatars/lead1.png';
 
 type PropertyRecord = {
   id: string;
@@ -198,6 +199,19 @@ function attachDiagnostics(page: Parameters<typeof test>[0]['page']) {
   });
 }
 
+async function setCurrencyInput(
+  page: Parameters<typeof test>[0]['page'],
+  selector: string,
+  value: string
+) {
+  const input = page.locator(selector);
+  await input.click();
+  await input.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
+  await input.press('Backspace');
+  await input.pressSequentially(value);
+  await input.press('Tab');
+}
+
 test.describe('Property UAT regressions', () => {
   test('price edit creates price history and manager can review it', async ({ browser, page }) => {
     test.setTimeout(120_000);
@@ -212,7 +226,7 @@ test.describe('Property UAT regressions', () => {
       await expect(page.getByRole('heading', { name: property.address })).toBeVisible();
 
       await page.getByRole('link', { name: /Edit/i }).click();
-      await page.locator('#propertyListPrice input').fill('829000');
+      await setCurrencyInput(page, '#propertyListPrice input', '829000');
       await page.getByRole('button', { name: /Update property/i }).click();
       await expect(page).toHaveURL(/\/app\/properties$/);
 
@@ -476,6 +490,112 @@ test.describe('Property UAT regressions', () => {
       await expectCreatePropertyForbidden(restrictedToken);
     } finally {
       await deleteUser(adminToken, restrictedUser.id);
+    }
+  });
+
+  test('full listing execution flow persists across tabs and manager review', async ({ browser, page }) => {
+    test.setTimeout(180_000);
+    attachDiagnostics(page);
+
+    const repToken = await apiLogin(SALES_REP_EMAIL, SALES_REP_PASSWORD);
+    const managerToken = await apiLogin(SALES_MANAGER_EMAIL, SALES_MANAGER_PASSWORD);
+    const property = await createProperty(repToken, 'Full Listing Flow', 855000);
+
+    try {
+      await loginUi(page, repToken, `/app/properties/${property.id}`);
+      await expect(page.getByRole('heading', { name: property.address })).toBeVisible();
+
+      await page.getByRole('link', { name: /Edit/i }).click();
+      await page.locator('.photo-drop-zone .drop-input').setInputFiles(SAMPLE_PHOTO_PATH);
+      await page.locator('#propertyVirtualTour').fill('https://tour.example.com/full-listing-flow');
+      await page.getByRole('button', { name: /Update property/i }).click();
+      await expect(page).toHaveURL(/\/app\/properties$/);
+
+      const propertyRow = page.getByRole('row', { name: new RegExp(property.address) });
+      await expect(propertyRow).toBeVisible();
+      await propertyRow.click();
+      await expect(page.getByRole('heading', { name: property.address })).toBeVisible();
+      await expect(page.getByRole('heading', { name: /Photos & Media/i })).toBeVisible();
+      await expect(page.locator('.gallery-item img').first()).toBeVisible();
+
+      await page.getByRole('button', { name: /Documents/i }).click();
+      await page.getByRole('button', { name: /Upload Document/i }).last().click();
+      await page.locator('#doc-name').fill('listing-agreement.pdf');
+      await page.locator('#doc-category .p-select-dropdown, #doc-category button[aria-label=\"dropdown trigger\"]').click();
+      await page.getByRole('option', { name: /Contract/i }).click();
+      await page.locator('#doc-url').fill('https://example.com/docs/full-listing-agreement.pdf');
+      await page.locator('.p-dialog:has(#doc-name) .p-dialog-footer .action-btn--add').click();
+      await expect(page.locator('.document-card', { hasText: 'listing-agreement.pdf' }).first()).toBeVisible();
+
+      await page.getByRole('button', { name: /Showings/i }).click();
+      await page.getByRole('button', { name: /Schedule Showing/i }).click();
+      await page.locator('#showing-visitor').fill('Emma Clarke');
+      await page.locator('#showing-email').fill('emma.clarke@example.com');
+      await page.locator('#showing-phone').fill('+1 (416) 555-0138');
+      await page.locator('#showing-date').fill('2026-03-18T15:00');
+      await page.locator('#showing-duration').fill('45');
+      await page.locator('.p-dialog:has(#showing-visitor) .p-dialog-footer .action-btn--add').click();
+      await expect(page.getByRole('button', { name: /Showings 1/i })).toBeVisible();
+
+      await page.getByRole('button', { name: /Activities/i }).click();
+      await page.getByRole('button', { name: /Add Activity/i }).click();
+      await page.locator('#activity-type .p-select-dropdown, #activity-type button[aria-label=\"dropdown trigger\"]').click();
+      await page.getByRole('option', { name: /Follow Up/i }).click();
+      await page.getByRole('textbox', { name: /Subject/i }).fill('Confirm offer review window');
+      await page.getByRole('textbox', { name: /^Description$/i }).fill('Call the buyer after the showing to confirm the offer review timeline.');
+      await page.getByRole('button', { name: /Create/i }).click();
+      await expect(page.getByRole('button', { name: /Activities 1/i })).toBeVisible();
+
+      await page.getByRole('link', { name: /Edit/i }).click();
+      await setCurrencyInput(page, '#propertyListPrice input', '839000');
+      await page.getByRole('button', { name: /Update property/i }).click();
+      await expect(page).toHaveURL(/\/app\/properties$/);
+      await page.getByRole('row', { name: new RegExp(property.address) }).click();
+      await expect(page.locator('.hero-price-value')).toHaveText('CA$839,000');
+      await expect(page.getByRole('button', { name: /Price History 1/i })).toBeVisible();
+
+      await page.getByRole('button', { name: /Alerts/i }).click();
+      await page.getByRole('button', { name: /Add Alert Rule/i }).click();
+      await page.locator('#alert-client-name').fill('Sophia Turner');
+      await page.locator('#alert-client-email').fill('sophia.turner@example.com');
+      await page.locator('#alert-min-price input').fill('800000');
+      await page.locator('#alert-max-price input').fill('850000');
+      await page.locator('#alert-bedrooms input').fill('2');
+      await page.getByRole('button', { name: /Create Rule/i }).click();
+      await expect(page.getByRole('button', { name: /Alerts 1/i })).toBeVisible();
+
+      await page.getByRole('button', { name: /Change Status/i }).click();
+      await page.locator('#status-select .p-select-dropdown, #status-select button[aria-label=\"dropdown trigger\"]').click();
+      await page.getByRole('option', { name: /^Active$/ }).click();
+      await page.locator('.p-dialog:has(#status-select) .p-dialog-footer .action-btn--add').click();
+      await expect(page.locator('.hero-badge')).toHaveText('Active');
+
+      const managerContext = await browser.newContext();
+      const managerPage = await managerContext.newPage();
+      attachDiagnostics(managerPage);
+      await loginUi(managerPage, managerToken, `/app/properties/${property.id}`);
+      await expect(managerPage.locator('.hero-badge')).toHaveText('Active');
+      await expect(managerPage.locator('.hero-price-value')).toHaveText('CA$839,000');
+      await expect(managerPage.getByRole('heading', { name: /Photos & Media/i })).toBeVisible();
+      await expect(managerPage.locator('.gallery-item img').first()).toBeVisible();
+      await expect(managerPage.getByRole('button', { name: /Documents/i })).toBeVisible();
+      await expect(managerPage.getByRole('button', { name: /Showings 1/i })).toBeVisible();
+      await expect(managerPage.getByRole('button', { name: /Activities 1/i })).toBeVisible();
+      await expect(managerPage.getByRole('button', { name: /Price History 1/i })).toBeVisible();
+      await expect(managerPage.getByRole('button', { name: /Alerts 1/i })).toBeVisible();
+      await managerPage.getByRole('button', { name: /Documents/i }).click();
+      await expect(managerPage.locator('.document-card', { hasText: 'listing-agreement.pdf' }).first()).toBeVisible();
+      await managerPage.getByRole('button', { name: /Showings 1/i }).click();
+      await expect(managerPage.locator('.showings-table .table-row', { hasText: 'Emma Clarke' }).first()).toBeVisible();
+      await managerPage.getByRole('button', { name: /Activities 1/i }).click();
+      await expect(managerPage.locator('.activity-item', { hasText: 'Confirm offer review window' }).first()).toBeVisible();
+      await managerPage.getByRole('button', { name: /Price History 1/i }).click();
+      await expect(managerPage.locator('.price-to').first()).toHaveText('CA$839,000');
+      await managerPage.getByRole('button', { name: /Alerts 1/i }).click();
+      await expect(managerPage.locator('.alert-rule-card', { hasText: 'Sophia Turner' }).first()).toBeVisible();
+      await managerContext.close();
+    } finally {
+      await deleteProperty(repToken, property.id);
     }
   });
 });

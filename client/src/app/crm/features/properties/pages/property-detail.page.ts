@@ -394,10 +394,42 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
   protected confirmStatusChange() {
     const prop = this.property();
     if (!prop) return;
-    this.propertyData.update(prop.id, { address: prop.address, status: this.selectedStatus() }).subscribe({
+    this.propertyData.update(prop.id, {
+      mlsNumber: prop.mlsNumber,
+      address: prop.address,
+      city: prop.city,
+      province: prop.province,
+      postalCode: prop.postalCode,
+      country: prop.country,
+      listPrice: prop.listPrice,
+      salePrice: prop.salePrice,
+      currency: prop.currency,
+      listingDateUtc: prop.listingDateUtc,
+      soldDateUtc: prop.soldDateUtc,
+      status: this.selectedStatus(),
+      propertyType: prop.propertyType,
+      bedrooms: prop.bedrooms,
+      bathrooms: prop.bathrooms,
+      squareFeet: prop.squareFeet,
+      lotSizeSqFt: prop.lotSizeSqFt,
+      yearBuilt: prop.yearBuilt,
+      garageSpaces: prop.garageSpaces,
+      description: prop.description,
+      features: prop.features,
+      neighborhood: prop.neighborhood,
+      photoUrls: prop.photoUrls,
+      virtualTourUrl: prop.virtualTourUrl,
+      commissionRate: prop.commissionRate,
+      buyerAgentCommission: prop.buyerAgentCommission,
+      sellerAgentCommission: prop.sellerAgentCommission,
+      coListingAgentId: prop.coListingAgentId,
+      ownerId: prop.ownerId,
+      accountId: prop.accountId,
+      primaryContactId: prop.primaryContactId,
+      opportunityId: prop.opportunityId
+    }).subscribe({
       next: () => {
-        this.property.set({ ...prop, status: this.selectedStatus() as any });
-        this.loadSubResources(prop.id);
+        this.loadProperty(prop.id);
         this.showStatusDialog.set(false);
         this.toast.show('success', 'Status updated.', 3000);
       }
