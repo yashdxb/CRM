@@ -588,24 +588,25 @@ public class AuthService : IAuthService
             return string.Equals(_defaultTenantKey, "default", StringComparison.OrdinalIgnoreCase);
         }
 
-        var tenant = _dbContext.Tenants
-            .AsNoTracking()
-            .FirstOrDefault(t => t.Id == _tenantProvider.TenantId);
-        if (tenant is null || string.IsNullOrWhiteSpace(tenant.FeatureFlagsJson))
-        {
-            return string.Equals(tenantKey, "default", StringComparison.OrdinalIgnoreCase);
-        }
-
         try
         {
+            var tenant = _dbContext.Tenants
+                .AsNoTracking()
+                .FirstOrDefault(t => t.Id == _tenantProvider.TenantId);
+            if (tenant is null || string.IsNullOrWhiteSpace(tenant.FeatureFlagsJson))
+            {
+                return string.Equals(tenantKey, "default", StringComparison.OrdinalIgnoreCase);
+            }
+
             var flags = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, bool>>(tenant.FeatureFlagsJson);
             if (flags is not null && flags.TryGetValue("auth.entra", out var enabled))
             {
                 return enabled;
             }
         }
-        catch (System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is System.Text.Json.JsonException || ex is DbUpdateException || ex is InvalidOperationException || ex is Microsoft.Data.SqlClient.SqlException)
         {
+            _logger.LogWarning(ex, "Falling back to default Entra availability because tenant auth configuration could not be resolved.");
         }
 
         return string.Equals(tenantKey, "default", StringComparison.OrdinalIgnoreCase);

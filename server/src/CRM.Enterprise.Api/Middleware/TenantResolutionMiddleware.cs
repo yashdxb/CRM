@@ -44,12 +44,19 @@ public class TenantResolutionMiddleware
 
             if (!string.IsNullOrWhiteSpace(loginTenantKey))
             {
-                var loginTenant = await dbContext.Tenants
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Key == loginTenantKey);
-                if (loginTenant is not null)
+                try
                 {
-                    tenantProvider.SetTenant(loginTenant.Id, loginTenant.Key);
+                    var loginTenant = await dbContext.Tenants
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(t => t.Key == loginTenantKey);
+                    if (loginTenant is not null)
+                    {
+                        tenantProvider.SetTenant(loginTenant.Id, loginTenant.Key);
+                    }
+                }
+                catch
+                {
+                    // Keep public auth bootstrap alive even if tenant lookup is temporarily unavailable.
                 }
             }
 
