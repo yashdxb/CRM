@@ -21,6 +21,12 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.101'
+          cache: true
+          cache-dependency-path: |
+            server/**/*.csproj
+            server/**/*.sln
+            **/Directory.Packages.props
+            **/NuGet.config
 
       - name: Configure Telerik NuGet feed
         run: |
@@ -46,10 +52,12 @@ jobs:
           rm -rf ./artifacts/publish
           dotnet publish server/src/CRM.Enterprise.Api/CRM.Enterprise.Api.csproj \
             --configuration Release \
+            --no-build \
+            --no-restore \
             --output ./artifacts/publish
           rm -f ./artifacts/api.zip
           cd ./artifacts/publish
-          zip -r ../api.zip .
+          zip -qr ../api.zip .
 
       - name: Azure Login
         uses: azure/login@v2
