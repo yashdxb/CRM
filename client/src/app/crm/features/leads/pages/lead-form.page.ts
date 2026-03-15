@@ -2753,8 +2753,8 @@ export class LeadFormPage implements OnInit, OnDestroy {
   }
 
   protected overallScorePrimaryLabel(): string {
-    const score = this.scoreSnapshot();
-    return `Overall score ${score.finalLeadScore} / 100`;
+    const value = this.overallScoreBadgeValue();
+    return `Overall score ${value} / 100`;
   }
 
   protected overallScoreBadgeValue(): number {

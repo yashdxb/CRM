@@ -3251,14 +3251,27 @@
   }
 
   .hero__subtitle {
-    position: relative;
     font-size: 0.98rem;
     line-height: 1.6;
     max-width: 100%;
+
+    &:not(.hero__subtitle--active) {
+      display: none;
+    }
+
+    &--active {
+      position: relative;
+    }
   }
 
   .hero__title-text {
-    position: relative;
+    &:not(.hero__title-text--active) {
+      display: none;
+    }
+
+    &.hero__title-text--active {
+      position: relative;
+    }
   }
 
   .hero-proof-points {
@@ -3377,6 +3390,10 @@
   }
 
   .hero__title {
+    min-height: auto;
+  }
+
+  .hero__subtitle-wrap {
     min-height: auto;
   }
 
