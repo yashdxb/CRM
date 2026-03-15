@@ -6,6 +6,7 @@ public interface ICustomerService
 {
     Task<CustomerSearchResultDto> SearchAsync(CustomerSearchRequest request, CancellationToken cancellationToken = default);
     Task<CustomerListItemDto?> GetAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<CustomerDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken = default);
     Task<CustomerOperationResult<CustomerListItemDto>> CreateAsync(CustomerUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default);
     Task<CustomerOperationResult<bool>> UpdateAsync(Guid id, CustomerUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default);
     Task<CustomerOperationResult<bool>> DeleteAsync(Guid id, ActorContext actor, CancellationToken cancellationToken = default);
@@ -14,4 +15,8 @@ public interface ICustomerService
     Task<CustomerOperationResult<int>> BulkAssignOwnerAsync(IReadOnlyCollection<Guid> ids, Guid ownerId, CancellationToken cancellationToken = default);
     Task<CustomerOperationResult<int>> BulkUpdateLifecycleAsync(IReadOnlyCollection<Guid> ids, string lifecycle, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CustomerListItemDto>> GetRelatedAccountsAsync(Guid accountId, CancellationToken cancellationToken = default);
+    Task<DuplicateCheckResult> CheckDuplicateAsync(string? name, string? accountNumber, string? website, string? phone, Guid? excludeId = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<AccountTeamMemberDto>> GetTeamMembersAsync(Guid accountId, CancellationToken cancellationToken = default);
+    Task<CustomerOperationResult<AccountTeamMemberDto>> AddTeamMemberAsync(Guid accountId, Guid userId, string role, CancellationToken cancellationToken = default);
+    Task<CustomerOperationResult<bool>> RemoveTeamMemberAsync(Guid accountId, Guid memberId, CancellationToken cancellationToken = default);
 }

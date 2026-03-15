@@ -806,6 +806,94 @@
   }
 }
 
+// Advanced filter toggle active indicator
+.btn.btn-ghost.active {
+  background: rgba($primary, 0.08);
+  color: $primary;
+}
+
+.filter-badge {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $primary;
+  flex-shrink: 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADVANCED FILTER PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.advanced-filter-panel {
+  margin-top: $space-3;
+  padding: $space-4 $space-5;
+  background: $glass-bg;
+  backdrop-filter: blur($glass-blur);
+  border: 1px solid $glass-border;
+  border-radius: $radius-lg;
+  box-shadow: $glass-shadow;
+  animation: fade-in-up 0.3s ease-out;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $space-4;
+  align-items: end;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+
+  label {
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $gray-500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &--actions {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: $space-2;
+    justify-content: flex-start;
+  }
+
+  ::ng-deep {
+    .p-select {
+      width: 100%;
+    }
+
+    .p-datepicker {
+      width: 100%;
+    }
+
+    .p-inputnumber {
+      width: 100%;
+
+      .p-inputnumber-input {
+        width: 100%;
+      }
+    }
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DATA SECTION
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -14,6 +14,7 @@ import { TagModule } from 'primeng/tag';
 import { FileUploadModule } from 'primeng/fileupload';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { InputNumberModule } from 'primeng/inputnumber';
 
 import { CustomerStatus } from '../models/customer.model';
 import { CustomerDataService, SaveCustomerRequest } from '../services/customer-data.service';
@@ -54,6 +55,7 @@ interface StatusOption {
     FileUploadModule,
     InputGroupModule,
     InputGroupAddonModule,
+    InputNumberModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./customer-form.page.html",
@@ -64,6 +66,27 @@ export class CustomerFormPage implements OnInit, OnDestroy {
     { label: 'Lead', value: 'Lead' },
     { label: 'Prospect', value: 'Prospect' },
     { label: 'Customer', value: 'Customer' }
+  ];
+
+  protected readonly accountTypeOptions = [
+    { label: 'Customer', value: 'Customer', icon: 'pi-users' },
+    { label: 'Partner', value: 'Partner', icon: 'pi-handshake' },
+    { label: 'Competitor', value: 'Competitor', icon: 'pi-bolt' },
+    { label: 'Vendor', value: 'Vendor', icon: 'pi-truck' }
+  ];
+
+  protected readonly ratingOptions = [
+    { label: 'Hot', value: 'Hot', icon: 'pi-sun' },
+    { label: 'Warm', value: 'Warm', icon: 'pi-cloud' },
+    { label: 'Cold', value: 'Cold', icon: 'pi-snowflake' }
+  ];
+
+  protected readonly accountSourceOptions = [
+    { label: 'Web', value: 'Web', icon: 'pi-globe' },
+    { label: 'Referral', value: 'Referral', icon: 'pi-share-alt' },
+    { label: 'Partner', value: 'Partner', icon: 'pi-handshake' },
+    { label: 'Trade Show', value: 'Trade Show', icon: 'pi-calendar' },
+    { label: 'Other', value: 'Other', icon: 'pi-ellipsis-h' }
   ];
 
   protected readonly isEditMode = signal(false);
@@ -91,6 +114,8 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   protected readonly noteSaving = signal(false);
   protected readonly parentAccountOptions = signal<{ label: string; value: string }[]>([]);
   protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string; isEditing: boolean }>>([]);
+  protected readonly duplicateWarning = signal<{ matchId: string; matchName: string } | null>(null);
+  private duplicateCheckTimer: ReturnType<typeof setTimeout> | null = null;
 
   protected noteText = '';
   private localEditingState = false;
@@ -106,7 +131,23 @@ export class CustomerFormPage implements OnInit, OnDestroy {
     email: '',
     company: '',
     address: '',
-    parentAccountId: undefined
+    parentAccountId: undefined,
+    territory: '',
+    annualRevenue: undefined,
+    numberOfEmployees: undefined,
+    accountType: undefined,
+    rating: undefined,
+    accountSource: undefined,
+    billingStreet: '',
+    billingCity: '',
+    billingState: '',
+    billingPostalCode: '',
+    billingCountry: '',
+    shippingStreet: '',
+    shippingCity: '',
+    shippingState: '',
+    shippingPostalCode: '',
+    shippingCountry: ''
   };
 
   constructor(
@@ -174,13 +215,19 @@ export class CustomerFormPage implements OnInit, OnDestroy {
           name: customer.name,
           lifecycleStage: customer.status,
           phone: customer.phone || '',
-          website: customer.address || '',
-          industry: '',
+          website: customer.website || '',
+          industry: customer.industry || '',
           description: customer.notes?.join(', ') || '',
           email: customer.email || '',
           company: customer.company || '',
           address: customer.address || '',
-          parentAccountId: customer.parentAccountId
+          parentAccountId: customer.parentAccountId,
+          territory: customer.territory || '',
+          annualRevenue: customer.annualRevenue,
+          numberOfEmployees: customer.numberOfEmployees,
+          accountType: customer.accountType,
+          rating: customer.rating,
+          accountSource: customer.accountSource
         };
         this.loading.set(false);
       },
@@ -189,6 +236,35 @@ export class CustomerFormPage implements OnInit, OnDestroy {
         this.raiseToast('error', 'Unable to load customer.');
       }
     });
+  }
+
+  protected checkForDuplicate(): void {
+    if (this.duplicateCheckTimer) {
+      clearTimeout(this.duplicateCheckTimer);
+    }
+    this.duplicateCheckTimer = setTimeout(() => {
+      const { name, accountNumber, website, phone } = this.form;
+      if (!name && !accountNumber && !website && !phone) {
+        this.duplicateWarning.set(null);
+        return;
+      }
+      this.customerData.checkDuplicate({
+        name: name || undefined,
+        accountNumber: accountNumber || undefined,
+        website: website || undefined,
+        phone: phone || undefined,
+        excludeId: this.customerId || undefined
+      }).subscribe({
+        next: (res) => {
+          this.duplicateWarning.set(
+            res.isDuplicate && res.matchId && res.matchName
+              ? { matchId: res.matchId, matchName: res.matchName }
+              : null
+          );
+        },
+        error: () => this.duplicateWarning.set(null)
+      });
+    }, 600);
   }
 
   protected onSave() {
@@ -206,7 +282,23 @@ export class CustomerFormPage implements OnInit, OnDestroy {
       website: this.form.website,
       industry: this.form.industry,
       description: this.form.description,
-      parentAccountId: this.form.parentAccountId
+      parentAccountId: this.form.parentAccountId,
+      territory: this.form.territory,
+      annualRevenue: this.form.annualRevenue,
+      numberOfEmployees: this.form.numberOfEmployees,
+      accountType: this.form.accountType,
+      rating: this.form.rating,
+      accountSource: this.form.accountSource,
+      billingStreet: this.form.billingStreet,
+      billingCity: this.form.billingCity,
+      billingState: this.form.billingState,
+      billingPostalCode: this.form.billingPostalCode,
+      billingCountry: this.form.billingCountry,
+      shippingStreet: this.form.shippingStreet,
+      shippingCity: this.form.shippingCity,
+      shippingState: this.form.shippingState,
+      shippingPostalCode: this.form.shippingPostalCode,
+      shippingCountry: this.form.shippingCountry
     };
 
     if (this.customerId) {

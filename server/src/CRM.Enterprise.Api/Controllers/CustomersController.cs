@@ -41,9 +41,21 @@ public class CustomersController : ControllerBase
         [FromQuery] string? status,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] string? sortDirection = null,
+        [FromQuery] string? industry = null,
+        [FromQuery] string? territory = null,
+        [FromQuery] Guid? ownerId = null,
+        [FromQuery] DateTime? createdFrom = null,
+        [FromQuery] DateTime? createdTo = null,
+        [FromQuery] decimal? minRevenue = null,
+        [FromQuery] decimal? maxRevenue = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _customerService.SearchAsync(new CustomerSearchRequest(search, status, page, pageSize), cancellationToken);
+        var result = await _customerService.SearchAsync(
+            new CustomerSearchRequest(search, status, page, pageSize, sortBy, sortDirection,
+                industry, territory, ownerId, createdFrom, createdTo, minRevenue, maxRevenue),
+            cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new CustomerSearchResponse(items, result.Total));
     }
@@ -62,6 +74,45 @@ public class CustomersController : ControllerBase
         var related = await _customerService.GetRelatedAccountsAsync(id, cancellationToken);
         var items = related.Select(ToApiItem);
         return Ok(items);
+    }
+
+    [HttpGet("{id:guid}/detail")]
+    public async Task<ActionResult<CustomerDetail>> GetCustomerDetail(Guid id, CancellationToken cancellationToken)
+    {
+        var detail = await _customerService.GetDetailAsync(id, cancellationToken);
+        if (detail is null) return NotFound();
+        return Ok(ToApiDetail(detail));
+    }
+
+    [HttpGet("{id:guid}/team-members")]
+    public async Task<ActionResult<IEnumerable<AccountTeamMemberItem>>> GetTeamMembers(Guid id, CancellationToken cancellationToken)
+    {
+        var members = await _customerService.GetTeamMembersAsync(id, cancellationToken);
+        return Ok(members.Select(m => new AccountTeamMemberItem(m.Id, m.UserId, m.UserName, m.Role, m.CreatedAtUtc)));
+    }
+
+    [HttpPost("{id:guid}/team-members")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
+    public async Task<ActionResult<AccountTeamMemberItem>> AddTeamMember(Guid id, [FromBody] AddTeamMemberRequest request, CancellationToken cancellationToken)
+    {
+        if (request.UserId == Guid.Empty || string.IsNullOrWhiteSpace(request.Role))
+            return BadRequest("UserId and Role are required.");
+
+        var result = await _customerService.AddTeamMemberAsync(id, request.UserId, request.Role, cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        var m = result.Value!;
+        return CreatedAtAction(nameof(GetTeamMembers), new { id }, new AccountTeamMemberItem(m.Id, m.UserId, m.UserName, m.Role, m.CreatedAtUtc));
+    }
+
+    [HttpDelete("{id:guid}/team-members/{memberId:guid}")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
+    public async Task<IActionResult> RemoveTeamMember(Guid id, Guid memberId, CancellationToken cancellationToken)
+    {
+        var result = await _customerService.RemoveTeamMemberAsync(id, memberId, cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        return NoContent();
     }
 
     [HttpPost]
@@ -198,6 +249,18 @@ public class CustomersController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("check-duplicate")]
+    [Authorize(Policy = Permissions.Policies.CustomersView)]
+    public async Task<ActionResult<DuplicateCheckResponse>> CheckDuplicate(
+        [FromBody] DuplicateCheckRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _customerService.CheckDuplicateAsync(
+            request.Name, request.AccountNumber, request.Website, request.Phone,
+            request.ExcludeId, cancellationToken);
+
+        return Ok(new DuplicateCheckResponse(result.IsDuplicate, result.MatchId, result.MatchName));
+    }
+
     private static CustomerListItem ToApiItem(CustomerListItemDto dto)
     {
         return new CustomerListItem(
@@ -211,7 +274,61 @@ public class CustomersController : ControllerBase
             dto.OwnerName,
             dto.ParentAccountId,
             dto.ParentAccountName,
-            dto.CreatedAtUtc);
+            dto.CreatedAtUtc,
+            dto.Industry,
+            dto.Territory,
+            dto.ActivityScore,
+            dto.Website,
+            dto.AccountNumber,
+            dto.AnnualRevenue,
+            dto.NumberOfEmployees,
+            dto.AccountType,
+            dto.Rating,
+            dto.AccountSource);
+    }
+
+    private static CustomerDetail ToApiDetail(CustomerDetailDto dto)
+    {
+        return new CustomerDetail(
+            dto.Id,
+            dto.Name,
+            dto.AccountNumber,
+            dto.Industry,
+            dto.Website,
+            dto.Phone,
+            dto.Status,
+            dto.OwnerId,
+            dto.OwnerName,
+            dto.ParentAccountId,
+            dto.ParentAccountName,
+            dto.Territory,
+            dto.Description,
+            dto.ActivityScore,
+            dto.HealthScore,
+            dto.LastActivityAtUtc,
+            dto.LastViewedAtUtc,
+            dto.CreatedAtUtc,
+            dto.UpdatedAtUtc,
+            dto.AnnualRevenue,
+            dto.NumberOfEmployees,
+            dto.AccountType,
+            dto.Rating,
+            dto.AccountSource,
+            dto.BillingStreet,
+            dto.BillingCity,
+            dto.BillingState,
+            dto.BillingPostalCode,
+            dto.BillingCountry,
+            dto.ShippingStreet,
+            dto.ShippingCity,
+            dto.ShippingState,
+            dto.ShippingPostalCode,
+            dto.ShippingCountry,
+            dto.ContactCount,
+            dto.OpportunityCount,
+            dto.LeadCount,
+            dto.SupportCaseCount,
+            dto.TeamMembers.Select(m => new AccountTeamMemberItem(m.Id, m.UserId, m.UserName, m.Role, m.CreatedAtUtc)));
     }
 
     private static AppCustomerUpsertRequest MapUpsertRequest(ApiUpsertCustomerRequest request)
@@ -226,7 +343,22 @@ public class CustomersController : ControllerBase
             request.OwnerId,
             request.ParentAccountId,
             request.Territory,
-            request.Description);
+            request.Description,
+            request.AnnualRevenue,
+            request.NumberOfEmployees,
+            request.AccountType,
+            request.Rating,
+            request.AccountSource,
+            request.BillingStreet,
+            request.BillingCity,
+            request.BillingState,
+            request.BillingPostalCode,
+            request.BillingCountry,
+            request.ShippingStreet,
+            request.ShippingCity,
+            request.ShippingState,
+            request.ShippingPostalCode,
+            request.ShippingCountry);
     }
 
     private ActorContext GetActor()

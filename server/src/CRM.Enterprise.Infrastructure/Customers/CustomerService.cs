@@ -40,10 +40,46 @@ public sealed class CustomerService : ICustomerService
             query = query.Where(a => a.LifecycleStage == request.Status);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Industry))
+        {
+            query = query.Where(a => a.Industry == request.Industry);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Territory))
+        {
+            query = query.Where(a => a.Territory == request.Territory);
+        }
+
+        if (request.OwnerId.HasValue)
+        {
+            query = query.Where(a => a.OwnerId == request.OwnerId.Value);
+        }
+
+        if (request.CreatedFrom.HasValue)
+        {
+            query = query.Where(a => a.CreatedAtUtc >= request.CreatedFrom.Value);
+        }
+
+        if (request.CreatedTo.HasValue)
+        {
+            query = query.Where(a => a.CreatedAtUtc <= request.CreatedTo.Value);
+        }
+
+        if (request.MinRevenue.HasValue)
+        {
+            query = query.Where(a => a.AnnualRevenue >= request.MinRevenue.Value);
+        }
+
+        if (request.MaxRevenue.HasValue)
+        {
+            query = query.Where(a => a.AnnualRevenue <= request.MaxRevenue.Value);
+        }
+
         var total = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderBy(a => a.Name)
+        var sortedQuery = ApplySort(query, request.SortBy, request.SortDirection);
+
+        var items = await sortedQuery
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(a => new
@@ -56,7 +92,17 @@ public sealed class CustomerService : ICustomerService
                 a.OwnerId,
                 a.ParentAccountId,
                 ParentAccountName = a.ParentAccount != null ? a.ParentAccount.Name : null,
-                a.CreatedAtUtc
+                a.CreatedAtUtc,
+                a.Industry,
+                a.Territory,
+                a.ActivityScore,
+                a.Website,
+                a.AccountNumber,
+                a.AnnualRevenue,
+                a.NumberOfEmployees,
+                a.AccountType,
+                a.Rating,
+                a.AccountSource
             })
             .ToListAsync(cancellationToken);
 
@@ -80,7 +126,17 @@ public sealed class CustomerService : ICustomerService
                 ownerName,
                 i.ParentAccountId,
                 i.ParentAccountName,
-                i.CreatedAtUtc);
+                i.CreatedAtUtc,
+                i.Industry,
+                i.Territory,
+                i.ActivityScore,
+                i.Website,
+                i.AccountNumber,
+                i.AnnualRevenue,
+                i.NumberOfEmployees,
+                i.AccountType,
+                i.Rating,
+                i.AccountSource);
         }).ToList();
 
         return new CustomerSearchResultDto(result, total);
@@ -117,7 +173,178 @@ public sealed class CustomerService : ICustomerService
             ownerName,
             account.ParentAccountId,
             account.ParentAccount?.Name,
-            account.CreatedAtUtc);
+            account.CreatedAtUtc,
+            account.Industry,
+            account.Territory,
+            account.ActivityScore,
+            account.Website,
+            account.AccountNumber,
+            account.AnnualRevenue,
+            account.NumberOfEmployees,
+            account.AccountType,
+            account.Rating,
+            account.AccountSource);
+    }
+
+    public async Task<CustomerDetailDto?> GetDetailAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var account = await _dbContext.Accounts
+            .Include(a => a.ParentAccount)
+            .Include(a => a.TeamMembers)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted, cancellationToken);
+
+        if (account is null)
+        {
+            return null;
+        }
+
+        var ownerName = await _dbContext.Users
+            .Where(u => u.Id == account.OwnerId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(cancellationToken) ?? "Unassigned";
+
+        var contactCount = await _dbContext.Contacts
+            .CountAsync(c => c.AccountId == id && !c.IsDeleted, cancellationToken);
+        var opportunityCount = await _dbContext.Opportunities
+            .CountAsync(o => o.AccountId == id && !o.IsDeleted, cancellationToken);
+        var leadCount = await _dbContext.Leads
+            .CountAsync(l => l.AccountId == id && !l.IsDeleted, cancellationToken);
+        var supportCaseCount = await _dbContext.SupportCases
+            .CountAsync(s => s.AccountId == id && !s.IsDeleted, cancellationToken);
+
+        var teamMemberUserIds = account.TeamMembers
+            .Where(m => !m.IsDeleted)
+            .Select(m => m.UserId)
+            .ToList();
+        var teamUsers = teamMemberUserIds.Count > 0
+            ? await _dbContext.Users
+                .Where(u => teamMemberUserIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FullName })
+                .ToListAsync(cancellationToken)
+            : [];
+
+        var teamDtos = account.TeamMembers
+            .Where(m => !m.IsDeleted)
+            .Select(m => new AccountTeamMemberDto(
+                m.Id,
+                m.UserId,
+                teamUsers.FirstOrDefault(u => u.Id == m.UserId)?.FullName ?? "Unknown",
+                m.Role,
+                m.CreatedAtUtc))
+            .ToList();
+
+        return new CustomerDetailDto(
+            account.Id,
+            account.Name,
+            account.AccountNumber,
+            account.Industry,
+            account.Website,
+            account.Phone,
+            account.LifecycleStage ?? "Customer",
+            account.OwnerId,
+            ownerName,
+            account.ParentAccountId,
+            account.ParentAccount?.Name,
+            account.Territory,
+            account.Description,
+            account.ActivityScore,
+            account.HealthScore,
+            account.LastActivityAtUtc,
+            account.LastViewedAtUtc,
+            account.CreatedAtUtc,
+            account.UpdatedAtUtc,
+            account.AnnualRevenue,
+            account.NumberOfEmployees,
+            account.AccountType,
+            account.Rating,
+            account.AccountSource,
+            account.BillingStreet,
+            account.BillingCity,
+            account.BillingState,
+            account.BillingPostalCode,
+            account.BillingCountry,
+            account.ShippingStreet,
+            account.ShippingCity,
+            account.ShippingState,
+            account.ShippingPostalCode,
+            account.ShippingCountry,
+            contactCount,
+            opportunityCount,
+            leadCount,
+            supportCaseCount,
+            teamDtos);
+    }
+
+    public async Task<IReadOnlyList<AccountTeamMemberDto>> GetTeamMembersAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        var members = await _dbContext.Set<AccountTeamMember>()
+            .Where(m => m.AccountId == accountId && !m.IsDeleted)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        if (members.Count == 0) return [];
+
+        var userIds = members.Select(m => m.UserId).Distinct().ToList();
+        var users = await _dbContext.Users
+            .Where(u => userIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToListAsync(cancellationToken);
+
+        return members.Select(m => new AccountTeamMemberDto(
+            m.Id,
+            m.UserId,
+            users.FirstOrDefault(u => u.Id == m.UserId)?.FullName ?? "Unknown",
+            m.Role,
+            m.CreatedAtUtc)).ToList();
+    }
+
+    public async Task<CustomerOperationResult<AccountTeamMemberDto>> AddTeamMemberAsync(Guid accountId, Guid userId, string role, CancellationToken cancellationToken = default)
+    {
+        var accountExists = await _dbContext.Accounts.AnyAsync(a => a.Id == accountId && !a.IsDeleted, cancellationToken);
+        if (!accountExists)
+            return CustomerOperationResult<AccountTeamMemberDto>.NotFoundResult();
+
+        var userExists = await _dbContext.Users.AnyAsync(u => u.Id == userId && !u.IsDeleted, cancellationToken);
+        if (!userExists)
+            return CustomerOperationResult<AccountTeamMemberDto>.Fail("User not found.");
+
+        var duplicate = await _dbContext.Set<AccountTeamMember>()
+            .AnyAsync(m => m.AccountId == accountId && m.UserId == userId && !m.IsDeleted, cancellationToken);
+        if (duplicate)
+            return CustomerOperationResult<AccountTeamMemberDto>.Fail("User is already a team member on this account.");
+
+        var member = new AccountTeamMember
+        {
+            AccountId = accountId,
+            UserId = userId,
+            Role = role,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        _dbContext.Set<AccountTeamMember>().Add(member);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var userName = await _dbContext.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.FullName)
+            .FirstOrDefaultAsync(cancellationToken) ?? "Unknown";
+
+        return CustomerOperationResult<AccountTeamMemberDto>.Ok(
+            new AccountTeamMemberDto(member.Id, member.UserId, userName, member.Role, member.CreatedAtUtc));
+    }
+
+    public async Task<CustomerOperationResult<bool>> RemoveTeamMemberAsync(Guid accountId, Guid memberId, CancellationToken cancellationToken = default)
+    {
+        var member = await _dbContext.Set<AccountTeamMember>()
+            .FirstOrDefaultAsync(m => m.Id == memberId && m.AccountId == accountId && !m.IsDeleted, cancellationToken);
+        if (member is null)
+            return CustomerOperationResult<bool>.NotFoundResult();
+
+        member.IsDeleted = true;
+        member.DeletedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return CustomerOperationResult<bool>.Ok(true);
     }
 
     public async Task<CustomerOperationResult<CustomerListItemDto>> CreateAsync(CustomerUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
@@ -163,6 +390,21 @@ public sealed class CustomerService : ICustomerService
             ParentAccountId = request.ParentAccountId,
             Territory = request.Territory,
             Description = request.Description,
+            AnnualRevenue = request.AnnualRevenue,
+            NumberOfEmployees = request.NumberOfEmployees,
+            AccountType = request.AccountType,
+            Rating = request.Rating,
+            AccountSource = request.AccountSource,
+            BillingStreet = request.BillingStreet,
+            BillingCity = request.BillingCity,
+            BillingState = request.BillingState,
+            BillingPostalCode = request.BillingPostalCode,
+            BillingCountry = request.BillingCountry,
+            ShippingStreet = request.ShippingStreet,
+            ShippingCity = request.ShippingCity,
+            ShippingState = request.ShippingState,
+            ShippingPostalCode = request.ShippingPostalCode,
+            ShippingCountry = request.ShippingCountry,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -239,6 +481,21 @@ public sealed class CustomerService : ICustomerService
         account.ParentAccountId = request.ParentAccountId;
         account.Territory = request.Territory;
         account.Description = request.Description;
+        account.AnnualRevenue = request.AnnualRevenue;
+        account.NumberOfEmployees = request.NumberOfEmployees;
+        account.AccountType = request.AccountType;
+        account.Rating = request.Rating;
+        account.AccountSource = request.AccountSource;
+        account.BillingStreet = request.BillingStreet;
+        account.BillingCity = request.BillingCity;
+        account.BillingState = request.BillingState;
+        account.BillingPostalCode = request.BillingPostalCode;
+        account.BillingCountry = request.BillingCountry;
+        account.ShippingStreet = request.ShippingStreet;
+        account.ShippingCity = request.ShippingCity;
+        account.ShippingState = request.ShippingState;
+        account.ShippingPostalCode = request.ShippingPostalCode;
+        account.ShippingCountry = request.ShippingCountry;
         account.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -389,7 +646,17 @@ public sealed class CustomerService : ICustomerService
                 a.OwnerId,
                 a.ParentAccountId,
                 ParentAccountName = a.ParentAccount != null ? a.ParentAccount.Name : null,
-                a.CreatedAtUtc
+                a.CreatedAtUtc,
+                a.Industry,
+                a.Territory,
+                a.ActivityScore,
+                a.Website,
+                a.AccountNumber,
+                a.AnnualRevenue,
+                a.NumberOfEmployees,
+                a.AccountType,
+                a.Rating,
+                a.AccountSource
             })
             .ToListAsync(cancellationToken);
 
@@ -413,7 +680,17 @@ public sealed class CustomerService : ICustomerService
                 ownerName,
                 i.ParentAccountId,
                 i.ParentAccountName,
-                i.CreatedAtUtc);
+                i.CreatedAtUtc,
+                i.Industry,
+                i.Territory,
+                i.ActivityScore,
+                i.Website,
+                i.AccountNumber,
+                i.AnnualRevenue,
+                i.NumberOfEmployees,
+                i.AccountType,
+                i.Rating,
+                i.AccountSource);
         }).ToList();
     }
 
@@ -501,5 +778,35 @@ public sealed class CustomerService : ICustomerService
         }
 
         return null;
+    }
+
+    private static IOrderedQueryable<Account> ApplySort(IQueryable<Account> query, string? sortBy, string? sortDirection)
+    {
+        var descending = string.Equals(sortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+
+        return sortBy?.ToLowerInvariant() switch
+        {
+            "createdat" or "createdatutc" => descending ? query.OrderByDescending(a => a.CreatedAtUtc) : query.OrderBy(a => a.CreatedAtUtc),
+            "industry" => descending ? query.OrderByDescending(a => a.Industry) : query.OrderBy(a => a.Industry),
+            "status" or "lifecyclestage" => descending ? query.OrderByDescending(a => a.LifecycleStage) : query.OrderBy(a => a.LifecycleStage),
+            "annualrevenue" => descending ? query.OrderByDescending(a => a.AnnualRevenue) : query.OrderBy(a => a.AnnualRevenue),
+            "numberofemployees" => descending ? query.OrderByDescending(a => a.NumberOfEmployees) : query.OrderBy(a => a.NumberOfEmployees),
+            "rating" => descending ? query.OrderByDescending(a => a.Rating) : query.OrderBy(a => a.Rating),
+            "activityscore" => descending ? query.OrderByDescending(a => a.ActivityScore) : query.OrderBy(a => a.ActivityScore),
+            "healthscore" => descending ? query.OrderByDescending(a => a.HealthScore) : query.OrderBy(a => a.HealthScore),
+            _ => descending ? query.OrderByDescending(a => a.Name) : query.OrderBy(a => a.Name),
+        };
+    }
+
+    public async Task<DuplicateCheckResult> CheckDuplicateAsync(
+        string? name, string? accountNumber, string? website, string? phone,
+        Guid? excludeId = null, CancellationToken cancellationToken = default)
+    {
+        var match = await AccountMatching.FindBestMatchAsync(
+            _dbContext, name, accountNumber, website, phone, excludeId, cancellationToken);
+
+        return match is null
+            ? new DuplicateCheckResult(false)
+            : new DuplicateCheckResult(true, match.Id, match.Name);
     }
 }

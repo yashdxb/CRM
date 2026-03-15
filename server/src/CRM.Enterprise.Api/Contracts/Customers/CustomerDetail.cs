@@ -1,0 +1,51 @@
+namespace CRM.Enterprise.Api.Contracts.Customers;
+
+public record CustomerDetail(
+    Guid Id,
+    string Name,
+    string? AccountNumber,
+    string? Industry,
+    string? Website,
+    string? Phone,
+    string Status,
+    Guid OwnerId,
+    string Owner,
+    Guid? ParentAccountId,
+    string? ParentAccountName,
+    string? Territory,
+    string? Description,
+    int ActivityScore,
+    int HealthScore,
+    DateTime? LastActivityAt,
+    DateTime? LastViewedAt,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt,
+    decimal? AnnualRevenue,
+    int? NumberOfEmployees,
+    string? AccountType,
+    string? Rating,
+    string? AccountSource,
+    string? BillingStreet,
+    string? BillingCity,
+    string? BillingState,
+    string? BillingPostalCode,
+    string? BillingCountry,
+    string? ShippingStreet,
+    string? ShippingCity,
+    string? ShippingState,
+    string? ShippingPostalCode,
+    string? ShippingCountry,
+    int ContactCount,
+    int OpportunityCount,
+    int LeadCount,
+    int SupportCaseCount,
+    IEnumerable<AccountTeamMemberItem> TeamMembers);
+
+public record AccountTeamMemberItem(
+    Guid Id,
+    Guid UserId,
+    string UserName,
+    string Role,
+    DateTime CreatedAt);
+
+public record AddTeamMemberRequest(Guid UserId, string Role);

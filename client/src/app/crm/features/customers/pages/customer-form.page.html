@@ -46,6 +46,13 @@
             </div>
           </section>
           <fieldset class="form-fieldset" [disabled]="loading()">
+
+            <div class="duplicate-warning" *ngIf="duplicateWarning() as dup">
+              <i class="pi pi-exclamation-triangle"></i>
+              <span>Possible duplicate found: <strong>{{ dup.matchName }}</strong></span>
+              <a [routerLink]="['/app/customers', dup.matchId]" class="dup-link">View existing record</a>
+            </div>
+
             <section class="form-section section--basic">
               <h2 class="section-title">
                 <i class="pi pi-user"></i>
@@ -59,7 +66,7 @@
                     <p-inputgroup-addon class="icon-addon icon-addon--name">
                       <i class="pi pi-user"></i>
                     </p-inputgroup-addon>
-                    <input pInputText id="customerName" name="name" [(ngModel)]="form.name" required placeholder="Enter customer name" />
+                    <input pInputText id="customerName" name="name" [(ngModel)]="form.name" required placeholder="Enter customer name" (blur)="checkForDuplicate()" />
                   </p-inputgroup>
                   <p class="field-error" *ngIf="nameError()">{{ nameError() }}</p>
                 </div>
@@ -116,6 +123,114 @@
               </div>
             </section>
 
+            <section class="form-section section--firmographic">
+              <h2 class="section-title">
+                <i class="pi pi-chart-bar"></i>
+                Firmographic details
+              </h2>
+              
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="accountType">Account Type</label>
+                  <p-select
+                    id="accountType"
+                    [options]="accountTypeOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    name="accountType"
+                    [(ngModel)]="form.accountType"
+                    placeholder="Select type"
+                    appendTo="body"
+                    styleClass="w-full"
+                  >
+                    <ng-template pTemplate="item" let-option>
+                      <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                    </ng-template>
+                    <ng-template pTemplate="value" let-option>
+                      <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                      <span *ngIf="!option" class="select-placeholder">Select type</span>
+                    </ng-template>
+                  </p-select>
+                </div>
+
+                <div class="form-field">
+                  <label for="rating">Rating</label>
+                  <p-select
+                    id="rating"
+                    [options]="ratingOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    name="rating"
+                    [(ngModel)]="form.rating"
+                    placeholder="Select rating"
+                    appendTo="body"
+                    styleClass="w-full"
+                  >
+                    <ng-template pTemplate="item" let-option>
+                      <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                    </ng-template>
+                    <ng-template pTemplate="value" let-option>
+                      <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                      <span *ngIf="!option" class="select-placeholder">Select rating</span>
+                    </ng-template>
+                  </p-select>
+                </div>
+
+                <div class="form-field">
+                  <label for="accountSource">Source</label>
+                  <p-select
+                    id="accountSource"
+                    [options]="accountSourceOptions"
+                    optionLabel="label"
+                    optionValue="value"
+                    name="accountSource"
+                    [(ngModel)]="form.accountSource"
+                    placeholder="Select source"
+                    appendTo="body"
+                    styleClass="w-full"
+                  >
+                    <ng-template pTemplate="item" let-option>
+                      <div class="select-option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                    </ng-template>
+                    <ng-template pTemplate="value" let-option>
+                      <div class="select-option" *ngIf="option"><i class="pi" [ngClass]="option.icon"></i><span>{{ option.label }}</span></div>
+                      <span *ngIf="!option" class="select-placeholder">Select source</span>
+                    </ng-template>
+                  </p-select>
+                </div>
+
+                <div class="form-field">
+                  <label for="annualRevenue">Annual Revenue</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--success">
+                      <i class="pi pi-dollar"></i>
+                    </p-inputgroup-addon>
+                    <p-inputNumber id="annualRevenue" name="annualRevenue" [(ngModel)]="form.annualRevenue" mode="currency" currency="USD" locale="en-US" placeholder="0.00" [inputStyleClass]="'w-full'"></p-inputNumber>
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="numberOfEmployees">Employees</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-users"></i>
+                    </p-inputgroup-addon>
+                    <p-inputNumber id="numberOfEmployees" name="numberOfEmployees" [(ngModel)]="form.numberOfEmployees" [useGrouping]="true" placeholder="0" [inputStyleClass]="'w-full'"></p-inputNumber>
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="territory">Territory</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--address">
+                      <i class="pi pi-map"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="territory" name="territory" [(ngModel)]="form.territory" placeholder="e.g., North America, EMEA" />
+                  </p-inputgroup>
+                </div>
+              </div>
+            </section>
+
             <section class="form-section section--contact">
               <h2 class="section-title">
                 <i class="pi pi-phone"></i>
@@ -139,7 +254,7 @@
                     <p-inputgroup-addon class="icon-addon icon-addon--phone">
                       <i class="pi pi-phone"></i>
                     </p-inputgroup-addon>
-                    <input pInputText id="customerPhone" name="phone" [(ngModel)]="form.phone" placeholder="+1 (555) 000-0000" />
+                    <input pInputText id="customerPhone" name="phone" [(ngModel)]="form.phone" placeholder="+1 (555) 000-0000" (blur)="checkForDuplicate()" />
                   </p-inputgroup>
                 </div>
                 
@@ -149,17 +264,126 @@
                     <p-inputgroup-addon class="icon-addon icon-addon--website">
                       <i class="pi pi-globe"></i>
                     </p-inputgroup-addon>
-                    <input pInputText id="customerWebsite" name="website" [(ngModel)]="form.website" placeholder="https://example.com" />
+                    <input pInputText id="customerWebsite" name="website" [(ngModel)]="form.website" placeholder="https://example.com" (blur)="checkForDuplicate()" />
                   </p-inputgroup>
                 </div>
 
-                <div class="form-field">
-                  <label for="customerAddress">Address</label>
+              </div>
+            </section>
+
+            <section class="form-section section--billing">
+              <h2 class="section-title">
+                <i class="pi pi-map-marker"></i>
+                Billing address
+              </h2>
+              
+              <div class="form-grid">
+                <div class="form-field full-row">
+                  <label for="billingStreet">Street</label>
                   <p-inputgroup>
                     <p-inputgroup-addon class="icon-addon icon-addon--address">
                       <i class="pi pi-map-marker"></i>
                     </p-inputgroup-addon>
-                    <input pInputText id="customerAddress" name="address" [(ngModel)]="form.address" placeholder="Street address, City, Country" />
+                    <input pInputText id="billingStreet" name="billingStreet" [(ngModel)]="form.billingStreet" placeholder="123 Main Street" />
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="billingCity">City</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-building"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="billingCity" name="billingCity" [(ngModel)]="form.billingCity" placeholder="City" />
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="billingState">State</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--company">
+                      <i class="pi pi-map"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="billingState" name="billingState" [(ngModel)]="form.billingState" placeholder="State / Province" />
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="billingPostalCode">Postal Code</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--name">
+                      <i class="pi pi-hashtag"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="billingPostalCode" name="billingPostalCode" [(ngModel)]="form.billingPostalCode" placeholder="ZIP / Postal code" />
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="billingCountry">Country</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--website">
+                      <i class="pi pi-globe"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="billingCountry" name="billingCountry" [(ngModel)]="form.billingCountry" placeholder="Country" />
+                  </p-inputgroup>
+                </div>
+              </div>
+            </section>
+
+            <section class="form-section section--shipping">
+              <h2 class="section-title">
+                <i class="pi pi-truck"></i>
+                Shipping address
+              </h2>
+              
+              <div class="form-grid">
+                <div class="form-field full-row">
+                  <label for="shippingStreet">Street</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--address">
+                      <i class="pi pi-map-marker"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="shippingStreet" name="shippingStreet" [(ngModel)]="form.shippingStreet" placeholder="123 Main Street" />
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="shippingCity">City</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--info">
+                      <i class="pi pi-building"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="shippingCity" name="shippingCity" [(ngModel)]="form.shippingCity" placeholder="City" />
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="shippingState">State</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--company">
+                      <i class="pi pi-map"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="shippingState" name="shippingState" [(ngModel)]="form.shippingState" placeholder="State / Province" />
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="shippingPostalCode">Postal Code</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--name">
+                      <i class="pi pi-hashtag"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="shippingPostalCode" name="shippingPostalCode" [(ngModel)]="form.shippingPostalCode" placeholder="ZIP / Postal code" />
+                  </p-inputgroup>
+                </div>
+
+                <div class="form-field">
+                  <label for="shippingCountry">Country</label>
+                  <p-inputgroup>
+                    <p-inputgroup-addon class="icon-addon icon-addon--website">
+                      <i class="pi pi-globe"></i>
+                    </p-inputgroup-addon>
+                    <input pInputText id="shippingCountry" name="shippingCountry" [(ngModel)]="form.shippingCountry" placeholder="Country" />
                   </p-inputgroup>
                 </div>
               </div>

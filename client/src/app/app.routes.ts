@@ -167,6 +167,12 @@ export const routes: Routes = [
               import('./crm/features/customers/pages/customer-form.page').then((m) => m.CustomerFormPage)
           },
           {
+            path: ':id',
+            data: { breadcrumb: 'Customer Detail' },
+            loadComponent: () =>
+              import('./crm/features/customers/pages/customer-detail.page').then((m) => m.CustomerDetailPage)
+          },
+          {
             path: ':id/edit',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.customersManage, breadcrumb: 'Edit Customer' },

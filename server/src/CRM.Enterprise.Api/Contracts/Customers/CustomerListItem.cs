@@ -13,4 +13,14 @@ public record CustomerListItem(
     string Owner,
     Guid? ParentAccountId,
     string? ParentAccountName,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? Industry = null,
+    string? Territory = null,
+    int ActivityScore = 0,
+    string? Website = null,
+    string? AccountNumber = null,
+    decimal? AnnualRevenue = null,
+    int? NumberOfEmployees = null,
+    string? AccountType = null,
+    string? Rating = null,
+    string? AccountSource = null);

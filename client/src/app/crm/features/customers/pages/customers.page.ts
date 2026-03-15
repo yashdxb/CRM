@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
+import { DatePickerModule } from 'primeng/datepicker';
 import { FileUploadModule } from 'primeng/fileupload';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { InputTextModule } from 'primeng/inputtext';
@@ -53,7 +55,9 @@ interface SegmentOption {
     FormsModule,
     CardModule,
     CheckboxModule,
+    DatePickerModule,
     FileUploadModule,
+    InputNumberModule,
     TableModule,
     TagModule,
     InputTextModule,
@@ -147,6 +151,24 @@ export class CustomersPage {
   protected pageIndex = 0;
   protected rows = 10;
   protected viewMode: 'table' | 'cards' = 'table';
+
+  // Advanced filter state
+  protected showAdvancedFilters = false;
+  protected readonly industryFilter = signal<string | null>(null);
+  protected readonly territoryFilter = signal<string | null>(null);
+  protected readonly ownerIdFilter = signal<string | null>(null);
+  protected readonly createdFrom = signal<Date | null>(null);
+  protected readonly createdTo = signal<Date | null>(null);
+  protected readonly minRevenue = signal<number | null>(null);
+  protected readonly maxRevenue = signal<number | null>(null);
+  protected readonly advancedFiltersActive = computed(() =>
+    !!this.industryFilter() || !!this.territoryFilter() || !!this.ownerIdFilter()
+    || !!this.createdFrom() || !!this.createdTo()
+    || this.minRevenue() != null || this.maxRevenue() != null
+  );
+  protected readonly industryOptions = signal<{ label: string; value: string }[]>([]);
+  protected readonly territoryOptions = signal<{ label: string; value: string }[]>([]);
+  protected readonly ownerIdOptions = signal<{ label: string; value: string }[]>([]);
   protected readonly Math = Math;
   protected readonly selectedIds = signal<string[]>([]);
   protected readonly bulkActions = computed<BulkAction[]>(() => {
@@ -188,19 +210,29 @@ export class CustomersPage {
   protected load() {
     this.loading.set(true);
     const status = this.statusFilter === 'all' ? undefined : (this.statusFilter as CustomerStatus);
+    const from = this.createdFrom();
+    const to = this.createdTo();
 
     this.customerData
       .search({
         search: this.searchTerm || undefined,
         status,
         page: this.pageIndex + 1,
-        pageSize: this.rows
+        pageSize: this.rows,
+        industry: this.industryFilter() || undefined,
+        territory: this.territoryFilter() || undefined,
+        ownerId: this.ownerIdFilter() || undefined,
+        createdFrom: from ? this.formatDateParam(from) : undefined,
+        createdTo: to ? this.formatDateParam(to) : undefined,
+        minRevenue: this.minRevenue() ?? undefined,
+        maxRevenue: this.maxRevenue() ?? undefined
       })
       .subscribe((res) => {
         this.customers.set(res.items);
         this.total.set(res.total);
         this.loading.set(false);
         this.selectedIds.set([]);
+        this.updateFilterOptions(res.items);
       });
   }
 
@@ -261,11 +293,15 @@ export class CustomersPage {
     this.router.navigate(['/app/customers', row.id, 'edit']);
   }
 
+  protected onView(row: Customer) {
+    this.router.navigate(['/app/customers', row.id]);
+  }
+
   protected onRowClick(row: Customer, event: MouseEvent) {
-    if (!this.canManage() || this.isInteractiveRowTarget(event)) {
+    if (this.isInteractiveRowTarget(event)) {
       return;
     }
-    this.onEdit(row);
+    this.onView(row);
   }
 
   protected onDelete(row: Customer) {
@@ -304,6 +340,13 @@ export class CustomersPage {
     this.segmentFilter.set('all');
     this.searchTerm = '';
     this.pageIndex = 0;
+    this.industryFilter.set(null);
+    this.territoryFilter.set(null);
+    this.ownerIdFilter.set(null);
+    this.createdFrom.set(null);
+    this.createdTo.set(null);
+    this.minRevenue.set(null);
+    this.maxRevenue.set(null);
     this.load();
   }
 
@@ -554,6 +597,46 @@ export class CustomersPage {
     this.userAdminData.search({ includeInactive: false, page: 1, pageSize: 200 }).subscribe((res) => {
       const options = res.items.map((user) => ({ label: user.fullName, value: user.id }));
       this.ownerOptionsForAssign.set(options);
+      this.ownerIdOptions.set([{ label: 'Any owner', value: '' }, ...options]);
     });
+  }
+
+  protected toggleAdvancedFilters() {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+
+  protected applyAdvancedFilters() {
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  protected clearAdvancedFilters() {
+    this.industryFilter.set(null);
+    this.territoryFilter.set(null);
+    this.ownerIdFilter.set(null);
+    this.createdFrom.set(null);
+    this.createdTo.set(null);
+    this.minRevenue.set(null);
+    this.maxRevenue.set(null);
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  private formatDateParam(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private updateFilterOptions(items: Customer[]) {
+    const industries = Array.from(new Set(items.map(c => c.industry).filter((v): v is string => !!v))).sort();
+    if (!this.industryOptions().length || industries.length > this.industryOptions().length - 1) {
+      this.industryOptions.set([{ label: 'Any industry', value: '' }, ...industries.map(i => ({ label: i, value: i }))]);
+    }
+    const territories = Array.from(new Set(items.map(c => c.territory).filter((v): v is string => !!v))).sort();
+    if (!this.territoryOptions().length || territories.length > this.territoryOptions().length - 1) {
+      this.territoryOptions.set([{ label: 'Any territory', value: '' }, ...territories.map(t => ({ label: t, value: t }))]);
+    }
   }
 }

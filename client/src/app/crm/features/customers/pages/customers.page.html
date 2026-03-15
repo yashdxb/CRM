@@ -280,6 +280,12 @@
           </button>
         </div>
 
+        <button pButton type="button" class="btn btn-ghost" (click)="toggleAdvancedFilters()" [class.active]="showAdvancedFilters || advancedFiltersActive()">
+          <i class="pi pi-sliders-h"></i>
+          <span>Filters</span>
+          <span class="filter-badge" *ngIf="advancedFiltersActive()"></span>
+        </button>
+
         <button pButton type="button" class="btn btn-ghost" (click)="resetFilters()">
           <i class="pi pi-times"></i>
           <span>Clear</span>
@@ -287,7 +293,107 @@
       </div>
     </div>
 
-    <div class="filter-summary" *ngIf="searchTerm || statusFilter !== 'all' || ownerFilter() !== 'all'">
+    <!-- Advanced Filter Panel -->
+    <div class="advanced-filter-panel" *ngIf="showAdvancedFilters">
+      <div class="filter-grid">
+        <div class="filter-field">
+          <label>Industry</label>
+          <p-select appendTo="body"
+            [options]="industryOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="industryFilter()"
+            (ngModelChange)="industryFilter.set($event || null)"
+            placeholder="Any industry"
+            styleClass="w-full"
+          ></p-select>
+        </div>
+        <div class="filter-field">
+          <label>Territory</label>
+          <p-select appendTo="body"
+            [options]="territoryOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="territoryFilter()"
+            (ngModelChange)="territoryFilter.set($event || null)"
+            placeholder="Any territory"
+            styleClass="w-full"
+          ></p-select>
+        </div>
+        <div class="filter-field">
+          <label>Account Owner</label>
+          <p-select appendTo="body"
+            [options]="ownerIdOptions()"
+            optionLabel="label"
+            optionValue="value"
+            [ngModel]="ownerIdFilter()"
+            (ngModelChange)="ownerIdFilter.set($event || null)"
+            placeholder="Any owner"
+            styleClass="w-full"
+          ></p-select>
+        </div>
+        <div class="filter-field">
+          <label>Created From</label>
+          <p-datepicker
+            [ngModel]="createdFrom()"
+            (ngModelChange)="createdFrom.set($event)"
+            dateFormat="yy-mm-dd"
+            [showIcon]="true"
+            appendTo="body"
+            placeholder="Start date"
+            styleClass="w-full"
+          ></p-datepicker>
+        </div>
+        <div class="filter-field">
+          <label>Created To</label>
+          <p-datepicker
+            [ngModel]="createdTo()"
+            (ngModelChange)="createdTo.set($event)"
+            dateFormat="yy-mm-dd"
+            [showIcon]="true"
+            appendTo="body"
+            placeholder="End date"
+            styleClass="w-full"
+          ></p-datepicker>
+        </div>
+        <div class="filter-field">
+          <label>Min Revenue</label>
+          <p-inputnumber
+            [ngModel]="minRevenue()"
+            (ngModelChange)="minRevenue.set($event)"
+            mode="currency"
+            currency="USD"
+            locale="en-US"
+            placeholder="Min"
+            styleClass="w-full"
+          ></p-inputnumber>
+        </div>
+        <div class="filter-field">
+          <label>Max Revenue</label>
+          <p-inputnumber
+            [ngModel]="maxRevenue()"
+            (ngModelChange)="maxRevenue.set($event)"
+            mode="currency"
+            currency="USD"
+            locale="en-US"
+            placeholder="Max"
+            styleClass="w-full"
+          ></p-inputnumber>
+        </div>
+        <div class="filter-field filter-field--actions">
+          <button type="button" class="action-btn action-btn--add" (click)="applyAdvancedFilters()">
+            <span class="action-btn__icon"><i class="pi pi-search"></i></span>
+            <span>Apply</span>
+          </button>
+          <button type="button" class="action-btn action-btn--settings" (click)="clearAdvancedFilters()">
+            <span class="action-btn__icon"><i class="pi pi-times"></i></span>
+            <span>Clear</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-summary" *ngIf="searchTerm || statusFilter !== 'all' || ownerFilter() !== 'all' || advancedFiltersActive()">
       <span class="summary-label">Active filters:</span>
       <span class="filter-tag" *ngIf="searchTerm">
         "{{ searchTerm }}"
@@ -300,6 +406,18 @@
       <span class="filter-tag" *ngIf="ownerFilter() !== 'all'">
         {{ ownerFilter() }}
         <i class="pi pi-times" (click)="onOwnerFilterChange('all')"></i>
+      </span>
+      <span class="filter-tag" *ngIf="industryFilter()">
+        {{ industryFilter() }}
+        <i class="pi pi-times" (click)="industryFilter.set(null); applyAdvancedFilters()"></i>
+      </span>
+      <span class="filter-tag" *ngIf="territoryFilter()">
+        {{ territoryFilter() }}
+        <i class="pi pi-times" (click)="territoryFilter.set(null); applyAdvancedFilters()"></i>
+      </span>
+      <span class="filter-tag" *ngIf="minRevenue() != null || maxRevenue() != null">
+        Revenue: {{ minRevenue() != null ? ('$' + minRevenue()) : '∞' }} – {{ maxRevenue() != null ? ('$' + maxRevenue()) : '∞' }}
+        <i class="pi pi-times" (click)="minRevenue.set(null); maxRevenue.set(null); applyAdvancedFilters()"></i>
       </span>
     </div>
   </section>

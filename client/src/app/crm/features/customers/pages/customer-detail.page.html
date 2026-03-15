@@ -1,0 +1,264 @@
+<div class="page-container">
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="page-content" *ngIf="!loading(); else pageLoading">
+    <ng-container *ngIf="customer() as c">
+      <!-- ═══ HERO ═══ -->
+      <header class="hero-section">
+        <div class="hero-left">
+          <app-breadcrumbs></app-breadcrumbs>
+          <div class="hero-nav">
+            <a class="back-link" routerLink="/app/customers">
+              <i class="pi pi-arrow-left"></i> Customers
+            </a>
+            <a *ngIf="canEdit" class="edit-link" [routerLink]="'/app/customers/' + c.id + '/edit'">
+              <i class="pi pi-pencil"></i> Edit
+            </a>
+          </div>
+          <h1 class="hero-title">
+            <span class="title-gradient">{{ c.name }}</span>
+          </h1>
+          <div class="hero-meta">
+            <span class="hero-badge" [ngClass]="statusClass(c.status)">{{ c.status }}</span>
+            <span class="hero-badge-secondary" *ngIf="c.accountType">{{ c.accountType }}</span>
+            <span class="hero-badge-secondary" *ngIf="c.rating" [ngClass]="ratingClass(c.rating)">
+              <i class="pi" [ngClass]="{'pi-sun': c.rating === 'Hot', 'pi-cloud': c.rating === 'Warm', 'pi-snowflake': c.rating === 'Cold'}"></i>
+              {{ c.rating }}
+            </span>
+            <span class="hero-industry" *ngIf="c.industry">
+              <i class="pi pi-briefcase"></i> {{ c.industry }}
+            </span>
+          </div>
+        </div>
+        <div class="hero-right">
+          <div class="hero-health" *ngIf="c.healthScore > 0">
+            <div class="health-ring">
+              <svg viewBox="0 0 36 36">
+                <path class="ring-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                <path class="ring-fill" [style.stroke]="healthScoreColor()" [attr.stroke-dasharray]="c.healthScore + ', 100'" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              </svg>
+              <span class="health-value">{{ c.healthScore }}</span>
+            </div>
+            <span class="health-label" [style.color]="healthScoreColor()">{{ healthScoreLabel() }}</span>
+          </div>
+          <div class="hero-revenue" *ngIf="c.annualRevenue">
+            <span class="revenue-value">{{ formatCurrency(c.annualRevenue) }}</span>
+            <span class="revenue-label">Annual Revenue</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- ═══ KPI CARDS ═══ -->
+      <section class="kpi-section">
+        <div class="kpi-card kpi-card--age">
+          <div class="kpi-icon"><i class="pi pi-stopwatch"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Account Age</span>
+            <strong class="kpi-value">{{ accountAgeDays() }}d</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--contacts">
+          <div class="kpi-icon"><i class="pi pi-id-card"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Contacts</span>
+            <strong class="kpi-value">{{ c.contactCount }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--opportunities">
+          <div class="kpi-icon"><i class="pi pi-chart-line"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Opportunities</span>
+            <strong class="kpi-value">{{ c.opportunityCount }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--leads">
+          <div class="kpi-icon"><i class="pi pi-bolt"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Leads</span>
+            <strong class="kpi-value">{{ c.leadCount }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--cases">
+          <div class="kpi-icon"><i class="pi pi-ticket"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Support Cases</span>
+            <strong class="kpi-value">{{ c.supportCaseCount }}</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══ MAIN GRID ═══ -->
+      <div class="detail-grid">
+        <!-- LEFT COLUMN -->
+        <div class="detail-col">
+          <!-- Company Details -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-building"></i> Company Details</h2>
+            <div class="detail-fields">
+              <div class="detail-field" *ngIf="c.accountNumber">
+                <span class="field-label">Account Number</span>
+                <span class="field-value">{{ c.accountNumber }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Industry</span>
+                <span class="field-value">{{ c.industry || '—' }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Territory</span>
+                <span class="field-value">{{ c.territory || '—' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.website">
+                <span class="field-label">Website</span>
+                <span class="field-value field-link">{{ c.website }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.phone">
+                <span class="field-label">Phone</span>
+                <span class="field-value">{{ c.phone }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.numberOfEmployees">
+                <span class="field-label">Employees</span>
+                <span class="field-value">{{ c.numberOfEmployees | number }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Source</span>
+                <span class="field-value">{{ c.accountSource || '—' }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Owner</span>
+                <span class="field-value">{{ c.owner || '—' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.parentAccountName">
+                <span class="field-label">Parent Account</span>
+                <span class="field-value">{{ c.parentAccountName }}</span>
+              </div>
+              <div class="detail-field">
+                <span class="field-label">Created</span>
+                <span class="field-value">{{ c.createdAt | date:'MMM d, yyyy' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.updatedAt">
+                <span class="field-label">Updated</span>
+                <span class="field-value">{{ c.updatedAt | date:'MMM d, yyyy' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.lastActivityAt">
+                <span class="field-label">Last Activity</span>
+                <span class="field-value">{{ c.lastActivityAt | date:'MMM d, yyyy' }}</span>
+              </div>
+            </div>
+            <div class="detail-summary" *ngIf="c.description">
+              <span class="field-label">Description</span>
+              <p class="summary-text">{{ c.description }}</p>
+            </div>
+          </section>
+
+          <!-- Addresses -->
+          <section class="detail-card" *ngIf="billingAddress() || shippingAddress()">
+            <h2 class="card-title"><i class="pi pi-map-marker"></i> Addresses</h2>
+            <div class="address-grid">
+              <div class="address-block" *ngIf="billingAddress()">
+                <span class="address-type">Billing Address</span>
+                <span class="address-text">{{ billingAddress() }}</span>
+              </div>
+              <div class="address-block" *ngIf="shippingAddress()">
+                <span class="address-type">Shipping Address</span>
+                <span class="address-text">{{ shippingAddress() }}</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div class="detail-col">
+          <!-- Health & Activity Score -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-heart"></i> Health & Engagement</h2>
+            <div class="score-row">
+              <div class="score-item">
+                <span class="score-label">Health Score</span>
+                <div class="score-bar">
+                  <div class="score-bar-fill" [style.width.%]="c.healthScore" [style.background]="healthScoreColor()"></div>
+                </div>
+                <span class="score-value" [style.color]="healthScoreColor()">{{ c.healthScore }}/100</span>
+              </div>
+              <div class="score-item">
+                <span class="score-label">Activity Score</span>
+                <div class="score-bar">
+                  <div class="score-bar-fill score-bar-fill--activity" [style.width.%]="c.activityScore"></div>
+                </div>
+                <span class="score-value">{{ c.activityScore }}/100</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Team Members -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-users"></i> Account Team</h2>
+            <div class="team-list" *ngIf="teamMembers().length > 0; else noTeam">
+              <div class="team-member" *ngFor="let member of teamMembers()">
+                <div class="member-avatar">{{ teamMemberInitials(member.userName) }}</div>
+                <div class="member-info">
+                  <span class="member-name">{{ member.userName }}</span>
+                  <span class="member-role">{{ member.role }}</span>
+                </div>
+              </div>
+            </div>
+            <ng-template #noTeam>
+              <div class="empty-state">
+                <i class="pi pi-users"></i>
+                <span>No team members assigned</span>
+              </div>
+            </ng-template>
+          </section>
+
+          <!-- Related Counts Summary -->
+          <section class="detail-card">
+            <h2 class="card-title"><i class="pi pi-link"></i> Related Records</h2>
+            <div class="related-list">
+              <div class="related-item">
+                <i class="pi pi-id-card related-icon related-icon--contacts"></i>
+                <span class="related-label">Contacts</span>
+                <strong class="related-count">{{ c.contactCount }}</strong>
+              </div>
+              <div class="related-item">
+                <i class="pi pi-chart-line related-icon related-icon--opportunities"></i>
+                <span class="related-label">Opportunities</span>
+                <strong class="related-count">{{ c.opportunityCount }}</strong>
+              </div>
+              <div class="related-item">
+                <i class="pi pi-bolt related-icon related-icon--leads"></i>
+                <span class="related-label">Leads</span>
+                <strong class="related-count">{{ c.leadCount }}</strong>
+              </div>
+              <div class="related-item">
+                <i class="pi pi-ticket related-icon related-icon--cases"></i>
+                <span class="related-label">Support Cases</span>
+                <strong class="related-count">{{ c.supportCaseCount }}</strong>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Loading skeleton -->
+  <ng-template #pageLoading>
+    <div class="page-content">
+      <div class="skeleton-hero">
+        <p-skeleton width="120px" height="28px" borderRadius="8px"></p-skeleton>
+        <p-skeleton width="350px" height="40px" borderRadius="8px"></p-skeleton>
+        <p-skeleton width="200px" height="24px" borderRadius="16px"></p-skeleton>
+      </div>
+      <div class="skeleton-kpi">
+        <p-skeleton *ngFor="let _ of [1,2,3,4,5]" width="100%" height="72px" borderRadius="12px"></p-skeleton>
+      </div>
+      <div class="skeleton-grid">
+        <p-skeleton width="100%" height="300px" borderRadius="16px"></p-skeleton>
+        <p-skeleton width="100%" height="300px" borderRadius="16px"></p-skeleton>
+      </div>
+    </div>
+  </ng-template>
+</div>

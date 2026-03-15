@@ -327,6 +327,38 @@
       box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
     }
 
+    /* ── Duplicate warning banner ── */
+    .duplicate-warning {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.35);
+      border-radius: 0.75rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: #92400e;
+
+      i {
+        color: #f59e0b;
+        font-size: 1.125rem;
+        flex-shrink: 0;
+      }
+
+      .dup-link {
+        margin-left: auto;
+        color: #4f46e5;
+        font-weight: 600;
+        text-decoration: none;
+        white-space: nowrap;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+
     /* ── Section color variants ── */
 
     /* Basic Information — Indigo */
@@ -387,6 +419,66 @@
       background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(217, 119, 6, 0.16) 100%);
       color: #d97706;
       box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    }
+
+    /* Firmographic Details — Purple */
+    .section--firmographic .section-title {
+      color: #6d28d9;
+      border-bottom-color: rgba(139, 92, 246, 0.2);
+    }
+    .section--firmographic .section-title i {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(109, 40, 217, 0.1) 100%);
+      color: #8b5cf6;
+      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+    }
+    .section--firmographic:hover .section-title {
+      color: #6d28d9;
+      border-bottom-color: rgba(139, 92, 246, 0.35);
+    }
+    .section--firmographic:hover .section-title i {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.22) 0%, rgba(109, 40, 217, 0.16) 100%);
+      color: #7c3aed;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    }
+
+    /* Billing Address — Teal */
+    .section--billing .section-title {
+      color: #0e7490;
+      border-bottom-color: rgba(6, 182, 212, 0.2);
+    }
+    .section--billing .section-title i {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(14, 116, 144, 0.1) 100%);
+      color: #06b6d4;
+      box-shadow: 0 2px 8px rgba(6, 182, 212, 0.15);
+    }
+    .section--billing:hover .section-title {
+      color: #0e7490;
+      border-bottom-color: rgba(6, 182, 212, 0.35);
+    }
+    .section--billing:hover .section-title i {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.22) 0%, rgba(14, 116, 144, 0.16) 100%);
+      color: #0891b2;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    }
+
+    /* Shipping Address — Rose */
+    .section--shipping .section-title {
+      color: #be123c;
+      border-bottom-color: rgba(244, 63, 94, 0.2);
+    }
+    .section--shipping .section-title i {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.15) 0%, rgba(190, 18, 60, 0.1) 100%);
+      color: #f43f5e;
+      box-shadow: 0 2px 8px rgba(244, 63, 94, 0.15);
+    }
+    .section--shipping:hover .section-title {
+      color: #be123c;
+      border-bottom-color: rgba(244, 63, 94, 0.35);
+    }
+    .section--shipping:hover .section-title i {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.22) 0%, rgba(190, 18, 60, 0.16) 100%);
+      color: #e11d48;
+      box-shadow: 0 4px 12px rgba(244, 63, 94, 0.25);
     }
 
     /* ═══════════════════════════════════════════════════════════════════════════

@@ -19,6 +19,7 @@ public class CrmDbContext : DbContext
     }
 
     public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<AccountTeamMember> AccountTeamMembers => Set<AccountTeamMember>();
     public DbSet<Contact> Contacts => Set<Contact>();
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<LeadAssignmentRule> LeadAssignmentRules => Set<LeadAssignmentRule>();
@@ -147,6 +148,12 @@ public class CrmDbContext : DbContext
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CrmDbContext).Assembly);
 
         modelBuilder.Entity<Account>().ToTable("Accounts", CrmSchema);
+        modelBuilder.Entity<Account>()
+            .Property(a => a.AnnualRevenue).HasPrecision(18, 2);
+        modelBuilder.Entity<AccountTeamMember>().ToTable("AccountTeamMembers", CrmSchema);
+        modelBuilder.Entity<AccountTeamMember>()
+            .HasIndex(m => new { m.AccountId, m.UserId })
+            .IsUnique();
         modelBuilder.Entity<Contact>().ToTable("Contacts", CrmSchema);
         modelBuilder.Entity<Lead>().ToTable("Leads", CrmSchema);
         modelBuilder.Entity<LeadAssignmentRule>().ToTable("LeadAssignmentRules", CrmSchema);
@@ -724,7 +731,7 @@ public class CrmDbContext : DbContext
             .Property(e => e.ExternalThreadKey).HasMaxLength(200).IsRequired();
         modelBuilder.Entity<SupportCase>()
             .HasOne(c => c.Account)
-            .WithMany()
+            .WithMany(a => a.SupportCases)
             .HasForeignKey(c => c.AccountId)
             .OnDelete(DeleteBehavior.SetNull);
         modelBuilder.Entity<SupportCase>()

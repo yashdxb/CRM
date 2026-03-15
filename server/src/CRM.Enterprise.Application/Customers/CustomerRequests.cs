@@ -4,7 +4,16 @@ public sealed record CustomerSearchRequest(
     string? Search,
     string? Status,
     int Page,
-    int PageSize);
+    int PageSize,
+    string? SortBy = null,
+    string? SortDirection = null,
+    string? Industry = null,
+    string? Territory = null,
+    Guid? OwnerId = null,
+    DateTime? CreatedFrom = null,
+    DateTime? CreatedTo = null,
+    decimal? MinRevenue = null,
+    decimal? MaxRevenue = null);
 
 public sealed record CustomerUpsertRequest(
     string Name,
@@ -16,4 +25,19 @@ public sealed record CustomerUpsertRequest(
     Guid? OwnerId,
     Guid? ParentAccountId,
     string? Territory,
-    string? Description);
+    string? Description,
+    decimal? AnnualRevenue = null,
+    int? NumberOfEmployees = null,
+    string? AccountType = null,
+    string? Rating = null,
+    string? AccountSource = null,
+    string? BillingStreet = null,
+    string? BillingCity = null,
+    string? BillingState = null,
+    string? BillingPostalCode = null,
+    string? BillingCountry = null,
+    string? ShippingStreet = null,
+    string? ShippingCity = null,
+    string? ShippingState = null,
+    string? ShippingPostalCode = null,
+    string? ShippingCountry = null);

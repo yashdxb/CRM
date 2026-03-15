@@ -4,6 +4,7 @@ using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CrmDbContext))]
-    partial class CrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260315230600_AddFirmographicAndAddressFields")]
+    partial class AddFirmographicAndAddressFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -74,17 +77,11 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("HealthScore")
-                        .HasColumnType("int");
-
                     b.Property<string>("Industry")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastActivityAtUtc")
-                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("LastViewedAtUtc")
                         .HasColumnType("datetime2");
@@ -148,58 +145,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Accounts", "crm");
-                });
-
-            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.AccountTeamMember", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("AccountId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DeletedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("AccountId", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("AccountTeamMembers", "crm");
                 });
 
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.Activity", b =>
@@ -8399,25 +8344,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Navigation("ParentAccount");
                 });
 
-            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.AccountTeamMember", b =>
-                {
-                    b.HasOne("CRM.Enterprise.Domain.Entities.Account", "Account")
-                        .WithMany("TeamMembers")
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CRM.Enterprise.Domain.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.Activity", b =>
                 {
                     b.HasOne("CRM.Enterprise.Domain.Entities.Contact", null)
@@ -8770,7 +8696,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.Lead", b =>
                 {
                     b.HasOne("CRM.Enterprise.Domain.Entities.Account", "Account")
-                        .WithMany("Leads")
+                        .WithMany()
                         .HasForeignKey("AccountId");
 
                     b.HasOne("CRM.Enterprise.Domain.Entities.Contact", "Contact")
@@ -9495,7 +9421,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.SupportCase", b =>
                 {
                     b.HasOne("CRM.Enterprise.Domain.Entities.Account", "Account")
-                        .WithMany("SupportCases")
+                        .WithMany()
                         .HasForeignKey("AccountId")
                         .OnDelete(DeleteBehavior.SetNull);
 
@@ -9644,13 +9570,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
                     b.Navigation("Contacts");
 
-                    b.Navigation("Leads");
-
                     b.Navigation("Opportunities");
-
-                    b.Navigation("SupportCases");
-
-                    b.Navigation("TeamMembers");
                 });
 
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.Campaign", b =>
