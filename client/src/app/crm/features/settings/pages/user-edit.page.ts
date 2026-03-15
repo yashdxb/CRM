@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AccordionModule } from 'primeng/accordion';
@@ -80,6 +81,8 @@ export class UserEditPage implements OnInit {
   protected readonly generatedPassword = signal<string | null>(null);
   private readonly initialFormState = signal<string | null>(null);
   private readonly initialDashboardPackKey = signal<string | null>(null);
+  private readonly formVersion = signal(0);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly currencyCode = signal<string>('');
   private currencyFallback = '';
   protected readonly canManageAdmin = signal(
@@ -90,6 +93,8 @@ export class UserEditPage implements OnInit {
     if (!initial) {
       return false;
     }
+    // Read formVersion to re-evaluate when reactive form changes
+    this.formVersion();
 
     const current = this.serializeFormState();
     const packChanged = (this.selectedDashboardPackKey() ?? null) !== (this.initialDashboardPackKey() ?? null);
@@ -356,6 +361,18 @@ export class UserEditPage implements OnInit {
     });
     this.loadDashboardPackOptions();
     this.loadCurrencyContext();
+
+    this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.formVersion.update((v) => v + 1);
+    });
+
+    this.form.controls.roleIds.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      const currentKey = this.selectedDashboardPackKey();
+      if (!currentKey || currentKey.startsWith('role-default:')) {
+        const newLevel = this.resolveCurrentRoleLevel();
+        this.selectedDashboardPackKey.set(`role-default:${newLevel}`);
+      }
+    });
 
     this.loading.set(true);
     this.dataService.getRoles().subscribe({

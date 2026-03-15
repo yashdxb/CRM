@@ -37,8 +37,8 @@ BRAND = "North Edge Systems"
 PRODUCT = "CRM Enterprise"
 VERSION = "1.0"
 DOC_DATE = datetime.now().strftime("%B %d, %Y")
-PREPARED_BY = "Anastassiia Zaher"
-APPROVED_BY = "Robert Lambke"
+PREPARED_BY = ""
+APPROVED_BY = ""
 
 PRIMARY = colors.HexColor("#667eea")
 PRIMARY_DARK = colors.HexColor("#4338ca")
@@ -240,8 +240,8 @@ def _signoff_block(s):
             Paragraph("<b>Date</b>", s["cell_bold"]),
             Paragraph("<b>Result</b>", s["cell_bold"]),
         ],
-        [Paragraph("Tester", s["cell"]), Paragraph(PREPARED_BY, s["cell"]), "", "", ""],
-        [Paragraph("Approver", s["cell"]), Paragraph(APPROVED_BY, s["cell"]), "", "", ""],
+        [Paragraph("Tester", s["cell"]), "", "", "", ""],
+        [Paragraph("Approver", s["cell"]), "", "", "", ""],
         [Paragraph("Project Manager", s["cell"]), "", "", "", ""],
     ]
     avail = PAGE_W - 2 * MARGIN
