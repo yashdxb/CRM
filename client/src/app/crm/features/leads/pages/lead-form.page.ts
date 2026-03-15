@@ -960,9 +960,9 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
   // ─── Status Stepper ────────────────────────────────────────────
 
-  /** Whether to show the visual stepper (non-admin edit mode) */
+  /** Whether to show the visual stepper (edit mode — all roles including admin) */
   protected showStatusStepper(): boolean {
-    return this.isEditMode() && !this.hasAdministrationManagePermission();
+    return this.isEditMode();
   }
 
   /** The ordered progression order index for the current status */
@@ -979,6 +979,8 @@ export class LeadFormPage implements OnInit, OnDestroy {
     const hasQualNotes = !!this.form.qualifiedNotes?.trim();
     const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
 
+    const isAdmin = this.hasAdministrationManagePermission();
+
     return LEAD_PROGRESSION_STATUSES.map((status, idx) => {
       let state: StepState;
       let unlockHint: string | null = null;
@@ -989,12 +991,16 @@ export class LeadFormPage implements OnInit, OnDestroy {
         // Steps before current are completed (in the progression)
         state = 'completed';
       } else {
-        // Steps after current — check if unlocked
-        state = this.isStepUnlocked(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence)
-          ? 'available'
-          : 'locked';
-        if (state === 'locked') {
-          unlockHint = this.stepUnlockHint(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence);
+        // Admins bypass gates — all steps are available
+        if (isAdmin) {
+          state = 'available';
+        } else {
+          state = this.isStepUnlocked(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence)
+            ? 'available'
+            : 'locked';
+          if (state === 'locked') {
+            unlockHint = this.stepUnlockHint(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence);
+          }
         }
       }
 

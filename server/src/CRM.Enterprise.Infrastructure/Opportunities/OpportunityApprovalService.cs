@@ -409,6 +409,11 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             return OpportunityOperationResult<OpportunityApprovalDto>.Fail(firstExecution.Error);
         }
 
+        if (firstExecution.IsDelayed)
+        {
+            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Workflow is paused at a delay node. It will resume automatically.");
+        }
+
         var firstStep = firstExecution.NextApprovalStep;
         if (firstStep is null)
         {
@@ -610,11 +615,19 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                     return OpportunityOperationResult<OpportunityApprovalDto>.Fail(continuation.Error);
                 }
 
+                if (continuation.IsDelayed)
+                {
+                    chain.Status = "Delayed";
+                }
+
                 var nextStep = continuation.NextApprovalStep;
                 if (nextStep is null)
                 {
-                    chain.Status = "Approved";
-                    chain.CompletedOn = DateTime.UtcNow;
+                    if (!continuation.IsDelayed)
+                    {
+                        chain.Status = "Approved";
+                        chain.CompletedOn = DateTime.UtcNow;
+                    }
                 }
                 else
                 {
@@ -1499,6 +1512,56 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
 
                     break;
                 }
+
+                case "email":
+                {
+                    var nextApproval = items.Skip(index + 1).Select(candidate => candidate.ApprovalStep).FirstOrDefault(step => step is not null);
+                    var error = await ExecuteEmailNodeAsync(opportunity, item.Config?.Email, nextApproval, actor, cancellationToken);
+                    if (error is not null)
+                    {
+                        return WorkflowContinuationResult.Fail(error);
+                    }
+
+                    break;
+                }
+
+                case "delay":
+                {
+                    var resumeAt = ComputeDelayResumeTime(item.Config?.Delay);
+                    if (resumeAt > DateTime.UtcNow)
+                    {
+                        var chain = await _dbContext.OpportunityApprovalChains
+                            .FirstOrDefaultAsync(c => c.OpportunityId == opportunity.Id && c.Status == "Pending", cancellationToken);
+
+                        if (chain is not null)
+                        {
+                            var planJson = System.Text.Json.JsonSerializer.Serialize(
+                                plan.Items,
+                                new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+
+                            _dbContext.Set<Domain.Entities.PendingWorkflowDelay>().Add(new Domain.Entities.PendingWorkflowDelay
+                            {
+                                OpportunityId = opportunity.Id,
+                                ApprovalChainId = chain.Id,
+                                ResumeFromSequence = item.Sequence + 1,
+                                ApprovalStepOrder = items.Take(index).LastOrDefault(i => i.ApprovalStep is not null)?.ApprovalStep?.Order,
+                                NodeId = item.NodeId,
+                                ResumeAfterUtc = resumeAt,
+                                ExecutionPlanJson = planJson,
+                                RequestedByUserId = actor.UserId
+                            });
+                            await _dbContext.SaveChangesAsync(cancellationToken);
+
+                            _logger.LogInformation(
+                                "Workflow delay node {NodeId} for opportunity {OpportunityId}: pausing until {ResumeAt}",
+                                item.NodeId, opportunity.Id, resumeAt);
+                        }
+
+                        return WorkflowContinuationResult.Delayed(item.Sequence + 1);
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -1735,6 +1798,89 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         }
 
         return null;
+    }
+
+    private async Task<string?> ExecuteEmailNodeAsync(
+        Opportunity opportunity,
+        DealApprovalWorkflowEmailConfigDefinition? config,
+        ApprovalWorkflowStep? upcomingApproval,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        var recipientType = config?.RecipientType?.Trim();
+        if (string.IsNullOrWhiteSpace(recipientType))
+        {
+            return null;
+        }
+
+        var subject = string.IsNullOrWhiteSpace(config?.Subject)
+            ? $"Workflow notification: {opportunity.Name}"
+            : config!.Subject!.Trim();
+
+        var targetUserIds = await ResolveNotificationAudienceAsync(opportunity, recipientType, upcomingApproval, cancellationToken);
+        if (targetUserIds.Count == 0)
+        {
+            _logger.LogWarning("Email node skipped: no recipients resolved for audience '{Audience}' on opportunity {OpportunityId}.", recipientType, opportunity.Id);
+            return null;
+        }
+
+        var htmlBody = BuildWorkflowEmailBody(config?.Template, subject, opportunity.Name);
+
+        foreach (var userId in targetUserIds)
+        {
+            var contact = await ResolveUserContactAsync(userId, cancellationToken);
+            if (contact is not null)
+            {
+                await TrySendEmailAsync(contact.Email, subject, htmlBody, cancellationToken);
+            }
+        }
+
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                OpportunityEntityType,
+                opportunity.Id,
+                "WorkflowEmailSent",
+                "EmailRecipientType",
+                null,
+                recipientType,
+                actor.UserId,
+                actor.UserName),
+            cancellationToken);
+
+        return null;
+    }
+
+    private static string BuildWorkflowEmailBody(string? template, string subject, string? opportunityName)
+    {
+        if (!string.IsNullOrWhiteSpace(template))
+        {
+            return template
+                .Replace("{{subject}}", subject)
+                .Replace("{{opportunityName}}", opportunityName ?? "Opportunity");
+        }
+
+        return $"""
+            <p><strong>{subject}</strong></p>
+            <p>A workflow action has been triggered for <strong>{opportunityName ?? "Opportunity"}</strong>.</p>
+            """;
+    }
+
+    private static DateTime ComputeDelayResumeTime(DealApprovalWorkflowDelayConfigDefinition? config)
+    {
+        if (config is null || !config.Duration.HasValue || config.Duration.Value <= 0)
+        {
+            return DateTime.UtcNow;
+        }
+
+        var duration = config.Unit?.ToLowerInvariant() switch
+        {
+            "minutes" => TimeSpan.FromMinutes(config.Duration.Value),
+            "hours" => TimeSpan.FromHours(config.Duration.Value),
+            "days" => TimeSpan.FromDays(config.Duration.Value),
+            _ => TimeSpan.FromHours(config.Duration.Value)
+        };
+
+        return DateTime.UtcNow.Add(duration);
     }
 
     private async Task<Guid> ResolveWorkflowActivityOwnerIdAsync(
@@ -2204,12 +2350,122 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         bool IsClosed,
         bool IsWon);
 
-    private sealed record WorkflowContinuationResult(ApprovalWorkflowStep? NextApprovalStep, string? Error)
+    private sealed record WorkflowContinuationResult(ApprovalWorkflowStep? NextApprovalStep, string? Error, bool IsDelayed = false, int DelayResumeSequence = 0)
     {
         public static WorkflowContinuationResult Next(ApprovalWorkflowStep step) => new(step, null);
         public static WorkflowContinuationResult Complete() => new(null, null);
         public static WorkflowContinuationResult Fail(string error) => new(null, error);
+        public static WorkflowContinuationResult Delayed(int resumeSequence) => new(null, null, IsDelayed: true, DelayResumeSequence: resumeSequence);
     }
 
     private sealed record UserContact(Guid Id, string FullName, string Email);
+
+    public async Task ResumeAfterDelayAsync(
+        Guid opportunityId,
+        Guid approvalChainId,
+        string executionPlanJson,
+        int resumeFromSequence,
+        Guid? requestedByUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var opportunity = await _dbContext.Opportunities
+            .FirstOrDefaultAsync(o => o.Id == opportunityId && !o.IsDeleted, cancellationToken);
+        if (opportunity is null)
+        {
+            _logger.LogWarning("ResumeAfterDelay: Opportunity {Id} not found.", opportunityId);
+            return;
+        }
+
+        var chain = await _dbContext.OpportunityApprovalChains
+            .FirstOrDefaultAsync(c => c.Id == approvalChainId, cancellationToken);
+        if (chain is null || chain.Status is "Approved" or "Rejected")
+        {
+            return;
+        }
+
+        WorkflowExecutionPlan? plan = null;
+        try
+        {
+            plan = JsonSerializer.Deserialize<WorkflowExecutionPlan>(executionPlanJson, JsonOptions);
+        }
+        catch
+        {
+            _logger.LogWarning("ResumeAfterDelay: Failed to deserialize execution plan for chain {ChainId}.", approvalChainId);
+            return;
+        }
+
+        if (plan is null)
+        {
+            return;
+        }
+
+        var user = requestedByUserId.HasValue
+            ? await _dbContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == requestedByUserId.Value, cancellationToken)
+            : null;
+
+        var actor = new ActorContext(
+            requestedByUserId ?? Guid.Empty,
+            user?.FullName ?? "System");
+
+        var filteredItems = plan.Items
+            .Where(i => i.Sequence >= resumeFromSequence)
+            .OrderBy(i => i.Sequence)
+            .ToList();
+
+        var resumePlan = new WorkflowExecutionPlan(filteredItems);
+
+        var continuation = await ExecutePlanUntilNextApprovalAsync(
+            resumePlan,
+            approvalStepOrder: null,
+            opportunity,
+            actor,
+            cancellationToken);
+
+        if (continuation.Error is not null)
+        {
+            _logger.LogWarning("ResumeAfterDelay: Error continuing workflow for {OpportunityId}: {Error}",
+                opportunityId, continuation.Error);
+            return;
+        }
+
+        if (continuation.IsDelayed)
+        {
+            chain.Status = "Delayed";
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return;
+        }
+
+        var nextStep = continuation.NextApprovalStep;
+        if (nextStep is null)
+        {
+            chain.Status = "Approved";
+            chain.CompletedOn = DateTime.UtcNow;
+        }
+        else
+        {
+            chain.Status = "Pending";
+            chain.CurrentStep = nextStep.Order;
+
+            var routing = await ResolveApprovalRoutingAsync(nextStep, cancellationToken);
+            if (routing.Success)
+            {
+                var nextApproval = new OpportunityApproval
+                {
+                    OpportunityId = opportunityId,
+                    ApprovalChainId = chain.Id,
+                    StepOrder = nextStep.Order,
+                    ApproverRoleId = routing.RoleId,
+                    ApproverRole = routing.RoleName,
+                    ApproverUserId = routing.ApproverUserId,
+                    RequestedByUserId = requestedByUserId,
+                    Status = "Pending",
+                    RequestedOn = DateTime.UtcNow
+                };
+
+                _dbContext.OpportunityApprovals.Add(nextApproval);
+            }
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

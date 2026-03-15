@@ -1,7 +1,8 @@
-import { NgFor, NgIf, TitleCasePipe } from '@angular/common';
-import { Component, ViewChild, inject, signal } from '@angular/core';
+import { KeyValuePipe, NgFor, NgIf, TitleCasePipe } from '@angular/common';
+import { Component, ViewChild, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 
 import { AppToastService } from '../../../../core/app-toast.service';
@@ -26,9 +27,11 @@ import { WorkflowDefinitionService } from '../services/workflow-definition.servi
   imports: [
     NgIf,
     NgFor,
+    KeyValuePipe,
     TitleCasePipe,
     FormsModule,
     ButtonModule,
+    DialogModule,
     SelectModule,
     BreadcrumbsComponent,
     WorkflowCanvasComponent,
@@ -65,7 +68,10 @@ export class WorkflowDesignerPage {
     { label: 'Deal Approval', value: 'deal-approval' },
     { label: 'Discount Approval', value: 'discount-approval' },
     { label: 'Large Deal Escalation', value: 'large-deal-escalation' },
-    { label: 'Stage Gate Exception', value: 'stage-gate-exception' }
+    { label: 'Stage Gate Exception', value: 'stage-gate-exception' },
+    { label: 'Approval + Email Follow-up', value: 'approval-email-followup' },
+    { label: 'Conditional Routing', value: 'conditional-routing' },
+    { label: 'Full Pipeline (All Nodes)', value: 'full-pipeline' }
   ]);
 
   private readonly supportedNodeTypes = new Set<DealApprovalWorkflowDefinition['nodes'][number]['type']>([
@@ -93,6 +99,10 @@ export class WorkflowDesignerPage {
   protected readonly selectedTemplate = signal('deal-approval');
   protected readonly lastValidationErrors = signal<string[]>([]);
   protected readonly lastValidationAtUtc = signal<string | null>(null);
+  protected readonly showPublishSummary = signal(false);
+  protected readonly showSimulation = signal(false);
+  protected readonly simulationTrace = signal<SimulationStep[]>([]);
+  protected readonly publishReadiness = computed(() => this.computePublishReadiness());
   protected readonly roleOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly securityLevelOptions = signal<Array<{ label: string; value: string }>>([]);
   protected readonly moduleOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackModuleOptions);
@@ -126,7 +136,10 @@ export class WorkflowDesignerPage {
             { label: 'New Inquiry Follow-up SLA', value: 'deal-approval' },
             { label: 'Showing Follow-up Automation', value: 'discount-approval' },
             { label: 'Weak Conversation Coaching', value: 'large-deal-escalation' },
-            { label: 'Low-Readiness Conversion Approval', value: 'stage-gate-exception' }
+            { label: 'Low-Readiness Conversion Approval', value: 'stage-gate-exception' },
+            { label: 'Approval + Email Follow-up', value: 'approval-email-followup' },
+            { label: 'Conditional Routing', value: 'conditional-routing' },
+            { label: 'Full Pipeline (All Nodes)', value: 'full-pipeline' }
           ]);
           return;
         }
@@ -137,7 +150,10 @@ export class WorkflowDesignerPage {
           { label: 'Deal Approval', value: 'deal-approval' },
           { label: 'Discount Approval', value: 'discount-approval' },
           { label: 'Large Deal Escalation', value: 'large-deal-escalation' },
-          { label: 'Stage Gate Exception', value: 'stage-gate-exception' }
+          { label: 'Stage Gate Exception', value: 'stage-gate-exception' },
+          { label: 'Approval + Email Follow-up', value: 'approval-email-followup' },
+          { label: 'Conditional Routing', value: 'conditional-routing' },
+          { label: 'Full Pipeline (All Nodes)', value: 'full-pipeline' }
         ]);
       },
       error: () => {}
@@ -318,7 +334,19 @@ export class WorkflowDesignerPage {
   }
 
   protected publish() {
+    this.showPublishSummary.set(true);
+  }
+
+  protected confirmPublish() {
+    this.showPublishSummary.set(false);
     this.persistWorkflow('publish', 'published');
+  }
+
+  protected simulate() {
+    const wf = this.workflow();
+    const trace = this.buildSimulationTrace(wf);
+    this.simulationTrace.set(trace);
+    this.showSimulation.set(true);
   }
 
   protected unpublish() {
@@ -411,6 +439,215 @@ export class WorkflowDesignerPage {
 
   protected nodeCountByType(type: WorkflowNode['type']) {
     return this.workflow().nodes.filter((node) => node.type === type).length;
+  }
+
+  private computePublishReadiness(): PublishReadiness {
+    const wf = this.workflow();
+    const nodes = wf.nodes;
+    const connections = wf.connections;
+    const steps = wf.steps;
+    const scope = wf.scope;
+
+    const nodeCounts: Record<string, number> = {};
+    for (const node of nodes) {
+      nodeCounts[node.type] = (nodeCounts[node.type] || 0) + 1;
+    }
+
+    const warnings: string[] = [];
+
+    // Scope checks
+    if (!scope.name?.trim()) warnings.push('Workflow name is empty.');
+    if (!scope.stage || scope.stage === '') warnings.push('No stage selected.');
+    if (!scope.trigger || scope.trigger === '') warnings.push('No trigger selected.');
+
+    // Structural checks
+    const hasStart = nodes.some(n => n.type === 'start');
+    const hasEnd = nodes.some(n => n.type === 'end');
+    if (!hasStart) warnings.push('Missing start node.');
+    if (!hasEnd) warnings.push('Missing end node.');
+    if (connections.length === 0) warnings.push('No connections between nodes.');
+
+    // Orphan detection
+    const connectedNodeIds = new Set<string>();
+    for (const conn of connections) {
+      connectedNodeIds.add(conn.source);
+      connectedNodeIds.add(conn.target);
+    }
+    const orphans = nodes.filter(n => n.type !== 'start' && !connectedNodeIds.has(n.id));
+    if (orphans.length > 0) {
+      warnings.push(`${orphans.length} node(s) not connected to any path.`);
+    }
+
+    // Email node config checks
+    const emailNodes = nodes.filter(n => n.type === 'email');
+    for (const node of emailNodes) {
+      const emailConfig = node.config?.email;
+      if (!emailConfig?.recipientType?.trim()) {
+        warnings.push(`Email node "${node.label || node.id}" has no recipient type.`);
+      }
+      if (!emailConfig?.subject?.trim() && !emailConfig?.template?.trim()) {
+        warnings.push(`Email node "${node.label || node.id}" has no subject or template.`);
+      }
+    }
+
+    // Notification node config checks
+    const notifNodes = nodes.filter(n => n.type === 'notification');
+    for (const node of notifNodes) {
+      const notifConfig = node.config?.notification;
+      if (!notifConfig?.channel?.trim()) {
+        warnings.push(`Notification node "${node.label || node.id}" has no channel.`);
+      }
+      if (!notifConfig?.audience?.trim()) {
+        warnings.push(`Notification node "${node.label || node.id}" has no audience.`);
+      }
+    }
+
+    // Condition node branch checks
+    const conditionNodes = nodes.filter(n => n.type === 'condition');
+    for (const node of conditionNodes) {
+      const outgoing = connections.filter(c => c.source === node.id);
+      if (outgoing.length < 2) {
+        warnings.push(`Condition node "${node.label || node.id}" has fewer than 2 branches.`);
+      }
+    }
+
+    // Approval step checks
+    if (steps.length === 0 && wf.enabled) {
+      warnings.push('No approval steps defined for an active workflow.');
+    }
+    for (const step of steps) {
+      if (!step.approverRole?.trim()) {
+        warnings.push(`Approval step "${step.purpose || step.nodeId}" has no approver role.`);
+      }
+    }
+
+    return {
+      nodeCounts,
+      totalNodes: nodes.length,
+      totalConnections: connections.length,
+      totalSteps: steps.length,
+      scopeName: scope.name || 'Unnamed',
+      scopeStage: scope.stage || 'Not set',
+      scopeTrigger: scope.trigger || 'Not set',
+      scopePipeline: scope.pipeline || 'Not set',
+      version: scope.version || 1,
+      status: scope.status || 'draft',
+      warnings
+    };
+  }
+
+  private buildSimulationTrace(wf: DealApprovalWorkflowDefinition): SimulationStep[] {
+    const nodeMap = new Map(wf.nodes.map(n => [n.id, n]));
+    const outgoingMap = new Map<string, WorkflowConnection[]>();
+    for (const conn of wf.connections) {
+      const list = outgoingMap.get(conn.source) ?? [];
+      list.push(conn);
+      outgoingMap.set(conn.source, list);
+    }
+
+    const trace: SimulationStep[] = [];
+    const startNode = wf.nodes.find(n => n.type === 'start');
+    if (!startNode) {
+      trace.push({ sequence: 1, nodeType: 'error', label: 'No start node', description: 'Workflow has no start node.' });
+      return trace;
+    }
+
+    const visited = new Set<string>();
+    const queue: string[] = [startNode.id];
+    let seq = 0;
+
+    while (queue.length > 0) {
+      const nodeId = queue.shift()!;
+      if (visited.has(nodeId)) continue;
+      visited.add(nodeId);
+
+      const node = nodeMap.get(nodeId);
+      if (!node) continue;
+
+      seq++;
+      const step: SimulationStep = {
+        sequence: seq,
+        nodeType: node.type,
+        label: node.label || node.type,
+        description: this.describeNodeAction(node, wf.steps)
+      };
+      trace.push(step);
+
+      if (node.type === 'end') continue;
+
+      if (node.type === 'approval') {
+        step.description += ' [PAUSES — waits for approver decision]';
+      }
+
+      const outgoing = outgoingMap.get(nodeId) ?? [];
+      if (node.type === 'condition' && outgoing.length >= 2) {
+        for (const conn of outgoing) {
+          const branchLabel = conn.label || conn.branchKey || 'branch';
+          step.description += ` → Branch "${branchLabel}"`;
+        }
+      }
+
+      for (const conn of outgoing) {
+        if (!visited.has(conn.target)) {
+          queue.push(conn.target);
+        }
+      }
+    }
+
+    return trace;
+  }
+
+  private describeNodeAction(node: WorkflowNode, steps: WorkflowStep[]): string {
+    switch (node.type) {
+      case 'start':
+        return 'Workflow execution begins.';
+      case 'end':
+        return 'Workflow execution ends.';
+      case 'approval': {
+        const step = steps.find(s => s.nodeId === node.id);
+        return step
+          ? `Request approval from ${step.approverRole || 'unassigned role'} (${step.purpose || 'approval'})`
+          : 'Request approval (unconfigured step).';
+      }
+      case 'condition': {
+        const cfg = node.config?.condition;
+        return cfg?.field
+          ? `Evaluate condition: ${cfg.field} ${cfg.operator || '?'} ${cfg.value || '?'}`
+          : 'Evaluate condition (unconfigured).';
+      }
+      case 'email': {
+        const cfg = node.config?.email;
+        return cfg?.recipientType
+          ? `Send email to ${cfg.recipientType}: "${cfg.subject || 'No subject'}"`
+          : 'Send email (unconfigured recipient).';
+      }
+      case 'notification': {
+        const cfg = node.config?.notification;
+        return cfg?.channel
+          ? `Send ${cfg.channel} notification to ${cfg.audience || 'unknown audience'}`
+          : 'Send notification (unconfigured).';
+      }
+      case 'delay': {
+        const cfg = node.config?.delay;
+        return cfg?.duration
+          ? `Wait ${cfg.duration} ${cfg.unit || 'hours'}${cfg.businessHoursOnly ? ' (business hours)' : ''}`
+          : 'Delay (unconfigured duration).';
+      }
+      case 'crm-update': {
+        const cfg = node.config?.crmUpdate;
+        return cfg?.field
+          ? `Update opportunity: set ${cfg.field} = "${cfg.value || ''}"`
+          : 'Update CRM record (unconfigured).';
+      }
+      case 'activity': {
+        const cfg = node.config?.activity;
+        return cfg?.activityType
+          ? `Create ${cfg.activityType} activity: "${cfg.subject || 'untitled'}"`
+          : 'Create activity (unconfigured).';
+      }
+      default:
+        return 'Unknown action.';
+    }
   }
 
   protected autoArrange() {
@@ -591,6 +828,108 @@ export class WorkflowDesignerPage {
             { source: 'start', target: 'approval-step-1' },
             { source: 'approval-step-1', target: 'approval-step-2' },
             { source: 'approval-step-2', target: 'end' }
+          ]
+        };
+      case 'approval-email-followup':
+        return {
+          enabled: true,
+          scope: {
+            name: 'Approval + Email Follow-up Workflow',
+            purpose: 'Approve a deal, wait for a cooling-off period, then email the stakeholder.',
+            module: 'opportunities',
+            pipeline: 'default',
+            stage: this.resolveStageValue('Proposal'),
+            trigger: 'on-stage-change',
+            status: 'draft',
+            version: 1
+          },
+          steps: [
+            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', minimumSecurityLevelId: null, amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }
+          ],
+          nodes: [
+            { id: 'start', type: 'start', x: 40, y: 180, label: 'Start' },
+            { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Manager Approval' },
+            { id: 'delay-1', type: 'delay', x: 560, y: 180, label: '24h Cooling Period', config: { delay: { duration: 24, unit: 'hours', businessHoursOnly: false } } },
+            { id: 'email-1', type: 'email', x: 820, y: 180, label: 'Confirmation Email', config: { email: { template: 'deal-approved', recipientType: 'deal-owner', subject: 'Your deal has been approved' } } },
+            { id: 'end', type: 'end', x: 1080, y: 180, label: 'End' }
+          ],
+          connections: [
+            { source: 'start', target: 'approval-step-1' },
+            { source: 'approval-step-1', target: 'delay-1' },
+            { source: 'delay-1', target: 'email-1' },
+            { source: 'email-1', target: 'end' }
+          ]
+        };
+      case 'conditional-routing':
+        return {
+          enabled: true,
+          scope: {
+            name: 'Conditional Routing Workflow',
+            purpose: 'Route deals above a threshold to executive review; smaller deals go straight to notification.',
+            module: 'opportunities',
+            pipeline: 'default',
+            stage: this.resolveStageValue('Proposal'),
+            trigger: 'on-amount-threshold',
+            status: 'draft',
+            version: 1
+          },
+          steps: [
+            { order: 1, approverRoleId: financeManagerRoleId, approverRole: 'Finance Manager', minimumSecurityLevelId: null, amountThreshold: 50000, purpose: 'Close', nodeId: 'approval-step-1' }
+          ],
+          nodes: [
+            { id: 'start', type: 'start', x: 40, y: 260, label: 'Start' },
+            { id: 'condition-1', type: 'condition', x: 300, y: 260, label: 'Amount > 50k?', config: { condition: { field: 'amount', operator: 'greater-than', value: '50000' } } },
+            { id: 'approval-step-1', type: 'approval', x: 600, y: 120, label: 'Executive Approval' },
+            { id: 'notification-1', type: 'notification', x: 600, y: 400, label: 'Notify Sales Rep', config: { notification: { channel: 'in-app', audience: 'deal-owner', message: 'Your deal has been auto-approved.' } } },
+            { id: 'email-1', type: 'email', x: 900, y: 120, label: 'Approval Confirmation', config: { email: { template: 'deal-approved', recipientType: 'deal-owner', subject: 'Executive approval granted' } } },
+            { id: 'end', type: 'end', x: 900, y: 400, label: 'End' }
+          ],
+          connections: [
+            { source: 'start', target: 'condition-1' },
+            { source: 'condition-1', target: 'approval-step-1', label: 'Yes' },
+            { source: 'condition-1', target: 'notification-1', label: 'No' },
+            { source: 'approval-step-1', target: 'email-1' },
+            { source: 'email-1', target: 'end' },
+            { source: 'notification-1', target: 'end' }
+          ]
+        };
+      case 'full-pipeline':
+        return {
+          enabled: true,
+          scope: {
+            name: 'Full Pipeline Workflow',
+            purpose: 'Demonstrate all node types: approval, condition, email, delay, notification, CRM update, and activity.',
+            module: 'opportunities',
+            pipeline: 'default',
+            stage: this.resolveStageValue('Proposal'),
+            trigger: 'on-stage-change',
+            status: 'draft',
+            version: 1
+          },
+          steps: [
+            { order: 1, approverRoleId: salesManagerRoleId, approverRole: 'Sales Manager', minimumSecurityLevelId: null, amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }
+          ],
+          nodes: [
+            { id: 'start', type: 'start', x: 40, y: 220, label: 'Start' },
+            { id: 'condition-1', type: 'condition', x: 300, y: 220, label: 'High Value?', config: { condition: { field: 'amount', operator: 'greater-than', value: '100000' } } },
+            { id: 'approval-step-1', type: 'approval', x: 560, y: 100, label: 'Manager Sign-Off' },
+            { id: 'delay-1', type: 'delay', x: 560, y: 340, label: '1-Day Wait', config: { delay: { duration: 1, unit: 'days', businessHoursOnly: true } } },
+            { id: 'email-1', type: 'email', x: 820, y: 100, label: 'Send Approval Email', config: { email: { template: 'deal-approved', recipientType: 'deal-owner', subject: 'Deal approved — next steps' } } },
+            { id: 'crm-update-1', type: 'crm-update', x: 820, y: 340, label: 'Advance Stage', config: { crmUpdate: { field: 'stage', value: 'Negotiation' } } },
+            { id: 'notification-1', type: 'notification', x: 1080, y: 220, label: 'Notify Team', config: { notification: { channel: 'in-app', audience: 'team', message: 'Deal workflow completed.' } } },
+            { id: 'activity-1', type: 'activity', x: 1340, y: 220, label: 'Schedule Follow-up', config: { activity: { activityType: 'task', subject: 'Follow-up with customer', ownerStrategy: 'deal-owner', dueInHours: 48 } } },
+            { id: 'end', type: 'end', x: 1600, y: 220, label: 'End' }
+          ],
+          connections: [
+            { source: 'start', target: 'condition-1' },
+            { source: 'condition-1', target: 'approval-step-1', label: 'Yes' },
+            { source: 'condition-1', target: 'delay-1', label: 'No' },
+            { source: 'approval-step-1', target: 'email-1' },
+            { source: 'delay-1', target: 'crm-update-1' },
+            { source: 'email-1', target: 'notification-1' },
+            { source: 'crm-update-1', target: 'notification-1' },
+            { source: 'notification-1', target: 'activity-1' },
+            { source: 'activity-1', target: 'end' }
           ]
         };
       case 'deal-approval':
@@ -942,4 +1281,25 @@ export class WorkflowDesignerPage {
 
     return ['Unable to save workflow.'];
   }
+}
+
+interface PublishReadiness {
+  nodeCounts: Record<string, number>;
+  totalNodes: number;
+  totalConnections: number;
+  totalSteps: number;
+  scopeName: string;
+  scopeStage: string;
+  scopeTrigger: string;
+  scopePipeline: string;
+  version: number;
+  status: string;
+  warnings: string[];
+}
+
+interface SimulationStep {
+  sequence: number;
+  nodeType: string;
+  label: string;
+  description: string;
 }

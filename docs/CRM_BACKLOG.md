@@ -441,10 +441,18 @@ MoSCoW: Must
   - Workflow designer UI: `client/src/app/crm/features/workflows/pages/workflow-designer.page.html`
   - Runtime enforcement + routing: `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityApprovalService.cs`
   - Execution/inbox linkage: `server/src/CRM.Enterprise.Infrastructure/Workflows/WorkflowExecutionService.cs`
+  - Detailed implementation notes: `docs/WORKFLOW_BUILDER_IMPROVEMENTS.md`
 - Acceptance criteria:
   - Draft workflow definitions can be validated, published, unpublished, and reverted without executing draft changes.
-  - Published workflows gate opportunity approval requests for amount/stage/discount triggers only.
+  - Published workflows gate opportunity approval requests for amount/stage/discount triggers.
   - Approval routing resolves tenant roles and optional minimum security levels, with execution history linked into Decision Inbox.
+  - Builder supports typed node config, branch metadata, direct canvas selection, and visible branch labels.
+  - Published deal workflows execute `crm-update`, `activity`, and `notification` nodes before and between approval checkpoints.
+- Remaining improvement focus:
+  - Execute `delay` and `email` nodes.
+  - Add simulation mode before publish.
+  - Replace overlay branch labels with routed-edge label placement.
+  - Add a more guided “starter template” experience so the builder feels less open-ended for first-time admins.
 
 10) Epistemic dashboard widgets (Truth Metrics, Risk Register, Confidence Forecast)
 MoSCoW: Must

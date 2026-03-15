@@ -12,6 +12,7 @@
       <button pButton type="button" class="btn btn-ghost" (click)="fitView()" [disabled]="loading()">Fit View</button>
       <button pButton type="button" class="btn btn-ghost" (click)="autoArrange()" [disabled]="loading()">Auto Arrange</button>
       <button pButton type="button" class="btn btn-secondary" (click)="validate()" [disabled]="validating()">Validate</button>
+      <button pButton type="button" class="btn btn-secondary" (click)="simulate()" [disabled]="loading()">Simulate</button>
       <button pButton type="button" class="btn btn-ghost" (click)="saveDraft()" [disabled]="saving()">Save Draft</button>
       <button pButton type="button" class="btn btn-ghost" (click)="revertDraft()" [disabled]="saving() || !publishedAtUtc()">Revert Draft</button>
       <button pButton type="button" class="btn btn-ghost" (click)="unpublish()" [disabled]="saving() || workflow().scope.status !== 'published'">Unpublish</button>
@@ -192,4 +193,85 @@
       (removeNode)="removeNode($event)"
     ></app-workflow-properties-panel>
   </div>
+
+  <p-dialog
+    header="Workflow Simulation"
+    [(visible)]="showSimulation"
+    [modal]="true"
+    [closable]="true"
+    [style]="{ width: '560px', maxHeight: '80vh' }"
+    appendTo="body"
+  >
+    <div class="simulation-trace">
+      <p class="simulation-trace__intro">Dry-run trace of the current workflow from start to end. No actions are executed.</p>
+      <ol class="simulation-trace__list">
+        <li *ngFor="let step of simulationTrace()" class="simulation-trace__step" [attr.data-type]="step.nodeType">
+          <span class="simulation-trace__badge">{{ step.nodeType }}</span>
+          <strong>{{ step.label }}</strong>
+          <p>{{ step.description }}</p>
+        </li>
+      </ol>
+      <p *ngIf="simulationTrace().length === 0" class="simulation-trace__empty">No nodes found in this workflow.</p>
+    </div>
+    <ng-template pTemplate="footer">
+      <button pButton type="button" class="btn btn-ghost" (click)="showSimulation.set(false)">Close</button>
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog
+    header="Publish Readiness Summary"
+    [(visible)]="showPublishSummary"
+    [modal]="true"
+    [closable]="true"
+    [style]="{ width: '520px' }"
+    appendTo="body"
+  >
+    <ng-container *ngIf="publishReadiness() as r">
+      <div class="publish-summary">
+        <div class="publish-summary__scope">
+          <h4>Scope</h4>
+          <div class="publish-summary__grid">
+            <span class="publish-summary__label">Name</span>
+            <span>{{ r.scopeName }}</span>
+            <span class="publish-summary__label">Stage</span>
+            <span>{{ r.scopeStage }}</span>
+            <span class="publish-summary__label">Trigger</span>
+            <span>{{ r.scopeTrigger }}</span>
+            <span class="publish-summary__label">Pipeline</span>
+            <span>{{ r.scopePipeline }}</span>
+            <span class="publish-summary__label">Version</span>
+            <span>v{{ r.version }} ({{ r.status }})</span>
+          </div>
+        </div>
+
+        <div class="publish-summary__counts">
+          <h4>Node Summary</h4>
+          <div class="publish-summary__chips">
+            <span class="publish-summary__chip" *ngFor="let entry of r.nodeCounts | keyvalue">
+              {{ entry.key }}: {{ entry.value }}
+            </span>
+          </div>
+          <p class="publish-summary__meta">
+            {{ r.totalNodes }} nodes · {{ r.totalConnections }} connections · {{ r.totalSteps }} approval steps
+          </p>
+        </div>
+
+        <div class="publish-summary__warnings" *ngIf="r.warnings.length > 0">
+          <h4><i class="pi pi-exclamation-triangle"></i> Warnings</h4>
+          <ul>
+            <li *ngFor="let w of r.warnings">{{ w }}</li>
+          </ul>
+        </div>
+
+        <div class="publish-summary__ok" *ngIf="r.warnings.length === 0">
+          <i class="pi pi-check-circle"></i>
+          <span>No issues detected. Ready to publish.</span>
+        </div>
+      </div>
+    </ng-container>
+    <ng-template pTemplate="footer">
+      <button pButton type="button" class="btn btn-ghost" (click)="showPublishSummary.set(false)">Cancel</button>
+      <button pButton type="button" class="btn btn-primary" (click)="confirmPublish()" [disabled]="saving()">Publish</button>
+    </ng-template>
+  </p-dialog>
 </div>

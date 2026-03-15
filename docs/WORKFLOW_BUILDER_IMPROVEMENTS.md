@@ -158,6 +158,28 @@ Current limitation:
 - `email` and `delay` nodes are still modeled but not executed
 - branch labels are visible on-canvas, but they are still rendered from workflow geometry rather than true routed-edge layout
 
+## Confidence and usability improvements still needed
+
+The builder is structurally stronger now, but it can still feel more complex than it needs to for a first-time CRM admin.
+
+Main confidence gaps still worth addressing:
+- the builder still starts as a blank expert surface instead of a guided setup flow
+- node configuration is clearer than before, but execution consequences are still not previewed before publish
+- branch labels are visible, but users still do not see a strong “happy path vs exception path” mental model
+- there is no simulation or dry-run mode to show which nodes would actually fire for a sample deal
+- runtime coverage is partial until `delay` and `email` nodes execute
+
+Recommended confidence-first improvements:
+1. Add a starter mode with a small number of guided templates and pre-wired paths.
+2. Add simulation mode with sample record input and traversed node output.
+3. Add inline “what this node will do” summaries in the properties panel.
+4. Add a publish readiness summary:
+   - valid nodes
+   - unlabeled branches
+   - inactive paths
+   - unsupported runtime nodes
+5. Add execution history per workflow node so admins can see which parts of a published workflow are actually being used.
+
 ## Next
 
 1. Add workflow simulation:

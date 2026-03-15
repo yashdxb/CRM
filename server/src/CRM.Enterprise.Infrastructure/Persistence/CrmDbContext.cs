@@ -40,6 +40,7 @@ public class CrmDbContext : DbContext
     public DbSet<OpportunityReviewChecklistItem> OpportunityReviewChecklistItems => Set<OpportunityReviewChecklistItem>();
     public DbSet<OpportunityApproval> OpportunityApprovals => Set<OpportunityApproval>();
     public DbSet<OpportunityApprovalChain> OpportunityApprovalChains => Set<OpportunityApprovalChain>();
+    public DbSet<PendingWorkflowDelay> PendingWorkflowDelays => Set<PendingWorkflowDelay>();
     public DbSet<DecisionRequest> DecisionRequests => Set<DecisionRequest>();
     public DbSet<DecisionStep> DecisionSteps => Set<DecisionStep>();
     public DbSet<DecisionActionLog> DecisionActionLogs => Set<DecisionActionLog>();

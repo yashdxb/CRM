@@ -124,6 +124,7 @@ public static class DependencyInjection
         services.AddHostedService<RenewalAutomationWorker>();
         services.AddHostedService<DecisionSlaEscalationWorker>();
         services.AddHostedService<HelpDeskSlaEscalationWorker>();
+        services.AddHostedService<WorkflowDelayResumeWorker>();
         services.AddSingleton<IEmailSender>(sp =>
         {
             var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<AcsEmailOptions>>().Value;
