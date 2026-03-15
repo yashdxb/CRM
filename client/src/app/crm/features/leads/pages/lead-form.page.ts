@@ -1104,7 +1104,13 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
   /** Click handler for a stepper step */
   protected onStepClick(step: StepperStep): void {
-    if (step.state === 'locked' || step.state === 'current') return;
+    if (step.state === 'current') return;
+
+    // Locked step: navigate to the tab that helps satisfy unlock requirements
+    if (step.state === 'locked') {
+      this.onLockedStepClick(step);
+      return;
+    }
 
     // Backward movement: clicking a completed step to regress
     if (step.state === 'completed') {
@@ -1114,6 +1120,15 @@ export class LeadFormPage implements OnInit, OnDestroy {
     }
 
     this.form.status = step.status;
+  }
+
+  /** Navigate to the relevant tab when a locked step is clicked */
+  private onLockedStepClick(step: StepperStep): void {
+    if (step.status === 'Contacted') {
+      this.setActiveTab('activity');
+    } else if (step.status === 'Qualified') {
+      this.setActiveTab('qualification');
+    }
   }
 
   /** Confirm backward movement */
@@ -1369,8 +1384,8 @@ export class LeadFormPage implements OnInit, OnDestroy {
           });
         }
         if (isEdit) {
-          // Navigate back to leads list after successful update
-          this.router.navigate(['/app/leads']);
+          // Stay on page and refresh data so user can perform follow-up actions (e.g., convert)
+          this.reloadLeadDetails(this.editingId!);
         }
         this.statusApiError.set(null);
         // Close inline closure form on successful save

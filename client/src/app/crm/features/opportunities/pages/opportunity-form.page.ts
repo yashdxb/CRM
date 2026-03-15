@@ -3180,6 +3180,21 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     return null;
   }
 
+  protected stageRequirementHint(): string | null {
+    const stage = this.selectedStage || 'Prospecting';
+    if (stage === 'Prospecting') return null;
+    const needs: string[] = [];
+    if (['Qualification', 'Proposal', 'Negotiation'].includes(stage)) needs.push('amount');
+    if (['Qualification', 'Proposal', 'Negotiation', 'Commit'].includes(stage)) {
+      needs.push('close date', 'pain summary', 'requirements', 'buying process', 'success criteria');
+    }
+    if (['Proposal', 'Negotiation', 'Commit'].includes(stage)) needs.push('buying role contact');
+    if (stage === 'Commit') needs.push('close date');
+    if (!needs.length) return null;
+    const unique = [...new Set(needs)];
+    return `${stage} requires: ${unique.join(', ')}.`;
+  }
+
   private validateStageRequirements(): string | null {
     const stage = this.selectedStage;
     const amountRequired = ['Qualification', 'Proposal', 'Negotiation'].includes(stage);

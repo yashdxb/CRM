@@ -625,11 +625,9 @@ test.describe('Lead Management', () => {
     }
     expect(updateRes).toBeTruthy();
 
-    // After successful update the page navigates to /app/leads; go back to edit
-    await page.waitForURL('**/app/leads', { timeout: 15_000 });
-    await page.goto(`/app/leads/${leadId}/edit`);
-    await page.locator('form.lead-form').waitFor({ state: 'visible' });
+    // After successful update the page stays on the lead edit form (reloads in-place)
     await page.waitForLoadState('networkidle');
+    await page.locator('form.lead-form').waitFor({ state: 'visible', timeout: 15_000 });
 
     // Click Convert Lead primary action button (appears because status is Qualified)
     const convertBtn = page.locator('.lead-status-rail__primary:has-text("Convert")').first();

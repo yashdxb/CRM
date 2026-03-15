@@ -178,9 +178,9 @@
                     <div
                       class="lead-stepper__step"
                       [attr.data-state]="step.state"
-                      [class.lead-stepper__step--clickable]="step.state === 'available' || step.state === 'completed'"
-                      (click)="step.state === 'available' || step.state === 'completed' ? onStepClick(step) : null"
-                      [pTooltip]="step.unlockHint ?? undefined"
+                      [class.lead-stepper__step--clickable]="step.state !== 'current'"
+                      (click)="step.state !== 'current' ? onStepClick(step) : null"
+                      [pTooltip]="step.state === 'locked' ? (step.unlockHint ? step.unlockHint + ' (click to go there)' : undefined) : undefined"
                       tooltipPosition="top"
                     >
                       <div class="lead-stepper__icon">
@@ -208,6 +208,7 @@
                     <span class="lead-status-rail__value">{{ form.status }}</span>
                   </div>
                   <p class="lead-status-rail__instruction" *ngIf="currentStatusInstruction() as instruction">{{ instruction }}</p>
+                  <span class="lead-status-rail__hint">Click an available step above to change status</span>
                   <ul class="lead-status-rail__blockers" *ngIf="progressActionBlockedReasons().length">
                     <li *ngFor="let blocker of progressActionBlockedReasons()">{{ blocker }}</li>
                   </ul>
@@ -1196,7 +1197,7 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-budgetAvailability" class="field-hint">Has the lead confirmed a budget for this initiative?</span>
+                <span id="hint-budgetAvailability" class="field-hint">Confirmed = budget stated in writing · Likely = verbal indication · Unknown = not yet discussed</span>
               </div>
               <div class="form-field">
                 <label for="lead-budgetEvidence">Evidence source</label>
@@ -1254,7 +1255,7 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-readinessToSpend" class="field-hint">How willing is the lead to commit funds in the near term?</span>
+                <span id="hint-readinessToSpend" class="field-hint">Confirmed = ready to purchase this quarter · Likely = evaluating options · Unknown = timeline unclear</span>
               </div>
               <div class="form-field">
                 <label for="lead-readinessEvidence">Evidence source</label>
@@ -1312,7 +1313,7 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-buyingTimeline" class="field-hint">When does the lead expect to make a purchase decision?</span>
+                <span id="hint-buyingTimeline" class="field-hint">Confirmed = decision date set · Likely = within 6 months · Unknown = no timeline shared</span>
               </div>
               <div class="form-field">
                 <label for="lead-timelineEvidence">Evidence source</label>
@@ -1370,7 +1371,7 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-problemSeverity" class="field-hint">How critical is the problem this lead is trying to solve?</span>
+                <span id="hint-problemSeverity" class="field-hint">Confirmed = urgent pain documented · Likely = acknowledged need · Unknown = no pain articulated</span>
               </div>
               <div class="form-field">
                 <label for="lead-problemEvidence">Evidence source</label>
@@ -1428,7 +1429,7 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-economicBuyer" class="field-hint">Has the decision-maker with budget authority been identified?</span>
+                <span id="hint-economicBuyer" class="field-hint">Confirmed = economic buyer identified and engaged · Likely = contact known but not confirmed · Unknown = buyer unknown</span>
               </div>
               <div class="form-field">
                 <label for="lead-economicBuyerEvidence">Evidence source</label>

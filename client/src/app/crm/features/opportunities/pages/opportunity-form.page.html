@@ -258,6 +258,7 @@
                   placeholder="Pick stage"
                   styleClass="w-full"
                 ></p-select>
+                <small class="field-hint" *ngIf="stageRequirementHint() as stageHint">{{ stageHint }}</small>
                 <small class="field-hint" *ngIf="demoOutcomeGuidance() as guidance">{{ guidance }}</small>
                 <small class="field-hint" *ngIf="discoveryGuidance() as discoveryGuidance">{{ discoveryGuidance }}</small>
                 <small class="field-hint" *ngIf="decisionMakerGuidance() as decisionGuidance">{{ decisionGuidance }}</small>

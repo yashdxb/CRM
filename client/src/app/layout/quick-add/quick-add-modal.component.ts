@@ -46,7 +46,6 @@ export class QuickAddModalComponent {
   private readonly activityData = inject(ActivityDataService);
 
   readonly visible = model(false);
-  readonly initialType = model<QuickAddType>('lead');
   readonly close = output<void>();
   readonly created = output<void>();
 

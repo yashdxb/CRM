@@ -1,6 +1,6 @@
 import { Component, computed, DestroyRef, ElementRef, inject, signal, HostListener, effect, ViewChild } from '@angular/core';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { RouterOutlet } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { NgClass, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NotificationContainerComponent } from '../core/notifications';
@@ -114,6 +114,7 @@ export class ShellComponent {
   private readonly directChatService = inject(DirectChatService);
   private readonly notificationService = inject(NotificationService);
   private readonly attachmentDataService = inject(AttachmentDataService);
+  private readonly router = inject(Router);
   protected readonly currentUserId = readUserId();
 
   protected readonly onlineUsers = toSignal(this.presenceService.onlineUsers$, { initialValue: new Set<string>() });
@@ -341,10 +342,17 @@ export class ShellComponent {
   }
 
   protected openQuickAdd(type?: QuickAddType) {
-    this.quickAddType.set(type ?? 'lead');
+    const resolved = type ?? this.inferQuickAddType();
+    this.quickAddModal?.open(resolved);
+    this.quickAddType.set(resolved);
     this.quickAddVisible.set(true);
-    // Allow modal to render, then call open() to load lookups
-    setTimeout(() => this.quickAddModal?.open(type), 0);
+  }
+
+  private inferQuickAddType(): QuickAddType {
+    const url = this.router.url;
+    if (url.startsWith('/app/contacts')) return 'contact';
+    if (url.startsWith('/app/activities')) return 'activity';
+    return 'lead';
   }
 
   protected onQuickAddCreated() {

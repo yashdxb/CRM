@@ -348,7 +348,6 @@
     <app-quick-add-modal
       #quickAddModal
       [visible]="quickAddVisible()"
-      [initialType]="quickAddType()"
       (close)="quickAddVisible.set(false)"
       (created)="onQuickAddCreated()"
     />
