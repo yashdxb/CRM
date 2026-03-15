@@ -1,6 +1,11 @@
 <section class="properties-card">
-  <h3>Properties</h3>
-  <p>Focus one node at a time and configure both its behavior and outgoing branches.</p>
+  <div class="properties-card__header">
+    <div>
+      <h3>Configuration</h3>
+      <p>Focus one node at a time. Configure the selected action, then label the paths leaving it.</p>
+    </div>
+    <span class="properties-pill" *ngIf="selectedNode">{{ selectedNode.type | titlecase }}</span>
+  </div>
 
   <label>Selected node</label>
   <p-select
@@ -17,6 +22,11 @@
   <div class="empty" *ngIf="!selectedNode">Select a node to edit its behavior.</div>
 
   <ng-container *ngIf="selectedNode as node">
+    <section class="selected-node-banner">
+      <strong>{{ node.label || (node.type | titlecase) }}</strong>
+      <span>{{ selectedConnections.length }} outgoing path{{ selectedConnections.length === 1 ? '' : 's' }}</span>
+    </section>
+
     <article class="step">
       <div class="step-header">
         <strong>{{ node.type | titlecase }}</strong>

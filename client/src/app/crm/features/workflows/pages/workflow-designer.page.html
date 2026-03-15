@@ -19,8 +19,41 @@
     </div>
   </header>
 
+  <section class="workflow-confidence-strip" *ngIf="!loading()">
+    <article class="confidence-step">
+      <span class="confidence-step__index">1</span>
+      <div>
+        <strong>Set scope</strong>
+        <p>Choose the trigger, stage, and pipeline first so the automation has a clear operating boundary.</p>
+      </div>
+    </article>
+    <article class="confidence-step">
+      <span class="confidence-step__index">2</span>
+      <div>
+        <strong>Build the path</strong>
+        <p>Add approval and action nodes, then click nodes in the canvas to focus the exact behavior you want to configure.</p>
+      </div>
+    </article>
+    <article class="confidence-step confidence-step--accent">
+      <span class="confidence-step__index">3</span>
+      <div>
+        <strong>Validate before publish</strong>
+        <p>Use validation as the release gate. Branch labels and node rules should be clean before a workflow goes live.</p>
+      </div>
+    </article>
+  </section>
+
   <section class="scope-panel" *ngIf="!loading()">
-    <h2 class="section-title">Workflow Scope</h2>
+    <div class="panel-heading">
+      <div>
+        <h2 class="section-title">Workflow Scope</h2>
+        <p>Define where this automation is allowed to run and what business event should trigger it.</p>
+      </div>
+      <div class="scope-state-pill">
+        <span>{{ workflow().scope.status | titlecase }}</span>
+        <strong>v{{ workflow().scope.version }}</strong>
+      </div>
+    </div>
     <div class="template-bar">
       <label>
         <span>Template</span>
@@ -124,6 +157,16 @@
     ></app-node-palette>
 
     <section class="canvas-shell">
+      <div class="canvas-shell__header">
+        <div>
+          <h3>Execution canvas</h3>
+          <p>Build the real path. Click a node to edit it. Labeled branches stay visible on the canvas.</p>
+        </div>
+        <div class="canvas-shell__meta">
+          <span>{{ workflow().nodes.length }} nodes</span>
+          <span>{{ workflow().connections.length }} connections</span>
+        </div>
+      </div>
       <app-workflow-canvas
         [workflow]="workflow()"
         [selectedNodeId]="selectedNodeId()"

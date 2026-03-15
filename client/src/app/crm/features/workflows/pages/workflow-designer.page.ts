@@ -1,4 +1,4 @@
-import { NgFor, NgIf } from '@angular/common';
+import { NgFor, NgIf, TitleCasePipe } from '@angular/common';
 import { Component, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -26,6 +26,7 @@ import { WorkflowDefinitionService } from '../services/workflow-definition.servi
   imports: [
     NgIf,
     NgFor,
+    TitleCasePipe,
     FormsModule,
     ButtonModule,
     SelectModule,

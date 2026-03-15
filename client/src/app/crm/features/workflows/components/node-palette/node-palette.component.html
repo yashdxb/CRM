@@ -1,6 +1,11 @@
 <section class="palette-card">
-  <h3>Node Palette</h3>
-  <p>Drag CRM workflow nodes to canvas.</p>
+  <div class="palette-card__header">
+    <div>
+      <h3>Build blocks</h3>
+      <p>Start with the path you want to automate. Add only the nodes you need.</p>
+    </div>
+    <span class="palette-pill">Drag or quick-add</span>
+  </div>
 
   <span class="p-input-icon-left">
     <i class="pi pi-search"></i>
@@ -41,5 +46,5 @@
     <i class="pi pi-plus"></i>
     <span>Quick Add Approval Step</span>
   </button>
-  <small>{{ filteredTemplates.length }} node types shown. Start and End are always kept by validation.</small>
+  <small>{{ filteredTemplates.length }} node types shown. Start and End are managed automatically by validation.</small>
 </section>
