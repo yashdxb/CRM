@@ -96,6 +96,8 @@ What this changed in practice:
 The canvas now:
 - preserves existing connection metadata when edges are recreated
 - renders more meaningful labels for configured nodes such as delay, email, notification, CRM update, and activity
+- supports direct node selection from the canvas overlay
+- renders branch labels on the canvas for labeled outgoing paths
 
 Updated file:
 - [workflow-canvas.component.ts](/Users/yasserahmed/Desktop/Development%20Projects/CRM-Enterprise/client/src/app/crm/features/workflows/components/workflow-canvas/workflow-canvas.component.ts)
@@ -126,22 +128,21 @@ It now has a real schema and validation path for general workflow nodes, which i
 
 Current limitation:
 - non-approval nodes are now configurable and validated, but the runtime is still mostly deal-approval oriented
-- selection focus is panel-driven and auto-selection driven; direct canvas click-to-edit is still the next UX step
+- branch labels are visible on-canvas, but they are still rendered from workflow geometry rather than true routed-edge layout
 
 ## Next
 
-1. Add canvas-driven node selection so clicking a node focuses the properties panel directly.
-2. Render branch labels visually on the canvas, not only in the side panel.
-3. Add workflow simulation:
+1. Add workflow simulation:
    - sample record
    - chosen trigger
    - traversed nodes
    - resulting actions
-4. Add executable real-estate templates:
+2. Add executable real-estate templates:
    - new inquiry follow-up SLA
    - showing follow-up
    - low-readiness review
    - price-drop escalation
+3. Replace overlay branch labels with routed-edge label placement tied to the actual rendered connection path.
 
 ## Later
 

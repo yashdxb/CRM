@@ -1,3 +1,4 @@
+import { NgFor } from '@angular/common';
 import { Component, ElementRef, EventEmitter, Injector, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { DealApprovalWorkflowDefinition, WorkflowConnection, WorkflowNode, WorkflowStep } from '../../models/workflow-definition.model';
 
@@ -6,13 +7,41 @@ type ReteEditorInstance = { destroy?: () => void };
 @Component({
   selector: 'app-workflow-canvas',
   standalone: true,
+  imports: [NgFor],
   template: `
-    <div
-      class="workflow-canvas-host"
-      #canvasHost
-      (dragover)="onDragOver($event)"
-      (drop)="onDrop($event)"
-    ></div>
+    <div class="workflow-canvas-shell">
+      <div
+        class="workflow-canvas-host"
+        #canvasHost
+        (dragover)="onDragOver($event)"
+        (drop)="onDrop($event)"
+      ></div>
+
+      <div class="workflow-canvas-overlay" aria-hidden="true">
+        <button
+          *ngFor="let node of workflow.nodes"
+          type="button"
+          class="node-selection-chip"
+          [class.is-selected]="node.id === selectedNodeId"
+          [style.left.px]="node.x"
+          [style.top.px]="node.y"
+          [attr.data-node-id]="node.id"
+          (click)="selectNode(node.id)"
+        >
+          <span class="node-selection-chip__type">{{ node.type }}</span>
+          <span class="node-selection-chip__label">{{ nodeLabel(node, stepByNode) }}</span>
+        </button>
+
+        <div
+          *ngFor="let label of branchLabels()"
+          class="branch-label"
+          [style.left.px]="label.x"
+          [style.top.px]="label.y"
+        >
+          <span>{{ label.text }}</span>
+        </div>
+      </div>
+    </div>
   `,
   styleUrl: './workflow-canvas.component.scss'
 })
@@ -31,7 +60,9 @@ export class WorkflowCanvasComponent implements OnChanges, OnDestroy {
   ]);
 
   @Input({ required: true }) workflow!: DealApprovalWorkflowDefinition;
+  @Input() selectedNodeId: string | null = null;
   @Output() workflowChange = new EventEmitter<DealApprovalWorkflowDefinition>();
+  @Output() selectionChange = new EventEmitter<string | null>();
 
   @ViewChild('canvasHost', { static: true })
   private canvasHost?: ElementRef<HTMLDivElement>;
@@ -39,6 +70,7 @@ export class WorkflowCanvasComponent implements OnChanges, OnDestroy {
   private reteInstance: ReteEditorInstance | null = null;
   private editorRef: any | null = null;
   private areaRef: any | null = null;
+  protected stepByNode = new Map<string, WorkflowStep>();
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['workflow']) {
@@ -97,9 +129,33 @@ export class WorkflowCanvasComponent implements OnChanges, OnDestroy {
     this.addNodeAt(nodeType as WorkflowNode['type'], x, y);
   }
 
+  protected selectNode(nodeId: string) {
+    this.selectionChange.emit(nodeId);
+  }
+
   private syncNodePosition(nodeId: string, x: number, y: number) {
     const nodes = this.workflow.nodes.map((node) => (node.id === nodeId ? { ...node, x, y } : node));
     this.workflowChange.emit({ ...this.workflow, nodes });
+  }
+
+  protected branchLabels() {
+    const nodes = new Map(this.workflow.nodes.map((node) => [node.id, node]));
+    return (this.workflow.connections ?? [])
+      .filter((connection) => !!connection.label?.trim() || !!connection.branchKey?.trim())
+      .map((connection) => {
+        const source = nodes.get(connection.source);
+        const target = nodes.get(connection.target);
+        if (!source || !target) {
+          return null;
+        }
+
+        return {
+          text: connection.label?.trim() || connection.branchKey?.trim() || '',
+          x: Math.round((source.x + target.x) / 2) + 70,
+          y: Math.round((source.y + target.y) / 2) + 14
+        };
+      })
+      .filter((label): label is { text: string; x: number; y: number } => !!label);
   }
 
   private syncConnections(connections: WorkflowConnection[]) {
@@ -179,7 +235,7 @@ export class WorkflowCanvasComponent implements OnChanges, OnDestroy {
     return edges;
   }
 
-  private nodeLabel(node: WorkflowNode, indexByNode: Map<string, WorkflowStep>): string {
+  protected nodeLabel(node: WorkflowNode, indexByNode: Map<string, WorkflowStep>): string {
     if (node.label?.trim()) return node.label.trim();
     if (node.type === 'start') return 'Start';
     if (node.type === 'end') return 'End';
@@ -259,13 +315,13 @@ export class WorkflowCanvasComponent implements OnChanges, OnDestroy {
     const accumulating = (AreaExtensions as any).accumulateOnCtrl();
     (AreaExtensions as any).selectableNodes(area, selector, { accumulating });
 
-    const stepByNode = new Map(this.workflow.steps.map((step) => [step.nodeId as string, step]));
+    this.stepByNode = new Map(this.workflow.steps.map((step) => [step.nodeId as string, step]));
     const nodeInstances = new Map<string, InstanceType<typeof WorkflowNodeClass>>();
 
     for (const node of this.workflow.nodes) {
       const instance = new WorkflowNodeClass(
         node.id,
-        this.nodeLabel(node, stepByNode),
+        this.nodeLabel(node, this.stepByNode),
         node.type !== 'start',
         node.type !== 'end'
       );

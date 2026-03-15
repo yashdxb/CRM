@@ -4,6 +4,10 @@ const API_BASE_URL = process.env.API_BASE_URL ?? process.env.E2E_API_URL ?? 'htt
 const ADMIN_EMAIL = 'yasser.ahamed@live.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'yAsh@123';
 
+async function expectWorkflowHeading(page) {
+  await expect(page.getByRole('heading', { name: /workflow builder/i })).toBeVisible();
+}
+
 async function login(page, request) {
   const response = await request.post(`${API_BASE_URL}/api/auth/login`, {
     headers: {
@@ -13,7 +17,10 @@ async function login(page, request) {
     data: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD }
   });
 
-  const payload = await response.json();
+  expect(response.ok()).toBeTruthy();
+  const payloadText = await response.text();
+  expect(payloadText).toBeTruthy();
+  const payload = JSON.parse(payloadText);
   if (!payload?.accessToken) {
     throw new Error('Unable to authenticate against the API for workflow designer test.');
   }
@@ -30,7 +37,7 @@ test('workflow designer shows draggable palette item and supports drop add', asy
   await login(page, request);
   await page.goto('/app/workflows/designer');
 
-  await expect(page.getByRole('heading', { name: 'Approval Workflow Builder' })).toBeVisible();
+  await expectWorkflowHeading(page);
   await expect(page.getByText('Template', { exact: true })).toBeVisible();
   await expect(page.getByText('Trigger', { exact: true })).toBeVisible();
 
@@ -44,14 +51,21 @@ test('workflow designer shows draggable palette item and supports drop add', asy
   await expect(draggableNode).toBeVisible();
   await expect(conditionNode).toBeVisible();
 
-  const stepCountBefore = await page.locator('.properties-card .step').count();
+  const nodeCountBefore = await page.locator('.node-selection-chip').count();
   await page.getByRole('button', { name: /Quick Add Approval Step/i }).click();
-  await expect.poll(async () => page.locator('.properties-card .step').count()).toBeGreaterThan(stepCountBefore);
+  await expect.poll(async () => page.locator('.node-selection-chip').count()).toBeGreaterThan(nodeCountBefore);
 
   await page.getByRole('button', { name: /Add Condition node/i }).click();
   await page.getByRole('button', { name: /Add Notification node/i }).click();
-  const notificationCard = page.locator('.properties-card .step', { hasText: 'Notification' }).first();
-  await notificationCard.locator('input').last().fill('Finance Alert');
+
+  const notificationChip = page.locator('.node-selection-chip', { hasText: 'Notification' }).last();
+  await notificationChip.click({ force: true });
+  await expect(page.locator('.properties-card .step-header strong')).toHaveText('Notification');
+  await page.locator('.properties-card input[placeholder="Notification"]').fill('Finance Alert');
+
+  const conditionChip = page.locator('.node-selection-chip', { hasText: 'Condition' }).last();
+  await conditionChip.click({ force: true });
+  await expect(page.locator('.properties-card .step-header strong')).toHaveText('Condition');
 
   const saveRequest = page.waitForRequest((request) =>
     request.method() === 'PUT' && request.url().includes('/api/workflows/definitions/deal-approval')
@@ -107,7 +121,7 @@ test('workflow publish validation rejects invalid controlled stage values', asyn
   const accessToken = await login(page, request);
   await page.goto('/app/workflows/designer');
 
-  await expect(page.getByRole('heading', { name: 'Approval Workflow Builder' })).toBeVisible();
+  await expectWorkflowHeading(page);
 
   const currentDefinitionResponse = await request.get(`${API_BASE_URL}/api/workflows/definitions/deal-approval`, {
     headers: {

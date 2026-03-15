@@ -126,7 +126,9 @@
     <section class="canvas-shell">
       <app-workflow-canvas
         [workflow]="workflow()"
+        [selectedNodeId]="selectedNodeId()"
         (workflowChange)="onCanvasChange($event)"
+        (selectionChange)="selectNode($event)"
       ></app-workflow-canvas>
     </section>
 
