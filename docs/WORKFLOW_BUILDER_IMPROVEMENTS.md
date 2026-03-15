@@ -120,14 +120,42 @@ The implemented `Now` scope was validated with:
 - `npm run build`
 - `npm exec playwright test e2e/smoke.spec.ts e2e/workflow-designer.spec.ts --project=chromium`
 
+## Additional delivered execution support
+
+The approval runtime now executes two non-approval node types inside the published deal workflow path:
+- `crm-update`
+- `activity`
+- `notification`
+
+Current runtime behavior:
+- the published graph is converted into an execution plan
+- workflow actions execute from `start` until the next approval checkpoint
+- after an approval decision, execution resumes until the next approval node or `end`
+- approval-chain storage remains backward compatible with older `StepsJson` payloads
+
+Current supported CRM update targets:
+- `stage`
+- `status`
+- `forecastCategory`
+
+Current supported activity behavior:
+- creates an `Activity` linked to the deal/opportunity
+- supports owner strategies for `owner`, `manager`, and `approver`
+- supports due-date offsets and activity type mapping
+
 ## Effect of the current implementation
 
 The builder is still primarily a deal-approval workflow builder at runtime, but it is no longer only a diagramming surface for non-approval nodes.
 
-It now has a real schema and validation path for general workflow nodes, which is the required foundation before broader execution support can be added.
+It now has:
+- a real schema for general workflow nodes
+- validation for configurable nodes
+- direct canvas selection and branch visibility
+- executable support for `crm-update`, `activity`, and `notification` nodes inside the deal-approval flow
 
 Current limitation:
-- non-approval nodes are now configurable and validated, but the runtime is still mostly deal-approval oriented
+- non-approval execution currently exists only inside the deal-approval runtime path
+- `email` and `delay` nodes are still modeled but not executed
 - branch labels are visible on-canvas, but they are still rendered from workflow geometry rather than true routed-edge layout
 
 ## Next
@@ -137,12 +165,15 @@ Current limitation:
    - chosen trigger
    - traversed nodes
    - resulting actions
-2. Add executable real-estate templates:
+2. Add runtime support for:
+   - `email`
+   - `delay`
+3. Add executable real-estate templates:
    - new inquiry follow-up SLA
    - showing follow-up
    - low-readiness review
    - price-drop escalation
-3. Replace overlay branch labels with routed-edge label placement tied to the actual rendered connection path.
+4. Replace overlay branch labels with routed-edge label placement tied to the actual rendered connection path.
 
 ## Later
 

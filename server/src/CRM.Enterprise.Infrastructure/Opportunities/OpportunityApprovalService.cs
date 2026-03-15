@@ -5,6 +5,7 @@ using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Application.Audit;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Workflows;
@@ -351,7 +352,6 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         CancellationToken cancellationToken = default)
     {
         var opportunity = await _dbContext.Opportunities
-            .AsNoTracking()
             .FirstOrDefaultAsync(o => o.Id == opportunityId && !o.IsDeleted, cancellationToken);
         if (opportunity is null)
         {
@@ -360,13 +360,18 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
 
         var tenantId = _tenantProvider.TenantId;
         var workflowDefinition = await ResolveApprovalWorkflowDefinitionAsync(tenantId, cancellationToken);
-        var workflow = DealApprovalWorkflowMapper.ToPolicy(workflowDefinition);
-        if (!workflow.Enabled || workflow.Steps.Count == 0)
+        if (!workflowDefinition.Enabled)
         {
             return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval workflow must be configured before requesting approval.");
         }
 
         var normalizedPurpose = string.IsNullOrWhiteSpace(purpose) ? "Close" : purpose.Trim();
+        var executionPlan = await BuildExecutionPlanAsync(workflowDefinition, opportunity, normalizedPurpose, amount, cancellationToken);
+        var steps = GetApprovalSteps(executionPlan);
+        if (steps.Count == 0)
+        {
+            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval workflow has no matching steps for this request.");
+        }
 
         var existingPending = await _dbContext.OpportunityApprovalChains
             .AsNoTracking()
@@ -388,21 +393,26 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             }
         }
 
-        var steps = workflow.Steps
-            .Where(step =>
-                (string.IsNullOrWhiteSpace(step.Purpose) || string.Equals(step.Purpose, normalizedPurpose, StringComparison.OrdinalIgnoreCase)) &&
-                (!step.AmountThreshold.HasValue || amount >= step.AmountThreshold.Value))
-            .OrderBy(step => step.Order)
-            .ToList();
-
-        if (steps.Count == 0)
-        {
-            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval workflow has no matching steps for this request.");
-        }
-
         if (steps.Any(step => string.IsNullOrWhiteSpace(step.ApproverRole)))
         {
             return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval workflow steps must include an approver role.");
+        }
+
+        var firstExecution = await ExecutePlanUntilNextApprovalAsync(
+            executionPlan,
+            approvalStepOrder: null,
+            opportunity,
+            actor,
+            cancellationToken);
+        if (firstExecution.Error is not null)
+        {
+            return OpportunityOperationResult<OpportunityApprovalDto>.Fail(firstExecution.Error);
+        }
+
+        var firstStep = firstExecution.NextApprovalStep;
+        if (firstStep is null)
+        {
+            return OpportunityOperationResult<OpportunityApprovalDto>.Fail("Approval workflow did not resolve a pending approval step.");
         }
 
         var chain = new OpportunityApprovalChain
@@ -411,17 +421,16 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             RequestedByUserId = actor.UserId,
             Purpose = normalizedPurpose,
             Status = "Pending",
-            CurrentStep = steps[0].Order,
+            CurrentStep = firstStep.Order,
             TotalSteps = steps.Count,
             WorkflowKey = "deal-approval",
             WorkflowName = string.IsNullOrWhiteSpace(workflowDefinition.Scope.Name) ? "Deal Approval" : workflowDefinition.Scope.Name.Trim(),
             WorkflowVersion = Math.Max(1, workflowDefinition.Scope.Version),
-            StepsJson = JsonSerializer.Serialize(steps, JsonOptions),
+            StepsJson = JsonSerializer.Serialize(executionPlan, JsonOptions),
             RequestedOn = DateTime.UtcNow
         };
         _dbContext.OpportunityApprovalChains.Add(chain);
 
-        var firstStep = steps.First();
         var firstRouting = await ResolveApprovalRoutingAsync(firstStep, cancellationToken);
         if (!firstRouting.Success)
         {
@@ -519,14 +528,19 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
 
         OpportunityApprovalChain? chain = null;
         ApprovalWorkflowStep? currentWorkflowStep = null;
+        WorkflowExecutionPlan? executionPlan = null;
+        Opportunity? opportunity = null;
         if (approval.ApprovalChainId.HasValue)
         {
             chain = await _dbContext.OpportunityApprovalChains
                 .FirstOrDefaultAsync(c => c.Id == approval.ApprovalChainId, cancellationToken);
+            executionPlan = DeserializeExecutionPlan(chain?.StepsJson);
             currentWorkflowStep = chain is null
                 ? null
-                : (JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(chain.StepsJson, JsonOptions) ?? new List<ApprovalWorkflowStep>())
+                : GetApprovalSteps(executionPlan)
                     .FirstOrDefault(step => step.Order == approval.StepOrder);
+            opportunity = await _dbContext.Opportunities
+                .FirstOrDefaultAsync(item => item.Id == approval.OpportunityId && !item.IsDeleted, cancellationToken);
         }
 
         if (!await IsApproverAsync(actor.UserId, approval.ApproverRoleId, approverRole, currentWorkflowStep?.MinimumSecurityLevelId, cancellationToken))
@@ -583,8 +597,20 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             }
             else
             {
-                var steps = JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(chain.StepsJson, JsonOptions) ?? new List<ApprovalWorkflowStep>();
-                var nextStep = steps.FirstOrDefault(s => s.Order > approval.StepOrder);
+                var continuation = opportunity is null
+                    ? WorkflowContinuationResult.Fail("Opportunity no longer exists for workflow execution.")
+                    : await ExecutePlanUntilNextApprovalAsync(
+                        executionPlan ?? CreateLegacyExecutionPlan(chain),
+                        approval.StepOrder,
+                        opportunity,
+                        actor,
+                        cancellationToken);
+                if (continuation.Error is not null)
+                {
+                    return OpportunityOperationResult<OpportunityApprovalDto>.Fail(continuation.Error);
+                }
+
+                var nextStep = continuation.NextApprovalStep;
                 if (nextStep is null)
                 {
                     chain.Status = "Approved";
@@ -737,8 +763,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         var pendingGenericStep = genericSteps.FirstOrDefault(s => string.Equals(s.Status, "Pending", StringComparison.OrdinalIgnoreCase));
         var pendingStepOrder = pendingGenericStep?.StepOrder;
 
-        var chainWorkflowSteps = JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(chain.StepsJson, JsonOptions)
-                                 ?? new List<ApprovalWorkflowStep>();
+        var chainWorkflowSteps = GetApprovalSteps(DeserializeExecutionPlan(chain.StepsJson));
 
         if (pendingGenericStep is not null)
         {
@@ -1001,7 +1026,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         }
 
         var chainSteps = chain is not null
-            ? (JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(chain.StepsJson, JsonOptions) ?? new List<ApprovalWorkflowStep>())
+            ? GetApprovalSteps(DeserializeExecutionPlan(chain.StepsJson))
             : new List<ApprovalWorkflowStep>();
 
         if (chainSteps.Count == 0)
@@ -1305,6 +1330,686 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         }
     }
 
+    private async Task<WorkflowExecutionPlan> BuildExecutionPlanAsync(
+        DealApprovalWorkflowDefinition definition,
+        Opportunity opportunity,
+        string purpose,
+        decimal amount,
+        CancellationToken cancellationToken)
+    {
+        var normalized = DealApprovalWorkflowMapper.Normalize(definition);
+        var nodesById = normalized.Nodes
+            .Where(node => !string.IsNullOrWhiteSpace(node.Id))
+            .ToDictionary(node => node.Id.Trim(), node => node, StringComparer.OrdinalIgnoreCase);
+        var outgoing = normalized.Connections
+            .Where(connection => !string.IsNullOrWhiteSpace(connection.Source) && !string.IsNullOrWhiteSpace(connection.Target))
+            .GroupBy(connection => connection.Source.Trim(), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+        var approvalSteps = normalized.Steps
+            .Where(step =>
+                (string.IsNullOrWhiteSpace(step.Purpose) || string.Equals(step.Purpose, purpose, StringComparison.OrdinalIgnoreCase)) &&
+                (!step.AmountThreshold.HasValue || amount >= step.AmountThreshold.Value))
+            .OrderBy(step => step.Order)
+            .ToDictionary(step => step.NodeId ?? $"approval-step-{step.Order}", step => step, StringComparer.OrdinalIgnoreCase);
+
+        var start = normalized.Nodes.FirstOrDefault(node => string.Equals(node.Type, "start", StringComparison.OrdinalIgnoreCase));
+        if (start is null)
+        {
+            return new WorkflowExecutionPlan(Array.Empty<WorkflowExecutionPlanItem>());
+        }
+
+        var stageName = await ResolveStageNameAsync(opportunity.StageId, cancellationToken);
+        var state = new WorkflowRuntimeState(
+            Amount: amount,
+            Purpose: purpose,
+            Stage: stageName,
+            ForecastCategory: opportunity.ForecastCategory,
+            IsClosed: opportunity.IsClosed,
+            IsWon: opportunity.IsWon);
+
+        var items = new List<WorkflowExecutionPlanItem>();
+        var current = start;
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { start.Id };
+        var sequence = 1;
+
+        while (sequence <= 100)
+        {
+            if (!outgoing.TryGetValue(current.Id, out var candidates) || candidates.Count == 0)
+            {
+                break;
+            }
+
+            var selectedConnection = SelectNextConnection(current, candidates, state);
+            if (selectedConnection is null || !nodesById.TryGetValue(selectedConnection.Target, out var nextNode))
+            {
+                break;
+            }
+
+            if (!visited.Add(nextNode.Id) && !string.Equals(nextNode.Type, "end", StringComparison.OrdinalIgnoreCase))
+            {
+                break;
+            }
+
+            var normalizedType = nextNode.Type.Trim();
+            switch (normalizedType)
+            {
+                case "approval":
+                    if (approvalSteps.TryGetValue(nextNode.Id, out var approvalStep))
+                    {
+                        items.Add(new WorkflowExecutionPlanItem(
+                            sequence++,
+                            nextNode.Id,
+                            normalizedType,
+                            new ApprovalWorkflowStep(
+                                approvalStep.Order,
+                                approvalStep.ApproverRoleId,
+                                approvalStep.ApproverRole,
+                                approvalStep.MinimumSecurityLevelId,
+                                approvalStep.AmountThreshold,
+                                approvalStep.Purpose,
+                                approvalStep.NodeId),
+                            nextNode.Config));
+                    }
+                    break;
+
+                case "crm-update":
+                    items.Add(new WorkflowExecutionPlanItem(sequence++, nextNode.Id, normalizedType, null, nextNode.Config));
+                    state = ApplyCrmUpdateToState(state, nextNode.Config?.CrmUpdate);
+                    break;
+
+                case "activity":
+                    items.Add(new WorkflowExecutionPlanItem(sequence++, nextNode.Id, normalizedType, null, nextNode.Config));
+                    break;
+
+                case "condition":
+                    break;
+
+                case "notification":
+                case "delay":
+                case "email":
+                    items.Add(new WorkflowExecutionPlanItem(sequence++, nextNode.Id, normalizedType, null, nextNode.Config));
+                    break;
+
+                case "end":
+                    return new WorkflowExecutionPlan(items);
+            }
+
+            current = nextNode;
+        }
+
+        return new WorkflowExecutionPlan(items);
+    }
+
+    private async Task<WorkflowContinuationResult> ExecutePlanUntilNextApprovalAsync(
+        WorkflowExecutionPlan plan,
+        int? approvalStepOrder,
+        Opportunity opportunity,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        var items = plan.Items.OrderBy(item => item.Sequence).ToList();
+        var startIndex = 0;
+        if (approvalStepOrder.HasValue)
+        {
+            startIndex = items.FindIndex(item => item.ApprovalStep?.Order == approvalStepOrder.Value);
+            startIndex = startIndex < 0 ? items.Count : startIndex + 1;
+        }
+
+        for (var index = startIndex; index < items.Count; index++)
+        {
+            var item = items[index];
+            if (item.ApprovalStep is not null)
+            {
+                return WorkflowContinuationResult.Next(item.ApprovalStep);
+            }
+
+            switch (item.NodeType)
+            {
+                case "crm-update":
+                {
+                    var error = await ExecuteCrmUpdateNodeAsync(opportunity, item.Config?.CrmUpdate, actor, cancellationToken);
+                    if (error is not null)
+                    {
+                        return WorkflowContinuationResult.Fail(error);
+                    }
+
+                    break;
+                }
+
+                case "activity":
+                {
+                    var nextApproval = items.Skip(index + 1).Select(candidate => candidate.ApprovalStep).FirstOrDefault(step => step is not null);
+                    var error = await ExecuteActivityNodeAsync(opportunity, item.Config?.Activity, nextApproval, actor, cancellationToken);
+                    if (error is not null)
+                    {
+                        return WorkflowContinuationResult.Fail(error);
+                    }
+
+                    break;
+                }
+
+                case "notification":
+                {
+                    var nextApproval = items.Skip(index + 1).Select(candidate => candidate.ApprovalStep).FirstOrDefault(step => step is not null);
+                    var error = await ExecuteNotificationNodeAsync(opportunity, item.Config?.Notification, nextApproval, actor, cancellationToken);
+                    if (error is not null)
+                    {
+                        return WorkflowContinuationResult.Fail(error);
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        return WorkflowContinuationResult.Complete();
+    }
+
+    private async Task<string?> ExecuteCrmUpdateNodeAsync(
+        Opportunity opportunity,
+        DealApprovalWorkflowCrmUpdateConfigDefinition? config,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        var field = config?.Field?.Trim();
+        var value = config?.Value?.Trim();
+        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (string.Equals(field, "stage", StringComparison.OrdinalIgnoreCase))
+        {
+            var stage = await _dbContext.OpportunityStages
+                .FirstOrDefaultAsync(item => !item.IsDeleted && item.Name == value, cancellationToken);
+            if (stage is null)
+            {
+                return $"Workflow CRM update could not find opportunity stage '{value}'.";
+            }
+
+            if (opportunity.StageId != stage.Id)
+            {
+                var previousStageId = opportunity.StageId;
+                opportunity.StageId = stage.Id;
+                opportunity.UpdatedAtUtc = DateTime.UtcNow;
+                opportunity.UpdatedBy = actor.UserName;
+
+                _dbContext.OpportunityStageHistories.Add(new OpportunityStageHistory
+                {
+                    OpportunityId = opportunity.Id,
+                    OpportunityStageId = stage.Id,
+                    ChangedAtUtc = DateTime.UtcNow,
+                    ChangedBy = actor.UserName ?? SystemActor,
+                    Notes = "Workflow CRM update"
+                });
+
+                await _auditEvents.TrackAsync(
+                    new AuditEventEntry(
+                        OpportunityEntityType,
+                        opportunity.Id,
+                        "WorkflowCrmUpdate",
+                        "StageId",
+                        previousStageId.ToString(),
+                        stage.Id.ToString(),
+                        actor.UserId,
+                        actor.UserName),
+                    cancellationToken);
+            }
+
+            return null;
+        }
+
+        if (string.Equals(field, "forecastCategory", StringComparison.OrdinalIgnoreCase))
+        {
+            var previous = opportunity.ForecastCategory;
+            opportunity.ForecastCategory = value;
+            opportunity.UpdatedAtUtc = DateTime.UtcNow;
+            opportunity.UpdatedBy = actor.UserName;
+
+            await _auditEvents.TrackAsync(
+                new AuditEventEntry(
+                    OpportunityEntityType,
+                    opportunity.Id,
+                    "WorkflowCrmUpdate",
+                    "ForecastCategory",
+                    previous,
+                    value,
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
+
+            return null;
+        }
+
+        if (string.Equals(field, "status", StringComparison.OrdinalIgnoreCase))
+        {
+            var previous = opportunity.IsClosed
+                ? (opportunity.IsWon ? "Closed Won" : "Closed Lost")
+                : "Open";
+            var normalized = value.Trim();
+            if (normalized.Equals("Open", StringComparison.OrdinalIgnoreCase))
+            {
+                opportunity.IsClosed = false;
+                opportunity.IsWon = false;
+            }
+            else if (normalized.Equals("Closed Won", StringComparison.OrdinalIgnoreCase))
+            {
+                opportunity.IsClosed = true;
+                opportunity.IsWon = true;
+            }
+            else if (normalized.Equals("Closed Lost", StringComparison.OrdinalIgnoreCase))
+            {
+                opportunity.IsClosed = true;
+                opportunity.IsWon = false;
+            }
+            else
+            {
+                return $"Workflow CRM update does not support opportunity status '{value}'.";
+            }
+
+            opportunity.UpdatedAtUtc = DateTime.UtcNow;
+            opportunity.UpdatedBy = actor.UserName;
+
+            await _auditEvents.TrackAsync(
+                new AuditEventEntry(
+                    OpportunityEntityType,
+                    opportunity.Id,
+                    "WorkflowCrmUpdate",
+                    "Status",
+                    previous,
+                    normalized,
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
+        }
+
+        return null;
+    }
+
+    private async Task<string?> ExecuteActivityNodeAsync(
+        Opportunity opportunity,
+        DealApprovalWorkflowActivityConfigDefinition? config,
+        ApprovalWorkflowStep? upcomingApproval,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        if (config is null || string.IsNullOrWhiteSpace(config.Subject))
+        {
+            return null;
+        }
+
+        var ownerId = await ResolveWorkflowActivityOwnerIdAsync(opportunity, config.OwnerStrategy, upcomingApproval, actor, cancellationToken);
+        var activityType = Enum.TryParse<ActivityType>(config.ActivityType, true, out var parsedType)
+            ? parsedType
+            : ActivityType.Task;
+
+        var activity = new Activity
+        {
+            Subject = config.Subject.Trim(),
+            Description = "Generated from workflow builder execution.",
+            Type = activityType,
+            RelatedEntityType = ActivityRelationType.Opportunity,
+            RelatedEntityId = opportunity.Id,
+            OwnerId = ownerId,
+            DueDateUtc = config.DueInHours.HasValue && config.DueInHours.Value > 0
+                ? DateTime.UtcNow.AddHours(config.DueInHours.Value)
+                : null,
+            Priority = "Medium",
+            TemplateKey = "workflow-builder",
+            CreatedAtUtc = DateTime.UtcNow,
+            UpdatedAtUtc = DateTime.UtcNow,
+            UpdatedBy = actor.UserName
+        };
+
+        _dbContext.Activities.Add(activity);
+        await _auditEvents.TrackAsync(
+            new AuditEventEntry(
+                OpportunityEntityType,
+                opportunity.Id,
+                "WorkflowActivityCreated",
+                "Activity",
+                null,
+                activity.Subject,
+                actor.UserId,
+                actor.UserName),
+            cancellationToken);
+
+        return null;
+    }
+
+    private async Task<string?> ExecuteNotificationNodeAsync(
+        Opportunity opportunity,
+        DealApprovalWorkflowNotificationConfigDefinition? config,
+        ApprovalWorkflowStep? upcomingApproval,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        var channel = config?.Channel?.Trim();
+        var audience = config?.Audience?.Trim();
+        if (string.IsNullOrWhiteSpace(channel) || string.IsNullOrWhiteSpace(audience))
+        {
+            return null;
+        }
+
+        var targetUserIds = await ResolveNotificationAudienceAsync(opportunity, audience, upcomingApproval, cancellationToken);
+        if (targetUserIds.Count == 0)
+        {
+            return null;
+        }
+
+        var title = BuildWorkflowNotificationTitle(channel, opportunity.Name);
+        var detail = string.IsNullOrWhiteSpace(config?.Message)
+            ? $"Workflow action triggered for {opportunity.Name}."
+            : config!.Message!.Trim();
+
+        if (channel.Equals("in-app", StringComparison.OrdinalIgnoreCase)
+            || channel.Equals("signalr", StringComparison.OrdinalIgnoreCase)
+            || channel.Equals("email-digest", StringComparison.OrdinalIgnoreCase))
+        {
+            await _realtimePublisher.PublishUsersEventAsync(
+                _tenantProvider.TenantId,
+                targetUserIds,
+                "notification.alert",
+                new
+                {
+                    title,
+                    detail,
+                    entityType = OpportunityEntityType,
+                    entityId = opportunity.Id,
+                    createdAtUtc = DateTime.UtcNow,
+                    source = "workflow-builder"
+                },
+                cancellationToken);
+
+            await _auditEvents.TrackAsync(
+                new AuditEventEntry(
+                    OpportunityEntityType,
+                    opportunity.Id,
+                    "WorkflowNotificationSent",
+                    "NotificationAudience",
+                    null,
+                    audience,
+                    actor.UserId,
+                    actor.UserName),
+                cancellationToken);
+        }
+
+        return null;
+    }
+
+    private async Task<Guid> ResolveWorkflowActivityOwnerIdAsync(
+        Opportunity opportunity,
+        string? ownerStrategy,
+        ApprovalWorkflowStep? upcomingApproval,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        if (string.Equals(ownerStrategy, "approver", StringComparison.OrdinalIgnoreCase) && upcomingApproval is not null)
+        {
+            var routing = await ResolveApprovalRoutingAsync(upcomingApproval, cancellationToken);
+            if (routing.Success && routing.ApproverUserId.HasValue && routing.ApproverUserId.Value != Guid.Empty)
+            {
+                return routing.ApproverUserId.Value;
+            }
+        }
+
+        if (string.Equals(ownerStrategy, "manager", StringComparison.OrdinalIgnoreCase))
+        {
+            var managerRole = await _dbContext.Roles
+                .AsNoTracking()
+                .FirstOrDefaultAsync(role => !role.IsDeleted && role.Name == "Sales Manager", cancellationToken);
+            if (managerRole is not null)
+            {
+                var managerUserId = await _dbContext.UserRoles
+                    .AsNoTracking()
+                    .Where(mapping => mapping.RoleId == managerRole.Id)
+                    .Select(mapping => mapping.UserId)
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (managerUserId != Guid.Empty)
+                {
+                    return managerUserId;
+                }
+            }
+        }
+
+        return opportunity.OwnerId != Guid.Empty
+            ? opportunity.OwnerId
+            : actor.UserId.GetValueOrDefault();
+    }
+
+    private async Task<IReadOnlyCollection<Guid>> ResolveNotificationAudienceAsync(
+        Opportunity opportunity,
+        string audience,
+        ApprovalWorkflowStep? upcomingApproval,
+        CancellationToken cancellationToken)
+    {
+        if (audience.Equals("owner", StringComparison.OrdinalIgnoreCase) && opportunity.OwnerId != Guid.Empty)
+        {
+            return new[] { opportunity.OwnerId };
+        }
+
+        if (audience.Equals("approver-role", StringComparison.OrdinalIgnoreCase) && upcomingApproval is not null)
+        {
+            var routing = await ResolveApprovalRoutingAsync(upcomingApproval, cancellationToken);
+            if (routing.Success && routing.ApproverUserId.HasValue && routing.ApproverUserId.Value != Guid.Empty)
+            {
+                return new[] { routing.ApproverUserId.Value };
+            }
+
+            return Array.Empty<Guid>();
+        }
+
+        if (audience.Equals("revenue-ops", StringComparison.OrdinalIgnoreCase))
+        {
+            var roleIds = await _dbContext.Roles
+                .AsNoTracking()
+                .Where(role => !role.IsDeleted
+                               && (role.Name == "Revenue Ops" || role.Name == "Sales Manager"))
+                .Select(role => role.Id)
+                .ToListAsync(cancellationToken);
+
+            if (roleIds.Count == 0)
+            {
+                return Array.Empty<Guid>();
+            }
+
+            return await _dbContext.UserRoles
+                .AsNoTracking()
+                .Where(mapping => roleIds.Contains(mapping.RoleId) && !mapping.IsDeleted)
+                .Select(mapping => mapping.UserId)
+                .Distinct()
+                .Where(userId => userId != Guid.Empty)
+                .ToListAsync(cancellationToken);
+        }
+
+        return Array.Empty<Guid>();
+    }
+
+    private static string BuildWorkflowNotificationTitle(string channel, string opportunityName)
+    {
+        return channel.Equals("email-digest", StringComparison.OrdinalIgnoreCase)
+            ? $"Workflow digest update for {opportunityName}"
+            : $"Workflow notification for {opportunityName}";
+    }
+
+    private static WorkflowRuntimeState ApplyCrmUpdateToState(
+        WorkflowRuntimeState state,
+        DealApprovalWorkflowCrmUpdateConfigDefinition? config)
+    {
+        var field = config?.Field?.Trim();
+        var value = config?.Value?.Trim();
+        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(value))
+        {
+            return state;
+        }
+
+        if (string.Equals(field, "stage", StringComparison.OrdinalIgnoreCase))
+        {
+            return state with { Stage = value };
+        }
+
+        if (string.Equals(field, "forecastCategory", StringComparison.OrdinalIgnoreCase))
+        {
+            return state with { ForecastCategory = value };
+        }
+
+        if (string.Equals(field, "status", StringComparison.OrdinalIgnoreCase))
+        {
+            return value.Equals("Closed Won", StringComparison.OrdinalIgnoreCase)
+                ? state with { IsClosed = true, IsWon = true }
+                : value.Equals("Closed Lost", StringComparison.OrdinalIgnoreCase)
+                    ? state with { IsClosed = true, IsWon = false }
+                    : value.Equals("Open", StringComparison.OrdinalIgnoreCase)
+                        ? state with { IsClosed = false, IsWon = false }
+                        : state;
+        }
+
+        return state;
+    }
+
+    private static DealApprovalWorkflowConnectionDefinition? SelectNextConnection(
+        DealApprovalWorkflowNodeDefinition currentNode,
+        IReadOnlyList<DealApprovalWorkflowConnectionDefinition> candidates,
+        WorkflowRuntimeState state)
+    {
+        if (!string.Equals(currentNode.Type, "condition", StringComparison.OrdinalIgnoreCase))
+        {
+            return candidates.FirstOrDefault();
+        }
+
+        var condition = currentNode.Config?.Condition;
+        var result = EvaluateCondition(condition, state);
+        if (result is null)
+        {
+            return candidates.FirstOrDefault();
+        }
+
+        var preferred = result.Value
+            ? candidates.FirstOrDefault(connection => MatchesBranch(connection, "yes", "true", "approved", "match"))
+            : candidates.FirstOrDefault(connection => MatchesBranch(connection, "no", "false", "rejected", "else", "default"));
+
+        if (preferred is not null)
+        {
+            return preferred;
+        }
+
+        return result.Value
+            ? candidates.FirstOrDefault()
+            : candidates.Skip(1).FirstOrDefault() ?? candidates.FirstOrDefault();
+    }
+
+    private static bool? EvaluateCondition(DealApprovalWorkflowConditionConfigDefinition? condition, WorkflowRuntimeState state)
+    {
+        var field = condition?.Field?.Trim();
+        var op = condition?.Operator?.Trim();
+        var value = condition?.Value?.Trim();
+        if (string.IsNullOrWhiteSpace(field) || string.IsNullOrWhiteSpace(op))
+        {
+            return null;
+        }
+
+        if (string.Equals(field, "amount", StringComparison.OrdinalIgnoreCase) && decimal.TryParse(value, out var decimalValue))
+        {
+            return op switch
+            {
+                "gt" => state.Amount > decimalValue,
+                "lt" => state.Amount < decimalValue,
+                "equals" => state.Amount == decimalValue,
+                _ => null
+            };
+        }
+
+        var actual = string.Equals(field, "purpose", StringComparison.OrdinalIgnoreCase) ? state.Purpose
+            : string.Equals(field, "stage", StringComparison.OrdinalIgnoreCase) ? state.Stage
+            : string.Equals(field, "status", StringComparison.OrdinalIgnoreCase)
+                ? (state.IsClosed ? (state.IsWon ? "Closed Won" : "Closed Lost") : "Open")
+            : string.Equals(field, "forecastCategory", StringComparison.OrdinalIgnoreCase) ? state.ForecastCategory
+            : null;
+
+        if (actual is null)
+        {
+            return null;
+        }
+
+        return op switch
+        {
+            "equals" => string.Equals(actual, value, StringComparison.OrdinalIgnoreCase),
+            "contains" => !string.IsNullOrWhiteSpace(value) && actual.Contains(value, StringComparison.OrdinalIgnoreCase),
+            _ => null
+        };
+    }
+
+    private static bool MatchesBranch(DealApprovalWorkflowConnectionDefinition connection, params string[] values)
+    {
+        var label = connection.Label?.Trim();
+        var key = connection.BranchKey?.Trim();
+        return values.Any(value =>
+            string.Equals(label, value, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(key, value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private List<ApprovalWorkflowStep> GetApprovalSteps(WorkflowExecutionPlan? plan)
+    {
+        return plan?.Items
+            .Where(item => item.ApprovalStep is not null)
+            .Select(item => item.ApprovalStep!)
+            .OrderBy(step => step.Order)
+            .ToList() ?? new List<ApprovalWorkflowStep>();
+    }
+
+    private WorkflowExecutionPlan? DeserializeExecutionPlan(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            var plan = JsonSerializer.Deserialize<WorkflowExecutionPlan>(json, JsonOptions);
+            if (plan?.Items is not null)
+            {
+                return plan;
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        try
+        {
+            var steps = JsonSerializer.Deserialize<List<ApprovalWorkflowStep>>(json, JsonOptions) ?? new List<ApprovalWorkflowStep>();
+            return new WorkflowExecutionPlan(
+                steps.OrderBy(step => step.Order)
+                    .Select((step, index) => new WorkflowExecutionPlanItem(index + 1, step.NodeId ?? $"approval-step-{step.Order}", "approval", step, null))
+                    .ToArray());
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private WorkflowExecutionPlan CreateLegacyExecutionPlan(OpportunityApprovalChain chain)
+    {
+        return DeserializeExecutionPlan(chain.StepsJson)
+            ?? new WorkflowExecutionPlan(Array.Empty<WorkflowExecutionPlanItem>());
+    }
+
+    private async Task<string?> ResolveStageNameAsync(Guid stageId, CancellationToken cancellationToken)
+    {
+        if (stageId == Guid.Empty)
+        {
+            return null;
+        }
+
+        return await _dbContext.OpportunityStages
+            .AsNoTracking()
+            .Where(stage => stage.Id == stageId && !stage.IsDeleted)
+            .Select(stage => stage.Name)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     private async Task SyncWorkflowExecutionMetadataAsync(Guid chainId, string? actorName, CancellationToken cancellationToken)
     {
         var chain = await _dbContext.OpportunityApprovalChains
@@ -1480,6 +2185,30 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
 
         public static ApprovalRoutingResolution Fail(string error) =>
             new(false, null, string.Empty, null, null, error);
+    }
+
+    private sealed record WorkflowExecutionPlan(IReadOnlyList<WorkflowExecutionPlanItem> Items);
+
+    private sealed record WorkflowExecutionPlanItem(
+        int Sequence,
+        string NodeId,
+        string NodeType,
+        ApprovalWorkflowStep? ApprovalStep,
+        DealApprovalWorkflowNodeConfigDefinition? Config);
+
+    private sealed record WorkflowRuntimeState(
+        decimal Amount,
+        string Purpose,
+        string? Stage,
+        string? ForecastCategory,
+        bool IsClosed,
+        bool IsWon);
+
+    private sealed record WorkflowContinuationResult(ApprovalWorkflowStep? NextApprovalStep, string? Error)
+    {
+        public static WorkflowContinuationResult Next(ApprovalWorkflowStep step) => new(step, null);
+        public static WorkflowContinuationResult Complete() => new(null, null);
+        public static WorkflowContinuationResult Fail(string error) => new(null, error);
     }
 
     private sealed record UserContact(Guid Id, string FullName, string Email);
