@@ -22,7 +22,7 @@ public class AcsEmailSender : IEmailSender
 
     public async Task SendAsync(string toEmail, string subject, string htmlBody, string? textBody = null, CancellationToken cancellationToken = default)
     {
-        if (_client is null || !_options.IsValid() || string.IsNullOrWhiteSpace(toEmail))
+        if (!_options.Enabled || _client is null || !_options.IsValid() || string.IsNullOrWhiteSpace(toEmail))
         {
             return;
         }
