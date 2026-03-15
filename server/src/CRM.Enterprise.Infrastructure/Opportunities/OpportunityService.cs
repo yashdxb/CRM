@@ -2010,117 +2010,155 @@ public sealed class OpportunityService : IOpportunityService
             .FirstOrDefaultAsync(o => o.Id == id && !o.IsDeleted, cancellationToken);
         if (opp is null) return null;
 
+        // Load tenant-level health scoring policy (falls back to defaults if not configured).
+        var policy = await LoadDealHealthScoringPolicyAsync(cancellationToken);
+
         var factors = new List<OpportunityHealthFactorDto>();
         var now = DateTime.UtcNow;
+        double daysSinceActivity = 999;
 
-        // 1. Stage Progression (0-15)
-        var stageOrder = opp.Stage?.Order ?? 0;
-        var stageScore = Math.Min(stageOrder * 3, 15);
-        factors.Add(new OpportunityHealthFactorDto("Stage Progression", stageScore, 15));
-
-        // 2. Activity Recency (0-20)
-        var lastActivity = await _dbContext.Activities
-            .Where(a => a.RelatedEntityType == Domain.Enums.ActivityRelationType.Opportunity && a.RelatedEntityId == id && !a.IsDeleted)
-            .OrderByDescending(a => a.CreatedAtUtc)
-            .Select(a => (DateTime?)a.CreatedAtUtc)
-            .FirstOrDefaultAsync(cancellationToken);
-        var daysSinceActivity = lastActivity.HasValue ? (now - lastActivity.Value).TotalDays : 999;
-        var activityScore = daysSinceActivity switch
+        foreach (var dim in policy.Dimensions)
         {
-            <= 3 => 20,
-            <= 7 => 16,
-            <= 14 => 12,
-            <= 30 => 6,
-            _ => 0
-        };
-        factors.Add(new OpportunityHealthFactorDto("Activity Recency", activityScore, 20));
+            if (!dim.Enabled) continue;
 
-        // 3. Close Date Health (0-15)
-        var closeDateScore = 0;
-        if (opp.ExpectedCloseDate.HasValue && !opp.IsClosed)
-        {
-            var daysToClose = (opp.ExpectedCloseDate.Value - now).TotalDays;
-            closeDateScore = daysToClose switch
+            int score;
+            switch (dim.Key)
             {
-                < 0 => 0,   // overdue
-                <= 7 => 8,  // imminent
-                <= 30 => 12,
-                <= 90 => 15,
-                _ => 10
-            };
+                case "StageProgression":
+                {
+                    var stageOrder = opp.Stage?.Order ?? 0;
+                    score = EvalBrackets(dim.Brackets, stageOrder, Math.Min(stageOrder * 3, dim.MaxScore));
+                    break;
+                }
+                case "ActivityRecency":
+                {
+                    var lastActivity = await _dbContext.Activities
+                        .Where(a => a.RelatedEntityType == ActivityRelationType.Opportunity && a.RelatedEntityId == id && !a.IsDeleted)
+                        .OrderByDescending(a => a.CreatedAtUtc)
+                        .Select(a => (DateTime?)a.CreatedAtUtc)
+                        .FirstOrDefaultAsync(cancellationToken);
+                    daysSinceActivity = lastActivity.HasValue ? (now - lastActivity.Value).TotalDays : 999;
+                    score = EvalBrackets(dim.Brackets, daysSinceActivity, 0);
+                    break;
+                }
+                case "CloseDateHealth":
+                {
+                    if (opp.IsClosed && opp.IsWon)
+                    {
+                        score = dim.MaxScore;
+                    }
+                    else if (opp.ExpectedCloseDate.HasValue && !opp.IsClosed)
+                    {
+                        var daysToClose = (opp.ExpectedCloseDate.Value - now).TotalDays;
+                        score = EvalBrackets(dim.Brackets, daysToClose, 0);
+                    }
+                    else
+                    {
+                        score = 0;
+                    }
+                    break;
+                }
+                case "StakeholderCoverage":
+                {
+                    var contactRolesCount = await _dbContext.OpportunityContactRoles
+                        .CountAsync(r => r.OpportunityId == id && !r.IsDeleted, cancellationToken);
+                    score = EvalBrackets(dim.Brackets, contactRolesCount, 0);
+                    break;
+                }
+                case "DealCompleteness":
+                {
+                    var completenessHits = 0;
+                    if (opp.Amount > 0) completenessHits++;
+                    if (opp.Probability > 0) completenessHits++;
+                    if (!string.IsNullOrWhiteSpace(opp.Requirements)) completenessHits++;
+                    if (!string.IsNullOrWhiteSpace(opp.SuccessCriteria)) completenessHits++;
+                    if (opp.ExpectedCloseDate.HasValue) completenessHits++;
+                    score = (int)Math.Round(completenessHits / 5.0 * dim.MaxScore);
+                    break;
+                }
+                case "TeamCoverage":
+                {
+                    var teamCount = await _dbContext.OpportunityTeamMembers
+                        .CountAsync(m => m.OpportunityId == id && !m.IsDeleted, cancellationToken);
+                    score = EvalBrackets(dim.Brackets, teamCount, 2);
+                    break;
+                }
+                case "ProcessCompliance":
+                {
+                    var processHits = 0;
+                    if (!string.IsNullOrWhiteSpace(opp.ProposalStatus) && opp.ProposalStatus != "Not Started") processHits += 2;
+                    if (!string.IsNullOrWhiteSpace(opp.SecurityReviewStatus) && opp.SecurityReviewStatus != "Not Started") processHits += 2;
+                    if (!string.IsNullOrWhiteSpace(opp.LegalReviewStatus) && opp.LegalReviewStatus != "Not Started") processHits += 2;
+                    if (!string.IsNullOrWhiteSpace(opp.BuyingProcess)) processHits++;
+                    score = Math.Min((int)Math.Round(processHits / 7.0 * dim.MaxScore), dim.MaxScore);
+                    break;
+                }
+                default:
+                    continue; // unknown custom dimension — skip (no built-in evaluator)
+            }
+
+            score = Math.Min(score, dim.MaxScore);
+            factors.Add(new OpportunityHealthFactorDto(dim.Label, score, dim.MaxScore));
         }
-        else if (opp.IsClosed && opp.IsWon)
-        {
-            closeDateScore = 15;
-        }
-        factors.Add(new OpportunityHealthFactorDto("Close Date Health", closeDateScore, 15));
-
-        // 4. Stakeholder Coverage (0-10)
-        var contactRolesCount = await _dbContext.OpportunityContactRoles
-            .CountAsync(r => r.OpportunityId == id && !r.IsDeleted, cancellationToken);
-        var stakeholderScore = contactRolesCount switch
-        {
-            0 => 0,
-            1 => 4,
-            2 => 7,
-            >= 3 => 10,
-            _ => 0
-        };
-        factors.Add(new OpportunityHealthFactorDto("Stakeholder Coverage", stakeholderScore, 10));
-
-        // 5. Deal Completeness (0-15)
-        var completenessHits = 0;
-        if (opp.Amount > 0) completenessHits++;
-        if (opp.Probability > 0) completenessHits++;
-        if (!string.IsNullOrWhiteSpace(opp.Requirements)) completenessHits++;
-        if (!string.IsNullOrWhiteSpace(opp.SuccessCriteria)) completenessHits++;
-        if (opp.ExpectedCloseDate.HasValue) completenessHits++;
-        var completenessScore = (int)Math.Round(completenessHits / 5.0 * 15);
-        factors.Add(new OpportunityHealthFactorDto("Deal Completeness", completenessScore, 15));
-
-        // 6. Team Coverage (0-10)
-        var teamCount = await _dbContext.OpportunityTeamMembers
-            .CountAsync(m => m.OpportunityId == id && !m.IsDeleted, cancellationToken);
-        var teamScore = teamCount switch
-        {
-            0 => 2, // owner always exists
-            1 => 6,
-            >= 2 => 10,
-            _ => 2
-        };
-        factors.Add(new OpportunityHealthFactorDto("Team Coverage", teamScore, 10));
-
-        // 7. Process Compliance (0-15)
-        var processHits = 0;
-        if (!string.IsNullOrWhiteSpace(opp.ProposalStatus) && opp.ProposalStatus != "Not Started") processHits += 2;
-        if (!string.IsNullOrWhiteSpace(opp.SecurityReviewStatus) && opp.SecurityReviewStatus != "Not Started") processHits += 2;
-        if (!string.IsNullOrWhiteSpace(opp.LegalReviewStatus) && opp.LegalReviewStatus != "Not Started") processHits += 2;
-        if (!string.IsNullOrWhiteSpace(opp.BuyingProcess)) processHits++;
-        var processScore = Math.Min((int)Math.Round(processHits / 7.0 * 15), 15);
-        factors.Add(new OpportunityHealthFactorDto("Process Compliance", processScore, 15));
 
         var totalScore = factors.Sum(f => f.Score);
         var maxTotal = factors.Sum(f => f.MaxScore);
         var normalizedScore = maxTotal > 0 ? (int)Math.Round(totalScore * 100.0 / maxTotal) : 0;
 
-        var label = normalizedScore switch
-        {
-            >= 80 => "Excellent",
-            >= 60 => "Good",
-            >= 40 => "Fair",
-            >= 20 => "At Risk",
-            _ => "Critical"
-        };
+        var label = normalizedScore >= policy.Bands.Excellent ? "Excellent"
+            : normalizedScore >= policy.Bands.Good ? "Good"
+            : normalizedScore >= policy.Bands.Fair ? "Fair"
+            : normalizedScore >= policy.Bands.AtRisk ? "At Risk"
+            : "Critical";
 
         var rationale = BuildHealthRationale(factors, normalizedScore, daysSinceActivity, opp);
 
         return new OpportunityHealthScoreDto(
             normalizedScore,
             label,
-            0.75m,
+            policy.Confidence,
             rationale,
             factors,
             now);
+    }
+
+    private async Task<DealHealthScoringPolicy> LoadDealHealthScoringPolicyAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        var json = await _dbContext.Tenants
+            .Where(t => t.Id == tenantId)
+            .Select(t => t.DealHealthScoringPolicyJson)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return DealHealthScoringPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = System.Text.Json.JsonSerializer.Deserialize<DealHealthScoringPolicy>(
+                json, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+            return DealHealthScoringPolicyDefaults.Normalize(parsed);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return DealHealthScoringPolicyDefaults.CreateDefault();
+        }
+    }
+
+    /// <summary>
+    /// Evaluates a list of brackets against a measured value.
+    /// Brackets are walked in order; the first bracket where value &lt;= Threshold wins.
+    /// </summary>
+    private static int EvalBrackets(IReadOnlyList<DealHealthBracket>? brackets, double value, int fallback)
+    {
+        if (brackets is null || brackets.Count == 0) return fallback;
+        foreach (var b in brackets)
+        {
+            if (value <= b.Threshold) return b.Score;
+        }
+        return brackets[^1].Score;
     }
 
     private static string BuildHealthRationale(

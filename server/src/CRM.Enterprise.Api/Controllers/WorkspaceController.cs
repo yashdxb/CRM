@@ -3,6 +3,7 @@ using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Application.Decisions;
 using CRM.Enterprise.Application.Leads;
+using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
@@ -83,6 +84,7 @@ public class WorkspaceController : ControllerBase
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
+            ResolveDealHealthScoringPolicy(tenant),
             ResolveFeatureFlags(tenant),
             tenant.ReportDesignerRequiredPermission));
     }
@@ -141,6 +143,12 @@ public class WorkspaceController : ControllerBase
                 SupportingDocumentPolicyDefaults.Normalize(request.SupportingDocumentPolicy),
                 JsonOptions);
         }
+        if (request.DealHealthScoringPolicy is not null)
+        {
+            tenant.DealHealthScoringPolicyJson = JsonSerializer.Serialize(
+                DealHealthScoringPolicyDefaults.Normalize(request.DealHealthScoringPolicy),
+                JsonOptions);
+        }
         if (request.FeatureFlags is not null)
         {
             tenant.FeatureFlagsJson = JsonSerializer.Serialize(
@@ -176,6 +184,7 @@ public class WorkspaceController : ControllerBase
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
+            ResolveDealHealthScoringPolicy(tenant),
             ResolveFeatureFlags(tenant),
             tenant.ReportDesignerRequiredPermission));
     }
@@ -222,6 +231,7 @@ public class WorkspaceController : ControllerBase
             ResolveAssistantActionScoringPolicy(tenant),
             ResolveDecisionEscalationPolicy(tenant),
             ResolveSupportingDocumentPolicy(tenant),
+            ResolveDealHealthScoringPolicy(tenant),
             ResolveFeatureFlags(tenant),
             tenant.ReportDesignerRequiredPermission));
     }
@@ -408,5 +418,23 @@ public class WorkspaceController : ControllerBase
         }
 
         return result;
+    }
+
+    private static DealHealthScoringPolicy ResolveDealHealthScoringPolicy(Tenant tenant)
+    {
+        if (string.IsNullOrWhiteSpace(tenant.DealHealthScoringPolicyJson))
+        {
+            return DealHealthScoringPolicyDefaults.CreateDefault();
+        }
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<DealHealthScoringPolicy>(tenant.DealHealthScoringPolicyJson, JsonOptions);
+            return DealHealthScoringPolicyDefaults.Normalize(parsed);
+        }
+        catch (JsonException)
+        {
+            return DealHealthScoringPolicyDefaults.CreateDefault();
+        }
     }
 }

@@ -4,6 +4,7 @@ using CRM.Enterprise.Application.Approvals;
 using CRM.Enterprise.Application.Assistant;
 using CRM.Enterprise.Application.Decisions;
 using CRM.Enterprise.Application.Leads;
+using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 
@@ -26,5 +27,6 @@ public record WorkspaceSettingsResponse(
     AssistantActionScoringPolicy AssistantActionScoringPolicy,
     DecisionEscalationPolicy DecisionEscalationPolicy,
     SupportingDocumentPolicy SupportingDocumentPolicy,
+    DealHealthScoringPolicy DealHealthScoringPolicy,
     IReadOnlyDictionary<string, bool>? FeatureFlags,
     string? ReportDesignerRequiredPermission);

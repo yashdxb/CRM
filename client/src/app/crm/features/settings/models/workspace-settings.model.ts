@@ -17,6 +17,7 @@ export interface WorkspaceSettings {
   assistantActionScoringPolicy: AssistantActionScoringPolicy;
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
+  dealHealthScoringPolicy?: DealHealthScoringPolicy | null;
   featureFlags?: Record<string, boolean> | null;
   reportDesignerRequiredPermission?: string | null;
 }
@@ -37,6 +38,7 @@ export interface UpdateWorkspaceSettingsRequest {
   assistantActionScoringPolicy?: AssistantActionScoringPolicy | null;
   decisionEscalationPolicy?: DecisionEscalationPolicy | null;
   supportingDocumentPolicy?: SupportingDocumentPolicy | null;
+  dealHealthScoringPolicy?: DealHealthScoringPolicy | null;
   featureFlags?: Record<string, boolean> | null;
   reportDesignerRequiredPermission?: string | null;
 }
@@ -167,4 +169,30 @@ export interface QualificationLeadDataWeight {
 export interface LeadDispositionPolicy {
   disqualificationReasons: string[];
   lossReasons: string[];
+}
+
+export interface DealHealthScoringPolicy {
+  dimensions: DealHealthDimensionConfig[];
+  bands: DealHealthBandThresholds;
+  confidence: number;
+}
+
+export interface DealHealthDimensionConfig {
+  key: string;
+  label: string;
+  maxScore: number;
+  enabled: boolean;
+  brackets?: DealHealthBracket[] | null;
+}
+
+export interface DealHealthBracket {
+  threshold: number;
+  score: number;
+}
+
+export interface DealHealthBandThresholds {
+  excellent: number;
+  good: number;
+  fair: number;
+  atRisk: number;
 }

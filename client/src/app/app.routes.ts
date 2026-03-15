@@ -644,6 +644,13 @@ export const routes: Routes = [
               import('./crm/features/settings/pages/opportunity-automation.page').then((m) => m.OpportunityAutomationPage)
           },
           {
+            path: 'deal-health',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Deal Health Scoring' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/deal-health-settings.page').then((m) => m.DealHealthSettingsPage)
+          },
+          {
             path: 'workflow-builder',
             pathMatch: 'full',
             redirectTo: '/app/workflows/designer'
