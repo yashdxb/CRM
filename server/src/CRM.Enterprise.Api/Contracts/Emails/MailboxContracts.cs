@@ -154,3 +154,129 @@ public record SaveDraftMailResponse(
     Guid? DraftId,
     string? Error
 );
+
+// ============ PROXY MAILBOX CONTRACTS ============
+
+/// <summary>
+/// List response for proxy (live) mailbox queries.
+/// </summary>
+public record ProxyMailboxMessagesResponse(
+    IEnumerable<ProxyMailboxMessageItem> Items,
+    int Total,
+    int Page,
+    int PageSize
+);
+
+/// <summary>
+/// Proxy message item with string ExternalId (not internal Guid).
+/// </summary>
+public record ProxyMailboxMessageItem(
+    string ExternalId,
+    Guid ConnectionId,
+    string? ConversationId,
+    string Folder,
+    string Subject,
+    string? BodyPreview,
+    string FromEmail,
+    string? FromName,
+    DateTime ReceivedAtUtc,
+    bool IsRead,
+    bool IsStarred,
+    bool IsDraft,
+    bool HasAttachments,
+    string Importance
+);
+
+/// <summary>
+/// Full proxy message detail including body.
+/// </summary>
+public record ProxyMailboxMessageDetail(
+    string ExternalId,
+    Guid ConnectionId,
+    string? ConversationId,
+    string Folder,
+    string Subject,
+    string? BodyPreview,
+    string? BodyHtml,
+    string? BodyText,
+    string FromEmail,
+    string? FromName,
+    IEnumerable<string> ToRecipients,
+    IEnumerable<string>? CcRecipients,
+    IEnumerable<string>? BccRecipients,
+    DateTime ReceivedAtUtc,
+    DateTime? SentAtUtc,
+    bool IsRead,
+    bool IsStarred,
+    bool IsDraft,
+    bool HasAttachments,
+    string Importance,
+    IEnumerable<ProxyAttachmentItem>? Attachments,
+    string? InternetMessageId
+);
+
+/// <summary>
+/// Proxy attachment item.
+/// </summary>
+public record ProxyAttachmentItem(
+    string Id,
+    string Name,
+    long Size,
+    string ContentType
+);
+
+/// <summary>
+/// Send response for proxy endpoints (uses string ExternalId).
+/// </summary>
+public record ProxySendMailResponse(
+    bool Success,
+    string? ExternalId,
+    string? Error
+);
+
+/// <summary>
+/// Draft response for proxy endpoints (uses string ExternalId).
+/// </summary>
+public record ProxySaveDraftResponse(
+    bool Success,
+    string? ExternalId,
+    string? Error
+);
+
+// ============ CRM EMAIL LINK CONTRACTS ============
+
+/// <summary>
+/// Request to link an external email to a CRM entity.
+/// </summary>
+public record CrmEmailLinkRequest(
+    Guid ConnectionId,
+    string ExternalMessageId,
+    string? ConversationId,
+    string Subject,
+    string FromEmail,
+    string? FromName,
+    DateTime ReceivedAtUtc,
+    string RelatedEntityType,
+    Guid RelatedEntityId,
+    string? Note
+);
+
+/// <summary>
+/// Response for a CRM email link.
+/// </summary>
+public record CrmEmailLinkResponse(
+    Guid Id,
+    Guid ConnectionId,
+    string ExternalMessageId,
+    string? ConversationId,
+    string Subject,
+    string FromEmail,
+    string? FromName,
+    DateTime ReceivedAtUtc,
+    string Provider,
+    string RelatedEntityType,
+    Guid RelatedEntityId,
+    Guid LinkedByUserId,
+    string? Note,
+    DateTime CreatedAtUtc
+);

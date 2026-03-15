@@ -1103,6 +1103,334 @@
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PREMIUM CARD GRID VIEW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.card-grid-section {
+  position: relative;
+  z-index: 1;
+  animation: fade-in-up 0.5s ease-out 0.3s both;
+}
+
+.card-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-4;
+  padding: 0 $space-2;
+
+  h2 {
+    font-size: $font-size-lg;
+    font-weight: 700;
+    color: $gray-800;
+    margin: 0;
+  }
+
+  .record-count {
+    font-size: $font-size-sm;
+    color: $gray-500;
+    font-weight: 500;
+  }
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: $space-5;
+  margin-bottom: $space-4;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: $space-3;
+  }
+}
+
+// ─── Premium Property Card ───────────────────────────────────────────────────
+.prop-glass-card {
+  position: relative;
+  background: #ffffff;
+  border-radius: $radius-xl;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: fade-in-up 0.5s ease-out both;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 6px 20px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.14), 0 8px 20px rgba(0, 0, 0, 0.07);
+
+    .card-photo-icon {
+      transform: scale(1.1);
+    }
+
+    .card-glass-footer .row-action-btn {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  &:active {
+    transform: translateY(-3px);
+  }
+}
+
+// ─── Status Ribbon ───────────────────────────────────────────────────────────
+.card-ribbon {
+  position: absolute;
+  top: $space-3;
+  right: 0;
+  z-index: 3;
+  padding: 4px $space-3 4px $space-3;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-radius: $radius-md 0 0 $radius-md;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+  &::after {
+    display: none;
+  }
+}
+
+// ─── Photo / Gradient Header Area ────────────────────────────────────────────
+.card-photo-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  padding: $space-8 $space-4 $space-6;
+  overflow: hidden;
+
+  // Decorative dot pattern
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+    background-size: 16px 16px;
+    pointer-events: none;
+  }
+
+  // Bottom gradient fade for text readability
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.35), transparent);
+    pointer-events: none;
+  }
+}
+
+.card-photo-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-lg;
+  color: white;
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-photo-price {
+  position: absolute;
+  bottom: $space-3;
+  left: $space-3;
+  z-index: 2;
+  padding: 6px $space-3;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  color: white;
+  font-size: 1.15rem;
+  font-weight: 800;
+  border-radius: $radius-md;
+  letter-spacing: -0.3px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+// ─── Card Body ───────────────────────────────────────────────────────────────
+.card-glass-body {
+  padding: $space-4;
+  background: #ffffff;
+}
+
+.card-address {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: $gray-800;
+  margin: 0 0 $space-1;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-location {
+  display: flex;
+  align-items: center;
+  gap: $space-1;
+  font-size: $font-size-xs;
+  color: $gray-500;
+  margin: 0 0 $space-3;
+
+  i {
+    font-size: 0.7rem;
+    color: #ef4444;
+  }
+}
+
+// ─── Specs Row (Beds / Baths / Sqft) ─────────────────────────────────────────
+.card-specs {
+  display: flex;
+  gap: $space-4;
+  margin-bottom: $space-3;
+  padding: $space-2 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.card-spec {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $font-size-xs;
+  color: $gray-600;
+
+  i {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 0.65rem;
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+  }
+
+  strong {
+    font-weight: 700;
+    color: $gray-800;
+  }
+}
+
+// ─── Meta Row (Type + MLS) ───────────────────────────────────────────────────
+.card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-3;
+}
+
+.card-type-badge {
+  display: inline-flex;
+  padding: 3px $space-2;
+  background: #f0f4ff;
+  color: #4f46e5;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-radius: $radius-full;
+  border: 1px solid #e0e7ff;
+}
+
+.card-mls {
+  font-size: 0.7rem;
+  color: $gray-400;
+  font-weight: 500;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.02em;
+}
+
+// ─── Footer ──────────────────────────────────────────────────────────────────
+.card-glass-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: $space-2;
+  border-top: 1px solid #f1f5f9;
+}
+
+.card-agent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: $font-size-xs;
+  color: $gray-600;
+  font-weight: 500;
+
+  i {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 50%;
+  }
+}
+
+.card-footer-actions {
+  display: flex;
+  gap: $space-1;
+
+  .row-action-btn {
+    opacity: 0.6;
+    transform: translateY(2px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+}
+
+// ─── Ambient Glow ────────────────────────────────────────────────────────────
+.card-ambient-glow {
+  display: none; // Remove ambient glow for clean look
+}
+
+// ─── Skeleton Loading Cards ──────────────────────────────────────────────────
+.prop-glass-card--skeleton {
+  cursor: default;
+  pointer-events: none;
+
+  .skeleton-photo {
+    min-height: 160px;
+    background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 100%);
+  }
+
+  .skeleton-body {
+    padding: $space-4;
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+  }
+
+  .skeleton {
+    height: 14px;
+    background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 50%, #e2e8f0 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: $radius-sm;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // KANBAN BOARD VIEW
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1204,22 +1532,25 @@
 // ── Property Card ────────────────────────────────────────────────────────────
 
 .property-card {
-  background: white;
+  position: relative;
+  background: #ffffff;
   border-radius: $radius-lg;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
   padding: $space-3;
   cursor: pointer;
-  transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-    border-color: rgba($primary, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
   }
 }
 
 .property-card-header {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: flex-start;
   gap: $space-2;
@@ -1263,6 +1594,8 @@
 }
 
 .property-card-body {
+  position: relative;
+  z-index: 2;
   margin-bottom: $space-2;
 
   .prop-price {
@@ -1315,11 +1648,13 @@
 }
 
 .property-card-footer {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-top: $space-2;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid rgba(102, 126, 234, 0.08);
 
   .prop-agent {
     display: flex;
@@ -1476,17 +1811,19 @@
 }
 
 .map-property-card {
-  background: $glass-bg-subtle;
-  border: 1px solid $glass-border;
+  position: relative;
+  background: #ffffff;
   border-radius: $radius-lg;
+  border: 1px solid #e2e8f0;
   padding: $space-3;
   cursor: pointer;
-  transition: all 250ms;
+  transition: transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              box-shadow 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 
   &:hover {
     transform: translateY(-3px);
-    box-shadow: $glass-shadow-hover;
-    border-color: rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
   }
 }
 

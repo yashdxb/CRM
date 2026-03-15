@@ -40,6 +40,7 @@ if (builder.Environment.IsDevelopment())
     EnsureSqlServerAvailable(sqlConnectionString);
 }
 
+builder.Services.AddMemoryCache();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddSingleton<ICrmRealtimePublisher, SignalRCrmRealtimePublisher>();

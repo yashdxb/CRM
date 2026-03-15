@@ -93,6 +93,26 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
   const respond = <T>(body: T, status = 200, delayMs = 120) => of(new HttpResponse({ status, body })).pipe(delay(delayMs));
 
+  // Mock tenant-context endpoint — enable all feature flags for development
+  if (req.method === 'GET' && path === '/api/tenant-context') {
+    return respond({
+      tenantKey: 'default',
+      tenantName: 'Mock Tenant',
+      featureFlags: {
+        properties: true,
+        leads: true,
+        opportunities: true,
+        contacts: true,
+        helpdesk: true,
+        marketing: true,
+        reports: true,
+        activities: true,
+        emails: true,
+        workflows: true
+      }
+    });
+  }
+
   // Mock login endpoint - creates a JWT with all permissions for development
   if (req.method === 'POST' && path === '/api/auth/login') {
     const allPermissions = Object.values(PERMISSION_KEYS);

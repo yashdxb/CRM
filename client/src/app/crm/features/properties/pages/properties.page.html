@@ -238,6 +238,9 @@
           <button type="button" class="toggle-btn" [class.active]="viewMode === 'table'" (click)="viewMode = 'table'" title="Table View" aria-label="Switch to table view">
             <i class="pi pi-list"></i>
           </button>
+          <button type="button" class="toggle-btn" [class.active]="viewMode === 'card'" (click)="viewMode = 'card'" title="Card View" aria-label="Switch to card view">
+            <i class="pi pi-th-large"></i>
+          </button>
           <button type="button" class="toggle-btn" [class.active]="viewMode === 'kanban'" (click)="viewMode = 'kanban'" title="Board View" aria-label="Switch to board view">
             <i class="pi pi-objects-column"></i>
           </button>
@@ -429,6 +432,116 @@
         ></p-paginator>
       </div>
     </div>
+  </section>
+
+  <!-- PREMIUM CARD GRID VIEW -->
+  <section class="card-grid-section" *ngIf="viewMode === 'card'">
+    <div class="card-grid-header">
+      <h2>Property Listings</h2>
+      <span class="record-count">{{ properties().length }} of {{ total() }} records</span>
+    </div>
+
+    <!-- Loading Shimmer Cards -->
+    <div class="card-grid" *ngIf="loading()">
+      <div class="prop-glass-card prop-glass-card--skeleton" *ngFor="let _ of [1,2,3,4,5,6]">
+        <div class="skeleton-photo"></div>
+        <div class="skeleton-body">
+          <div class="skeleton skeleton-text" style="width: 70%"></div>
+          <div class="skeleton skeleton-text" style="width: 50%"></div>
+          <div class="skeleton skeleton-text" style="width: 40%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="!loading() && !properties().length">
+      <div class="empty-icon"><i class="pi pi-home"></i></div>
+      <h3>No properties found</h3>
+      <p>Try adjusting your search or filters</p>
+      <button type="button" class="action-btn action-btn--refresh" (click)="resetFilters()">
+        <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+        <span>Reset Filters</span>
+      </button>
+    </div>
+
+    <!-- Card Grid -->
+    <div class="card-grid" *ngIf="!loading() && properties().length">
+      <div class="prop-glass-card" *ngFor="let prop of properties(); let i = index"
+           [style.animation-delay]="i * 0.04 + 's'"
+           (click)="onRowClick(prop, $event)">
+        <!-- Status ribbon -->
+        <div class="card-ribbon" [style.background]="'linear-gradient(135deg, ' + statusColor(prop.status) + ' 0%, ' + statusColor(prop.status) + 'cc 100%)'">
+          {{ prop.status }}
+        </div>
+
+        <!-- Photo / gradient header -->
+        <div class="card-photo-area" [style.background]="'linear-gradient(135deg, ' + statusColor(prop.status) + ' 0%, ' + statusColor(prop.status) + 'b3 50%, ' + statusColor(prop.status) + '80 100%)'">
+          <div class="card-photo-icon">
+            <i class="pi pi-home"></i>
+          </div>
+          <div class="card-photo-price" *ngIf="prop.listPrice">
+            {{ prop.listPrice | currency:prop.currency:'symbol':'1.0-0' }}
+          </div>
+        </div>
+
+        <!-- Card body -->
+        <div class="card-glass-body">
+          <h3 class="card-address">{{ prop.address }}</h3>
+          <p class="card-location">
+            <i class="pi pi-map-marker"></i>
+            {{ prop.city }}{{ prop.province ? ', ' + prop.province : '' }}
+          </p>
+
+          <!-- Specs row -->
+          <div class="card-specs">
+            <span class="card-spec" *ngIf="prop.bedrooms">
+              <i class="pi pi-th-large"></i>
+              <strong>{{ prop.bedrooms }}</strong> Beds
+            </span>
+            <span class="card-spec" *ngIf="prop.bathrooms">
+              <i class="pi pi-box"></i>
+              <strong>{{ prop.bathrooms }}</strong> Baths
+            </span>
+            <span class="card-spec" *ngIf="prop.squareFeet">
+              <i class="pi pi-expand"></i>
+              <strong>{{ prop.squareFeet | number:'1.0-0' }}</strong> sqft
+            </span>
+          </div>
+
+          <!-- Meta row -->
+          <div class="card-meta-row">
+            <span class="card-type-badge">{{ formatPropertyType(prop.propertyType) }}</span>
+            <span class="card-mls" *ngIf="prop.mlsNumber">MLS# {{ prop.mlsNumber }}</span>
+          </div>
+
+          <!-- Footer -->
+          <div class="card-glass-footer">
+            <span class="card-agent" *ngIf="prop.ownerName">
+              <i class="pi pi-user"></i> {{ prop.ownerName }}
+            </span>
+            <div class="card-footer-actions">
+              <button type="button" class="row-action-btn row-action-btn--edit" [disabled]="!canManage()" (click)="$event.stopPropagation(); onEdit(prop)" title="Edit">
+                <i class="pi pi-pencil"></i>
+              </button>
+              <button type="button" class="row-action-btn row-action-btn--view" (click)="$event.stopPropagation(); onRowClick(prop, $event)" title="View">
+                <i class="pi pi-eye"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ambient glow -->
+        <div class="card-ambient-glow" [style.background]="'radial-gradient(circle at 80% 20%, ' + statusColor(prop.status) + '18 0%, transparent 60%)'"></div>
+      </div>
+    </div>
+
+    <p-paginator *ngIf="!loading() && properties().length"
+      [rows]="rows"
+      [totalRecords]="total()"
+      [first]="pageIndex * rows"
+      [rowsPerPageOptions]="[10, 25, 50]"
+      (onPageChange)="onPageChange($event)"
+    ></p-paginator>
   </section>
 
   <!-- KANBAN BOARD VIEW -->

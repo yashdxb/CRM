@@ -187,15 +187,16 @@ export interface MailboxEmailParticipant {
 
 export interface MailboxAttachment {
   id: string;
-  filename: string;
-  mimeType: string;
+  name: string;
+  contentType: string;
   size: number;
-  url?: string;
 }
 
 export interface MailboxEmail {
   id: string;
-  threadId?: string;
+  connectionId: string;
+  externalId: string;
+  conversationId?: string;
   folderId: string;
   folderType: MailboxFolderType;
   from: MailboxEmailParticipant;
@@ -253,12 +254,50 @@ export interface MailboxSearchResponse {
 }
 
 export interface MailboxStats {
+  inboxTotal: number;
   inboxUnread: number;
-  draftsCount: number;
-  sentToday: number;
-  starredCount: number;
-  spamCount: number;
-  trashCount: number;
+  sentTotal: number;
+  draftsTotal: number;
+  starredTotal: number;
+  archiveTotal: number;
+  trashTotal: number;
+  spamTotal: number;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CRM EMAIL LINK MODELS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type CrmLinkEntityType = 'Lead' | 'Contact' | 'Account' | 'Opportunity';
+
+export interface CrmEmailLinkRequest {
+  connectionId: string;
+  externalMessageId: string;
+  conversationId?: string;
+  subject: string;
+  fromEmail: string;
+  fromName?: string;
+  receivedAtUtc: string;
+  relatedEntityType: CrmLinkEntityType;
+  relatedEntityId: string;
+  note?: string;
+}
+
+export interface CrmEmailLink {
+  id: string;
+  connectionId: string;
+  externalMessageId: string;
+  conversationId?: string;
+  subject: string;
+  fromEmail: string;
+  fromName?: string;
+  receivedAtUtc: string;
+  provider: string;
+  relatedEntityType: CrmLinkEntityType;
+  relatedEntityId: string;
+  linkedByUserId: string;
+  note?: string;
+  createdAtUtc: string;
 }
 
 // Compose Mode for Reply/Forward

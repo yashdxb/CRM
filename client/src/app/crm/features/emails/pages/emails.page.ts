@@ -14,8 +14,9 @@ import { AvatarModule } from 'primeng/avatar';
 import { MenuModule } from 'primeng/menu';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
-import { MailboxFolder, MailboxFolderType, MailboxEmail, ComposeMode } from '../models/email.model';
+import { MailboxFolder, MailboxFolderType, MailboxEmail, ComposeMode, CrmLinkEntityType } from '../models/email.model';
 import { MailboxService } from '../services/mailbox.service';
+import { CrmEmailLinkService } from '../services/crm-email-link.service';
 import { UiStateService } from '../../../../core/ui-state/ui-state.service';
 
 interface MailboxLayoutPrefs {
@@ -52,6 +53,7 @@ import { EmailComposeDialogComponent } from '../components/email-compose-dialog.
 })
 export class EmailsPage implements OnInit, OnDestroy {
   protected readonly mailbox = inject(MailboxService);
+  private readonly crmLinkService = inject(CrmEmailLinkService);
   private readonly toastService = inject(AppToastService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -72,6 +74,18 @@ export class EmailsPage implements OnInit, OnDestroy {
   protected composeMode: ComposeMode = 'new';
   protected replyToEmail: MailboxEmail | null = null;
   protected readingPanePosition: 'right' | 'bottom' | 'off' = 'right';
+
+  // CRM Link state
+  protected showLinkDialog = false;
+  protected linkEntityType: CrmLinkEntityType | '' = '';
+  protected linkEntityId = '';
+  protected linkNote = '';
+  protected readonly linkEntityTypeOptions = [
+    { label: 'Lead', value: 'Lead' },
+    { label: 'Contact', value: 'Contact' },
+    { label: 'Account', value: 'Account' },
+    { label: 'Opportunity', value: 'Opportunity' }
+  ];
 
   // Resize state
   protected isResizing = false;
@@ -305,6 +319,47 @@ export class EmailsPage implements OnInit, OnDestroy {
     this.replyToEmail = null;
     this.mailbox.loadEmails();
     this.toastService.show('success', 'Email sent successfully');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRM LINK ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  openLinkDialog(): void {
+    this.linkEntityType = '';
+    this.linkEntityId = '';
+    this.linkNote = '';
+    this.showLinkDialog = true;
+  }
+
+  closeLinkDialog(): void {
+    this.showLinkDialog = false;
+  }
+
+  linkEmailToCrm(): void {
+    const email = this.selectedEmail();
+    if (!email || !this.linkEntityType || !this.linkEntityId) return;
+
+    this.crmLinkService.linkEmail({
+      connectionId: email.connectionId,
+      externalMessageId: email.externalId,
+      conversationId: email.conversationId,
+      subject: email.subject,
+      fromEmail: email.from.email,
+      fromName: email.from.name,
+      receivedAtUtc: email.receivedAtUtc,
+      relatedEntityType: this.linkEntityType,
+      relatedEntityId: this.linkEntityId,
+      note: this.linkNote || undefined
+    }).subscribe({
+      next: () => {
+        this.toastService.show('success', 'Email linked to CRM record');
+        this.closeLinkDialog();
+      },
+      error: () => {
+        this.toastService.show('error', 'Failed to link email');
+      }
+    });
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

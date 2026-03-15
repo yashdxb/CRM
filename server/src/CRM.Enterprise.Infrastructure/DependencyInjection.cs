@@ -248,6 +248,13 @@ public static class DependencyInjection
         services.AddHttpClient<MailboxSyncService>();
         services.AddScoped<IMailboxSyncService, MailboxSyncService>();
 
+        // Mailbox proxy service (live provider queries, no local sync)
+        services.AddHttpClient<MailboxProxyService>();
+        services.AddScoped<IMailboxProxyService, MailboxProxyService>();
+
+        // CRM email link service (pin external emails to CRM entities)
+        services.AddScoped<ICrmEmailLinkService, CrmEmailLinkService>();
+
         return services;
     }
 

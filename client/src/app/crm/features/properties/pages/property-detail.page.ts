@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -97,6 +97,10 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
   protected voidTargetId = signal<string | null>(null);
   protected voidReason = signal('');
   protected sigActionLoading = signal<string | null>(null); // tracks which signature action is loading
+
+  // Photo lightbox
+  protected lightboxOpen = signal(false);
+  protected lightboxIndex = signal(0);
 
   // Alerts (G5)
   protected alertRules = signal<PropertyAlertRule[]>([]);
@@ -860,6 +864,35 @@ export class PropertyDetailPage implements OnInit, OnDestroy {
 
   protected alertNotifStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     switch (status) { case 'Clicked': return 'success'; case 'Opened': case 'Sent': return 'info'; case 'Bounced': return 'danger'; default: return 'secondary'; }
+  }
+
+  protected openLightbox(index: number): void {
+    this.lightboxIndex.set(index);
+    this.lightboxOpen.set(true);
+  }
+
+  protected closeLightbox(): void {
+    this.lightboxOpen.set(false);
+  }
+
+  protected lightboxPrev(): void {
+    const total = this.photoUrlList().length;
+    if (total === 0) return;
+    this.lightboxIndex.set((this.lightboxIndex() - 1 + total) % total);
+  }
+
+  protected lightboxNext(): void {
+    const total = this.photoUrlList().length;
+    if (total === 0) return;
+    this.lightboxIndex.set((this.lightboxIndex() + 1) % total);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(e: KeyboardEvent): void {
+    if (!this.lightboxOpen()) return;
+    if (e.key === 'Escape') this.closeLightbox();
+    else if (e.key === 'ArrowLeft') this.lightboxPrev();
+    else if (e.key === 'ArrowRight') this.lightboxNext();
   }
 
   protected resolveMediaUrl(url?: string | null): string {

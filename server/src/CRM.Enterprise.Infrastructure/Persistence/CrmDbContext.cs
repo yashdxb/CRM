@@ -108,6 +108,7 @@ public class CrmDbContext : DbContext
     public DbSet<CampaignEmailRecipient> CampaignEmailRecipients => Set<CampaignEmailRecipient>();
     public DbSet<UserEmailConnection> UserEmailConnections => Set<UserEmailConnection>();
     public DbSet<UserMailMessage> UserMailMessages => Set<UserMailMessage>();
+    public DbSet<CrmEmailLink> CrmEmailLinks => Set<CrmEmailLink>();
     public DbSet<DirectChatThread> DirectChatThreads => Set<DirectChatThread>();
     public DbSet<DirectChatParticipant> DirectChatParticipants => Set<DirectChatParticipant>();
     public DbSet<DirectChatMessage> DirectChatMessages => Set<DirectChatMessage>();
@@ -170,6 +171,18 @@ public class CrmDbContext : DbContext
             .IsUnique();
         modelBuilder.Entity<CampaignEmail>().ToTable("CampaignEmails", CrmSchema);
         modelBuilder.Entity<CampaignEmailRecipient>().ToTable("CampaignEmailRecipients", CrmSchema);
+        modelBuilder.Entity<CrmEmailLink>().ToTable("CrmEmailLinks", CrmSchema);
+        modelBuilder.Entity<CrmEmailLink>()
+            .HasIndex(l => new { l.TenantId, l.RelatedEntityType, l.RelatedEntityId });
+        modelBuilder.Entity<CrmEmailLink>()
+            .HasIndex(l => new { l.ConnectionId, l.ExternalMessageId })
+            .HasFilter("[IsDeleted] = 0");
+        modelBuilder.Entity<CrmEmailLink>()
+            .Property(l => l.Subject).HasMaxLength(500);
+        modelBuilder.Entity<CrmEmailLink>()
+            .Property(l => l.FromEmail).HasMaxLength(320);
+        modelBuilder.Entity<CrmEmailLink>()
+            .Property(l => l.ExternalMessageId).HasMaxLength(500);
         modelBuilder.Entity<Lead>()
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);

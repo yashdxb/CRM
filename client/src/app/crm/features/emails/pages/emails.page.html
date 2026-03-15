@@ -197,6 +197,10 @@
               </button>
             </div>
             <div class="toolbar-right">
+              <button class="toolbar-btn crm-link-btn" (click)="openLinkDialog()" pTooltip="Link to CRM Record">
+                <i class="pi pi-link"></i>
+                <span>Link</span>
+              </button>
               <button class="toolbar-btn" (click)="archiveSelected()" pTooltip="Archive">
                 <i class="pi pi-inbox"></i>
               </button>
@@ -268,12 +272,12 @@
                   <div class="attachment-item">
                     <i class="pi pi-file"></i>
                     <div class="attachment-info">
-                      <span class="attachment-name">{{ attachment.filename }}</span>
+                      <span class="attachment-name">{{ attachment.name }}</span>
                       <span class="attachment-size">{{ mailbox.formatFileSize(attachment.size) }}</span>
                     </div>
-                    <button class="download-btn" pTooltip="Download">
+                    <a class="download-btn" [href]="mailbox.getAttachmentUrl(selectedEmail()!, attachment.id)" target="_blank" pTooltip="Download">
                       <i class="pi pi-download"></i>
-                    </button>
+                    </a>
                   </div>
                 }
               </div>
@@ -286,6 +290,45 @@
     </section>
   }
 </div>
+
+<!-- CRM Link Dialog -->
+@if (showLinkDialog && selectedEmail()) {
+  <div class="crm-link-overlay" (click)="closeLinkDialog()"></div>
+  <div class="crm-link-dialog">
+    <div class="crm-link-dialog-header">
+      <h3><i class="pi pi-link"></i> Link to CRM Record</h3>
+      <button class="close-btn" (click)="closeLinkDialog()"><i class="pi pi-times"></i></button>
+    </div>
+    <div class="crm-link-dialog-body">
+      <div class="link-field">
+        <label>Entity Type</label>
+        <p-select
+          [options]="linkEntityTypeOptions"
+          optionLabel="label"
+          optionValue="value"
+          [(ngModel)]="linkEntityType"
+          placeholder="Select type"
+          class="w-full"
+          appendTo="body"
+        ></p-select>
+      </div>
+      <div class="link-field">
+        <label>Entity ID</label>
+        <input pInputText [(ngModel)]="linkEntityId" placeholder="Enter entity ID (GUID)" class="w-full" />
+      </div>
+      <div class="link-field">
+        <label>Note (optional)</label>
+        <input pInputText [(ngModel)]="linkNote" placeholder="Add a note..." class="w-full" />
+      </div>
+    </div>
+    <div class="crm-link-dialog-footer">
+      <button class="toolbar-btn" (click)="closeLinkDialog()">Cancel</button>
+      <button class="toolbar-btn crm-link-btn" (click)="linkEmailToCrm()" [disabled]="!linkEntityType || !linkEntityId">
+        <i class="pi pi-link"></i> Link Email
+      </button>
+    </div>
+  </div>
+}
 
 <!-- Compose Email Dialog -->
 <app-email-compose-dialog

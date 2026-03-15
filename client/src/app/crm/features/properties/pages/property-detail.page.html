@@ -95,8 +95,11 @@
         <div class="gallery-card">
           <h2 class="card-title"><i class="pi pi-images"></i> Photos &amp; Media</h2>
           <div class="gallery-grid" *ngIf="photoUrlList().length > 0">
-            <div class="gallery-item" *ngFor="let url of photoUrlList(); let i = index">
+            <div class="gallery-item" *ngFor="let url of photoUrlList(); let i = index" (click)="openLightbox(i)">
               <img [src]="url" [alt]="'Photo ' + (i + 1) + ' of ' + prop.address" loading="lazy" />
+              <div class="gallery-item-overlay">
+                <i class="pi pi-search-plus"></i>
+              </div>
             </div>
           </div>
           <div class="virtual-tour" *ngIf="prop.virtualTourUrl">
@@ -193,7 +196,6 @@
                 <div class="card-header-copy">
                   <span class="card-kicker">Property Snapshot</span>
                   <h2 class="card-title"><i class="pi pi-home"></i> Property Details</h2>
-                  <p class="card-subtitle">Core listing identity, location, and market-facing details.</p>
                 </div>
                 <div class="card-badge-stack">
                   <span class="mini-badge" *ngIf="prop.listingDateUtc || prop.createdAtUtc">
@@ -252,7 +254,6 @@
                 <div class="card-header-copy">
                   <span class="card-kicker">Interior & Exterior</span>
                   <h2 class="card-title"><i class="pi pi-sliders-h"></i> Features &amp; Specs</h2>
-                  <p class="card-subtitle">Physical characteristics and buyer-facing highlights for the home.</p>
                 </div>
               </div>
             </div>
@@ -302,7 +303,6 @@
                 <div class="card-header-copy">
                   <span class="card-kicker">Story</span>
                   <h2 class="card-title"><i class="pi pi-align-left"></i> Description</h2>
-                  <p class="card-subtitle">The narrative the agent uses to position the property.</p>
                 </div>
               </div>
             </div>
@@ -319,7 +319,6 @@
                 <div class="card-header-copy">
                   <span class="card-kicker">Commercials</span>
                   <h2 class="card-title"><i class="pi pi-dollar"></i> Pricing &amp; Commission</h2>
-                  <p class="card-subtitle">Listing value, sale outcome, pricing context, and commission structure.</p>
                 </div>
               </div>
             </div>
@@ -379,7 +378,6 @@
                 <div class="card-header-copy">
                   <span class="card-kicker">CRM Relationships</span>
                   <h2 class="card-title"><i class="pi pi-user"></i> Ownership &amp; Links</h2>
-                  <p class="card-subtitle">Who owns the record and which account and contact records it is tied to.</p>
                 </div>
               </div>
             </div>
@@ -415,32 +413,57 @@
                 <div class="card-header-copy">
                   <span class="card-kicker">Lifecycle</span>
                   <h2 class="card-title"><i class="pi pi-calendar"></i> Timeline</h2>
-                  <p class="card-subtitle">Track the operational history of the listing from creation through status changes.</p>
                 </div>
                 <div class="card-badge-stack">
                   <span class="mini-badge mini-badge--accent">
+                    <i class="pi pi-clock" style="font-size: 0.7rem"></i>
                     {{ daysSinceListed() }} days on market
                   </span>
                 </div>
               </div>
             </div>
+
+            <div class="timeline-summary">
+              <div class="timeline-summary-stat">
+                <span class="summary-value">{{ timelineEvents().length }}</span>
+                <span class="summary-label">Events</span>
+              </div>
+              <div class="timeline-summary-stat">
+                <span class="summary-value">{{ daysSinceListed() }}</span>
+                <span class="summary-label">Days Listed</span>
+              </div>
+            </div>
+
             <div class="status-timeline">
-              <div class="timeline-event" *ngFor="let evt of timelineEvents(); let last = last"
+              <div *ngFor="let evt of timelineEvents(); let i = index; let last = last"
                    [class]="'timeline-event timeline-event--' + evt.variant">
                 <div class="timeline-marker">
                   <span class="marker-dot"><i class="pi" [ngClass]="evt.icon"></i></span>
                   <span class="marker-line" *ngIf="!last"></span>
                 </div>
-                <div class="timeline-body">
-                  <span class="timeline-label">{{ evt.label }}</span>
-                  <span class="timeline-date">{{ evt.occurredAtUtc | date:'MMM d, yyyy' }}</span>
-                  <span class="timeline-note" *ngIf="evt.description">{{ evt.description }}</span>
+                <div class="timeline-card">
+                  <div class="timeline-card-header">
+                    <span class="timeline-label">{{ evt.label }}</span>
+                    <span [class]="'timeline-type-badge timeline-type-badge--' + evt.variant">{{ evt.eventType }}</span>
+                  </div>
+                  <div class="timeline-meta">
+                    <span class="timeline-date">
+                      <i class="pi pi-calendar"></i>
+                      {{ evt.occurredAtUtc | date:'MMM d, yyyy' }}
+                    </span>
+                    <span class="timeline-time">
+                      <i class="pi pi-clock"></i>
+                      {{ evt.occurredAtUtc | date:'h:mm a' }}
+                    </span>
+                  </div>
+                  <p class="timeline-description" *ngIf="evt.description">{{ evt.description }}</p>
                 </div>
               </div>
             </div>
-            <div class="days-on-market">
-              <i class="pi pi-clock"></i>
-              <span><strong>{{ daysSinceListed() }}</strong> days on market</span>
+
+            <div class="timeline-empty" *ngIf="timelineEvents().length === 0">
+              <i class="pi pi-info-circle"></i>
+              <span>No timeline events recorded yet.</span>
             </div>
           </section>
         </div>
@@ -1236,3 +1259,33 @@
     </button>
   </ng-template>
 </p-dialog>
+
+<!-- ═══ PHOTO LIGHTBOX ═══ -->
+<div class="lightbox-overlay" *ngIf="lightboxOpen()" (click)="closeLightbox()">
+  <button class="lightbox-close" (click)="closeLightbox()" title="Close (Esc)">
+    <i class="pi pi-times"></i>
+  </button>
+
+  <button class="lightbox-nav lightbox-nav--prev"
+          *ngIf="photoUrlList().length > 1"
+          (click)="$event.stopPropagation(); lightboxPrev()"
+          title="Previous (←)">
+    <i class="pi pi-chevron-left"></i>
+  </button>
+
+  <div class="lightbox-content" (click)="$event.stopPropagation()">
+    <img [src]="photoUrlList()[lightboxIndex()]"
+         [alt]="'Photo ' + (lightboxIndex() + 1)"
+         class="lightbox-image" />
+    <div class="lightbox-counter">
+      {{ lightboxIndex() + 1 }} / {{ photoUrlList().length }}
+    </div>
+  </div>
+
+  <button class="lightbox-nav lightbox-nav--next"
+          *ngIf="photoUrlList().length > 1"
+          (click)="$event.stopPropagation(); lightboxNext()"
+          title="Next (→)">
+    <i class="pi pi-chevron-right"></i>
+  </button>
+</div>

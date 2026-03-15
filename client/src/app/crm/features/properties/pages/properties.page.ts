@@ -103,7 +103,7 @@ export class PropertiesPage {
   protected typeFilter: TypeOption['value'] = 'all';
   protected pageIndex = 0;
   protected rows = 10;
-  protected viewMode: 'table' | 'kanban' | 'map' = 'table';
+  protected viewMode: 'table' | 'card' | 'kanban' | 'map' = 'table';
   protected readonly Math = Math;
 
   /* ── Bulk Operations (X11) ── */
