@@ -37,8 +37,8 @@ BRAND = "North Edge Systems"
 PRODUCT = "CRM Enterprise"
 VERSION = "1.0"
 DOC_DATE = datetime.now().strftime("%B %d, %Y")
-PREPARED_BY = ""
-APPROVED_BY = ""
+PREPARED_BY = "QA Engineering"
+APPROVED_BY = "Robert Lambke"
 
 PRIMARY = colors.HexColor("#667eea")
 PRIMARY_DARK = colors.HexColor("#4338ca")
@@ -742,6 +742,42 @@ MODULES = [
                 "expected": (
                     "The quick-add dialog opens. Lead is created with the provided name. "
                     "The dialog closes and the lead is findable in the system."
+                ),
+            },
+            {
+                "title": "Lead Conversion — Elena Voronova, Baltic Freight Solutions",
+                "category": "Lead Conversion",
+                "steps": [
+                    "Create lead: Elena Voronova, Baltic Freight Solutions, Head of Digital Transformation.",
+                    "Complete CQVS qualification (all five factors rated).",
+                    "Log a discovery meeting activity linked to the lead.",
+                    "Set lead status to 'Qualified'.",
+                    "Click 'Convert Lead' on the lead edit page.",
+                    "On the conversion form, confirm the conversion.",
+                    "Verify the system displays a 'Lead converted' confirmation.",
+                    "Verify the lead is no longer editable as a lead.",
+                ],
+                "expected": (
+                    "Qualified lead is successfully converted to an opportunity. "
+                    "The conversion confirmation is shown. Lead status reflects the conversion. "
+                    "An opportunity record is created with the lead's company and contact information carried over."
+                ),
+            },
+            {
+                "title": "Round Robin Lead Assignment — Claire Dubois",
+                "category": "Assignment Strategy",
+                "steps": [
+                    "Navigate to Leads → New Lead.",
+                    "Enter: Claire Dubois, Lumière Design Studio, Creative Director.",
+                    "Enter Source: Website Inquiry.",
+                    "Select Assignment Strategy: Round Robin.",
+                    "Click 'Create Lead'.",
+                    "Verify the system automatically assigns an owner.",
+                ],
+                "expected": (
+                    "Lead is created with round robin assignment strategy. "
+                    "The system assigns an owner from the available pool. "
+                    "The assigned owner is visible on the lead record."
                 ),
             },
         ],

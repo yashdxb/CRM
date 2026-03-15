@@ -664,6 +664,7 @@
                     optionValue="id"
                     [showClear]="true"
                     [ngModel]="selectedQuoteId"
+                    name="quoteSelect"
                     (ngModelChange)="onQuoteSelectionChange($event)"
                     placeholder="Select quote"
                     styleClass="w-full"
@@ -790,6 +791,7 @@
                   ></p-inputNumber>
                   <p-inputNumber
                     [ngModel]="line.lineTotal"
+                    [ngModelOptions]="{standalone: true}"
                     [disabled]="true"
                     mode="currency"
                     [currency]="resolveCurrency(quoteCurrency || form.currency)"
@@ -1156,6 +1158,7 @@
                           optionLabel="label"
                           optionValue="value"
                           [(ngModel)]="stakeholderSelectedContactId"
+                          name="stakeholderContactId"
                           placeholder="Select contact"
                           [filter]="true"
                           filterPlaceholder="Search contacts…"
@@ -1168,6 +1171,7 @@
                           optionLabel="label"
                           optionValue="value"
                           [(ngModel)]="stakeholderSelectedRole"
+                          name="stakeholderRole"
                           placeholder="Role"
                           styleClass="stakeholder-role-select"
                         ></p-select>
