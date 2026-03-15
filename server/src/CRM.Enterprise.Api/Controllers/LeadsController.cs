@@ -527,6 +527,11 @@ public class LeadsController : ControllerBase
             dto.ConversationScoreReasons,
             dto.ConversationScoreUpdatedAtUtc,
             dto.ConversationSignalAvailable,
+            dto.ConversationAiDimensionScore,
+            dto.ConversationAiToneLabel,
+            dto.ConversationAiBuyingReadiness,
+            dto.ConversationAiSemanticIntent,
+            dto.ConversationAiToneJustification,
             dto.IsConverted,
             new LeadConversionReadinessItem(
                 dto.ConversionReadiness.Score,

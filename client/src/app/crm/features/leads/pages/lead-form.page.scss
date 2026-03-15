@@ -1299,6 +1299,92 @@
       gap: 0.55rem;
     }
 
+    // AI Tone & Intent Analysis panel
+    .ai-tone-panel {
+      background: rgba(99, 102, 241, 0.06);
+      border: 1px solid rgba(99, 102, 241, 0.15);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.8rem;
+
+      &__header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.65rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #4338ca;
+
+        i { color: #6366f1; font-size: 0.9rem; }
+      }
+
+      &__score {
+        margin-left: auto;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: #6366f1;
+        background: rgba(99, 102, 241, 0.12);
+        padding: 2px 8px;
+        border-radius: 9999px;
+      }
+
+      &__grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+
+        @media (max-width: 640px) {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      &__justification {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        color: #6b7280;
+        line-height: 1.45;
+
+        i {
+          color: #a5b4fc;
+          font-size: 0.8rem;
+          margin-top: 2px;
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    .ai-tone-chip {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 0.45rem 0.65rem;
+      border-radius: 0.5rem;
+      background: rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+
+      &__label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #9ca3af;
+      }
+
+      strong {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #1e293b;
+      }
+
+      &--tone { border-left: 3px solid #6366f1; }
+      &--buying { border-left: 3px solid #22c55e; }
+      &--intent { border-left: 3px solid #06b6d4; }
+    }
+
     .conversation-intelligence-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));

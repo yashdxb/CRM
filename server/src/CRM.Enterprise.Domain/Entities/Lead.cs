@@ -65,6 +65,13 @@ public class Lead : AuditableEntity
     public DateTime? ConversationScoreUpdatedAtUtc { get; set; }
     public bool ConversationSignalAvailable { get; set; }
 
+    // AI Tone & Intent dimension (LLM-scored, 0-20 points)
+    public int? ConversationAiDimensionScore { get; set; }
+    public string? ConversationAiToneLabel { get; set; }
+    public string? ConversationAiBuyingReadiness { get; set; }
+    public string? ConversationAiSemanticIntent { get; set; }
+    public string? ConversationAiToneJustification { get; set; }
+
     // AI Conversation Summary
     public string? ConversationAiSummary { get; set; }
     public string? ConversationAiSentiment { get; set; }

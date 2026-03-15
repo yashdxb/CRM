@@ -243,6 +243,11 @@ public sealed class LeadService : ILeadService
                 l.ConversationScoreReasonsJson,
                 l.ConversationScoreUpdatedAtUtc,
                 l.ConversationSignalAvailable,
+                l.ConversationAiDimensionScore,
+                l.ConversationAiToneLabel,
+                l.ConversationAiBuyingReadiness,
+                l.ConversationAiSemanticIntent,
+                l.ConversationAiToneJustification,
                 LastActivityAtUtc = l.Activities.Any() ? l.Activities.Max(a => a.CreatedAtUtc) : (DateTime?)null
             })
             .ToListAsync(cancellationToken);
@@ -337,6 +342,11 @@ public sealed class LeadService : ILeadService
                 conversationReasons,
                 l.ConversationScoreUpdatedAtUtc,
                 l.ConversationSignalAvailable,
+                l.ConversationAiDimensionScore,
+                l.ConversationAiToneLabel,
+                l.ConversationAiBuyingReadiness,
+                l.ConversationAiSemanticIntent,
+                l.ConversationAiToneJustification,
                 l.ConvertedOpportunityId.HasValue,
                 readiness,
                 l.LastActivityAtUtc);
@@ -446,6 +456,11 @@ public sealed class LeadService : ILeadService
             detailConversation.Reasons,
             lead.ConversationScoreUpdatedAtUtc,
             lead.ConversationSignalAvailable,
+            lead.ConversationAiDimensionScore,
+            lead.ConversationAiToneLabel,
+            lead.ConversationAiBuyingReadiness,
+            lead.ConversationAiSemanticIntent,
+            lead.ConversationAiToneJustification,
             lead.IsConverted,
             detailReadiness,
             await _dbContext.Activities
@@ -1070,6 +1085,11 @@ public sealed class LeadService : ILeadService
             createConversation.Reasons,
             lead.ConversationScoreUpdatedAtUtc,
             lead.ConversationSignalAvailable,
+            lead.ConversationAiDimensionScore,
+            lead.ConversationAiToneLabel,
+            lead.ConversationAiBuyingReadiness,
+            lead.ConversationAiSemanticIntent,
+            lead.ConversationAiToneJustification,
             lead.IsConverted,
             createReadiness,
             null);

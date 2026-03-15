@@ -1,9 +1,13 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CRM.Enterprise.Infrastructure.Leads;
 
@@ -11,10 +15,23 @@ public sealed class LeadConversationScoreService : ILeadConversationScoreService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly CrmDbContext _dbContext;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly AzureOpenAiOptions _azureOptions;
+    private readonly OpenAiOptions _openAiOptions;
+    private readonly ILogger<LeadConversationScoreService> _logger;
 
-    public LeadConversationScoreService(CrmDbContext dbContext)
+    public LeadConversationScoreService(
+        CrmDbContext dbContext,
+        IHttpClientFactory httpClientFactory,
+        IOptions<AzureOpenAiOptions> azureOptions,
+        IOptions<OpenAiOptions> openAiOptions,
+        ILogger<LeadConversationScoreService> logger)
     {
         _dbContext = dbContext;
+        _httpClientFactory = httpClientFactory;
+        _azureOptions = azureOptions.Value;
+        _openAiOptions = openAiOptions.Value;
+        _logger = logger;
     }
 
     public async Task<LeadConversationScoreSnapshot> CalculateAsync(Lead lead, CancellationToken cancellationToken = default)
@@ -102,10 +119,16 @@ public sealed class LeadConversationScoreService : ILeadConversationScoreService
                     ? 5
                     : 0;
 
-        var totalScore = recencyScore + frequencyScore + bidirectionalScore + stakeholderScore + signalScore + momentumScore;
-        var label = totalScore >= 75
+        var rulesScore = recencyScore + frequencyScore + bidirectionalScore + stakeholderScore + signalScore + momentumScore;
+
+        // 7th dimension: AI Tone & Intent analysis (0-20 points)
+        var toneAnalysis = await AnalyzeToneAsync(lead, interactions, cancellationToken);
+        var aiDimensionScore = toneAnalysis?.AiDimensionScore ?? 0;
+
+        var totalScore = rulesScore + aiDimensionScore;
+        var label = totalScore >= 90
             ? "High"
-            : totalScore >= 45
+            : totalScore >= 55
                 ? "Medium"
                 : "Low";
 
@@ -118,12 +141,18 @@ public sealed class LeadConversationScoreService : ILeadConversationScoreService
             stakeholders,
             signalCategories);
 
+        if (toneAnalysis is not null)
+        {
+            reasons = [..reasons, $"AI tone: {toneAnalysis.ToneLabel}, buying readiness: {toneAnalysis.BuyingReadiness}."];
+        }
+
         return new LeadConversationScoreSnapshot(
             totalScore,
             label,
             reasons,
             now,
-            true);
+            true,
+            toneAnalysis);
     }
 
     public async Task<LeadConversationScoreSnapshot?> RefreshAsync(Guid leadId, CancellationToken cancellationToken = default)
@@ -168,6 +197,165 @@ public sealed class LeadConversationScoreService : ILeadConversationScoreService
             : JsonSerializer.Serialize(snapshot.Reasons, JsonOptions);
         lead.ConversationScoreUpdatedAtUtc = snapshot.UpdatedAtUtc;
         lead.ConversationSignalAvailable = snapshot.SignalAvailable;
+
+        // AI Tone dimension
+        lead.ConversationAiDimensionScore = snapshot.ToneAnalysis?.AiDimensionScore;
+        lead.ConversationAiToneLabel = snapshot.ToneAnalysis?.ToneLabel;
+        lead.ConversationAiBuyingReadiness = snapshot.ToneAnalysis?.BuyingReadiness;
+        lead.ConversationAiSemanticIntent = snapshot.ToneAnalysis?.SemanticIntent;
+        lead.ConversationAiToneJustification = snapshot.ToneAnalysis?.Justification;
+    }
+
+    private async Task<ConversationToneAnalysis?> AnalyzeToneAsync(
+        Lead lead,
+        List<NormalizedInteraction> interactions,
+        CancellationToken ct)
+    {
+        // Only analyze if there is meaningful text content
+        var textParts = interactions
+            .Where(i => !string.IsNullOrWhiteSpace(i.Text))
+            .OrderByDescending(i => i.OccurredAtUtc)
+            .Take(15)
+            .Select(i =>
+            {
+                var body = i.Text.Length > 400 ? i.Text[..400] + "..." : i.Text;
+                return $"[{i.OccurredAtUtc:yyyy-MM-dd} {i.Direction} via {i.Source}]\n{body}";
+            })
+            .ToList();
+
+        if (textParts.Count == 0)
+        {
+            return null;
+        }
+
+        var conversationText = string.Join("\n---\n", textParts);
+        if (conversationText.Length > 6000)
+        {
+            conversationText = conversationText[..6000];
+        }
+
+        var prompt = $"Analyze the tone and buying intent of this sales conversation with lead " +
+                     $"\"{lead.FirstName} {lead.LastName}\" from \"{lead.CompanyName ?? "Unknown"}\".\n\n" +
+                     $"Conversation:\n{conversationText}\n\n" +
+                     "Return JSON with:\n" +
+                     "- toneLabel: overall conversational tone, one of: Engaged, Formal, Enthusiastic, Guarded, Dismissive, Urgent\n" +
+                     "- buyingReadiness: one of: Ready to Buy, Actively Evaluating, Early Exploration, Stalling, Objecting, Disengaged\n" +
+                     "- semanticIntent: one of: Seeking Solution, Comparing Options, Negotiating Terms, Requesting Information, Going Silent, Raising Objections\n" +
+                     "- aiScore: integer 0-20 representing buying strength (20=strong buying signals + engaged tone, 0=disengaged/hostile)\n" +
+                     "- justification: one sentence explaining the aiScore (<=120 chars)";
+
+        try
+        {
+            return await CallToneAiAsync(prompt, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "AI tone analysis failed for lead {LeadId}; scoring without AI dimension.", lead.Id);
+            return null;
+        }
+    }
+
+    private async Task<ConversationToneAnalysis> CallToneAiAsync(string prompt, CancellationToken ct)
+    {
+        const string systemMessage = "You are a CRM sales conversation analyst specializing in tone and intent detection. " +
+            "Return JSON with fields: toneLabel (Engaged|Formal|Enthusiastic|Guarded|Dismissive|Urgent), " +
+            "buyingReadiness (Ready to Buy|Actively Evaluating|Early Exploration|Stalling|Objecting|Disengaged), " +
+            "semanticIntent (Seeking Solution|Comparing Options|Negotiating Terms|Requesting Information|Going Silent|Raising Objections), " +
+            "aiScore (integer 0-20), justification (string <=120 chars).";
+
+        string responseText;
+
+        if (!string.IsNullOrWhiteSpace(_azureOptions.ApiKey) && !string.IsNullOrWhiteSpace(_azureOptions.Deployment))
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(_azureOptions.Endpoint.TrimEnd('/') + "/");
+
+            var requestBody = new
+            {
+                temperature = 0.2m,
+                max_tokens = 300,
+                response_format = new { type = "json_object" },
+                messages = new[]
+                {
+                    new { role = "system", content = systemMessage },
+                    new { role = "user", content = prompt }
+                }
+            };
+
+            var requestUri = $"openai/deployments/{_azureOptions.Deployment}/chat/completions?api-version={_azureOptions.ApiVersion}";
+            using var message = new HttpRequestMessage(HttpMethod.Post, requestUri);
+            message.Headers.Add("api-key", _azureOptions.ApiKey);
+            message.Content = JsonContent.Create(requestBody, options: JsonOptions);
+
+            using var response = await client.SendAsync(message, ct);
+            responseText = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Azure OpenAI tone analysis error: {response.StatusCode} {responseText}");
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(_openAiOptions.ApiKey))
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.BaseAddress = new Uri(_openAiOptions.BaseUrl);
+
+            var requestBody = new
+            {
+                model = _openAiOptions.Model,
+                temperature = 0.2m,
+                max_tokens = 300,
+                response_format = new { type = "json_object" },
+                messages = new[]
+                {
+                    new { role = "system", content = systemMessage },
+                    new { role = "user", content = prompt }
+                }
+            };
+
+            using var message = new HttpRequestMessage(HttpMethod.Post, "chat/completions");
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _openAiOptions.ApiKey);
+            message.Content = JsonContent.Create(requestBody, options: JsonOptions);
+
+            using var response = await client.SendAsync(message, ct);
+            responseText = await response.Content.ReadAsStringAsync(ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"OpenAI tone analysis error: {response.StatusCode} {responseText}");
+            }
+        }
+        else
+        {
+            throw new InvalidOperationException("No AI service configured for tone analysis.");
+        }
+
+        return ParseToneResponse(responseText);
+    }
+
+    private static ConversationToneAnalysis ParseToneResponse(string responseText)
+    {
+        using var doc = JsonDocument.Parse(responseText);
+        var content = doc.RootElement
+            .GetProperty("choices")[0]
+            .GetProperty("message")
+            .GetProperty("content")
+            .GetString();
+
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw new InvalidOperationException("AI returned empty tone analysis.");
+        }
+
+        using var result = JsonDocument.Parse(content);
+        var root = result.RootElement;
+
+        var toneLabel = root.TryGetProperty("toneLabel", out var t) ? t.GetString() ?? "Formal" : "Formal";
+        var buyingReadiness = root.TryGetProperty("buyingReadiness", out var b) ? b.GetString() ?? "Early Exploration" : "Early Exploration";
+        var semanticIntent = root.TryGetProperty("semanticIntent", out var si) ? si.GetString() ?? "Requesting Information" : "Requesting Information";
+        var aiScore = root.TryGetProperty("aiScore", out var a) && a.TryGetInt32(out var scoreVal) ? Math.Clamp(scoreVal, 0, 20) : 0;
+        var justification = root.TryGetProperty("justification", out var j) ? j.GetString() ?? "" : "";
+        if (justification.Length > 120) justification = justification[..120];
+
+        return new ConversationToneAnalysis(aiScore, toneLabel, buyingReadiness, semanticIntent, justification);
     }
 
     private async Task<List<NormalizedInteraction>> LoadLeadActivitiesAsync(Lead lead, CancellationToken cancellationToken)

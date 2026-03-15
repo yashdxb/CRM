@@ -63,6 +63,11 @@ public record LeadListItem(
     IEnumerable<string> ConversationScoreReasons,
     DateTime? ConversationScoreUpdatedAtUtc,
     bool ConversationSignalAvailable,
+    int? ConversationAiDimensionScore,
+    string? ConversationAiToneLabel,
+    string? ConversationAiBuyingReadiness,
+    string? ConversationAiSemanticIntent,
+    string? ConversationAiToneJustification,
     bool IsConverted,
     LeadConversionReadinessItem? ConversionReadiness,
     DateTime? LastActivityAtUtc);

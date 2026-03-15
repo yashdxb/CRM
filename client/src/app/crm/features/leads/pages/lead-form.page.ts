@@ -336,6 +336,11 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected conversationScoreReasons = signal<string[]>([]);
   protected conversationScoreUpdatedAtUtc = signal<string | null>(null);
   protected conversationSignalAvailable = signal(false);
+  protected conversationAiDimensionScore = signal<number | null>(null);
+  protected conversationAiToneLabel = signal<string | null>(null);
+  protected conversationAiBuyingReadiness = signal<string | null>(null);
+  protected conversationAiSemanticIntent = signal<string | null>(null);
+  protected conversationAiToneJustification = signal<string | null>(null);
   protected conversionReadiness = signal<LeadConversionReadiness | null>(null);
   protected serverNextEvidenceSuggestions = signal<string[]>([]);
   protected nextEvidenceSuggestions = signal<string[]>([]);
@@ -1512,6 +1517,11 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.conversationScoreReasons.set(lead.conversationScoreReasons ?? []);
     this.conversationScoreUpdatedAtUtc.set(lead.conversationScoreUpdatedAtUtc ?? null);
     this.conversationSignalAvailable.set(lead.conversationSignalAvailable === true);
+    this.conversationAiDimensionScore.set(lead.conversationAiDimensionScore ?? null);
+    this.conversationAiToneLabel.set(lead.conversationAiToneLabel ?? null);
+    this.conversationAiBuyingReadiness.set(lead.conversationAiBuyingReadiness ?? null);
+    this.conversationAiSemanticIntent.set(lead.conversationAiSemanticIntent ?? null);
+    this.conversationAiToneJustification.set(lead.conversationAiToneJustification ?? null);
     this.conversionReadiness.set(lead.conversionReadiness ?? null);
     this.serverWeakestSignal.set(lead.weakestSignal ?? null);
     this.serverWeakestState.set(lead.weakestState ?? null);

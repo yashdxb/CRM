@@ -1029,6 +1029,33 @@
               </div>
             </div>
 
+            <!-- AI Tone & Intent Analysis -->
+            <div class="ai-tone-panel" *ngIf="conversationAiToneLabel()">
+              <div class="ai-tone-panel__header">
+                <i class="pi pi-sparkles" aria-hidden="true"></i>
+                <span>AI Tone &amp; Intent Analysis</span>
+                <span class="ai-tone-panel__score">+{{ conversationAiDimensionScore() ?? 0 }}/20</span>
+              </div>
+              <div class="ai-tone-panel__grid">
+                <div class="ai-tone-chip ai-tone-chip--tone">
+                  <span class="ai-tone-chip__label">Tone</span>
+                  <strong>{{ conversationAiToneLabel() }}</strong>
+                </div>
+                <div class="ai-tone-chip ai-tone-chip--buying">
+                  <span class="ai-tone-chip__label">Buying Readiness</span>
+                  <strong>{{ conversationAiBuyingReadiness() }}</strong>
+                </div>
+                <div class="ai-tone-chip ai-tone-chip--intent">
+                  <span class="ai-tone-chip__label">Semantic Intent</span>
+                  <strong>{{ conversationAiSemanticIntent() }}</strong>
+                </div>
+              </div>
+              <div class="ai-tone-panel__justification" *ngIf="conversationAiToneJustification()">
+                <i class="pi pi-info-circle" aria-hidden="true"></i>
+                <span>{{ conversationAiToneJustification() }}</span>
+              </div>
+            </div>
+
             <div class="conversation-intelligence-grid">
               <div class="conversation-signal-card" *ngIf="conversationPositiveSignals().length">
                 <div class="conversation-signal-card__label">What we know</div>

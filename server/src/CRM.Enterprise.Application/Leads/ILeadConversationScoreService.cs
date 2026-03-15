@@ -13,4 +13,15 @@ public sealed record LeadConversationScoreSnapshot(
     string? Label,
     IReadOnlyList<string> Reasons,
     DateTime? UpdatedAtUtc,
-    bool SignalAvailable);
+    bool SignalAvailable,
+    ConversationToneAnalysis? ToneAnalysis = null);
+
+/// <summary>
+/// LLM-generated tone and intent analysis contributing up to 20 points to the conversation score.
+/// </summary>
+public sealed record ConversationToneAnalysis(
+    int AiDimensionScore,
+    string ToneLabel,
+    string BuyingReadiness,
+    string SemanticIntent,
+    string Justification);

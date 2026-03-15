@@ -60,6 +60,11 @@ public sealed record LeadListItemDto(
     IReadOnlyList<string> ConversationScoreReasons,
     DateTime? ConversationScoreUpdatedAtUtc,
     bool ConversationSignalAvailable,
+    int? ConversationAiDimensionScore,
+    string? ConversationAiToneLabel,
+    string? ConversationAiBuyingReadiness,
+    string? ConversationAiSemanticIntent,
+    string? ConversationAiToneJustification,
     bool IsConverted,
     LeadConversionReadinessDto ConversionReadiness,
     DateTime? LastActivityAtUtc);

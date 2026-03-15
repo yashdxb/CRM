@@ -79,6 +79,11 @@ export interface Lead {
   conversationScoreReasons?: string[];
   conversationScoreUpdatedAtUtc?: string | null;
   conversationSignalAvailable?: boolean;
+  conversationAiDimensionScore?: number | null;
+  conversationAiToneLabel?: string | null;
+  conversationAiBuyingReadiness?: string | null;
+  conversationAiSemanticIntent?: string | null;
+  conversationAiToneJustification?: string | null;
   conversionReadiness?: LeadConversionReadiness;
 }
 
