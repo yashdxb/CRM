@@ -133,11 +133,17 @@
     <app-workflow-properties-panel
       [steps]="workflow().steps"
       [nodes]="workflow().nodes"
+      [connections]="workflow().connections"
+      [selectedNodeId]="selectedNodeId()"
+      [nodeSelectionOptions]="nodeSelectionOptions()"
       [roleOptions]="roleOptions()"
       [securityLevelOptions]="securityLevelOptions()"
+      (selectionChange)="selectNode($event)"
       (removeStep)="removeStep($event)"
       (patchStep)="patchStep($event)"
       (patchNode)="patchNode($event)"
+      (patchNodeConfig)="patchNodeConfig($event.nodeId, $event.patch)"
+      (patchConnection)="patchConnection($event.index, $event.patch)"
       (removeNode)="removeNode($event)"
     ></app-workflow-properties-panel>
   </div>

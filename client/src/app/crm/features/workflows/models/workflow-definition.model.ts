@@ -1,14 +1,62 @@
+export interface WorkflowNodeConditionConfig {
+  field: string | null;
+  operator: string | null;
+  value: string | null;
+}
+
+export interface WorkflowNodeDelayConfig {
+  duration: number | null;
+  unit: 'minutes' | 'hours' | 'days';
+  businessHoursOnly: boolean;
+}
+
+export interface WorkflowNodeEmailConfig {
+  template: string | null;
+  recipientType: string | null;
+  subject: string | null;
+}
+
+export interface WorkflowNodeNotificationConfig {
+  channel: string | null;
+  audience: string | null;
+  message: string | null;
+}
+
+export interface WorkflowNodeCrmUpdateConfig {
+  field: string | null;
+  value: string | null;
+}
+
+export interface WorkflowNodeActivityConfig {
+  activityType: string | null;
+  subject: string | null;
+  ownerStrategy: string | null;
+  dueInHours: number | null;
+}
+
+export interface WorkflowNodeConfig {
+  condition?: WorkflowNodeConditionConfig | null;
+  delay?: WorkflowNodeDelayConfig | null;
+  email?: WorkflowNodeEmailConfig | null;
+  notification?: WorkflowNodeNotificationConfig | null;
+  crmUpdate?: WorkflowNodeCrmUpdateConfig | null;
+  activity?: WorkflowNodeActivityConfig | null;
+}
+
 export interface WorkflowNode {
   id: string;
   type: 'start' | 'approval' | 'condition' | 'email' | 'notification' | 'delay' | 'crm-update' | 'activity' | 'end';
   x: number;
   y: number;
   label?: string | null;
+  config?: WorkflowNodeConfig | null;
 }
 
 export interface WorkflowConnection {
   source: string;
   target: string;
+  label?: string | null;
+  branchKey?: string | null;
 }
 
 export interface WorkflowStep {

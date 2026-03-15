@@ -103,7 +103,20 @@ export class WorkflowCanvasComponent implements OnChanges, OnDestroy {
   }
 
   private syncConnections(connections: WorkflowConnection[]) {
-    this.workflowChange.emit({ ...this.workflow, connections });
+    const existing = new Map(
+      (this.workflow.connections ?? []).map((connection) => [
+        `${connection.source}->${connection.target}`,
+        connection
+      ])
+    );
+
+    this.workflowChange.emit({
+      ...this.workflow,
+      connections: connections.map((connection) => ({
+        ...existing.get(`${connection.source}->${connection.target}`),
+        ...connection
+      }))
+    });
   }
 
   private addApprovalStepAt(x: number, y: number) {
@@ -171,18 +184,21 @@ export class WorkflowCanvasComponent implements OnChanges, OnDestroy {
     if (node.type === 'start') return 'Start';
     if (node.type === 'end') return 'End';
     if (node.type === 'condition') return 'Condition';
-    if (node.type === 'email') return 'Email';
-    if (node.type === 'notification') return 'Notification';
-    if (node.type === 'delay') return 'Delay';
-    if (node.type === 'crm-update') return 'CRM Update';
-    if (node.type === 'activity') return 'Create Activity';
+    if (node.type === 'email') return node.config?.email?.template ? `Email: ${node.config.email.template}` : 'Email';
+    if (node.type === 'notification') return node.config?.notification?.channel ? `Notify: ${node.config.notification.channel}` : 'Notification';
+    if (node.type === 'delay') {
+      const delay = node.config?.delay;
+      return delay?.duration ? `Delay ${delay.duration} ${delay.unit}` : 'Delay';
+    }
+    if (node.type === 'crm-update') return node.config?.crmUpdate?.field ? `Update ${node.config.crmUpdate.field}` : 'CRM Update';
+    if (node.type === 'activity') return node.config?.activity?.subject ? `Activity: ${node.config.activity.subject}` : 'Create Activity';
 
     const step = indexByNode.get(node.id);
     if (!step) return 'Approval Step';
 
-    const role = step.approverRole || 'Approver role';
-    const threshold = step.amountThreshold != null ? ` | >= ${step.amountThreshold}` : '';
-    return `Step ${step.order}: ${role}${threshold}`;
+      const role = step.approverRole || 'Approver role';
+      const threshold = step.amountThreshold != null ? ` | >= ${step.amountThreshold}` : '';
+      return `Step ${step.order}: ${role}${threshold}`;
   }
 
   private defaultNodeLabel(type: WorkflowNode['type']): string {

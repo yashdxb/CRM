@@ -10,7 +10,14 @@ import { TenantContextService } from '../../../../core/tenant/tenant-context.ser
 import { WorkflowCanvasComponent } from '../components/workflow-canvas/workflow-canvas.component';
 import { NodePaletteComponent } from '../components/node-palette/node-palette.component';
 import { PropertiesPanelComponent } from '../components/properties-panel/properties-panel.component';
-import { DealApprovalWorkflowDefinition, WorkflowNode, WorkflowScopeOption, WorkflowStep } from '../models/workflow-definition.model';
+import {
+  DealApprovalWorkflowDefinition,
+  WorkflowConnection,
+  WorkflowNode,
+  WorkflowNodeConfig,
+  WorkflowScopeOption,
+  WorkflowStep
+} from '../models/workflow-definition.model';
 import { WorkflowDefinitionService } from '../services/workflow-definition.service';
 
 @Component({
@@ -92,6 +99,7 @@ export class WorkflowDesignerPage {
   protected readonly stageOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackStageOptions);
   protected readonly triggerOptions = signal<WorkflowScopeOption[]>(WorkflowDesignerPage.fallbackTriggerOptions);
   protected readonly workflow = signal<DealApprovalWorkflowDefinition>(this.defaultWorkflow());
+  protected readonly selectedNodeId = signal<string | null>(null);
   protected readonly workflowTitle = signal('Approval Workflow Builder');
   protected readonly workflowDescription = signal('Design and publish the single CRM deal approval workflow used by opportunity approvals.');
 
@@ -142,6 +150,7 @@ export class WorkflowDesignerPage {
     this.workflowService.getDealApprovalDefinition().subscribe({
       next: (result) => {
         this.workflow.set(this.normalizeAgainstMetadata(this.normalize(result.definition)));
+        this.ensureSelectedNode();
         this.updatedAtUtc.set(result.updatedAtUtc ?? null);
         this.publishedAtUtc.set(result.publishedAtUtc ?? null);
         this.publishedBy.set(result.publishedBy ?? null);
@@ -150,6 +159,7 @@ export class WorkflowDesignerPage {
       error: () => {
         this.loading.set(false);
         this.workflow.set(this.normalizeAgainstMetadata(this.defaultWorkflow()));
+        this.ensureSelectedNode();
         this.toast.show('error', 'Unable to load workflow definition.', 3000);
       }
     });
@@ -157,6 +167,7 @@ export class WorkflowDesignerPage {
 
   protected onCanvasChange(next: DealApprovalWorkflowDefinition) {
     this.workflow.set(this.normalizeAgainstMetadata(this.normalize(next)));
+    this.ensureSelectedNode();
   }
 
   protected addApprovalStep() {
@@ -177,6 +188,7 @@ export class WorkflowDesignerPage {
       nodes,
       connections: this.createLinearConnections(steps)
     })));
+    this.selectedNodeId.set(nodeId);
   }
 
   protected addNodeByType(type: WorkflowNode['type']) {
@@ -203,6 +215,7 @@ export class WorkflowDesignerPage {
       ...current,
       nodes: [...current.nodes, nextNode]
     })));
+    this.selectedNodeId.set(nextNode.id);
   }
 
   protected removeStep(index: number) {
@@ -218,6 +231,7 @@ export class WorkflowDesignerPage {
       nodes: current.nodes.filter((node) => node.id !== removedNodeId),
       connections: current.connections.filter((edge) => edge.source !== removedNodeId && edge.target !== removedNodeId)
     })));
+    this.ensureSelectedNode();
   }
 
   protected patchStep({ index, patch }: { index: number; patch: Partial<WorkflowStep> }) {
@@ -232,6 +246,33 @@ export class WorkflowDesignerPage {
     this.workflow.set(this.normalizeAgainstMetadata(this.normalize({ ...current, nodes })));
   }
 
+  protected patchNodeConfig(nodeId: string, patch: Partial<WorkflowNodeConfig>) {
+    const current = this.normalize(this.workflow());
+    const nodes = current.nodes.map((node) => {
+      if (node.id !== nodeId) {
+        return node;
+      }
+
+      return {
+        ...node,
+        config: {
+          ...(node.config ?? {}),
+          ...patch
+        }
+      };
+    });
+
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({ ...current, nodes })));
+  }
+
+  protected patchConnection(connectionIndex: number, patch: Partial<WorkflowConnection>) {
+    const current = this.normalize(this.workflow());
+    const connections = current.connections.map((connection, index) =>
+      index === connectionIndex ? { ...connection, ...patch } : connection
+    );
+    this.workflow.set(this.normalizeAgainstMetadata(this.normalize({ ...current, connections })));
+  }
+
   protected removeNode(nodeId: string) {
     const current = this.normalize(this.workflow());
     if (nodeId === 'start' || nodeId === 'end') {
@@ -241,6 +282,11 @@ export class WorkflowDesignerPage {
     const nodes = current.nodes.filter((node) => node.id !== nodeId);
     const connections = current.connections.filter((edge) => edge.source !== nodeId && edge.target !== nodeId);
     this.workflow.set(this.normalizeAgainstMetadata(this.normalize({ ...current, nodes, connections })));
+    this.ensureSelectedNode();
+  }
+
+  protected selectNode(nodeId: string | null) {
+    this.selectedNodeId.set(nodeId);
   }
 
   protected validate() {
@@ -285,6 +331,7 @@ export class WorkflowDesignerPage {
       next: (result) => {
         this.saving.set(false);
         this.workflow.set(this.normalizeAgainstMetadata(this.normalize(JSON.parse(result.definitionJson) as DealApprovalWorkflowDefinition)));
+        this.ensureSelectedNode();
         this.updatedAtUtc.set(result.updatedAtUtc ?? null);
         this.publishedAtUtc.set(result.publishedAtUtc ?? null);
         this.publishedBy.set(result.publishedBy ?? null);
@@ -309,6 +356,7 @@ export class WorkflowDesignerPage {
   protected applyTemplate(templateKey: string) {
     this.selectedTemplate.set(templateKey);
     this.workflow.set(this.normalizeAgainstMetadata(this.normalize(this.createTemplate(templateKey))));
+    this.ensureSelectedNode();
     this.lastValidationErrors.set([]);
     this.lastValidationAtUtc.set(null);
     this.toast.show('success', 'Workflow template applied.', 2500);
@@ -343,6 +391,7 @@ export class WorkflowDesignerPage {
         this.lastValidationErrors.set([]);
         this.lastValidationAtUtc.set(new Date().toISOString());
         this.workflow.set(this.normalizeAgainstMetadata(this.normalize(JSON.parse(result.definitionJson) as DealApprovalWorkflowDefinition)));
+        this.ensureSelectedNode();
         this.toast.show('success',
           operation === 'publish' ? 'Workflow published.'
             : operation === 'unpublish' ? 'Workflow unpublished.'
@@ -394,6 +443,37 @@ export class WorkflowDesignerPage {
   protected async fitView() {
     await this.canvas?.zoomToFit();
   }
+
+  protected readonly nodeSelectionOptions = () => this.workflow().nodes.map((node) => ({
+    label: `${node.type === 'approval' ? 'Approval' : this.defaultNodeLabel(node.type)} - ${node.label ?? node.id}`,
+    value: node.id
+  }));
+
+  protected readonly selectedNode = () => {
+    const selected = this.selectedNodeId();
+    return this.workflow().nodes.find((node) => node.id === selected) ?? null;
+  };
+
+  protected readonly selectedStepIndex = () => {
+    const selected = this.selectedNodeId();
+    return this.workflow().steps.findIndex((step) => step.nodeId === selected);
+  };
+
+  protected readonly selectedStep = () => {
+    const index = this.selectedStepIndex();
+    return index >= 0 ? this.workflow().steps[index] : null;
+  };
+
+  protected readonly selectedNodeConnections = () => {
+    const selected = this.selectedNodeId();
+    if (!selected) {
+      return [];
+    }
+
+    return this.workflow().connections
+      .map((connection, index) => ({ connection, index }))
+      .filter(({ connection }) => connection.source === selected);
+  };
 
   private defaultWorkflow(): DealApprovalWorkflowDefinition {
     return this.createTemplate('deal-approval');
@@ -541,7 +621,7 @@ export class WorkflowDesignerPage {
   }
 
   private createLinearConnections(steps: WorkflowStep[]) {
-    const edges: { source: string; target: string }[] = [];
+    const edges: WorkflowConnection[] = [];
     let previous = 'start';
 
     for (const step of steps) {
@@ -593,32 +673,39 @@ export class WorkflowDesignerPage {
         ...node,
         id: normalizedId,
         type,
-        label: node.label?.trim() || this.defaultNodeLabel(type)
+        label: node.label?.trim() || this.defaultNodeLabel(type),
+        config: this.normalizeNodeConfig(type, node.config ?? null)
       });
     }
 
     if (!nodes.some((node) => node.id === 'start')) {
-      nodes.unshift({ id: 'start', type: 'start', x: 40, y: 180, label: 'Start' });
+      nodes.unshift({ id: 'start', type: 'start', x: 40, y: 180, label: 'Start', config: null });
       seenNodeIds.add('start');
     }
     if (!nodes.some((node) => node.id === 'end')) {
-      nodes.push({ id: 'end', type: 'end', x: 40 + (steps.length + 1) * 260, y: 180, label: 'End' });
+      nodes.push({ id: 'end', type: 'end', x: 40 + (steps.length + 1) * 260, y: 180, label: 'End', config: null });
       seenNodeIds.add('end');
     }
 
     for (const [index, step] of steps.entries()) {
       const nodeId = step.nodeId || `approval-step-${index + 1}`;
       if (!nodes.some((node) => node.id === nodeId)) {
-        nodes.push({ id: nodeId, type: 'approval', x: 40 + (index + 1) * 260, y: 180, label: `Step ${index + 1}` });
+        nodes.push({ id: nodeId, type: 'approval', x: 40 + (index + 1) * 260, y: 180, label: `Step ${index + 1}`, config: null });
         seenNodeIds.add(nodeId);
       }
     }
 
-    const connections = (definition.connections ?? []).filter(
-      (edge, index, all) => seenNodeIds.has(edge.source) && seenNodeIds.has(edge.target)
-        && edge.source !== edge.target
-        && all.findIndex((candidate) => candidate.source === edge.source && candidate.target === edge.target) === index
-    );
+    const connections = (definition.connections ?? [])
+      .filter(
+        (edge, index, all) => seenNodeIds.has(edge.source) && seenNodeIds.has(edge.target)
+          && edge.source !== edge.target
+          && all.findIndex((candidate) => candidate.source === edge.source && candidate.target === edge.target) === index
+      )
+      .map((edge) => ({
+        ...edge,
+        label: edge.label?.trim() || null,
+        branchKey: edge.branchKey?.trim() || null
+      }));
 
     return {
       enabled: definition.enabled,
@@ -732,6 +819,84 @@ export class WorkflowDesignerPage {
     if (type === 'crm-update') return 'CRM Update';
     if (type === 'activity') return 'Activity';
     return 'End';
+  }
+
+  private ensureSelectedNode() {
+    const selected = this.selectedNodeId();
+    if (selected && this.workflow().nodes.some((node) => node.id === selected)) {
+      return;
+    }
+
+    this.selectedNodeId.set(this.workflow().nodes.find((node) => node.type === 'approval')?.id ?? this.workflow().nodes[0]?.id ?? null);
+  }
+
+  private normalizeNodeConfig(type: WorkflowNode['type'], config: WorkflowNodeConfig | null | undefined): WorkflowNodeConfig | null {
+    if (!config) {
+      if (type === 'condition') {
+        return { condition: { field: null, operator: null, value: null } };
+      }
+      if (type === 'delay') {
+        return { delay: { duration: null, unit: 'hours', businessHoursOnly: false } };
+      }
+      if (type === 'email') {
+        return { email: { template: null, recipientType: null, subject: null } };
+      }
+      if (type === 'notification') {
+        return { notification: { channel: null, audience: null, message: null } };
+      }
+      if (type === 'crm-update') {
+        return { crmUpdate: { field: null, value: null } };
+      }
+      if (type === 'activity') {
+        return { activity: { activityType: null, subject: null, ownerStrategy: null, dueInHours: null } };
+      }
+      return null;
+    }
+
+    return {
+      condition: config.condition
+        ? {
+            field: config.condition.field?.trim() || null,
+            operator: config.condition.operator?.trim() || null,
+            value: config.condition.value?.trim() || null
+          }
+        : type === 'condition' ? { field: null, operator: null, value: null } : null,
+      delay: config.delay
+        ? {
+            duration: config.delay.duration ?? null,
+            unit: config.delay.unit ?? 'hours',
+            businessHoursOnly: !!config.delay.businessHoursOnly
+          }
+        : type === 'delay' ? { duration: null, unit: 'hours', businessHoursOnly: false } : null,
+      email: config.email
+        ? {
+            template: config.email.template?.trim() || null,
+            recipientType: config.email.recipientType?.trim() || null,
+            subject: config.email.subject?.trim() || null
+          }
+        : type === 'email' ? { template: null, recipientType: null, subject: null } : null,
+      notification: config.notification
+        ? {
+            channel: config.notification.channel?.trim() || null,
+            audience: config.notification.audience?.trim() || null,
+            message: config.notification.message?.trim() || null
+          }
+        : type === 'notification' ? { channel: null, audience: null, message: null } : null,
+      crmUpdate: config.crmUpdate
+        ? {
+            field: config.crmUpdate.field?.trim() || null,
+            value: config.crmUpdate.value?.trim() || null
+          }
+        : type === 'crm-update' ? { field: null, value: null } : null,
+      activity: config.activity
+        ? {
+            activityType: config.activity.activityType?.trim() || null,
+            subject: config.activity.subject?.trim() || null,
+            ownerStrategy: config.activity.ownerStrategy?.trim() || null,
+            dueInHours: config.activity.dueInHours ?? null
+          }
+        : type === 'activity' ? { activityType: null, subject: null, ownerStrategy: null, dueInHours: null } : null
+    };
   }
 
   private extractErrors(error: unknown) {

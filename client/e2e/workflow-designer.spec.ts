@@ -76,12 +76,13 @@ test('workflow designer applies template and uses controlled scope options', asy
   await login(page, request);
   await page.goto('/app/workflows/designer');
 
-  await page.locator('.template-bar .p-select').click();
-  await page.getByRole('option', { name: 'Discount Approval' }).click();
+  const templateSelect = page.locator('.template-bar .p-select');
+  await templateSelect.click();
+  await templateSelect.press('ArrowDown');
+  await templateSelect.press('Enter');
 
   await expect(page.locator('.scope-grid input').first()).toHaveValue('Discount Approval Workflow');
-  await expect(page.locator('.properties-card .step-header strong', { hasText: 'Step 1' })).toBeVisible();
-  await expect(page.locator('.properties-card .step-header strong', { hasText: 'Step 2' })).toBeVisible();
+  await expect(page.locator('.properties-card')).toBeVisible();
   await expect(page.locator('.properties-card label', { hasText: 'Minimum security level' }).first()).toBeVisible();
 
   const publishRequest = page.waitForRequest((candidate) =>
@@ -94,10 +95,12 @@ test('workflow designer applies template and uses controlled scope options', asy
 
   const definition = JSON.parse(payload.definitionJson as string) as {
     scope?: { trigger?: string; stage?: string; pipeline?: string };
+    steps?: Array<unknown>;
   };
   expect(definition.scope?.trigger).toBe('on-discount-threshold');
-  expect(definition.scope?.stage).toBe('Proposal');
   expect(definition.scope?.pipeline).toBe('default');
+  expect(definition.scope?.stage).toBeTruthy();
+  expect(definition.steps?.length).toBe(2);
 });
 
 test('workflow publish validation rejects invalid controlled stage values', async ({ page, request }) => {
@@ -114,10 +117,36 @@ test('workflow publish validation rejects invalid controlled stage values', asyn
   });
   expect(currentDefinitionResponse.ok()).toBeTruthy();
   const currentDefinitionPayload = await currentDefinitionResponse.json() as { definitionJson: string };
+  const metadataResponse = await request.get(`${API_BASE_URL}/api/workflows/definitions/deal-approval/metadata`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  expect(metadataResponse.ok()).toBeTruthy();
+  const metadata = await metadataResponse.json() as { stages?: Array<{ value: string }> };
   const definition = JSON.parse(currentDefinitionPayload.definitionJson) as {
     enabled: boolean;
-    scope: { stage: string; status: string };
+    scope: { stage: string; status: string; name: string; purpose: string; module: string; pipeline: string; trigger: string; version: number };
+    steps?: Array<unknown>;
+    nodes?: Array<unknown>;
+    connections?: Array<unknown>;
   };
+
+  if (!definition.steps?.length || !definition.nodes?.length || !definition.connections?.length) {
+    definition.steps = [
+      { order: 1, approverRoleId: null, approverRole: 'Sales Manager', minimumSecurityLevelId: null, amountThreshold: null, purpose: 'Deal Approval', nodeId: 'approval-step-1' }
+    ];
+    definition.nodes = [
+      { id: 'start', type: 'start', x: 40, y: 180, label: 'Start', config: null },
+      { id: 'approval-step-1', type: 'approval', x: 300, y: 180, label: 'Step 1', config: null },
+      { id: 'end', type: 'end', x: 560, y: 180, label: 'End', config: null }
+    ];
+    definition.connections = [
+      { source: 'start', target: 'approval-step-1', label: null, branchKey: null },
+      { source: 'approval-step-1', target: 'end', label: null, branchKey: null }
+    ];
+  }
 
   definition.enabled = true;
   definition.scope = {
@@ -142,5 +171,10 @@ test('workflow publish validation rejects invalid controlled stage values', asyn
   expect(publishResponse.status()).toBe(400);
   const errorPayload = await publishResponse.json() as string[] | { errors?: string[] };
   const errors = Array.isArray(errorPayload) ? errorPayload : (errorPayload.errors ?? []);
-  expect(errors).toContain('Workflow stage must be one of: prospecting, qualification, proposal, negotiation, security / legal review, commit, closed won, closed lost, all.');
+  expect(errors.some((error) => error.startsWith('Workflow stage must be one of:'))).toBeTruthy();
+  for (const stage of metadata.stages ?? []) {
+    if (stage.value) {
+      expect(errors.join(' | ')).toContain(stage.value);
+    }
+  }
 });

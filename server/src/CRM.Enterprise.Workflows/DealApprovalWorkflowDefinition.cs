@@ -71,11 +71,52 @@ public sealed record DealApprovalWorkflowNodeDefinition(
     string Type,
     double X,
     double Y,
-    string? Label);
+    string? Label,
+    DealApprovalWorkflowNodeConfigDefinition? Config = null);
 
 public sealed record DealApprovalWorkflowConnectionDefinition(
     string Source,
-    string Target);
+    string Target,
+    string? Label = null,
+    string? BranchKey = null);
+
+public sealed record DealApprovalWorkflowNodeConfigDefinition(
+    DealApprovalWorkflowConditionConfigDefinition? Condition = null,
+    DealApprovalWorkflowDelayConfigDefinition? Delay = null,
+    DealApprovalWorkflowEmailConfigDefinition? Email = null,
+    DealApprovalWorkflowNotificationConfigDefinition? Notification = null,
+    DealApprovalWorkflowCrmUpdateConfigDefinition? CrmUpdate = null,
+    DealApprovalWorkflowActivityConfigDefinition? Activity = null);
+
+public sealed record DealApprovalWorkflowConditionConfigDefinition(
+    string? Field,
+    string? Operator,
+    string? Value);
+
+public sealed record DealApprovalWorkflowDelayConfigDefinition(
+    int? Duration,
+    string? Unit,
+    bool BusinessHoursOnly);
+
+public sealed record DealApprovalWorkflowEmailConfigDefinition(
+    string? Template,
+    string? RecipientType,
+    string? Subject);
+
+public sealed record DealApprovalWorkflowNotificationConfigDefinition(
+    string? Channel,
+    string? Audience,
+    string? Message);
+
+public sealed record DealApprovalWorkflowCrmUpdateConfigDefinition(
+    string? Field,
+    string? Value);
+
+public sealed record DealApprovalWorkflowActivityConfigDefinition(
+    string? ActivityType,
+    string? Subject,
+    string? OwnerStrategy,
+    int? DueInHours);
 
 public static class DealApprovalWorkflowMapper
 {
@@ -198,7 +239,11 @@ public static class DealApprovalWorkflowMapper
         var nodeIds = normalizedNodes.Select(node => node.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var normalizedConnections = connections
             .Where(connection => !string.IsNullOrWhiteSpace(connection.Source) && !string.IsNullOrWhiteSpace(connection.Target))
-            .Select(connection => new ConnectionEdge(connection.Source.Trim(), connection.Target.Trim()))
+            .Select(connection => new ConnectionEdge(
+                connection.Source.Trim(),
+                connection.Target.Trim(),
+                string.IsNullOrWhiteSpace(connection.Label) ? null : connection.Label.Trim(),
+                string.IsNullOrWhiteSpace(connection.BranchKey) ? null : connection.BranchKey.Trim()))
             .ToArray();
 
         foreach (var node in nodes)
@@ -262,6 +307,11 @@ public static class DealApprovalWorkflowMapper
         foreach (var approvalNodeId in approvalNodes.Select(node => node.Id).Where(nodeId => !stepNodeIds.Contains(nodeId, StringComparer.OrdinalIgnoreCase)))
         {
             errors.Add($"Approval node '{approvalNodeId}' does not map to an approval step.");
+        }
+
+        foreach (var node in nodes.Where(node => !string.IsNullOrWhiteSpace(node.Id)))
+        {
+            ValidateNodeConfig(node, normalizedConnections, errors);
         }
 
         foreach (var connection in normalizedConnections)
@@ -355,6 +405,80 @@ public static class DealApprovalWorkflowMapper
         return errors.Distinct(StringComparer.Ordinal).ToArray();
     }
 
+    private static void ValidateNodeConfig(
+        DealApprovalWorkflowNodeDefinition node,
+        IReadOnlyList<ConnectionEdge> connections,
+        ICollection<string> errors)
+    {
+        var nodeType = NormalizeNodeType(node.Type, node.Id);
+        var config = NormalizeNodeConfig(node.Config);
+        var outgoing = connections.Where(connection => string.Equals(connection.Source, node.Id, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        if (string.Equals(nodeType, "condition", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(config.Condition?.Field)
+                || string.IsNullOrWhiteSpace(config.Condition?.Operator)
+                || string.IsNullOrWhiteSpace(config.Condition?.Value))
+            {
+                errors.Add($"Condition node '{node.Id}' must define field, operator, and value.");
+            }
+
+            if (outgoing.Length < 2)
+            {
+                errors.Add($"Condition node '{node.Id}' must have at least two outgoing branches.");
+            }
+
+            if (outgoing.Any(connection => string.IsNullOrWhiteSpace(connection.Label)))
+            {
+                errors.Add($"Condition node '{node.Id}' requires labels on all outgoing branches.");
+            }
+        }
+
+        if (string.Equals(nodeType, "delay", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!config.Delay?.Duration.HasValue ?? true || config.Delay.Duration <= 0)
+            {
+                errors.Add($"Delay node '{node.Id}' must define a duration greater than zero.");
+            }
+        }
+
+        if (string.Equals(nodeType, "email", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(config.Email?.Template)
+                && string.IsNullOrWhiteSpace(config.Email?.Subject))
+            {
+                errors.Add($"Email node '{node.Id}' must define a template or subject.");
+            }
+        }
+
+        if (string.Equals(nodeType, "notification", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(config.Notification?.Channel)
+                || string.IsNullOrWhiteSpace(config.Notification?.Audience))
+            {
+                errors.Add($"Notification node '{node.Id}' must define channel and audience.");
+            }
+        }
+
+        if (string.Equals(nodeType, "crm-update", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(config.CrmUpdate?.Field)
+                || string.IsNullOrWhiteSpace(config.CrmUpdate?.Value))
+            {
+                errors.Add($"CRM update node '{node.Id}' must define field and value.");
+            }
+        }
+
+        if (string.Equals(nodeType, "activity", StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(config.Activity?.ActivityType)
+                || string.IsNullOrWhiteSpace(config.Activity?.Subject))
+            {
+                errors.Add($"Activity node '{node.Id}' must define activity type and subject.");
+            }
+        }
+    }
+
     private static HashSet<string> Traverse(IEnumerable<ConnectionEdge> connections, string startNodeId, bool useSource)
     {
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { startNodeId };
@@ -381,7 +505,7 @@ public static class DealApprovalWorkflowMapper
         return visited;
     }
 
-    private sealed record ConnectionEdge(string Source, string Target);
+    private sealed record ConnectionEdge(string Source, string Target, string? Label, string? BranchKey);
 
     private static DealApprovalWorkflowScopeDefinition NormalizeScope(DealApprovalWorkflowScopeDefinition? scope)
     {
@@ -468,7 +592,11 @@ public static class DealApprovalWorkflowMapper
         {
             if (seenIds.Add(node.Id))
             {
-                result.Add(node with { Label = string.IsNullOrWhiteSpace(node.Label) ? DefaultNodeLabel(node.Type) : node.Label.Trim() });
+                result.Add(node with
+                {
+                    Label = string.IsNullOrWhiteSpace(node.Label) ? DefaultNodeLabel(node.Type) : node.Label.Trim(),
+                    Config = NormalizeNodeConfig(node.Config)
+                });
             }
         }
 
@@ -484,7 +612,8 @@ public static class DealApprovalWorkflowMapper
                     : existing with
                     {
                         Type = "approval",
-                        Label = string.IsNullOrWhiteSpace(existing.Label) ? $"Step {index + 1}" : existing.Label.Trim()
+                        Label = string.IsNullOrWhiteSpace(existing.Label) ? $"Step {index + 1}" : existing.Label.Trim(),
+                        Config = NormalizeNodeConfig(existing.Config)
                     });
             }
         }
@@ -516,6 +645,13 @@ public static class DealApprovalWorkflowMapper
                                  && nodeIds.Contains(connection.Target)
                                  && connection.Source != connection.Target)
             .DistinctBy(connection => $"{connection.Source}->{connection.Target}")
+            .Select(connection => connection with
+            {
+                Source = connection.Source.Trim(),
+                Target = connection.Target.Trim(),
+                Label = string.IsNullOrWhiteSpace(connection.Label) ? null : connection.Label.Trim(),
+                BranchKey = string.IsNullOrWhiteSpace(connection.BranchKey) ? null : connection.BranchKey.Trim()
+            })
             .ToList();
 
         if (valid.Count > 0)
@@ -571,5 +707,56 @@ public static class DealApprovalWorkflowMapper
         if (string.Equals(type, "start", StringComparison.OrdinalIgnoreCase)) return "Start";
         if (string.Equals(type, "end", StringComparison.OrdinalIgnoreCase)) return "End";
         return "Node";
+    }
+
+    private static DealApprovalWorkflowNodeConfigDefinition NormalizeNodeConfig(DealApprovalWorkflowNodeConfigDefinition? config)
+    {
+        if (config is null)
+        {
+            return new DealApprovalWorkflowNodeConfigDefinition();
+        }
+
+        return new DealApprovalWorkflowNodeConfigDefinition(
+            config.Condition is null
+                ? null
+                : new DealApprovalWorkflowConditionConfigDefinition(
+                    NormalizeOptional(config.Condition.Field),
+                    NormalizeOptional(config.Condition.Operator),
+                    NormalizeOptional(config.Condition.Value)),
+            config.Delay is null
+                ? null
+                : new DealApprovalWorkflowDelayConfigDefinition(
+                    config.Delay.Duration is > 0 ? config.Delay.Duration : null,
+                    NormalizeOptional(config.Delay.Unit) ?? "hours",
+                    config.Delay.BusinessHoursOnly),
+            config.Email is null
+                ? null
+                : new DealApprovalWorkflowEmailConfigDefinition(
+                    NormalizeOptional(config.Email.Template),
+                    NormalizeOptional(config.Email.RecipientType),
+                    NormalizeOptional(config.Email.Subject)),
+            config.Notification is null
+                ? null
+                : new DealApprovalWorkflowNotificationConfigDefinition(
+                    NormalizeOptional(config.Notification.Channel),
+                    NormalizeOptional(config.Notification.Audience),
+                    NormalizeOptional(config.Notification.Message)),
+            config.CrmUpdate is null
+                ? null
+                : new DealApprovalWorkflowCrmUpdateConfigDefinition(
+                    NormalizeOptional(config.CrmUpdate.Field),
+                    NormalizeOptional(config.CrmUpdate.Value)),
+            config.Activity is null
+                ? null
+                : new DealApprovalWorkflowActivityConfigDefinition(
+                    NormalizeOptional(config.Activity.ActivityType),
+                    NormalizeOptional(config.Activity.Subject),
+                    NormalizeOptional(config.Activity.OwnerStrategy),
+                    config.Activity.DueInHours is > 0 ? config.Activity.DueInHours : null));
+    }
+
+    private static string? NormalizeOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }
