@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Customer, CustomerDetail, CustomerSearchRequest, CustomerSearchResponse, CustomerStatus, AccountTeamMember } from '../models/customer.model';
+import { Customer, CustomerDetail, CustomerSearchRequest, CustomerSearchResponse, CustomerStatus, AccountTeamMember, DuplicateMatch, MergeAccountRequest, MergeAccountResponse, AccountHierarchyNode, AccountTimelineEntry } from '../models/customer.model';
 import { environment } from '../../../../../environments/environment';
 import { CsvImportJob } from '../../../../shared/models/csv-import.model';
 
@@ -30,6 +30,8 @@ export interface SaveCustomerRequest {
   shippingState?: string;
   shippingPostalCode?: string;
   shippingCountry?: string;
+  renewalDate?: string;
+  contractEndDate?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -155,5 +157,22 @@ export class CustomerDataService {
     return this.http.post<{ isDuplicate: boolean; matchId?: string; matchName?: string }>(
       `${this.baseUrl}/api/customers/check-duplicate`, params
     );
+  }
+
+  findDuplicates(id: string) {
+    return this.http.get<DuplicateMatch[]>(`${this.baseUrl}/api/customers/${id}/duplicates`);
+  }
+
+  mergeAccounts(survivorId: string, request: MergeAccountRequest) {
+    return this.http.post<MergeAccountResponse>(`${this.baseUrl}/api/customers/${survivorId}/merge`, request);
+  }
+
+  getHierarchy(id: string) {
+    return this.http.get<AccountHierarchyNode>(`${this.baseUrl}/api/customers/${id}/hierarchy`);
+  }
+
+  getTimeline(id: string, take = 50) {
+    const params = new HttpParams().set('take', take);
+    return this.http.get<AccountTimelineEntry[]>(`${this.baseUrl}/api/customers/${id}/timeline`, { params });
   }
 }

@@ -213,6 +213,24 @@ public sealed class CustomerService : ICustomerService
         var supportCaseCount = await _dbContext.SupportCases
             .CountAsync(s => s.AccountId == id && !s.IsDeleted, cancellationToken);
 
+        // #12 Revenue rollup
+        var openPipelineValue = await _dbContext.Opportunities
+            .Where(o => o.AccountId == id && !o.IsDeleted && !o.IsClosed)
+            .SumAsync(o => o.Amount, cancellationToken);
+        var closedWonRevenue = await _dbContext.Opportunities
+            .Where(o => o.AccountId == id && !o.IsDeleted && o.IsClosed && o.IsWon)
+            .SumAsync(o => o.Amount, cancellationToken);
+        var weightedForecast = await _dbContext.Opportunities
+            .Where(o => o.AccountId == id && !o.IsDeleted && !o.IsClosed)
+            .SumAsync(o => o.Amount * o.Probability / 100m, cancellationToken);
+
+        // #14 Nearest opportunity renewal
+        var nearestOpportunityRenewal = await _dbContext.Opportunities
+            .Where(o => o.AccountId == id && !o.IsDeleted && !o.IsClosed && o.ContractEndDateUtc != null && o.ContractEndDateUtc > DateTime.UtcNow)
+            .OrderBy(o => o.ContractEndDateUtc)
+            .Select(o => o.ContractEndDateUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
         var teamMemberUserIds = account.TeamMembers
             .Where(m => !m.IsDeleted)
             .Select(m => m.UserId)
@@ -273,7 +291,13 @@ public sealed class CustomerService : ICustomerService
             opportunityCount,
             leadCount,
             supportCaseCount,
-            teamDtos);
+            teamDtos,
+            account.RenewalDateUtc,
+            account.ContractEndDateUtc,
+            nearestOpportunityRenewal,
+            openPipelineValue,
+            closedWonRevenue,
+            weightedForecast);
     }
 
     public async Task<IReadOnlyList<AccountTeamMemberDto>> GetTeamMembersAsync(Guid accountId, CancellationToken cancellationToken = default)
@@ -405,6 +429,8 @@ public sealed class CustomerService : ICustomerService
             ShippingState = request.ShippingState,
             ShippingPostalCode = request.ShippingPostalCode,
             ShippingCountry = request.ShippingCountry,
+            RenewalDateUtc = request.RenewalDateUtc,
+            ContractEndDateUtc = request.ContractEndDateUtc,
             CreatedAtUtc = DateTime.UtcNow
         };
 
@@ -496,6 +522,8 @@ public sealed class CustomerService : ICustomerService
         account.ShippingState = request.ShippingState;
         account.ShippingPostalCode = request.ShippingPostalCode;
         account.ShippingCountry = request.ShippingCountry;
+        account.RenewalDateUtc = request.RenewalDateUtc;
+        account.ContractEndDateUtc = request.ContractEndDateUtc;
         account.UpdatedAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -808,5 +836,272 @@ public sealed class CustomerService : ICustomerService
         return match is null
             ? new DuplicateCheckResult(false)
             : new DuplicateCheckResult(true, match.Id, match.Name);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // #11 — Account merge
+    // ════════════════════════════════════════════════════════════════
+
+    public async Task<IReadOnlyList<DuplicateMatchDto>> FindDuplicatesAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        var account = await _dbContext.Accounts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == accountId && !a.IsDeleted, cancellationToken);
+
+        if (account is null)
+            return [];
+
+        var matches = await AccountMatching.FindAllMatchesAsync(
+            _dbContext, account.Name, account.AccountNumber, account.Website, account.Phone,
+            accountId, cancellationToken);
+
+        return matches.Select(m => new DuplicateMatchDto(m.Id, m.Name, m.AccountNumber, m.Website, m.Phone, m.Score)).ToList();
+    }
+
+    public async Task<MergeAccountResult> MergeAccountsAsync(Guid survivorId, Guid duplicateId, CancellationToken cancellationToken = default)
+    {
+        if (survivorId == duplicateId)
+            return new MergeAccountResult(false, survivorId, 0, 0, 0, 0, "Cannot merge an account into itself.");
+
+        var survivor = await _dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == survivorId && !a.IsDeleted, cancellationToken);
+        var duplicate = await _dbContext.Accounts.FirstOrDefaultAsync(a => a.Id == duplicateId && !a.IsDeleted, cancellationToken);
+
+        if (survivor is null || duplicate is null)
+            return new MergeAccountResult(false, survivorId, 0, 0, 0, 0, "One or both accounts not found.");
+
+        // Move contacts
+        var contacts = await _dbContext.Contacts.Where(c => c.AccountId == duplicateId && !c.IsDeleted).ToListAsync(cancellationToken);
+        foreach (var c in contacts) c.AccountId = survivorId;
+
+        // Move opportunities
+        var opportunities = await _dbContext.Opportunities.Where(o => o.AccountId == duplicateId && !o.IsDeleted).ToListAsync(cancellationToken);
+        foreach (var o in opportunities) o.AccountId = survivorId;
+
+        // Move leads
+        var leads = await _dbContext.Leads.Where(l => l.AccountId == duplicateId && !l.IsDeleted).ToListAsync(cancellationToken);
+        foreach (var l in leads) l.AccountId = survivorId;
+
+        // Move support cases
+        var cases = await _dbContext.SupportCases.Where(s => s.AccountId == duplicateId && !s.IsDeleted).ToListAsync(cancellationToken);
+        foreach (var s in cases) s.AccountId = survivorId;
+
+        // Move child accounts
+        var childAccounts = await _dbContext.Accounts.Where(a => a.ParentAccountId == duplicateId && !a.IsDeleted).ToListAsync(cancellationToken);
+        foreach (var child in childAccounts) child.ParentAccountId = survivorId;
+
+        // Move team members (skip if already on survivor)
+        var existingSurvivorMembers = await _dbContext.Set<AccountTeamMember>()
+            .Where(m => m.AccountId == survivorId && !m.IsDeleted)
+            .Select(m => m.UserId)
+            .ToListAsync(cancellationToken);
+        var duplicateMembers = await _dbContext.Set<AccountTeamMember>()
+            .Where(m => m.AccountId == duplicateId && !m.IsDeleted)
+            .ToListAsync(cancellationToken);
+        foreach (var m in duplicateMembers)
+        {
+            if (!existingSurvivorMembers.Contains(m.UserId))
+                m.AccountId = survivorId;
+            else
+                m.IsDeleted = true;
+        }
+
+        // Fill empty survivor fields from duplicate
+        survivor.AccountNumber ??= duplicate.AccountNumber;
+        survivor.Industry ??= duplicate.Industry;
+        survivor.Website ??= duplicate.Website;
+        survivor.Phone ??= duplicate.Phone;
+        survivor.Territory ??= duplicate.Territory;
+        survivor.Description ??= duplicate.Description;
+        survivor.AnnualRevenue ??= duplicate.AnnualRevenue;
+        survivor.NumberOfEmployees ??= duplicate.NumberOfEmployees;
+        survivor.AccountType ??= duplicate.AccountType;
+        survivor.Rating ??= duplicate.Rating;
+        survivor.AccountSource ??= duplicate.AccountSource;
+        survivor.BillingStreet ??= duplicate.BillingStreet;
+        survivor.BillingCity ??= duplicate.BillingCity;
+        survivor.BillingState ??= duplicate.BillingState;
+        survivor.BillingPostalCode ??= duplicate.BillingPostalCode;
+        survivor.BillingCountry ??= duplicate.BillingCountry;
+        survivor.ShippingStreet ??= duplicate.ShippingStreet;
+        survivor.ShippingCity ??= duplicate.ShippingCity;
+        survivor.ShippingState ??= duplicate.ShippingState;
+        survivor.ShippingPostalCode ??= duplicate.ShippingPostalCode;
+        survivor.ShippingCountry ??= duplicate.ShippingCountry;
+        survivor.RenewalDateUtc ??= duplicate.RenewalDateUtc;
+        survivor.ContractEndDateUtc ??= duplicate.ContractEndDateUtc;
+
+        // Soft-delete the duplicate
+        duplicate.IsDeleted = true;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return new MergeAccountResult(true, survivorId, contacts.Count, opportunities.Count, leads.Count, cases.Count);
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // #13 — Account hierarchy
+    // ════════════════════════════════════════════════════════════════
+
+    public async Task<AccountHierarchyNodeDto?> GetAccountHierarchyAsync(Guid accountId, CancellationToken cancellationToken = default)
+    {
+        // Find the root of the hierarchy
+        var rootId = await FindHierarchyRootAsync(accountId, cancellationToken);
+        if (rootId is null)
+            return null;
+
+        // Load all accounts in the hierarchy tree
+        var allAccounts = await _dbContext.Accounts
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted)
+            .Select(a => new { a.Id, a.Name, a.Industry, a.LifecycleStage, a.OwnerId, a.ParentAccountId })
+            .ToListAsync(cancellationToken);
+
+        var ownerIds = allAccounts.Select(a => a.OwnerId).Distinct().ToList();
+        var owners = await _dbContext.Users
+            .Where(u => ownerIds.Contains(u.Id))
+            .Select(u => new { u.Id, u.FullName })
+            .ToListAsync(cancellationToken);
+        var ownerMap = owners.ToDictionary(o => o.Id, o => o.FullName);
+
+        var lookup = allAccounts.ToLookup(a => a.ParentAccountId);
+
+        AccountHierarchyNodeDto BuildNode(Guid id, int depth)
+        {
+            var acc = allAccounts.First(a => a.Id == id);
+            var children = lookup[id]
+                .Where(c => c.Id != id)
+                .Select(c => BuildNode(c.Id, depth + 1))
+                .ToList();
+            return new AccountHierarchyNodeDto(
+                acc.Id, acc.Name, acc.Industry, acc.LifecycleStage, acc.OwnerId,
+                ownerMap.GetValueOrDefault(acc.OwnerId, "Unassigned"),
+                depth, children);
+        }
+
+        return BuildNode(rootId.Value, 0);
+    }
+
+    private async Task<Guid?> FindHierarchyRootAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        var currentId = accountId;
+        var visited = new HashSet<Guid>();
+
+        while (true)
+        {
+            if (!visited.Add(currentId))
+                return currentId; // cycle guard
+
+            var parentId = await _dbContext.Accounts
+                .AsNoTracking()
+                .Where(a => a.Id == currentId && !a.IsDeleted)
+                .Select(a => a.ParentAccountId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (parentId is null)
+                return currentId;
+
+            currentId = parentId.Value;
+        }
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // #15 — Communication history / timeline
+    // ════════════════════════════════════════════════════════════════
+
+    public async Task<IReadOnlyList<AccountTimelineEntryDto>> GetAccountTimelineAsync(Guid accountId, int take = 50, CancellationToken cancellationToken = default)
+    {
+        take = Math.Clamp(take, 1, 200);
+
+        // Activities linked to this account
+        var activities = await _dbContext.Activities
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted
+                && a.RelatedEntityType == Domain.Enums.ActivityRelationType.Account
+                && a.RelatedEntityId == accountId)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Take(take)
+            .Select(a => new { a.Id, a.Type, a.Subject, a.Description, a.Outcome, a.CreatedAtUtc, a.OwnerId })
+            .ToListAsync(cancellationToken);
+
+        // CRM email links to this account
+        var emailLinks = await _dbContext.CrmEmailLinks
+            .AsNoTracking()
+            .Where(e => !e.IsDeleted
+                && e.RelatedEntityType == Domain.Enums.ActivityRelationType.Account
+                && e.RelatedEntityId == accountId)
+            .OrderByDescending(e => e.ReceivedAtUtc)
+            .Take(take)
+            .Select(e => new { e.Id, e.Subject, e.FromEmail, e.FromName, e.ReceivedAtUtc })
+            .ToListAsync(cancellationToken);
+
+        // Outbound emails to this account
+        var emailLogs = await _dbContext.EmailLogs
+            .AsNoTracking()
+            .Where(e => !e.IsDeleted
+                && e.RelatedEntityType == Domain.Entities.EmailRelationType.Customer
+                && e.RelatedEntityId == accountId)
+            .OrderByDescending(e => e.CreatedAtUtc)
+            .Take(take)
+            .Select(e => new { e.Id, e.Subject, e.ToEmail, e.SentAtUtc, e.CreatedAtUtc, e.SenderId })
+            .ToListAsync(cancellationToken);
+
+        // Resolve owner names
+        var ownerIds = activities.Select(a => a.OwnerId)
+            .Union(emailLogs.Select(e => e.SenderId))
+            .Distinct()
+            .ToList();
+        var owners = ownerIds.Count > 0
+            ? await _dbContext.Users
+                .Where(u => ownerIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FullName })
+                .ToListAsync(cancellationToken)
+            : [];
+        var ownerMap = owners.ToDictionary(o => o.Id, o => o.FullName);
+
+        var timeline = new List<AccountTimelineEntryDto>();
+
+        foreach (var a in activities)
+        {
+            timeline.Add(new AccountTimelineEntryDto(
+                a.Id,
+                a.Type.ToString(),
+                a.Subject,
+                a.Description,
+                a.Outcome,
+                a.CreatedAtUtc,
+                ownerMap.GetValueOrDefault(a.OwnerId),
+                null,
+                null));
+        }
+
+        foreach (var e in emailLinks)
+        {
+            timeline.Add(new AccountTimelineEntryDto(
+                e.Id,
+                "InboundEmail",
+                e.Subject,
+                null,
+                null,
+                e.ReceivedAtUtc,
+                e.FromName,
+                e.FromEmail,
+                "Inbound"));
+        }
+
+        foreach (var e in emailLogs)
+        {
+            timeline.Add(new AccountTimelineEntryDto(
+                e.Id,
+                "OutboundEmail",
+                e.Subject,
+                null,
+                null,
+                e.SentAtUtc ?? e.CreatedAtUtc,
+                ownerMap.GetValueOrDefault(e.SenderId),
+                e.ToEmail,
+                "Outbound"));
+        }
+
+        return timeline.OrderByDescending(t => t.OccurredAtUtc).Take(take).ToList();
     }
 }

@@ -8,6 +8,8 @@ internal static class AccountMatching
 {
     internal sealed record AccountMatch(Guid Id, string Name);
 
+    internal sealed record ScoredAccountMatch(Guid Id, string Name, string? AccountNumber, string? Website, string? Phone, int Score);
+
     public static async Task<AccountMatch?> FindBestMatchAsync(
         CrmDbContext dbContext,
         string? name,
@@ -90,6 +92,56 @@ internal static class AccountMatching
             .FirstOrDefault();
 
         return best is null ? null : new AccountMatch(best.Id, best.Name);
+    }
+
+    public static async Task<IReadOnlyList<ScoredAccountMatch>> FindAllMatchesAsync(
+        CrmDbContext dbContext,
+        string? name,
+        string? accountNumber,
+        string? website,
+        string? phone,
+        Guid excludeAccountId,
+        CancellationToken cancellationToken)
+    {
+        var normalizedName = NormalizeText(name);
+        var normalizedAccountNumber = NormalizeText(accountNumber);
+        var normalizedWebsite = NormalizeWebsite(website);
+        var normalizedPhone = NormalizePhone(phone);
+
+        if (string.IsNullOrWhiteSpace(normalizedName)
+            && string.IsNullOrWhiteSpace(normalizedAccountNumber)
+            && string.IsNullOrWhiteSpace(normalizedWebsite)
+            && string.IsNullOrWhiteSpace(normalizedPhone))
+        {
+            return [];
+        }
+
+        var query = dbContext.Accounts
+            .AsNoTracking()
+            .Where(a => !a.IsDeleted && a.Id != excludeAccountId);
+
+        query = query.Where(a =>
+            (!string.IsNullOrWhiteSpace(normalizedName) && a.Name != null && a.Name.ToLower() == normalizedName)
+            || (!string.IsNullOrWhiteSpace(normalizedAccountNumber) && a.AccountNumber != null && a.AccountNumber.ToLower() == normalizedAccountNumber)
+            || (!string.IsNullOrWhiteSpace(normalizedWebsite) && a.Website != null && a.Website.ToLower().Contains(normalizedWebsite))
+            || (!string.IsNullOrWhiteSpace(normalizedPhone) && a.Phone != null && a.Phone.Replace(" ", "").Replace("-", "").Replace("(", "").Replace(")", "") == normalizedPhone));
+
+        var candidates = await query
+            .Select(a => new { a.Id, a.Name, a.AccountNumber, a.Website, a.Phone })
+            .Take(20)
+            .ToListAsync(cancellationToken);
+
+        return candidates
+            .Select(c => new ScoredAccountMatch(
+                c.Id,
+                c.Name,
+                c.AccountNumber,
+                c.Website,
+                c.Phone,
+                ComputeMatchScore(normalizedName, normalizedAccountNumber, normalizedWebsite, normalizedPhone, c.Name, c.AccountNumber, c.Website, c.Phone)))
+            .Where(m => m.Score > 0)
+            .OrderByDescending(m => m.Score)
+            .ToList();
     }
 
     private static int ComputeMatchScore(

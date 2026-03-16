@@ -29,4 +29,6 @@ public class UpsertCustomerRequest
     public string? ShippingState { get; set; }
     public string? ShippingPostalCode { get; set; }
     public string? ShippingCountry { get; set; }
+    public DateTime? RenewalDate { get; set; }
+    public DateTime? ContractEndDate { get; set; }
 }

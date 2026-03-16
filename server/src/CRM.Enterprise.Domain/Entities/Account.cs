@@ -38,6 +38,10 @@ public class Account : AuditableEntity
     public string? ShippingPostalCode { get; set; }
     public string? ShippingCountry { get; set; }
 
+    // Renewal / contract tracking
+    public DateTime? RenewalDateUtc { get; set; }
+    public DateTime? ContractEndDateUtc { get; set; }
+
     public Account? ParentAccount { get; set; }
     public ICollection<Account> ChildAccounts { get; set; } = new List<Account>();
     public ICollection<Contact> Contacts { get; set; } = new List<Contact>();

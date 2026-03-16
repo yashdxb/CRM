@@ -66,6 +66,12 @@ export interface CustomerDetail {
   leadCount: number;
   supportCaseCount: number;
   teamMembers: AccountTeamMember[];
+  renewalDate?: string;
+  contractEndDate?: string;
+  nearestOpportunityRenewal?: string;
+  openPipelineValue?: number;
+  closedWonRevenue?: number;
+  weightedForecast?: number;
 }
 
 export interface AccountTeamMember {
@@ -95,4 +101,50 @@ export interface CustomerSearchRequest {
 export interface CustomerSearchResponse {
   items: Customer[];
   total: number;
+}
+
+export interface DuplicateMatch {
+  id: string;
+  name: string;
+  accountNumber?: string;
+  website?: string;
+  phone?: string;
+  matchScore: number;
+}
+
+export interface MergeAccountRequest {
+  duplicateId: string;
+}
+
+export interface MergeAccountResponse {
+  success: boolean;
+  survivorId: string;
+  contactsMoved: number;
+  opportunitiesMoved: number;
+  leadsMoved: number;
+  casesMoved: number;
+  error?: string;
+}
+
+export interface AccountHierarchyNode {
+  id: string;
+  name: string;
+  industry?: string;
+  lifecycleStage?: string;
+  ownerId: string;
+  ownerName: string;
+  depth: number;
+  children: AccountHierarchyNode[];
+}
+
+export interface AccountTimelineEntry {
+  id: string;
+  type: string;
+  subject?: string;
+  description?: string;
+  outcome?: string;
+  occurredAt: string;
+  ownerName?: string;
+  fromEmail?: string;
+  direction?: string;
 }

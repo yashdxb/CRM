@@ -62,7 +62,15 @@ public sealed record CustomerDetailDto(
     int OpportunityCount,
     int LeadCount,
     int SupportCaseCount,
-    IReadOnlyList<AccountTeamMemberDto> TeamMembers);
+    IReadOnlyList<AccountTeamMemberDto> TeamMembers,
+    // Renewal / contract tracking (#14)
+    DateTime? RenewalDateUtc = null,
+    DateTime? ContractEndDateUtc = null,
+    DateTime? NearestOpportunityRenewalUtc = null,
+    // Revenue tracking / aggregation (#12)
+    decimal OpenPipelineValue = 0,
+    decimal ClosedWonRevenue = 0,
+    decimal WeightedForecast = 0);
 
 public sealed record AccountTeamMemberDto(
     Guid Id,
@@ -74,6 +82,35 @@ public sealed record AccountTeamMemberDto(
 public sealed record CustomerSearchResultDto(IReadOnlyList<CustomerListItemDto> Items, int Total);
 
 public sealed record DuplicateCheckResult(bool IsDuplicate, Guid? MatchId = null, string? MatchName = null);
+
+// Multi-match duplicate detection (#11)
+public sealed record DuplicateMatchDto(Guid Id, string Name, string? AccountNumber, string? Website, string? Phone, int MatchScore);
+
+// Merge result (#11)
+public sealed record MergeAccountResult(bool Success, Guid SurvivorId, int ContactsMoved, int OpportunitiesMoved, int LeadsMoved, int CasesMoved, string? Error = null);
+
+// Account hierarchy (#13)
+public sealed record AccountHierarchyNodeDto(
+    Guid Id,
+    string Name,
+    string? Industry,
+    string? LifecycleStage,
+    Guid OwnerId,
+    string OwnerName,
+    int Depth,
+    IReadOnlyList<AccountHierarchyNodeDto> Children);
+
+// Communication timeline (#15)
+public sealed record AccountTimelineEntryDto(
+    Guid Id,
+    string Type,       // "Call", "Email", "Meeting", "Task", "Note", "FollowUp", "InboundEmail"
+    string? Subject,
+    string? Description,
+    string? Outcome,
+    DateTime OccurredAtUtc,
+    string? OwnerName,
+    string? FromEmail,
+    string? Direction);  // "Inbound", "Outbound", or null
 
 public sealed record CustomerOperationResult<T>(bool Success, T? Value, string? Error, bool NotFound = false)
 {

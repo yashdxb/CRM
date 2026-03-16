@@ -6,7 +6,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 
 import { CustomerDataService } from '../services/customer-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { CustomerDetail, AccountTeamMember } from '../models/customer.model';
+import { CustomerDetail, AccountTeamMember, AccountTimelineEntry } from '../models/customer.model';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 
@@ -32,6 +32,8 @@ export class CustomerDetailPage implements OnInit {
   protected loading = signal(true);
   protected teamMembers = signal<AccountTeamMember[]>([]);
   protected teamLoading = signal(false);
+  protected timeline = signal<AccountTimelineEntry[]>([]);
+  protected timelineLoading = signal(false);
 
   protected canEdit = tokenHasPermission(
     readTokenContext()?.payload ?? null,
@@ -87,6 +89,7 @@ export class CustomerDetailPage implements OnInit {
     }
     this.loadDetail(id);
     this.loadTeam(id);
+    this.loadTimeline(id);
   }
 
   private loadDetail(id: string): void {
@@ -145,5 +148,33 @@ export class CustomerDetailPage implements OnInit {
   protected teamMemberInitials(name: string): string {
     if (!name) return '?';
     return name.split(' ').map(p => p[0]).join('').toUpperCase().slice(0, 2);
+  }
+
+  private loadTimeline(id: string): void {
+    this.timelineLoading.set(true);
+    this.customerData.getTimeline(id).subscribe({
+      next: (entries) => {
+        this.timeline.set(entries);
+        this.timelineLoading.set(false);
+      },
+      error: () => {
+        this.timeline.set([]);
+        this.timelineLoading.set(false);
+      }
+    });
+  }
+
+  protected timelineIcon(type: string): string {
+    switch (type) {
+      case 'Call': return 'pi pi-phone';
+      case 'Email': return 'pi pi-envelope';
+      case 'Meeting': return 'pi pi-calendar';
+      case 'Task': return 'pi pi-check-square';
+      case 'Note': return 'pi pi-file';
+      case 'FollowUp': return 'pi pi-replay';
+      case 'EmailLog': return 'pi pi-send';
+      case 'LinkedEmail': return 'pi pi-link';
+      default: return 'pi pi-circle';
+    }
   }
 }

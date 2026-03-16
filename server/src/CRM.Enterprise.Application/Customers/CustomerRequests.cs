@@ -40,4 +40,6 @@ public sealed record CustomerUpsertRequest(
     string? ShippingCity = null,
     string? ShippingState = null,
     string? ShippingPostalCode = null,
-    string? ShippingCountry = null);
+    string? ShippingCountry = null,
+    DateTime? RenewalDateUtc = null,
+    DateTime? ContractEndDateUtc = null);

@@ -89,6 +89,27 @@
             <strong class="kpi-value">{{ c.supportCaseCount }}</strong>
           </div>
         </div>
+        <div class="kpi-card kpi-card--pipeline" *ngIf="c.openPipelineValue">
+          <div class="kpi-icon"><i class="pi pi-dollar"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Open Pipeline</span>
+            <strong class="kpi-value">{{ formatCurrency(c.openPipelineValue) }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--revenue" *ngIf="c.closedWonRevenue">
+          <div class="kpi-icon"><i class="pi pi-check-circle"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Closed Won</span>
+            <strong class="kpi-value">{{ formatCurrency(c.closedWonRevenue) }}</strong>
+          </div>
+        </div>
+        <div class="kpi-card kpi-card--forecast" *ngIf="c.weightedForecast">
+          <div class="kpi-icon"><i class="pi pi-chart-bar"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Forecast</span>
+            <strong class="kpi-value">{{ formatCurrency(c.weightedForecast) }}</strong>
+          </div>
+        </div>
       </section>
 
       <!-- ═══ MAIN GRID ═══ -->
@@ -146,6 +167,18 @@
               <div class="detail-field" *ngIf="c.lastActivityAt">
                 <span class="field-label">Last Activity</span>
                 <span class="field-value">{{ c.lastActivityAt | date:'MMM d, yyyy' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.renewalDate">
+                <span class="field-label">Renewal Date</span>
+                <span class="field-value">{{ c.renewalDate | date:'MMM d, yyyy' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.contractEndDate">
+                <span class="field-label">Contract End</span>
+                <span class="field-value">{{ c.contractEndDate | date:'MMM d, yyyy' }}</span>
+              </div>
+              <div class="detail-field" *ngIf="c.nearestOpportunityRenewal">
+                <span class="field-label">Next Opp Renewal</span>
+                <span class="field-value">{{ c.nearestOpportunityRenewal | date:'MMM d, yyyy' }}</span>
               </div>
             </div>
             <div class="detail-summary" *ngIf="c.description">
@@ -241,6 +274,33 @@
           </section>
         </div>
       </div>
+
+      <!-- ═══ COMMUNICATION TIMELINE ═══ -->
+      <section class="timeline-section" *ngIf="!timelineLoading() && timeline().length > 0">
+        <div class="detail-card">
+          <h2 class="card-title"><i class="pi pi-history"></i> Communication History</h2>
+          <div class="timeline-list">
+            <div class="timeline-entry" *ngFor="let entry of timeline()">
+              <div class="timeline-dot">
+                <i [class]="timelineIcon(entry.type)"></i>
+              </div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <span class="timeline-type">{{ entry.type }}</span>
+                  <span class="timeline-date">{{ entry.occurredAt | date:'MMM d, yyyy h:mm a' }}</span>
+                </div>
+                <span class="timeline-subject" *ngIf="entry.subject">{{ entry.subject }}</span>
+                <span class="timeline-desc" *ngIf="entry.description">{{ entry.description }}</span>
+                <div class="timeline-meta">
+                  <span *ngIf="entry.ownerName"><i class="pi pi-user"></i> {{ entry.ownerName }}</span>
+                  <span *ngIf="entry.direction"><i class="pi pi-arrows-h"></i> {{ entry.direction }}</span>
+                  <span *ngIf="entry.fromEmail"><i class="pi pi-envelope"></i> {{ entry.fromEmail }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </ng-container>
   </div>
 

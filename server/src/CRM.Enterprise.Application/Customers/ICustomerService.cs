@@ -19,4 +19,14 @@ public interface ICustomerService
     Task<IReadOnlyList<AccountTeamMemberDto>> GetTeamMembersAsync(Guid accountId, CancellationToken cancellationToken = default);
     Task<CustomerOperationResult<AccountTeamMemberDto>> AddTeamMemberAsync(Guid accountId, Guid userId, string role, CancellationToken cancellationToken = default);
     Task<CustomerOperationResult<bool>> RemoveTeamMemberAsync(Guid accountId, Guid memberId, CancellationToken cancellationToken = default);
+
+    // #11 Account merge
+    Task<IReadOnlyList<DuplicateMatchDto>> FindDuplicatesAsync(Guid accountId, CancellationToken cancellationToken = default);
+    Task<MergeAccountResult> MergeAccountsAsync(Guid survivorId, Guid duplicateId, CancellationToken cancellationToken = default);
+
+    // #13 Account hierarchy
+    Task<AccountHierarchyNodeDto?> GetAccountHierarchyAsync(Guid accountId, CancellationToken cancellationToken = default);
+
+    // #15 Communication history
+    Task<IReadOnlyList<AccountTimelineEntryDto>> GetAccountTimelineAsync(Guid accountId, int take = 50, CancellationToken cancellationToken = default);
 }

@@ -261,6 +261,50 @@ public class CustomersController : ControllerBase
         return Ok(new DuplicateCheckResponse(result.IsDuplicate, result.MatchId, result.MatchName));
     }
 
+    [HttpGet("{id:guid}/duplicates")]
+    [Authorize(Policy = Permissions.Policies.CustomersView)]
+    public async Task<ActionResult<IEnumerable<DuplicateMatchItem>>> FindDuplicates(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var matches = await _customerService.FindDuplicatesAsync(id, cancellationToken);
+        return Ok(matches.Select(m => new DuplicateMatchItem(m.Id, m.Name, m.AccountNumber, m.Website, m.Phone, m.MatchScore)));
+    }
+
+    [HttpPost("{id:guid}/merge")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
+    public async Task<ActionResult<MergeAccountResponse>> MergeAccounts(
+        Guid id, [FromBody] MergeAccountRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _customerService.MergeAccountsAsync(id, request.DuplicateId, cancellationToken);
+        if (!result.Success) return BadRequest(new MergeAccountResponse(false, id, 0, 0, 0, 0, result.Error));
+        return Ok(new MergeAccountResponse(true, result.SurvivorId, result.ContactsMoved, result.OpportunitiesMoved, result.LeadsMoved, result.CasesMoved, null));
+    }
+
+    [HttpGet("{id:guid}/hierarchy")]
+    [Authorize(Policy = Permissions.Policies.CustomersView)]
+    public async Task<ActionResult<AccountHierarchyNode>> GetHierarchy(
+        Guid id, CancellationToken cancellationToken)
+    {
+        var node = await _customerService.GetAccountHierarchyAsync(id, cancellationToken);
+        if (node is null) return NotFound();
+        return Ok(MapHierarchyNode(node));
+    }
+
+    [HttpGet("{id:guid}/timeline")]
+    [Authorize(Policy = Permissions.Policies.CustomersView)]
+    public async Task<ActionResult<IEnumerable<AccountTimelineEntry>>> GetTimeline(
+        Guid id, [FromQuery] int take = 50, CancellationToken cancellationToken = default)
+    {
+        var entries = await _customerService.GetAccountTimelineAsync(id, take, cancellationToken);
+        return Ok(entries.Select(e => new AccountTimelineEntry(e.Id, e.Type, e.Subject, e.Description, e.Outcome, e.OccurredAtUtc, e.OwnerName, e.FromEmail, e.Direction)));
+    }
+
+    private static AccountHierarchyNode MapHierarchyNode(AccountHierarchyNodeDto dto)
+    {
+        return new AccountHierarchyNode(dto.Id, dto.Name, dto.Industry, dto.LifecycleStage, dto.OwnerId, dto.OwnerName, dto.Depth,
+            dto.Children.Select(MapHierarchyNode));
+    }
+
     private static CustomerListItem ToApiItem(CustomerListItemDto dto)
     {
         return new CustomerListItem(
@@ -328,7 +372,13 @@ public class CustomersController : ControllerBase
             dto.OpportunityCount,
             dto.LeadCount,
             dto.SupportCaseCount,
-            dto.TeamMembers.Select(m => new AccountTeamMemberItem(m.Id, m.UserId, m.UserName, m.Role, m.CreatedAtUtc)));
+            dto.TeamMembers.Select(m => new AccountTeamMemberItem(m.Id, m.UserId, m.UserName, m.Role, m.CreatedAtUtc)),
+            dto.RenewalDateUtc,
+            dto.ContractEndDateUtc,
+            dto.NearestOpportunityRenewalUtc,
+            dto.OpenPipelineValue,
+            dto.ClosedWonRevenue,
+            dto.WeightedForecast);
     }
 
     private static AppCustomerUpsertRequest MapUpsertRequest(ApiUpsertCustomerRequest request)
@@ -358,7 +408,9 @@ public class CustomersController : ControllerBase
             request.ShippingCity,
             request.ShippingState,
             request.ShippingPostalCode,
-            request.ShippingCountry);
+            request.ShippingCountry,
+            request.RenewalDate,
+            request.ContractEndDate);
     }
 
     private ActorContext GetActor()

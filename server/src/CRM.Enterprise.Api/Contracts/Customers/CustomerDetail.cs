@@ -39,7 +39,15 @@ public record CustomerDetail(
     int OpportunityCount,
     int LeadCount,
     int SupportCaseCount,
-    IEnumerable<AccountTeamMemberItem> TeamMembers);
+    IEnumerable<AccountTeamMemberItem> TeamMembers,
+    // Renewal / contract tracking (#14)
+    DateTime? RenewalDate = null,
+    DateTime? ContractEndDate = null,
+    DateTime? NearestOpportunityRenewal = null,
+    // Revenue tracking (#12)
+    decimal OpenPipelineValue = 0,
+    decimal ClosedWonRevenue = 0,
+    decimal WeightedForecast = 0);
 
 public record AccountTeamMemberItem(
     Guid Id,
