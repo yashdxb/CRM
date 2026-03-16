@@ -33,8 +33,10 @@ public class Lead : AuditableEntity
     public Guid? ConvertedOpportunityId { get; set; }
     public DateTime? QualifiedAtUtc { get; set; }
     public DateTime? ConvertedAtUtc { get; set; }
-    public string? DisqualifiedReason { get; set; }
-    public string? LossReason { get; set; }
+    public Guid? DisqualificationReasonId { get; set; }
+    public LeadDisqualificationReasonDefinition? DisqualificationReason { get; set; }
+    public Guid? LossReasonId { get; set; }
+    public LeadLossReasonDefinition? LossReason { get; set; }
     public string? LossCompetitor { get; set; }
     public string? LossNotes { get; set; }
     public DateTime? NurtureFollowUpAtUtc { get; set; }

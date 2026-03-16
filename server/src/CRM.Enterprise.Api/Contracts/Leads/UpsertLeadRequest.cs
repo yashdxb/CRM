@@ -20,8 +20,8 @@ public class UpsertLeadRequest
     public int Score { get; set; }
     public Guid? AccountId { get; set; }
     public Guid? ContactId { get; set; }
-    public string? DisqualifiedReason { get; set; }
-    public string? LossReason { get; set; }
+    public Guid? DisqualificationReasonId { get; set; }
+    public Guid? LossReasonId { get; set; }
     public string? LossCompetitor { get; set; }
     public string? LossNotes { get; set; }
     public DateTime? NurtureFollowUpAtUtc { get; set; }

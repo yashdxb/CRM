@@ -1,0 +1,146 @@
+<!-- Account Types Management Page -->
+<div class="page-container">
+  <!-- Animated background -->
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- Hero section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <app-breadcrumbs />
+      <a class="back-link" routerLink="/app/settings">
+        <i class="pi pi-arrow-left"></i>
+        <span>Back to Settings</span>
+      </a>
+
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        Data &amp; Lookups
+      </div>
+      <h1 class="hero-title">
+        <span class="title-gradient">Account</span>
+        <span class="title-light">Types</span>
+      </h1>
+      <p class="hero-description">Manage account classification types used across customer records.</p>
+    </div>
+
+    <!-- Visual summary cards -->
+    <div class="hero-visual">
+      <div class="visual-card visual-card--primary">
+        <div class="card-icon"><i class="pi pi-briefcase"></i></div>
+        <div class="card-content">
+          <span class="card-label">Total Types</span>
+          <strong class="card-value">{{ items().length }}</strong>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+      <div class="visual-card visual-card--success">
+        <div class="card-icon"><i class="pi pi-check-circle"></i></div>
+        <div class="card-content">
+          <span class="card-label">Active</span>
+          <strong class="card-value">{{ activeCount() }}</strong>
+        </div>
+        <div class="card-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Data table section -->
+  <section class="data-section">
+    <div class="data-card">
+      <div class="data-header">
+        <h2>Account Type List</h2>
+        <div class="header-actions">
+          <button type="button" class="action-btn action-btn--refresh" (click)="loadItems()" [disabled]="loading()">
+            <span class="action-btn__icon"><i class="pi pi-refresh"></i></span>
+            <span>Refresh</span>
+          </button>
+          <button *ngIf="canManage()" type="button" class="action-btn action-btn--add" (click)="openCreate()">
+            <span class="action-btn__icon"><i class="pi pi-plus"></i></span>
+            <span>New Account Type</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Skeleton loader -->
+      <div *ngIf="loading()" class="skeleton-rows">
+        <p-skeleton *ngFor="let r of [1,2,3]" height="3rem" styleClass="mb-2" />
+      </div>
+
+      <!-- Table -->
+      <p-table *ngIf="!loading()" [value]="items()" [rows]="20" [paginator]="items().length > 20"
+               [rowHover]="true" styleClass="p-datatable-sm" [tableStyle]="{ 'min-width': '30rem' }">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Name</th>
+            <th>Active</th>
+            <th>Sort Order</th>
+            <th *ngIf="canManage()" style="width: 7rem">Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-row>
+          <tr class="table-row">
+            <td><strong>{{ row.name }}</strong></td>
+            <td>
+              <p-tag *ngIf="row.isActive" severity="success" value="Active" [rounded]="true" />
+              <p-tag *ngIf="!row.isActive" severity="warn" value="Inactive" [rounded]="true" />
+            </td>
+            <td>{{ row.sortOrder }}</td>
+            <td *ngIf="canManage()">
+              <div class="row-actions">
+                <button type="button" class="row-action-btn row-action-btn--edit" title="Edit" (click)="openEdit(row)">
+                  <i class="pi pi-pencil"></i>
+                </button>
+                <button type="button" class="row-action-btn row-action-btn--delete" title="Delete" (click)="deleteItem(row)">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr><td [attr.colspan]="canManage() ? 4 : 3" class="empty-message">No account types configured yet.</td></tr>
+        </ng-template>
+      </p-table>
+    </div>
+  </section>
+</div>
+
+<!-- Editor dialog -->
+<p-dialog [header]="editing() ? 'Edit Account Type' : 'New Account Type'" [(visible)]="editorOpen"
+          [modal]="true" [style]="{ width: '460px' }" [closable]="true" (onHide)="closeEditor()" [draggable]="false">
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="dialog-body">
+      <!-- Name -->
+      <div class="form-field">
+        <label for="lu-name">Name <span class="required">*</span></label>
+        <p-inputgroup>
+          <p-inputgroup-addon class="icon-addon icon-addon--company">
+            <i class="pi pi-briefcase"></i>
+          </p-inputgroup-addon>
+          <input pInputText id="lu-name" formControlName="name" placeholder="e.g. Customer" />
+        </p-inputgroup>
+      </div>
+
+      <!-- Sort Order -->
+      <div class="form-field">
+        <label for="lu-sort">Sort Order</label>
+        <p-inputNumber id="lu-sort" formControlName="sortOrder" [min]="0" [showButtons]="true" />
+      </div>
+
+      <!-- Is Active -->
+      <div class="form-field">
+        <label>&nbsp;</label>
+        <p-checkbox formControlName="isActive" [binary]="true" label="Active" />
+      </div>
+    </div>
+
+    <div class="dialog-footer">
+      <button type="button" pButton label="Cancel" class="p-button-text" (click)="closeEditor()"></button>
+      <button type="submit" pButton label="Save" icon="pi pi-check" [loading]="saving()"></button>
+    </div>
+  </form>
+</p-dialog>

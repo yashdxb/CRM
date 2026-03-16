@@ -594,6 +594,57 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   if (req.method === 'GET' && path === '/api/lookups/cadence-channels') {
     return respond([], 200, 80);
   }
+  if (req.method === 'GET' && path === '/api/lookups/account-types') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/account-sources') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/customer-ratings') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/contact-buying-roles') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/activity-types') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/activity-priorities') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/helpdesk-case-statuses') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/helpdesk-priorities') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/helpdesk-severities') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/helpdesk-sources') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/property-statuses') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/property-types') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/deal-types') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/deal-segments') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/document-categories') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/lead-disqualification-reasons') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/lead-loss-reasons') {
+    return respond([], 200, 80);
+  }
 
   // Catch-all for lookup mutations (POST/PUT/DELETE) — return 501 in mock mode
   if (/^\/api\/lookups\//.test(path) && ['POST', 'PUT', 'DELETE'].includes(req.method)) {

@@ -728,6 +728,131 @@ export const routes: Routes = [
               )
           },
           {
+            path: 'lookups/account-types',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Account Types' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-account-types.page').then((m) => m.LookupAccountTypesPage)
+          },
+          {
+            path: 'lookups/account-sources',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Account Sources' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-account-sources.page').then((m) => m.LookupAccountSourcesPage)
+          },
+          {
+            path: 'lookups/customer-ratings',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Customer Ratings' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-customer-ratings.page').then(
+                (m) => m.LookupCustomerRatingsPage
+              )
+          },
+          {
+            path: 'lookups/contact-buying-roles',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Contact Buying Roles' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-contact-buying-roles.page').then(
+                (m) => m.LookupContactBuyingRolesPage
+              )
+          },
+          {
+            path: 'lookups/activity-types',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Activity Types' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-activity-types.page').then((m) => m.LookupActivityTypesPage)
+          },
+          {
+            path: 'lookups/activity-priorities',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Activity Priorities' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-activity-priorities.page').then(
+                (m) => m.LookupActivityPrioritiesPage
+              )
+          },
+          {
+            path: 'lookups/helpdesk-case-statuses',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Case Statuses' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-helpdesk-case-statuses.page').then((m) => m.LookupHelpdeskCaseStatusesPage)
+          },
+          {
+            path: 'lookups/helpdesk-priorities',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Helpdesk Priorities' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-helpdesk-priorities.page').then((m) => m.LookupHelpdeskPrioritiesPage)
+          },
+          {
+            path: 'lookups/helpdesk-severities',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Helpdesk Severities' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-helpdesk-severities.page').then((m) => m.LookupHelpdeskSeveritiesPage)
+          },
+          {
+            path: 'lookups/helpdesk-sources',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Helpdesk Sources' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-helpdesk-sources.page').then((m) => m.LookupHelpdeskSourcesPage)
+          },
+          {
+            path: 'lookups/property-statuses',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Property Statuses' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-property-statuses.page').then((m) => m.LookupPropertyStatusesPage)
+          },
+          {
+            path: 'lookups/property-types',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Property Types' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-property-types.page').then((m) => m.LookupPropertyTypesPage)
+          },
+          {
+            path: 'lookups/deal-types',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Deal Types' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-deal-types.page').then((m) => m.LookupDealTypesPage)
+          },
+          {
+            path: 'lookups/deal-segments',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Deal Segments' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-deal-segments.page').then((m) => m.LookupDealSegmentsPage)
+          },
+          {
+            path: 'lookups/document-categories',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Document Categories' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-document-categories.page').then((m) => m.LookupDocumentCategoriesPage)
+          },
+          {
+            path: 'lookups/lead-disqualification-reasons',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Lead Disqualification Reasons' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-lead-disqualification-reasons.page').then((m) => m.LookupLeadDisqualificationReasonsPage)
+          },
+          {
+            path: 'lookups/lead-loss-reasons',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Lead Loss Reasons' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-lead-loss-reasons.page').then((m) => m.LookupLeadLossReasonsPage)
+          },
+          {
             path: 'tenants/new',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.tenantsManage, breadcrumb: 'Create Tenant' },
