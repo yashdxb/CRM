@@ -205,8 +205,8 @@ public sealed class LeadService : ILeadService
                 l.AccountId,
                 l.ContactId,
                 l.ConvertedOpportunityId,
-                l.DisqualifiedReason,
-                l.LossReason,
+                l.DisqualificationReasonId,
+                l.LossReasonId,
                 l.LossCompetitor,
                 l.LossNotes,
                 l.NurtureFollowUpAtUtc,
@@ -301,8 +301,8 @@ public sealed class LeadService : ILeadService
                 l.AccountId,
                 l.ContactId,
                 l.ConvertedOpportunityId,
-                l.DisqualifiedReason,
-                l.LossReason,
+                l.DisqualificationReasonId,
+                l.LossReasonId,
                 l.LossCompetitor,
                 l.LossNotes,
                 l.NurtureFollowUpAtUtc,
@@ -415,8 +415,8 @@ public sealed class LeadService : ILeadService
             lead.AccountId,
             lead.ContactId,
             lead.ConvertedOpportunityId,
-            lead.DisqualifiedReason,
-            lead.LossReason,
+            lead.DisqualificationReasonId,
+            lead.LossReasonId,
             lead.LossCompetitor,
             lead.LossNotes,
             lead.NurtureFollowUpAtUtc,
@@ -484,8 +484,8 @@ public sealed class LeadService : ILeadService
                 Status = l.Status != null ? l.Status.Name : "New",
                 l.OwnerId,
                 l.Source,
-                l.DisqualifiedReason,
-                l.LossReason
+                l.DisqualificationReasonId,
+                l.LossReasonId
             })
             .ToListAsync(cancellationToken);
 
@@ -507,7 +507,7 @@ public sealed class LeadService : ILeadService
         var nurtureLeads = leads.Where(l => string.Equals(l.Status, LeadLifecycle.Nurture, StringComparison.OrdinalIgnoreCase)).ToList();
 
         var disqualificationReasons = disqualifiedLeads
-            .GroupBy(l => string.IsNullOrWhiteSpace(l.DisqualifiedReason) ? "Unspecified" : l.DisqualifiedReason!.Trim())
+            .GroupBy(l => l.DisqualificationReasonId.HasValue ? l.DisqualificationReasonId.Value.ToString() : "Unspecified")
             .Select(g => new LeadDispositionReasonCountDto(g.Key, g.Count()))
             .OrderByDescending(x => x.Count)
             .ThenBy(x => x.Reason)
@@ -515,7 +515,7 @@ public sealed class LeadService : ILeadService
             .ToList();
 
         var lossReasons = lostLeads
-            .GroupBy(l => string.IsNullOrWhiteSpace(l.LossReason) ? "Unspecified" : l.LossReason!.Trim())
+            .GroupBy(l => l.LossReasonId.HasValue ? l.LossReasonId.Value.ToString() : "Unspecified")
             .Select(g => new LeadDispositionReasonCountDto(g.Key, g.Count()))
             .OrderByDescending(x => x.Count)
             .ThenBy(x => x.Reason)
@@ -855,8 +855,8 @@ public sealed class LeadService : ILeadService
             lead.Score,
             lead.AccountId,
             lead.ContactId,
-            lead.DisqualifiedReason,
-            lead.LossReason,
+            lead.DisqualificationReasonId,
+            lead.LossReasonId,
             lead.LossCompetitor,
             lead.LossNotes,
             lead.NurtureFollowUpAtUtc,
@@ -947,8 +947,8 @@ public sealed class LeadService : ILeadService
             Score = score,
             AccountId = request.AccountId,
             ContactId = request.ContactId,
-            DisqualifiedReason = request.DisqualifiedReason,
-            LossReason = request.LossReason,
+            DisqualificationReasonId = request.DisqualificationReasonId,
+            LossReasonId = request.LossReasonId,
             LossCompetitor = request.LossCompetitor,
             LossNotes = request.LossNotes,
             NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc,
@@ -1044,8 +1044,8 @@ public sealed class LeadService : ILeadService
             lead.AccountId,
             lead.ContactId,
             lead.ConvertedOpportunityId,
-            lead.DisqualifiedReason,
-            lead.LossReason,
+            lead.DisqualificationReasonId,
+            lead.LossReasonId,
             lead.LossCompetitor,
             lead.LossNotes,
             lead.NurtureFollowUpAtUtc,
@@ -1162,8 +1162,8 @@ public sealed class LeadService : ILeadService
         lead.Score = ResolveLeadScore(request, lead.Score);
         lead.AccountId = request.AccountId;
         lead.ContactId = request.ContactId;
-        lead.DisqualifiedReason = request.DisqualifiedReason;
-        lead.LossReason = request.LossReason;
+        lead.DisqualificationReasonId = request.DisqualificationReasonId;
+        lead.LossReasonId = request.LossReasonId;
         lead.LossCompetitor = request.LossCompetitor;
         lead.LossNotes = request.LossNotes;
         lead.NurtureFollowUpAtUtc = request.NurtureFollowUpAtUtc;
@@ -1490,11 +1490,11 @@ public sealed class LeadService : ILeadService
         lead.UpdatedAtUtc = DateTime.UtcNow;
 
         var dispositionSource = string.Equals(previousStatusName, LeadLifecycle.Lost, StringComparison.OrdinalIgnoreCase)
-            ? lead.LossReason
-            : lead.DisqualifiedReason;
+            ? lead.LossReasonId?.ToString()
+            : lead.DisqualificationReasonId?.ToString();
         var historyNote = string.IsNullOrWhiteSpace(dispositionSource)
             ? $"Recycled from {previousStatusName} to nurture."
-            : $"Recycled from {previousStatusName} to nurture. Prior reason: {dispositionSource}.";
+            : $"Recycled from {previousStatusName} to nurture. Prior reason ID: {dispositionSource}.";
 
         AddStatusHistory(lead, nurtureStatus.Id, historyNote, actor);
         await _auditEvents.TrackAsync(
@@ -2348,14 +2348,14 @@ public sealed class LeadService : ILeadService
     {
         if (string.Equals(statusName, "Disqualified", StringComparison.OrdinalIgnoreCase))
         {
-            return string.IsNullOrWhiteSpace(request.DisqualifiedReason)
-                ? "Disqualified reason is required when closing a lead."
+            return !request.DisqualificationReasonId.HasValue
+                ? "Disqualification reason is required when closing a lead."
                 : null;
         }
 
         if (string.Equals(statusName, "Lost", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(request.LossReason))
+            if (!request.LossReasonId.HasValue)
             {
                 return "Loss reason is required when marking a lead as Lost.";
             }

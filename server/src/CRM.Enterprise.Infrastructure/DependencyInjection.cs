@@ -263,6 +263,23 @@ public static class DependencyInjection
         services.AddScoped<ICurrencyLookupService, CurrencyLookupService>();
         services.AddScoped<IPhoneTypeLookupService, PhoneTypeLookupService>();
         services.AddScoped<ICadenceChannelLookupService, CadenceChannelLookupService>();
+        services.AddScoped<IAccountTypeLookupService, AccountTypeLookupService>();
+        services.AddScoped<IAccountSourceLookupService, AccountSourceLookupService>();
+        services.AddScoped<ICustomerRatingLookupService, CustomerRatingLookupService>();
+        services.AddScoped<IContactBuyingRoleLookupService, ContactBuyingRoleLookupService>();
+        services.AddScoped<IActivityTypeLookupService, ActivityTypeLookupService>();
+        services.AddScoped<IActivityPriorityLookupService, ActivityPriorityLookupService>();
+        services.AddScoped<IHelpdeskCaseStatusLookupService, HelpdeskCaseStatusLookupService>();
+        services.AddScoped<IHelpdeskPriorityLookupService, HelpdeskPriorityLookupService>();
+        services.AddScoped<IHelpdeskSeverityLookupService, HelpdeskSeverityLookupService>();
+        services.AddScoped<IHelpdeskSourceLookupService, HelpdeskSourceLookupService>();
+        services.AddScoped<IPropertyStatusLookupService, PropertyStatusLookupService>();
+        services.AddScoped<IPropertyTypeLookupService, PropertyTypeLookupService>();
+        services.AddScoped<IDealTypeLookupService, DealTypeLookupService>();
+        services.AddScoped<IDealSegmentLookupService, DealSegmentLookupService>();
+        services.AddScoped<IDocumentCategoryLookupService, DocumentCategoryLookupService>();
+        services.AddScoped<ILeadDisqualificationReasonLookupService, LeadDisqualificationReasonLookupService>();
+        services.AddScoped<ILeadLossReasonLookupService, LeadLossReasonLookupService>();
 
         return services;
     }

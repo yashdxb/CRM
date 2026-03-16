@@ -4,6 +4,7 @@ using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(CrmDbContext))]
-    partial class CrmDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260316173623_AddTier3LookupEntities")]
+    partial class AddTier3LookupEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -3431,8 +3434,8 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("DisqualificationReasonId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("DisqualifiedReason")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EconomicBuyer")
                         .HasColumnType("nvarchar(max)");
@@ -3487,8 +3490,8 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Property<string>("LossNotes")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid?>("LossReasonId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("LossReason")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("MotivationUrgency")
                         .HasColumnType("nvarchar(max)");
@@ -3570,11 +3573,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ConvertedOpportunityId");
 
-                    b.HasIndex("DisqualificationReasonId");
-
                     b.HasIndex("LeadStatusId");
-
-                    b.HasIndex("LossReasonId");
 
                     b.HasIndex("PhoneTypeId");
 
@@ -3688,48 +3687,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("LeadCadenceChannels", "crm");
-                });
-
-            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.LeadDisqualificationReasonDefinition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LeadDisqualificationReasons");
-                });
-
-            modelBuilder.Entity("CRM.Enterprise.Domain.Entities.LeadLossReasonDefinition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LeadLossReasons");
                 });
 
             modelBuilder.Entity("CRM.Enterprise.Domain.Entities.LeadStatus", b =>
@@ -9313,19 +9270,11 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ConvertedOpportunityId");
 
-                    b.HasOne("CRM.Enterprise.Domain.Entities.LeadDisqualificationReasonDefinition", "DisqualificationReason")
-                        .WithMany()
-                        .HasForeignKey("DisqualificationReasonId");
-
                     b.HasOne("CRM.Enterprise.Domain.Entities.LeadStatus", "Status")
                         .WithMany("Leads")
                         .HasForeignKey("LeadStatusId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("CRM.Enterprise.Domain.Entities.LeadLossReasonDefinition", "LossReason")
-                        .WithMany()
-                        .HasForeignKey("LossReasonId");
 
                     b.HasOne("CRM.Enterprise.Domain.Entities.PhoneTypeDefinition", "PhoneType")
                         .WithMany()
@@ -9336,10 +9285,6 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.Navigation("Contact");
 
                     b.Navigation("ConvertedOpportunity");
-
-                    b.Navigation("DisqualificationReason");
-
-                    b.Navigation("LossReason");
 
                     b.Navigation("PhoneType");
 
