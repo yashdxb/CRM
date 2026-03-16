@@ -4,6 +4,7 @@ import { authGuard } from './core/auth/auth.guard';
 import { roleGuard } from './core/auth/role.guard';
 import { tenantFeatureGuard } from './core/auth/tenant-feature.guard';
 import { PERMISSION_KEYS } from './core/auth/permission.constants';
+import { unsavedChangesGuard } from './core/guards/unsaved-changes.guard';
 
 export const routes: Routes = [
   {
@@ -195,6 +196,7 @@ export const routes: Routes = [
           {
             path: 'new',
             canActivate: [roleGuard],
+            canDeactivate: [unsavedChangesGuard],
             data: { permission: PERMISSION_KEYS.contactsManage, breadcrumb: 'New Contact' },
             loadComponent: () =>
               import('./crm/features/contacts/pages/contact-form.page').then((m) => m.ContactFormPage)
@@ -202,6 +204,7 @@ export const routes: Routes = [
           {
             path: ':id/edit',
             canActivate: [roleGuard],
+            canDeactivate: [unsavedChangesGuard],
             data: { permission: PERMISSION_KEYS.contactsManage, breadcrumb: 'Edit Contact' },
             loadComponent: () =>
               import('./crm/features/contacts/pages/contact-form.page').then((m) => m.ContactFormPage)

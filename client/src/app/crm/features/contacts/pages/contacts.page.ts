@@ -14,6 +14,8 @@ import { PaginatorModule, PaginatorState } from 'primeng/paginator';
 import { SkeletonModule } from 'primeng/skeleton';
 import { Router } from '@angular/router';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService } from 'primeng/api';
 import { forkJoin, of, Subscription, timer } from 'rxjs';
 import { catchError, map, switchMap, takeWhile, tap } from 'rxjs/operators';
 
@@ -57,9 +59,11 @@ interface LifecycleOption {
     PaginatorModule,
     SkeletonModule,
     DialogModule,
+    ConfirmDialogModule,
     BreadcrumbsComponent,
     BulkActionsBarComponent
   ],
+  providers: [ConfirmationService],
   templateUrl: './contacts.page.html',
   styleUrl: './contacts.page.scss'
 })
@@ -87,7 +91,7 @@ export class ContactsPage {
   protected readonly lifecycleFormOptions: LifecycleOption[] = this.lifecycleOptions.filter((option) => option.value !== 'all');
   protected readonly accountFilterOptions = computed(() => {
     const customerOptions = this.customers().map((customer) => ({ label: customer.name, value: customer.id }));
-    return [{ label: 'All accounts', value: 'all' }, ...customerOptions];
+    return [{ label: 'All customers', value: 'all' }, ...customerOptions];
   });
   protected readonly contactsInScope = computed(() => this.filteredContacts().length);
   protected readonly contactsWithLinkedAccounts = computed(() => this.contacts().filter((contact) => !!contact.accountId).length);
@@ -141,6 +145,7 @@ export class ContactsPage {
   private activeImportJobId: string | null = null;
   private readonly crmEventsService = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmationService = inject(ConfirmationService);
 
   protected readonly filteredContacts = computed(() => {
     let rows = [...this.contacts()];
@@ -279,15 +284,22 @@ export class ContactsPage {
   }
 
   protected onDelete(row: Contact) {
-    if (!confirm(`Delete contact ${row.name}?`)) {
-      return;
-    }
-    this.contactsData.delete(row.id).subscribe({
-      next: () => {
-        this.load();
-        this.raiseToast('success', 'Contact deleted.');
-      },
-      error: () => this.raiseToast('error', 'Unable to delete contact.')
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete <b>${row.name}</b>?`,
+      header: 'Delete Contact',
+      icon: 'pi pi-trash',
+      acceptLabel: 'Delete',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.contactsData.delete(row.id).subscribe({
+          next: () => {
+            this.load();
+            this.raiseToast('success', 'Contact deleted.');
+          },
+          error: () => this.raiseToast('error', 'Unable to delete contact.')
+        });
+      }
     });
   }
 
@@ -473,27 +485,33 @@ export class ContactsPage {
     if (!ids.length) {
       return;
     }
-    const confirmed = confirm(`Delete ${ids.length} contacts?`);
-    if (!confirmed) {
-      return;
-    }
 
-    const deletes$ = ids.map((id) =>
-      this.contactsData.delete(id).pipe(
-        map(() => true),
-        catchError(() => of(false))
-      )
-    );
+    this.confirmationService.confirm({
+      message: `Are you sure you want to delete <b>${ids.length}</b> contacts?`,
+      header: 'Delete Contacts',
+      icon: 'pi pi-trash',
+      acceptLabel: 'Delete All',
+      rejectLabel: 'Cancel',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        const deletes$ = ids.map((id) =>
+          this.contactsData.delete(id).pipe(
+            map(() => true),
+            catchError(() => of(false))
+          )
+        );
 
-    forkJoin(deletes$).subscribe((results) => {
-      const failures = results.filter((ok) => !ok).length;
-      this.clearSelection();
-      this.load();
-      if (failures) {
-        this.raiseToast('error', `${failures} contacts could not be deleted.`);
-        return;
+        forkJoin(deletes$).subscribe((results) => {
+          const failures = results.filter((ok) => !ok).length;
+          this.clearSelection();
+          this.load();
+          if (failures) {
+            this.raiseToast('error', `${failures} contacts could not be deleted.`);
+            return;
+          }
+          this.raiseToast('success', 'Contacts deleted.');
+        });
       }
-      this.raiseToast('success', 'Contacts deleted.');
     });
   }
 
@@ -579,7 +597,7 @@ export class ContactsPage {
       { header: 'Name', value: (row) => row.name },
       { header: 'Email', value: (row) => row.email },
       { header: 'Phone', value: (row) => row.phone },
-      { header: 'Account', value: (row) => row.accountName },
+      { header: 'Customer', value: (row) => row.accountName },
       { header: 'Lifecycle', value: (row) => row.lifecycleStage ?? 'Customer' },
       { header: 'Owner', value: (row) => row.owner },
       { header: 'Created At', value: (row) => row.createdAt }
@@ -591,6 +609,17 @@ export class ContactsPage {
     if (stage === 'Prospect') return 'warn';
     if (stage === 'Lead') return 'info';
     return 'info';
+  }
+
+  protected buyingRoleSeverity(role: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+    switch (role) {
+      case 'Decision Maker': return 'success';
+      case 'Champion': return 'info';
+      case 'Influencer': return 'warn';
+      case 'End User': return 'secondary';
+      case 'Gatekeeper': return 'contrast';
+      default: return 'info';
+    }
   }
 
   private loadOwners() {

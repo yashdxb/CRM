@@ -8609,7 +8609,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                     b.HasOne("CRM.Enterprise.Domain.Entities.User", "LinkedByUser")
                         .WithMany()
                         .HasForeignKey("LinkedByUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Connection");

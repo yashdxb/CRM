@@ -896,6 +896,196 @@ MoSCoW: Should
   - Create lead/contact/activity without leaving the current page.
   - Shows validation and success feedback, closes on save.
 
+### Next: Contact Module Improvements
+
+> **ClickUp sync**: All 22 items below are tracked in ClickUp CRM Backlog (list `901710720381`) with `module:Contacts` tag and tier tags.
+
+#### Tier 1 — Quick Wins (Now)
+
+C1) Clickable email/phone/LinkedIn links
+MoSCoW: Must
+- Status: NOT STARTED
+- ClickUp: `86e0cg0d0`
+- Acceptance criteria:
+  - Email renders as mailto: link, phone as tel: link, LinkedIn as external link.
+  - Icons displayed (pi-envelope, pi-phone, pi-linkedin).
+  - Works on both list and detail pages.
+
+C2) Quick-filter lifecycle status chips
+MoSCoW: Must
+- Status: NOT STARTED
+- ClickUp: `86e0cg0d3`
+- Acceptance criteria:
+  - Chip bar above contacts table: All / Lead / Prospect / Customer / Inactive with count badges.
+  - Click filters table instantly.
+
+C3) Show BuyingRole + ActivityScore columns in table
+MoSCoW: Must
+- Status: NOT STARTED
+- ClickUp: `86e0cg0d7`
+- Acceptance criteria:
+  - Buying Role column with colored badge.
+  - Activity Score column with mini progress bar (0-100, green/amber/red).
+  - Columns sortable.
+
+C4) Replace native confirm() with PrimeNG ConfirmDialog
+MoSCoW: Must
+- Status: NOT STARTED
+- ClickUp: `86e0cg0da`
+- Acceptance criteria:
+  - All confirm() calls replaced with ConfirmationService.
+  - Dialog uses glass-UI styling. Shows record name. Delete button is red/danger.
+
+C5) Sort options (name, date, score, lifecycle)
+MoSCoW: Must
+- Status: NOT STARTED
+- ClickUp: `86e0cg0de`
+- Acceptance criteria:
+  - Sort by Name, Created Date, Activity Score, Lifecycle Stage.
+  - Active sort indicator shown. Works with pagination.
+
+C6) Tab badges showing counts on detail page
+MoSCoW: Must
+- Status: NOT STARTED
+- ClickUp: `86e0cg0dh`
+- Acceptance criteria:
+  - Activities, Attachments, Opportunities, Notes tabs show count badges.
+  - Badges update dynamically.
+
+C7) Unsaved changes guard (canDeactivate + dirty check)
+MoSCoW: Must
+- Status: NOT STARTED
+- ClickUp: `86e0cg0dk`
+- Acceptance criteria:
+  - canDeactivate guard on contact edit route with dirty form check.
+  - PrimeNG ConfirmDialog for unsaved changes warning.
+  - Works with browser back and sidebar navigation.
+
+#### Tier 2 — Feature Gaps (Next)
+
+C8) Lifecycle stepper on detail page (visual progression + time-in-stage)
+MoSCoW: Should
+- Status: NOT STARTED
+- ClickUp: `86e0cg0dt`
+- Acceptance criteria:
+  - Horizontal stepper: Lead → Prospect → Customer → Churned.
+  - Click-to-advance with confirmation. Time-in-stage shown below each step.
+
+C9) Automated contact engagement scoring (transparent weights)
+MoSCoW: Should
+- Status: NOT STARTED
+- ClickUp: `86e0cg0dy`
+- Acceptance criteria:
+  - Score from: activities (30%), opportunities (25%), emails (20%), recency (15%), completeness (10%).
+  - Displayed 0-100 with color. Detail page shows weight breakdown.
+
+C10) Email communication history (inline from MailboxSync)
+MoSCoW: Should
+- Status: NOT STARTED
+- ClickUp: `86e0cg0e2`
+- Acceptance criteria:
+  - Email tab on contact detail page. Query by contact email address.
+  - Show: subject, from/to, date, snippet. Click to expand.
+
+C11) Status/lifecycle history timeline with time-in-stage
+MoSCoW: Should
+- Status: NOT STARTED
+- ClickUp: `86e0cg0e9`
+- Acceptance criteria:
+  - ContactStatusHistory entity. Auto-log on lifecycle change.
+  - Timeline view on detail page. Duration calculation per stage.
+
+C12) Address fields (Street, City, State, PostalCode, Country)
+MoSCoW: Should
+- Status: NOT STARTED
+- ClickUp: `86e0cg0ec`
+- Acceptance criteria:
+  - New fields on Contact entity. EF migration. Address section on contact form.
+
+C13) Card/Grid view toggle with engagement heat indicators
+MoSCoW: Should
+- Status: NOT STARTED
+- ClickUp: `86e0cg0eg`
+- Acceptance criteria:
+  - Toggle: Table view / Card view. Card shows avatar, name, company, lifecycle badge, score.
+  - Engagement heat indicator on each card. Same filtering/sorting in both views.
+
+C14) Quick activity log from list (per-row mini-form)
+MoSCoW: Should
+- Status: NOT STARTED
+- ClickUp: `86e0cg0et`
+- Acceptance criteria:
+  - Row action button: Log Activity. PrimeNG dialog with mini form.
+  - Pre-fills Contact reference. Toast on success.
+
+#### Tier 3 — Differentiators (Later)
+
+C15) Duplicate detection with AI match confidence
+MoSCoW: Could
+- Status: NOT STARTED
+- ClickUp: `86e0cg0f1`
+- Acceptance criteria:
+  - Duplicate check on save (exact email, fuzzy name, similar phone).
+  - AI match confidence %. Field-by-field merge preview. Bulk scan option.
+
+C16) Contact merge with undo (60s window)
+MoSCoW: Could
+- Status: NOT STARTED
+- ClickUp: `86e0cg0fc`
+- Acceptance criteria:
+  - Select 2+ contacts → Merge. Pick master. Field-by-field selection.
+  - Consolidate activities/opportunities/notes. 60-second undo window.
+
+C17) Tags + smart segments (freeform tags + saved dynamic filters)
+MoSCoW: Could
+- Status: NOT STARTED
+- ClickUp: `86e0cg0fk`
+- Acceptance criteria:
+  - Tag entity (many-to-many). Autocomplete + create new. Filter by tags.
+  - Save filter combos as named segments with real-time count preview.
+
+C18) Contact-to-Opportunity conversion with AI-suggested deal amount
+MoSCoW: Could
+- Status: NOT STARTED
+- ClickUp: `86e0cg0ft`
+- Acceptance criteria:
+  - Create Opportunity from contact detail. Pre-fills Account + Contact.
+  - AI-suggested deal amount from account history. 3-tier AI fallback.
+
+C19) Relationship mapping (interactive graph visualization)
+MoSCoW: Could
+- Status: NOT STARTED
+- ClickUp: `86e0cg0fy`
+- Acceptance criteria:
+  - Relationship fields: ReportsTo, Influences, ReferredBy.
+  - Interactive graph. Nodes = contacts, edges = relationships. Click to navigate.
+
+#### Tier 4 — AI-Powered (Later)
+
+C23) Churn prediction (contact-level with configurable thresholds)
+MoSCoW: Won't (this phase)
+- Status: NOT STARTED
+- ClickUp: `86e0cg0g2`
+- Acceptance criteria:
+  - Churn risk: days since last activity + score trend.
+  - Configurable thresholds in workspace settings. At Risk badge. Alert on High risk.
+
+C24) AI email draft using full contact context graph
+MoSCoW: Won't (this phase)
+- Status: NOT STARTED
+- ClickUp: `86e0cg0g4`
+- Acceptance criteria:
+  - Draft Email button on contact detail. AI uses full context graph.
+  - Tone selection: Formal, Friendly, Follow-up, Introduction. Uses ACS.
+
+C25) Conversation intelligence (call transcript key moments + sentiment)
+MoSCoW: Won't (this phase)
+- Status: NOT STARTED
+- ClickUp: `86e0cg0g5`
+- Acceptance criteria:
+  - Match contact to call transcripts. Extract key moments + sentiment.
+  - Timeline with sentiment trend. 3-tier AI fallback.
+
 ### Next: Permissions & Roles (Capability Model)
 
 15) Capability-first permission model with role intent
@@ -1746,6 +1936,85 @@ Source: ClickUp list `CRM Backlog` (id: 901710720381).
         - `server/src/CRM.Enterprise.Domain/Entities/OpportunityContactRole.cs`
         - `server/src/CRM.Enterprise.Application/Opportunities/IOpportunityService.cs`
         - `server/src/CRM.Enterprise.Infrastructure/Opportunities/OpportunityService.cs`
+    - Accounts | Account 360 Detail Page — unified account detail with hero, health score ring, KPI cards, company details, addresses, and team members. (ClickUp: TBD, Status: COMPLETED) Flow: 10A
+      - Acceptance criteria:
+        - Account detail page accessible at `/app/customers/:id`.
+        - Hero section displays company name, status badge, industry, and health score ring chart (SVG).
+        - 5 KPI metric cards: Total Revenue, Open Deals, Contacts, Activities, Avg Deal Size.
+        - Company Details card shows firmographic fields (Account Type, Rating, Source, Annual Revenue, Employees, Territory).
+        - Addresses card lists billing/shipping addresses with map pin icons.
+        - Team Members card shows assigned team with role badges and avatars.
+        - Quick-action buttons: Edit, Add Activity, Add Contact, Add Opportunity.
+      - Evidence:
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.html`
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.scss`
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.ts`
+        - `client/src/app/app.routes.ts`
+    - Accounts | Account form firmographic fields and duplicate detection on create/edit. (ClickUp: 86e041x79, Status: COMPLETED) Flow: 10B
+      - Acceptance criteria:
+        - Customer form includes Firmographic Details section with 6 fields: Account Type, Rating, Source, Annual Revenue, Employee Count, Territory.
+        - Duplicate detection fires on company-name and phone blur, calls `/api/customers/check-duplicate`.
+        - Warning banner shows matching records with name, industry, and navigate link.
+        - Firmographic fields use colorful icon addons per CRM design system.
+      - Evidence:
+        - `client/src/app/crm/features/customers/pages/customer-form.page.html`
+        - `client/src/app/crm/features/customers/pages/customer-form.page.scss`
+        - `client/src/app/crm/features/customers/pages/customer-form.page.ts`
+        - `server/src/CRM.Enterprise.Api/Controllers/CustomersController.cs`
+        - `server/src/CRM.Enterprise.Application/Customers/ICustomerService.cs`
+        - `server/src/CRM.Enterprise.Infrastructure/Customers/CustomerService.cs`
+    - Accounts | Advanced filters on account list page (Industry, Territory, Owner, Date Range, Revenue Range). (ClickUp: TBD, Status: COMPLETED) Flow: 10C
+      - Acceptance criteria:
+        - Filter toggle button with active-filter badge indicator in action bar.
+        - Expandable filter panel with Industry dropdown, Territory dropdown, Account Owner dropdown, Created Date range pickers, Min/Max Revenue inputs.
+        - Filters apply to table data via API query params.
+        - Clear All button resets all filters and hides badge.
+      - Evidence:
+        - `client/src/app/crm/features/customers/pages/customers.page.html`
+        - `client/src/app/crm/features/customers/pages/customers.page.scss`
+        - `client/src/app/crm/features/customers/pages/customers.page.ts`
+        - `client/src/app/crm/features/customers/services/customer-data.service.ts`
+    - Accounts | Pipeline revenue rollup KPIs and renewal/contract tracking on account detail. (ClickUp: 86e041x63, Status: COMPLETED) Flow: 10D
+      - Acceptance criteria:
+        - 3 pipeline KPI cards on detail page: Open Pipeline (sum of open deals), Closed Won (sum of won deals), Weighted Forecast.
+        - 3 renewal/contract date fields: Contract Start Date, Contract End Date, Next Renewal Date.
+        - Renewal dates render with calendar icons and formatted display.
+        - Pipeline KPIs styled with cyan/green/purple gradients matching design system.
+      - Evidence:
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.html`
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.scss`
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.ts`
+        - `client/src/app/crm/features/customers/models/customer.model.ts`
+        - `server/src/CRM.Enterprise.Domain/Entities/Customer.cs`
+        - `server/src/CRM.Enterprise.Infrastructure/Persistence/Migrations/*AddAccountRenewalAndContractFields*`
+    - Accounts | Communication timeline on account detail page aggregating emails, calls, meetings, and notes. (ClickUp: TBD, Status: COMPLETED) Flow: 10E
+      - Acceptance criteria:
+        - Communication Timeline section on account detail with vertical timeline layout.
+        - Timeline entries show type icon (email/call/meeting/note), subject, date/time, and user avatar.
+        - Type-specific icon colors: email=pink, call=green, meeting=blue, note=amber.
+        - Empty state with illustration when no timeline entries exist.
+        - Data fetched from `/api/customers/{id}/timeline` endpoint.
+      - Evidence:
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.html`
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.scss`
+        - `client/src/app/crm/features/customers/pages/customer-detail.page.ts`
+        - `client/src/app/crm/features/customers/services/customer-data.service.ts`
+    - Accounts | Backend — firmographic fields, health score, team members, account hierarchy, merge, and renewal entity additions. (ClickUp: TBD, Status: COMPLETED) Flow: 10F
+      - Acceptance criteria:
+        - Customer entity extended with: AccountType, CustomerRating, LeadSource, AnnualRevenue, NumberOfEmployees, Territory, HealthScore, ParentAccountId, ContractStartDate, ContractEndDate, NextRenewalDate.
+        - AccountTeamMember entity with CustomerTeamMembers DbSet and CRUD endpoints.
+        - Duplicate check endpoint (`GET /api/customers/check-duplicate?companyName=&phone=`).
+        - Account merge endpoint (`POST /api/customers/merge`).
+        - Account hierarchy endpoint (`GET /api/customers/{id}/hierarchy`).
+        - Timeline endpoint (`GET /api/customers/{id}/timeline`).
+        - EF migrations: AddFirmographicAndAddressFields, AddAccountTeamMembersAndHealthScore, AddAccountRenewalAndContractFields.
+      - Evidence:
+        - `server/src/CRM.Enterprise.Domain/Entities/Customer.cs`
+        - `server/src/CRM.Enterprise.Domain/Entities/AccountTeamMember.cs`
+        - `server/src/CRM.Enterprise.Application/Customers/ICustomerService.cs`
+        - `server/src/CRM.Enterprise.Infrastructure/Customers/CustomerService.cs`
+        - `server/src/CRM.Enterprise.Api/Controllers/CustomersController.cs`
+        - `server/src/CRM.Enterprise.Infrastructure/Persistence/CrmDbContext.cs`
 
 ## Public Site / Landing Direction
 

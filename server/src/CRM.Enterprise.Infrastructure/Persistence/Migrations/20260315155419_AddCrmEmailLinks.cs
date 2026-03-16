@@ -53,7 +53,7 @@ namespace CRM.Enterprise.Infrastructure.Persistence.Migrations
                         principalSchema: "identity",
                         principalTable: "Users",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(

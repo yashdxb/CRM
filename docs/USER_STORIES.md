@@ -5,25 +5,25 @@
 > Do not edit stories manually here; update in ClickUp, then re-sync.
 
 ## Sync Metadata
-- Synced at: **2026-03-14 22:10 UTC**
+- Synced at: **2026-03-16 03:51 UTC**
 - ClickUp list id: `901710720381`
-- Total tasks mirrored: **247**
-- Epics mirrored: **41**
-- Stories mirrored: **206**
+- Total tasks mirrored: **277**
+- Epics mirrored: **63**
+- Stories mirrored: **214**
 
 ## Status Summary
 - All tasks:
-  - `done`: 140
-  - `backlog`: 96
+  - `done`: 153
+  - `backlog`: 112
   - `completed`: 8
-  - `in progress`: 3
+  - `in progress`: 4
 - Epics:
-  - `backlog`: 22
-  - `done`: 18
-  - `in progress`: 1
+  - `backlog`: 42
+  - `done`: 19
+  - `in progress`: 2
 - Stories:
-  - `done`: 122
-  - `backlog`: 74
+  - `done`: 134
+  - `backlog`: 70
   - `completed`: 8
   - `in progress`: 2
 
@@ -100,19 +100,19 @@
   - `86e0422pc` | `backlog` | OData endpoints for key entities | tags: future, next
 
 ### [NEXT] Contract Management (`86e041x5y`)
-- Status: `backlog`
+- Status: `in progress`
 - Tags: future, next
 - Stories:
-  - `86e041x63` | `backlog` | Contract lifecycle tracking | tags: -
+  - `86e041x63` | `done` | Contract lifecycle tracking | tags: -
   - `86e041x6f` | `backlog` | Contract templates and versioning | tags: -
-  - `86e041x6j` | `backlog` | Renewal alerts and reminders | tags: -
+  - `86e041x6j` | `done` | Renewal alerts and reminders | tags: -
 
 ### [NEXT] Deduplication & Merge (`86e041x78`)
-- Status: `backlog`
+- Status: `done`
 - Tags: future, next
 - Stories:
-  - `86e041x79` | `backlog` | Duplicate detection for contacts and leads | tags: -
-  - `86e041x7f` | `backlog` | Record merge wizard | tags: -
+  - `86e041x79` | `done` | Duplicate detection for contacts and leads | tags: -
+  - `86e041x7f` | `done` | Record merge wizard | tags: -
 
 ### [NEXT] Email Marketing Campaigns (`86e041x7y`)
 - Status: `backlog`
@@ -140,6 +140,9 @@
 - Status: `done`
 - Tags: module:properties, next
 - Stories:
+  - `86e0c7wmw` | `done` | G3) Comparable Market Analysis (CMA) tab on property detail page | tags: done, module:properties, next
+  - `86e0c7wmx` | `done` | G4) E-Signature / DocuSign integration on property detail page | tags: done, module:properties, next
+  - `86e0c7wmy` | `done` | G5) Property alerts and subscription notifications | tags: done, module:properties, next
   - `86e0bjwxb` | `completed` | Module: Properties | X1 - Document & attachment management on property detail page | tags: module:properties, next
   - `86e0bjwyh` | `done` | Module: Properties | X10 - Reverse navigation from Account/Contact to Properties | tags: module:properties, next
   - `86e0bjwyn` | `done` | Module: Properties | X11 - Bulk operations on properties list page | tags: module:properties, next
@@ -272,11 +275,16 @@
 - Status: `done`
 - Tags: built, core
 - Stories:
+  - `86e0cf8fr` | `done` | Account 360 Detail Page with health score, KPIs, addresses, team members | tags: done, module:customers, now
+  - `86e0cf8fv` | `done` | Advanced filters on account list (Industry, Territory, Owner, Date, Revenue) | tags: done, module:customers, now
+  - `86e0cf8g8` | `done` | Backend: firmographic fields, health score, team members, hierarchy, merge endpoints | tags: done, module:customers, now
+  - `86e0cf8g2` | `done` | Communication timeline on account detail | tags: done, module:customers, now
   - `86e041wy0` | `done` | Create new customer | tags: -
   - `86e041wyb` | `done` | Customer import from CSV/Excel | tags: -
   - `86e041wy7` | `done` | Customer status lifecycle management | tags: -
   - `86e041wxy` | `done` | Customer workspace with search and pagination | tags: -
   - `86e041wy5` | `done` | Edit existing customer | tags: -
+  - `86e0cf8fz` | `done` | Pipeline revenue rollup KPIs on account detail | tags: done, module:customers, now
   - `86e0c7v5c` | `backlog` | UAT - Customer Management | tags: module:customers, uat
 
 ### Dashboard & Analytics (`86e041wwf`)
@@ -335,6 +343,116 @@
   - `86e04290t` | `done` | Marketing recommendation decision flow and action worklist handoff | tags: -
   - `86e041x0g` | `done` | Marketing settings configuration | tags: -
   - `86e04290e` | `done` | Next best action recommendations with confidence and evidence | tags: -
+
+### Module: Contacts | #1 Clickable email/phone/LinkedIn links (`86e0cg0d0`)
+- Status: `backlog`
+- Tags: module:contacts, now, tier-1
+- Stories: _None_
+
+### Module: Contacts | #10 Email communication history (inline from MailboxSync) (`86e0cg0e2`)
+- Status: `backlog`
+- Tags: module:contacts, next, tier-2
+- Stories: _None_
+
+### Module: Contacts | #11 Status/lifecycle history timeline with time-in-stage (`86e0cg0e9`)
+- Status: `backlog`
+- Tags: module:contacts, next, tier-2
+- Stories: _None_
+
+### Module: Contacts | #12 Address fields (Street, City, State, PostalCode, Country) (`86e0cg0ec`)
+- Status: `backlog`
+- Tags: module:contacts, next, tier-2
+- Stories: _None_
+
+### Module: Contacts | #13 Card/Grid view toggle with engagement heat indicators (`86e0cg0eg`)
+- Status: `backlog`
+- Tags: module:contacts, next, tier-2
+- Stories: _None_
+
+### Module: Contacts | #14 Quick activity log from list (per-row mini-form) (`86e0cg0et`)
+- Status: `backlog`
+- Tags: module:contacts, next, tier-2
+- Stories: _None_
+
+### Module: Contacts | #15 Duplicate detection with AI match confidence (`86e0cg0f1`)
+- Status: `backlog`
+- Tags: later, module:contacts, tier-3
+- Stories: _None_
+
+### Module: Contacts | #16 Contact merge with undo (60s window) (`86e0cg0fc`)
+- Status: `backlog`
+- Tags: later, module:contacts, tier-3
+- Stories: _None_
+
+### Module: Contacts | #17 Tags + smart segments (freeform tags + saved dynamic filters) (`86e0cg0fk`)
+- Status: `backlog`
+- Tags: later, module:contacts, tier-3
+- Stories: _None_
+
+### Module: Contacts | #18 Contact-to-Opportunity conversion with AI-suggested deal amount (`86e0cg0ft`)
+- Status: `backlog`
+- Tags: later, module:contacts, tier-3
+- Stories: _None_
+
+### Module: Contacts | #19 Relationship mapping (interactive graph visualization) (`86e0cg0fy`)
+- Status: `backlog`
+- Tags: later, module:contacts, tier-3
+- Stories: _None_
+
+### Module: Contacts | #2 Quick-filter lifecycle status chips (`86e0cg0d3`)
+- Status: `backlog`
+- Tags: module:contacts, now, tier-1
+- Stories: _None_
+
+### Module: Contacts | #23 Churn prediction (contact-level with configurable thresholds) (`86e0cg0g2`)
+- Status: `backlog`
+- Tags: later, module:contacts, tier-4
+- Stories: _None_
+
+### Module: Contacts | #24 AI email draft using full contact context graph (`86e0cg0g4`)
+- Status: `backlog`
+- Tags: later, module:contacts, tier-4
+- Stories: _None_
+
+### Module: Contacts | #25 Conversation intelligence (call transcript key moments + sentiment) (`86e0cg0g5`)
+- Status: `backlog`
+- Tags: later, module:contacts, tier-4
+- Stories: _None_
+
+### Module: Contacts | #3 Show BuyingRole + ActivityScore columns in table (`86e0cg0d7`)
+- Status: `backlog`
+- Tags: module:contacts, now, tier-1
+- Stories: _None_
+
+### Module: Contacts | #4 Replace native confirm() with PrimeNG ConfirmDialog (`86e0cg0da`)
+- Status: `backlog`
+- Tags: module:contacts, now, tier-1
+- Stories: _None_
+
+### Module: Contacts | #5 Sort options (name, date, score, lifecycle) (`86e0cg0de`)
+- Status: `backlog`
+- Tags: module:contacts, now, tier-1
+- Stories: _None_
+
+### Module: Contacts | #6 Tab badges showing counts on detail page (`86e0cg0dh`)
+- Status: `backlog`
+- Tags: module:contacts, now, tier-1
+- Stories: _None_
+
+### Module: Contacts | #7 Unsaved changes guard (canDeactivate + dirty check) (`86e0cg0dk`)
+- Status: `backlog`
+- Tags: module:contacts, now, tier-1
+- Stories: _None_
+
+### Module: Contacts | #8 Lifecycle stepper on detail page (visual progression + time-in-stage) (`86e0cg0dt`)
+- Status: `backlog`
+- Tags: module:contacts, next, tier-2
+- Stories: _None_
+
+### Module: Contacts | #9 Automated contact engagement scoring (transparent weights) (`86e0cg0dy`)
+- Status: `backlog`
+- Tags: module:contacts, next, tier-2
+- Stories: _None_
 
 ### Opportunity & Deal Management (`86e041wyc`)
 - Status: `done`

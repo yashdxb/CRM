@@ -1,4 +1,5 @@
 @use '../../../../../styles/design-tokens' as *;
+@use 'sass:color';
 
 @keyframes orb-float {
   0%, 100% {
@@ -513,6 +514,89 @@
     animation: fade-in-up 0.6s ease-out 0.3s both;
   }
 
+  .lifecycle-chips {
+    display: flex;
+    gap: $space-2;
+    margin-bottom: $space-4;
+    animation: fade-in-up 0.5s ease-out 0.35s both;
+    position: relative;
+    z-index: 2;
+    flex-wrap: wrap;
+  }
+
+  .lifecycle-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-1;
+    padding: $space-1 $space-3;
+    border: 1px solid $glass-border;
+    border-radius: $radius-full;
+    background: $glass-bg;
+    backdrop-filter: blur($glass-blur);
+    font-size: $font-size-sm;
+    font-weight: 600;
+    color: $gray-600;
+    cursor: pointer;
+    transition: all 250ms;
+    box-shadow: $glass-shadow;
+
+    i { font-size: 0.8rem; }
+
+    .chip-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 $space-1;
+      border-radius: $radius-full;
+      background: rgba($gray-200, 0.8);
+      font-size: $font-size-xs;
+      font-weight: 700;
+      color: $gray-500;
+    }
+
+    &:hover {
+      transform: translateY(-1px);
+      box-shadow: $glass-shadow-hover;
+    }
+
+    &--active {
+      background: rgba($primary, 0.1);
+      border-color: rgba($primary, 0.3);
+      color: $primary;
+
+      .chip-count {
+        background: $primary;
+        color: white;
+      }
+    }
+
+    &--lead.lifecycle-chip--active {
+      background: rgba(#06b6d4, 0.1);
+      border-color: rgba(#06b6d4, 0.3);
+      color: #0891b2;
+
+      .chip-count { background: #06b6d4; color: white; }
+    }
+
+    &--prospect.lifecycle-chip--active {
+      background: rgba(#a855f7, 0.1);
+      border-color: rgba(#a855f7, 0.3);
+      color: #9333ea;
+
+      .chip-count { background: #a855f7; color: white; }
+    }
+
+    &--customer.lifecycle-chip--active {
+      background: rgba(#22c55e, 0.1);
+      border-color: rgba(#22c55e, 0.3);
+      color: #16a34a;
+
+      .chip-count { background: #22c55e; color: white; }
+    }
+  }
+
   .filter-bar {
     display: flex;
     align-items: center;
@@ -746,6 +830,66 @@
     display: flex;
     flex-direction: column;
     gap: $space-2;
+  }
+
+  .contact-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: $primary;
+    text-decoration: none;
+    font-size: $font-size-sm;
+    transition: color 200ms;
+
+    i { font-size: 0.75rem; }
+
+    &:hover {
+      color: color.adjust($primary, $lightness: -10%);
+      text-decoration: underline;
+    }
+
+    &--phone {
+      color: $gray-700;
+      font-weight: 600;
+
+      &:hover { color: $primary; }
+    }
+  }
+
+  .text-muted {
+    color: $gray-400;
+    font-size: $font-size-sm;
+  }
+
+  .score-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+  }
+
+  .score-bar {
+    width: 60px;
+    height: 6px;
+    background: $gray-200;
+    border-radius: $radius-full;
+    overflow: hidden;
+
+    &__fill {
+      height: 100%;
+      border-radius: $radius-full;
+      transition: width 0.6s ease-out;
+
+      &--low { background: linear-gradient(90deg, #f87171, #ef4444); }
+      &--mid { background: linear-gradient(90deg, #fbbf24, #f59e0b); }
+      &--high { background: linear-gradient(90deg, #4ade80, #22c55e); }
+    }
+  }
+
+  .score-value {
+    font-size: $font-size-xs;
+    font-weight: 700;
+    color: $gray-700;
+    min-width: 20px;
   }
 
   .contact-cell {

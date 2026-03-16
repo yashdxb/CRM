@@ -434,6 +434,40 @@
       color: #b91c1c;
     }
 
+    .field-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: #667eea;
+      text-decoration: none;
+      margin-top: 2px;
+      transition: color 200ms;
+
+      i { font-size: 0.65rem; }
+
+      &:hover {
+        color: #4f46e5;
+        text-decoration: underline;
+      }
+    }
+
+    .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      margin-left: 4px;
+      border-radius: 9px;
+      background: rgba(102, 126, 234, 0.15);
+      color: #667eea;
+      font-size: 0.7rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
     .required {
       color: rgba(var(--apple-pink), 1);
       font-weight: 600;

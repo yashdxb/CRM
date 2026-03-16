@@ -12,7 +12,7 @@
               <span class="title-gradient">{{ isEditMode() ? 'Edit' : 'Create New' }}</span>
               <span class="title-light">Contact</span>
             </h1>
-            <p>{{ isEditMode() ? 'Update stakeholder details' : 'Add a new person to your account team' }}</p>
+            <p>{{ isEditMode() ? 'Update stakeholder details' : 'Add a new person to your customer team' }}</p>
             <div class="presence-focus" *ngIf="isEditMode() && visiblePresenceUsers().length">
               <i class="pi pi-eye"></i>
               <span>{{ viewingPresenceSummary() }}</span>
@@ -29,7 +29,7 @@
         <form class="contact-form" (ngSubmit)="onSave()">
           <section class="related-summary-strip" *ngIf="isEditMode()">
             <div class="summary-chip" *ngIf="linkedAccount(); else accountSummaryEmpty">
-              <span class="chip-label">Account</span>
+              <span class="chip-label">Customer</span>
               <span class="chip-value">{{ linkedAccount()?.name }}</span>
               <span class="chip-meta">
                 Owner {{ linkedAccount()?.owner || '—' }} · Created
@@ -38,9 +38,9 @@
             </div>
             <ng-template #accountSummaryEmpty>
               <div class="summary-chip">
-                <span class="chip-label">Account</span>
+                <span class="chip-label">Customer</span>
                 <span class="chip-value">None</span>
-                <span class="chip-meta">No account linked yet.</span>
+                <span class="chip-meta">No customer linked yet.</span>
               </div>
             </ng-template>
             <div class="summary-chip">
@@ -85,6 +85,7 @@
                   </p-inputgroup-addon>
                   <input pInputText id="contact-email" name="email" [(ngModel)]="form.email" type="email" placeholder="name@company.com" />
                 </p-inputgroup>
+                <a *ngIf="isEditMode() && form.email" class="field-link" [href]="'mailto:' + form.email"><i class="pi pi-external-link"></i> Send email</a>
               </div>
               <div class="form-field">
                 <label for="contact-jobTitle">Job title</label>
@@ -117,6 +118,7 @@
                   </p-inputgroup-addon>
                   <input pInputText id="contact-phone" name="phone" [(ngModel)]="form.phone" placeholder="+1 555-0101" />
                 </p-inputgroup>
+                <a *ngIf="isEditMode() && form.phone" class="field-link" [href]="'tel:' + form.phone"><i class="pi pi-external-link"></i> Call</a>
               </div>
               <div class="form-field">
                 <label for="contact-mobile">Mobile</label>
@@ -126,6 +128,7 @@
                   </p-inputgroup-addon>
                   <input pInputText id="contact-mobile" name="mobile" [(ngModel)]="form.mobile" placeholder="+1 555-0102" />
                 </p-inputgroup>
+                <a *ngIf="isEditMode() && form.mobile" class="field-link" [href]="'tel:' + form.mobile"><i class="pi pi-external-link"></i> Call</a>
               </div>
             </div>
           </section>
@@ -133,11 +136,11 @@
           <section class="form-section">
             <h2 class="section-title">
               <i class="pi pi-building"></i>
-              Account context
+              Customer context
             </h2>
             <div class="form-grid">
               <div class="form-field">
-                <label for="contact-accountId">Account</label>
+                <label for="contact-accountId">Customer</label>
                 <p-select
                   id="contact-accountId"
                   [options]="accountOptions"
@@ -145,7 +148,7 @@
                   optionValue="value"
                   name="accountId"
                   [(ngModel)]="form.accountId"
-                  placeholder="Link to account"
+                  placeholder="Link to customer"
                   styleClass="w-full"
                   appendTo="body"
                 ></p-select>
@@ -176,6 +179,7 @@
                   </p-inputgroup-addon>
                   <input pInputText id="contact-linkedInProfile" name="linkedInProfile" [(ngModel)]="form.linkedInProfile" placeholder="https://linkedin.com/in/..." />
                 </p-inputgroup>
+                <a *ngIf="isEditMode() && form.linkedInProfile" class="field-link" [href]="form.linkedInProfile" target="_blank" rel="noopener noreferrer"><i class="pi pi-external-link"></i> View profile</a>
               </div>
             </div>
           </section>
@@ -202,10 +206,10 @@
 
           <p-tabs value="timeline">
             <p-tablist>
-              <p-tab value="timeline">Timeline</p-tab>
-              <p-tab value="notes">Notes</p-tab>
-              <p-tab value="related">Related records</p-tab>
-              <p-tab value="attachments">Attachments</p-tab>
+              <p-tab value="timeline">Timeline <span class="tab-badge" *ngIf="activities().length">{{ activities().length }}</span></p-tab>
+              <p-tab value="notes">Notes <span class="tab-badge" *ngIf="notes().length">{{ notes().length }}</span></p-tab>
+              <p-tab value="related">Related <span class="tab-badge" *ngIf="relatedOpportunities().length + relatedProperties().length">{{ relatedOpportunities().length + relatedProperties().length }}</span></p-tab>
+              <p-tab value="attachments">Attachments <span class="tab-badge" *ngIf="attachments().length">{{ attachments().length }}</span></p-tab>
             </p-tablist>
             <p-tabpanels>
               <p-tabpanel value="timeline">
@@ -279,7 +283,7 @@
               <p-tabpanel value="related">
               <div class="related-grid">
                 <div class="related-section">
-                  <h3>Account</h3>
+                  <h3>Customer</h3>
                   <div
                     class="account-card clickable-row"
                     *ngIf="linkedAccount(); else accountEmpty"
@@ -293,7 +297,7 @@
                     </div>
                   </div>
                   <ng-template #accountEmpty>
-                    <div class="empty-state">No account linked.</div>
+                    <div class="empty-state">No customer linked.</div>
                   </ng-template>
                 </div>
 

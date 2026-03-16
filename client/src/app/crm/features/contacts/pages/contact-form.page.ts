@@ -31,6 +31,7 @@ import { PropertyDataService } from '../../properties/services/property-data.ser
 import { Property } from '../../properties/models/property.model';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { readUserId } from '../../../../core/auth/token.utils';
+import { HasUnsavedChanges } from '../../../../core/guards/unsaved-changes.guard';
 
 interface Option<T = string> {
   label: string;
@@ -60,7 +61,7 @@ interface Option<T = string> {
   templateUrl: "./contact-form.page.html",
   styleUrls: ["./contact-form.page.scss"]
 })
-export class ContactFormPage implements OnInit, OnDestroy {
+export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected readonly lifecycleOptions: Option<string>[] = [
     { label: 'Lead', value: 'Lead' },
     { label: 'Prospect', value: 'Prospect' },
@@ -77,6 +78,7 @@ export class ContactFormPage implements OnInit, OnDestroy {
   protected accountOptions: Option<string>[] = [];
   protected readonly accounts = signal<Customer[]>([]);
   protected form: SaveContactRequest = this.createEmptyForm();
+  private _originalFormSnapshot: string = '';
   protected saving = signal(false);
   protected firstNameError = signal<string | null>(null);
   protected lastNameError = signal<string | null>(null);
@@ -124,6 +126,8 @@ export class ContactFormPage implements OnInit, OnDestroy {
         next: (item) => this.prefill(item),
         error: () => this.raiseToast('error', 'Unable to load contact.')
       });
+    } else {
+      this._originalFormSnapshot = JSON.stringify(this.form);
     }
 
     this.customerData.search({ page: 1, pageSize: 100 }).subscribe((res) => {
@@ -170,6 +174,17 @@ export class ContactFormPage implements OnInit, OnDestroy {
     return !!this.editingId;
   }
 
+  hasUnsavedChanges(): boolean {
+    return this._originalFormSnapshot !== '' && JSON.stringify(this.form) !== this._originalFormSnapshot;
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+    }
+  }
+
   protected onSave() {
     this.firstNameError.set(!this.form.firstName ? 'First name is required.' : null);
     this.lastNameError.set(!this.form.lastName ? 'Last name is required.' : null);
@@ -191,6 +206,7 @@ export class ContactFormPage implements OnInit, OnDestroy {
     request$.subscribe({
       next: () => {
         this.saving.set(false);
+        this._originalFormSnapshot = JSON.stringify(this.form);
         const message = this.editingId ? 'Contact updated.' : 'Contact created.';
         this.raiseToast('success', message);
       },
@@ -222,6 +238,7 @@ export class ContactFormPage implements OnInit, OnDestroy {
       linkedInProfile: ''
     };
     this.loadDetailData();
+    this._originalFormSnapshot = JSON.stringify(this.form);
   }
 
   private createEmptyForm(): SaveContactRequest {

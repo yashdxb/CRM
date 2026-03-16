@@ -190,6 +190,11 @@ public class CrmDbContext : DbContext
             .Property(l => l.FromEmail).HasMaxLength(320);
         modelBuilder.Entity<CrmEmailLink>()
             .Property(l => l.ExternalMessageId).HasMaxLength(500);
+        modelBuilder.Entity<CrmEmailLink>()
+            .HasOne(l => l.LinkedByUser)
+            .WithMany()
+            .HasForeignKey(l => l.LinkedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<Lead>()
             .Property(l => l.AiConfidence)
             .HasPrecision(5, 4);
