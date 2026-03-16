@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ApiUpsertCustomerRequest = CRM.Enterprise.Api.Contracts.Customers.UpsertCustomerRequest;
 using AppCustomerUpsertRequest = CRM.Enterprise.Application.Customers.CustomerUpsertRequest;
+using ApiAddContactRoleRequest = CRM.Enterprise.Api.Contracts.Customers.AddAccountContactRoleRequest;
+using AppAddContactRoleRequest = CRM.Enterprise.Application.Customers.AddAccountContactRoleRequest;
 
 namespace CRM.Enterprise.Api.Controllers;
 
@@ -110,6 +112,43 @@ public class CustomersController : ControllerBase
     public async Task<IActionResult> RemoveTeamMember(Guid id, Guid memberId, CancellationToken cancellationToken)
     {
         var result = await _customerService.RemoveTeamMemberAsync(id, memberId, cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        return NoContent();
+    }
+
+    // ── Account Contact Roles ──────────────────────────────────────────
+
+    [HttpGet("{id:guid}/contact-roles")]
+    public async Task<ActionResult<IEnumerable<AccountContactRoleItem>>> GetContactRoles(Guid id, CancellationToken cancellationToken)
+    {
+        var roles = await _customerService.GetContactRolesAsync(id, cancellationToken);
+        if (roles is null) return NotFound();
+        return Ok(roles.Select(ToContactRoleItem));
+    }
+
+    [HttpPost("{id:guid}/contact-roles")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
+    public async Task<ActionResult<AccountContactRoleItem>> AddContactRole(
+        Guid id,
+        [FromBody] ApiAddContactRoleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _customerService.AddContactRoleAsync(
+            id,
+            new AppAddContactRoleRequest(request.ContactId, request.Role, request.Notes, request.IsPrimary),
+            GetActor(),
+            cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success || result.Value is null) return BadRequest(result.Error);
+        return Ok(ToContactRoleItem(result.Value));
+    }
+
+    [HttpDelete("{id:guid}/contact-roles/{contactRoleId:guid}")]
+    [Authorize(Policy = Permissions.Policies.CustomersManage)]
+    public async Task<IActionResult> RemoveContactRole(Guid id, Guid contactRoleId, CancellationToken cancellationToken)
+    {
+        var result = await _customerService.RemoveContactRoleAsync(id, contactRoleId, GetActor(), cancellationToken);
         if (result.NotFound) return NotFound();
         if (!result.Success) return BadRequest(result.Error);
         return NoContent();
@@ -419,6 +458,13 @@ public class CustomersController : ControllerBase
         var name = User.FindFirstValue(ClaimTypes.Name);
         var parsed = Guid.TryParse(id, out var value) ? value : (Guid?)null;
         return new ActorContext(parsed, name);
+    }
+
+    private static AccountContactRoleItem ToContactRoleItem(AccountContactRoleDto dto)
+    {
+        return new AccountContactRoleItem(
+            dto.Id, dto.ContactId, dto.ContactName, dto.Email, dto.JobTitle,
+            dto.Role, dto.Notes, dto.IsPrimary, dto.CreatedAtUtc, dto.UpdatedAtUtc);
     }
 
     private Task PublishCustomerRealtimeAsync(string action, Guid customerId, CancellationToken cancellationToken)

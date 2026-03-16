@@ -39,11 +39,12 @@ public class ContactsController : ControllerBase
     public async Task<ActionResult<ContactSearchResponse>> GetContacts(
         [FromQuery] string? search,
         [FromQuery] Guid? accountId,
+        [FromQuery] string? tag,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _contactService.SearchAsync(new ContactSearchRequest(search, accountId, page, pageSize), cancellationToken);
+        var result = await _contactService.SearchAsync(new ContactSearchRequest(search, accountId, tag, page, pageSize), cancellationToken);
         var items = result.Items.Select(ToApiItem);
         return Ok(new ContactSearchResponse(items, result.Total));
     }
@@ -190,6 +191,55 @@ public class ContactsController : ControllerBase
         return NoContent();
     }
 
+    // C15: Duplicate detection
+    [HttpPost("check-duplicates")]
+    public async Task<ActionResult<DuplicateCheckApiResponse>> CheckDuplicates([FromBody] DuplicateCheckApiRequest request, CancellationToken cancellationToken)
+    {
+        var appRequest = new DuplicateCheckRequest(request.FirstName, request.LastName, request.Email, request.Phone, request.ExcludeContactId);
+        var result = await _contactService.CheckDuplicatesAsync(appRequest, cancellationToken);
+        var items = result.Duplicates.Select(d => new DuplicateContactItem(d.Id, d.FullName, d.Email, d.Phone, d.MatchScore, d.MatchReason));
+        return Ok(new DuplicateCheckApiResponse(items));
+    }
+
+    // C16: Merge contacts
+    [HttpPost("merge")]
+    [Authorize(Policy = Permissions.Policies.ContactsManage)]
+    public async Task<ActionResult<MergeContactsApiResponse>> MergeContacts([FromBody] MergeContactsApiRequest request, CancellationToken cancellationToken)
+    {
+        var appRequest = new ContactMergeRequest(request.MasterContactId, request.SecondaryContactIds);
+        var result = await _contactService.MergeAsync(appRequest, GetActor(), cancellationToken);
+        if (!result.Success) return BadRequest(result.Error);
+        await PublishContactRealtimeAsync("merged", result.Value!.MasterId, cancellationToken);
+        return Ok(new MergeContactsApiResponse(result.Value!.MasterId, result.Value!.MergedCount));
+    }
+
+    // C17: Tags
+    [HttpGet("tags")]
+    public async Task<ActionResult<IEnumerable<string>>> GetAllTags(CancellationToken cancellationToken)
+    {
+        var tags = await _contactService.GetAllTagsAsync(cancellationToken);
+        return Ok(tags);
+    }
+
+    [HttpPut("{id:guid}/tags")]
+    [Authorize(Policy = Permissions.Policies.ContactsManage)]
+    public async Task<IActionResult> UpdateTags(Guid id, [FromBody] List<string> tags, CancellationToken cancellationToken)
+    {
+        var result = await _contactService.UpdateTagsAsync(id, tags, cancellationToken);
+        if (result.NotFound) return NotFound();
+        if (!result.Success) return BadRequest(result.Error);
+        return NoContent();
+    }
+
+    // C19: Relationships
+    [HttpGet("{id:guid}/relationships")]
+    public async Task<ActionResult<IEnumerable<ContactRelationshipItem>>> GetRelationships(Guid id, CancellationToken cancellationToken)
+    {
+        var relationships = await _contactService.GetRelationshipsAsync(id, cancellationToken);
+        var items = relationships.Select(r => new ContactRelationshipItem(r.Id, r.FullName, r.JobTitle, r.Relationship));
+        return Ok(items);
+    }
+
     private static ContactListItem ToApiItem(ContactListItemDto dto)
     {
         return new ContactListItem(
@@ -206,7 +256,10 @@ public class ContactsController : ControllerBase
             dto.OwnerName,
             dto.LifecycleStage,
             dto.ActivityScore,
-            dto.CreatedAtUtc);
+            dto.CreatedAtUtc,
+            dto.City,
+            dto.Country,
+            dto.Tags);
     }
 
     private static ContactDetailResponse ToApiDetail(ContactDetailDto dto)
@@ -228,7 +281,15 @@ public class ContactsController : ControllerBase
             dto.LifecycleStage,
             dto.ActivityScore,
             dto.CreatedAtUtc,
-            dto.UpdatedAtUtc);
+            dto.UpdatedAtUtc,
+            dto.Street,
+            dto.City,
+            dto.State,
+            dto.PostalCode,
+            dto.Country,
+            dto.Tags,
+            dto.ReportsToId,
+            dto.ReportsToName);
     }
 
     private static AppContactUpsertRequest MapUpsertRequest(ApiUpsertContactRequest request)
@@ -245,7 +306,14 @@ public class ContactsController : ControllerBase
             request.OwnerId,
             request.LinkedInProfile,
             request.LifecycleStage,
-            request.ActivityScore);
+            request.ActivityScore,
+            request.Street,
+            request.City,
+            request.State,
+            request.PostalCode,
+            request.Country,
+            request.Tags,
+            request.ReportsToId);
     }
 
     private ActorContext GetActor()

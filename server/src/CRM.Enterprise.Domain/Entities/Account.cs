@@ -45,6 +45,7 @@ public class Account : AuditableEntity
     public Account? ParentAccount { get; set; }
     public ICollection<Account> ChildAccounts { get; set; } = new List<Account>();
     public ICollection<Contact> Contacts { get; set; } = new List<Contact>();
+    public ICollection<AccountContactRole> ContactRoles { get; set; } = new List<AccountContactRole>();
     public ICollection<Opportunity> Opportunities { get; set; } = new List<Opportunity>();
     public ICollection<Lead> Leads { get; set; } = new List<Lead>();
     public ICollection<SupportCase> SupportCases { get; set; } = new List<SupportCase>();

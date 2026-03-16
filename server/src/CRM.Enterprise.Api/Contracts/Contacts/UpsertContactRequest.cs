@@ -16,4 +16,11 @@ public class UpsertContactRequest
     public string? LinkedInProfile { get; set; }
     public string? LifecycleStage { get; set; }
     public int ActivityScore { get; set; }
+    public string? Street { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? PostalCode { get; set; }
+    public string? Country { get; set; }
+    public List<string>? Tags { get; set; }
+    public Guid? ReportsToId { get; set; }
 }

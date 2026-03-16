@@ -16,4 +16,7 @@ public record ContactListItem(
     string? Owner,
     string? LifecycleStage,
     int ActivityScore,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    string? City = null,
+    string? Country = null,
+    IEnumerable<string>? Tags = null);

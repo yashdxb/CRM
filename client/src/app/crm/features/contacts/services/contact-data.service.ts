@@ -4,8 +4,13 @@ import { environment } from '../../../../../environments/environment';
 import { CsvImportJob } from '../../../../shared/models/csv-import.model';
 import {
   Contact,
+  ContactRelationship,
   ContactSearchRequest,
   ContactSearchResponse,
+  DuplicateCheckRequest,
+  DuplicateCheckResponse,
+  MergeContactsRequest,
+  MergeContactsResponse,
   SaveContactRequest
 } from '../models/contact.model';
 
@@ -22,6 +27,9 @@ export class ContactDataService {
     }
     if (request.accountId) {
       params = params.set('accountId', request.accountId);
+    }
+    if (request.tag) {
+      params = params.set('tag', request.tag);
     }
     if (request.page) {
       params = params.set('page', request.page);
@@ -79,5 +87,29 @@ export class ContactDataService {
     const formData = new FormData();
     formData.append('file', file);
     return this.http.post<CsvImportJob>(`${this.baseUrl}/api/contacts/import/queue`, formData);
+  }
+
+  // C15: Duplicate detection
+  checkDuplicates(request: DuplicateCheckRequest) {
+    return this.http.post<DuplicateCheckResponse>(`${this.baseUrl}/api/contacts/check-duplicates`, request);
+  }
+
+  // C16: Merge contacts
+  mergeContacts(request: MergeContactsRequest) {
+    return this.http.post<MergeContactsResponse>(`${this.baseUrl}/api/contacts/merge`, request);
+  }
+
+  // C17: Tags
+  getAllTags() {
+    return this.http.get<string[]>(`${this.baseUrl}/api/contacts/tags`);
+  }
+
+  updateTags(id: string, tags: string[]) {
+    return this.http.put<void>(`${this.baseUrl}/api/contacts/${id}/tags`, tags);
+  }
+
+  // C19: Relationships
+  getRelationships(id: string) {
+    return this.http.get<ContactRelationship[]>(`${this.baseUrl}/api/contacts/${id}/relationships`);
   }
 }

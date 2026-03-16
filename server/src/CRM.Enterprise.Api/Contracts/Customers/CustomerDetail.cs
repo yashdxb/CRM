@@ -57,3 +57,21 @@ public record AccountTeamMemberItem(
     DateTime CreatedAt);
 
 public record AddTeamMemberRequest(Guid UserId, string Role);
+
+public sealed record AccountContactRoleItem(
+    Guid Id,
+    Guid ContactId,
+    string ContactName,
+    string? Email,
+    string? JobTitle,
+    string Role,
+    string? Notes,
+    bool IsPrimary,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt);
+
+public sealed record AddAccountContactRoleRequest(
+    Guid ContactId,
+    string Role,
+    string? Notes,
+    bool IsPrimary);

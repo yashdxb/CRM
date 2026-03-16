@@ -14,7 +14,10 @@ public sealed record ContactListItemDto(
     string OwnerName,
     string LifecycleStage,
     int ActivityScore,
-    DateTime CreatedAtUtc);
+    DateTime CreatedAtUtc,
+    string? City = null,
+    string? Country = null,
+    IReadOnlyList<string>? Tags = null);
 
 public sealed record ContactDetailDto(
     Guid Id,
@@ -33,7 +36,15 @@ public sealed record ContactDetailDto(
     string? LifecycleStage,
     int ActivityScore,
     DateTime CreatedAtUtc,
-    DateTime? UpdatedAtUtc);
+    DateTime? UpdatedAtUtc,
+    string? Street = null,
+    string? City = null,
+    string? State = null,
+    string? PostalCode = null,
+    string? Country = null,
+    IReadOnlyList<string>? Tags = null,
+    Guid? ReportsToId = null,
+    string? ReportsToName = null);
 
 public sealed record ContactSearchResultDto(IReadOnlyList<ContactListItemDto> Items, int Total);
 
@@ -43,3 +54,13 @@ public sealed record ContactOperationResult<T>(bool Success, T? Value, string? E
     public static ContactOperationResult<T> Fail(string error) => new(false, default, error, false);
     public static ContactOperationResult<T> NotFoundResult() => new(false, default, null, true);
 }
+
+// C15: Duplicate detection
+public sealed record DuplicateContactDto(Guid Id, string FullName, string? Email, string? Phone, int MatchScore, string MatchReason);
+public sealed record DuplicateCheckResultDto(IReadOnlyList<DuplicateContactDto> Duplicates);
+
+// C16: Merge
+public sealed record ContactMergeResultDto(Guid MasterId, int MergedCount);
+
+// C19: Relationship
+public sealed record ContactRelationshipDto(Guid Id, string FullName, string? JobTitle, string Relationship);

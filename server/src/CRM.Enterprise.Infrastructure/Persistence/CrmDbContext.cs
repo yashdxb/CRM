@@ -21,6 +21,7 @@ public class CrmDbContext : DbContext
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<AccountTeamMember> AccountTeamMembers => Set<AccountTeamMember>();
     public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<ContactTag> ContactTags => Set<ContactTag>();
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<LeadAssignmentRule> LeadAssignmentRules => Set<LeadAssignmentRule>();
     public DbSet<LeadStatus> LeadStatuses => Set<LeadStatus>();
@@ -47,6 +48,7 @@ public class CrmDbContext : DbContext
     public DbSet<DecisionActionLog> DecisionActionLogs => Set<DecisionActionLog>();
     public DbSet<OpportunityTeamMember> OpportunityTeamMembers => Set<OpportunityTeamMember>();
     public DbSet<OpportunityContactRole> OpportunityContactRoles => Set<OpportunityContactRole>();
+    public DbSet<AccountContactRole> AccountContactRoles => Set<AccountContactRole>();
     public DbSet<OpportunityOnboardingItem> OpportunityOnboardingItems => Set<OpportunityOnboardingItem>();
     public DbSet<OpportunityStageAutomationRule> OpportunityStageAutomationRules => Set<OpportunityStageAutomationRule>();
     public DbSet<Activity> Activities => Set<Activity>();
@@ -155,6 +157,18 @@ public class CrmDbContext : DbContext
             .HasIndex(m => new { m.AccountId, m.UserId })
             .IsUnique();
         modelBuilder.Entity<Contact>().ToTable("Contacts", CrmSchema);
+        modelBuilder.Entity<Contact>()
+            .HasOne(c => c.ReportsTo)
+            .WithMany(c => c.DirectReports)
+            .HasForeignKey(c => c.ReportsToId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<ContactTag>().ToTable("ContactTags", CrmSchema);
+        modelBuilder.Entity<ContactTag>()
+            .Property(t => t.Tag).HasMaxLength(100).IsRequired();
+        modelBuilder.Entity<ContactTag>()
+            .HasIndex(t => new { t.ContactId, t.Tag })
+            .HasFilter("[IsDeleted] = 0")
+            .IsUnique();
         modelBuilder.Entity<Lead>().ToTable("Leads", CrmSchema);
         modelBuilder.Entity<LeadAssignmentRule>().ToTable("LeadAssignmentRules", CrmSchema);
         modelBuilder.Entity<LeadStatus>().ToTable("LeadStatuses", CrmSchema);
@@ -230,12 +244,17 @@ public class CrmDbContext : DbContext
         modelBuilder.Entity<OpportunityReviewChecklistItem>().ToTable("OpportunityReviewChecklistItems", CrmSchema);
         modelBuilder.Entity<OpportunityTeamMember>().ToTable("OpportunityTeamMembers", CrmSchema);
         modelBuilder.Entity<OpportunityContactRole>().ToTable("OpportunityContactRoles", CrmSchema);
+        modelBuilder.Entity<AccountContactRole>().ToTable("AccountContactRoles", CrmSchema);
         modelBuilder.Entity<OpportunityOnboardingItem>().ToTable("OpportunityOnboardingItems", CrmSchema);
         modelBuilder.Entity<OpportunityTeamMember>()
             .HasIndex(member => new { member.OpportunityId, member.UserId })
             .IsUnique();
         modelBuilder.Entity<OpportunityContactRole>()
             .HasIndex(role => new { role.OpportunityId, role.ContactId })
+            .IsUnique()
+            .HasFilter("[IsDeleted] = 0");
+        modelBuilder.Entity<AccountContactRole>()
+            .HasIndex(role => new { role.AccountId, role.ContactId })
             .IsUnique()
             .HasFilter("[IsDeleted] = 0");
         modelBuilder.Entity<OpportunityOnboardingItem>()

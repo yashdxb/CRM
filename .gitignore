@@ -73,3 +73,9 @@ nohup.out
 
 # Runtime file uploads (dev testing artifacts)
 server/src/CRM.Enterprise.Api/uploads/
+
+# Playwright MCP logs
+.playwright-mcp/
+
+# Local utility scripts
+scripts/

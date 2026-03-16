@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, DestroyRef, HostListener, OnDestroy, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, HostListener, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -14,9 +14,11 @@ import { TabsModule } from 'primeng/tabs';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { FileUploadModule } from 'primeng/fileupload';
+import { AutoCompleteModule } from 'primeng/autocomplete';
+import { DialogModule } from 'primeng/dialog';
 import { map } from 'rxjs';
 
-import { Contact, SaveContactRequest } from '../models/contact.model';
+import { Contact, SaveContactRequest, DuplicateContact, ContactRelationship } from '../models/contact.model';
 import { ContactDataService } from '../services/contact-data.service';
 import { CustomerDataService } from '../../customers/services/customer-data.service';
 import { Customer } from '../../customers/models/customer.model';
@@ -56,6 +58,8 @@ interface Option<T = string> {
     TableModule,
     TagModule,
     FileUploadModule,
+    AutoCompleteModule,
+    DialogModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./contact-form.page.html",
@@ -74,6 +78,45 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     { label: 'Procurement', value: 'Procurement' },
     { label: 'Technical Evaluator', value: 'Technical Evaluator' }
   ];
+
+  // C8: Lifecycle stepper
+  protected readonly lifecycleStages = [
+    { label: 'Lead', value: 'Lead', icon: 'pi-user-plus' },
+    { label: 'Prospect', value: 'Prospect', icon: 'pi-search' },
+    { label: 'Customer', value: 'Customer', icon: 'pi-check-circle' }
+  ];
+  protected readonly contactCreatedAt = signal<string | null>(null);
+
+  // C9: Engagement scoring breakdown
+  protected engagementBreakdown = computed(() => {
+    const activityCount = this.activities().length;
+    const oppCount = this.relatedOpportunities().length;
+    const hasEmail = !!this.form.email;
+    const created = this.contactCreatedAt();
+    const recencyDays = created
+      ? Math.floor((Date.now() - new Date(created.endsWith('Z') ? created : created + 'Z').getTime()) / 86400000)
+      : 999;
+    const completeness = [this.form.firstName, this.form.lastName, this.form.email, this.form.phone, this.form.jobTitle, this.form.linkedInProfile]
+      .filter(v => !!v).length / 6;
+
+    const activities = Math.min(activityCount / 10, 1) * 30;
+    const opportunities = Math.min(oppCount / 3, 1) * 25;
+    const email = hasEmail ? 20 : 0;
+    const recency = recencyDays <= 7 ? 15 : recencyDays <= 30 ? 10 : recencyDays <= 90 ? 5 : 0;
+    const profile = completeness * 10;
+    const total = Math.round(activities + opportunities + email + recency + profile);
+
+    return {
+      total,
+      items: [
+        { label: 'Activities', value: Math.round(activities), max: 30, color: '#667eea' },
+        { label: 'Opportunities', value: Math.round(opportunities), max: 25, color: '#a855f7' },
+        { label: 'Email', value: Math.round(email), max: 20, color: '#ec4899' },
+        { label: 'Recency', value: Math.round(recency), max: 15, color: '#22c55e' },
+        { label: 'Profile', value: Math.round(profile), max: 10, color: '#f59e0b' }
+      ]
+    };
+  });
 
   protected accountOptions: Option<string>[] = [];
   protected readonly accounts = signal<Customer[]>([]);
@@ -94,6 +137,26 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected readonly noteSaving = signal(false);
   protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string; isEditing: boolean }>>([]);
   protected noteText = '';
+
+  // C17: Tags
+  protected formTags: string[] = [];
+  protected tagSuggestions = signal<string[]>([]);
+  private allTags: string[] = [];
+
+  // C19: Reports-To
+  protected reportsToOptions = signal<Option<string>[]>([]);
+
+  // C15: Duplicate Detection
+  protected duplicateDialogVisible = signal(false);
+  protected duplicates = signal<DuplicateContact[]>([]);
+  private pendingSave = false;
+
+  // C18: Convert to Opportunity
+  protected converting = signal(false);
+
+  // C19: Relationships
+  protected relationships = signal<ContactRelationship[]>([]);
+  protected relationshipsLoading = signal(false);
   private readonly toastService = inject(AppToastService);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -136,6 +199,23 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         this.accountOptions = res.items.map((account: Customer) => ({ label: account.name, value: account.id }));
         this.cdr.markForCheck();
       });
+    });
+
+    // C17: Load all existing tags for autocomplete
+    this.contactData.getAllTags().subscribe({
+      next: (tags) => { this.allTags = tags; },
+      error: () => {}
+    });
+
+    // C19: Load contacts for Reports-To dropdown
+    this.contactData.search({ page: 1, pageSize: 200 }).subscribe({
+      next: (res) => {
+        const opts = res.items
+          .filter((c: Contact) => c.id !== this.editingId)
+          .map((c: Contact) => ({ label: c.name, value: c.id }));
+        this.reportsToOptions.set(opts);
+      },
+      error: () => {}
     });
   }
 
@@ -193,9 +273,44 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       return;
     }
 
+    // C15: Check for duplicates before creating (skip if user already confirmed)
+    if (!this.editingId && !this.pendingSave) {
+      this.contactData.checkDuplicates({
+        firstName: this.form.firstName,
+        lastName: this.form.lastName,
+        email: this.form.email,
+        phone: this.form.phone
+      }).subscribe({
+        next: (result) => {
+          if (result.duplicates.length > 0) {
+            this.duplicates.set(result.duplicates);
+            this.duplicateDialogVisible.set(true);
+            return;
+          }
+          this.executeSave();
+        },
+        error: () => this.executeSave() // proceed on error
+      });
+      return;
+    }
+
+    this.pendingSave = false;
+    this.executeSave();
+  }
+
+  // C15: Called when user confirms save despite duplicates
+  protected confirmSaveDespiteDuplicates() {
+    this.duplicateDialogVisible.set(false);
+    this.pendingSave = true;
+    this.onSave();
+  }
+
+  private executeSave() {
     const payload: SaveContactRequest = {
       ...this.form,
-      activityScore: this.form.activityScore ?? 0
+      activityScore: this.form.activityScore ?? 0,
+      tags: this.formTags.length > 0 ? this.formTags : undefined,
+      reportsToId: this.form.reportsToId || undefined
     };
 
     this.saving.set(true);
@@ -217,6 +332,23 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     });
   }
 
+  // C8: Lifecycle stepper helpers
+  protected lifecycleStageIndex(stage?: string): number {
+    return this.lifecycleStages.findIndex(s => s.value === stage);
+  }
+
+  protected timeInStage(): string {
+    const created = this.contactCreatedAt();
+    if (!created) return '';
+    const diff = Date.now() - new Date(created.endsWith('Z') ? created : created + 'Z').getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days < 1) return 'Today';
+    if (days === 1) return '1 day in stage';
+    if (days < 30) return `${days} days in stage`;
+    const months = Math.floor(days / 30);
+    return months === 1 ? '1 month in stage' : `${months} months in stage`;
+  }
+
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, tone === 'error' ? 5000 : 3000);
   }
@@ -235,9 +367,18 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       ownerId: undefined,
       lifecycleStage: contact.lifecycleStage ?? 'Lead',
       activityScore: contact.activityScore ?? 0,
-      linkedInProfile: ''
+      linkedInProfile: '',
+      street: contact.street,
+      city: contact.city,
+      state: contact.state,
+      postalCode: contact.postalCode,
+      country: contact.country,
+      tags: contact.tags ?? [],
+      reportsToId: contact.reportsToId
     };
+    this.formTags = contact.tags ? [...contact.tags] : [];
     this.loadDetailData();
+    this.contactCreatedAt.set(contact.createdAt ?? null);
     this._originalFormSnapshot = JSON.stringify(this.form);
   }
 
@@ -254,7 +395,14 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       ownerId: undefined,
       lifecycleStage: 'Lead',
       activityScore: 0,
-      linkedInProfile: ''
+      linkedInProfile: '',
+      street: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: '',
+      tags: [],
+      reportsToId: undefined
     };
   }
 
@@ -468,10 +616,54 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return latest?.createdAtUtc ?? null;
   }
 
+  // C17: Tag autocomplete filtering
+  protected onTagSearch(event: { query: string }) {
+    const q = event.query.toLowerCase();
+    this.tagSuggestions.set(
+      this.allTags.filter(t => t.toLowerCase().includes(q) && !this.formTags.includes(t))
+    );
+  }
+
+  // C18: Convert contact to opportunity
+  protected convertToOpportunity() {
+    this.converting.set(true);
+    const params: Record<string, string> = {};
+    if (this.form.accountId) params['accountId'] = this.form.accountId;
+    if (this.editingId) params['contactId'] = this.editingId;
+    this.router.navigate(['/app/deals/new'], { queryParams: params });
+  }
+
+  // C19: Load relationships
+  private loadRelationships() {
+    if (!this.editingId) return;
+    this.relationshipsLoading.set(true);
+    this.contactData.getRelationships(this.editingId).subscribe({
+      next: (rels) => {
+        this.relationships.set(rels);
+        this.relationshipsLoading.set(false);
+      },
+      error: () => {
+        this.relationshipsLoading.set(false);
+      }
+    });
+  }
+
+  protected relationshipIcon(type: string): string {
+    switch (type) {
+      case 'ReportsTo': return 'pi-arrow-up';
+      case 'DirectReport': return 'pi-arrow-down';
+      case 'SameAccount': return 'pi-building';
+      default: return 'pi-link';
+    }
+  }
+
   private loadDetailData() {
     if (!this.editingId) {
       return;
     }
+
+    // C19: Load relationships
+    this.loadRelationships();
 
     this.timelineLoading.set(true);
     this.activityData

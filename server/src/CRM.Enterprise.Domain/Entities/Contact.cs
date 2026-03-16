@@ -16,8 +16,19 @@ public class Contact : AuditableEntity
     public string? LinkedInProfile { get; set; }
     public string? LifecycleStage { get; set; }
     public int ActivityScore { get; set; }
+    public string? Street { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? PostalCode { get; set; }
+    public string? Country { get; set; }
+
+    // C19: Relationship mapping
+    public Guid? ReportsToId { get; set; }
 
     public Account? Account { get; set; }
+    public Contact? ReportsTo { get; set; }
+    public ICollection<Contact> DirectReports { get; set; } = new List<Contact>();
     public ICollection<Activity> Activities { get; set; } = new List<Activity>();
     public ICollection<Opportunity> Opportunities { get; set; } = new List<Opportunity>();
+    public ICollection<ContactTag> Tags { get; set; } = new List<ContactTag>();
 }

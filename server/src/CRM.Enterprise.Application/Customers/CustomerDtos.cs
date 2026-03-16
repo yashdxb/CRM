@@ -112,6 +112,19 @@ public sealed record AccountTimelineEntryDto(
     string? FromEmail,
     string? Direction);  // "Inbound", "Outbound", or null
 
+// Account contact roles
+public sealed record AccountContactRoleDto(
+    Guid Id,
+    Guid ContactId,
+    string ContactName,
+    string? Email,
+    string? JobTitle,
+    string Role,
+    string? Notes,
+    bool IsPrimary,
+    DateTime CreatedAtUtc,
+    DateTime? UpdatedAtUtc);
+
 public sealed record CustomerOperationResult<T>(bool Success, T? Value, string? Error, bool NotFound = false)
 {
     public static CustomerOperationResult<T> Ok(T value) => new(true, value, null, false);

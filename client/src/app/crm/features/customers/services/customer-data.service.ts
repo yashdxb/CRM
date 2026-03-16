@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Customer, CustomerDetail, CustomerSearchRequest, CustomerSearchResponse, CustomerStatus, AccountTeamMember, DuplicateMatch, MergeAccountRequest, MergeAccountResponse, AccountHierarchyNode, AccountTimelineEntry } from '../models/customer.model';
+import { Customer, CustomerDetail, CustomerSearchRequest, CustomerSearchResponse, CustomerStatus, AccountTeamMember, DuplicateMatch, MergeAccountRequest, MergeAccountResponse, AccountHierarchyNode, AccountTimelineEntry, AccountContactRole, AddAccountContactRoleRequest } from '../models/customer.model';
 import { environment } from '../../../../../environments/environment';
 import { CsvImportJob } from '../../../../shared/models/csv-import.model';
 
@@ -107,6 +107,18 @@ export class CustomerDataService {
 
   removeTeamMember(id: string, memberId: string) {
     return this.http.delete<void>(`${this.baseUrl}/api/customers/${id}/team-members/${memberId}`);
+  }
+
+  getContactRoles(id: string) {
+    return this.http.get<AccountContactRole[]>(`${this.baseUrl}/api/customers/${id}/contact-roles`);
+  }
+
+  addContactRole(id: string, payload: AddAccountContactRoleRequest) {
+    return this.http.post<AccountContactRole>(`${this.baseUrl}/api/customers/${id}/contact-roles`, payload);
+  }
+
+  removeContactRole(id: string, contactRoleId: string) {
+    return this.http.delete<void>(`${this.baseUrl}/api/customers/${id}/contact-roles/${contactRoleId}`);
   }
 
   create(payload: SaveCustomerRequest) {

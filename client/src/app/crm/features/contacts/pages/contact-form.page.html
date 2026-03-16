@@ -130,6 +130,21 @@
                 </p-inputgroup>
                 <a *ngIf="isEditMode() && form.mobile" class="field-link" [href]="'tel:' + form.mobile"><i class="pi pi-external-link"></i> Call</a>
               </div>
+
+              <!-- C17: Tags -->
+              <div class="form-field full-row">
+                <label for="contact-tags">Tags</label>
+                <p-autoComplete
+                  id="contact-tags"
+                  [(ngModel)]="formTags"
+                  [ngModelOptions]="{ standalone: true }"
+                  [suggestions]="tagSuggestions()"
+                  (completeMethod)="onTagSearch($event)"
+                  [multiple]="true"
+                  placeholder="Add tags..."
+                  styleClass="w-full"
+                ></p-autoComplete>
+              </div>
             </div>
           </section>
 
@@ -171,6 +186,23 @@
                 <label for="contact-activityScore">Activity score</label>
                 <p-inputNumber id="contact-activityScore" name="activityScore" [(ngModel)]="form.activityScore" [min]="0" [max]="100" class="w-full"></p-inputNumber>
               </div>
+
+              <!-- C19: Reports-To -->
+              <div class="form-field">
+                <label for="contact-reportsTo">Reports to</label>
+                <p-select
+                  id="contact-reportsTo"
+                  [options]="reportsToOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  name="reportsToId"
+                  [(ngModel)]="form.reportsToId"
+                  placeholder="Select manager"
+                  styleClass="w-full"
+                  appendTo="body"
+                  [showClear]="true"
+                ></p-select>
+              </div>
               <div class="form-field">
                 <label for="contact-linkedInProfile">LinkedIn</label>
                 <p-inputgroup>
@@ -184,8 +216,73 @@
             </div>
           </section>
 
+          <section class="form-section">
+            <h2 class="section-title">
+              <i class="pi pi-map-marker"></i>
+              Address
+            </h2>
+            <div class="form-grid">
+              <div class="form-field full-row">
+                <label for="contact-street">Street</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--address">
+                    <i class="pi pi-map"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-street" name="street" [(ngModel)]="form.street" placeholder="123 Main Street" />
+                </p-inputgroup>
+              </div>
+              <div class="form-field">
+                <label for="contact-city">City</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--address">
+                    <i class="pi pi-building"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-city" name="city" [(ngModel)]="form.city" placeholder="City" />
+                </p-inputgroup>
+              </div>
+              <div class="form-field">
+                <label for="contact-state">State</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--info">
+                    <i class="pi pi-map-marker"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-state" name="state" [(ngModel)]="form.state" placeholder="State / Province" />
+                </p-inputgroup>
+              </div>
+              <div class="form-field">
+                <label for="contact-postalCode">Postal code</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--info">
+                    <i class="pi pi-hashtag"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-postalCode" name="postalCode" [(ngModel)]="form.postalCode" placeholder="12345" />
+                </p-inputgroup>
+              </div>
+              <div class="form-field">
+                <label for="contact-country">Country</label>
+                <p-inputgroup>
+                  <p-inputgroup-addon class="icon-addon icon-addon--company">
+                    <i class="pi pi-globe"></i>
+                  </p-inputgroup-addon>
+                  <input pInputText id="contact-country" name="country" [(ngModel)]="form.country" placeholder="Country" />
+                </p-inputgroup>
+              </div>
+            </div>
+          </section>
+
           <footer class="form-actions">
             <button type="button" pButton label="Cancel" class="crm-button crm-button--ghost" (click)="router.navigate(['/app/contacts'])"></button>
+            <!-- C18: Convert to Opportunity -->
+            <button
+              *ngIf="isEditMode()"
+              type="button"
+              pButton
+              label="Convert to opportunity"
+              icon="pi pi-chart-line"
+              class="crm-button crm-button--secondary"
+              (click)="convertToOpportunity()"
+              [disabled]="converting()"
+            ></button>
             <button
               type="submit"
               pButton
@@ -198,6 +295,53 @@
       </main>
 
       <section class="form-container detail-container" *ngIf="isEditMode()">
+        <!-- C8: Lifecycle Stepper -->
+        <div class="lifecycle-stepper">
+          <div class="stepper-track">
+            <div class="stepper-step"
+              *ngFor="let stage of lifecycleStages; let i = index"
+              [class.active]="stage.value === form.lifecycleStage"
+              [class.completed]="lifecycleStageIndex(stage.value) < lifecycleStageIndex(form.lifecycleStage)">
+              <div class="step-indicator">
+                <div class="step-dot">
+                  <i class="pi" [ngClass]="stage.icon"></i>
+                </div>
+                <div class="step-connector" *ngIf="i < lifecycleStages.length - 1"></div>
+              </div>
+              <span class="step-label">{{ stage.label }}</span>
+            </div>
+          </div>
+          <div class="stepper-meta" *ngIf="contactCreatedAt()">
+            <i class="pi pi-clock"></i>
+            <span>{{ timeInStage() }}</span>
+          </div>
+        </div>
+
+        <!-- C9: Engagement Scoring Breakdown -->
+        <div class="engagement-breakdown">
+          <div class="engagement-header">
+            <div class="engagement-title">
+              <i class="pi pi-chart-bar"></i>
+              <span>Engagement Score</span>
+            </div>
+            <div class="engagement-total">
+              <strong>{{ engagementBreakdown().total }}</strong>
+              <span>/ 100</span>
+            </div>
+          </div>
+          <div class="engagement-bars">
+            <div class="engagement-bar" *ngFor="let item of engagementBreakdown().items">
+              <div class="bar-header">
+                <span class="bar-label">{{ item.label }}</span>
+                <span class="bar-value">{{ item.value }}/{{ item.max }}</span>
+              </div>
+              <div class="bar-track">
+                <div class="bar-fill" [style.width.%]="(item.value / item.max) * 100" [style.background]="item.color"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <section class="form-section">
           <h2 class="section-title">
             <i class="pi pi-address-book"></i>
@@ -210,10 +354,26 @@
               <p-tab value="notes">Notes <span class="tab-badge" *ngIf="notes().length">{{ notes().length }}</span></p-tab>
               <p-tab value="related">Related <span class="tab-badge" *ngIf="relatedOpportunities().length + relatedProperties().length">{{ relatedOpportunities().length + relatedProperties().length }}</span></p-tab>
               <p-tab value="attachments">Attachments <span class="tab-badge" *ngIf="attachments().length">{{ attachments().length }}</span></p-tab>
+              <p-tab value="emails">Emails</p-tab>
+              <p-tab value="relationships">Relationships <span class="tab-badge" *ngIf="relationships().length">{{ relationships().length }}</span></p-tab>
             </p-tablist>
             <p-tabpanels>
               <p-tabpanel value="timeline">
               <div class="timeline" *ngIf="!timelineLoading(); else timelineLoadingTpl">
+                <!-- C11: Lifecycle History -->
+                <div class="timeline-item lifecycle-event" *ngIf="form.lifecycleStage">
+                  <div class="timeline-type">
+                    <span class="type-dot" data-type="lifecycle">{{ form.lifecycleStage }}</span>
+                  </div>
+                  <div class="timeline-body">
+                    <div class="timeline-title">Current lifecycle: {{ form.lifecycleStage }}</div>
+                    <div class="timeline-meta">
+                      <span *ngIf="contactCreatedAt()">Since {{ contactCreatedAt() | date: 'MMM d, yyyy' }}</span>
+                      <span>• {{ timeInStage() }}</span>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="timeline-item" *ngFor="let activity of activities()">
                   <div class="timeline-type">
                     <span class="type-dot" [attr.data-type]="activity.type">{{ activity.type }}</span>
@@ -447,9 +607,65 @@
                 </div>
               </div>
               </p-tabpanel>
+
+              <!-- C10: Email History Tab -->
+              <p-tabpanel value="emails">
+                <div class="emails-section">
+                  <div class="empty-state">
+                    <i class="pi pi-envelope"></i>
+                    <span>Email history will appear here once email sync is configured.</span>
+                    <p class="empty-hint" *ngIf="form.email">Contact email: {{ form.email }}</p>
+                  </div>
+                </div>
+              </p-tabpanel>
+
+              <!-- C19: Relationships -->
+              <p-tabpanel value="relationships">
+                <div class="relationships-section">
+                  <div class="relationships-loading" *ngIf="relationshipsLoading()">
+                    <i class="pi pi-spin pi-spinner"></i>
+                    <span>Loading relationships…</span>
+                  </div>
+                  <div class="empty-state" *ngIf="!relationshipsLoading() && !relationships().length">
+                    <i class="pi pi-users"></i>
+                    <span>No relationships found for this contact.</span>
+                  </div>
+                  <div class="relationship-list" *ngIf="!relationshipsLoading() && relationships().length">
+                    <div class="relationship-item" *ngFor="let rel of relationships()">
+                      <div class="relationship-icon">
+                        <i class="pi" [ngClass]="relationshipIcon(rel.relationship)"></i>
+                      </div>
+                      <div class="relationship-info">
+                        <span class="relationship-name">{{ rel.fullName }}</span>
+                        <span class="relationship-type">{{ rel.relationship }}</span>
+                        <span class="relationship-detail" *ngIf="rel.jobTitle">{{ rel.jobTitle }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </p-tabpanel>
             </p-tabpanels>
           </p-tabs>
         </section>
       </section>
     </div>
+
+    <!-- C15: Duplicate Detection Dialog -->
+    <p-dialog header="Possible Duplicates Found" [(visible)]="duplicateDialogVisible" [modal]="true" [style]="{ width: '520px' }" [closable]="true">
+      <p class="duplicate-note">The following contacts look similar. Do you still want to save?</p>
+      <div class="duplicate-list">
+        <div class="duplicate-item" *ngFor="let dup of duplicates()">
+          <div class="duplicate-info">
+            <strong>{{ dup.fullName }}</strong>
+            <span class="duplicate-email" *ngIf="dup.email">{{ dup.email }}</span>
+            <span class="duplicate-phone" *ngIf="dup.phone">{{ dup.phone }}</span>
+          </div>
+          <span class="duplicate-score">{{ dup.matchScore }}% match</span>
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <button type="button" pButton label="Cancel" class="crm-button crm-button--ghost" (click)="duplicateDialogVisible.set(false)"></button>
+        <button type="button" pButton label="Save Anyway" class="crm-button crm-button--primary" (click)="confirmSaveDespiteDuplicates()"></button>
+      </ng-template>
+    </p-dialog>
   

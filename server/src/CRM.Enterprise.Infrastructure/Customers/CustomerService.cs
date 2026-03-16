@@ -1104,4 +1104,119 @@ public sealed class CustomerService : ICustomerService
 
         return timeline.OrderByDescending(t => t.OccurredAtUtc).Take(take).ToList();
     }
+
+    // ── Account Contact Roles ─────────────────────────────────────────
+
+    public async Task<IReadOnlyList<AccountContactRoleDto>?> GetContactRolesAsync(
+        Guid accountId, CancellationToken cancellationToken = default)
+    {
+        var exists = await _dbContext.Set<Account>()
+            .AsNoTracking()
+            .AnyAsync(a => a.Id == accountId && !a.IsDeleted, cancellationToken);
+        if (!exists) return null;
+
+        var roles = await _dbContext.AccountContactRoles
+            .AsNoTracking()
+            .Where(r => r.AccountId == accountId && !r.IsDeleted)
+            .Join(_dbContext.Contacts,
+                role => role.ContactId,
+                contact => contact.Id,
+                (role, contact) => new AccountContactRoleDto(
+                    role.Id,
+                    role.ContactId,
+                    (contact.FirstName + " " + contact.LastName).Trim(),
+                    contact.Email,
+                    contact.JobTitle,
+                    role.Role,
+                    role.Notes,
+                    role.IsPrimary,
+                    role.CreatedAtUtc,
+                    role.UpdatedAtUtc))
+            .OrderByDescending(r => r.IsPrimary)
+            .ThenBy(r => r.ContactName)
+            .ToListAsync(cancellationToken);
+
+        return roles;
+    }
+
+    public async Task<CustomerOperationResult<AccountContactRoleDto>> AddContactRoleAsync(
+        Guid accountId,
+        AddAccountContactRoleRequest request,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var account = await _dbContext.Set<Account>()
+            .FirstOrDefaultAsync(a => a.Id == accountId && !a.IsDeleted, cancellationToken);
+        if (account is null)
+            return CustomerOperationResult<AccountContactRoleDto>.NotFoundResult();
+
+        if (string.IsNullOrWhiteSpace(request.Role))
+            return CustomerOperationResult<AccountContactRoleDto>.Fail("Contact role is required.");
+
+        var contact = await _dbContext.Contacts
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == request.ContactId && !c.IsDeleted, cancellationToken);
+        if (contact is null)
+            return CustomerOperationResult<AccountContactRoleDto>.Fail("Contact not found.");
+
+        var duplicate = await _dbContext.AccountContactRoles
+            .AnyAsync(r => r.AccountId == accountId && r.ContactId == request.ContactId && !r.IsDeleted, cancellationToken);
+        if (duplicate)
+            return CustomerOperationResult<AccountContactRoleDto>.Fail("This contact is already assigned to this account.");
+
+        var now = DateTime.UtcNow;
+        var entity = new AccountContactRole
+        {
+            AccountId = accountId,
+            ContactId = request.ContactId,
+            Role = request.Role.Trim(),
+            Notes = request.Notes?.Trim(),
+            IsPrimary = request.IsPrimary,
+            TenantId = account.TenantId,
+            CreatedAtUtc = now,
+            CreatedBy = actor.UserName
+        };
+
+        _dbContext.AccountContactRoles.Add(entity);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var dto = new AccountContactRoleDto(
+            entity.Id,
+            entity.ContactId,
+            (contact.FirstName + " " + contact.LastName).Trim(),
+            contact.Email,
+            contact.JobTitle,
+            entity.Role,
+            entity.Notes,
+            entity.IsPrimary,
+            entity.CreatedAtUtc,
+            entity.UpdatedAtUtc);
+
+        return CustomerOperationResult<AccountContactRoleDto>.Ok(dto);
+    }
+
+    public async Task<CustomerOperationResult<bool>> RemoveContactRoleAsync(
+        Guid accountId,
+        Guid contactRoleId,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        var accountExists = await _dbContext.Set<Account>()
+            .AsNoTracking()
+            .AnyAsync(a => a.Id == accountId && !a.IsDeleted, cancellationToken);
+        if (!accountExists)
+            return CustomerOperationResult<bool>.NotFoundResult();
+
+        var role = await _dbContext.AccountContactRoles
+            .FirstOrDefaultAsync(r => r.Id == contactRoleId && r.AccountId == accountId && !r.IsDeleted, cancellationToken);
+        if (role is null)
+            return CustomerOperationResult<bool>.NotFoundResult();
+
+        role.IsDeleted = true;
+        role.DeletedAtUtc = DateTime.UtcNow;
+        role.DeletedBy = actor.UserName;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return CustomerOperationResult<bool>.Ok(true);
+    }
 }

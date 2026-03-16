@@ -19,4 +19,12 @@ public record ContactDetailResponse(
     string? LifecycleStage,
     int ActivityScore,
     DateTime CreatedAtUtc,
-    DateTime? UpdatedAtUtc);
+    DateTime? UpdatedAtUtc,
+    string? Street = null,
+    string? City = null,
+    string? State = null,
+    string? PostalCode = null,
+    string? Country = null,
+    IEnumerable<string>? Tags = null,
+    Guid? ReportsToId = null,
+    string? ReportsToName = null);

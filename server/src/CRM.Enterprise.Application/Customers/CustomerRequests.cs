@@ -15,6 +15,12 @@ public sealed record CustomerSearchRequest(
     decimal? MinRevenue = null,
     decimal? MaxRevenue = null);
 
+public sealed record AddAccountContactRoleRequest(
+    Guid ContactId,
+    string Role,
+    string? Notes,
+    bool IsPrimary);
+
 public sealed record CustomerUpsertRequest(
     string Name,
     string? AccountNumber,

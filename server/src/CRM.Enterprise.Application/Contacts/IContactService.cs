@@ -13,4 +13,17 @@ public interface IContactService
     Task<ContactOperationResult<bool>> UpdateLifecycleAsync(Guid id, string lifecycle, ActorContext actor, CancellationToken cancellationToken = default);
     Task<ContactOperationResult<int>> BulkAssignOwnerAsync(IReadOnlyCollection<Guid> ids, Guid ownerId, CancellationToken cancellationToken = default);
     Task<ContactOperationResult<int>> BulkUpdateLifecycleAsync(IReadOnlyCollection<Guid> ids, string lifecycle, CancellationToken cancellationToken = default);
+
+    // C15: Duplicate detection
+    Task<DuplicateCheckResultDto> CheckDuplicatesAsync(DuplicateCheckRequest request, CancellationToken cancellationToken = default);
+
+    // C16: Contact merge
+    Task<ContactOperationResult<ContactMergeResultDto>> MergeAsync(ContactMergeRequest request, ActorContext actor, CancellationToken cancellationToken = default);
+
+    // C17: Tags
+    Task<IReadOnlyList<string>> GetAllTagsAsync(CancellationToken cancellationToken = default);
+    Task<ContactOperationResult<bool>> UpdateTagsAsync(Guid contactId, IReadOnlyList<string> tags, CancellationToken cancellationToken = default);
+
+    // C19: Relationships
+    Task<IReadOnlyList<ContactRelationshipDto>> GetRelationshipsAsync(Guid contactId, CancellationToken cancellationToken = default);
 }

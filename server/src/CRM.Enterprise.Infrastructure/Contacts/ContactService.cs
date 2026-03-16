@@ -1,6 +1,7 @@
 using CRM.Enterprise.Application.Common;
 using CRM.Enterprise.Application.Contacts;
 using CRM.Enterprise.Domain.Entities;
+using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -30,6 +31,7 @@ public sealed class ContactService : IContactService
 
         var query = _dbContext.Contacts
             .Include(c => c.Account)
+            .Include(c => c.Tags.Where(t => !t.IsDeleted))
             .AsNoTracking()
             .Where(c => !c.IsDeleted);
 
@@ -45,6 +47,12 @@ public sealed class ContactService : IContactService
                 (c.FirstName + " " + c.LastName).ToLower().Contains(term) ||
                 (c.Email ?? string.Empty).ToLower().Contains(term) ||
                 (c.Phone ?? string.Empty).ToLower().Contains(term));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Tag))
+        {
+            var tagLower = request.Tag.ToLower();
+            query = query.Where(c => c.Tags.Any(t => !t.IsDeleted && t.Tag.ToLower() == tagLower));
         }
 
         var total = await query.CountAsync(cancellationToken);
@@ -68,7 +76,10 @@ public sealed class ContactService : IContactService
                 c.OwnerId,
                 c.LifecycleStage,
                 c.ActivityScore,
-                c.CreatedAtUtc
+                c.CreatedAtUtc,
+                c.City,
+                c.Country,
+                Tags = c.Tags.Where(t => !t.IsDeleted).Select(t => t.Tag).ToList()
             })
             .ToListAsync(cancellationToken);
 
@@ -93,7 +104,10 @@ public sealed class ContactService : IContactService
             ownerLookup.TryGetValue(c.OwnerId, out var ownerName) ? ownerName : "Unassigned",
             c.LifecycleStage ?? "Customer",
             c.ActivityScore,
-            c.CreatedAtUtc)).ToList();
+            c.CreatedAtUtc,
+            c.City,
+            c.Country,
+            c.Tags)).ToList();
 
         return new ContactSearchResultDto(items, total);
     }
@@ -102,6 +116,8 @@ public sealed class ContactService : IContactService
     {
         var contact = await _dbContext.Contacts
             .Include(c => c.Account)
+            .Include(c => c.Tags.Where(t => !t.IsDeleted))
+            .Include(c => c.ReportsTo)
             .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted, cancellationToken);
 
@@ -114,6 +130,11 @@ public sealed class ContactService : IContactService
             .Where(u => u.Id == contact.OwnerId)
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(cancellationToken);
+
+        var tags = contact.Tags.Select(t => t.Tag).ToList();
+        var reportsToName = contact.ReportsTo is not null
+            ? $"{contact.ReportsTo.FirstName} {contact.ReportsTo.LastName}".Trim()
+            : null;
 
         return new ContactDetailDto(
             contact.Id,
@@ -132,7 +153,15 @@ public sealed class ContactService : IContactService
             contact.LifecycleStage,
             contact.ActivityScore,
             contact.CreatedAtUtc,
-            contact.UpdatedAtUtc);
+            contact.UpdatedAtUtc,
+            contact.Street,
+            contact.City,
+            contact.State,
+            contact.PostalCode,
+            contact.Country,
+            tags,
+            contact.ReportsToId,
+            reportsToName);
     }
 
     public async Task<ContactOperationResult<ContactDetailDto>> CreateAsync(ContactUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
@@ -157,10 +186,30 @@ public sealed class ContactService : IContactService
             LinkedInProfile = request.LinkedInProfile,
             LifecycleStage = request.LifecycleStage,
             ActivityScore = request.ActivityScore,
+            Street = request.Street,
+            City = request.City,
+            State = request.State,
+            PostalCode = request.PostalCode,
+            Country = request.Country,
+            ReportsToId = request.ReportsToId,
             CreatedAtUtc = DateTime.UtcNow
         };
 
         _dbContext.Contacts.Add(contact);
+
+        if (request.Tags is { Count: > 0 })
+        {
+            foreach (var tag in request.Tags.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                _dbContext.Set<ContactTag>().Add(new ContactTag
+                {
+                    ContactId = contact.Id,
+                    Tag = tag.Trim(),
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+            }
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var ownerName = await _dbContext.Users
@@ -189,14 +238,23 @@ public sealed class ContactService : IContactService
             contact.LifecycleStage,
             contact.ActivityScore,
             contact.CreatedAtUtc,
-            contact.UpdatedAtUtc);
+            contact.UpdatedAtUtc,
+            contact.Street,
+            contact.City,
+            contact.State,
+            contact.PostalCode,
+            contact.Country,
+            request.Tags?.ToList(),
+            contact.ReportsToId);
 
         return ContactOperationResult<ContactDetailDto>.Ok(dto);
     }
 
     public async Task<ContactOperationResult<bool>> UpdateAsync(Guid id, ContactUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
-        var contact = await _dbContext.Contacts.FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted, cancellationToken);
+        var contact = await _dbContext.Contacts
+            .Include(c => c.Tags.Where(t => !t.IsDeleted))
+            .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted, cancellationToken);
         if (contact is null)
         {
             return ContactOperationResult<bool>.NotFoundResult();
@@ -220,7 +278,38 @@ public sealed class ContactService : IContactService
         contact.LinkedInProfile = request.LinkedInProfile;
         contact.LifecycleStage = request.LifecycleStage;
         contact.ActivityScore = request.ActivityScore;
+        contact.Street = request.Street;
+        contact.City = request.City;
+        contact.State = request.State;
+        contact.PostalCode = request.PostalCode;
+        contact.Country = request.Country;
+        contact.ReportsToId = request.ReportsToId;
         contact.UpdatedAtUtc = DateTime.UtcNow;
+
+        // Sync tags
+        if (request.Tags is not null)
+        {
+            var existingTags = contact.Tags.Select(t => t.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var requestedTags = request.Tags.Select(t => t.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+            // Remove tags no longer present
+            foreach (var tag in contact.Tags.Where(t => !requestedTags.Contains(t.Tag, StringComparer.OrdinalIgnoreCase)).ToList())
+            {
+                tag.IsDeleted = true;
+                tag.DeletedAtUtc = DateTime.UtcNow;
+            }
+
+            // Add new tags
+            foreach (var tag in requestedTags.Where(t => !existingTags.Contains(t)))
+            {
+                _dbContext.Set<ContactTag>().Add(new ContactTag
+                {
+                    ContactId = contact.Id,
+                    Tag = tag,
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+            }
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ContactOperationResult<bool>.Ok(true);
@@ -305,6 +394,263 @@ public sealed class ContactService : IContactService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return ContactOperationResult<int>.Ok(contacts.Count);
+    }
+
+    // C15: Duplicate detection
+    public async Task<DuplicateCheckResultDto> CheckDuplicatesAsync(DuplicateCheckRequest request, CancellationToken cancellationToken = default)
+    {
+        var duplicates = new List<DuplicateContactDto>();
+
+        var query = _dbContext.Contacts.AsNoTracking().Where(c => !c.IsDeleted);
+        if (request.ExcludeContactId.HasValue)
+        {
+            query = query.Where(c => c.Id != request.ExcludeContactId.Value);
+        }
+
+        // Check exact email match
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            var emailLower = request.Email.ToLower();
+            var emailMatches = await query
+                .Where(c => c.Email != null && c.Email.ToLower() == emailLower)
+                .Select(c => new { c.Id, FullName = (c.FirstName + " " + c.LastName).Trim(), c.Email, c.Phone })
+                .Take(5)
+                .ToListAsync(cancellationToken);
+
+            foreach (var m in emailMatches)
+            {
+                duplicates.Add(new DuplicateContactDto(m.Id, m.FullName, m.Email, m.Phone, 95, "Exact email match"));
+            }
+        }
+
+        // Check name match
+        if (!string.IsNullOrWhiteSpace(request.FirstName) && !string.IsNullOrWhiteSpace(request.LastName))
+        {
+            var firstLower = request.FirstName.ToLower();
+            var lastLower = request.LastName.ToLower();
+            var nameMatches = await query
+                .Where(c => c.FirstName.ToLower() == firstLower && c.LastName.ToLower() == lastLower)
+                .Select(c => new { c.Id, FullName = (c.FirstName + " " + c.LastName).Trim(), c.Email, c.Phone })
+                .Take(5)
+                .ToListAsync(cancellationToken);
+
+            foreach (var m in nameMatches.Where(nm => duplicates.All(d => d.Id != nm.Id)))
+            {
+                duplicates.Add(new DuplicateContactDto(m.Id, m.FullName, m.Email, m.Phone, 75, "Exact name match"));
+            }
+        }
+
+        // Check phone match
+        if (!string.IsNullOrWhiteSpace(request.Phone))
+        {
+            var phoneDigits = new string(request.Phone.Where(char.IsDigit).ToArray());
+            if (phoneDigits.Length >= 7)
+            {
+                var phoneMatches = await query
+                    .Where(c => c.Phone != null && c.Phone.Contains(phoneDigits.Substring(phoneDigits.Length - 7)))
+                    .Select(c => new { c.Id, FullName = (c.FirstName + " " + c.LastName).Trim(), c.Email, c.Phone })
+                    .Take(5)
+                    .ToListAsync(cancellationToken);
+
+                foreach (var m in phoneMatches.Where(pm => duplicates.All(d => d.Id != pm.Id)))
+                {
+                    duplicates.Add(new DuplicateContactDto(m.Id, m.FullName, m.Email, m.Phone, 60, "Similar phone number"));
+                }
+            }
+        }
+
+        return new DuplicateCheckResultDto(duplicates);
+    }
+
+    // C16: Contact merge
+    public async Task<ContactOperationResult<ContactMergeResultDto>> MergeAsync(ContactMergeRequest request, ActorContext actor, CancellationToken cancellationToken = default)
+    {
+        var master = await _dbContext.Contacts.FirstOrDefaultAsync(c => c.Id == request.MasterContactId && !c.IsDeleted, cancellationToken);
+        if (master is null)
+        {
+            return ContactOperationResult<ContactMergeResultDto>.Fail("Master contact not found.");
+        }
+
+        var secondaries = await _dbContext.Contacts
+            .Where(c => request.SecondaryContactIds.Contains(c.Id) && !c.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        if (secondaries.Count == 0)
+        {
+            return ContactOperationResult<ContactMergeResultDto>.Fail("No secondary contacts found.");
+        }
+
+        var secondaryIds = secondaries.Select(s => s.Id).ToList();
+
+        // Move activities to master
+        var activities = await _dbContext.Activities
+            .Where(a => a.RelatedEntityType == ActivityRelationType.Contact && secondaryIds.Contains(a.RelatedEntityId) && !a.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        foreach (var activity in activities)
+        {
+            activity.RelatedEntityId = master.Id;
+            activity.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        // Move opportunities where secondary is primary contact
+        var opportunities = await _dbContext.Opportunities
+            .Where(o => o.PrimaryContactId.HasValue && secondaryIds.Contains(o.PrimaryContactId.Value) && !o.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        foreach (var opp in opportunities)
+        {
+            opp.PrimaryContactId = master.Id;
+            opp.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        // Update contacts reporting to secondaries
+        var reportingContacts = await _dbContext.Contacts
+            .Where(c => c.ReportsToId.HasValue && secondaryIds.Contains(c.ReportsToId.Value) && !c.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        foreach (var rc in reportingContacts)
+        {
+            rc.ReportsToId = master.Id;
+            rc.UpdatedAtUtc = DateTime.UtcNow;
+        }
+
+        // Merge tags
+        var masterTags = await _dbContext.Set<ContactTag>()
+            .Where(t => t.ContactId == master.Id && !t.IsDeleted)
+            .Select(t => t.Tag)
+            .ToListAsync(cancellationToken);
+
+        var existingTagSet = new HashSet<string>(masterTags, StringComparer.OrdinalIgnoreCase);
+
+        var secondaryTags = await _dbContext.Set<ContactTag>()
+            .Where(t => secondaryIds.Contains(t.ContactId) && !t.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        foreach (var st in secondaryTags)
+        {
+            if (!existingTagSet.Contains(st.Tag))
+            {
+                _dbContext.Set<ContactTag>().Add(new ContactTag
+                {
+                    ContactId = master.Id,
+                    Tag = st.Tag,
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+                existingTagSet.Add(st.Tag);
+            }
+            st.IsDeleted = true;
+            st.DeletedAtUtc = DateTime.UtcNow;
+        }
+
+        // Soft delete secondaries
+        foreach (var secondary in secondaries)
+        {
+            secondary.IsDeleted = true;
+            secondary.DeletedAtUtc = DateTime.UtcNow;
+        }
+
+        master.UpdatedAtUtc = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return ContactOperationResult<ContactMergeResultDto>.Ok(new ContactMergeResultDto(master.Id, secondaries.Count));
+    }
+
+    // C17: Tags
+    public async Task<IReadOnlyList<string>> GetAllTagsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Set<ContactTag>()
+            .AsNoTracking()
+            .Where(t => !t.IsDeleted)
+            .Select(t => t.Tag)
+            .Distinct()
+            .OrderBy(t => t)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<ContactOperationResult<bool>> UpdateTagsAsync(Guid contactId, IReadOnlyList<string> tags, CancellationToken cancellationToken = default)
+    {
+        var contact = await _dbContext.Contacts
+            .Include(c => c.Tags.Where(t => !t.IsDeleted))
+            .FirstOrDefaultAsync(c => c.Id == contactId && !c.IsDeleted, cancellationToken);
+
+        if (contact is null)
+        {
+            return ContactOperationResult<bool>.NotFoundResult();
+        }
+
+        var existingTags = contact.Tags.Select(t => t.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var requestedTags = tags.Select(t => t.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        foreach (var tag in contact.Tags.Where(t => !requestedTags.Contains(t.Tag, StringComparer.OrdinalIgnoreCase)).ToList())
+        {
+            tag.IsDeleted = true;
+            tag.DeletedAtUtc = DateTime.UtcNow;
+        }
+
+        foreach (var tag in requestedTags.Where(t => !existingTags.Contains(t)))
+        {
+            _dbContext.Set<ContactTag>().Add(new ContactTag
+            {
+                ContactId = contact.Id,
+                Tag = tag,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return ContactOperationResult<bool>.Ok(true);
+    }
+
+    // C19: Relationships
+    public async Task<IReadOnlyList<ContactRelationshipDto>> GetRelationshipsAsync(Guid contactId, CancellationToken cancellationToken = default)
+    {
+        var relationships = new List<ContactRelationshipDto>();
+
+        // Manager (reports to)
+        var contact = await _dbContext.Contacts
+            .Include(c => c.ReportsTo)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == contactId && !c.IsDeleted, cancellationToken);
+
+        if (contact?.ReportsTo is not null && !contact.ReportsTo.IsDeleted)
+        {
+            relationships.Add(new ContactRelationshipDto(
+                contact.ReportsTo.Id,
+                $"{contact.ReportsTo.FirstName} {contact.ReportsTo.LastName}".Trim(),
+                contact.ReportsTo.JobTitle,
+                "Reports To"));
+        }
+
+        // Direct reports
+        var directReports = await _dbContext.Contacts
+            .AsNoTracking()
+            .Where(c => c.ReportsToId == contactId && !c.IsDeleted)
+            .Select(c => new { c.Id, FullName = (c.FirstName + " " + c.LastName).Trim(), c.JobTitle })
+            .ToListAsync(cancellationToken);
+
+        foreach (var dr in directReports)
+        {
+            relationships.Add(new ContactRelationshipDto(dr.Id, dr.FullName, dr.JobTitle, "Direct Report"));
+        }
+
+        // Same account contacts
+        if (contact?.AccountId.HasValue == true)
+        {
+            var sameAccount = await _dbContext.Contacts
+                .AsNoTracking()
+                .Where(c => c.AccountId == contact.AccountId && c.Id != contactId && !c.IsDeleted)
+                .Select(c => new { c.Id, FullName = (c.FirstName + " " + c.LastName).Trim(), c.JobTitle })
+                .Take(10)
+                .ToListAsync(cancellationToken);
+
+            foreach (var sa in sameAccount.Where(s => relationships.All(r => r.Id != s.Id)))
+            {
+                relationships.Add(new ContactRelationshipDto(sa.Id, sa.FullName, sa.JobTitle, "Same Account"));
+            }
+        }
+
+        return relationships;
     }
 
     private async Task<Guid> ResolveOwnerIdAsync(Guid? requestedOwnerId, ActorContext actor, CancellationToken cancellationToken)

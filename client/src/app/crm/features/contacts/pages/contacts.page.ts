@@ -1,4 +1,4 @@
-import { NgFor, NgIf, DatePipe } from '@angular/common';
+import { NgClass, NgFor, NgIf, DatePipe } from '@angular/common';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -23,6 +23,8 @@ import { Contact } from '../models/contact.model';
 import { ContactDataService } from '../services/contact-data.service';
 import { CustomerDataService } from '../../customers/services/customer-data.service';
 import { Customer } from '../../customers/models/customer.model';
+import { ActivityDataService } from '../../activities/services/activity-data.service';
+import { ActivityType } from '../../activities/models/activity.model';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { CsvColumn, exportToCsv } from '../../../../shared/utils/csv';
 import { BulkAction, BulkActionsBarComponent } from '../../../../shared/components/bulk-actions/bulk-actions-bar.component';
@@ -46,6 +48,7 @@ interface LifecycleOption {
   imports: [
     NgIf,
     NgFor,
+    NgClass,
     DatePipe,
     FormsModule,
     CardModule,
@@ -75,6 +78,7 @@ export class ContactsPage {
     { label: 'Customer', value: 'Customer' }
   ];
 
+  protected readonly viewMode = signal<'table' | 'grid'>('table');
   protected readonly contacts = signal<Contact[]>([]);
   protected readonly total = signal(0);
   protected readonly loading = signal(true);
@@ -117,6 +121,10 @@ export class ContactsPage {
     return tokenHasPermission(context?.payload ?? null, PERMISSION_KEYS.contactsManage);
   });
 
+  // C17: Tag filter
+  protected readonly tagOptions = signal<{ label: string; value: string }[]>([]);
+  protected tagFilter: string | 'all' = 'all';
+
   protected searchTerm = '';
   protected accountFilter: string | 'all' = 'all';
   protected pageIndex = 0;
@@ -124,9 +132,11 @@ export class ContactsPage {
   protected readonly selectedIds = signal<string[]>([]);
   protected readonly bulkActions = computed<BulkAction[]>(() => {
     const disabled = !this.canManage();
+    const mergeDisabled = disabled || this.selectedIds().length < 2;
     return [
       { id: 'assign-owner', label: 'Assign owner', icon: 'pi pi-user', disabled },
       { id: 'change-status', label: 'Change status', icon: 'pi pi-tag', disabled },
+      { id: 'merge', label: 'Merge', icon: 'pi pi-clone', disabled: mergeDisabled },
       { id: 'delete', label: 'Delete', icon: 'pi pi-trash', severity: 'danger', disabled }
     ];
   });
@@ -138,6 +148,12 @@ export class ContactsPage {
   protected importDialogVisible = false;
   protected importFile: File | null = null;
   protected readonly importJob = signal<CsvImportJob | null>(null);
+
+  // C16: Merge state
+  protected mergeDialogVisible = false;
+  protected mergeMasterId: string | null = null;
+  protected readonly merging = signal(false);
+
   protected readonly importStatus = signal<CsvImportJobStatusResponse | null>(null);
   protected readonly importError = signal<string | null>(null);
   protected readonly importing = signal(false);
@@ -146,6 +162,21 @@ export class ContactsPage {
   private readonly crmEventsService = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly confirmationService = inject(ConfirmationService);
+  private readonly activityData = inject(ActivityDataService);
+
+  // C14: Quick activity log
+  protected activityLogVisible = false;
+  protected activityLogContact: Contact | null = null;
+  protected activityType: ActivityType = 'Call';
+  protected activitySubject = '';
+  protected readonly activitySaving = signal(false);
+  protected readonly activityTypeOptions: { label: string; value: ActivityType; icon: string }[] = [
+    { label: 'Call', value: 'Call', icon: 'pi-phone' },
+    { label: 'Email', value: 'Email', icon: 'pi-envelope' },
+    { label: 'Meeting', value: 'Meeting', icon: 'pi-calendar' },
+    { label: 'Task', value: 'Task', icon: 'pi-check-square' },
+    { label: 'Note', value: 'Note', icon: 'pi-file' }
+  ];
 
   protected readonly filteredContacts = computed(() => {
     let rows = [...this.contacts()];
@@ -176,6 +207,7 @@ export class ContactsPage {
     this.load();
     this.loadAccounts();
     this.loadOwners();
+    this.loadTags();
 
     this.crmEventsService.events$
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -194,6 +226,7 @@ export class ContactsPage {
       .search({
         search: this.searchTerm || undefined,
         accountId: this.accountFilter === 'all' ? undefined : this.accountFilter,
+        tag: this.tagFilter === 'all' ? undefined : this.tagFilter,
         page: this.pageIndex + 1,
         pageSize: this.rows
       })
@@ -475,6 +508,10 @@ export class ContactsPage {
       this.statusDialogVisible = true;
       return;
     }
+    if (action.id === 'merge') {
+      this.openMergeDialog();
+      return;
+    }
     if (action.id === 'delete') {
       this.confirmBulkDelete();
     }
@@ -589,6 +626,86 @@ export class ContactsPage {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, 3000);
+  }
+
+  // C14: Quick activity log methods
+  protected openQuickActivity(contact: Contact) {
+    this.activityLogContact = contact;
+    this.activityType = 'Call';
+    this.activitySubject = '';
+    this.activityLogVisible = true;
+  }
+
+  protected saveQuickActivity() {
+    if (!this.activityLogContact || !this.activitySubject.trim()) return;
+    this.activitySaving.set(true);
+    this.activityData.create({
+      subject: this.activitySubject.trim(),
+      type: this.activityType,
+      relatedEntityType: 'Contact',
+      relatedEntityId: this.activityLogContact.id,
+      priority: 'Normal'
+    }).subscribe({
+      next: () => {
+        this.activitySaving.set(false);
+        this.activityLogVisible = false;
+        this.raiseToast('success', 'Activity logged.');
+      },
+      error: () => {
+        this.activitySaving.set(false);
+        this.raiseToast('error', 'Failed to log activity.');
+      }
+    });
+  }
+
+  // C16: Merge dialog
+  protected openMergeDialog() {
+    const ids = this.selectedIds();
+    if (ids.length < 2) return;
+    this.mergeMasterId = ids[0];
+    this.mergeDialogVisible = true;
+  }
+
+  protected confirmMerge() {
+    const ids = this.selectedIds();
+    if (!this.mergeMasterId || ids.length < 2) return;
+    const secondaryIds = ids.filter(id => id !== this.mergeMasterId);
+    this.merging.set(true);
+    this.contactsData.mergeContacts({ masterContactId: this.mergeMasterId, secondaryContactIds: secondaryIds }).subscribe({
+      next: (res) => {
+        this.merging.set(false);
+        this.mergeDialogVisible = false;
+        this.mergeMasterId = null;
+        this.clearSelection();
+        this.load();
+        this.loadTags();
+        this.raiseToast('success', `Merged ${res.mergedCount} contacts.`);
+      },
+      error: () => {
+        this.merging.set(false);
+        this.raiseToast('error', 'Contact merge failed.');
+      }
+    });
+  }
+
+  protected getMergeContactName(id: string): string {
+    return this.contacts().find(c => c.id === id)?.name ?? id;
+  }
+
+  // C17: Tag filter
+  protected onTagFilterChange(value: string | null) {
+    this.tagFilter = value ?? 'all';
+    this.pageIndex = 0;
+    this.load();
+  }
+
+  private loadTags() {
+    this.contactsData.getAllTags().subscribe((tags) => {
+      this.tagOptions.set([
+        { label: 'All tags', value: 'all' },
+        ...tags.map(t => ({ label: t, value: t }))
+      ]);
+    });
   }
 
   protected onExport() {

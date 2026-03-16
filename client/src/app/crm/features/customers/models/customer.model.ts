@@ -148,3 +148,23 @@ export interface AccountTimelineEntry {
   fromEmail?: string;
   direction?: string;
 }
+
+export interface AccountContactRole {
+  id: string;
+  contactId: string;
+  contactName: string;
+  email?: string;
+  jobTitle?: string;
+  role: string;
+  notes?: string;
+  isPrimary: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface AddAccountContactRoleRequest {
+  contactId: string;
+  role: string;
+  notes?: string;
+  isPrimary: boolean;
+}
