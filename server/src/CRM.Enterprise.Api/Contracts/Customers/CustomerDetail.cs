@@ -47,7 +47,8 @@ public record CustomerDetail(
     // Revenue tracking (#12)
     decimal OpenPipelineValue = 0,
     decimal ClosedWonRevenue = 0,
-    decimal WeightedForecast = 0);
+    decimal WeightedForecast = 0,
+    AccountRelatedRecordsResponse? RelatedRecords = null);
 
 public record AccountTeamMemberItem(
     Guid Id,

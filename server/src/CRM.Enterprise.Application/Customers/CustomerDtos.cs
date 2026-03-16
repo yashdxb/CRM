@@ -70,7 +70,8 @@ public sealed record CustomerDetailDto(
     // Revenue tracking / aggregation (#12)
     decimal OpenPipelineValue = 0,
     decimal ClosedWonRevenue = 0,
-    decimal WeightedForecast = 0);
+    decimal WeightedForecast = 0,
+    AccountRelatedRecordsDto? RelatedRecords = null);
 
 public sealed record AccountTeamMemberDto(
     Guid Id,

@@ -94,7 +94,6 @@ export class CustomerDetailPage implements OnInit {
     this.loadDetail(id);
     this.loadTeam(id);
     this.loadTimeline(id);
-    this.loadRelatedRecords(id);
   }
 
   private loadDetail(id: string): void {
@@ -104,6 +103,9 @@ export class CustomerDetailPage implements OnInit {
         this.customer.set(detail);
         this.teamMembers.set(detail.teamMembers ?? []);
         this.loading.set(false);
+        // Build related records tree from detail response
+        const rel = detail.relatedRecords;
+        this.relatedTreeNodes.set(this.buildRelatedTree(rel ?? { contacts: [], opportunities: [], leads: [], supportCases: [] }));
       },
       error: () => {
         this.router.navigate(['/app/customers']);
@@ -166,13 +168,6 @@ export class CustomerDetailPage implements OnInit {
         this.timeline.set([]);
         this.timelineLoading.set(false);
       }
-    });
-  }
-
-  private loadRelatedRecords(id: string): void {
-    this.customerData.getRelatedRecords(id).subscribe({
-      next: (data) => this.relatedTreeNodes.set(this.buildRelatedTree(data)),
-      error: () => this.relatedTreeNodes.set(this.buildRelatedTree({ contacts: [], opportunities: [], leads: [], supportCases: [] }))
     });
   }
 

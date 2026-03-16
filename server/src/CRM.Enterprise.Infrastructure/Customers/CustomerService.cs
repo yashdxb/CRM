@@ -213,6 +213,33 @@ public sealed class CustomerService : ICustomerService
         var supportCaseCount = await _dbContext.SupportCases
             .CountAsync(s => s.AccountId == id && !s.IsDeleted, cancellationToken);
 
+        // Related records for tree view
+        var relContacts = await _dbContext.Contacts
+            .Where(c => c.AccountId == id && !c.IsDeleted)
+            .OrderBy(c => c.FirstName).ThenBy(c => c.LastName)
+            .Select(c => new RelatedRecordItem(c.Id, c.FirstName + " " + c.LastName, c.JobTitle))
+            .ToListAsync(cancellationToken);
+
+        var relOpportunities = await _dbContext.Opportunities
+            .Where(o => o.AccountId == id && !o.IsDeleted)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Select(o => new RelatedRecordItem(o.Id, o.Name, o.Stage != null ? o.Stage.Name : null))
+            .ToListAsync(cancellationToken);
+
+        var relLeads = await _dbContext.Leads
+            .Where(l => l.AccountId == id && !l.IsDeleted)
+            .OrderByDescending(l => l.CreatedAtUtc)
+            .Select(l => new RelatedRecordItem(l.Id, l.FirstName + " " + l.LastName, l.Status != null ? l.Status.Name : null))
+            .ToListAsync(cancellationToken);
+
+        var relCases = await _dbContext.SupportCases
+            .Where(s => s.AccountId == id && !s.IsDeleted)
+            .OrderByDescending(s => s.CreatedAtUtc)
+            .Select(s => new RelatedRecordItem(s.Id, s.CaseNumber + " – " + s.Subject, s.Status))
+            .ToListAsync(cancellationToken);
+
+        var relatedRecords = new AccountRelatedRecordsDto(relContacts, relOpportunities, relLeads, relCases);
+
         // #12 Revenue rollup
         var openPipelineValue = await _dbContext.Opportunities
             .Where(o => o.AccountId == id && !o.IsDeleted && !o.IsClosed)
@@ -297,7 +324,8 @@ public sealed class CustomerService : ICustomerService
             nearestOpportunityRenewal,
             openPipelineValue,
             closedWonRevenue,
-            weightedForecast);
+            weightedForecast,
+            relatedRecords);
     }
 
     public async Task<IReadOnlyList<AccountTeamMemberDto>> GetTeamMembersAsync(Guid accountId, CancellationToken cancellationToken = default)

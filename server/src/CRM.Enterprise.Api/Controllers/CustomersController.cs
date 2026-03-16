@@ -432,7 +432,14 @@ public class CustomersController : ControllerBase
             dto.NearestOpportunityRenewalUtc,
             dto.OpenPipelineValue,
             dto.ClosedWonRevenue,
-            dto.WeightedForecast);
+            dto.WeightedForecast,
+            dto.RelatedRecords is not null
+                ? new AccountRelatedRecordsResponse(
+                    dto.RelatedRecords.Contacts.Select(r => new RelatedRecordResponse(r.Id, r.Label, r.Subtitle)).ToList(),
+                    dto.RelatedRecords.Opportunities.Select(r => new RelatedRecordResponse(r.Id, r.Label, r.Subtitle)).ToList(),
+                    dto.RelatedRecords.Leads.Select(r => new RelatedRecordResponse(r.Id, r.Label, r.Subtitle)).ToList(),
+                    dto.RelatedRecords.SupportCases.Select(r => new RelatedRecordResponse(r.Id, r.Label, r.Subtitle)).ToList())
+                : null);
     }
 
     private static AppCustomerUpsertRequest MapUpsertRequest(ApiUpsertCustomerRequest request)

@@ -72,6 +72,7 @@ export interface CustomerDetail {
   openPipelineValue?: number;
   closedWonRevenue?: number;
   weightedForecast?: number;
+  relatedRecords?: AccountRelatedRecords;
 }
 
 export interface AccountTeamMember {
