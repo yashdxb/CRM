@@ -2548,6 +2548,49 @@
             ></button>
           </div>
         </form>
+
+        <!-- Duplicate Check Dialog -->
+        <p-dialog
+          [header]="duplicateDialogTitle()"
+          [modal]="true"
+          [draggable]="false"
+          [resizable]="false"
+          [closable]="true"
+          [dismissableMask]="true"
+          [visible]="duplicateDialogVisible()"
+          [style]="{ width: '42rem', maxWidth: '95vw' }"
+          (visibleChange)="duplicateDialogVisible.set($event)"
+          (onHide)="dismissDuplicateDialog()"
+        >
+          <div class="duplicate-dialog">
+            <p class="duplicate-dialog__message">{{ duplicateDialogMessage() }}</p>
+            <div class="duplicate-dialog__list" *ngIf="duplicateMatches().length; else noDuplicateMatches">
+              <div class="duplicate-row" *ngFor="let match of duplicateMatches()">
+                <div class="duplicate-row__meta">
+                  <div class="duplicate-row__name">{{ match.name }}</div>
+                  <div class="duplicate-row__account">{{ match.accountName || 'No account' }}</div>
+                  <div class="duplicate-row__stage">{{ match.stageName }}</div>
+                  <div class="duplicate-row__signals">{{ match.matchedSignals.join(', ') }}</div>
+                </div>
+                <div class="duplicate-row__score">
+                  <span class="duplicate-row__badge" [attr.data-level]="match.matchLevel">{{ match.matchLevel | titlecase }}</span>
+                  <span>Score {{ match.matchScore }}</span>
+                </div>
+                <button pButton type="button" class="p-button-text p-button-sm" label="Open"
+                  (click)="reviewDuplicate(match)"></button>
+              </div>
+            </div>
+            <ng-template #noDuplicateMatches>
+              <p class="duplicate-dialog__message">No duplicate details found.</p>
+            </ng-template>
+            <div class="duplicate-dialog__actions">
+              <button pButton type="button" class="p-button-outlined" label="Cancel" (click)="dismissDuplicateDialog()"></button>
+              <button pButton type="button" class="crm-button crm-button--primary" label="Save Anyway"
+                *ngIf="!duplicateIsBlocked()" (click)="saveDespiteWarning()"></button>
+            </div>
+          </div>
+        </p-dialog>
+
       </div>
     </section>
   

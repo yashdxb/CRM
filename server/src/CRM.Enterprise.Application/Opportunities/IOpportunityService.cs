@@ -28,4 +28,6 @@ public interface IOpportunityService
     Task<OpportunityOperationResult<bool>> RemoveContactRoleAsync(Guid id, Guid contactRoleId, ActorContext actor, CancellationToken cancellationToken = default);
 
     Task<OpportunityHealthScoreDto?> GetHealthScoreAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<OpportunityDuplicateCheckResultDto> CheckDuplicatesAsync(OpportunityDuplicateCheckRequest request, CancellationToken cancellationToken = default);
 }

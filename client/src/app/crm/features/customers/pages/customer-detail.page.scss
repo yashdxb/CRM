@@ -696,9 +696,61 @@
       }
     }
 
-    // Remove default tree line connectors
+    // Branch lines from parent to children
     .p-tree-node-children {
-      padding-left: $space-4;
+      padding-left: 28px;
+      position: relative;
+      margin-left: 10px;
+
+      // Vertical line from parent down along children
+      &::before {
+        content: '';
+        position: absolute;
+        left: 10px;
+        top: 0;
+        bottom: 16px;
+        width: 1.5px;
+        background: linear-gradient(180deg, rgba(102, 126, 234, 0.35) 0%, rgba(102, 126, 234, 0.08) 100%);
+        border-radius: 1px;
+      }
+
+      // Horizontal branch line to each child's content
+      .p-tree-node-content {
+        position: relative;
+
+        &::after {
+          content: '';
+          position: absolute;
+          left: -18px;
+          top: 50%;
+          width: 14px;
+          height: 1.5px;
+          background: rgba(102, 126, 234, 0.25);
+          border-radius: 1px;
+          pointer-events: none;
+        }
+      }
+    }
+
+    // Color-code branch lines per category
+    .parent-node--contacts .p-tree-node-children {
+      &::before { background: linear-gradient(180deg, rgba(6, 182, 212, 0.4) 0%, rgba(6, 182, 212, 0.08) 100%); }
+      .p-tree-node-content::after { background: rgba(6, 182, 212, 0.35); }
+    }
+
+    .parent-node--opportunities .p-tree-node-children {
+      &::before { background: linear-gradient(180deg, rgba(34, 197, 94, 0.4) 0%, rgba(34, 197, 94, 0.08) 100%); }
+      .p-tree-node-content::after { background: rgba(34, 197, 94, 0.35); }
+    }
+
+    .parent-node--leads .p-tree-node-children {
+      &::before { background: linear-gradient(180deg, rgba(168, 85, 247, 0.4) 0%, rgba(168, 85, 247, 0.08) 100%); }
+      .p-tree-node-content::after { background: rgba(168, 85, 247, 0.35); }
+    }
+
+    .parent-node--cases .p-tree-node-children {
+      &::before { background: linear-gradient(180deg, rgba(249, 115, 22, 0.4) 0%, rgba(249, 115, 22, 0.08) 100%); }
+      .p-tree-node-content::after { background: rgba(249, 115, 22, 0.35); }
     }
   }
 }

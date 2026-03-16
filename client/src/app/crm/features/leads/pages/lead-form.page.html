@@ -1170,7 +1170,7 @@
                 </div>
               </div>
               <div class="form-field">
-                <label for="lead-budgetAvailability">Budget availability</label>
+                <label for="lead-budgetAvailability">Budget availability <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = budget stated in writing&#10;Likely = verbal indication&#10;Unknown = not yet discussed" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-budgetAvailability"
                   name="budgetAvailability"
@@ -1182,7 +1182,6 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
-                  aria-describedby="hint-budgetAvailability"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -1197,7 +1196,6 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-budgetAvailability" class="field-hint">Confirmed = budget stated in writing · Likely = verbal indication · Unknown = not yet discussed</span>
               </div>
               <div class="form-field">
                 <label for="lead-budgetEvidence">Evidence source</label>
@@ -1228,7 +1226,7 @@
                 </p-select>
               </div>
               <div class="form-field">
-                <label for="lead-readinessToSpend">Readiness to spend</label>
+                <label for="lead-readinessToSpend">Readiness to spend <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = ready to purchase this quarter&#10;Likely = evaluating options&#10;Unknown = timeline unclear" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-readinessToSpend"
                   name="readinessToSpend"
@@ -1240,7 +1238,6 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
-                  aria-describedby="hint-readinessToSpend"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -1255,7 +1252,6 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-readinessToSpend" class="field-hint">Confirmed = ready to purchase this quarter · Likely = evaluating options · Unknown = timeline unclear</span>
               </div>
               <div class="form-field">
                 <label for="lead-readinessEvidence">Evidence source</label>
@@ -1286,7 +1282,7 @@
                 </p-select>
               </div>
               <div class="form-field">
-                <label for="lead-buyingTimeline">Buying timeline</label>
+                <label for="lead-buyingTimeline">Buying timeline <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = decision date set&#10;Likely = within 6 months&#10;Unknown = no timeline shared" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-buyingTimeline"
                   name="buyingTimeline"
@@ -1298,7 +1294,6 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
-                  aria-describedby="hint-buyingTimeline"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -1313,7 +1308,6 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-buyingTimeline" class="field-hint">Confirmed = decision date set · Likely = within 6 months · Unknown = no timeline shared</span>
               </div>
               <div class="form-field">
                 <label for="lead-timelineEvidence">Evidence source</label>
@@ -1344,7 +1338,7 @@
                 </p-select>
               </div>
               <div class="form-field">
-                <label for="lead-problemSeverity">Problem severity</label>
+                <label for="lead-problemSeverity">Problem severity <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = urgent pain documented&#10;Likely = acknowledged need&#10;Unknown = no pain articulated" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-problemSeverity"
                   name="problemSeverity"
@@ -1356,7 +1350,6 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
-                  aria-describedby="hint-problemSeverity"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -1371,7 +1364,6 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-problemSeverity" class="field-hint">Confirmed = urgent pain documented · Likely = acknowledged need · Unknown = no pain articulated</span>
               </div>
               <div class="form-field">
                 <label for="lead-problemEvidence">Evidence source</label>
@@ -1402,7 +1394,7 @@
                 </p-select>
               </div>
               <div class="form-field">
-                <label for="lead-economicBuyer">Economic buyer</label>
+                <label for="lead-economicBuyer">Economic buyer <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = economic buyer identified and engaged&#10;Likely = contact known but not confirmed&#10;Unknown = buyer unknown" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
                   id="lead-economicBuyer"
                   name="economicBuyer"
@@ -1414,7 +1406,6 @@
                   placeholder="Unknown / not yet discussed"
                   appendTo="body"
                   class="w-full"
-                  aria-describedby="hint-economicBuyer"
                 >
                   <ng-template pTemplate="selectedItem" let-option>
                     <div class="select-option" *ngIf="option">
@@ -1429,7 +1420,6 @@
                     </div>
                   </ng-template>
                 </p-select>
-                <span id="hint-economicBuyer" class="field-hint">Confirmed = economic buyer identified and engaged · Likely = contact known but not confirmed · Unknown = buyer unknown</span>
               </div>
               <div class="form-field">
                 <label for="lead-economicBuyerEvidence">Evidence source</label>

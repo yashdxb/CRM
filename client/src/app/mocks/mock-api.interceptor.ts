@@ -183,6 +183,10 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     return respond(result, 200, 140);
   }
 
+  if (req.method === 'POST' && path === '/api/opportunities/duplicate-check') {
+    return respond({ decision: 'allow', isBlocked: false, hasWarnings: false, matches: [] }, 200, 80);
+  }
+
   if (req.method === 'POST' && path === '/api/opportunities') {
     const payload = req.body as SaveOpportunityRequest;
     const created = createOpportunity(payload);
@@ -570,6 +574,30 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
       const ok = deleteRole(match[1]);
       return respond(ok ? null : { message: 'Unable to delete role' }, ok ? 204 : 400, 130);
     }
+  }
+
+  // ── Lookup / Picklist CRUD stubs ──
+  // Return empty arrays for GET list, 501 for mutations — backend handles real data.
+
+  if (req.method === 'GET' && path === '/api/lookups/lead-statuses') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/opportunity-stages') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/currencies') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/phone-types') {
+    return respond([], 200, 80);
+  }
+  if (req.method === 'GET' && path === '/api/lookups/cadence-channels') {
+    return respond([], 200, 80);
+  }
+
+  // Catch-all for lookup mutations (POST/PUT/DELETE) — return 501 in mock mode
+  if (/^\/api\/lookups\//.test(path) && ['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    return respond({ message: 'Lookup mutations are not available in mock mode' }, 501, 50);
   }
 
   return next(req);

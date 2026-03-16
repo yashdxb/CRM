@@ -2207,19 +2207,24 @@
       flex-wrap: wrap;
     }
 
-    .qualification-grid .form-field > .field-hint {
-      flex-basis: 100%;
-      margin: 0.15rem 0 0;
-      padding-left: calc(110px + 0.75rem); // align with input (label min-width + gap)
-      font-size: 0.72rem;
-      color: #94a3b8;
-    }
-
     .qualification-grid .form-field > label {
       font-size: 0.78rem;
       letter-spacing: 0.04em;
       text-transform: uppercase;
       color: rgba(71, 85, 105, 0.8);
+    }
+
+    .qual-info-icon {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-left: 0.25rem;
+      cursor: help;
+      vertical-align: middle;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: #667eea;
+      }
     }
 
     .select-option {

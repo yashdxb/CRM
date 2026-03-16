@@ -48,6 +48,8 @@ using CRM.Enterprise.Infrastructure.HelpDesk;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Properties;
 using CRM.Enterprise.Infrastructure.Emails;
+using CRM.Enterprise.Application.Lookups;
+using CRM.Enterprise.Infrastructure.Lookups;
 using CRM.Enterprise.Application.Reporting;
 using CRM.Enterprise.Infrastructure.Reporting;
 using CRM.Enterprise.Infrastructure.Workflows;
@@ -254,6 +256,13 @@ public static class DependencyInjection
 
         // CRM email link service (pin external emails to CRM entities)
         services.AddScoped<ICrmEmailLinkService, CrmEmailLinkService>();
+
+        // Lookup / Picklist CRUD services
+        services.AddScoped<ILeadStatusLookupService, LeadStatusLookupService>();
+        services.AddScoped<IOpportunityStageLookupService, OpportunityStageLookupService>();
+        services.AddScoped<ICurrencyLookupService, CurrencyLookupService>();
+        services.AddScoped<IPhoneTypeLookupService, PhoneTypeLookupService>();
+        services.AddScoped<ICadenceChannelLookupService, CadenceChannelLookupService>();
 
         return services;
     }

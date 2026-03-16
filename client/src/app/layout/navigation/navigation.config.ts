@@ -188,6 +188,19 @@ export const NAV_LINKS: NavLink[] = [
         ]
       },
       {
+        label: 'Data & Lookups',
+        icon: 'pi-list',
+        path: '/app/settings/lookups/lead-statuses',
+        permission: PERMISSION_KEYS.administrationManage,
+        children: [
+          { label: 'Lead Statuses', icon: 'pi-tag', path: '/app/settings/lookups/lead-statuses', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Opportunity Stages', icon: 'pi-chart-bar', path: '/app/settings/lookups/opportunity-stages', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Currencies', icon: 'pi-dollar', path: '/app/settings/lookups/currencies', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Phone Types', icon: 'pi-phone', path: '/app/settings/lookups/phone-types', permission: PERMISSION_KEYS.administrationManage },
+          { label: 'Cadence Channels', icon: 'pi-send', path: '/app/settings/lookups/cadence-channels', permission: PERMISSION_KEYS.administrationManage }
+        ]
+      },
+      {
         label: 'Integrations',
         icon: 'pi-link',
         path: '/app/settings/email-accounts',

@@ -131,6 +131,23 @@ public sealed record OpportunityOperationResult<T>(bool Success, T? Value, strin
     public static OpportunityOperationResult<T> NotFoundResult() => new(false, default, null, true);
 }
 
+public sealed record OpportunityDuplicateCandidateDto(
+    Guid OpportunityId,
+    string Name,
+    string? AccountName,
+    string? StageName,
+    decimal Amount,
+    DateTime? ExpectedCloseDate,
+    int MatchScore,
+    string MatchLevel,
+    IReadOnlyList<string> MatchedSignals);
+
+public sealed record OpportunityDuplicateCheckResultDto(
+    string Decision,
+    bool IsBlocked,
+    bool HasWarnings,
+    IReadOnlyList<OpportunityDuplicateCandidateDto> Matches);
+
 public sealed record OpportunityApprovalDto(
     Guid Id,
     Guid OpportunityId,

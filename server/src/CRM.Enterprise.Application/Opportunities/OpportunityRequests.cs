@@ -58,6 +58,14 @@ public sealed record OpportunityReviewOutcomeRequest(
 
 public sealed record OpportunityTeamMemberRequest(Guid UserId, string Role);
 
+public sealed record OpportunityDuplicateCheckRequest(
+    string Name,
+    Guid? AccountId,
+    decimal Amount,
+    DateTime? ExpectedCloseDate,
+    string? StageName,
+    Guid? ExcludeOpportunityId);
+
 public sealed record OpportunityOnboardingCreateRequest(
     string Type,
     string Title,

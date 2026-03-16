@@ -380,3 +380,31 @@ export interface OpportunityHealthFactor {
   score: number;
   maxScore: number;
 }
+
+export interface OpportunityDuplicateCheckRequest {
+  name: string;
+  accountId?: string | null;
+  amount?: number | null;
+  expectedCloseDate?: string | null;
+  stageName?: string | null;
+  excludeOpportunityId?: string | null;
+}
+
+export interface OpportunityDuplicateCandidate {
+  opportunityId: string;
+  name: string;
+  accountName?: string | null;
+  stageName?: string | null;
+  amount: number;
+  expectedCloseDate?: string | null;
+  matchScore: number;
+  matchLevel: string;
+  matchedSignals: string[];
+}
+
+export interface OpportunityDuplicateCheckResponse {
+  decision: string;
+  isBlocked: boolean;
+  hasWarnings: boolean;
+  matches: OpportunityDuplicateCandidate[];
+}

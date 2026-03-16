@@ -495,6 +495,10 @@ public sealed class OpportunityService : IOpportunityService
         {
             return OpportunityOperationResult<OpportunityListItemDto>.Fail("Opportunity name is required.");
         }
+        if (request.Name.Trim().Length < 2)
+        {
+            return OpportunityOperationResult<OpportunityListItemDto>.Fail("Opportunity name must be at least 2 characters.");
+        }
         if ((!request.StageId.HasValue || request.StageId == Guid.Empty) && string.IsNullOrWhiteSpace(request.StageName))
         {
             return OpportunityOperationResult<OpportunityListItemDto>.Fail("Stage is required when creating an opportunity.");
@@ -552,7 +556,7 @@ public sealed class OpportunityService : IOpportunityService
 
         var opp = new Opportunity
         {
-            Name = request.Name,
+            Name = request.Name.Trim(),
             AccountId = accountId,
             PrimaryContactId = request.PrimaryContactId,
             StageId = stageId,
@@ -679,6 +683,14 @@ public sealed class OpportunityService : IOpportunityService
             return OpportunityOperationResult<bool>.Fail(lockViolation);
         }
 
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return OpportunityOperationResult<bool>.Fail("Opportunity name is required.");
+        }
+        if (request.Name.Trim().Length < 2)
+        {
+            return OpportunityOperationResult<bool>.Fail("Opportunity name must be at least 2 characters.");
+        }
         if (request.IsClosed && string.IsNullOrWhiteSpace(request.WinLossReason))
         {
             return OpportunityOperationResult<bool>.Fail("Win/Loss reason is required when closing an opportunity.");
@@ -761,7 +773,7 @@ public sealed class OpportunityService : IOpportunityService
                 "Closed won deals are locked. Only delivery handoff and renewal fields can be updated.");
         }
 
-        opp.Name = request.Name;
+        opp.Name = request.Name.Trim();
         opp.AccountId = resolvedAccountId;
         opp.PrimaryContactId = request.PrimaryContactId;
         opp.StageId = nextStageId;
@@ -2120,6 +2132,46 @@ public sealed class OpportunityService : IOpportunityService
             rationale,
             factors,
             now);
+    }
+
+    public async Task<OpportunityDuplicateCheckResultDto> CheckDuplicatesAsync(OpportunityDuplicateCheckRequest request, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return new OpportunityDuplicateCheckResultDto("allow", false, false, []);
+        }
+
+        var matches = await OpportunityMatching.FindDuplicatesAsync(
+            _dbContext,
+            request.Name,
+            request.AccountId,
+            request.Amount,
+            request.ExpectedCloseDate,
+            request.StageName,
+            request.ExcludeOpportunityId,
+            cancellationToken);
+
+        if (matches.Count == 0)
+        {
+            return new OpportunityDuplicateCheckResultDto("allow", false, false, []);
+        }
+
+        var dtos = matches.Select(m => new OpportunityDuplicateCandidateDto(
+            m.Id,
+            m.Name,
+            m.AccountName,
+            m.StageName,
+            m.Amount,
+            m.ExpectedCloseDate,
+            m.Score,
+            m.MatchLevel,
+            m.MatchedSignals)).ToList();
+
+        var hasBlock = dtos.Any(m => string.Equals(m.MatchLevel, "block", StringComparison.OrdinalIgnoreCase));
+        var hasWarnings = !hasBlock && dtos.Count != 0;
+        var decision = hasBlock ? "block" : hasWarnings ? "warning" : "allow";
+
+        return new OpportunityDuplicateCheckResultDto(decision, hasBlock, hasWarnings, dtos);
     }
 
     private async Task<DealHealthScoringPolicy> LoadDealHealthScoringPolicyAsync(CancellationToken cancellationToken)

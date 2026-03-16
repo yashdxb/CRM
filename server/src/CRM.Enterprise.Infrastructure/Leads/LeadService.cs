@@ -1368,13 +1368,20 @@ public sealed class LeadService : ILeadService
         Guid? contactId = lead.ContactId;
         if (request.CreateContact && contactId is null)
         {
+            var firstName = lead.FirstName?.Trim() ?? string.Empty;
+            var lastName = lead.LastName?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(firstName) && string.IsNullOrWhiteSpace(lastName))
+            {
+                return LeadOperationResult<LeadConversionResultDto>.Fail("Cannot create contact: the lead must have at least a first name or last name.");
+            }
+
             var contact = new Contact
             {
-                FirstName = lead.FirstName,
-                LastName = lead.LastName,
-                Email = lead.Email,
-                Phone = lead.Phone,
-                JobTitle = lead.JobTitle,
+                FirstName = firstName,
+                LastName = lastName,
+                Email = lead.Email?.Trim(),
+                Phone = lead.Phone?.Trim(),
+                JobTitle = lead.JobTitle?.Trim(),
                 AccountId = accountId,
                 OwnerId = ownerId,
                 LifecycleStage = "Customer",
@@ -1389,9 +1396,14 @@ public sealed class LeadService : ILeadService
         if (request.CreateOpportunity && opportunityId is null)
         {
             var stageId = await ResolveOpportunityStageIdAsync(cancellationToken);
-            var oppName = string.IsNullOrWhiteSpace(request.OpportunityName)
-                ? $"{(lead.CompanyName ?? lead.FirstName)} Opportunity"
+            var oppNameRaw = string.IsNullOrWhiteSpace(request.OpportunityName)
+                ? $"{(lead.CompanyName?.Trim() ?? lead.FirstName?.Trim())} Opportunity"
                 : request.OpportunityName;
+            var oppName = oppNameRaw?.Trim() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(oppName) || oppName.Equals("Opportunity", StringComparison.OrdinalIgnoreCase))
+            {
+                oppName = $"Deal – {DateTime.UtcNow:yyyy-MM-dd}";
+            }
 
             var opportunity = new Opportunity
             {

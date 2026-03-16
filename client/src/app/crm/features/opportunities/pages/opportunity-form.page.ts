@@ -41,7 +41,9 @@ import {
   OpportunityContactRole,
   AddOpportunityContactRoleRequest,
   OpportunityHealthScore,
-  OpportunityStageHistoryItem
+  OpportunityStageHistoryItem,
+  OpportunityDuplicateCandidate,
+  OpportunityDuplicateCheckResponse
 } from '../models/opportunity.model';
 import { Activity } from '../../activities/models/activity.model';
 import { ActivityDataService } from '../../activities/services/activity-data.service';
@@ -401,6 +403,12 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   /* ── Deal Health Score ────────────────────────────────── */
   protected dealHealthScore = signal<OpportunityHealthScore | null>(null);
   protected dealHealthScoreLoading = signal(false);
+
+  /* ── Duplicate Check ──────────────────────────────────── */
+  protected duplicateDialogVisible = signal(false);
+  protected duplicateCheckResult = signal<OpportunityDuplicateCheckResponse | null>(null);
+  protected duplicateMatches = signal<OpportunityDuplicateCandidate[]>([]);
+  private pendingSavePayload: SaveOpportunityRequest | null = null;
 
   /* ── Deal Aging / Stage Duration ────────────────────── */
   protected stageHistory = signal<OpportunityStageHistoryItem[]>([]);
@@ -1259,8 +1267,17 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       this.scrollToGateBanner();
       return;
     }
-    this.saving.set(true);
 
+    const payload = this.buildSavePayload();
+
+    if (!this.editingId) {
+      this.submitWithDuplicateGuard(payload);
+    } else {
+      this.performSave(payload);
+    }
+  }
+
+  private buildSavePayload(): SaveOpportunityRequest {
     const rawCloseDate = this.form.expectedCloseDate as unknown;
     const expectedCloseDate = rawCloseDate instanceof Date
       ? rawCloseDate.toISOString()
@@ -1285,7 +1302,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     const proposalSentAtUtc = rawProposalSent instanceof Date
       ? rawProposalSent.toISOString()
       : (typeof rawProposalSent === 'string' && rawProposalSent.trim() ? rawProposalSent : undefined);
-    const payload: SaveOpportunityRequest = {
+    return {
       ...this.form,
       expectedCloseDate,
       contractStartDateUtc,
@@ -1296,6 +1313,83 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       stageName: this.selectedStage,
       winLossReason: this.form.winLossReason || null
     };
+  }
+
+  private submitWithDuplicateGuard(payload: SaveOpportunityRequest): void {
+    this.opportunityData.checkDuplicates({
+      name: payload.name,
+      accountId: payload.accountId ?? null,
+      amount: payload.amount ?? null,
+      expectedCloseDate: payload.expectedCloseDate ?? null,
+      stageName: payload.stageName ?? null,
+      excludeOpportunityId: null
+    }).subscribe({
+      next: (result) => {
+        if (result.isBlocked) {
+          this.pendingSavePayload = payload;
+          this.duplicateCheckResult.set(result);
+          this.duplicateMatches.set(result.matches ?? []);
+          this.duplicateDialogVisible.set(true);
+          this.toastService.show('error', 'A very similar opportunity already exists. Review the match below.', 5000);
+          return;
+        }
+
+        if (result.hasWarnings) {
+          this.pendingSavePayload = payload;
+          this.duplicateCheckResult.set(result);
+          this.duplicateMatches.set(result.matches ?? []);
+          this.duplicateDialogVisible.set(true);
+          return;
+        }
+
+        this.performSave(payload);
+      },
+      error: () => {
+        // Duplicate-check should not block saves if the endpoint is temporarily unavailable.
+        this.performSave(payload);
+      }
+    });
+  }
+
+  protected dismissDuplicateDialog(): void {
+    this.duplicateDialogVisible.set(false);
+    this.duplicateCheckResult.set(null);
+    this.duplicateMatches.set([]);
+    this.pendingSavePayload = null;
+  }
+
+  protected saveDespiteWarning(): void {
+    if (!this.pendingSavePayload) {
+      this.dismissDuplicateDialog();
+      return;
+    }
+    const payload = this.pendingSavePayload;
+    this.dismissDuplicateDialog();
+    this.performSave(payload);
+  }
+
+  protected reviewDuplicate(candidate: OpportunityDuplicateCandidate): void {
+    this.dismissDuplicateDialog();
+    this.router.navigate(['/app/opportunities', candidate.opportunityId, 'edit']);
+  }
+
+  protected duplicateIsBlocked(): boolean {
+    return this.duplicateCheckResult()?.isBlocked ?? false;
+  }
+
+  protected duplicateDialogTitle(): string {
+    return this.duplicateIsBlocked() ? 'Duplicate Opportunity Blocked' : 'Possible Duplicate Opportunities';
+  }
+
+  protected duplicateDialogMessage(): string {
+    if (this.duplicateIsBlocked()) {
+      return 'A very similar opportunity already exists. Open the existing deal and continue there.';
+    }
+    return 'Similar opportunities were found. Review and decide whether to save anyway.';
+  }
+
+  private performSave(payload: SaveOpportunityRequest): void {
+    this.saving.set(true);
 
     const request$ = this.editingId
       ? this.opportunityData.update(this.editingId, payload).pipe(map(() => this.editingId!))

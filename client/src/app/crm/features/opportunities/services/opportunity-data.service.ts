@@ -20,7 +20,9 @@ import {
   OpportunityProposalActionResult,
   OpportunityAuditEvent,
   PriceListListItem,
-  ItemMasterListItem
+  ItemMasterListItem,
+  OpportunityDuplicateCheckRequest,
+  OpportunityDuplicateCheckResponse
 } from '../models/opportunity.model';
 
 export interface SaveOpportunityRequest {
@@ -220,5 +222,9 @@ export class OpportunityDataService {
 
   getHealthScore(opportunityId: string) {
     return this.http.get<OpportunityHealthScore>(`${this.baseUrl}/api/opportunities/${opportunityId}/health-score`);
+  }
+
+  checkDuplicates(payload: OpportunityDuplicateCheckRequest) {
+    return this.http.post<OpportunityDuplicateCheckResponse>(`${this.baseUrl}/api/opportunities/duplicate-check`, payload);
   }
 }

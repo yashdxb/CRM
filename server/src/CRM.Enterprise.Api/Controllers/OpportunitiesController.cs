@@ -10,6 +10,8 @@ using AppOpportunityUpsertRequest = CRM.Enterprise.Application.Opportunities.Opp
 using AppOpportunityCoachingRequest = CRM.Enterprise.Application.Opportunities.OpportunityCoachingRequest;
 using AppOpportunityReviewOutcomeRequest = CRM.Enterprise.Application.Opportunities.OpportunityReviewOutcomeRequest;
 using AppOpportunityTeamMemberRequest = CRM.Enterprise.Application.Opportunities.OpportunityTeamMemberRequest;
+using ApiOpportunityDuplicateCheckRequest = CRM.Enterprise.Api.Contracts.Opportunities.OpportunityDuplicateCheckRequest;
+using AppOpportunityDuplicateCheckRequest = CRM.Enterprise.Application.Opportunities.OpportunityDuplicateCheckRequest;
 using CRM.Enterprise.Api.Contracts.Audit;
 using CRM.Enterprise.Api.Contracts.Shared;
 using CRM.Enterprise.Application.Common;
@@ -116,6 +118,45 @@ public class OpportunitiesController : ControllerBase
         if (!result.Success) return BadRequest(result.Error);
         await PublishOpportunityRealtimeAsync("created", result.Value!.Id, cancellationToken);
         return CreatedAtAction(nameof(GetOpportunity), new { id = result.Value!.Id }, ToApiItem(result.Value!));
+    }
+
+    [HttpPost("duplicate-check")]
+    [Authorize(Policy = Permissions.Policies.OpportunitiesManage)]
+    [ProducesResponseType(typeof(OpportunityDuplicateCheckResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<OpportunityDuplicateCheckResponse>> CheckDuplicates(
+        [FromBody] ApiOpportunityDuplicateCheckRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            return BadRequest("Opportunity name is required.");
+        }
+
+        var result = await _opportunityService.CheckDuplicatesAsync(
+            new AppOpportunityDuplicateCheckRequest(
+                request.Name,
+                request.AccountId,
+                request.Amount,
+                request.ExpectedCloseDate,
+                request.StageName,
+                request.ExcludeOpportunityId),
+            cancellationToken);
+
+        return Ok(new OpportunityDuplicateCheckResponse(
+            result.Decision,
+            result.IsBlocked,
+            result.HasWarnings,
+            result.Matches.Select(m => new OpportunityDuplicateCheckCandidate(
+                m.OpportunityId,
+                m.Name,
+                m.AccountName,
+                m.StageName,
+                m.Amount,
+                m.ExpectedCloseDate,
+                m.MatchScore,
+                m.MatchLevel,
+                m.MatchedSignals))));
     }
 
     [HttpPut("{id:guid}")]

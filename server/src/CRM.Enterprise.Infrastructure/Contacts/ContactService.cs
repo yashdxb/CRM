@@ -166,6 +166,11 @@ public sealed class ContactService : IContactService
 
     public async Task<ContactOperationResult<ContactDetailDto>> CreateAsync(ContactUpsertRequest request, ActorContext actor, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(request.FirstName) && string.IsNullOrWhiteSpace(request.LastName))
+        {
+            return ContactOperationResult<ContactDetailDto>.Fail("At least one of first name or last name is required.");
+        }
+
         var roleError = ValidateBuyingRole(request.BuyingRole);
         if (roleError is not null)
         {
@@ -174,8 +179,8 @@ public sealed class ContactService : IContactService
 
         var contact = new Contact
         {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
+            FirstName = request.FirstName?.Trim() ?? string.Empty,
+            LastName = request.LastName?.Trim() ?? string.Empty,
             Email = request.Email,
             Phone = request.Phone,
             Mobile = request.Mobile,
@@ -260,14 +265,19 @@ public sealed class ContactService : IContactService
             return ContactOperationResult<bool>.NotFoundResult();
         }
 
+        if (string.IsNullOrWhiteSpace(request.FirstName) && string.IsNullOrWhiteSpace(request.LastName))
+        {
+            return ContactOperationResult<bool>.Fail("At least one of first name or last name is required.");
+        }
+
         var roleError = ValidateBuyingRole(request.BuyingRole);
         if (roleError is not null)
         {
             return ContactOperationResult<bool>.Fail(roleError);
         }
 
-        contact.FirstName = request.FirstName;
-        contact.LastName = request.LastName;
+        contact.FirstName = request.FirstName?.Trim() ?? string.Empty;
+        contact.LastName = request.LastName?.Trim() ?? string.Empty;
         contact.Email = request.Email;
         contact.Phone = request.Phone;
         contact.Mobile = request.Mobile;

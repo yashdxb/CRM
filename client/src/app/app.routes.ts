@@ -689,6 +689,45 @@ export const routes: Routes = [
             loadComponent: () => import('./crm/features/settings/pages/audit-log.page').then((m) => m.AuditLogPage)
           },
           {
+            path: 'lookups/lead-statuses',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Lead Statuses' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-lead-statuses.page').then((m) => m.LookupLeadStatusesPage)
+          },
+          {
+            path: 'lookups/opportunity-stages',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Opportunity Stages' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-opportunity-stages.page').then(
+                (m) => m.LookupOpportunityStagesPage
+              )
+          },
+          {
+            path: 'lookups/currencies',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Currencies' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-currencies.page').then((m) => m.LookupCurrenciesPage)
+          },
+          {
+            path: 'lookups/phone-types',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Phone Types' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-phone-types.page').then((m) => m.LookupPhoneTypesPage)
+          },
+          {
+            path: 'lookups/cadence-channels',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Cadence Channels' },
+            loadComponent: () =>
+              import('./crm/features/settings/pages/lookup-cadence-channels.page').then(
+                (m) => m.LookupCadenceChannelsPage
+              )
+          },
+          {
             path: 'tenants/new',
             canActivate: [roleGuard],
             data: { permission: PERMISSION_KEYS.tenantsManage, breadcrumb: 'Create Tenant' },

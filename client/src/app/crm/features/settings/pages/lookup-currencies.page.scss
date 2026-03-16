@@ -1,0 +1,141 @@
+@use '../../../../shared/form-page-styles' as form;
+@use '../../../../../styles/design-tokens' as *;
+@use 'sass:color';
+
+/* ───── page container ───── */
+.page-container {
+  position: relative;
+  min-height: 100vh;
+  padding: $space-5 $space-6;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 50%, #d8dde8 100%);
+  overflow-x: hidden;
+
+  @media (max-width: 768px) { padding: $space-3; }
+}
+
+/* ───── animated orbs ───── */
+.bg-orbs { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.orb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.4; animation: orb-float 20s ease-in-out infinite; }
+.orb-1 { width: 600px; height: 600px; background: $primary-gradient; top: -200px; right: -100px; }
+.orb-2 { width: 400px; height: 400px; background: $cyan-gradient; bottom: 10%; left: -100px; animation-delay: -7s; }
+.orb-3 { width: 300px; height: 300px; background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); top: 40%; right: 20%; animation-delay: -14s; }
+
+/* ───── hero ───── */
+.hero-section {
+  position: relative; z-index: 1;
+  display: grid; grid-template-columns: 1fr auto; gap: $space-6;
+  margin-bottom: $space-5; animation: fade-in-up 0.6s ease-out;
+  @media (max-width: 1200px) { grid-template-columns: 1fr; gap: $space-4; }
+}
+
+.hero-content { display: flex; flex-direction: column; gap: $space-2; }
+
+.back-link {
+  display: inline-flex; align-items: center; gap: $space-2;
+  color: $gray-500; font-size: $font-size-sm; font-weight: 500; text-decoration: none;
+  transition: color 200ms;
+  &:hover { color: #667eea; }
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: $space-2;
+  padding: $space-1 $space-3; background: $glass-bg; backdrop-filter: blur(20px);
+  border: 1px solid $glass-border; border-radius: 9999px;
+  font-size: $font-size-sm; font-weight: 600; color: #667eea;
+  text-transform: uppercase; letter-spacing: 0.1em; width: fit-content; box-shadow: $glass-shadow;
+  .badge-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; animation: pulse-glow 2s ease-in-out infinite; }
+}
+
+.hero-title {
+  font-size: 2rem; font-weight: 800; letter-spacing: -0.5px; line-height: 1.1; margin: 0 0 $space-1;
+  .title-gradient {
+    background: $primary-gradient; background-size: 200% auto;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; animation: gradient-shift 4s ease-in-out infinite;
+  }
+}
+
+.hero-description { font-size: $font-size-base; color: $gray-500; max-width: 500px; line-height: 1.6; margin: 0; }
+
+/* ───── visual cards ───── */
+.hero-visual { display: flex; flex-direction: column; gap: $space-3; animation: slide-in-right 0.6s ease-out 0.2s both; }
+
+.visual-card {
+  position: relative; display: flex; align-items: center; gap: $space-3;
+  padding: $space-3 $space-4; background: $glass-bg; backdrop-filter: blur(20px);
+  border: 1px solid $glass-border; border-radius: $radius-lg; box-shadow: $glass-shadow;
+  min-width: 200px; overflow: hidden; transition: transform 250ms, box-shadow 250ms;
+  &:hover { transform: translateY(-2px); box-shadow: $glass-shadow-hover; }
+  .card-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: $radius-md; font-size: $font-size-xl; color: white; }
+  &--primary .card-icon { background: $primary-gradient; }
+  &--success .card-icon { background: $success-gradient; }
+  .card-label { font-size: $font-size-xs; color: $gray-500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .card-value { font-size: $font-size-2xl; font-weight: 700; color: $gray-800; }
+  .card-glow { position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, transparent 70%); pointer-events: none; }
+}
+
+/* ───── data section ───── */
+.data-section { position: relative; z-index: 1; animation: fade-in-up 0.5s ease-out 0.4s both; }
+
+.data-card {
+  background: $glass-bg; backdrop-filter: blur(20px);
+  border: 1px solid $glass-border; border-radius: $radius-2xl; box-shadow: $glass-shadow; overflow: hidden;
+}
+
+.data-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: $space-3;
+  padding: $space-3 $space-4; border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  h2 { margin: 0; font-size: $font-size-lg; font-weight: 600; color: $gray-800; }
+}
+
+.header-actions { display: flex; gap: $space-2; }
+
+.skeleton-rows { padding: $space-4; }
+
+.empty-message { text-align: center; padding: $space-6 !important; color: $gray-500; font-style: italic; }
+
+.symbol-cell { font-weight: 700; font-size: $font-size-lg; color: $gray-700; }
+
+/* ───── table rows ───── */
+:host ::ng-deep {
+  .p-datatable-thead > tr > th {
+    background: linear-gradient(180deg, #f0f7ff 0%, #e6f0fa 100%);
+    border: none; border-bottom: 2px solid rgba(59, 130, 246, 0.2);
+    padding: $space-3 $space-4; font-size: 0.72rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em; color: #3b82f6;
+  }
+  .p-datatable-tbody > tr > td { vertical-align: middle; padding: $space-3 $space-2; }
+}
+
+.table-row {
+  transition: background 150ms; border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  &:last-child { border-bottom: none; }
+  &:hover { background: rgba(102, 126, 234, 0.03); }
+}
+
+/* ───── dialog form ───── */
+.dialog-body { display: flex; flex-direction: column; gap: $space-4; padding: $space-4 0; }
+
+.form-field {
+  display: flex; flex-direction: row; align-items: center; gap: 0.75rem;
+  & > label {
+    font-size: 0.8125rem; font-weight: 600; color: #475569;
+    min-width: 90px; flex-shrink: 0; text-align: right; white-space: nowrap;
+    transition: color 200ms;
+    .required { color: #ef4444; }
+  }
+  &:focus-within > label { color: #4f46e5; }
+  & > p-inputgroup, & > p-inputNumber, & > p-checkbox { flex: 1; min-width: 0; }
+}
+
+.dialog-footer {
+  display: flex; justify-content: flex-end; gap: $space-2; padding-top: $space-3;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* ───── animations ───── */
+@keyframes fade-in-up   { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slide-in-right { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+@keyframes pulse-glow     { 0%, 100% { opacity: 1; box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); } 50% { opacity: 0.8; box-shadow: 0 0 40px rgba(102, 126, 234, 0.6); } }
+@keyframes orb-float      { 0%, 100% { transform: translate(0, 0) scale(1); } 25% { transform: translate(50px, -30px) scale(1.1); } 50% { transform: translate(100px, 20px) scale(0.9); } 75% { transform: translate(30px, 50px) scale(1.05); } }
