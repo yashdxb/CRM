@@ -1105,6 +1105,46 @@ public sealed class CustomerService : ICustomerService
         return timeline.OrderByDescending(t => t.OccurredAtUtc).Take(take).ToList();
     }
 
+    // ── Related Records (tree view) ──────────────────────────────────
+
+    public async Task<AccountRelatedRecordsDto?> GetRelatedRecordsAsync(
+        Guid accountId, CancellationToken cancellationToken = default)
+    {
+        var exists = await _dbContext.Set<Account>()
+            .AsNoTracking()
+            .AnyAsync(a => a.Id == accountId && !a.IsDeleted, cancellationToken);
+
+        if (!exists) return null;
+
+        var contacts = await _dbContext.Contacts
+            .Where(c => c.AccountId == accountId && !c.IsDeleted)
+            .OrderBy(c => c.FirstName).ThenBy(c => c.LastName)
+            .Select(c => new RelatedRecordItem(c.Id, c.FirstName + " " + c.LastName, c.JobTitle))
+            .ToListAsync(cancellationToken);
+
+        var opportunities = await _dbContext.Opportunities
+            .Where(o => o.AccountId == accountId && !o.IsDeleted)
+            .Include(o => o.Stage)
+            .OrderByDescending(o => o.CreatedAtUtc)
+            .Select(o => new RelatedRecordItem(o.Id, o.Name, o.Stage != null ? o.Stage.Name : null))
+            .ToListAsync(cancellationToken);
+
+        var leads = await _dbContext.Leads
+            .Where(l => l.AccountId == accountId && !l.IsDeleted)
+            .Include(l => l.Status)
+            .OrderByDescending(l => l.CreatedAtUtc)
+            .Select(l => new RelatedRecordItem(l.Id, l.FirstName + " " + l.LastName, l.Status != null ? l.Status.Name : null))
+            .ToListAsync(cancellationToken);
+
+        var supportCases = await _dbContext.SupportCases
+            .Where(s => s.AccountId == accountId && !s.IsDeleted)
+            .OrderByDescending(s => s.CreatedAtUtc)
+            .Select(s => new RelatedRecordItem(s.Id, s.CaseNumber + " – " + s.Subject, s.Status))
+            .ToListAsync(cancellationToken);
+
+        return new AccountRelatedRecordsDto(contacts, opportunities, leads, supportCases);
+    }
+
     // ── Account Contact Roles ─────────────────────────────────────────
 
     public async Task<IReadOnlyList<AccountContactRoleDto>?> GetContactRolesAsync(

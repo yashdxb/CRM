@@ -246,31 +246,22 @@
             </ng-template>
           </section>
 
-          <!-- Related Counts Summary -->
-          <section class="detail-card">
+          <!-- Related Records Tree -->
+          <section class="detail-card related-tree-card">
             <h2 class="card-title"><i class="pi pi-link"></i> Related Records</h2>
-            <div class="related-list">
-              <div class="related-item">
-                <i class="pi pi-id-card related-icon related-icon--contacts"></i>
-                <span class="related-label">Contacts</span>
-                <strong class="related-count">{{ c.contactCount }}</strong>
-              </div>
-              <div class="related-item">
-                <i class="pi pi-chart-line related-icon related-icon--opportunities"></i>
-                <span class="related-label">Opportunities</span>
-                <strong class="related-count">{{ c.opportunityCount }}</strong>
-              </div>
-              <div class="related-item">
-                <i class="pi pi-bolt related-icon related-icon--leads"></i>
-                <span class="related-label">Leads</span>
-                <strong class="related-count">{{ c.leadCount }}</strong>
-              </div>
-              <div class="related-item">
-                <i class="pi pi-ticket related-icon related-icon--cases"></i>
-                <span class="related-label">Support Cases</span>
-                <strong class="related-count">{{ c.supportCaseCount }}</strong>
-              </div>
-            </div>
+            <p-tree
+              [value]="relatedTreeNodes()"
+              selectionMode="single"
+              (onNodeSelect)="onRelatedNodeSelect($event)"
+              styleClass="related-tree"
+            >
+              <ng-template pTemplate="default" let-node>
+                <span class="tree-node-content" [class.tree-node--clickable]="node.leaf">
+                  <span class="tree-node-label">{{ node.label }}</span>
+                  <span class="tree-node-subtitle" *ngIf="node.data?.subtitle">{{ node.data.subtitle }}</span>
+                </span>
+              </ng-template>
+            </p-tree>
           </section>
         </div>
       </div>

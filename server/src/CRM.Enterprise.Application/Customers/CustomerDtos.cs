@@ -125,6 +125,18 @@ public sealed record AccountContactRoleDto(
     DateTime CreatedAtUtc,
     DateTime? UpdatedAtUtc);
 
+// Related records for tree view
+public sealed record RelatedRecordItem(
+    Guid Id,
+    string Label,
+    string? Subtitle);
+
+public sealed record AccountRelatedRecordsDto(
+    IReadOnlyList<RelatedRecordItem> Contacts,
+    IReadOnlyList<RelatedRecordItem> Opportunities,
+    IReadOnlyList<RelatedRecordItem> Leads,
+    IReadOnlyList<RelatedRecordItem> SupportCases);
+
 public sealed record CustomerOperationResult<T>(bool Success, T? Value, string? Error, bool NotFound = false)
 {
     public static CustomerOperationResult<T> Ok(T value) => new(true, value, null, false);

@@ -75,3 +75,14 @@ public sealed record AddAccountContactRoleRequest(
     string Role,
     string? Notes,
     bool IsPrimary);
+
+public sealed record RelatedRecordResponse(
+    Guid Id,
+    string Label,
+    string? Subtitle);
+
+public sealed record AccountRelatedRecordsResponse(
+    IReadOnlyList<RelatedRecordResponse> Contacts,
+    IReadOnlyList<RelatedRecordResponse> Opportunities,
+    IReadOnlyList<RelatedRecordResponse> Leads,
+    IReadOnlyList<RelatedRecordResponse> SupportCases);

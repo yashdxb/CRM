@@ -3,10 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { TooltipModule } from 'primeng/tooltip';
 import { SkeletonModule } from 'primeng/skeleton';
+import { Tree } from 'primeng/tree';
+import { TreeNode } from 'primeng/api';
 
 import { CustomerDataService } from '../services/customer-data.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { CustomerDetail, AccountTeamMember, AccountTimelineEntry } from '../models/customer.model';
+import { CustomerDetail, AccountTeamMember, AccountTimelineEntry, AccountRelatedRecords } from '../models/customer.model';
 import { readTokenContext, tokenHasPermission } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 
@@ -20,7 +22,8 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
     RouterModule,
     TooltipModule,
     SkeletonModule,
-    BreadcrumbsComponent
+    BreadcrumbsComponent,
+    Tree
   ]
 })
 export class CustomerDetailPage implements OnInit {
@@ -34,6 +37,7 @@ export class CustomerDetailPage implements OnInit {
   protected teamLoading = signal(false);
   protected timeline = signal<AccountTimelineEntry[]>([]);
   protected timelineLoading = signal(false);
+  protected relatedTreeNodes = signal<TreeNode[]>([]);
 
   protected canEdit = tokenHasPermission(
     readTokenContext()?.payload ?? null,
@@ -90,6 +94,7 @@ export class CustomerDetailPage implements OnInit {
     this.loadDetail(id);
     this.loadTeam(id);
     this.loadTimeline(id);
+    this.loadRelatedRecords(id);
   }
 
   private loadDetail(id: string): void {
@@ -162,6 +167,79 @@ export class CustomerDetailPage implements OnInit {
         this.timelineLoading.set(false);
       }
     });
+  }
+
+  private loadRelatedRecords(id: string): void {
+    this.customerData.getRelatedRecords(id).subscribe({
+      next: (data) => this.relatedTreeNodes.set(this.buildRelatedTree(data)),
+      error: () => this.relatedTreeNodes.set(this.buildRelatedTree({ contacts: [], opportunities: [], leads: [], supportCases: [] }))
+    });
+  }
+
+  private buildRelatedTree(data: AccountRelatedRecords): TreeNode[] {
+    const makeChildren = (items: { id: string; label: string; subtitle?: string }[], icon: string, type: string): TreeNode[] =>
+      items.map(item => ({
+        label: item.label,
+        data: { id: item.id, type, subtitle: item.subtitle },
+        icon,
+        leaf: true,
+        styleClass: `child-node child-node--${type}`
+      }));
+
+    return [
+      {
+        label: `Contacts (${data.contacts.length})`,
+        icon: 'pi pi-id-card',
+        expanded: data.contacts.length > 0,
+        selectable: false,
+        styleClass: 'parent-node parent-node--contacts',
+        children: makeChildren(data.contacts, 'pi pi-user', 'contact')
+      },
+      {
+        label: `Opportunities (${data.opportunities.length})`,
+        icon: 'pi pi-chart-line',
+        expanded: data.opportunities.length > 0,
+        selectable: false,
+        styleClass: 'parent-node parent-node--opportunities',
+        children: makeChildren(data.opportunities, 'pi pi-briefcase', 'opportunity')
+      },
+      {
+        label: `Leads (${data.leads.length})`,
+        icon: 'pi pi-bolt',
+        expanded: data.leads.length > 0,
+        selectable: false,
+        styleClass: 'parent-node parent-node--leads',
+        children: makeChildren(data.leads, 'pi pi-user-plus', 'lead')
+      },
+      {
+        label: `Support Cases (${data.supportCases.length})`,
+        icon: 'pi pi-ticket',
+        expanded: data.supportCases.length > 0,
+        selectable: false,
+        styleClass: 'parent-node parent-node--cases',
+        children: makeChildren(data.supportCases, 'pi pi-inbox', 'supportCase')
+      }
+    ];
+  }
+
+  protected onRelatedNodeSelect(event: { node: TreeNode }): void {
+    const nodeData = event.node?.data;
+    if (!nodeData?.id) return;
+
+    switch (nodeData.type) {
+      case 'contact':
+        this.router.navigate(['/app/contacts', nodeData.id, 'edit']);
+        break;
+      case 'opportunity':
+        this.router.navigate(['/app/deals', nodeData.id]);
+        break;
+      case 'lead':
+        this.router.navigate(['/app/leads', nodeData.id, 'edit']);
+        break;
+      case 'supportCase':
+        this.router.navigate(['/app/helpdesk/cases', nodeData.id]);
+        break;
+    }
   }
 
   protected timelineIcon(type: string): string {

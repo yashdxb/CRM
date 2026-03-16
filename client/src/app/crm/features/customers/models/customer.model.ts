@@ -168,3 +168,16 @@ export interface AddAccountContactRoleRequest {
   notes?: string;
   isPrimary: boolean;
 }
+
+export interface RelatedRecordItem {
+  id: string;
+  label: string;
+  subtitle?: string;
+}
+
+export interface AccountRelatedRecords {
+  contacts: RelatedRecordItem[];
+  opportunities: RelatedRecordItem[];
+  leads: RelatedRecordItem[];
+  supportCases: RelatedRecordItem[];
+}

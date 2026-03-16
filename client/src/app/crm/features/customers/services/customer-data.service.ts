@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Customer, CustomerDetail, CustomerSearchRequest, CustomerSearchResponse, CustomerStatus, AccountTeamMember, DuplicateMatch, MergeAccountRequest, MergeAccountResponse, AccountHierarchyNode, AccountTimelineEntry, AccountContactRole, AddAccountContactRoleRequest } from '../models/customer.model';
+import { Customer, CustomerDetail, CustomerSearchRequest, CustomerSearchResponse, CustomerStatus, AccountTeamMember, DuplicateMatch, MergeAccountRequest, MergeAccountResponse, AccountHierarchyNode, AccountTimelineEntry, AccountContactRole, AddAccountContactRoleRequest, AccountRelatedRecords } from '../models/customer.model';
 import { environment } from '../../../../../environments/environment';
 import { CsvImportJob } from '../../../../shared/models/csv-import.model';
 
@@ -119,6 +119,10 @@ export class CustomerDataService {
 
   removeContactRole(id: string, contactRoleId: string) {
     return this.http.delete<void>(`${this.baseUrl}/api/customers/${id}/contact-roles/${contactRoleId}`);
+  }
+
+  getRelatedRecords(id: string) {
+    return this.http.get<AccountRelatedRecords>(`${this.baseUrl}/api/customers/${id}/related-records`);
   }
 
   create(payload: SaveCustomerRequest) {

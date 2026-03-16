@@ -117,6 +117,21 @@ public class CustomersController : ControllerBase
         return NoContent();
     }
 
+    // ── Related Records (tree view) ─────────────────────────────────────
+
+    [HttpGet("{id:guid}/related-records")]
+    public async Task<ActionResult<AccountRelatedRecordsResponse>> GetRelatedRecords(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _customerService.GetRelatedRecordsAsync(id, cancellationToken);
+        if (result is null) return NotFound();
+
+        return Ok(new AccountRelatedRecordsResponse(
+            result.Contacts.Select(r => new RelatedRecordResponse(r.Id, r.Label, r.Subtitle)).ToList(),
+            result.Opportunities.Select(r => new RelatedRecordResponse(r.Id, r.Label, r.Subtitle)).ToList(),
+            result.Leads.Select(r => new RelatedRecordResponse(r.Id, r.Label, r.Subtitle)).ToList(),
+            result.SupportCases.Select(r => new RelatedRecordResponse(r.Id, r.Label, r.Subtitle)).ToList()));
+    }
+
     // ── Account Contact Roles ──────────────────────────────────────────
 
     [HttpGet("{id:guid}/contact-roles")]

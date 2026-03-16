@@ -552,54 +552,155 @@
   color: $gray-500;
 }
 
-// ═══ RELATED RECORDS ═══
+// ═══ RELATED RECORDS TREE ═══
 
-.related-list {
-  display: flex;
-  flex-direction: column;
-  gap: $space-2;
-}
+.related-tree-card {
+  ::ng-deep .related-tree {
+    padding: 0;
+    background: transparent;
+    border: none;
 
-.related-item {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  padding: $space-2;
-  border-radius: $radius-md;
-  transition: background 150ms;
+    .p-tree-node {
+      padding: 0;
+    }
 
-  &:hover {
-    background: rgba(0, 0, 0, 0.03);
+    .p-tree-node-content {
+      padding: $space-2;
+      border-radius: $radius-md;
+      transition: background 150ms, transform 150ms;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      &.p-tree-node-selected {
+        background: rgba(102, 126, 234, 0.08);
+        outline: none;
+        box-shadow: none;
+      }
+    }
+
+    // Parent node icons with gradient backgrounds
+    .p-tree-node-icon {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: $radius-md;
+      font-size: $font-size-sm;
+      color: white;
+      flex-shrink: 0;
+      margin-right: $space-2;
+    }
+
+    // Parent node icon colors
+    .parent-node--contacts > .p-tree-node-content .p-tree-node-icon {
+      background: $cyan-gradient;
+    }
+
+    .parent-node--opportunities > .p-tree-node-content .p-tree-node-icon {
+      background: $success-gradient;
+    }
+
+    .parent-node--leads > .p-tree-node-content .p-tree-node-icon {
+      background: linear-gradient(135deg, #a855f7, #9333ea);
+    }
+
+    .parent-node--cases > .p-tree-node-content .p-tree-node-icon {
+      background: $orange-gradient;
+    }
+
+    // Child node icon colors (smaller, subtler)
+    .child-node > .p-tree-node-content .p-tree-node-icon {
+      width: 24px;
+      height: 24px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+    }
+
+    .child-node--contact > .p-tree-node-content .p-tree-node-icon {
+      background: rgba(6, 182, 212, 0.15);
+      color: #06b6d4;
+    }
+
+    .child-node--opportunity > .p-tree-node-content .p-tree-node-icon {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+    }
+
+    .child-node--lead > .p-tree-node-content .p-tree-node-icon {
+      background: rgba(168, 85, 247, 0.15);
+      color: #a855f7;
+    }
+
+    .child-node--supportCase > .p-tree-node-content .p-tree-node-icon {
+      background: rgba(249, 115, 22, 0.15);
+      color: #f97316;
+    }
+
+    // Parent node label styling
+    .parent-node > .p-tree-node-content .tree-node-label {
+      font-size: $font-size-md;
+      font-weight: 600;
+      color: $gray-800;
+    }
+
+    // Child node styling
+    .child-node > .p-tree-node-content {
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(102, 126, 234, 0.06);
+        transform: translateX(2px);
+      }
+    }
+
+    .tree-node-content {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .tree-node-label {
+      font-size: $font-size-sm;
+      font-weight: 500;
+      color: $gray-700;
+    }
+
+    .tree-node-subtitle {
+      font-size: $font-size-xs;
+      color: $gray-500;
+      font-weight: 400;
+    }
+
+    .tree-node--clickable {
+      .tree-node-label {
+        color: $gray-800;
+
+        &:hover {
+          color: #667eea;
+        }
+      }
+    }
+
+    // Toggler styling
+    .p-tree-node-toggle-button {
+      color: $gray-400;
+      width: 24px;
+      height: 24px;
+
+      &:hover {
+        color: $gray-600;
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    // Remove default tree line connectors
+    .p-tree-node-children {
+      padding-left: $space-4;
+    }
   }
-}
-
-.related-icon {
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: $radius-md;
-  font-size: $font-size-sm;
-  color: white;
-  flex-shrink: 0;
-
-  &--contacts { background: $cyan-gradient; }
-  &--opportunities { background: $success-gradient; }
-  &--leads { background: linear-gradient(135deg, #a855f7, #9333ea); }
-  &--cases { background: $orange-gradient; }
-}
-
-.related-label {
-  font-size: $font-size-md;
-  color: $gray-700;
-  flex: 1;
-}
-
-.related-count {
-  font-size: $font-size-lg;
-  font-weight: 700;
-  color: $gray-800;
 }
 
 // ═══ EMPTY STATE ═══
