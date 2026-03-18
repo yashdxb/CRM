@@ -2255,6 +2255,7 @@ public class DatabaseInitializer : IDatabaseInitializer
             await SeedUsersAsync(cancellationToken);
             await SeedLeadAssignmentRulesAsync(cancellationToken);
             await SeedLeadCadenceChannelsAsync(cancellationToken);
+            await SeedLeadOutcomeReasonsAsync(cancellationToken);
             await SeedOpportunityStagesAsync(cancellationToken);
             await SeedHelpDeskDefaultsAsync(cancellationToken);
             // CRM sample data seeding disabled
@@ -2264,6 +2265,65 @@ public class DatabaseInitializer : IDatabaseInitializer
         finally
         {
             _tenantProvider.SetTenant(originalTenantId, originalTenantKey);
+        }
+    }
+
+    private async Task SeedLeadOutcomeReasonsAsync(CancellationToken cancellationToken)
+    {
+        var existingDisqualificationNames = await _dbContext.LeadDisqualificationReasons
+            .Select(x => x.Name)
+            .ToListAsync(cancellationToken);
+
+        var existingLossNames = await _dbContext.LeadLossReasons
+            .Select(x => x.Name)
+            .ToListAsync(cancellationToken);
+
+        var disqualificationReasons = new[]
+        {
+            "No budget / funding",
+            "Not a fit",
+            "No active project",
+            "Duplicate inquiry"
+        };
+
+        var lossReasons = new[]
+        {
+            "Lost to competitor",
+            "Chose internal solution",
+            "Timing pushed",
+            "No decision"
+        };
+
+        for (var index = 0; index < disqualificationReasons.Length; index++)
+        {
+            var name = disqualificationReasons[index];
+            if (existingDisqualificationNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            _dbContext.LeadDisqualificationReasons.Add(new LeadDisqualificationReasonDefinition
+            {
+                Name = name,
+                IsActive = true,
+                SortOrder = index + 1
+            });
+        }
+
+        for (var index = 0; index < lossReasons.Length; index++)
+        {
+            var name = lossReasons[index];
+            if (existingLossNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            _dbContext.LeadLossReasons.Add(new LeadLossReasonDefinition
+            {
+                Name = name,
+                IsActive = true,
+                SortOrder = index + 1
+            });
         }
     }
 

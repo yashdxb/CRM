@@ -1,6 +1,5 @@
 -- ============================================================
--- CRM Enterprise: Delete ALL transactional data
--- PRESERVE: Lead "Rob" (078ddd15-b6f3-41f2-a7eb-08a3d4d9ac39)
+-- CRM Enterprise: Delete transactional CRM data only
 -- PRESERVE: All lookup/reference/config/identity tables
 -- ============================================================
 
@@ -26,6 +25,16 @@ BEGIN TRY
     PRINT 'Deleted AttributionExplainabilityEvents';
     DELETE FROM crm.CampaignMembers;
     PRINT 'Deleted CampaignMembers';
+    IF OBJECT_ID('crm.CampaignEmailRecipients', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM crm.CampaignEmailRecipients;
+        PRINT 'Deleted CampaignEmailRecipients';
+    END;
+    IF OBJECT_ID('crm.CampaignEmails', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM crm.CampaignEmails;
+        PRINT 'Deleted CampaignEmails';
+    END;
 
     -- Opportunity children
     DELETE FROM crm.OpportunityQuoteLines;
@@ -38,12 +47,22 @@ BEGIN TRY
     PRINT 'Deleted OpportunityApprovalChains';
     DELETE FROM crm.OpportunityApprovals;
     PRINT 'Deleted OpportunityApprovals';
+    IF OBJECT_ID('crm.PendingWorkflowDelays', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM crm.PendingWorkflowDelays;
+        PRINT 'Deleted PendingWorkflowDelays';
+    END;
     DELETE FROM crm.OpportunityReviewChecklistItems;
     PRINT 'Deleted OpportunityReviewChecklistItems';
     DELETE FROM crm.OpportunityTeamMembers;
     PRINT 'Deleted OpportunityTeamMembers';
     DELETE FROM crm.OpportunityContactRoles;
     PRINT 'Deleted OpportunityContactRoles';
+    IF OBJECT_ID('crm.AccountContactRoles', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM crm.AccountContactRoles;
+        PRINT 'Deleted AccountContactRoles';
+    END;
     DELETE FROM crm.OpportunityOnboardingItems;
     PRINT 'Deleted OpportunityOnboardingItems';
 
@@ -96,6 +115,11 @@ BEGIN TRY
     PRINT 'Deleted UserMailMessages';
     DELETE FROM dbo.UserEmailConnections;
     PRINT 'Deleted UserEmailConnections';
+    IF OBJECT_ID('crm.CrmEmailLinks', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM crm.CrmEmailLinks;
+        PRINT 'Deleted CrmEmailLinks';
+    END;
 
     -- ========================================
     -- Phase 3: Clear Lead FKs before parents
@@ -118,14 +142,23 @@ BEGIN TRY
     PRINT 'Deleted SupportCases';
     DELETE FROM crm.DirectChatThreads;
     PRINT 'Deleted DirectChatThreads';
+    IF OBJECT_ID('crm.ContactTags', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM crm.ContactTags;
+        PRINT 'Deleted ContactTags';
+    END;
     DELETE FROM crm.Contacts;
     PRINT 'Deleted Contacts';
+    IF OBJECT_ID('crm.AccountTeamMembers', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM crm.AccountTeamMembers;
+        PRINT 'Deleted AccountTeamMembers';
+    END;
     DELETE FROM crm.Accounts;
     PRINT 'Deleted Accounts';
 
-    -- Delete all leads EXCEPT Rob
-    DELETE FROM crm.Leads WHERE Id != '078ddd15-b6f3-41f2-a7eb-08a3d4d9ac39';
-    PRINT 'Deleted Leads (except Rob)';
+    DELETE FROM crm.Leads;
+    PRINT 'Deleted Leads';
 
     COMMIT TRANSACTION;
     PRINT '';

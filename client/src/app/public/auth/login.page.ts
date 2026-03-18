@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, NgZone, OnInit } from '@angular/core';
+import { Component, NgZone, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -50,8 +50,7 @@ export class LoginPage implements OnInit {
     private auth: AuthService,
     private router: Router,
     private route: ActivatedRoute,
-    private zone: NgZone,
-    private cdr: ChangeDetectorRef
+    private zone: NgZone
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -73,12 +72,10 @@ export class LoginPage implements OnInit {
         this.entraClientId = config.entra?.clientId || this.entraClientId;
         this.entraAuthority = config.entra?.authority || this.entraAuthority;
         this.entraRedirectUri = config.entra?.redirectUri || this.entraRedirectUri;
-        this.cdr.detectChanges();
       },
       error: () => {
         this.localLoginEnabled = true;
         this.entraEnabled = !!environment.auth?.entra?.enabled;
-        this.cdr.detectChanges();
       }
     });
   }
@@ -115,7 +112,6 @@ export class LoginPage implements OnInit {
           this.error = ok
             ? `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out but the server is reachable — please try again.`
             : `Unable to sign in as ${normalizedEmail || 'the requested user'}. The API server is not responding. It may be restarting after a deployment — please wait a moment and try again.`;
-          this.cdr.detectChanges();
         });
       });
     }, 30000);
@@ -125,13 +121,14 @@ export class LoginPage implements OnInit {
       .pipe(
         timeout(30000),
         finalize(() => {
-          window.clearTimeout(timeoutId);
-          this.loading = false;
-          if (!timedOut && !this.error && !readTokenContext()) {
-            this.showErrors = true;
-            this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Please check your credentials and try again.`;
-            this.cdr.detectChanges();
-          }
+          this.deferUiUpdate(() => {
+            window.clearTimeout(timeoutId);
+            this.loading = false;
+            if (!timedOut && !this.error && !readTokenContext()) {
+              this.showErrors = true;
+              this.error = `Unable to sign in as ${normalizedEmail || 'the requested user'}. Please check your credentials and try again.`;
+            }
+          });
         })
       )
       .subscribe({
@@ -166,7 +163,6 @@ export class LoginPage implements OnInit {
                 this.error = ok
                   ? `Unable to sign in as ${normalizedEmail || 'the requested user'}. Request timed out. The server is reachable — please try again.`
                   : `Unable to sign in as ${normalizedEmail || 'the requested user'}. The API server is not responding. It may be restarting after a deployment — please wait a moment and try again.`;
-                this.cdr.detectChanges();
               });
               return;
             }
@@ -181,12 +177,10 @@ export class LoginPage implements OnInit {
                 this.error = ok
                   ? `Unable to sign in as ${normalizedEmail || 'the requested user'}. A network error occurred but the server is reachable. Please try again.`
                   : `Unable to sign in as ${normalizedEmail || 'the requested user'}. Cannot reach the API server (${environment.apiUrl}). It may be restarting — please wait and retry.`;
-                this.cdr.detectChanges();
               });
               return;
             }
             this.error = this.buildErrorText(normalizedEmail, messageBody, httpError?.status);
-            this.cdr.detectChanges();
           });
         }
       });
@@ -232,8 +226,9 @@ export class LoginPage implements OnInit {
         .loginWithEntra({ idToken })
         .pipe(
           finalize(() => {
-            this.loading = false;
-            this.cdr.detectChanges();
+            this.deferUiUpdate(() => {
+              this.loading = false;
+            });
           })
         )
         .subscribe({
@@ -259,7 +254,6 @@ export class LoginPage implements OnInit {
             const messageBody = httpError?.error?.message || httpError?.error?.error || null;
             this.showErrors = true;
             this.error = this.buildErrorText('Microsoft account', messageBody, httpError?.status, code);
-            this.cdr.detectChanges();
           }
         });
     } catch (err) {
@@ -267,7 +261,6 @@ export class LoginPage implements OnInit {
       this.showErrors = true;
       this.loading = false;
       this.error = message;
-      this.cdr.detectChanges();
     }
   }
 
@@ -295,5 +288,11 @@ export class LoginPage implements OnInit {
       return `${base} Invalid tenant key.`;
     }
     return serverMessage ? `${base} ${serverMessage}` : `${base} Please check your credentials and try again.`;
+  }
+
+  private deferUiUpdate(action: () => void): void {
+    window.setTimeout(() => {
+      this.zone.run(action);
+    });
   }
 }

@@ -2115,6 +2115,7 @@ public class DashboardReadService : IDashboardReadService
         ["unknown / not validated"] = EpistemicState.Unknown,
         ["mild inconvenience"] = EpistemicState.Assumed,
         ["recognized operational problem"] = EpistemicState.Assumed,
+        ["high business impact"] = EpistemicState.Assumed,
         ["critical business impact"] = EpistemicState.Verified,
         ["executive-level priority"] = EpistemicState.Verified,
         ["problem acknowledged but deprioritized"] = EpistemicState.Invalid

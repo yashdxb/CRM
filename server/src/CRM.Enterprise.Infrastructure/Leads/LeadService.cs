@@ -2968,7 +2968,8 @@ public sealed class LeadService : ILeadService
         return value.Trim().ToLowerInvariant() switch
         {
             "executive-level priority" => 20,
-            "critical business impact" => 15,
+            "critical business impact" => 20,
+            "high business impact" => 15,
             "recognized operational problem" => 8,
             "mild inconvenience" => 2,
             "problem acknowledged but deprioritized" => 0,
@@ -3480,6 +3481,7 @@ public sealed class LeadService : ILeadService
         ["unknown / not validated"] = EpistemicState.Unknown,
         ["mild inconvenience"] = EpistemicState.Assumed,
         ["recognized operational problem"] = EpistemicState.Assumed,
+        ["high business impact"] = EpistemicState.Assumed,
         ["critical business impact"] = EpistemicState.Verified,
         ["executive-level priority"] = EpistemicState.Verified,
         ["problem acknowledged but deprioritized"] = EpistemicState.Invalid

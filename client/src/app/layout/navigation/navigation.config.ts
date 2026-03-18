@@ -118,6 +118,36 @@ export const NAV_LINKS: NavLink[] = [
     ]
   },
   {
+    label: 'Reference Data',
+    icon: 'pi-list',
+    path: '/app/settings/lookups/lead-statuses',
+    permission: PERMISSION_KEYS.administrationManage,
+    children: [
+      { label: 'Lead Statuses', icon: 'pi-tag', path: '/app/settings/lookups/lead-statuses', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Opportunity Stages', icon: 'pi-chart-bar', path: '/app/settings/lookups/opportunity-stages', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Currencies', icon: 'pi-dollar', path: '/app/settings/lookups/currencies', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Phone Types', icon: 'pi-phone', path: '/app/settings/lookups/phone-types', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Cadence Channels', icon: 'pi-send', path: '/app/settings/lookups/cadence-channels', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Account Types', icon: 'pi-briefcase', path: '/app/settings/lookups/account-types', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Account Sources', icon: 'pi-compass', path: '/app/settings/lookups/account-sources', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Customer Ratings', icon: 'pi-star', path: '/app/settings/lookups/customer-ratings', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Contact Buying Roles', icon: 'pi-users', path: '/app/settings/lookups/contact-buying-roles', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Activity Priorities', icon: 'pi-flag', path: '/app/settings/lookups/activity-priorities', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Activity Types', icon: 'pi-list', path: '/app/settings/lookups/activity-types', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Case Statuses', icon: 'pi-ticket', path: '/app/settings/lookups/helpdesk-case-statuses', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Helpdesk Priorities', icon: 'pi-exclamation-triangle', path: '/app/settings/lookups/helpdesk-priorities', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Helpdesk Severities', icon: 'pi-shield', path: '/app/settings/lookups/helpdesk-severities', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Helpdesk Sources', icon: 'pi-inbox', path: '/app/settings/lookups/helpdesk-sources', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Property Statuses', icon: 'pi-home', path: '/app/settings/lookups/property-statuses', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Property Types', icon: 'pi-building', path: '/app/settings/lookups/property-types', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Deal Types', icon: 'pi-briefcase', path: '/app/settings/lookups/deal-types', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Deal Segments', icon: 'pi-chart-pie', path: '/app/settings/lookups/deal-segments', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Document Categories', icon: 'pi-folder', path: '/app/settings/lookups/document-categories', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Disqualification Reasons', icon: 'pi-ban', path: '/app/settings/lookups/lead-disqualification-reasons', permission: PERMISSION_KEYS.administrationManage },
+      { label: 'Lead Loss Reasons', icon: 'pi-times-circle', path: '/app/settings/lookups/lead-loss-reasons', permission: PERMISSION_KEYS.administrationManage }
+    ]
+  },
+  {
     label: 'Settings',
     icon: 'pi-cog',
     path: '/app/settings',
@@ -185,36 +215,6 @@ export const NAV_LINKS: NavLink[] = [
           { label: 'Lead Assignment', icon: 'pi-sitemap', path: '/app/settings/lead-assignment', permission: PERMISSION_KEYS.leadsManage },
           { label: 'Qualification Policy', icon: 'pi-shield', path: '/app/settings/qualification-policy', permission: PERMISSION_KEYS.administrationManage },
           { label: 'Qualification Thresholds', icon: 'pi-filter', path: '/app/settings/qualification-thresholds', permission: PERMISSION_KEYS.administrationManage }
-        ]
-      },
-      {
-        label: 'Data & Lookups',
-        icon: 'pi-list',
-        path: '/app/settings/lookups/lead-statuses',
-        permission: PERMISSION_KEYS.administrationManage,
-        children: [
-          { label: 'Lead Statuses', icon: 'pi-tag', path: '/app/settings/lookups/lead-statuses', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Opportunity Stages', icon: 'pi-chart-bar', path: '/app/settings/lookups/opportunity-stages', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Currencies', icon: 'pi-dollar', path: '/app/settings/lookups/currencies', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Phone Types', icon: 'pi-phone', path: '/app/settings/lookups/phone-types', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Cadence Channels', icon: 'pi-send', path: '/app/settings/lookups/cadence-channels', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Account Types', icon: 'pi-briefcase', path: '/app/settings/lookups/account-types', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Account Sources', icon: 'pi-compass', path: '/app/settings/lookups/account-sources', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Customer Ratings', icon: 'pi-star', path: '/app/settings/lookups/customer-ratings', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Contact Buying Roles', icon: 'pi-users', path: '/app/settings/lookups/contact-buying-roles', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Activity Priorities', icon: 'pi-flag', path: '/app/settings/lookups/activity-priorities', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Activity Types', icon: 'pi-list', path: '/app/settings/lookups/activity-types', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Case Statuses', icon: 'pi-ticket', path: '/app/settings/lookups/helpdesk-case-statuses', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Helpdesk Priorities', icon: 'pi-exclamation-triangle', path: '/app/settings/lookups/helpdesk-priorities', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Helpdesk Severities', icon: 'pi-shield', path: '/app/settings/lookups/helpdesk-severities', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Helpdesk Sources', icon: 'pi-inbox', path: '/app/settings/lookups/helpdesk-sources', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Property Statuses', icon: 'pi-home', path: '/app/settings/lookups/property-statuses', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Property Types', icon: 'pi-building', path: '/app/settings/lookups/property-types', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Deal Types', icon: 'pi-briefcase', path: '/app/settings/lookups/deal-types', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Deal Segments', icon: 'pi-chart-pie', path: '/app/settings/lookups/deal-segments', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Document Categories', icon: 'pi-folder', path: '/app/settings/lookups/document-categories', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Disqualification Reasons', icon: 'pi-ban', path: '/app/settings/lookups/lead-disqualification-reasons', permission: PERMISSION_KEYS.administrationManage },
-          { label: 'Lead Loss Reasons', icon: 'pi-times-circle', path: '/app/settings/lookups/lead-loss-reasons', permission: PERMISSION_KEYS.administrationManage }
         ]
       },
       {
