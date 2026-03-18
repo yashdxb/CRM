@@ -1728,6 +1728,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         await SeedTimeZonesAsync(cancellationToken);
         await SeedCurrenciesAsync(cancellationToken);
         await SeedPhoneTypesAsync(cancellationToken);
+        await SeedGlobalReferenceDataAsync(cancellationToken);
 
         var defaultTenant = await EnsureDefaultTenantAsync(cancellationToken);
         var seedTenants = allowTestDataSeed
@@ -1906,6 +1907,126 @@ public class DatabaseInitializer : IDatabaseInitializer
 
         _dbContext.PhoneTypes.AddRange(phoneTypes);
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SeedGlobalReferenceDataAsync(CancellationToken cancellationToken)
+    {
+        await SeedNamedDefinitionsAsync(
+            _dbContext.AccountTypes,
+            ["Prospect", "Customer", "Partner", "Vendor", "Investor"],
+            (name, order) => new AccountTypeDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.AccountSources,
+            ["Website", "Referral", "Partner", "Outbound", "Inbound Call", "Industry Event"],
+            (name, order) => new AccountSourceDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.CustomerRatings,
+            ["Strategic", "Healthy", "Watchlist", "At Risk"],
+            (name, order) => new CustomerRatingDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.ContactBuyingRoles,
+            ["Economic Buyer", "Decision Maker", "Champion", "Influencer", "Evaluator", "End User"],
+            (name, order) => new ContactBuyingRoleDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.ActivityPriorities,
+            ["Low", "Normal", "High", "Urgent"],
+            (name, order) => new ActivityPriorityDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.HelpdeskCaseStatuses,
+            ["New", "Open", "Pending Customer", "Pending Internal", "Resolved", "Closed"],
+            (name, order) => new HelpdeskCaseStatusDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.HelpdeskPriorities,
+            ["Urgent", "High", "Medium", "Low"],
+            (name, order) => new HelpdeskPriorityDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.HelpdeskSeverities,
+            ["S1", "S2", "S3", "S4"],
+            (name, order) => new HelpdeskSeverityDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.HelpdeskSources,
+            ["Email", "Phone", "Portal", "Chat", "Manual"],
+            (name, order) => new HelpdeskSourceDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.PropertyStatuses,
+            ["Draft", "Active", "Under Offer", "Sold", "Leased", "Off Market"],
+            (name, order) => new PropertyStatusDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.PropertyTypes,
+            ["Office", "Retail", "Industrial", "Residential", "Mixed Use", "Land"],
+            (name, order) => new PropertyTypeDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.DealTypes,
+            ["Net-New", "Expansion", "Renewal", "Upsell", "Cross-sell"],
+            (name, order) => new DealTypeDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.DealSegments,
+            ["SMB", "Mid-Market", "Enterprise", "Strategic"],
+            (name, order) => new DealSegmentDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedNamedDefinitionsAsync(
+            _dbContext.DocumentCategories,
+            ["Proposal", "Contract", "Quote", "Presentation", "Invoice", "Support Document"],
+            (name, order) => new DocumentCategoryDefinition { Name = name, IsActive = true, SortOrder = order },
+            cancellationToken);
+
+        await SeedLeadOutcomeReasonsAsync(cancellationToken);
+    }
+
+    private async Task SeedNamedDefinitionsAsync<T>(
+        DbSet<T> set,
+        IReadOnlyList<string> names,
+        Func<string, int, T> factory,
+        CancellationToken cancellationToken) where T : class
+    {
+        var existingNames = await set
+            .Select(entity => EF.Property<string>(entity, "Name"))
+            .ToListAsync(cancellationToken);
+
+        var existing = new HashSet<string>(existingNames, StringComparer.OrdinalIgnoreCase);
+        var changed = false;
+
+        for (var index = 0; index < names.Count; index++)
+        {
+            var name = names[index];
+            if (existing.Contains(name))
+            {
+                continue;
+            }
+
+            set.Add(factory(name, index + 1));
+            changed = true;
+        }
+
+        if (changed)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private async Task SeedPermissionCatalogAsync(CancellationToken cancellationToken)
@@ -2253,9 +2374,9 @@ public class DatabaseInitializer : IDatabaseInitializer
             await SeedSecurityLevelsAsync(cancellationToken);
             await SeedRolesAsync(cancellationToken);
             await SeedUsersAsync(cancellationToken);
+            await SeedLeadStatusesAsync(cancellationToken);
             await SeedLeadAssignmentRulesAsync(cancellationToken);
             await SeedLeadCadenceChannelsAsync(cancellationToken);
-            await SeedLeadOutcomeReasonsAsync(cancellationToken);
             await SeedOpportunityStagesAsync(cancellationToken);
             await SeedHelpDeskDefaultsAsync(cancellationToken);
             // CRM sample data seeding disabled
