@@ -2256,10 +2256,56 @@ public class DatabaseInitializer : IDatabaseInitializer
             await SeedHelpDeskDefaultsAsync(cancellationToken);
             // CRM sample data seeding disabled
             // await SeedSampleDataAsync(cancellationToken);
+            await SeedActivityTypeDefinitionsAsync(cancellationToken);
         }
         finally
         {
             _tenantProvider.SetTenant(originalTenantId, originalTenantKey);
+        }
+    }
+
+    private async Task SeedActivityTypeDefinitionsAsync(CancellationToken cancellationToken)
+    {
+        var tenantId = _tenantProvider.TenantId;
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        var existingNames = await _dbContext.ActivityTypes
+            .Where(a => a.TenantId == tenantId)
+            .Select(a => a.Name)
+            .ToListAsync(cancellationToken);
+
+        var now = DateTime.UtcNow;
+        var activityTypes = new[]
+        {
+            new ActivityTypeDefinition { Name = "Call", IsActive = true, SortOrder = 1, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Email", IsActive = true, SortOrder = 2, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Meeting", IsActive = true, SortOrder = 3, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Task", IsActive = true, SortOrder = 4, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Note", IsActive = true, SortOrder = 5, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Follow Up", IsActive = true, SortOrder = 6, TenantId = tenantId, CreatedAtUtc = now },
+            // Real estate/broker/property specializations:
+            new ActivityTypeDefinition { Name = "Property Tour", IsActive = true, SortOrder = 7, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Open House", IsActive = true, SortOrder = 8, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Inspection", IsActive = true, SortOrder = 9, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Appraisal", IsActive = true, SortOrder = 10, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Closing", IsActive = true, SortOrder = 11, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Brokerage Meeting", IsActive = true, SortOrder = 12, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Offer Review", IsActive = true, SortOrder = 13, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Contract Signing", IsActive = true, SortOrder = 14, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Walkthrough", IsActive = true, SortOrder = 15, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Tenant Move-In", IsActive = true, SortOrder = 16, TenantId = tenantId, CreatedAtUtc = now },
+            new ActivityTypeDefinition { Name = "Tenant Move-Out", IsActive = true, SortOrder = 17, TenantId = tenantId, CreatedAtUtc = now }
+        };
+
+        foreach (var type in activityTypes)
+        {
+            if (!existingNames.Contains(type.Name))
+            {
+                _dbContext.ActivityTypes.Add(type);
+            }
         }
     }
 

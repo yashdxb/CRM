@@ -693,7 +693,29 @@ export function buildDashboardSummary(): DashboardSummary {
     });
 
   // Calculate activity breakdown
-  const activityTypes = ['Call', 'Email', 'Meeting', 'Task'];
+  const activityTypes = [
+    'Call',
+    'Email',
+    'Meeting',
+    'Task',
+    'Property Tour',
+    'Open House',
+    'Listing Presentation',
+    'Appraisal',
+    'Inspection',
+    'Offer Submission',
+    'Contract Signing',
+    'Document Review',
+    'Lease Signing',
+    'Move-in/Move-out Walkthrough',
+    'Maintenance Request',
+    'Follow-up',
+    'Client Onboarding',
+    'Closing Coordination',
+    'Marketing Campaign',
+    'Virtual Tour',
+    'Photography Session'
+  ];
   const totalActivities = mockActivities.length;
   const activityBreakdown = activityTypes.map(type => {
     const count = mockActivities.filter(a => a.type === type).length;
