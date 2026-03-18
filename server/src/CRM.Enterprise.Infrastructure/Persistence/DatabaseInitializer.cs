@@ -1593,6 +1593,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         ("Super Admin", "super.admin@crmenterprise.demo", "UTC", "en-US", new[] { Permissions.RoleNames.SuperAdmin }, "ChangeThisSuper!1"),
         ("Jordan Patel", "jordan.patel@crmenterprise.demo", "America/New_York", "en-US", new[] { "Sales Manager" }, "ChangeThisSales!1"),
         ("Ava Chen", "ava.chen@crmenterprise.demo", "America/Los_Angeles", "en-US", new[] { "Sales Rep" }, "ChangeThisRep!1"),
+        ("Leo Martin", "leo.martin@crmenterprise.demo", "Europe/London", "en-GB", new[] { "Sales Rep" }, "ChangeThisRep!1"),
         ("Leo Martins", "leo.martins@crmenterprise.demo", "Europe/London", "en-GB", new[] { "Marketing Ops" }, "ChangeThisMops!1"),
         ("Priya Nair", "priya.nair@crmenterprise.demo", "Asia/Kolkata", "en-IN", new[] { "Customer Success" }, "ChangeThisCsm!1"),
         ("Nina Okafor", "nina.okafor@crmenterprise.demo", "America/Chicago", "en-US", new[] { "Support" }, "ChangeThisSup!1" )
@@ -1705,6 +1706,7 @@ public class DatabaseInitializer : IDatabaseInitializer
     public async Task MigrateOnlyAsync(CancellationToken cancellationToken = default)
     {
         await _dbContext.Database.MigrateAsync(cancellationToken);
+        await EnsureSchemaCompatibilityAsync(cancellationToken);
     }
 
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
@@ -1720,6 +1722,7 @@ public class DatabaseInitializer : IDatabaseInitializer
         var allowTestDataSeed = ShouldSeedProductionTestData();
 
         await _dbContext.Database.MigrateAsync(cancellationToken);
+        await EnsureSchemaCompatibilityAsync(cancellationToken);
 
         await SeedPermissionCatalogAsync(cancellationToken);
         await SeedTimeZonesAsync(cancellationToken);
@@ -2645,6 +2648,18 @@ public class DatabaseInitializer : IDatabaseInitializer
         await _dbContext.Database.ExecuteSqlRawAsync(normalizeSql, cancellationToken);
         await _dbContext.Database.ExecuteSqlRawAsync(dedupeAgainstTargetSql, cancellationToken);
         await _dbContext.Database.ExecuteSqlRawAsync(dedupeSql, cancellationToken);
+    }
+
+    private async Task EnsureSchemaCompatibilityAsync(CancellationToken cancellationToken)
+    {
+        const string ensureTenantQualificationPolicyColumnSql = """
+            IF COL_LENGTH('identity.Tenants', 'QualificationPolicyJson') IS NULL
+            BEGIN
+                ALTER TABLE [identity].[Tenants] ADD [QualificationPolicyJson] nvarchar(max) NULL;
+            END
+            """;
+
+        await _dbContext.Database.ExecuteSqlRawAsync(ensureTenantQualificationPolicyColumnSql, cancellationToken);
     }
 
     private async Task<User> EnsureDemoUserAsync(

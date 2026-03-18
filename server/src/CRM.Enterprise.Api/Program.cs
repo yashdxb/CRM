@@ -347,33 +347,28 @@ app.MapHealthChecks("/healthz", new HealthCheckOptions
 }).AllowAnonymous();
 
 // Production: apply migrations only (no data seeding).
-// Development: apply migrations + seed structural & demo data.
-app.Lifetime.ApplicationStarted.Register(() =>
+// Development: apply migrations + seed structural & demo data before serving requests.
+try
 {
-    _ = Task.Run(async () =>
-    {
-        try
-        {
-            using var scope = app.Services.CreateScope();
-            var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
+    using var scope = app.Services.CreateScope();
+    var initializer = scope.ServiceProvider.GetRequiredService<IDatabaseInitializer>();
 
-            if (app.Environment.IsDevelopment())
-            {
-                await initializer.InitializeAsync();
-                app.Logger.LogInformation("Database initialization completed (Development — migrations + seeding).");
-            }
-            else
-            {
-                await initializer.MigrateOnlyAsync();
-                app.Logger.LogInformation("Database migration completed (Production — migrations only, no seeding).");
-            }
-        }
-        catch (Exception ex)
-        {
-            app.Logger.LogError(ex, "Database startup task failed.");
-        }
-    });
-});
+    if (app.Environment.IsDevelopment())
+    {
+        await initializer.InitializeAsync();
+        app.Logger.LogInformation("Database initialization completed (Development - migrations + seeding).");
+    }
+    else
+    {
+        await initializer.MigrateOnlyAsync();
+        app.Logger.LogInformation("Database migration completed (Production - migrations only, no seeding).");
+    }
+}
+catch (Exception ex)
+{
+    app.Logger.LogError(ex, "Database startup task failed.");
+    throw;
+}
 
 await app.RunAsync();
 
@@ -388,7 +383,8 @@ static void EnsureSqlServerAvailable(string connectionString)
         {
             var builder = new SqlConnectionStringBuilder(connectionString)
             {
-                ConnectTimeout = 5
+                ConnectTimeout = 5,
+                InitialCatalog = "master"
             };
             using var connection = new SqlConnection(builder.ConnectionString);
             connection.Open();
