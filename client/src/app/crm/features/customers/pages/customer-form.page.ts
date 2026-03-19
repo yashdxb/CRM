@@ -17,6 +17,7 @@ import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DialogModule } from 'primeng/dialog';
+import { KnobModule } from 'primeng/knob';
 import { SplitButtonModule } from 'primeng/splitbutton';
 
 import { CustomerStatus } from '../models/customer.model';
@@ -63,6 +64,7 @@ interface StatusOption {
     InputGroupAddonModule,
     InputNumberModule,
     DialogModule,
+    KnobModule,
     SplitButtonModule,
     BreadcrumbsComponent
   ],
@@ -854,6 +856,65 @@ export class CustomerFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected latestOpportunityCreatedAt() {
     const latest = this.relatedOpportunitiesSorted().slice(-1)[0];
     return latest?.createdAtUtc ?? null;
+  }
+
+  protected customerHeaderScoreValue(): number {
+    let score = 18;
+
+    switch (this.form.lifecycleStage) {
+      case 'Lead':
+        score += 10;
+        break;
+      case 'Prospect':
+        score += 24;
+        break;
+      case 'Customer':
+        score += 38;
+        break;
+    }
+
+    score += Math.min(this.contactCount() * 8, 24);
+    score += Math.min(this.opportunityCount() * 10, 20);
+    score += Math.min(this.notes().length * 4, 12);
+    score += Math.min(this.activities().length * 3, 12);
+
+    if ((this.form.annualRevenue ?? 0) > 0) {
+      score += 6;
+    }
+
+    if ((this.form.numberOfEmployees ?? 0) > 0) {
+      score += 4;
+    }
+
+    if ((this.form.website ?? '').trim()) {
+      score += 3;
+    }
+
+    if ((this.form.industry ?? '').trim()) {
+      score += 3;
+    }
+
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  protected customerHeaderScoreColor(): string {
+    const score = this.customerHeaderScoreValue();
+    if (score >= 80) return '#22c55e';
+    if (score >= 60) return '#3b82f6';
+    if (score >= 40) return '#f59e0b';
+    if (score >= 20) return '#f97316';
+    return '#ef4444';
+  }
+
+  protected customerLifecycleSummary(): string {
+    const order: CustomerStatus[] = ['Lead', 'Prospect', 'Customer'];
+    const stage = this.form.lifecycleStage ?? 'Lead';
+    const index = order.indexOf(stage);
+    return index >= 0 ? `Stage ${index + 1} of ${order.length}` : 'Lifecycle stage';
+  }
+
+  protected customerHeaderScoreMessage(): string {
+    return 'Overall customer score is derived from lifecycle stage, relationship activity, and linked-record depth. Lifecycle progress remains separate.';
   }
 
   private initializePresence(recordId: string): void {

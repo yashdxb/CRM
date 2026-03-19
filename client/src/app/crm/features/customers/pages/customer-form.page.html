@@ -132,6 +132,32 @@
               <span class="title-light">Customer</span>
             </h1>
             <p>{{ isEditMode() ? 'Update customer information' : 'Add a new customer to your CRM' }}</p>
+            <div class="customer-header-progress" *ngIf="isEditMode()">
+              <div class="customer-header-progress__dial">
+                <p-knob
+                  [ngModel]="customerHeaderScoreValue()"
+                  [readonly]="true"
+                  [valueTemplate]="'{value}%'"
+                  [size]="92"
+                  [strokeWidth]="9"
+                  [showValue]="true"
+                  [min]="0"
+                  [max]="100"
+                  valueColor="var(--customer-header-score-color)"
+                  rangeColor="rgba(148, 163, 184, 0.18)"
+                  textColor="#1e293b"
+                  styleClass="customer-header-progress__knob"
+                ></p-knob>
+              </div>
+              <div class="customer-header-progress__content" [style.--customer-header-score-color]="customerHeaderScoreColor()">
+                <span class="customer-header-progress__eyebrow">Overall customer score</span>
+                <div class="customer-header-progress__meta">
+                  <span class="customer-header-progress__status">{{ form.lifecycleStage || 'Lead' }}</span>
+                  <span class="customer-header-progress__step">{{ customerLifecycleSummary() }}</span>
+                </div>
+                <p class="customer-header-progress__copy">{{ customerHeaderScoreMessage() }}</p>
+              </div>
+            </div>
             <div class="form-draft-status" *ngIf="draftStatusMessage() as draftStatus">
               <i class="pi pi-bookmark"></i>
               <span>{{ draftStatus }}</span>

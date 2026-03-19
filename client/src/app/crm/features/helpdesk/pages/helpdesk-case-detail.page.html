@@ -7,11 +7,40 @@
   <app-breadcrumbs></app-breadcrumbs>
 
   <section class="glass-card hero-card">
-    <div>
+    <div class="hero-copy">
       <h1 class="hero-title">{{ isNewCase() ? 'New Support Case' : (caseRecord()?.caseNumber || 'Case Workspace') }}</h1>
       <p class="hero-subtitle">
         {{ isNewCase() ? 'Capture customer issue details and set SLA context.' : 'Manage status, conversation, and escalation timeline.' }}
       </p>
+      <div class="case-header-progress" *ngIf="caseRecord() as currentCase">
+        <div class="case-header-progress__dial">
+          <p-knob
+            [ngModel]="caseHeaderScoreValue()"
+            [readonly]="true"
+            [valueTemplate]="'{value}%'"
+            [size]="92"
+            [strokeWidth]="9"
+            [showValue]="true"
+            [min]="0"
+            [max]="100"
+            valueColor="var(--case-header-score-color)"
+            rangeColor="rgba(148, 163, 184, 0.18)"
+            textColor="#1e293b"
+            styleClass="case-header-progress__knob"
+          ></p-knob>
+        </div>
+        <div class="case-header-progress__content" [style.--case-header-score-color]="caseHeaderScoreColor()">
+          <span class="case-header-progress__eyebrow">Overall case score</span>
+          <div class="case-header-progress__meta">
+            <span class="case-header-progress__status">{{ currentCase.status }}</span>
+            <span class="case-header-progress__step">{{ caseHeaderProgressSummary() }}</span>
+            <span class="case-header-progress__sla" [class.breached]="getSlaState() === 'breached'" [class.at-risk]="getSlaState() === 'at-risk'" [class.healthy]="getSlaState() === 'healthy'">
+              SLA {{ getSlaState() | titlecase }}
+            </span>
+          </div>
+          <p class="case-header-progress__copy">{{ caseHeaderScoreMessage() }}</p>
+        </div>
+      </div>
     </div>
     <div class="hero-actions">
       <button pButton type="button" class="crm-button crm-button--ghost" label="Back" routerLink="/app/helpdesk/cases"></button>

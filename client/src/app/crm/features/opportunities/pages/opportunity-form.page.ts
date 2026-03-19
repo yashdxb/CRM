@@ -17,6 +17,7 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { ChartModule } from 'primeng/chart';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { KnobModule } from 'primeng/knob';
 import { SplitButtonModule } from 'primeng/splitbutton';
 import { Subject, map, of, switchMap, takeUntil } from 'rxjs';
 
@@ -161,6 +162,7 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
     ChartModule,
     InputGroupModule,
     InputGroupAddonModule,
+    KnobModule,
     SplitButtonModule,
     BreadcrumbsComponent
   ],
@@ -1331,6 +1333,37 @@ export class OpportunityFormPage implements OnInit, OnDestroy, HasUnsavedChanges
 
   protected primarySaveLabel(): string {
     return this.isEditMode() ? 'Update Opportunity' : 'Create Opportunity';
+  }
+
+  protected dealHeaderScoreValue(): number {
+    return this.dealHealthScore()?.score ?? 0;
+  }
+
+  protected dealHeaderScoreColor(): string {
+    return this.healthScoreColor(this.dealHeaderScoreValue());
+  }
+
+  protected dealHeaderStageSummary(): string {
+    const stage = this.selectedStage || this.form.stageName || 'Prospecting';
+    const order = this.stageOptions.map((item) => item.value);
+    const index = order.indexOf(stage);
+    if (index >= 0) {
+      return `Stage ${index + 1} of ${order.length}`;
+    }
+
+    if (stage.startsWith('Closed')) {
+      return 'Outcome recorded';
+    }
+
+    return 'Pipeline stage';
+  }
+
+  protected dealHeaderScoreMessage(): string {
+    if (!this.dealHealthScore()) {
+      return 'Overall deal score is shown here after the deal health score is computed. Lifecycle progress remains separate.';
+    }
+
+    return 'Overall deal score is shown here, while the current stage and pipeline progress remain separate.';
   }
 
   protected draftButtonLabel(): string {

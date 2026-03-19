@@ -134,6 +134,32 @@
                 <span class="title-light">Deal</span>
               </h1>
               <p>Capture the deal details, set your stage, and keep the team aligned on next steps.</p>
+              <div class="deal-header-progress" *ngIf="isEditMode()">
+                <div class="deal-header-progress__dial">
+                  <p-knob
+                    [ngModel]="dealHeaderScoreValue()"
+                    [readonly]="true"
+                    [valueTemplate]="'{value}%'"
+                    [size]="92"
+                    [strokeWidth]="9"
+                    [showValue]="true"
+                    [min]="0"
+                    [max]="100"
+                    valueColor="var(--deal-header-score-color)"
+                    rangeColor="rgba(148, 163, 184, 0.18)"
+                    textColor="#1e293b"
+                    styleClass="deal-header-progress__knob"
+                  ></p-knob>
+                </div>
+                <div class="deal-header-progress__content" [style.--deal-header-score-color]="dealHeaderScoreColor()">
+                  <span class="deal-header-progress__eyebrow">Overall deal score</span>
+                  <div class="deal-header-progress__meta">
+                    <span class="deal-header-progress__status">{{ selectedStage || 'Prospecting' }}</span>
+                    <span class="deal-header-progress__step">{{ dealHeaderStageSummary() }}</span>
+                  </div>
+                  <p class="deal-header-progress__copy">{{ dealHeaderScoreMessage() }}</p>
+                </div>
+              </div>
               <div class="form-draft-status" *ngIf="draftStatusMessage() as draftStatus">
                 <i class="pi pi-bookmark"></i>
                 <span>{{ draftStatus }}</span>

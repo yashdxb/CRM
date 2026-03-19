@@ -11,6 +11,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { KnobModule } from 'primeng/knob';
 import { SelectModule } from 'primeng/select';
 import { TabsModule } from 'primeng/tabs';
 import { TextareaModule } from 'primeng/textarea';
@@ -25,7 +26,7 @@ import { AttachmentDataService, AttachmentItem } from '../../../../shared/servic
 @Component({
   selector: 'app-helpdesk-case-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonModule, InputTextModule, InputGroupModule, InputGroupAddonModule, TextareaModule, SelectModule, TabsModule, RouterLink, BreadcrumbsComponent, FileUploadModule, CheckboxModule, InputNumberModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ButtonModule, InputTextModule, InputGroupModule, InputGroupAddonModule, TextareaModule, SelectModule, TabsModule, RouterLink, BreadcrumbsComponent, FileUploadModule, CheckboxModule, InputNumberModule, KnobModule],
   templateUrl: './helpdesk-case-detail.page.html',
   styleUrl: './helpdesk-case-detail.page.scss'
 })
@@ -293,6 +294,83 @@ export class HelpDeskCaseDetailPage {
     const minutes = absoluteMinutes % 60;
     const token = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
     return ms >= 0 ? `in ${token}` : `${token} overdue`;
+  }
+
+  protected caseHeaderScoreValue(): number {
+    const row = this.caseRecord();
+    if (!row) {
+      return 0;
+    }
+
+    let score = 100;
+    const slaState = this.getSlaState();
+
+    if (slaState === 'breached') {
+      score -= 40;
+    } else if (slaState === 'at-risk') {
+      score -= 20;
+    }
+
+    if (row.status === 'Pending Customer') {
+      score -= 8;
+    } else if (row.status === 'Pending Internal') {
+      score -= 12;
+    } else if (row.status === 'Resolved') {
+      score += 5;
+    } else if (row.status === 'Closed') {
+      score += 8;
+    }
+
+    const severityPenalty = { S1: 18, S2: 10, S3: 4, S4: 0 } as const;
+    const priorityPenalty = { Urgent: 15, High: 8, Medium: 3, Low: 0 } as const;
+    score -= severityPenalty[row.severity as keyof typeof severityPenalty] ?? 0;
+    score -= priorityPenalty[row.priority as keyof typeof priorityPenalty] ?? 0;
+
+    if (typeof row.csatScore === 'number' && row.csatScore > 0) {
+      score += (row.csatScore - 3) * 4;
+    }
+
+    return Math.max(0, Math.min(100, Math.round(score)));
+  }
+
+  protected caseHeaderScoreColor(): string {
+    const score = this.caseHeaderScoreValue();
+    if (score >= 80) return '#22c55e';
+    if (score >= 60) return '#3b82f6';
+    if (score >= 40) return '#f59e0b';
+    if (score >= 20) return '#f97316';
+    return '#ef4444';
+  }
+
+  protected caseHeaderProgressSummary(): string {
+    const row = this.caseRecord();
+    if (!row) {
+      return 'Case not yet created';
+    }
+
+    const openStates = ['New', 'Open', 'Pending Customer', 'Pending Internal'];
+    if (openStates.includes(row.status)) {
+      return 'Active support cycle';
+    }
+
+    if (row.status === 'Resolved') {
+      return 'Resolution recorded';
+    }
+
+    if (row.status === 'Closed') {
+      return 'Case closed';
+    }
+
+    return 'Status recorded';
+  }
+
+  protected caseHeaderScoreMessage(): string {
+    const row = this.caseRecord();
+    if (!row) {
+      return 'Overall case score will appear after the support case is created.';
+    }
+
+    return 'Overall case score is derived from SLA state, case status, priority, severity, and CSAT when available.';
   }
 
   private loadCase(id: string) {
