@@ -3329,21 +3329,21 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     const status = this.form.status as LeadStatus;
     switch (status) {
       case 'New':
-        return 'Capture the first meaningful outreach and evidence to move this lead forward.';
+        return 'Status and stage progress are shown separately below the overall lead score.';
       case 'Contacted':
-        return 'Discovery is underway. Strengthen evidence before advancing to qualification.';
+        return 'Status and stage progress are shown separately below the overall lead score.';
       case 'Nurture':
-        return 'This lead is being held for future follow-up until buying intent improves.';
+        return 'Status and stage progress are shown separately below the overall lead score.';
       case 'Qualified':
-        return 'This lead meets the current qualification bar and is being prepared for conversion.';
+        return 'Status and stage progress are shown separately below the overall lead score.';
       case 'Converted':
-        return 'This lead is converted and the pipeline handoff is complete.';
+        return 'Status and stage progress are shown separately below the overall lead score.';
       case 'Lost':
-        return 'The opportunity did not progress. Review the outcome reason before recycling.';
+        return 'Status and stage progress are shown separately below the overall lead score.';
       case 'Disqualified':
-        return 'The lead was disqualified based on fit or readiness and should not advance.';
+        return 'Status and stage progress are shown separately below the overall lead score.';
       default:
-        return 'Review the latest score, status, and evidence before making the next move.';
+        return 'Status and stage progress are shown separately below the overall lead score.';
     }
   }
 
