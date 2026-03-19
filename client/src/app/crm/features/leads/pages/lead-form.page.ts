@@ -3299,6 +3299,54 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return this.scoreSnapshot().qualificationContributionScore100;
   }
 
+  protected leadHeaderScoreValue(): number {
+    return this.scoreSnapshot().finalLeadScore;
+  }
+
+  protected leadHeaderScoreColor(): string {
+    const score = this.leadHeaderScoreValue();
+    if (score >= 80) return '#16a34a';
+    if (score >= 55) return '#2563eb';
+    if (score >= 35) return '#d97706';
+    return '#dc2626';
+  }
+
+  protected leadProgressSummary(): string {
+    const status = this.form.status as LeadStatus;
+    const progressionIndex = this.progressionIndex(status);
+    if (progressionIndex >= 0) {
+      return `Stage ${progressionIndex + 1} of ${LEAD_PROGRESSION_STATUSES.length}`;
+    }
+
+    if ((LEAD_OUTCOME_STATUSES as readonly LeadStatus[]).includes(status)) {
+      return 'Outcome recorded';
+    }
+
+    return 'Initial stage';
+  }
+
+  protected leadHeaderProgressMessage(): string {
+    const status = this.form.status as LeadStatus;
+    switch (status) {
+      case 'New':
+        return 'Capture the first meaningful outreach and evidence to move this lead forward.';
+      case 'Contacted':
+        return 'Discovery is underway. Strengthen evidence before advancing to qualification.';
+      case 'Nurture':
+        return 'This lead is being held for future follow-up until buying intent improves.';
+      case 'Qualified':
+        return 'This lead meets the current qualification bar and is being prepared for conversion.';
+      case 'Converted':
+        return 'This lead is converted and the pipeline handoff is complete.';
+      case 'Lost':
+        return 'The opportunity did not progress. Review the outcome reason before recycling.';
+      case 'Disqualified':
+        return 'The lead was disqualified based on fit or readiness and should not advance.';
+      default:
+        return 'Review the latest score, status, and evidence before making the next move.';
+    }
+  }
+
   protected scoreContributionPercent(row: ScoreBreakdownRow): number {
     if (!row.maxScore) return 0;
     return Math.max(0, Math.min(100, Math.round((row.score / row.maxScore) * 100)));
