@@ -18,14 +18,21 @@ public class AuthController : ControllerBase
     private static readonly TimeZoneInfo TorontoTimeZone = ResolveTorontoTimeZone();
     private readonly IAuthService _authService;
     private readonly IEmailSender _emailSender;
+    private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
     private readonly ILogger<AuthController> _logger;
     private readonly string _brandLogoUrl;
     private readonly string _brandWebsiteUrl;
 
-    public AuthController(IAuthService authService, IEmailSender emailSender, IConfiguration configuration, ILogger<AuthController> logger)
+    public AuthController(
+        IAuthService authService,
+        IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
+        IConfiguration configuration,
+        ILogger<AuthController> logger)
     {
         _authService = authService;
         _emailSender = emailSender;
+        _emailDeliveryPolicy = emailDeliveryPolicy;
         _logger = logger;
         _brandLogoUrl = configuration["Branding:LogoUrl"] ?? string.Empty;
         _brandWebsiteUrl = configuration["Branding:WebsiteUrl"] ?? string.Empty;
@@ -219,13 +226,20 @@ public class AuthController : ControllerBase
 
         var textBody = $"Hi {result.FullName},\n\nYour password was updated successfully. If this wasn't you, contact your administrator immediately.\n\nSign in: {loginUrl}";
 
-        try
+        if (await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Security, cancellationToken))
         {
-            await _emailSender.SendAsync(result.Email, subject, htmlBody, textBody, cancellationToken);
+            try
+            {
+                await _emailSender.SendAsync(result.Email, subject, htmlBody, textBody, cancellationToken);
+            }
+            catch
+            {
+                // Avoid blocking the password change flow if email delivery fails.
+            }
         }
-        catch
+        else
         {
-            // Avoid blocking the password change flow if email delivery fails.
+            _logger.LogInformation("Password update email suppressed by workspace email policy for {Email}.", result.Email);
         }
 
         // Return a JSON payload to avoid Safari hanging on 204 responses for CORS requests.
@@ -393,6 +407,11 @@ public class AuthController : ControllerBase
         textBodyBuilder.AppendLine($"Preferred Toronto: {preferredTorontoDisplay} America/Toronto");
         textBodyBuilder.AppendLine($"Use case: {useCase}");
         textBodyBuilder.AppendLine($"Landing page: {landingPageUrl ?? "Not provided"}");
+
+        if (!await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Security, cancellationToken))
+        {
+            return Conflict("Security emails are disabled in workspace settings.");
+        }
 
         try
         {

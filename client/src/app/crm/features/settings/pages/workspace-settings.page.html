@@ -453,6 +453,77 @@
           </section>
 
           <section class="form-card">
+            <h3 class="section-title section-title--warning">
+              <i class="pi pi-send"></i>
+              Communications
+            </h3>
+            <p class="section-description">Control tenant-wide outbound email delivery and delivery-status popups for test, demo, and live environments.</p>
+
+            <div class="form-grid form-grid--2col">
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDelivery" [binary]="true"></p-checkbox>
+                  <span>Enable outbound email delivery</span>
+                </label>
+                <small class="field-hint">Master switch for all outbound CRM email sends in this workspace.</small>
+              </div>
+
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDeliveryStatusNotifications" [binary]="true"></p-checkbox>
+                  <span>Show email delivery status notifications in app</span>
+                </label>
+                <small class="field-hint">Keeps the inbox-style delivery popup separate from actual send permissions.</small>
+              </div>
+            </div>
+
+            <div class="form-grid form-grid--2col">
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDeliveryInvites" [binary]="true" [disabled]="!settingsForm.get('featureEmailDelivery')?.value"></p-checkbox>
+                  <span>Invite emails</span>
+                </label>
+              </div>
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDeliverySecurity" [binary]="true" [disabled]="!settingsForm.get('featureEmailDelivery')?.value"></p-checkbox>
+                  <span>Password and security emails</span>
+                </label>
+              </div>
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDeliveryApprovals" [binary]="true" [disabled]="!settingsForm.get('featureEmailDelivery')?.value"></p-checkbox>
+                  <span>Approval and workflow emails</span>
+                </label>
+              </div>
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDeliveryProposals" [binary]="true" [disabled]="!settingsForm.get('featureEmailDelivery')?.value"></p-checkbox>
+                  <span>Proposal and quote emails</span>
+                </label>
+              </div>
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDeliveryMarketing" [binary]="true" [disabled]="!settingsForm.get('featureEmailDelivery')?.value"></p-checkbox>
+                  <span>Marketing campaign emails</span>
+                </label>
+              </div>
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDeliveryNotifications" [binary]="true" [disabled]="!settingsForm.get('featureEmailDelivery')?.value"></p-checkbox>
+                  <span>Alert and notification emails</span>
+                </label>
+              </div>
+              <div class="form-field">
+                <label class="checkbox-field">
+                  <p-checkbox formControlName="featureEmailDeliveryMailbox" [binary]="true" [disabled]="!settingsForm.get('featureEmailDelivery')?.value"></p-checkbox>
+                  <span>Mailbox and manual send actions</span>
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card">
             <h3 class="section-title section-title--info">
               <i class="pi pi-microchip-ai"></i>
               AI Features

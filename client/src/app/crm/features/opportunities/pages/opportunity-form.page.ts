@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit, computed
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -16,6 +17,7 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { ChartModule } from 'primeng/chart';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { Subject, map, of, switchMap, takeUntil } from 'rxjs';
 
 import { OpportunityDataService, OpportunityReviewOutcomeRequest, SaveOpportunityRequest } from '../services/opportunity-data.service';
@@ -59,6 +61,8 @@ import { WorkspaceSettingsService } from '../../settings/services/workspace-sett
 import { ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { environment } from '../../../../../environments/environment';
+import { FormDraftDetail, FormDraftSummary } from '../../../../core/drafts/form-draft.model';
+import { FormDraftService } from '../../../../core/drafts/form-draft.service';
 
 interface Option<T = string> {
   label: string;
@@ -156,6 +160,7 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
     ChartModule,
     InputGroupModule,
     InputGroupAddonModule,
+    SplitButtonModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./opportunity-form.page.html",
@@ -231,6 +236,16 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected selectedStage = 'Prospecting';
   protected form: SaveOpportunityRequest = this.createEmptyForm();
   protected saving = signal(false);
+  protected draftSaving = signal(false);
+  protected readonly recentDrafts = signal<FormDraftSummary[]>([]);
+  protected readonly draftLibraryVisible = signal(false);
+  protected readonly draftLibraryLoading = signal(false);
+  protected readonly draftLibraryItems = signal<FormDraftSummary[]>([]);
+  protected readonly draftStatusMessage = signal<string | null>(null);
+  protected readonly draftModeActive = signal(false);
+  protected readonly draftPromptVisible = signal(false);
+  protected readonly draftOpenConfirmVisible = signal(false);
+  protected readonly activeDraftId = signal<string | null>(null);
   protected dealNameError = signal<string | null>(null);
   protected readonly isEditMode = signal(false);
   protected readonly canManage = computed(() => {
@@ -368,6 +383,8 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected nextStepDueAtUtc: Date | null = null;
   private originalStage: string | null = null;
   private editingId: string | null = null;
+  private pendingDraftToOpen: FormDraftSummary | null = null;
+  private hasShownDraftPrompt = false;
   private localEditingState = false;
   private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingOpportunity: Opportunity | null = null;
@@ -504,6 +521,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   private readonly settingsService = inject(WorkspaceSettingsService);
   private readonly referenceData = inject(ReferenceDataService);
   private readonly crmEvents = inject(CrmEventsService);
+  private readonly formDraftService = inject(FormDraftService);
   protected readonly router = inject(Router);
   protected readonly customerData = inject(CustomerDataService);
   private readonly toastService = inject(AppToastService);
@@ -515,6 +533,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   ngOnInit() {
+    this.loadRecentDrafts();
     this.loadCurrencyContext();
     this.loadAccounts();
     this.loadQuoteCatalogData();
@@ -1277,6 +1296,130 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     }
   }
 
+  protected primarySaveLabel(): string {
+    return this.isEditMode() ? 'Update Opportunity' : 'Create Opportunity';
+  }
+
+  protected draftButtonLabel(): string {
+    const count = this.recentDrafts().length;
+    return count > 0 ? `Save Draft (${count})` : 'Save Draft';
+  }
+
+  protected draftSplitButtonItems(): MenuItem[] {
+    const items: MenuItem[] = [];
+
+    const drafts = this.recentDrafts();
+    items.push({ label: 'Saved drafts', disabled: true, styleClass: 'crm-draft-menu-heading' });
+    if (!drafts.length) {
+      items.push({ label: 'No saved drafts yet', disabled: true, styleClass: 'crm-draft-menu-empty' });
+      return items;
+    }
+    for (const draft of drafts) {
+      items.push({
+        label: this.buildDraftMenuMarkup(draft),
+        escape: false,
+        command: () => this.openDraftFromSummary(draft)
+      });
+    }
+    items.push({ separator: true });
+    items.push({ label: 'View all drafts', icon: 'pi pi-list', command: () => this.openDraftLibrary() });
+    return items;
+  }
+
+  protected saveDraft(): void {
+    this.draftSaving.set(true);
+    this.formDraftService.save({
+      id: this.activeDraftId(),
+      entityType: 'opportunity',
+      title: this.buildDraftTitle(),
+      subtitle: this.buildDraftSubtitle(),
+      payloadJson: JSON.stringify({ form: this.form, selectedStage: this.selectedStage })
+    }).subscribe({
+      next: (draft) => {
+        this.draftSaving.set(false);
+        this.activeDraftId.set(draft.id);
+        this.draftModeActive.set(true);
+        this.draftStatusMessage.set(`Draft saved at ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.loadRecentDrafts();
+        if (this.draftLibraryVisible()) {
+          this.loadDraftLibrary();
+        }
+      },
+      error: () => {
+        this.draftSaving.set(false);
+        this.draftStatusMessage.set('Unable to save draft.');
+        this.toastService.show('error', 'Unable to save draft.', 5000);
+      }
+    });
+  }
+
+  protected openDraftFromSummary(draft: FormDraftSummary): void {
+    if (this.hasDraftFormChanges()) {
+      this.pendingDraftToOpen = draft;
+      this.draftOpenConfirmVisible.set(true);
+      return;
+    }
+
+    this.loadDraft(draft.id);
+  }
+
+  protected confirmOpenDraft(): void {
+    const draft = this.pendingDraftToOpen;
+    this.pendingDraftToOpen = null;
+    this.draftOpenConfirmVisible.set(false);
+    if (draft) {
+      this.loadDraft(draft.id);
+    }
+  }
+
+  protected cancelOpenDraft(): void {
+    this.pendingDraftToOpen = null;
+    this.draftOpenConfirmVisible.set(false);
+  }
+
+  protected openDraftLibrary(): void {
+    this.draftLibraryVisible.set(true);
+    this.loadDraftLibrary();
+  }
+
+  protected closeDraftLibrary(): void {
+    this.draftLibraryVisible.set(false);
+  }
+
+  protected dismissDraftPrompt(): void {
+    this.draftPromptVisible.set(false);
+  }
+
+  protected loadDraftFromPrompt(draft: FormDraftSummary): void {
+    this.draftPromptVisible.set(false);
+    this.loadDraft(draft.id);
+  }
+
+  protected discardDraft(draft: FormDraftSummary, event?: Event): void {
+    event?.stopPropagation();
+    this.formDraftService.discard(draft.id).subscribe({
+      next: () => {
+        if (this.activeDraftId() === draft.id) {
+          this.activeDraftId.set(null);
+          this.draftModeActive.set(false);
+          this.draftStatusMessage.set(null);
+        }
+        this.loadRecentDrafts();
+        this.loadDraftLibrary();
+      },
+      error: () => this.toastService.show('error', 'Unable to discard draft.', 5000)
+    });
+  }
+
+  protected formatDraftTimestamp(value: string): string {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }).format(new Date(value));
+  }
+
   private buildSavePayload(): SaveOpportunityRequest {
     const rawCloseDate = this.form.expectedCloseDate as unknown;
     const expectedCloseDate = rawCloseDate instanceof Date
@@ -1400,9 +1543,11 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.saving.set(false);
+          this.completeActiveDraft();
           this.originalStage = this.selectedStage;
           this.policyGateMessage.set(null);
           this.canRequestStageOverride.set(false);
+          this.loadRecentDrafts();
         },
         error: (err) => {
           this.saving.set(false);
@@ -1735,6 +1880,100 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
 
   protected isForecastLocked(): boolean {
     return true;
+  }
+
+  private loadRecentDrafts(): void {
+    this.formDraftService.list('opportunity', { limit: 5, page: 1, pageSize: 5 }).subscribe({
+      next: (result) => {
+        const items = result.items;
+        this.recentDrafts.set(items);
+        if (!this.hasShownDraftPrompt && !this.isEditMode() && !this.draftModeActive() && items.length) {
+          this.hasShownDraftPrompt = true;
+          this.draftPromptVisible.set(true);
+        }
+      },
+      error: () => this.recentDrafts.set([])
+    });
+  }
+
+  private loadDraftLibrary(): void {
+    this.draftLibraryLoading.set(true);
+    this.formDraftService.list('opportunity', { page: 1, pageSize: 50 }).subscribe({
+      next: (result) => {
+        this.draftLibraryLoading.set(false);
+        this.draftLibraryItems.set(result.items);
+      },
+      error: () => {
+        this.draftLibraryLoading.set(false);
+        this.draftLibraryItems.set([]);
+      }
+    });
+  }
+
+  private loadDraft(id: string): void {
+    this.formDraftService.get(id).subscribe({
+      next: (draft) => {
+        const payload = this.parseDraftPayload(draft);
+        this.form = {
+          ...this.createEmptyForm(),
+          ...(payload.form ?? {})
+        };
+        this.selectedStage = payload.selectedStage ?? this.form.stageName ?? 'Prospecting';
+        this.activeDraftId.set(draft.id);
+        this.draftModeActive.set(true);
+        this.draftStatusMessage.set(`Draft loaded from ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.draftLibraryVisible.set(false);
+      },
+      error: () => this.toastService.show('error', 'Unable to open draft.', 5000)
+    });
+  }
+
+  private parseDraftPayload(draft: FormDraftDetail): { form?: Partial<SaveOpportunityRequest>; selectedStage?: string } {
+    try {
+      return JSON.parse(draft.payloadJson) as { form?: Partial<SaveOpportunityRequest>; selectedStage?: string };
+    } catch {
+      return {};
+    }
+  }
+
+  private completeActiveDraft(): void {
+    const activeDraftId = this.activeDraftId();
+    if (!activeDraftId) {
+      return;
+    }
+
+    this.formDraftService.complete(activeDraftId).subscribe({ next: () => {}, error: () => {} });
+    this.activeDraftId.set(null);
+    this.draftModeActive.set(false);
+  }
+
+  private hasDraftFormChanges(): boolean {
+    return JSON.stringify({ form: this.form, selectedStage: this.selectedStage }) !== JSON.stringify({ form: this.createEmptyForm(), selectedStage: 'Prospecting' });
+  }
+
+  private buildDraftTitle(): string {
+    return this.form.name?.trim() || 'Untitled opportunity draft';
+  }
+
+  private buildDraftSubtitle(): string | null {
+    const account = this.accountOptions.find((item) => item.value === this.form.accountId);
+    return account?.label ?? this.selectedStage ?? null;
+  }
+
+  private buildDraftMenuMarkup(draft: FormDraftSummary): string {
+    const title = this.escapeDraftText(draft.title);
+    const subtitle = this.escapeDraftText(draft.subtitle?.trim() || 'No account');
+    const timestamp = this.escapeDraftText(this.formatDraftTimestamp(draft.updatedAtUtc));
+    return `<div class="crm-draft-menuitem"><span class="crm-draft-menuitem__title">${title}</span><span class="crm-draft-menuitem__meta">${subtitle} · ${timestamp}</span></div>`;
+  }
+
+  private escapeDraftText(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   private loadOpportunity(id: string) {

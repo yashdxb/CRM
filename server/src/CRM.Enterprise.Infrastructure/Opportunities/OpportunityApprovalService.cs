@@ -29,6 +29,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
     private readonly ServiceBusApprovalQueue _approvalQueue;
     private readonly ICrmRealtimePublisher _realtimePublisher;
     private readonly IEmailSender _emailSender;
+    private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
     private readonly ILogger<OpportunityApprovalService> _logger;
 
     public OpportunityApprovalService(
@@ -38,6 +39,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         ServiceBusApprovalQueue approvalQueue,
         ICrmRealtimePublisher realtimePublisher,
         IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         ILogger<OpportunityApprovalService> logger)
     {
         _dbContext = dbContext;
@@ -46,6 +48,7 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
         _approvalQueue = approvalQueue;
         _realtimePublisher = realtimePublisher;
         _emailSender = emailSender;
+        _emailDeliveryPolicy = emailDeliveryPolicy;
         _logger = logger;
     }
 
@@ -1296,6 +1299,12 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
 
         try
         {
+            if (!await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Approvals, cancellationToken))
+            {
+                _logger.LogInformation("Approval notification email to {ToEmail} suppressed by workspace email policy.", toEmail);
+                return;
+            }
+
             await _emailSender.SendAsync(toEmail.Trim(), subject, htmlBody, cancellationToken: cancellationToken);
         }
         catch (Exception ex)

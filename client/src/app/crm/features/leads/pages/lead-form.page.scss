@@ -101,9 +101,9 @@
        ═══════════════════════════════════════════════════════════════════════════ */
 
     .page-header {
-      position: sticky;
+      position: relative;
       width: 100%;
-      top: 0;
+      top: auto;
       z-index: 100;
       /* Premium frosted glass */
       background: rgba(255, 255, 255, 0.65);
@@ -118,6 +118,9 @@
       background-clip: padding-box, border-box;
       padding: 1rem 1.5rem;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
     }
 
     .header-content {
@@ -3073,6 +3076,9 @@
         0 2px 12px rgba(0, 0, 0, 0.04),
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
       transition: box-shadow 300ms;
+      max-height: min(34rem, calc(100vh - 11rem));
+      overflow-y: auto;
+      overscroll-behavior: contain;
 
       &:hover {
         box-shadow:
@@ -4810,6 +4816,7 @@
     @media (max-width: 768px) {
       .page-header {
         padding: 1rem;
+        max-height: calc(100vh - 0.5rem);
       }
 
       .form-container {
@@ -4841,6 +4848,10 @@
       .lead-btn {
         width: 100%;
         min-width: auto;
+      }
+
+      .status-ribbon__inner {
+        max-height: calc(100vh - 9.5rem);
       }
     }
 

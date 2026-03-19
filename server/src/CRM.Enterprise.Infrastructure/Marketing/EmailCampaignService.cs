@@ -18,12 +18,18 @@ public sealed class EmailCampaignService : IEmailCampaignService
     private readonly CrmDbContext _dbContext;
     private readonly IEmailComplianceService _complianceService;
     private readonly IEmailSender _emailSender;
+    private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
 
-    public EmailCampaignService(CrmDbContext dbContext, IEmailComplianceService complianceService, IEmailSender emailSender)
+    public EmailCampaignService(
+        CrmDbContext dbContext,
+        IEmailComplianceService complianceService,
+        IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy)
     {
         _dbContext = dbContext;
         _complianceService = complianceService;
         _emailSender = emailSender;
+        _emailDeliveryPolicy = emailDeliveryPolicy;
     }
 
     public async Task<CampaignEmailSearchResultDto> SearchEmailsAsync(CampaignEmailSearchRequest request, CancellationToken cancellationToken = default)
@@ -243,6 +249,13 @@ public sealed class EmailCampaignService : IEmailCampaignService
         entity.SentAtUtc = DateTime.UtcNow;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        if (!await _emailDeliveryPolicy.IsEnabledAsync(entity.TenantId, WorkspaceEmailDeliveryCategory.Marketing, cancellationToken))
+        {
+            entity.Status = CampaignEmailStatus.Failed;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            return MarketingOperationResult<CampaignEmailDetailDto>.Fail("Marketing emails are disabled in workspace settings.");
+        }
 
         // Send to eligible recipients
         var queuedRecipients = recipients.Where(r => r.Status == CampaignEmailRecipientStatus.Queued).ToList();

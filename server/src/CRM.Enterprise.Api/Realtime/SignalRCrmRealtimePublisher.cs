@@ -1,5 +1,6 @@
 using CRM.Enterprise.Api.Hubs;
 using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +29,8 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
         "assistant.chat.failed",
         "helpdesk.case.changed",
         "helpdesk.case.escalated",
-        "helpdesk.queue.changed"
+        "helpdesk.queue.changed",
+        "email.delivery.status"
     };
 
     private readonly IHubContext<CrmEventsHub> _hubContext;
@@ -153,6 +155,11 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
         if (tenantOverride.HasValue)
         {
             return tenantOverride.Value;
+        }
+
+        if (string.Equals(flagName, WorkspaceEmailDeliveryFlags.StatusNotifications, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
         }
 
         var defaultEnabled = _configuration.GetValue<bool?>("Features:Realtime:EnabledByDefault") ?? false;
@@ -285,6 +292,7 @@ public sealed class SignalRCrmRealtimePublisher : ICrmRealtimePublisher
             "record.presence.snapshot" or "record.presence.changed" => "realtime.recordPresence",
             "assistant.chat.token" or "assistant.chat.completed" or "assistant.chat.failed" => "realtime.assistantStreaming",
             "helpdesk.case.changed" or "helpdesk.case.escalated" or "helpdesk.queue.changed" => "helpdesk.realtime",
+            "email.delivery.status" => "communications.emailDelivery.statusNotifications",
             _ => null
         };
 

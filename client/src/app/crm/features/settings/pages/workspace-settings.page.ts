@@ -122,6 +122,15 @@ export class WorkspaceSettingsPage {
     featureHelpDeskCases: [false],
     featureHelpDeskEmailIntake: [false],
     featureHelpDeskRealtime: [false],
+    featureEmailDelivery: [false],
+    featureEmailDeliveryInvites: [true],
+    featureEmailDeliverySecurity: [true],
+    featureEmailDeliveryApprovals: [true],
+    featureEmailDeliveryProposals: [true],
+    featureEmailDeliveryMarketing: [true],
+    featureEmailDeliveryNotifications: [true],
+    featureEmailDeliveryMailbox: [true],
+    featureEmailDeliveryStatusNotifications: [true],
     reportDesignerRequiredPermission: ['Permissions.Administration.Manage']
   });
 
@@ -197,7 +206,16 @@ export class WorkspaceSettingsPage {
         'ai.knowledgeSearch': !!payload.featureAiKnowledgeSearch,
         'helpdesk.cases': !!payload.featureHelpDeskCases,
         'helpdesk.emailIntake': !!payload.featureHelpDeskEmailIntake,
-        'helpdesk.realtime': !!payload.featureHelpDeskRealtime
+        'helpdesk.realtime': !!payload.featureHelpDeskRealtime,
+        'communications.emailDelivery': !!payload.featureEmailDelivery,
+        'communications.emailDelivery.invites': !!payload.featureEmailDeliveryInvites,
+        'communications.emailDelivery.security': !!payload.featureEmailDeliverySecurity,
+        'communications.emailDelivery.approvals': !!payload.featureEmailDeliveryApprovals,
+        'communications.emailDelivery.proposals': !!payload.featureEmailDeliveryProposals,
+        'communications.emailDelivery.marketing': !!payload.featureEmailDeliveryMarketing,
+        'communications.emailDelivery.notifications': !!payload.featureEmailDeliveryNotifications,
+        'communications.emailDelivery.mailbox': !!payload.featureEmailDeliveryMailbox,
+        'communications.emailDelivery.statusNotifications': !!payload.featureEmailDeliveryStatusNotifications
       },
       reportDesignerRequiredPermission: payload.reportDesignerRequiredPermission || null
     };
@@ -248,6 +266,15 @@ export class WorkspaceSettingsPage {
       featureHelpDeskCases: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.cases'),
       featureHelpDeskEmailIntake: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.emailIntake'),
       featureHelpDeskRealtime: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.realtime'),
+      featureEmailDelivery: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery'),
+      featureEmailDeliveryInvites: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.invites', true),
+      featureEmailDeliverySecurity: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.security', true),
+      featureEmailDeliveryApprovals: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.approvals', true),
+      featureEmailDeliveryProposals: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.proposals', true),
+      featureEmailDeliveryMarketing: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.marketing', true),
+      featureEmailDeliveryNotifications: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.notifications', true),
+      featureEmailDeliveryMailbox: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.mailbox', true),
+      featureEmailDeliveryStatusNotifications: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.statusNotifications', true),
       reportDesignerRequiredPermission: settings.reportDesignerRequiredPermission || 'Permissions.Administration.Manage'
     });
     this.activeVerticalPresetConfiguration.set(settings.verticalPresetConfiguration ?? null);

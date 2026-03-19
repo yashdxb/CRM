@@ -1,5 +1,6 @@
 using CRM.Enterprise.Api.Contracts.Emails;
 using CRM.Enterprise.Application.Emails;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -19,17 +20,20 @@ public class MailboxController : ControllerBase
     private readonly IMailboxSyncService _mailboxService;
     private readonly IMailboxProxyService _proxyService;
     private readonly ICrmEmailLinkService _linkService;
+    private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
     private readonly ILogger<MailboxController> _logger;
 
     public MailboxController(
         IMailboxSyncService mailboxService,
         IMailboxProxyService proxyService,
         ICrmEmailLinkService linkService,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         ILogger<MailboxController> logger)
     {
         _mailboxService = mailboxService;
         _proxyService = proxyService;
         _linkService = linkService;
+        _emailDeliveryPolicy = emailDeliveryPolicy;
         _logger = logger;
     }
 
@@ -45,6 +49,11 @@ public class MailboxController : ControllerBase
     {
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
+
+        if (!await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Mailbox, cancellationToken))
+        {
+            return Conflict(new SendMailboxEmailResponse(false, null, "Mailbox email sends are disabled in workspace settings."));
+        }
 
         SyncResult result;
         if (request?.ConnectionId != null)
@@ -85,6 +94,11 @@ public class MailboxController : ControllerBase
     {
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
+
+        if (!await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Mailbox, cancellationToken))
+        {
+            return Conflict(new ProxySendMailResponse(false, null, "Mailbox email sends are disabled in workspace settings."));
+        }
 
         var stats = await _mailboxService.GetStatsAsync(userId.Value, cancellationToken);
 

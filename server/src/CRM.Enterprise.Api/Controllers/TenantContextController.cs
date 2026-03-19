@@ -1,5 +1,6 @@
 using CRM.Enterprise.Api.Contracts.Tenants;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -32,7 +33,16 @@ public class TenantContextController : ControllerBase
         "realtime.entityCrud",
         "realtime.importProgress",
         "realtime.recordPresence",
-        "realtime.assistantStreaming"
+        "realtime.assistantStreaming",
+        WorkspaceEmailDeliveryFlags.Master,
+        WorkspaceEmailDeliveryFlags.Invites,
+        WorkspaceEmailDeliveryFlags.Security,
+        WorkspaceEmailDeliveryFlags.Approvals,
+        WorkspaceEmailDeliveryFlags.Proposals,
+        WorkspaceEmailDeliveryFlags.Marketing,
+        WorkspaceEmailDeliveryFlags.Notifications,
+        WorkspaceEmailDeliveryFlags.Mailbox,
+        WorkspaceEmailDeliveryFlags.StatusNotifications
     };
 
     public TenantContextController(CrmDbContext dbContext, ITenantProvider tenantProvider, IConfiguration configuration)
@@ -83,7 +93,16 @@ public class TenantContextController : ControllerBase
             ["marketing.campaigns"] = marketingEnabled,
             ["helpdesk.cases"] = helpDeskEnabled,
             ["helpdesk.emailIntake"] = helpDeskEnabled,
-            ["helpdesk.realtime"] = helpDeskEnabled
+            ["helpdesk.realtime"] = helpDeskEnabled,
+            [WorkspaceEmailDeliveryFlags.Master] = false,
+            [WorkspaceEmailDeliveryFlags.Invites] = true,
+            [WorkspaceEmailDeliveryFlags.Security] = true,
+            [WorkspaceEmailDeliveryFlags.Approvals] = true,
+            [WorkspaceEmailDeliveryFlags.Proposals] = true,
+            [WorkspaceEmailDeliveryFlags.Marketing] = true,
+            [WorkspaceEmailDeliveryFlags.Notifications] = true,
+            [WorkspaceEmailDeliveryFlags.Mailbox] = true,
+            [WorkspaceEmailDeliveryFlags.StatusNotifications] = true
         };
 
         var realtimeDefaultEnabled = _configuration.GetValue<bool?>("Features:Realtime:EnabledByDefault") ?? false;

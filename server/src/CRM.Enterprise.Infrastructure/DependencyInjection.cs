@@ -18,6 +18,7 @@ using CRM.Enterprise.Application.Pricing;
 using CRM.Enterprise.Application.Sourcing;
 using CRM.Enterprise.Application.Customers;
 using CRM.Enterprise.Application.Contacts;
+using CRM.Enterprise.Application.Drafts;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Application.Leads;
@@ -48,6 +49,7 @@ using CRM.Enterprise.Infrastructure.HelpDesk;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Properties;
 using CRM.Enterprise.Infrastructure.Emails;
+using CRM.Enterprise.Infrastructure.Drafts;
 using CRM.Enterprise.Application.Lookups;
 using CRM.Enterprise.Infrastructure.Lookups;
 using CRM.Enterprise.Application.Reporting;
@@ -118,6 +120,7 @@ public static class DependencyInjection
         services.AddSingleton<ServiceBusEmailQueue>();
         services.AddSingleton<ServiceBusApprovalQueue>();
         services.AddHostedService<EmailQueueWorker>();
+        services.AddScoped<IWorkspaceEmailDeliveryPolicy, WorkspaceEmailDeliveryPolicy>();
         var alertsEnabled = configuration.GetValue("Notifications:AlertsEnabled", true);
         if (alertsEnabled)
         {
@@ -200,6 +203,7 @@ public static class DependencyInjection
         });
         services.AddScoped<IAssistantChatService, AssistantChatService>();
         services.AddScoped<ILeadService, LeadService>();
+        services.AddScoped<IFormDraftService, FormDraftService>();
         services.AddScoped<ILeadImportService, LeadImportService>();
         services.AddScoped<IActivityService, ActivityService>();
         services.AddScoped<IOpportunityService, OpportunityService>();

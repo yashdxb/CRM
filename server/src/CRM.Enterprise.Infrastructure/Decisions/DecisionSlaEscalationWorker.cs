@@ -13,8 +13,6 @@ namespace CRM.Enterprise.Infrastructure.Decisions;
 
 public sealed class DecisionSlaEscalationWorker : BackgroundService
 {
-    // Temporary hard stop requested: disable all outbound decision escalation emails.
-    private static readonly bool EmailNotificationsEnabled = false;
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(2);
     private static readonly string[] ClosedStatuses = new[] { "Approved", "Rejected", "Cancelled", "Expired" };
     private const string EscalationAction = "ApprovalSlaEscalated";
@@ -78,13 +76,14 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
         var db = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
         var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
         var emailSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
+        var emailDeliveryPolicy = scope.ServiceProvider.GetRequiredService<IWorkspaceEmailDeliveryPolicy>();
 
         var tenants = await db.Tenants.AsNoTracking().ToListAsync(cancellationToken);
         foreach (var tenant in tenants)
         {
             tenantProvider.SetTenant(tenant.Id, tenant.Key);
             var escalationPolicy = ResolveDecisionEscalationPolicy(tenant);
-            var escalatedCount = await RunTenantPassAsync(db, emailSender, escalationPolicy, cancellationToken);
+            var escalatedCount = await RunTenantPassAsync(db, emailSender, emailDeliveryPolicy, escalationPolicy, cancellationToken);
             if (escalatedCount > 0)
             {
                 _logger.LogInformation(
@@ -107,6 +106,7 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
     private async Task<int> RunTenantPassAsync(
         CrmDbContext db,
         IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         DecisionEscalationPolicy escalationPolicy,
         CancellationToken cancellationToken)
     {
@@ -269,7 +269,7 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
                 }
             }
 
-            if (EmailNotificationsEnabled && escalationPolicy.SendEmailNotifications)
+            if (escalationPolicy.SendEmailNotifications)
             {
                 foreach (var recipient in recipients)
                 {
@@ -291,7 +291,10 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
                         $"Policy reason: {decision.PolicyReason ?? "Decision review required."}. " +
                         $"Recipient reason: {recipient.Reason}.";
 
-                    await emailSender.SendAsync(recipient.Email, subject, htmlBody, textBody, cancellationToken);
+                    if (await emailDeliveryPolicy.IsEnabledAsync(decision.TenantId, WorkspaceEmailDeliveryCategory.Approvals, cancellationToken))
+                    {
+                        await emailSender.SendAsync(recipient.Email, subject, htmlBody, textBody, cancellationToken);
+                    }
                 }
             }
 

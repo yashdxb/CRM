@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute, RouterLink } from '@angular/router';
+import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
@@ -15,6 +16,8 @@ import { FileUploadModule } from 'primeng/fileupload';
 import { InputGroupModule } from 'primeng/inputgroup';
 import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { DialogModule } from 'primeng/dialog';
+import { SplitButtonModule } from 'primeng/splitbutton';
 
 import { CustomerStatus } from '../models/customer.model';
 import { CustomerDataService, SaveCustomerRequest } from '../services/customer-data.service';
@@ -31,6 +34,8 @@ import { PropertyDataService } from '../../properties/services/property-data.ser
 import { Property } from '../../properties/models/property.model';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { readUserId } from '../../../../core/auth/token.utils';
+import { FormDraftDetail, FormDraftSummary } from '../../../../core/drafts/form-draft.model';
+import { FormDraftService } from '../../../../core/drafts/form-draft.service';
 
 interface StatusOption {
   label: string;
@@ -56,6 +61,8 @@ interface StatusOption {
     InputGroupModule,
     InputGroupAddonModule,
     InputNumberModule,
+    DialogModule,
+    SplitButtonModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./customer-form.page.html",
@@ -91,7 +98,17 @@ export class CustomerFormPage implements OnInit, OnDestroy {
 
   protected readonly isEditMode = signal(false);
   protected readonly saving = signal(false);
+  protected readonly draftSaving = signal(false);
   protected readonly loading = signal(false);
+  protected readonly recentDrafts = signal<FormDraftSummary[]>([]);
+  protected readonly draftLibraryVisible = signal(false);
+  protected readonly draftLibraryLoading = signal(false);
+  protected readonly draftLibraryItems = signal<FormDraftSummary[]>([]);
+  protected readonly draftStatusMessage = signal<string | null>(null);
+  protected readonly draftModeActive = signal(false);
+  protected readonly draftPromptVisible = signal(false);
+  protected readonly draftOpenConfirmVisible = signal(false);
+  protected readonly activeDraftId = signal<string | null>(null);
   protected readonly nameError = signal<string | null>(null);
   private readonly toastService = inject(AppToastService);
   private readonly activityData = inject(ActivityDataService);
@@ -100,6 +117,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   private readonly attachmentData = inject(AttachmentDataService);
   private readonly propertyData = inject(PropertyDataService);
   private readonly crmEvents = inject(CrmEventsService);
+  private readonly formDraftService = inject(FormDraftService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly currentUserId = readUserId();
   protected customerId: string | null = null;
@@ -116,6 +134,8 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   protected readonly presenceUsers = signal<Array<{ userId: string; displayName: string; isEditing: boolean }>>([]);
   protected readonly duplicateWarning = signal<{ matchId: string; matchName: string } | null>(null);
   private duplicateCheckTimer: ReturnType<typeof setTimeout> | null = null;
+  private pendingDraftToOpen: FormDraftSummary | null = null;
+  private hasShownDraftPrompt = false;
 
   protected noteText = '';
   private localEditingState = false;
@@ -158,6 +178,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.customerId = this.route.snapshot.paramMap.get('id');
+    this.loadRecentDrafts();
     if (this.customerId) {
       this.initializePresence(this.customerId);
       this.isEditMode.set(true);
@@ -305,7 +326,9 @@ export class CustomerFormPage implements OnInit, OnDestroy {
       this.customerData.update(this.customerId, payload).subscribe({
         next: () => {
           this.saving.set(false);
+          this.completeActiveDraft();
           this.raiseToast('success', 'Customer updated.');
+          this.loadRecentDrafts();
         },
         error: () => {
           this.saving.set(false);
@@ -314,9 +337,12 @@ export class CustomerFormPage implements OnInit, OnDestroy {
       });
     } else {
       this.customerData.create(payload).subscribe({
-        next: () => {
+        next: (created) => {
           this.saving.set(false);
+          this.completeActiveDraft();
           this.raiseToast('success', 'Customer created.');
+          this.loadRecentDrafts();
+          void this.router.navigate(['/app/customers', created.id, 'edit']);
         },
         error: () => {
           this.saving.set(false);
@@ -324,6 +350,130 @@ export class CustomerFormPage implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  protected primarySaveLabel(): string {
+    return this.customerId ? 'Update Customer' : 'Create Customer';
+  }
+
+  protected draftButtonLabel(): string {
+    const count = this.recentDrafts().length;
+    return count > 0 ? `Save Draft (${count})` : 'Save Draft';
+  }
+
+  protected draftSplitButtonItems(): MenuItem[] {
+    const items: MenuItem[] = [];
+
+    const drafts = this.recentDrafts();
+    items.push({ label: 'Saved drafts', disabled: true, styleClass: 'crm-draft-menu-heading' });
+    if (!drafts.length) {
+      items.push({ label: 'No saved drafts yet', disabled: true, styleClass: 'crm-draft-menu-empty' });
+      return items;
+    }
+    for (const draft of drafts) {
+      items.push({
+        label: this.buildDraftMenuMarkup(draft),
+        escape: false,
+        command: () => this.openDraftFromSummary(draft)
+      });
+    }
+    items.push({ separator: true });
+    items.push({ label: 'View all drafts', icon: 'pi pi-list', command: () => this.openDraftLibrary() });
+    return items;
+  }
+
+  protected saveDraft(): void {
+    this.draftSaving.set(true);
+    this.formDraftService.save({
+      id: this.activeDraftId(),
+      entityType: 'customer',
+      title: this.buildDraftTitle(),
+      subtitle: this.buildDraftSubtitle(),
+      payloadJson: JSON.stringify(this.form)
+    }).subscribe({
+      next: (draft) => {
+        this.draftSaving.set(false);
+        this.activeDraftId.set(draft.id);
+        this.draftModeActive.set(true);
+        this.draftStatusMessage.set(`Draft saved at ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.loadRecentDrafts();
+        if (this.draftLibraryVisible()) {
+          this.loadDraftLibrary();
+        }
+      },
+      error: () => {
+        this.draftSaving.set(false);
+        this.draftStatusMessage.set('Unable to save draft.');
+        this.raiseToast('error', 'Unable to save draft.');
+      }
+    });
+  }
+
+  protected openDraftFromSummary(draft: FormDraftSummary): void {
+    if (this.hasDraftFormChanges()) {
+      this.pendingDraftToOpen = draft;
+      this.draftOpenConfirmVisible.set(true);
+      return;
+    }
+
+    this.loadDraft(draft.id);
+  }
+
+  protected confirmOpenDraft(): void {
+    const draft = this.pendingDraftToOpen;
+    this.pendingDraftToOpen = null;
+    this.draftOpenConfirmVisible.set(false);
+    if (draft) {
+      this.loadDraft(draft.id);
+    }
+  }
+
+  protected cancelOpenDraft(): void {
+    this.pendingDraftToOpen = null;
+    this.draftOpenConfirmVisible.set(false);
+  }
+
+  protected openDraftLibrary(): void {
+    this.draftLibraryVisible.set(true);
+    this.loadDraftLibrary();
+  }
+
+  protected closeDraftLibrary(): void {
+    this.draftLibraryVisible.set(false);
+  }
+
+  protected dismissDraftPrompt(): void {
+    this.draftPromptVisible.set(false);
+  }
+
+  protected loadDraftFromPrompt(draft: FormDraftSummary): void {
+    this.draftPromptVisible.set(false);
+    this.loadDraft(draft.id);
+  }
+
+  protected discardDraft(draft: FormDraftSummary, event?: Event): void {
+    event?.stopPropagation();
+    this.formDraftService.discard(draft.id).subscribe({
+      next: () => {
+        if (this.activeDraftId() === draft.id) {
+          this.activeDraftId.set(null);
+          this.draftModeActive.set(false);
+          this.draftStatusMessage.set(null);
+        }
+        this.loadRecentDrafts();
+        this.loadDraftLibrary();
+      },
+      error: () => this.raiseToast('error', 'Unable to discard draft.')
+    });
+  }
+
+  protected formatDraftTimestamp(value: string): string {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }).format(new Date(value));
   }
 
   protected addNote() {
@@ -383,6 +533,128 @@ export class CustomerFormPage implements OnInit, OnDestroy {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, tone === 'error' ? 5000 : 3000);
+  }
+
+  private loadRecentDrafts(): void {
+    this.formDraftService.list('customer', { limit: 5, page: 1, pageSize: 5 }).subscribe({
+      next: (result) => {
+        const items = result.items;
+        this.recentDrafts.set(items);
+        if (!this.hasShownDraftPrompt && !this.customerId && !this.draftModeActive() && items.length) {
+          this.hasShownDraftPrompt = true;
+          this.draftPromptVisible.set(true);
+        }
+      },
+      error: () => this.recentDrafts.set([])
+    });
+  }
+
+  private loadDraftLibrary(): void {
+    this.draftLibraryLoading.set(true);
+    this.formDraftService.list('customer', { page: 1, pageSize: 50 }).subscribe({
+      next: (result) => {
+        this.draftLibraryLoading.set(false);
+        this.draftLibraryItems.set(result.items);
+      },
+      error: () => {
+        this.draftLibraryLoading.set(false);
+        this.draftLibraryItems.set([]);
+      }
+    });
+  }
+
+  private loadDraft(id: string): void {
+    this.formDraftService.get(id).subscribe({
+      next: (draft) => {
+        this.form = {
+          ...this.emptyDraftPayload(),
+          ...this.parseDraftPayload(draft)
+        };
+        this.activeDraftId.set(draft.id);
+        this.draftModeActive.set(true);
+        this.draftStatusMessage.set(`Draft loaded from ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.draftLibraryVisible.set(false);
+      },
+      error: () => this.raiseToast('error', 'Unable to open draft.')
+    });
+  }
+
+  private parseDraftPayload(draft: FormDraftDetail): Partial<SaveCustomerRequest & { email?: string; company?: string; address?: string }> {
+    try {
+      return JSON.parse(draft.payloadJson) as Partial<SaveCustomerRequest & { email?: string; company?: string; address?: string }>;
+    } catch {
+      return {};
+    }
+  }
+
+  private completeActiveDraft(): void {
+    const activeDraftId = this.activeDraftId();
+    if (!activeDraftId) {
+      return;
+    }
+
+    this.formDraftService.complete(activeDraftId).subscribe({ next: () => {}, error: () => {} });
+    this.activeDraftId.set(null);
+    this.draftModeActive.set(false);
+  }
+
+  private hasDraftFormChanges(): boolean {
+    return JSON.stringify(this.form) !== JSON.stringify(this.emptyDraftPayload());
+  }
+
+  private buildDraftTitle(): string {
+    return this.form.name?.trim() || 'Untitled customer draft';
+  }
+
+  private buildDraftSubtitle(): string | null {
+    return this.form.industry?.trim() || null;
+  }
+
+  private buildDraftMenuMarkup(draft: FormDraftSummary): string {
+    const title = this.escapeDraftText(draft.title);
+    const subtitle = this.escapeDraftText(draft.subtitle?.trim() || 'No industry');
+    const timestamp = this.escapeDraftText(this.formatDraftTimestamp(draft.updatedAtUtc));
+    return `<div class="crm-draft-menuitem"><span class="crm-draft-menuitem__title">${title}</span><span class="crm-draft-menuitem__meta">${subtitle} · ${timestamp}</span></div>`;
+  }
+
+  private escapeDraftText(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  private emptyDraftPayload(): SaveCustomerRequest & { email?: string; company?: string; address?: string } {
+    return {
+      name: '',
+      lifecycleStage: 'Lead',
+      phone: '',
+      website: '',
+      industry: '',
+      description: '',
+      email: '',
+      company: '',
+      address: '',
+      parentAccountId: undefined,
+      territory: '',
+      annualRevenue: undefined,
+      numberOfEmployees: undefined,
+      accountType: undefined,
+      rating: undefined,
+      accountSource: undefined,
+      billingStreet: '',
+      billingCity: '',
+      billingState: '',
+      billingPostalCode: '',
+      billingCountry: '',
+      shippingStreet: '',
+      shippingCity: '',
+      shippingState: '',
+      shippingPostalCode: '',
+      shippingCountry: ''
+    };
   }
 
   private loadDetailData() {

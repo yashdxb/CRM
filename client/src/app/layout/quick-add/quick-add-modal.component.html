@@ -3,13 +3,29 @@
       header="Quick add"
       [(visible)]="visible"
       [modal]="true"
-      [style]="{ width: '520px' }"
+      [style]="{ width: '760px', maxWidth: '96vw' }"
       [draggable]="false"
       [resizable]="false"
       styleClass="quick-add-dialog"
       (onHide)="close.emit()"
     >
       <div class="quick-add">
+        <div class="quick-add__hero">
+          <div class="quick-add__hero-copy">
+            <span class="quick-add__eyebrow">Quick create</span>
+            <h3>{{ quickAddType === 'lead' ? 'Add a lead' : (quickAddType === 'contact' ? 'Add a contact' : 'Log an activity') }}</h3>
+            <p>{{ quickAddType === 'lead' ? 'Capture the essentials first, then continue in the full form later.' : (quickAddType === 'contact' ? 'Create a contact with the core details and account link.' : 'Record the activity and keep follow-up details visible.') }}</p>
+          </div>
+          <div class="quick-add__hero-badge">
+            <i
+              class="pi"
+              [class.pi-user-plus]="quickAddType === 'lead'"
+              [class.pi-id-card]="quickAddType === 'contact'"
+              [class.pi-calendar-plus]="quickAddType === 'activity'"
+            ></i>
+            <span>{{ quickAddType === 'lead' ? 'Lead' : (quickAddType === 'contact' ? 'Contact' : 'Activity') }}</span>
+          </div>
+        </div>
         <div class="form-field">
           <label for="qa-recordType">Record type</label>
           <p-select
@@ -20,6 +36,7 @@
             [(ngModel)]="quickAddType"
             [ngModelOptions]="{ standalone: true }"
             appendTo="body"
+            styleClass="w-full"
           ></p-select>
         </div>
 

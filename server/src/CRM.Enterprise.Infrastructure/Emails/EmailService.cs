@@ -12,15 +12,18 @@ public sealed class EmailService : IEmailService
 {
     private readonly CrmDbContext _dbContext;
     private readonly IEmailSender _emailSender;
+    private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
     private readonly ILeadConversationScoreService _leadConversationScoreService;
 
     public EmailService(
         CrmDbContext dbContext,
         IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         ILeadConversationScoreService leadConversationScoreService)
     {
         _dbContext = dbContext;
         _emailSender = emailSender;
+        _emailDeliveryPolicy = emailDeliveryPolicy;
         _leadConversationScoreService = leadConversationScoreService;
     }
 
@@ -194,20 +197,30 @@ public sealed class EmailService : IEmailService
 
         if (request.SendImmediately)
         {
+            var sendAllowed = await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Mailbox, cancellationToken);
             try
             {
-                emailLog.Status = EmailStatus.Queued;
-                await _dbContext.SaveChangesAsync(cancellationToken);
+                if (!sendAllowed)
+                {
+                    emailLog.Status = EmailStatus.Failed;
+                    emailLog.ErrorMessage = "Email delivery is disabled in workspace settings.";
+                    await _dbContext.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    emailLog.Status = EmailStatus.Queued;
+                    await _dbContext.SaveChangesAsync(cancellationToken);
 
-                await _emailSender.SendAsync(
-                    request.ToEmail, 
-                    subject, 
-                    trackedHtmlBody, 
-                    textBody, 
-                    cancellationToken);
+                    await _emailSender.SendAsync(
+                        request.ToEmail, 
+                        subject, 
+                        trackedHtmlBody, 
+                        textBody, 
+                        cancellationToken);
 
-                emailLog.Status = EmailStatus.Sent;
-                emailLog.SentAtUtc = DateTime.UtcNow;
+                    emailLog.Status = EmailStatus.Sent;
+                    emailLog.SentAtUtc = DateTime.UtcNow;
+                }
             }
             catch (Exception ex)
             {

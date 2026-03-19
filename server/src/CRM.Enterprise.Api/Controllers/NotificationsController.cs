@@ -12,10 +12,12 @@ namespace CRM.Enterprise.Api.Controllers;
 public class NotificationsController : ControllerBase
 {
     private readonly IEmailSender _emailSender;
+    private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
 
-    public NotificationsController(IEmailSender emailSender)
+    public NotificationsController(IEmailSender emailSender, IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy)
     {
         _emailSender = emailSender;
+        _emailDeliveryPolicy = emailDeliveryPolicy;
     }
 
     [HttpPost("test-email")]
@@ -24,6 +26,11 @@ public class NotificationsController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.ToEmail))
         {
             return BadRequest("ToEmail is required.");
+        }
+
+        if (!await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Notifications, cancellationToken))
+        {
+            return Conflict("Notification emails are disabled in workspace settings.");
         }
 
         // Keep a predictable subject/body for quick smoke tests in prod.

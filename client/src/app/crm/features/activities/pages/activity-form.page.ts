@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -25,7 +25,7 @@ import { UserAdminDataService } from '../../settings/services/user-admin-data.se
 import { UserListItem } from '../../settings/models/user-admin.model';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
-import { readUserId } from '../../../../core/auth/token.utils';
+import { readTokenContext, readUserId, tokenHasRole } from '../../../../core/auth/token.utils';
 
 interface Option<T = string> {
   label: string;
@@ -280,6 +280,15 @@ export class ActivityFormPage implements OnInit {
   protected activityStatus: 'Open' | 'Completed' = 'Open';
   protected readonly systemLocked = signal(false);
   protected readonly dueDateDefaultedFromLeadSla = signal(false);
+  protected readonly canEditOwner = computed(() => {
+    const payload = readTokenContext()?.payload ?? null;
+    return (
+      tokenHasRole(payload, 'Sales Manager') ||
+      tokenHasRole(payload, 'System Administrator') ||
+      tokenHasRole(payload, 'Admin') ||
+      tokenHasRole(payload, 'Super Admin')
+    );
+  });
   private pendingAccountOption: Option<string> | null = null;
   private pendingContactOption: Option<string> | null = null;
   private pendingOpportunityOption: Option<string> | null = null;
@@ -297,6 +306,7 @@ export class ActivityFormPage implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
+  private readonly currentUserId = readUserId();
 
   private editingId: string | null = null;
 
@@ -312,6 +322,7 @@ export class ActivityFormPage implements OnInit {
     }
 
     if (!this.editingId) {
+      this.assignCurrentUserAsOwner();
       this.applyContextFromQuery();
     }
     this.updateTemplateOptions();
@@ -600,6 +611,10 @@ export class ActivityFormPage implements OnInit {
       this.pendingOwnerOption = option;
     }
 
+    if (!this.canEditOwner()) {
+      this.assignCurrentUserAsOwner();
+    }
+
     if (activity.relatedEntityType === 'Lead' && activity.relatedEntityId) {
       const label = activity.relatedEntityName?.trim() || 'Lead';
       const option = { label, value: activity.relatedEntityId, icon: 'pi-user' };
@@ -673,7 +688,7 @@ export class ActivityFormPage implements OnInit {
       nextStepDueDateUtc: undefined,
       relatedEntityType: 'Account',
       relatedEntityId: undefined,
-      ownerId: readUserId() ?? undefined
+      ownerId: this.currentUserId ?? undefined
     };
   }
 
@@ -693,19 +708,39 @@ export class ActivityFormPage implements OnInit {
             }
             this.pendingOwnerOption = null;
           }
-          if (!this.form.ownerId) {
-            this.form.ownerId = readUserId() ?? undefined;
-          }
+          this.assignCurrentUserAsOwner();
           this.cdr.markForCheck();
         });
       },
       error: () => {
         queueMicrotask(() => {
           this.ownerOptions = [];
+          this.assignCurrentUserAsOwner();
           this.cdr.markForCheck();
         });
       }
     });
+  }
+
+  private assignCurrentUserAsOwner(): void {
+    if (!this.currentUserId) {
+      return;
+    }
+
+    if (!this.form.ownerId || !this.canEditOwner()) {
+      this.form.ownerId = this.currentUserId;
+    }
+
+    const currentOption = this.ownerOptions.find((option) => option.value === this.currentUserId);
+    if (!currentOption) {
+      this.pendingOwnerOption = this.pendingOwnerOption?.value === this.currentUserId
+        ? this.pendingOwnerOption
+        : { label: 'Current user', value: this.currentUserId, icon: 'pi-user' };
+      this.ownerOptions = this.pendingOwnerOption ? [this.pendingOwnerOption, ...this.ownerOptions] : this.ownerOptions;
+      return;
+    }
+
+    this.pendingOwnerOption = currentOption;
   }
 
   private applyContextFromQuery() {

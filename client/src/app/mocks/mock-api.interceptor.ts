@@ -108,7 +108,16 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         reports: true,
         activities: true,
         emails: true,
-        workflows: true
+        workflows: true,
+        'communications.emailDelivery': false,
+        'communications.emailDelivery.invites': true,
+        'communications.emailDelivery.security': true,
+        'communications.emailDelivery.approvals': true,
+        'communications.emailDelivery.proposals': true,
+        'communications.emailDelivery.marketing': true,
+        'communications.emailDelivery.notifications': true,
+        'communications.emailDelivery.mailbox': true,
+        'communications.emailDelivery.statusNotifications': true
       }
     });
   }

@@ -27,6 +27,7 @@ public class CrmDbContext : DbContext
     public DbSet<LeadStatus> LeadStatuses => Set<LeadStatus>();
     public DbSet<LeadStatusHistory> LeadStatusHistories => Set<LeadStatusHistory>();
     public DbSet<LeadCadenceChannel> LeadCadenceChannels => Set<LeadCadenceChannel>();
+    public DbSet<FormDraft> FormDrafts => Set<FormDraft>();
     public DbSet<Campaign> Campaigns => Set<Campaign>();
     public DbSet<CampaignMember> CampaignMembers => Set<CampaignMember>();
     public DbSet<CampaignAttribution> CampaignAttributions => Set<CampaignAttribution>();
@@ -194,6 +195,17 @@ public class CrmDbContext : DbContext
             .IsUnique();
         modelBuilder.Entity<LeadStatusHistory>().ToTable("LeadStatusHistories", CrmSchema);
         modelBuilder.Entity<LeadCadenceChannel>().ToTable("LeadCadenceChannels", CrmSchema);
+        modelBuilder.Entity<FormDraft>().ToTable("FormDrafts", CrmSchema);
+        modelBuilder.Entity<FormDraft>()
+            .Property(draft => draft.EntityType).HasMaxLength(40).IsRequired();
+        modelBuilder.Entity<FormDraft>()
+            .Property(draft => draft.Title).HasMaxLength(250).IsRequired();
+        modelBuilder.Entity<FormDraft>()
+            .Property(draft => draft.Subtitle).HasMaxLength(250);
+        modelBuilder.Entity<FormDraft>()
+            .Property(draft => draft.Status).HasMaxLength(20).IsRequired();
+        modelBuilder.Entity<FormDraft>()
+            .HasIndex(draft => new { draft.TenantId, draft.OwnerUserId, draft.EntityType, draft.Status });
         modelBuilder.Entity<Campaign>().ToTable("Campaigns", CrmSchema);
         modelBuilder.Entity<CampaignMember>().ToTable("CampaignMembers", CrmSchema);
         modelBuilder.Entity<CampaignAttribution>().ToTable("CampaignAttributions", CrmSchema);

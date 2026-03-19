@@ -35,6 +35,7 @@ public class UsersController : ControllerBase
     private readonly CRM.Enterprise.Infrastructure.Presence.IPresenceTracker _presenceTracker;
     private readonly ITenantProvider _tenantProvider;
     private readonly IDashboardLayoutService _dashboardLayoutService;
+    private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
     private readonly string? _brandLogoUrl;
     private readonly string? _brandWebsiteUrl;
 
@@ -42,6 +43,7 @@ public class UsersController : ControllerBase
         CrmDbContext dbContext,
         IPasswordHasher<User> passwordHasher,
         IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         IDashboardLayoutService dashboardLayoutService,
         IConfiguration configuration,
         ITenantProvider tenantProvider,
@@ -51,6 +53,7 @@ public class UsersController : ControllerBase
         _dbContext = dbContext;
         _passwordHasher = passwordHasher;
         _emailSender = emailSender;
+        _emailDeliveryPolicy = emailDeliveryPolicy;
         _dashboardLayoutService = dashboardLayoutService;
         _brandLogoUrl = configuration["Branding:LogoUrl"];
         _brandWebsiteUrl = configuration["Branding:WebsiteUrl"];
@@ -341,6 +344,11 @@ public class UsersController : ControllerBase
             return BadRequest("Email is required.");
         }
 
+        if (!await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Invites, cancellationToken))
+        {
+            return Conflict("Invite emails are disabled in workspace settings.");
+        }
+
         var exists = await _dbContext.Users
             .AnyAsync(u =>
                 !u.IsDeleted &&
@@ -374,7 +382,6 @@ public class UsersController : ControllerBase
         var inviteToken = InviteTokenHelper.GenerateToken();
         user.InviteTokenHash = InviteTokenHelper.HashToken(inviteToken);
         user.InviteTokenExpiresAtUtc = DateTime.UtcNow.AddHours(24);
-        user.LastInviteSentAtUtc = DateTime.UtcNow;
 
         _dbContext.Users.Add(user);
         await _dbContext.SaveChangesAsync(cancellationToken);
@@ -382,7 +389,12 @@ public class UsersController : ControllerBase
         await AssignRolesAsync(user, roleIds, cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await SendInviteEmailAsync(user, password, inviteToken, cancellationToken);
+        var inviteSent = await SendInviteEmailAsync(user, password, inviteToken, cancellationToken);
+        if (inviteSent)
+        {
+            user.LastInviteSentAtUtc = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
 
         var detail = await BuildDetailResponseAsync(user.Id, cancellationToken);
         return CreatedAtAction(nameof(GetUser), new { id = user.Id }, detail);
@@ -483,16 +495,25 @@ public class UsersController : ControllerBase
             return BadRequest("User is inactive. Reactivate before resending the invite.");
         }
 
+        if (!await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Invites, cancellationToken))
+        {
+            return Conflict("Invite emails are disabled in workspace settings.");
+        }
+
         var password = PasswordGenerator.CreateStrongPassword();
         user.PasswordHash = _passwordHasher.HashPassword(user, password);
         user.MustChangePassword = true;
         var inviteToken = InviteTokenHelper.GenerateToken();
         user.InviteTokenHash = InviteTokenHelper.HashToken(inviteToken);
         user.InviteTokenExpiresAtUtc = DateTime.UtcNow.AddHours(24);
-        user.LastInviteSentAtUtc = DateTime.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        await SendInviteEmailAsync(user, password, inviteToken, cancellationToken);
+        var inviteSent = await SendInviteEmailAsync(user, password, inviteToken, cancellationToken);
+        if (inviteSent)
+        {
+            user.LastInviteSentAtUtc = DateTime.UtcNow;
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
         return NoContent();
     }
 
@@ -1006,7 +1027,7 @@ public class UsersController : ControllerBase
     private static string ToAudienceString(UserAudience audience)
         => audience == UserAudience.External ? "External" : "Internal";
 
-    private async Task SendInviteEmailAsync(User user, string temporaryPassword, string inviteToken, CancellationToken cancellationToken)
+    private async Task<bool> SendInviteEmailAsync(User user, string temporaryPassword, string inviteToken, CancellationToken cancellationToken)
     {
         var origin = Request.Headers.Origin.FirstOrDefault();
         var baseUrl = string.IsNullOrWhiteSpace(origin)
@@ -1138,10 +1159,12 @@ public class UsersController : ControllerBase
         try
         {
             await _emailSender.SendAsync(user.Email, subject, htmlBody, textBody, cancellationToken);
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to send invite email to {Email}.", user.Email);
+            return false;
         }
     }
 }

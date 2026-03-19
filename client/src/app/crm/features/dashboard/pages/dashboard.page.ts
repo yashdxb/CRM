@@ -746,12 +746,16 @@ export class DashboardPage implements OnInit {
           const resolvedSummary = summary ?? this.emptySummary;
           this.summarySignal.set(resolvedSummary);
           this.emitRiskAlerts(resolvedSummary);
+          queueMicrotask(() => this.loadSecondaryDashboardData());
         },
         error: () => {
           this.dataLoadFailed.set(true);
+          queueMicrotask(() => this.loadSecondaryDashboardData());
         }
       });
+  }
 
+  private loadSecondaryDashboardData(): void {
     this.dashboardData.getAssistantInsights()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((insights) => {

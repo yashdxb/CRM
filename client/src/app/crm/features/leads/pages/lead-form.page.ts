@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { MenuItem } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputTextModule } from 'primeng/inputtext';
@@ -22,6 +23,7 @@ import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
 import { InputMaskModule } from 'primeng/inputmask';
 import { TabsModule } from 'primeng/tabs';
 import { AccordionModule } from 'primeng/accordion';
+import { SplitButtonModule } from 'primeng/splitbutton';
 import { PhoneNumberFormat, PhoneNumberUtil } from 'google-libphonenumber';
 
 import { map, Observable } from 'rxjs';
@@ -62,6 +64,8 @@ import { Activity } from '../../activities/models/activity.model';
 import { ActivityDataService } from '../../activities/services/activity-data.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { EmailListItem } from '../../emails/models/email.model';
+import { FormDraftDetail, FormDraftSummary } from '../../../../core/drafts/form-draft.model';
+import { FormDraftService } from '../../../../core/drafts/form-draft.service';
 
 /** Progression statuses shown in the stepper (left → right) */
 const LEAD_PROGRESSION_STATUSES: readonly LeadStatus[] = ['New', 'Contacted', 'Nurture', 'Qualified'] as const;
@@ -210,6 +214,7 @@ const CQVS_GROUP_DEFINITIONS: Array<{
     InputMaskModule,
     TabsModule,
     AccordionModule,
+    SplitButtonModule,
     BreadcrumbsComponent
   ],
   templateUrl: "./lead-form.page.html",
@@ -319,6 +324,16 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
   protected form: SaveLeadRequest & { autoScore: boolean } = this.createEmptyForm();
   protected saving = signal(false);
+  protected draftSaving = signal(false);
+  protected readonly recentDrafts = signal<FormDraftSummary[]>([]);
+  protected readonly draftLibraryVisible = signal(false);
+  protected readonly draftLibraryLoading = signal(false);
+  protected readonly draftLibraryItems = signal<FormDraftSummary[]>([]);
+  protected readonly draftStatusMessage = signal<string | null>(null);
+  protected readonly draftModeActive = signal(false);
+  protected readonly draftPromptVisible = signal(false);
+  protected readonly draftOpenConfirmVisible = signal(false);
+  protected readonly activeDraftId = signal<string | null>(null);
   protected aiScoring = signal(false);
   protected statusApiError = signal<string | null>(null);
   protected aiScoreNote = signal<string | null>(null);
@@ -408,6 +423,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
   private readonly attachmentData = inject(AttachmentDataService);
   private readonly activityData = inject(ActivityDataService);
   private readonly authService = inject(AuthService);
+  private readonly formDraftService = inject(FormDraftService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   private readonly crmEvents = inject(CrmEventsService);
@@ -417,13 +433,16 @@ export class LeadFormPage implements OnInit, OnDestroy {
   private editingId: string | null = null;
   private leadDataWeights: LeadDataWeight[] = [];
   private pendingSavePayload: SaveLeadRequest | null = null;
+  private pendingDraftToOpen: FormDraftSummary | null = null;
   private pendingSaveIsEdit = false;
   private localEditingState = false;
   private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private formSnapshot: string | null = null;
+  private hasShownDraftPrompt = false;
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
+    this.loadRecentDrafts();
     this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
     this.activeTab.set(this.getDefaultTab());
     this.restoreAccordionState();
@@ -1330,6 +1349,146 @@ export class LeadFormPage implements OnInit, OnDestroy {
     return 'Similar leads were found. Review and decide whether to save anyway.';
   }
 
+  protected primarySaveLabel(): string {
+    return this.isEditMode() ? 'Update Lead' : 'Create Lead';
+  }
+
+  protected draftButtonLabel(): string {
+    const count = this.recentDrafts().length;
+    return count > 0 ? `Save Draft (${count})` : 'Save Draft';
+  }
+
+  protected draftSplitButtonItems(): MenuItem[] {
+    const items: MenuItem[] = [];
+
+    const drafts = this.recentDrafts();
+    items.push({
+      label: 'Saved drafts',
+      disabled: true,
+      styleClass: 'crm-draft-menu-heading'
+    });
+
+    if (!drafts.length) {
+      items.push({
+        label: 'No saved drafts yet',
+        disabled: true,
+        styleClass: 'crm-draft-menu-empty'
+      });
+      return items;
+    }
+
+    for (const draft of drafts) {
+      items.push({
+        label: this.buildDraftMenuMarkup(draft),
+        escape: false,
+        command: () => this.openDraftFromSummary(draft)
+      });
+    }
+
+    items.push({ separator: true });
+    items.push({
+      label: 'View all drafts',
+      icon: 'pi pi-list',
+      command: () => this.openDraftLibrary()
+    });
+
+    return items;
+  }
+
+  protected openDraftFromSummary(draft: FormDraftSummary): void {
+    if (this.hasDraftFormChanges()) {
+      this.pendingDraftToOpen = draft;
+      this.draftOpenConfirmVisible.set(true);
+      return;
+    }
+
+    this.loadDraft(draft.id);
+  }
+
+  protected confirmOpenDraft(): void {
+    const draft = this.pendingDraftToOpen;
+    this.pendingDraftToOpen = null;
+    this.draftOpenConfirmVisible.set(false);
+    if (draft) {
+      this.loadDraft(draft.id);
+    }
+  }
+
+  protected cancelOpenDraft(): void {
+    this.pendingDraftToOpen = null;
+    this.draftOpenConfirmVisible.set(false);
+  }
+
+  protected saveDraft(): void {
+    this.draftSaving.set(true);
+    this.formDraftService.save({
+      id: this.activeDraftId(),
+      entityType: 'lead',
+      title: this.buildDraftTitle(),
+      subtitle: this.buildDraftSubtitle(),
+      payloadJson: this.serializeDraftPayload()
+    }).subscribe({
+      next: (draft) => {
+        this.draftSaving.set(false);
+        this.activeDraftId.set(draft.id);
+        this.draftModeActive.set(true);
+        this.draftStatusMessage.set(`Draft saved at ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.loadRecentDrafts();
+        if (this.draftLibraryVisible()) {
+          this.loadDraftLibrary();
+        }
+      },
+      error: () => {
+        this.draftSaving.set(false);
+        this.draftStatusMessage.set('Unable to save draft.');
+        this.raiseToast('error', 'Unable to save draft.');
+      }
+    });
+  }
+
+  protected openDraftLibrary(): void {
+    this.draftLibraryVisible.set(true);
+    this.loadDraftLibrary();
+  }
+
+  protected closeDraftLibrary(): void {
+    this.draftLibraryVisible.set(false);
+  }
+
+  protected dismissDraftPrompt(): void {
+    this.draftPromptVisible.set(false);
+  }
+
+  protected loadDraftFromPrompt(draft: FormDraftSummary): void {
+    this.draftPromptVisible.set(false);
+    this.loadDraft(draft.id);
+  }
+
+  protected discardDraft(draft: FormDraftSummary, event?: Event): void {
+    event?.stopPropagation();
+    this.formDraftService.discard(draft.id).subscribe({
+      next: () => {
+        if (this.activeDraftId() === draft.id) {
+          this.activeDraftId.set(null);
+          this.draftModeActive.set(false);
+          this.draftStatusMessage.set(null);
+        }
+        this.loadRecentDrafts();
+        this.loadDraftLibrary();
+      },
+      error: () => this.raiseToast('error', 'Unable to discard draft.')
+    });
+  }
+
+  protected formatDraftTimestamp(value: string): string {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }).format(new Date(value));
+  }
+
   private submitWithDuplicateGuard(payload: SaveLeadRequest, isEdit: boolean): void {
     this.leadData.checkDuplicates({
       firstName: payload.firstName,
@@ -1376,7 +1535,13 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
     request$.subscribe({
       next: (created) => {
+        const activeDraftId = this.activeDraftId();
         this.saving.set(false);
+        if (activeDraftId) {
+          this.formDraftService.complete(activeDraftId).subscribe({ next: () => {}, error: () => {} });
+          this.activeDraftId.set(null);
+          this.draftModeActive.set(false);
+        }
         if (!isEdit && created) {
           this.editingId = created.id;
           this.router.navigate(['/app/leads', created.id, 'edit'], {
@@ -1396,6 +1561,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
         const message = isEdit ? 'Lead updated.' : 'Lead created. Complete qualification now or later.';
         this.raiseToast('success', message);
         this.updateQualificationFeedback();
+        this.loadRecentDrafts();
       },
       error: (err) => {
         this.saving.set(false);
@@ -1409,6 +1575,99 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
   private raiseToast(tone: 'success' | 'error', message: string) {
     this.toastService.show(tone, message, tone === 'error' ? 5000 : 3000);
+  }
+
+  private loadRecentDrafts(): void {
+    this.formDraftService.list('lead', { limit: 5, page: 1, pageSize: 5 }).subscribe({
+      next: (result) => {
+        const items = result.items;
+        this.recentDrafts.set(items);
+        if (!this.hasShownDraftPrompt && !this.isEditMode() && !this.draftModeActive() && items.length) {
+          this.hasShownDraftPrompt = true;
+          this.draftPromptVisible.set(true);
+        }
+      },
+      error: () => this.recentDrafts.set([])
+    });
+  }
+
+  private loadDraftLibrary(): void {
+    this.draftLibraryLoading.set(true);
+    this.formDraftService.list('lead', { page: 1, pageSize: 50 }).subscribe({
+      next: (result) => {
+        this.draftLibraryLoading.set(false);
+        this.draftLibraryItems.set(result.items);
+      },
+      error: () => {
+        this.draftLibraryLoading.set(false);
+        this.draftLibraryItems.set([]);
+      }
+    });
+  }
+
+  private loadDraft(id: string): void {
+    this.formDraftService.get(id).subscribe({
+      next: (draft) => {
+        const payload = this.parseDraftPayload(draft);
+        this.form = {
+          ...this.createEmptyForm(),
+          ...payload
+        };
+        this.activeDraftId.set(draft.id);
+        this.draftModeActive.set(true);
+        this.draftStatusMessage.set(`Draft loaded from ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.draftLibraryVisible.set(false);
+        this.updateQualificationFeedback();
+        this.captureFormSnapshot();
+      },
+      error: () => this.raiseToast('error', 'Unable to open draft.')
+    });
+  }
+
+  private parseDraftPayload(draft: FormDraftDetail): Partial<SaveLeadRequest & { autoScore: boolean }> {
+    try {
+      return JSON.parse(draft.payloadJson) as Partial<SaveLeadRequest & { autoScore: boolean }>;
+    } catch {
+      return {};
+    }
+  }
+
+  private serializeDraftPayload(): string {
+    return JSON.stringify(this.form);
+  }
+
+  private hasDraftFormChanges(): boolean {
+    if (this.formSnapshot) {
+      return this.createFormSnapshot() !== this.formSnapshot;
+    }
+
+    const payload = this.serializeDraftPayload();
+    return payload !== JSON.stringify(this.createEmptyForm());
+  }
+
+  private buildDraftTitle(): string {
+    const fullName = `${this.form.firstName ?? ''} ${this.form.lastName ?? ''}`.trim();
+    return fullName || 'Untitled lead draft';
+  }
+
+  private buildDraftSubtitle(): string | null {
+    return this.form.companyName?.trim() || null;
+  }
+
+  private buildDraftMenuMarkup(draft: FormDraftSummary): string {
+    const title = this.escapeDraftText(draft.title);
+    const subtitle = this.escapeDraftText(draft.subtitle?.trim() || 'No company');
+    const timestamp = this.escapeDraftText(this.formatDraftTimestamp(draft.updatedAtUtc));
+    return `<div class="crm-draft-menuitem"><span class="crm-draft-menuitem__title">${title}</span><span class="crm-draft-menuitem__meta">${subtitle} · ${timestamp}</span></div>`;
+  }
+
+  private escapeDraftText(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
   }
 
   private extractApiError(error: unknown, fallback: string): { message: string; code: string | null } {

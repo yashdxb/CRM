@@ -182,7 +182,7 @@
                   optionValue="value"
                   name="ownerId"
                   [(ngModel)]="form.ownerId"
-                  [disabled]="systemLocked()"
+                  [disabled]="systemLocked() || !canEditOwner()"
                   placeholder="Select owner"
                   styleClass="w-full"
                 >
@@ -202,6 +202,9 @@
                     </ng-template>
                   </ng-template>
                 </p-select>
+                <small class="field-hint" *ngIf="!canEditOwner()">
+                  Owner is fixed to the current logged-in user.
+                </small>
               </div>
               <div class="form-field">
                 <label for="act-dueDateUtc">Due date</label>

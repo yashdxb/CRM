@@ -159,6 +159,17 @@ let mockWorkspaceSettings: WorkspaceSettings = {
       'Historical / prior deal',
       'Inferred from context'
     ]
+  },
+  featureFlags: {
+    'communications.emailDelivery': false,
+    'communications.emailDelivery.invites': true,
+    'communications.emailDelivery.security': true,
+    'communications.emailDelivery.approvals': true,
+    'communications.emailDelivery.proposals': true,
+    'communications.emailDelivery.marketing': true,
+    'communications.emailDelivery.notifications': true,
+    'communications.emailDelivery.mailbox': true,
+    'communications.emailDelivery.statusNotifications': true
   }
 };
 

@@ -16,8 +16,6 @@ namespace CRM.Enterprise.Infrastructure.Notifications;
 
 public sealed class NotificationAlertWorker : BackgroundService
 {
-    // Temporary hard stop requested: disable all outbound notification-alert emails.
-    private static readonly bool EmailNotificationsEnabled = false;
     private const string LeadSlaBreachAction = "LeadSlaBreachAlert";
     private const string IdleDealAction = "IdleDealAlert";
     private const string CoachingEscalationAction = "CoachingEscalation";
@@ -76,15 +74,16 @@ public sealed class NotificationAlertWorker : BackgroundService
         var dbContext = scope.ServiceProvider.GetRequiredService<CrmDbContext>();
         var tenantProvider = scope.ServiceProvider.GetRequiredService<ITenantProvider>();
         var emailSender = scope.ServiceProvider.GetRequiredService<IEmailSender>();
+        var emailDeliveryPolicy = scope.ServiceProvider.GetRequiredService<IWorkspaceEmailDeliveryPolicy>();
         var auditEvents = scope.ServiceProvider.GetRequiredService<IAuditEventService>();
 
         var tenants = await dbContext.Tenants.AsNoTracking().ToListAsync(cancellationToken);
         foreach (var tenant in tenants)
         {
             tenantProvider.SetTenant(tenant.Id, tenant.Key);
-            await ProcessLeadSlaAlertsAsync(dbContext, emailSender, auditEvents, tenant.Id, cancellationToken);
-            await ProcessIdleDealAlertsAsync(dbContext, emailSender, auditEvents, tenant.Id, cancellationToken);
-            await ProcessCoachingEscalationsAsync(dbContext, emailSender, auditEvents, tenant.Id, cancellationToken);
+            await ProcessLeadSlaAlertsAsync(dbContext, emailSender, emailDeliveryPolicy, auditEvents, tenant.Id, cancellationToken);
+            await ProcessIdleDealAlertsAsync(dbContext, emailSender, emailDeliveryPolicy, auditEvents, tenant.Id, cancellationToken);
+            await ProcessCoachingEscalationsAsync(dbContext, emailSender, emailDeliveryPolicy, auditEvents, tenant.Id, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             dbContext.ChangeTracker.Clear();
         }
@@ -93,6 +92,7 @@ public sealed class NotificationAlertWorker : BackgroundService
     private async Task ProcessLeadSlaAlertsAsync(
         CrmDbContext dbContext,
         IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         IAuditEventService auditEvents,
         Guid tenantId,
         CancellationToken cancellationToken)
@@ -131,7 +131,7 @@ public sealed class NotificationAlertWorker : BackgroundService
                 {
                     var subject = $"Lead SLA breach: {lead.FirstName} {lead.LastName}";
                     var body = BuildLeadSlaBody(lead, owner.FullName);
-                    await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                    await SendAlertAsync(emailSender, emailDeliveryPolicy, tenantId, owner.Email, subject, body, cancellationToken);
                     await PublishNotificationAlertAsync(
                         tenantId,
                         owner.Id,
@@ -152,7 +152,7 @@ public sealed class NotificationAlertWorker : BackgroundService
 
                 var subject = $"SLA breach (Lead): {lead.FirstName} {lead.LastName}";
                 var body = BuildLeadManagerBody(lead, manager.FullName);
-                await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
+                await SendAlertAsync(emailSender, emailDeliveryPolicy, tenantId, manager.Email, subject, body, cancellationToken);
                 await PublishNotificationAlertAsync(
                     tenantId,
                     manager.Id,
@@ -171,6 +171,7 @@ public sealed class NotificationAlertWorker : BackgroundService
     private async Task ProcessIdleDealAlertsAsync(
         CrmDbContext dbContext,
         IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         IAuditEventService auditEvents,
         Guid tenantId,
         CancellationToken cancellationToken)
@@ -268,7 +269,7 @@ public sealed class NotificationAlertWorker : BackgroundService
                     var reason = BuildIdleDealReason(settings, now, referenceAtUtc, nextStepDueAtUtc);
                     var subject = $"Idle deal alert: {opportunity.Name}";
                     var body = BuildIdleDealBody(opportunity, lastActivityAtUtc, owner.FullName, reason);
-                    await SendAlertAsync(emailSender, owner.Email, subject, body, cancellationToken);
+                    await SendAlertAsync(emailSender, emailDeliveryPolicy, tenantId, owner.Email, subject, body, cancellationToken);
                     await PublishNotificationAlertAsync(
                         tenantId,
                         owner.Id,
@@ -295,7 +296,7 @@ public sealed class NotificationAlertWorker : BackgroundService
                 var reason = BuildIdleDealReason(settings, now, referenceAtUtc, nextStepDueAtUtc);
                 var subject = $"Idle deal alert: {opportunity.Name}";
                 var body = BuildIdleDealManagerBody(opportunity, lastActivityAtUtc, manager.FullName, reason);
-                await SendAlertAsync(emailSender, manager.Email, subject, body, cancellationToken);
+                await SendAlertAsync(emailSender, emailDeliveryPolicy, tenantId, manager.Email, subject, body, cancellationToken);
                 await PublishNotificationAlertAsync(
                     tenantId,
                     manager.Id,
@@ -318,6 +319,7 @@ public sealed class NotificationAlertWorker : BackgroundService
     private async Task ProcessCoachingEscalationsAsync(
         CrmDbContext dbContext,
         IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
         IAuditEventService auditEvents,
         Guid tenantId,
         CancellationToken cancellationToken)
@@ -390,7 +392,7 @@ public sealed class NotificationAlertWorker : BackgroundService
                     continue;
                 }
 
-                await SendAlertAsync(emailSender, manager.Manager.Email, subject, body, cancellationToken);
+                await SendAlertAsync(emailSender, emailDeliveryPolicy, tenantId, manager.Manager.Email, subject, body, cancellationToken);
                 await PublishNotificationAlertAsync(
                     tenantId,
                     manager.Manager.Id,
@@ -457,17 +459,19 @@ public sealed class NotificationAlertWorker : BackgroundService
 
     private static async Task SendAlertAsync(
         IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy,
+        Guid tenantId,
         string? toEmail,
         string subject,
         string htmlBody,
         CancellationToken cancellationToken)
     {
-        if (!EmailNotificationsEnabled)
+        if (string.IsNullOrWhiteSpace(toEmail))
         {
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(toEmail))
+        if (!await emailDeliveryPolicy.IsEnabledAsync(tenantId, WorkspaceEmailDeliveryCategory.Notifications, cancellationToken))
         {
             return;
         }

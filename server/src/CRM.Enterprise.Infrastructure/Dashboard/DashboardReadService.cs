@@ -57,6 +57,14 @@ public class DashboardReadService : IDashboardReadService
         string? IcpFit,
         string? IcpFitEvidence,
         DateTime? IcpFitValidatedAtUtc);
+    private sealed record DueActivityRow(
+        Guid Id,
+        ActivityType Type,
+        ActivityRelationType RelatedEntityType,
+        Guid RelatedEntityId,
+        DateTime? DueDateUtc,
+        DateTime? CompletedDateUtc,
+        string Subject);
     private readonly CrmDbContext _dbContext;
     private readonly ITenantProvider _tenantProvider;
     private const int InactivityThresholdDays = 30;
@@ -92,20 +100,20 @@ public class DashboardReadService : IDashboardReadService
             accountQuery = accountQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
         }
 
-        var totalCustomers = await accountQuery.CountAsync(cancellationToken);
-        var leads = await accountQuery.CountAsync(a => a.LifecycleStage == "Lead", cancellationToken);
-        var prospects = await accountQuery.CountAsync(a => a.LifecycleStage == "Prospect", cancellationToken);
-        var activeCustomers = await accountQuery.CountAsync(
-            a => a.LifecycleStage == "Customer" || a.LifecycleStage == null,
-            cancellationToken);
+        var accountLifecycleRows = await accountQuery
+            .Select(a => a.LifecycleStage)
+            .ToListAsync(cancellationToken);
+        var totalCustomers = accountLifecycleRows.Count;
+        var leads = accountLifecycleRows.Count(stage => string.Equals(stage, "Lead", StringComparison.OrdinalIgnoreCase));
+        var prospects = accountLifecycleRows.Count(stage => string.Equals(stage, "Prospect", StringComparison.OrdinalIgnoreCase));
+        var activeCustomers = accountLifecycleRows.Count(stage =>
+            string.IsNullOrWhiteSpace(stage) || string.Equals(stage, "Customer", StringComparison.OrdinalIgnoreCase));
 
         var opportunitiesQuery = _dbContext.Opportunities.AsNoTracking().Where(o => !o.IsDeleted && !o.IsClosed);
         if (visibility.UserIds is not null)
         {
             opportunitiesQuery = opportunitiesQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
         }
-
-        var openOpportunities = await opportunitiesQuery.CountAsync(cancellationToken);
 
         var exposureWeights = await ResolveExposureWeightsAsync(cancellationToken);
         var pipelineRows = await opportunitiesQuery
@@ -123,12 +131,15 @@ public class DashboardReadService : IDashboardReadService
                 o.SuccessCriteria,
                 o.CreatedAtUtc))
             .ToListAsync(cancellationToken);
+        var openOpportunities = pipelineRows.Count;
+        var openOpportunityIds = pipelineRows.Select(row => row.Id).ToList();
+        var pipelineRowLookup = pipelineRows.ToDictionary(row => row.Id);
 
         var leadQualificationRows = await _dbContext.Leads
             .AsNoTracking()
             .Where(l => !l.IsDeleted
                         && l.ConvertedOpportunityId.HasValue
-                        && pipelineRows.Select(p => p.Id).Contains(l.ConvertedOpportunityId.Value))
+                        && openOpportunityIds.Contains(l.ConvertedOpportunityId.Value))
             .Select(l => new LeadQualificationRow(
                 l.ConvertedOpportunityId!.Value,
                 l.CreatedAtUtc,
@@ -243,25 +254,15 @@ public class DashboardReadService : IDashboardReadService
             activitiesQuery = activitiesQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
         }
 
-        var tasksDueToday = await activitiesQuery.CountAsync(
-            a => !a.CompletedDateUtc.HasValue && a.DueDateUtc.HasValue &&
-                 a.DueDateUtc.Value >= startOfToday && a.DueDateUtc.Value < endOfToday,
-            cancellationToken);
-
-        var upcomingActivitiesCount = await activitiesQuery.CountAsync(
-            a => !a.CompletedDateUtc.HasValue &&
-                 a.DueDateUtc.HasValue &&
-                 a.DueDateUtc.Value >= now &&
-                 a.DueDateUtc.Value <= nextWeek,
-            cancellationToken);
-
-        var overdueActivitiesCount = await activitiesQuery.CountAsync(
-            a => !a.CompletedDateUtc.HasValue && a.DueDateUtc < now,
-            cancellationToken);
-
-        var openOpportunityIds = await opportunitiesQuery
-            .Select(o => o.Id)
+        var scheduledActivityRows = await activitiesQuery
+            .Where(a => !a.CompletedDateUtc.HasValue && a.DueDateUtc.HasValue)
+            .Select(a => a.DueDateUtc!.Value)
             .ToListAsync(cancellationToken);
+        var tasksDueToday = scheduledActivityRows.Count(
+            dueAt => dueAt >= startOfToday && dueAt < endOfToday);
+        var upcomingActivitiesCount = scheduledActivityRows.Count(
+            dueAt => dueAt >= now && dueAt <= nextWeek);
+        var overdueActivitiesCount = scheduledActivityRows.Count(dueAt => dueAt < now);
 
         var atRiskOpportunities = 0;
         var opportunitiesWithoutNextStep = 0;
@@ -309,12 +310,12 @@ public class DashboardReadService : IDashboardReadService
                     atRiskOpportunities++;
                     if (atRiskDetails.Count < 6)
                     {
-                        atRiskDetails.Add(await BuildAtRiskDetailAsync(
+                        atRiskDetails.Add(BuildAtRiskDetail(
+                            pipelineRowLookup.GetValueOrDefault(opportunityId),
                             opportunityId,
                             "Missing next step",
                             nextStepDueAtUtc,
-                            lastActivityAtUtc,
-                            cancellationToken));
+                            lastActivityAtUtc));
                     }
                     continue;
                 }
@@ -324,12 +325,12 @@ public class DashboardReadService : IDashboardReadService
                     atRiskOpportunities++;
                     if (atRiskDetails.Count < 6)
                     {
-                        atRiskDetails.Add(await BuildAtRiskDetailAsync(
+                        atRiskDetails.Add(BuildAtRiskDetail(
+                            pipelineRowLookup.GetValueOrDefault(opportunityId),
                             opportunityId,
                             "Next step overdue",
                             nextStepDueAtUtc,
-                            lastActivityAtUtc,
-                            cancellationToken));
+                            lastActivityAtUtc));
                     }
                     continue;
                 }
@@ -339,12 +340,12 @@ public class DashboardReadService : IDashboardReadService
                     atRiskOpportunities++;
                     if (atRiskDetails.Count < 6)
                     {
-                        atRiskDetails.Add(await BuildAtRiskDetailAsync(
+                        atRiskDetails.Add(BuildAtRiskDetail(
+                            pipelineRowLookup.GetValueOrDefault(opportunityId),
                             opportunityId,
                             "No recent activity",
                             nextStepDueAtUtc,
-                            lastActivityAtUtc,
-                            cancellationToken));
+                            lastActivityAtUtc));
                     }
                 }
             }
@@ -378,6 +379,7 @@ public class DashboardReadService : IDashboardReadService
             .Where(u => ownerIds.Contains(u.Id))
             .Select(u => new { u.Id, u.FullName })
             .ToListAsync(cancellationToken);
+        var ownerLookup = owners.ToDictionary(o => o.Id, o => o.FullName);
 
         var recentCustomers = recentCustomersRaw
             .Select(rc => new RecentAccountDto(
@@ -387,7 +389,7 @@ public class DashboardReadService : IDashboardReadService
                 rc.Phone,
                 rc.LifecycleStage ?? "Customer",
                 rc.OwnerId,
-                owners.FirstOrDefault(o => o.Id == rc.OwnerId)?.FullName ?? "Unassigned",
+                ownerLookup.GetValueOrDefault(rc.OwnerId) ?? "Unassigned",
                 rc.CreatedAtUtc))
             .ToList();
 
@@ -407,14 +409,14 @@ public class DashboardReadService : IDashboardReadService
         var activitiesNextWeekRaw = await activitiesNextWeekQuery
             .OrderBy(a => a.DueDateUtc)
             .Take(10)
-            .Select(a => new DashboardActivityRaw(
+            .Select(a => new DueActivityRow(
                 a.Id,
-                a.Subject,
                 a.Type,
                 a.RelatedEntityType,
                 a.RelatedEntityId,
                 a.DueDateUtc,
-                a.CompletedDateUtc))
+                a.CompletedDateUtc,
+                a.Subject))
             .ToListAsync(cancellationToken);
 
         var myTasksRaw = userId.HasValue
@@ -428,16 +430,16 @@ public class DashboardReadService : IDashboardReadService
                      (!string.IsNullOrWhiteSpace(userEmail) && a.CreatedBy == userEmail)))
                 .OrderBy(a => a.DueDateUtc ?? DateTime.MaxValue)
                 .Take(6)
-                .Select(a => new DashboardActivityRaw(
+                .Select(a => new DueActivityRow(
                     a.Id,
-                    a.Subject,
                     a.Type,
                     a.RelatedEntityType,
                     a.RelatedEntityId,
                     a.DueDateUtc,
-                    a.CompletedDateUtc))
+                    a.CompletedDateUtc,
+                    a.Subject))
                 .ToListAsync(cancellationToken)
-            : new List<DashboardActivityRaw>();
+            : new List<DueActivityRow>();
 
         var newlyAssignedLeads = userId.HasValue
             ? await _dbContext.Leads
@@ -727,55 +729,54 @@ public class DashboardReadService : IDashboardReadService
                 null))
             .ToList();
 
-        var monthLeadOwnersQuery = _dbContext.Leads
+        var monthLeadRowsQuery = _dbContext.Leads
             .AsNoTracking()
-            .Where(l => !l.IsDeleted && l.CreatedAtUtc >= monthStart && l.CreatedAtUtc < monthEnd);
+            .Where(l => !l.IsDeleted
+                && ((l.CreatedAtUtc >= monthStart && l.CreatedAtUtc < monthEnd)
+                    || (l.QualifiedAtUtc.HasValue && l.QualifiedAtUtc.Value >= monthStart && l.QualifiedAtUtc.Value < monthEnd)));
         if (visibility.UserIds is not null)
         {
-            monthLeadOwnersQuery = monthLeadOwnersQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
+            monthLeadRowsQuery = monthLeadRowsQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
         }
-        var monthLeadOwners = await monthLeadOwnersQuery
+        var monthLeadRows = await monthLeadRowsQuery
+            .Select(l => new { l.OwnerId, l.CreatedAtUtc, l.QualifiedAtUtc })
+            .ToListAsync(cancellationToken);
+        var monthLeadOwners = monthLeadRows
+            .Where(l => l.CreatedAtUtc >= monthStart && l.CreatedAtUtc < monthEnd)
             .Select(l => l.OwnerId)
-            .ToListAsync(cancellationToken);
-
-        var monthQualifiedOwnersQuery = _dbContext.Leads
-            .AsNoTracking()
-            .Where(l => !l.IsDeleted && l.QualifiedAtUtc.HasValue && l.QualifiedAtUtc.Value >= monthStart && l.QualifiedAtUtc.Value < monthEnd);
-        if (visibility.UserIds is not null)
-        {
-            monthQualifiedOwnersQuery = monthQualifiedOwnersQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
-        }
-        var monthQualifiedOwners = await monthQualifiedOwnersQuery
+            .ToList();
+        var monthQualifiedOwners = monthLeadRows
+            .Where(l => l.QualifiedAtUtc.HasValue && l.QualifiedAtUtc.Value >= monthStart && l.QualifiedAtUtc.Value < monthEnd)
             .Select(l => l.OwnerId)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
-        var monthOpportunityOwnersQuery = _dbContext.Opportunities
+        var monthOpportunityRowsQuery = _dbContext.Opportunities
             .AsNoTracking()
-            .Where(o => !o.IsDeleted && o.CreatedAtUtc >= monthStart && o.CreatedAtUtc < monthEnd);
+            .Where(o => !o.IsDeleted
+                && ((o.CreatedAtUtc >= monthStart && o.CreatedAtUtc < monthEnd)
+                    || (o.IsClosed && o.IsWon && (o.UpdatedAtUtc ?? o.CreatedAtUtc) >= monthStart && (o.UpdatedAtUtc ?? o.CreatedAtUtc) < monthEnd)));
         if (visibility.UserIds is not null)
         {
-            monthOpportunityOwnersQuery = monthOpportunityOwnersQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
+            monthOpportunityRowsQuery = monthOpportunityRowsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
         }
-        var monthOpportunityOwners = await monthOpportunityOwnersQuery
-            .Select(o => o.OwnerId)
-            .ToListAsync(cancellationToken);
-
-        var monthWonRowsQuery = _dbContext.Opportunities
-            .AsNoTracking()
-            .Where(o => !o.IsDeleted && o.IsClosed && o.IsWon);
-        if (visibility.UserIds is not null)
-        {
-            monthWonRowsQuery = monthWonRowsQuery.Where(o => visibility.UserIds.Contains(o.OwnerId));
-        }
-        var monthWonRows = await monthWonRowsQuery
+        var monthOpportunityRows = await monthOpportunityRowsQuery
             .Select(o => new
             {
                 o.OwnerId,
                 o.Amount,
+                o.CreatedAtUtc,
+                o.IsWon,
+                o.IsClosed,
                 ClosedAt = o.UpdatedAtUtc ?? o.CreatedAtUtc
             })
-            .Where(o => o.ClosedAt >= monthStart && o.ClosedAt < monthEnd)
             .ToListAsync(cancellationToken);
+        var monthOpportunityOwners = monthOpportunityRows
+            .Where(o => o.CreatedAtUtc >= monthStart && o.CreatedAtUtc < monthEnd)
+            .Select(o => o.OwnerId)
+            .ToList();
+        var monthWonRows = monthOpportunityRows
+            .Where(o => o.IsClosed && o.IsWon && o.ClosedAt >= monthStart && o.ClosedAt < monthEnd)
+            .ToList();
 
         var teamOwnerIds = monthLeadOwners
             .Concat(monthQualifiedOwners)
@@ -900,17 +901,6 @@ public class DashboardReadService : IDashboardReadService
         var customerLifetimeValue = wonTwelveMonthAccounts == 0
             ? 0
             : wonTwelveMonthRevenue / wonTwelveMonthAccounts;
-
-        var accountLifecycleRowsQuery = _dbContext.Accounts
-            .AsNoTracking()
-            .Where(a => !a.IsDeleted);
-        if (visibility.UserIds is not null)
-        {
-            accountLifecycleRowsQuery = accountLifecycleRowsQuery.Where(a => visibility.UserIds.Contains(a.OwnerId));
-        }
-        var accountLifecycleRows = await accountLifecycleRowsQuery
-            .Select(a => a.LifecycleStage)
-            .ToListAsync(cancellationToken);
 
         var totalCustomerPopulation = accountLifecycleRows.Count(stage =>
             string.IsNullOrWhiteSpace(stage)
@@ -2140,29 +2130,14 @@ public class DashboardReadService : IDashboardReadService
         ["clearly out of icp"] = EpistemicState.Invalid
     };
 
-    private async Task<DashboardOpportunityDto> BuildAtRiskDetailAsync(
+    private static DashboardOpportunityDto BuildAtRiskDetail(
+        PipelineExposureRow? row,
         Guid opportunityId,
         string reason,
         DateTime? nextStepDueAtUtc,
-        DateTime? lastActivityAtUtc,
-        CancellationToken cancellationToken)
+        DateTime? lastActivityAtUtc)
     {
-        var record = await _dbContext.Opportunities
-            .AsNoTracking()
-            .Include(o => o.Account)
-            .Include(o => o.Stage)
-            .Where(o => o.Id == opportunityId)
-            .Select(o => new
-            {
-                o.Id,
-                o.Name,
-                AccountName = o.Account != null ? o.Account.Name : string.Empty,
-                Stage = o.Stage != null ? o.Stage.Name : "Prospecting",
-                o.Amount
-            })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (record is null)
+        if (row is null)
         {
             return new DashboardOpportunityDto(
                 opportunityId,
@@ -2176,11 +2151,11 @@ public class DashboardReadService : IDashboardReadService
         }
 
         return new DashboardOpportunityDto(
-            record.Id,
-            record.Name,
-            record.AccountName,
-            record.Stage,
-            record.Amount,
+            row.Id,
+            row.Name,
+            row.AccountName,
+            row.Stage,
+            row.Amount,
             reason,
             nextStepDueAtUtc,
             lastActivityAtUtc);

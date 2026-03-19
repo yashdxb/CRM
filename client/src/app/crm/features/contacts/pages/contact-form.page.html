@@ -1,6 +1,93 @@
 
     <div class="contact-form-page">
       <app-breadcrumbs></app-breadcrumbs>
+      <p-dialog
+        header="Saved drafts available"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [closable]="true"
+        [dismissableMask]="true"
+        [visible]="draftPromptVisible()"
+        [style]="{ width: '38rem', maxWidth: '96vw' }"
+        styleClass="form-draft-prompt-dialog"
+        (visibleChange)="draftPromptVisible.set($event)"
+        (onHide)="dismissDraftPrompt()"
+      >
+        <div class="form-draft-prompt">
+          <div class="form-draft-prompt__hero">
+            <div class="form-draft-prompt__icon">
+              <i class="pi pi-bookmark"></i>
+            </div>
+            <div>
+              <h3>Resume a saved contact draft?</h3>
+              <p>You have saved contact drafts. Choose one to continue where you left off, or start with a blank form.</p>
+            </div>
+          </div>
+          <div class="form-draft-list" *ngIf="recentDrafts().length; else noContactPromptDrafts">
+            <div class="form-draft-list__item" *ngFor="let draft of recentDrafts()">
+              <span class="form-draft-list__title">{{ draft.title }}</span>
+              <span class="form-draft-list__meta">{{ draft.subtitle || 'No account' }} · {{ formatDraftTimestamp(draft.updatedAtUtc) }}</span>
+              <span class="form-draft-list__actions">
+                <button type="button" class="form-draft-list__resume" (click)="loadDraftFromPrompt(draft)">Load draft</button>
+              </span>
+            </div>
+          </div>
+          <ng-template #noContactPromptDrafts>
+            <p class="form-draft-dialog__empty">No saved drafts available.</p>
+          </ng-template>
+          <div class="lead-status-dialog__actions">
+            <button pButton type="button" class="p-button-outlined" label="Start fresh" (click)="dismissDraftPrompt()"></button>
+            <button pButton type="button" class="crm-button crm-button--primary" label="View all drafts" (click)="dismissDraftPrompt(); openDraftLibrary()"></button>
+          </div>
+        </div>
+      </p-dialog>
+      <p-dialog
+        header="Open saved draft?"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [closable]="true"
+        [dismissableMask]="true"
+        [visible]="draftOpenConfirmVisible()"
+        [style]="{ width: '28rem', maxWidth: '94vw' }"
+        (visibleChange)="draftOpenConfirmVisible.set($event)"
+        (onHide)="cancelOpenDraft()"
+      >
+        <div class="form-draft-dialog">
+          <p>Your current unsaved changes will be replaced by the selected draft.</p>
+          <div class="lead-status-dialog__actions">
+            <button pButton type="button" class="p-button-outlined" label="Cancel" (click)="cancelOpenDraft()"></button>
+            <button pButton type="button" class="crm-button crm-button--primary" label="Open Draft" (click)="confirmOpenDraft()"></button>
+          </div>
+        </div>
+      </p-dialog>
+      <p-dialog
+        header="Saved contact drafts"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [closable]="true"
+        [dismissableMask]="true"
+        [visible]="draftLibraryVisible()"
+        [style]="{ width: '42rem', maxWidth: '96vw' }"
+        (visibleChange)="draftLibraryVisible.set($event)"
+        (onHide)="closeDraftLibrary()"
+      >
+        <div class="form-draft-dialog">
+          <p class="form-draft-dialog__empty" *ngIf="!draftLibraryLoading() && !draftLibraryItems().length">No saved drafts yet.</p>
+          <div class="form-draft-list" *ngIf="draftLibraryItems().length">
+            <div class="form-draft-list__item" *ngFor="let draft of draftLibraryItems()">
+              <span class="form-draft-list__title">{{ draft.title }}</span>
+              <span class="form-draft-list__meta">{{ draft.subtitle || 'No account' }} · {{ formatDraftTimestamp(draft.updatedAtUtc) }}</span>
+              <span class="form-draft-list__actions">
+                <button type="button" class="form-draft-list__resume" (click)="openDraftFromSummary(draft)">Resume</button>
+                <button type="button" class="form-draft-list__discard" (click)="discardDraft(draft, $event)">Discard</button>
+              </span>
+            </div>
+          </div>
+        </div>
+      </p-dialog>
       <header class="page-header">
         <div class="header-content">
           <button pButton type="button" class="back-link p-button-text" routerLink="/app/contacts">
@@ -13,6 +100,14 @@
               <span class="title-light">Contact</span>
             </h1>
             <p>{{ isEditMode() ? 'Update stakeholder details' : 'Add a new person to your customer team' }}</p>
+            <div class="form-draft-status" *ngIf="draftStatusMessage() as draftStatus">
+              <i class="pi pi-bookmark"></i>
+              <span>{{ draftStatus }}</span>
+            </div>
+            <div class="form-draft-banner" *ngIf="draftModeActive()">
+              <i class="pi pi-info-circle"></i>
+              <span>This form is loaded from a saved draft. Final Save will create or update the live CRM record.</span>
+            </div>
             <div class="presence-focus" *ngIf="isEditMode() && visiblePresenceUsers().length">
               <i class="pi pi-eye"></i>
               <span>{{ viewingPresenceSummary() }}</span>
@@ -284,12 +379,25 @@
               [disabled]="converting()"
             ></button>
             <button
-              type="submit"
+              type="button"
               pButton
-              [label]="isEditMode() ? 'Update contact' : 'Create contact'"
+              [label]="primarySaveLabel()"
+              icon="pi pi-check"
               class="crm-button crm-button--primary"
-              [disabled]="!form.firstName || !form.lastName || saving()"
+              [disabled]="saving() || draftSaving()"
+              (click)="onSave()"
             ></button>
+            <p-splitbutton
+              [label]="draftButtonLabel()"
+              icon="pi pi-bookmark"
+              styleClass="crm-draft-splitbutton"
+              buttonStyleClass="crm-button crm-button--secondary"
+              menuButtonStyleClass="crm-button crm-button--secondary"
+              appendTo="body"
+              [disabled]="saving() || draftSaving()"
+              [model]="draftSplitButtonItems()"
+              (onClick)="saveDraft()"
+            ></p-splitbutton>
           </footer>
         </form>
       </main>

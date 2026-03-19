@@ -24,6 +24,7 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
     private readonly IWebHostEnvironment _environment;
     private readonly ITenantProvider _tenantProvider;
     private readonly IEmailSender _emailSender;
+    private readonly IWorkspaceEmailDeliveryPolicy _emailDeliveryPolicy;
 
     public OpportunityQuoteService(
         CrmDbContext dbContext,
@@ -31,7 +32,8 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
         IOpportunityApprovalService approvalService,
         IWebHostEnvironment environment,
         ITenantProvider tenantProvider,
-        IEmailSender emailSender)
+        IEmailSender emailSender,
+        IWorkspaceEmailDeliveryPolicy emailDeliveryPolicy)
     {
         _dbContext = dbContext;
         _auditEvents = auditEvents;
@@ -39,6 +41,7 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
         _environment = environment;
         _tenantProvider = tenantProvider;
         _emailSender = emailSender;
+        _emailDeliveryPolicy = emailDeliveryPolicy;
     }
 
     public async Task<IReadOnlyList<OpportunityQuoteListItemDto>?> GetByOpportunityAsync(Guid opportunityId, CancellationToken cancellationToken = default)
@@ -377,6 +380,11 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
             $"{(customMessage ?? "Please review the attached proposal details from our CRM workspace.")}{Environment.NewLine}" +
             $"Open proposal: {link}{Environment.NewLine}{Environment.NewLine}" +
             $"Regards,{Environment.NewLine}{(string.IsNullOrWhiteSpace(actor.UserName) ? "CRM Team" : actor.UserName)}";
+
+        if (!await _emailDeliveryPolicy.IsEnabledAsync(WorkspaceEmailDeliveryCategory.Proposals, cancellationToken))
+        {
+            throw new InvalidOperationException("Proposal emails are disabled in workspace settings.");
+        }
 
         await _emailSender.SendAsync(recipientEmail, subject, htmlBody, textBody, cancellationToken);
 

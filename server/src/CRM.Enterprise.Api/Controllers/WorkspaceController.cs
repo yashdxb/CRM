@@ -6,6 +6,7 @@ using CRM.Enterprise.Application.Leads;
 using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
+using CRM.Enterprise.Application.Notifications;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Infrastructure.Persistence;
 using CRM.Enterprise.Security;
@@ -39,7 +40,16 @@ public class WorkspaceController : ControllerBase
         "realtime.importProgress",
         "realtime.recordPresence",
         "realtime.assistantStreaming",
-        "ai.knowledgeSearch"
+        "ai.knowledgeSearch",
+        WorkspaceEmailDeliveryFlags.Master,
+        WorkspaceEmailDeliveryFlags.Invites,
+        WorkspaceEmailDeliveryFlags.Security,
+        WorkspaceEmailDeliveryFlags.Approvals,
+        WorkspaceEmailDeliveryFlags.Proposals,
+        WorkspaceEmailDeliveryFlags.Marketing,
+        WorkspaceEmailDeliveryFlags.Notifications,
+        WorkspaceEmailDeliveryFlags.Mailbox,
+        WorkspaceEmailDeliveryFlags.StatusNotifications
     };
 
     public WorkspaceController(
@@ -377,6 +387,16 @@ public class WorkspaceController : ControllerBase
         {
             defaults["properties"] = true;
         }
+
+        defaults[WorkspaceEmailDeliveryFlags.Master] = false;
+        defaults[WorkspaceEmailDeliveryFlags.Invites] = true;
+        defaults[WorkspaceEmailDeliveryFlags.Security] = true;
+        defaults[WorkspaceEmailDeliveryFlags.Approvals] = true;
+        defaults[WorkspaceEmailDeliveryFlags.Proposals] = true;
+        defaults[WorkspaceEmailDeliveryFlags.Marketing] = true;
+        defaults[WorkspaceEmailDeliveryFlags.Notifications] = true;
+        defaults[WorkspaceEmailDeliveryFlags.Mailbox] = true;
+        defaults[WorkspaceEmailDeliveryFlags.StatusNotifications] = true;
 
         if (string.IsNullOrWhiteSpace(tenant.FeatureFlagsJson))
         {
