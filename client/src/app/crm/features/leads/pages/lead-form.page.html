@@ -750,48 +750,6 @@
                       ></p-select>
                     </div>
                     <div class="form-field">
-                      <label for="lead-motivationUrgency">Motivation / urgency</label>
-                      <p-select
-                        id="lead-motivationUrgency"
-                        name="motivationUrgency"
-                        [options]="motivationUrgencyOptions()"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select motivation"
-                        appendTo="body"
-                        styleClass="w-full"
-                        [(ngModel)]="form.motivationUrgency"
-                      ></p-select>
-                    </div>
-                    <div class="form-field">
-                      <label for="lead-financingReadiness">Financing readiness</label>
-                      <p-select
-                        id="lead-financingReadiness"
-                        name="financingReadiness"
-                        [options]="financingReadinessOptions()"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select financing readiness"
-                        appendTo="body"
-                        styleClass="w-full"
-                        [(ngModel)]="form.financingReadiness"
-                      ></p-select>
-                    </div>
-                    <div class="form-field">
-                      <label for="lead-preApprovalStatus">Pre-approval status</label>
-                      <p-select
-                        id="lead-preApprovalStatus"
-                        name="preApprovalStatus"
-                        [options]="preApprovalStatusOptions()"
-                        optionLabel="label"
-                        optionValue="value"
-                        placeholder="Select pre-approval status"
-                        appendTo="body"
-                        styleClass="w-full"
-                        [(ngModel)]="form.preApprovalStatus"
-                      ></p-select>
-                    </div>
-                    <div class="form-field">
                       <label for="lead-preferredArea">Preferred area</label>
                       <p-select
                         id="lead-preferredArea"
@@ -1337,6 +1295,20 @@
                   </ng-template>
                 </p-select>
               </div>
+              <div class="form-field" *ngIf="isBrokeragePreset()">
+                <label for="lead-motivationUrgency">Motivation / urgency</label>
+                <p-select
+                  id="lead-motivationUrgency"
+                  name="motivationUrgency"
+                  [options]="motivationUrgencyOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select motivation"
+                  appendTo="body"
+                  class="w-full"
+                  [(ngModel)]="form.motivationUrgency"
+                ></p-select>
+              </div>
               <div class="form-field">
                 <label for="lead-readinessToSpend">Readiness to spend <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = ready to purchase this quarter&#10;Likely = evaluating options&#10;Unknown = timeline unclear" tooltipPosition="top" [escape]="false"></i></label>
                 <p-select
@@ -1365,6 +1337,20 @@
                   </ng-template>
                 </p-select>
               </div>
+              <div class="form-field" *ngIf="isBrokeragePreset()">
+                <label for="lead-financingReadiness">Financing readiness</label>
+                <p-select
+                  id="lead-financingReadiness"
+                  name="financingReadiness"
+                  [options]="financingReadinessOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select financing readiness"
+                  appendTo="body"
+                  class="w-full"
+                  [(ngModel)]="form.financingReadiness"
+                ></p-select>
+              </div>
               <div class="form-field">
                 <label for="lead-readinessEvidence">Evidence source</label>
                 <p-select
@@ -1392,6 +1378,20 @@
                     </div>
                   </ng-template>
                 </p-select>
+              </div>
+              <div class="form-field" *ngIf="isBrokeragePreset()">
+                <label for="lead-preApprovalStatus">Pre-approval status</label>
+                <p-select
+                  id="lead-preApprovalStatus"
+                  name="preApprovalStatus"
+                  [options]="preApprovalStatusOptions()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select pre-approval status"
+                  appendTo="body"
+                  class="w-full"
+                  [(ngModel)]="form.preApprovalStatus"
+                ></p-select>
               </div>
               <div class="form-field">
                 <label for="lead-buyingTimeline">Buying timeline <i class="pi pi-info-circle qual-info-icon" pTooltip="Confirmed = decision date set&#10;Likely = within 6 months&#10;Unknown = no timeline shared" tooltipPosition="top" [escape]="false"></i></label>
