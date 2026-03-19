@@ -34,6 +34,7 @@ import { PropertyDataService } from '../../properties/services/property-data.ser
 import { Property } from '../../properties/models/property.model';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { readUserId } from '../../../../core/auth/token.utils';
+import { HasUnsavedChanges } from '../../../../core/guards/unsaved-changes.guard';
 import { FormDraftDetail, FormDraftSummary } from '../../../../core/drafts/form-draft.model';
 import { FormDraftService } from '../../../../core/drafts/form-draft.service';
 
@@ -68,7 +69,7 @@ interface StatusOption {
   templateUrl: "./customer-form.page.html",
   styleUrls: ["./customer-form.page.scss"]
 })
-export class CustomerFormPage implements OnInit, OnDestroy {
+export class CustomerFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected readonly statusOptions: StatusOption[] = [
     { label: 'Lead', value: 'Lead' },
     { label: 'Prospect', value: 'Prospect' },
@@ -108,6 +109,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   protected readonly draftModeActive = signal(false);
   protected readonly draftPromptVisible = signal(false);
   protected readonly draftOpenConfirmVisible = signal(false);
+  protected readonly leavePromptVisible = signal(false);
   protected readonly activeDraftId = signal<string | null>(null);
   protected readonly nameError = signal<string | null>(null);
   private readonly toastService = inject(AppToastService);
@@ -136,6 +138,11 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   private duplicateCheckTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingDraftToOpen: FormDraftSummary | null = null;
   private hasShownDraftPrompt = false;
+  private originalFormSnapshot = '';
+  private pendingLeaveResolver: ((value: boolean) => void) | null = null;
+  private pendingLeaveDecision: Promise<boolean> | null = null;
+  private leaveAfterSave = false;
+  private leaveAfterDraftSave = false;
 
   protected noteText = '';
   private localEditingState = false;
@@ -184,6 +191,8 @@ export class CustomerFormPage implements OnInit, OnDestroy {
       this.isEditMode.set(true);
       this.loadCustomer();
       this.loadDetailData();
+    } else {
+      this.captureFormSnapshot();
     }
 
     this.customerData.search({ page: 1, pageSize: 200 }).subscribe((res) => {
@@ -197,6 +206,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.resolvePendingLeave(false);
     this.clearEditingIdleTimer();
     if (this.customerId) {
       this.crmEvents.setRecordEditingState('customer', this.customerId, false);
@@ -227,6 +237,29 @@ export class CustomerFormPage implements OnInit, OnDestroy {
     }, 8000);
   }
 
+  hasUnsavedChanges(): boolean {
+    return this.originalFormSnapshot !== '' && JSON.stringify(this.form) !== this.originalFormSnapshot;
+  }
+
+  confirmLeaveWithUnsavedChanges(): Promise<boolean> {
+    if (this.pendingLeaveDecision) {
+      return this.pendingLeaveDecision;
+    }
+
+    this.leavePromptVisible.set(true);
+    this.pendingLeaveDecision = new Promise<boolean>((resolve) => {
+      this.pendingLeaveResolver = resolve;
+    });
+    return this.pendingLeaveDecision;
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+    }
+  }
+
   private loadCustomer() {
     if (!this.customerId) return;
     this.loading.set(true);
@@ -250,6 +283,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
           rating: customer.rating,
           accountSource: customer.accountSource
         };
+        this.captureFormSnapshot();
         this.loading.set(false);
       },
       error: () => {
@@ -288,11 +322,11 @@ export class CustomerFormPage implements OnInit, OnDestroy {
     }, 600);
   }
 
-  protected onSave() {
+  protected onSave(): boolean {
     this.nameError.set(!this.form.name ? 'Customer name is required.' : null);
     if (this.nameError()) {
       this.raiseToast('error', 'Please fix the highlighted errors before saving.');
-      return;
+      return false;
     }
 
     this.saving.set(true);
@@ -327,12 +361,15 @@ export class CustomerFormPage implements OnInit, OnDestroy {
         next: () => {
           this.saving.set(false);
           this.completeActiveDraft();
+          this.captureFormSnapshot();
           this.raiseToast('success', 'Customer updated.');
           this.loadRecentDrafts();
+          this.finalizeLeaveAfterSave(true);
         },
         error: () => {
           this.saving.set(false);
           this.raiseToast('error', 'Unable to update customer.');
+          this.finalizeLeaveAfterSave(false);
         }
       });
     } else {
@@ -340,16 +377,24 @@ export class CustomerFormPage implements OnInit, OnDestroy {
         next: (created) => {
           this.saving.set(false);
           this.completeActiveDraft();
+          this.captureFormSnapshot();
           this.raiseToast('success', 'Customer created.');
           this.loadRecentDrafts();
+          if (this.leaveAfterSave) {
+            this.finalizeLeaveAfterSave(true);
+            return;
+          }
           void this.router.navigate(['/app/customers', created.id, 'edit']);
         },
         error: () => {
           this.saving.set(false);
           this.raiseToast('error', 'Unable to create customer.');
+          this.finalizeLeaveAfterSave(false);
         }
       });
     }
+
+    return true;
   }
 
   protected primarySaveLabel(): string {
@@ -396,17 +441,41 @@ export class CustomerFormPage implements OnInit, OnDestroy {
         this.activeDraftId.set(draft.id);
         this.draftModeActive.set(true);
         this.draftStatusMessage.set(`Draft saved at ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.captureFormSnapshot();
         this.loadRecentDrafts();
         if (this.draftLibraryVisible()) {
           this.loadDraftLibrary();
         }
+        this.finalizeLeaveAfterDraftSave(true);
       },
       error: () => {
         this.draftSaving.set(false);
         this.draftStatusMessage.set('Unable to save draft.');
         this.raiseToast('error', 'Unable to save draft.');
+        this.finalizeLeaveAfterDraftSave(false);
       }
     });
+  }
+
+  protected stayOnForm(): void {
+    this.resolvePendingLeave(false);
+  }
+
+  protected leaveWithoutSaving(): void {
+    this.resolvePendingLeave(true);
+  }
+
+  protected saveDraftAndLeave(): void {
+    this.leaveAfterDraftSave = true;
+    this.saveDraft();
+  }
+
+  protected submitAndLeave(): void {
+    this.leaveAfterSave = true;
+    if (!this.onSave()) {
+      this.leaveAfterSave = false;
+      this.resolvePendingLeave(false);
+    }
   }
 
   protected openDraftFromSummary(draft: FormDraftSummary): void {
@@ -573,6 +642,7 @@ export class CustomerFormPage implements OnInit, OnDestroy {
         this.activeDraftId.set(draft.id);
         this.draftModeActive.set(true);
         this.draftStatusMessage.set(`Draft loaded from ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.captureFormSnapshot();
         this.draftLibraryVisible.set(false);
       },
       error: () => this.raiseToast('error', 'Unable to open draft.')
@@ -596,6 +666,34 @@ export class CustomerFormPage implements OnInit, OnDestroy {
     this.formDraftService.complete(activeDraftId).subscribe({ next: () => {}, error: () => {} });
     this.activeDraftId.set(null);
     this.draftModeActive.set(false);
+  }
+
+  private captureFormSnapshot(): void {
+    this.originalFormSnapshot = JSON.stringify(this.form);
+  }
+
+  private resolvePendingLeave(value: boolean): void {
+    const resolver = this.pendingLeaveResolver;
+    this.pendingLeaveResolver = null;
+    this.pendingLeaveDecision = null;
+    this.leaveAfterSave = false;
+    this.leaveAfterDraftSave = false;
+    this.leavePromptVisible.set(false);
+    resolver?.(value);
+  }
+
+  private finalizeLeaveAfterSave(success: boolean): void {
+    if (!this.leaveAfterSave) {
+      return;
+    }
+    this.resolvePendingLeave(success);
+  }
+
+  private finalizeLeaveAfterDraftSave(success: boolean): void {
+    if (!this.leaveAfterDraftSave) {
+      return;
+    }
+    this.resolvePendingLeave(success);
   }
 
   private hasDraftFormChanges(): boolean {

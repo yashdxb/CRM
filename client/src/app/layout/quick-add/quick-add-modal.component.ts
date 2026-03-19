@@ -75,6 +75,8 @@ export class QuickAddModalComponent {
   protected quickAddActivityRelationId: string | null = null;
   
   readonly saving = signal(false);
+  readonly submitted = signal(false);
+  readonly validationMessage = signal<string | null>(null);
   readonly accountOptions = signal<Option<string>[]>([]);
   readonly contactOptions = signal<Option<string>[]>([]);
   readonly opportunityOptions = signal<Option<string>[]>([]);
@@ -110,13 +112,17 @@ export class QuickAddModalComponent {
       return !!this.quickAddLeadName.trim();
     }
     if (this.quickAddType === 'contact') {
-      return !!this.quickAddContactName.trim();
+      return !!this.quickAddContactName.trim() && !!this.quickAddContactAccountId;
     }
-    return !!this.quickAddActivitySubject.trim();
+    return !!this.quickAddActivitySubject.trim() && !!this.quickAddActivityRelationId;
   }
 
   protected submitQuickAdd() {
     if (this.saving()) return;
+    this.submitted.set(true);
+    if (!this.validateQuickAdd()) {
+      return;
+    }
 
     this.saving.set(true);
     if (this.quickAddType === 'lead') {
@@ -183,6 +189,7 @@ export class QuickAddModalComponent {
 
   private finishQuickAdd(title: string, name?: string) {
     this.saving.set(false);
+    this.validationMessage.set(null);
     this.notificationService.success(title, name ? `${name} saved successfully.` : 'Saved successfully.');
     this.created.emit();
     this.close.emit();
@@ -195,6 +202,8 @@ export class QuickAddModalComponent {
 
   private resetForm(type?: QuickAddType) {
     this.quickAddType = type ?? 'lead';
+    this.submitted.set(false);
+    this.validationMessage.set(null);
     this.quickAddLeadName = '';
     this.quickAddLeadCompany = '';
     this.quickAddLeadEmail = '';
@@ -212,6 +221,68 @@ export class QuickAddModalComponent {
     this.quickAddActivityNextStepDueDate = undefined;
     this.quickAddActivityRelationType = 'Account';
     this.quickAddActivityRelationId = null;
+  }
+
+  protected leadNameInvalid(): boolean {
+    return this.submitted() && !this.quickAddLeadName.trim();
+  }
+
+  protected contactNameInvalid(): boolean {
+    return this.submitted() && !this.quickAddContactName.trim();
+  }
+
+  protected contactAccountInvalid(): boolean {
+    return this.submitted() && !this.quickAddContactAccountId;
+  }
+
+  protected activitySubjectInvalid(): boolean {
+    return this.submitted() && !this.quickAddActivitySubject.trim();
+  }
+
+  protected activityRelationInvalid(): boolean {
+    return this.submitted() && !this.quickAddActivityRelationId;
+  }
+
+  protected quickAddPrimaryLabel(): string {
+    return this.quickAddType === 'lead'
+      ? 'Create Lead'
+      : this.quickAddType === 'contact'
+        ? 'Create Contact'
+        : 'Create Activity';
+  }
+
+  private validateQuickAdd(): boolean {
+    if (this.quickAddType === 'lead') {
+      if (!this.quickAddLeadName.trim()) {
+        this.validationMessage.set('Lead name is required.');
+        return false;
+      }
+    }
+
+    if (this.quickAddType === 'contact') {
+      if (!this.quickAddContactName.trim()) {
+        this.validationMessage.set('Contact name is required.');
+        return false;
+      }
+      if (!this.quickAddContactAccountId) {
+        this.validationMessage.set('Account is required for quick-add contact creation.');
+        return false;
+      }
+    }
+
+    if (this.quickAddType === 'activity') {
+      if (!this.quickAddActivitySubject.trim()) {
+        this.validationMessage.set('Activity subject is required.');
+        return false;
+      }
+      if (!this.quickAddActivityRelationId) {
+        this.validationMessage.set('Select the related record before creating the activity.');
+        return false;
+      }
+    }
+
+    this.validationMessage.set(null);
+    return true;
   }
 
   private splitName(value: string) {

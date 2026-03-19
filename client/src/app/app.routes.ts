@@ -163,6 +163,7 @@ export const routes: Routes = [
           {
             path: 'new',
             canActivate: [roleGuard],
+            canDeactivate: [unsavedChangesGuard],
             data: { permission: PERMISSION_KEYS.customersManage, breadcrumb: 'New Customer' },
             loadComponent: () =>
               import('./crm/features/customers/pages/customer-form.page').then((m) => m.CustomerFormPage)
@@ -176,6 +177,7 @@ export const routes: Routes = [
           {
             path: ':id/edit',
             canActivate: [roleGuard],
+            canDeactivate: [unsavedChangesGuard],
             data: { permission: PERMISSION_KEYS.customersManage, breadcrumb: 'Edit Customer' },
             loadComponent: () =>
               import('./crm/features/customers/pages/customer-form.page').then((m) => m.CustomerFormPage)
@@ -233,12 +235,14 @@ export const routes: Routes = [
       {
         path: 'leads/new',
         canActivate: [roleGuard],
+        canDeactivate: [unsavedChangesGuard],
         data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'New Lead', icon: 'pi-plus' },
         loadComponent: () => import('./crm/features/leads/pages/lead-form.page').then((m) => m.LeadFormPage)
       },
       {
         path: 'leads/:id/edit',
         canActivate: [roleGuard],
+        canDeactivate: [unsavedChangesGuard],
         data: { permission: PERMISSION_KEYS.leadsManage, breadcrumb: 'Edit Lead', icon: 'pi-pencil' },
         loadComponent: () => import('./crm/features/leads/pages/lead-form.page').then((m) => m.LeadFormPage)
       },
@@ -251,6 +255,7 @@ export const routes: Routes = [
       {
         path: 'deals/new',
         canActivate: [roleGuard],
+        canDeactivate: [unsavedChangesGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'New Deal', icon: 'pi-plus' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)
@@ -263,6 +268,7 @@ export const routes: Routes = [
       {
         path: 'deals/:id/edit',
         canActivate: [roleGuard],
+        canDeactivate: [unsavedChangesGuard],
         data: { permission: PERMISSION_KEYS.opportunitiesManage, breadcrumb: 'Edit Deal', icon: 'pi-pencil' },
         loadComponent: () =>
           import('./crm/features/opportunities/pages/opportunity-form.page').then((m) => m.OpportunityFormPage)

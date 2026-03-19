@@ -55,6 +55,7 @@ import { AttachmentDataService, AttachmentItem } from '../../../../shared/servic
 import { AppToastService } from '../../../../core/app-toast.service';
 import { readTokenContext, readUserId, tokenHasPermission, tokenHasRole } from '../../../../core/auth/token.utils';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
+import { HasUnsavedChanges } from '../../../../core/guards/unsaved-changes.guard';
 import { UserAdminDataService } from '../../settings/services/user-admin-data.service';
 import { UserListItem } from '../../settings/models/user-admin.model';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
@@ -166,7 +167,7 @@ const DEAL_PANEL_ORDER: DealPanelKey[] = [
   templateUrl: "./opportunity-form.page.html",
   styleUrls: ['./opportunity-form.page.scss']
 })
-export class OpportunityFormPage implements OnInit, OnDestroy {
+export class OpportunityFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private static readonly DISCOUNT_PERCENT_APPROVAL_THRESHOLD = 10;
   private static readonly DISCOUNT_AMOUNT_APPROVAL_THRESHOLD = 1000;
   protected readonly accordionPanels = signal<string[]>([
@@ -245,6 +246,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   protected readonly draftModeActive = signal(false);
   protected readonly draftPromptVisible = signal(false);
   protected readonly draftOpenConfirmVisible = signal(false);
+  protected readonly leavePromptVisible = signal(false);
   protected readonly activeDraftId = signal<string | null>(null);
   protected dealNameError = signal<string | null>(null);
   protected readonly isEditMode = signal(false);
@@ -531,6 +533,11 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   private readonly currentUserId = readUserId();
   private currencyFallback = '';
   private readonly destroy$ = new Subject<void>();
+  private originalFormSnapshot = '';
+  private pendingLeaveResolver: ((value: boolean) => void) | null = null;
+  private pendingLeaveDecision: Promise<boolean> | null = null;
+  private leaveAfterSave = false;
+  private leaveAfterDraftSave = false;
 
   ngOnInit() {
     this.loadRecentDrafts();
@@ -587,6 +594,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
           'delivery-handoff'
         ]));
         this.loadingSectionKeys.set(new Set<DealPanelKey>());
+        this.captureFormSnapshot();
       }
     });
     this.loadTeamMemberOptions();
@@ -597,6 +605,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.resolvePendingLeave(false);
     this.clearEditingIdleTimer();
     if (this.editingId) {
       this.crmEvents.setRecordEditingState('opportunity', this.editingId, false);
@@ -607,6 +616,29 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     if (this.proposalResendChipTimeoutHandle) {
       clearTimeout(this.proposalResendChipTimeoutHandle);
       this.proposalResendChipTimeoutHandle = null;
+    }
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.originalFormSnapshot !== '' && this.createFormSnapshot() !== this.originalFormSnapshot;
+  }
+
+  confirmLeaveWithUnsavedChanges(): Promise<boolean> {
+    if (this.pendingLeaveDecision) {
+      return this.pendingLeaveDecision;
+    }
+
+    this.leavePromptVisible.set(true);
+    this.pendingLeaveDecision = new Promise<boolean>((resolve) => {
+      this.pendingLeaveResolver = resolve;
+    });
+    return this.pendingLeaveDecision;
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
     }
   }
 
@@ -1258,33 +1290,33 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     return this.hasPendingAcknowledgment() ? 'warning' : 'neutral';
   }
 
-  protected onSave() {
+  protected onSave(): boolean {
     if (this.requesterApprovalLocked()) {
       this.toastService.show('error', 'This deal is read-only while approval is pending.', 5000);
-      return;
+      return false;
     }
     if (this.decisionReviewMode()) {
       this.toastService.show('success', 'This record is opened in decision review mode (read-only).', 3000);
-      return;
+      return false;
     }
     if (!this.form.name) {
       this.dealNameError.set('Deal name is required.');
       this.toastService.show('error', 'Deal name is required.', 5000);
       this.scrollToFirstError('oppName');
-      return;
+      return false;
     }
     this.dealNameError.set(null);
     const teamError = this.validateTeamMembers();
     if (teamError) {
       this.toastService.show('error', teamError, 5000);
-      return;
+      return false;
     }
     const validationError = this.validateStageRequirements();
     if (validationError) {
       this.handlePolicyGateMessage(validationError);
       this.toastService.show('error', validationError, 5000);
       this.scrollToGateBanner();
-      return;
+      return false;
     }
 
     const payload = this.buildSavePayload();
@@ -1294,6 +1326,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     } else {
       this.performSave(payload);
     }
+    return true;
   }
 
   protected primarySaveLabel(): string {
@@ -1340,17 +1373,41 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.activeDraftId.set(draft.id);
         this.draftModeActive.set(true);
         this.draftStatusMessage.set(`Draft saved at ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.captureFormSnapshot();
         this.loadRecentDrafts();
         if (this.draftLibraryVisible()) {
           this.loadDraftLibrary();
         }
+        this.finalizeLeaveAfterDraftSave(true);
       },
       error: () => {
         this.draftSaving.set(false);
         this.draftStatusMessage.set('Unable to save draft.');
         this.toastService.show('error', 'Unable to save draft.', 5000);
+        this.finalizeLeaveAfterDraftSave(false);
       }
     });
+  }
+
+  protected stayOnForm(): void {
+    this.resolvePendingLeave(false);
+  }
+
+  protected leaveWithoutSaving(): void {
+    this.resolvePendingLeave(true);
+  }
+
+  protected saveDraftAndLeave(): void {
+    this.leaveAfterDraftSave = true;
+    this.saveDraft();
+  }
+
+  protected submitAndLeave(): void {
+    this.leaveAfterSave = true;
+    if (!this.onSave()) {
+      this.leaveAfterSave = false;
+      this.resolvePendingLeave(false);
+    }
   }
 
   protected openDraftFromSummary(draft: FormDraftSummary): void {
@@ -1544,10 +1601,12 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         next: () => {
           this.saving.set(false);
           this.completeActiveDraft();
+          this.captureFormSnapshot();
           this.originalStage = this.selectedStage;
           this.policyGateMessage.set(null);
           this.canRequestStageOverride.set(false);
           this.loadRecentDrafts();
+          this.finalizeLeaveAfterSave(true);
         },
         error: (err) => {
           this.saving.set(false);
@@ -1555,6 +1614,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
           this.handlePolicyGateMessage(message);
           this.toastService.show('error', message, 5000);
           this.scrollToGateBanner();
+          this.finalizeLeaveAfterSave(false);
         }
       });
   }
@@ -1922,6 +1982,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
         this.activeDraftId.set(draft.id);
         this.draftModeActive.set(true);
         this.draftStatusMessage.set(`Draft loaded from ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.captureFormSnapshot();
         this.draftLibraryVisible.set(false);
       },
       error: () => this.toastService.show('error', 'Unable to open draft.', 5000)
@@ -1947,8 +2008,43 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     this.draftModeActive.set(false);
   }
 
+  private createFormSnapshot(): string {
+    return JSON.stringify({ form: this.form, selectedStage: this.selectedStage });
+  }
+
+  private captureFormSnapshot(): void {
+    this.originalFormSnapshot = this.createFormSnapshot();
+  }
+
+  private resolvePendingLeave(value: boolean): void {
+    const resolver = this.pendingLeaveResolver;
+    this.pendingLeaveResolver = null;
+    this.pendingLeaveDecision = null;
+    this.leaveAfterSave = false;
+    this.leaveAfterDraftSave = false;
+    this.leavePromptVisible.set(false);
+    resolver?.(value);
+  }
+
+  private finalizeLeaveAfterSave(success: boolean): void {
+    if (!this.leaveAfterSave) {
+      return;
+    }
+    this.resolvePendingLeave(success);
+  }
+
+  private finalizeLeaveAfterDraftSave(success: boolean): void {
+    if (!this.leaveAfterDraftSave) {
+      return;
+    }
+    this.resolvePendingLeave(success);
+  }
+
   private hasDraftFormChanges(): boolean {
-    return JSON.stringify({ form: this.form, selectedStage: this.selectedStage }) !== JSON.stringify({ form: this.createEmptyForm(), selectedStage: 'Prospecting' });
+    if (!this.originalFormSnapshot) {
+      return this.createFormSnapshot() !== JSON.stringify({ form: this.createEmptyForm(), selectedStage: 'Prospecting' });
+    }
+    return this.createFormSnapshot() !== this.originalFormSnapshot;
   }
 
   private buildDraftTitle(): string {
@@ -3319,6 +3415,7 @@ export class OpportunityFormPage implements OnInit, OnDestroy {
     this.approvalAmountLocked = false;
     this.syncApprovalAmount();
     this.enforceAccordionAccess();
+    this.captureFormSnapshot();
     this.cdr.detectChanges();
   }
 

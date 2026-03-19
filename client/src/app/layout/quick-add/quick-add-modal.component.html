@@ -26,6 +26,10 @@
             <span>{{ quickAddType === 'lead' ? 'Lead' : (quickAddType === 'contact' ? 'Contact' : 'Activity') }}</span>
           </div>
         </div>
+        <div class="quick-add__validation" *ngIf="validationMessage() as validationMessage">
+          <i class="pi pi-exclamation-triangle"></i>
+          <span>{{ validationMessage }}</span>
+        </div>
         <div class="form-field">
           <label for="qa-recordType">Record type</label>
           <p-select
@@ -41,14 +45,15 @@
         </div>
 
         <div *ngIf="quickAddType === 'lead'" class="quick-add__grid">
-          <div class="form-field">
-            <label for="qa-leadName">Name</label>
+          <div class="form-field" [class.form-field--invalid]="leadNameInvalid()">
+            <label for="qa-leadName">Name <span class="field-required">*</span></label>
             <p-inputgroup>
               <p-inputgroup-addon class="icon-addon icon-addon--name">
                 <i class="pi pi-user"></i>
               </p-inputgroup-addon>
               <input pInputText id="qa-leadName" [(ngModel)]="quickAddLeadName" [ngModelOptions]="{ standalone: true }" placeholder="Lead name" />
             </p-inputgroup>
+            <small class="field-error" *ngIf="leadNameInvalid()">Lead name is required.</small>
           </div>
           <div class="form-field">
             <label for="qa-leadCompany">Company</label>
@@ -80,17 +85,18 @@
         </div>
 
         <div *ngIf="quickAddType === 'contact'" class="quick-add__grid">
-          <div class="form-field">
-            <label for="qa-contactName">Name</label>
+          <div class="form-field" [class.form-field--invalid]="contactNameInvalid()">
+            <label for="qa-contactName">Name <span class="field-required">*</span></label>
             <p-inputgroup>
               <p-inputgroup-addon class="icon-addon icon-addon--name">
                 <i class="pi pi-user"></i>
               </p-inputgroup-addon>
               <input pInputText id="qa-contactName" [(ngModel)]="quickAddContactName" [ngModelOptions]="{ standalone: true }" placeholder="Contact name" />
             </p-inputgroup>
+            <small class="field-error" *ngIf="contactNameInvalid()">Contact name is required.</small>
           </div>
-          <div class="form-field">
-            <label for="qa-contactAccount">Account</label>
+          <div class="form-field" [class.form-field--invalid]="contactAccountInvalid()">
+            <label for="qa-contactAccount">Account <span class="field-required">*</span></label>
             <p-select
               id="qa-contactAccount"
               [options]="accountOptions()"
@@ -101,6 +107,7 @@
               placeholder="Select account"
               appendTo="body"
             ></p-select>
+            <small class="field-error" *ngIf="contactAccountInvalid()">Account is required.</small>
           </div>
           <div class="form-field">
             <label for="qa-contactEmail">Email</label>
@@ -123,14 +130,15 @@
         </div>
 
         <div *ngIf="quickAddType === 'activity'" class="quick-add__grid">
-          <div class="form-field">
-            <label for="qa-activitySubject">Subject</label>
+          <div class="form-field" [class.form-field--invalid]="activitySubjectInvalid()">
+            <label for="qa-activitySubject">Subject <span class="field-required">*</span></label>
             <p-inputgroup>
               <p-inputgroup-addon class="icon-addon icon-addon--name">
                 <i class="pi pi-tag"></i>
               </p-inputgroup-addon>
               <input pInputText id="qa-activitySubject" [(ngModel)]="quickAddActivitySubject" [ngModelOptions]="{ standalone: true }" placeholder="Follow up call" />
             </p-inputgroup>
+            <small class="field-error" *ngIf="activitySubjectInvalid()">Activity subject is required.</small>
           </div>
           <div class="form-field">
             <label for="qa-activityType">Type</label>
@@ -197,8 +205,8 @@
               appendTo="body"
             ></p-select>
           </div>
-          <div class="form-field" *ngIf="quickAddActivityRelationType === 'Account'">
-            <label for="qa-activityAccount">Account</label>
+          <div class="form-field" [class.form-field--invalid]="activityRelationInvalid()" *ngIf="quickAddActivityRelationType === 'Account'">
+            <label for="qa-activityAccount">Account <span class="field-required">*</span></label>
             <p-select
               id="qa-activityAccount"
               [options]="accountOptions()"
@@ -209,9 +217,10 @@
               placeholder="Select account"
               appendTo="body"
             ></p-select>
+            <small class="field-error" *ngIf="activityRelationInvalid()">Choose the related account.</small>
           </div>
-          <div class="form-field" *ngIf="quickAddActivityRelationType === 'Contact'">
-            <label for="qa-activityContact">Contact</label>
+          <div class="form-field" [class.form-field--invalid]="activityRelationInvalid()" *ngIf="quickAddActivityRelationType === 'Contact'">
+            <label for="qa-activityContact">Contact <span class="field-required">*</span></label>
             <p-select
               id="qa-activityContact"
               [options]="contactOptions()"
@@ -222,9 +231,10 @@
               placeholder="Select contact"
               appendTo="body"
             ></p-select>
+            <small class="field-error" *ngIf="activityRelationInvalid()">Choose the related contact.</small>
           </div>
-          <div class="form-field" *ngIf="quickAddActivityRelationType === 'Opportunity'">
-            <label for="qa-activityOpportunity">Opportunity</label>
+          <div class="form-field" [class.form-field--invalid]="activityRelationInvalid()" *ngIf="quickAddActivityRelationType === 'Opportunity'">
+            <label for="qa-activityOpportunity">Deal <span class="field-required">*</span></label>
             <p-select
               id="qa-activityOpportunity"
               [options]="opportunityOptions()"
@@ -232,9 +242,10 @@
               optionValue="value"
               [(ngModel)]="quickAddActivityRelationId"
               [ngModelOptions]="{ standalone: true }"
-              placeholder="Select opportunity"
+              placeholder="Select deal"
               appendTo="body"
             ></p-select>
+            <small class="field-error" *ngIf="activityRelationInvalid()">Choose the related deal.</small>
           </div>
         </div>
       </div>
@@ -244,7 +255,7 @@
           pButton
           type="button"
           class="crm-button crm-button--primary"
-          label="Create"
+          [label]="quickAddPrimaryLabel()"
           [disabled]="saving() || !canSubmitQuickAdd()"
           (click)="submitQuickAdd()"
         ></button>

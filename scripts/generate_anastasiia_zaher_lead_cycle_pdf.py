@@ -16,13 +16,14 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "output" / "pdf" / "anastasiia-zaher-lead-cycle.pdf"
 RESULTS_TEMPLATE = ROOT / "output" / "uat" / "leo-martin-lead-cycle-results.json"
 
-DOCUMENT_VERSION = "1.4"
+DOCUMENT_VERSION = "1.5"
 USER_NAME = "Anastasiia Zaher"
 ROLE_NAME = "Sales Rep"
 VERSION_UPDATE_SUMMARY = (
-    "Derived from version 1.3. This version keeps the Anastasiia Zaher dataset and retained status set, and "
-    "now aligns the guide to the latest lead page where Next Lead Action is planning-only and Log activity is the "
-    "only activity write path from the lead form."
+    "Derived from version 1.4. This version keeps the Anastasiia Zaher dataset and retained status set, and now "
+    "aligns the guide to the latest lead intelligence cockpit, including Conversion Readiness, Qualification Status, "
+    "Conversation Intelligence, the planning-only Next Lead Action summary, and the current Buyer Profile plus "
+    "qualification readiness field split."
 )
 
 TENANT_KEY = "default"

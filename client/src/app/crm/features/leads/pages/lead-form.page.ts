@@ -46,6 +46,7 @@ import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { readTokenContext, readUserEmail, readUserId, tokenHasPermission } from '../../../../core/auth/token.utils';
+import { HasUnsavedChanges } from '../../../../core/guards/unsaved-changes.guard';
 import { TooltipModule } from 'primeng/tooltip';
 import { PhoneTypeReference, ReferenceDataService } from '../../../../core/services/reference-data.service';
 import { WorkspaceSettingsService } from '../../settings/services/workspace-settings.service';
@@ -213,7 +214,7 @@ const CQVS_GROUP_DEFINITIONS: Array<{
   templateUrl: "./lead-form.page.html",
   styleUrls: ["./lead-form.page.scss"]
 })
-export class LeadFormPage implements OnInit, OnDestroy {
+export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private static readonly ACCORDION_STATE_STORAGE_KEY = 'crm.lead-form.accordion-state.v1';
   protected activeTab = signal<'overview' | 'qualification' | 'activity' | 'history' | 'documents'>('overview');
 
@@ -326,6 +327,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected readonly draftModeActive = signal(false);
   protected readonly draftPromptVisible = signal(false);
   protected readonly draftOpenConfirmVisible = signal(false);
+  protected readonly leavePromptVisible = signal(false);
   protected readonly activeDraftId = signal<string | null>(null);
   protected aiScoring = signal(false);
   protected statusApiError = signal<string | null>(null);
@@ -426,6 +428,10 @@ export class LeadFormPage implements OnInit, OnDestroy {
   private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private formSnapshot: string | null = null;
   private hasShownDraftPrompt = false;
+  private pendingLeaveResolver: ((value: boolean) => void) | null = null;
+  private pendingLeaveDecision: Promise<boolean> | null = null;
+  private leaveAfterSave = false;
+  private leaveAfterDraftSave = false;
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
@@ -441,6 +447,9 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.loadLeadDataWeights();
     this.loadSupportingDocumentPolicy();
     this.resolveAssignmentAccess();
+    if (!this.editingId) {
+      this.captureFormSnapshot();
+    }
     if (this.editingId) {
       this.initializePresence(this.editingId);
       if (lead) {
@@ -467,6 +476,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.resolvePendingLeave(false);
     this.clearEditingIdleTimer();
     if (this.editingId) {
       this.crmEvents.setRecordEditingState('lead', this.editingId, false);
@@ -559,6 +569,30 @@ export class LeadFormPage implements OnInit, OnDestroy {
     console.debug('[LeadForm] Form snapshot captured');
   }
 
+  private resolvePendingLeave(value: boolean): void {
+    const resolver = this.pendingLeaveResolver;
+    this.pendingLeaveResolver = null;
+    this.pendingLeaveDecision = null;
+    this.leaveAfterSave = false;
+    this.leaveAfterDraftSave = false;
+    this.leavePromptVisible.set(false);
+    resolver?.(value);
+  }
+
+  private finalizeLeaveAfterSave(success: boolean): void {
+    if (!this.leaveAfterSave) {
+      return;
+    }
+    this.resolvePendingLeave(success);
+  }
+
+  private finalizeLeaveAfterDraftSave(success: boolean): void {
+    if (!this.leaveAfterDraftSave) {
+      return;
+    }
+    this.resolvePendingLeave(success);
+  }
+
   private resetEditingState(): void {
     if (this.editingId && this.localEditingState) {
       this.localEditingState = false;
@@ -570,6 +604,29 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
   protected isEditMode() {
     return !!this.editingId;
+  }
+
+  hasUnsavedChanges(): boolean {
+    return this.hasDraftFormChanges();
+  }
+
+  confirmLeaveWithUnsavedChanges(): Promise<boolean> {
+    if (this.pendingLeaveDecision) {
+      return this.pendingLeaveDecision;
+    }
+
+    this.leavePromptVisible.set(true);
+    this.pendingLeaveDecision = new Promise<boolean>((resolve) => {
+      this.pendingLeaveResolver = resolve;
+    });
+    return this.pendingLeaveDecision;
+  }
+
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.hasUnsavedChanges()) {
+      event.preventDefault();
+    }
   }
 
   protected onAccordionValueChange(
@@ -1259,19 +1316,19 @@ export class LeadFormPage implements OnInit, OnDestroy {
     });
   }
 
-  protected onSave() {
+  protected onSave(): boolean {
     if (!this.form.firstName || !this.form.lastName) {
-      return;
+      return false;
     }
 
     if (!this.validateOverviewFields()) {
-      return;
+      return false;
     }
 
     const outcomeError = this.validateOutcome();
     if (outcomeError) {
       this.raiseToast('error', outcomeError);
-      return;
+      return false;
     }
 
     const resolvedScore = this.form.autoScore ? this.computeAutoScore() : (this.form.score ?? 0);
@@ -1292,6 +1349,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.saving.set(true);
     const isEdit = !!this.editingId;
     this.submitWithDuplicateGuard(payload, isEdit);
+    return true;
   }
 
   protected dismissDuplicateDialog(): void {
@@ -1417,17 +1475,41 @@ export class LeadFormPage implements OnInit, OnDestroy {
         this.activeDraftId.set(draft.id);
         this.draftModeActive.set(true);
         this.draftStatusMessage.set(`Draft saved at ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this.captureFormSnapshot();
         this.loadRecentDrafts();
         if (this.draftLibraryVisible()) {
           this.loadDraftLibrary();
         }
+        this.finalizeLeaveAfterDraftSave(true);
       },
       error: () => {
         this.draftSaving.set(false);
         this.draftStatusMessage.set('Unable to save draft.');
         this.raiseToast('error', 'Unable to save draft.');
+        this.finalizeLeaveAfterDraftSave(false);
       }
     });
+  }
+
+  protected stayOnForm(): void {
+    this.resolvePendingLeave(false);
+  }
+
+  protected leaveWithoutSaving(): void {
+    this.resolvePendingLeave(true);
+  }
+
+  protected saveDraftAndLeave(): void {
+    this.leaveAfterDraftSave = true;
+    this.saveDraft();
+  }
+
+  protected submitAndLeave(): void {
+    this.leaveAfterSave = true;
+    if (!this.onSave()) {
+      this.leaveAfterSave = false;
+      this.resolvePendingLeave(false);
+    }
   }
 
   protected openDraftLibrary(): void {
@@ -1528,13 +1610,17 @@ export class LeadFormPage implements OnInit, OnDestroy {
         }
         if (!isEdit && created) {
           this.editingId = created.id;
-          this.router.navigate(['/app/leads', created.id, 'edit'], {
-            state: { lead: created, defaultTab: 'qualification' }
-          });
+          if (!this.leaveAfterSave) {
+            this.router.navigate(['/app/leads', created.id, 'edit'], {
+              state: { lead: created, defaultTab: 'qualification' }
+            });
+          }
         }
         if (isEdit) {
           // Stay on page and refresh data so user can perform follow-up actions (e.g., convert)
-          this.reloadLeadDetails(this.editingId!);
+          if (!this.leaveAfterSave) {
+            this.reloadLeadDetails(this.editingId!);
+          }
         }
         this.statusApiError.set(null);
         // Close inline closure form on successful save
@@ -1546,6 +1632,8 @@ export class LeadFormPage implements OnInit, OnDestroy {
         this.raiseToast('success', message);
         this.updateQualificationFeedback();
         this.loadRecentDrafts();
+        this.captureFormSnapshot();
+        this.finalizeLeaveAfterSave(true);
       },
       error: (err) => {
         this.saving.set(false);
@@ -1553,6 +1641,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
         const parsed = this.extractApiError(err, fallback);
         this.statusApiError.set(this.mapLeadStatusErrorToHint(parsed.code, parsed.message));
         this.raiseToast('error', parsed.message);
+        this.finalizeLeaveAfterSave(false);
       }
     });
   }

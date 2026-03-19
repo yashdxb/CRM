@@ -138,6 +138,37 @@
         </div>
       </p-dialog>
       <p-dialog
+        header="Unsaved lead changes"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [closable]="true"
+        [dismissableMask]="false"
+        [visible]="leavePromptVisible()"
+        [style]="{ width: '36rem', maxWidth: '96vw' }"
+        styleClass="form-leave-dialog"
+        (visibleChange)="leavePromptVisible.set($event)"
+        (onHide)="stayOnForm()"
+      >
+        <div class="form-leave-dialog__body">
+          <div class="form-leave-dialog__hero">
+            <div class="form-leave-dialog__icon">
+              <i class="pi pi-exclamation-circle"></i>
+            </div>
+            <div>
+              <h3>Your lead form has unsaved changes.</h3>
+              <p>Choose whether to save the current state as a draft, submit the lead now, or leave without saving.</p>
+            </div>
+          </div>
+          <div class="form-leave-dialog__actions">
+            <button pButton type="button" class="p-button-outlined" label="Stay on form" [disabled]="saving() || draftSaving()" (click)="stayOnForm()"></button>
+            <button pButton type="button" class="p-button-outlined" label="Leave without saving" [disabled]="saving() || draftSaving()" (click)="leaveWithoutSaving()"></button>
+            <button pButton type="button" class="crm-button crm-button--secondary" label="Save to draft" [loading]="draftSaving()" [disabled]="saving() || draftSaving()" (click)="saveDraftAndLeave()"></button>
+            <button pButton type="button" class="crm-button crm-button--primary" [label]="primarySaveLabel()" [loading]="saving()" [disabled]="saving() || draftSaving()" (click)="submitAndLeave()"></button>
+          </div>
+        </div>
+      </p-dialog>
+      <p-dialog
         header="Saved lead drafts"
         [modal]="true"
         [draggable]="false"
@@ -908,6 +939,7 @@
                     <strong class="summary-metric__value">{{ qualificationContributionTotal() }}</strong>
                     <span class="summary-metric__suffix">/100</span>
                   </div>
+                  <span class="summary-metric__hint">Current qualification strength</span>
                 </div>
               </article>
               <article class="summary-metric summary-metric--confidence">
@@ -960,8 +992,9 @@
               </article>
             </div>
 
-            <div class="qualification-feedback qualification-feedback--summary" *ngIf="conversionReadiness() as readiness">
-              <span class="feedback-title">Conversion readiness</span>
+            <div class="qualification-insight-grid">
+            <div class="qualification-feedback qualification-feedback--summary qualification-feedback--readiness" *ngIf="conversionReadiness() as readiness">
+              <span class="feedback-title"><i class="pi pi-bolt" aria-hidden="true"></i> Conversion readiness</span>
               <div class="qualification-summary-card__focus">
                 <span class="focus-pill">Readiness</span>
                 <strong>{{ conversionReadinessScoreLabel() }}</strong>
@@ -991,8 +1024,8 @@
               </div>
             </div>
 
-            <div class="qualification-feedback qualification-feedback--summary" *ngIf="qualificationFeedback() as feedback">
-              <span class="feedback-title">Qualification status</span>
+            <div class="qualification-feedback qualification-feedback--summary qualification-feedback--status" *ngIf="qualificationFeedback() as feedback">
+              <span class="feedback-title"><i class="pi pi-chart-line" aria-hidden="true"></i> Qualification status</span>
               <div class="qualification-summary-card__focus" *ngIf="feedback.weakestSignal">
                 <span class="focus-pill">Priority gap</span>
                 <strong>{{ feedback.weakestSignal }}</strong>
@@ -1030,6 +1063,7 @@
                   <li *ngFor="let suggestion of nextEvidenceSuggestions()">{{ suggestion }}</li>
                 </ul>
               </div>
+            </div>
             </div>
 
           </section>

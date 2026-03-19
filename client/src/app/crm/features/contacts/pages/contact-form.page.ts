@@ -137,6 +137,7 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected readonly draftModeActive = signal(false);
   protected readonly draftPromptVisible = signal(false);
   protected readonly draftOpenConfirmVisible = signal(false);
+  protected readonly leavePromptVisible = signal(false);
   protected readonly activeDraftId = signal<string | null>(null);
   protected firstNameError = signal<string | null>(null);
   protected lastNameError = signal<string | null>(null);
@@ -193,6 +194,10 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private localEditingState = false;
   private editingIdleTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingDraftToOpen: FormDraftSummary | null = null;
+  private pendingLeaveResolver: ((value: boolean) => void) | null = null;
+  private pendingLeaveDecision: Promise<boolean> | null = null;
+  private leaveAfterSave = false;
+  private leaveAfterDraftSave = false;
 
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
@@ -209,7 +214,7 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         error: () => this.raiseToast('error', 'Unable to load contact.')
       });
     } else {
-      this._originalFormSnapshot = JSON.stringify(this.form);
+      this._originalFormSnapshot = this.createSnapshot();
     }
 
     this.customerData.search({ page: 1, pageSize: 100 }).subscribe((res) => {
@@ -239,6 +244,7 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   ngOnDestroy(): void {
+    this.resolvePendingLeave(false);
     this.clearEditingIdleTimer();
     if (this.editingId) {
       this.crmEvents.setRecordEditingState('contact', this.editingId, false);
@@ -274,7 +280,19 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   hasUnsavedChanges(): boolean {
-    return this._originalFormSnapshot !== '' && JSON.stringify(this.form) !== this._originalFormSnapshot;
+    return this._originalFormSnapshot !== '' && this.createSnapshot() !== this._originalFormSnapshot;
+  }
+
+  confirmLeaveWithUnsavedChanges(): Promise<boolean> {
+    if (this.pendingLeaveDecision) {
+      return this.pendingLeaveDecision;
+    }
+
+    this.leavePromptVisible.set(true);
+    this.pendingLeaveDecision = new Promise<boolean>((resolve) => {
+      this.pendingLeaveResolver = resolve;
+    });
+    return this.pendingLeaveDecision;
   }
 
   @HostListener('window:beforeunload', ['$event'])
@@ -284,12 +302,12 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
   }
 
-  protected onSave() {
+  protected onSave(): boolean {
     this.firstNameError.set(!this.form.firstName ? 'First name is required.' : null);
     this.lastNameError.set(!this.form.lastName ? 'Last name is required.' : null);
     if (this.firstNameError() || this.lastNameError()) {
       this.raiseToast('error', 'Please fix the highlighted errors before saving.');
-      return;
+      return false;
     }
 
     // C15: Check for duplicates before creating (skip if user already confirmed)
@@ -310,11 +328,12 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         },
         error: () => this.executeSave() // proceed on error
       });
-      return;
+      return true;
     }
 
     this.pendingSave = false;
     this.executeSave();
+    return true;
   }
 
   // C15: Called when user confirms save despite duplicates
@@ -368,17 +387,41 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         this.activeDraftId.set(draft.id);
         this.draftModeActive.set(true);
         this.draftStatusMessage.set(`Draft saved at ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+      this._originalFormSnapshot = this.createSnapshot();
         this.loadRecentDrafts();
         if (this.draftLibraryVisible()) {
           this.loadDraftLibrary();
         }
+        this.finalizeLeaveAfterDraftSave(true);
       },
       error: () => {
         this.draftSaving.set(false);
         this.draftStatusMessage.set('Unable to save draft.');
         this.raiseToast('error', 'Unable to save draft.');
+        this.finalizeLeaveAfterDraftSave(false);
       }
     });
+  }
+
+  protected stayOnForm(): void {
+    this.resolvePendingLeave(false);
+  }
+
+  protected leaveWithoutSaving(): void {
+    this.resolvePendingLeave(true);
+  }
+
+  protected saveDraftAndLeave(): void {
+    this.leaveAfterDraftSave = true;
+    this.saveDraft();
+  }
+
+  protected submitAndLeave(): void {
+    this.leaveAfterSave = true;
+    if (!this.onSave()) {
+      this.leaveAfterSave = false;
+      this.resolvePendingLeave(false);
+    }
   }
 
   protected openDraftFromSummary(draft: FormDraftSummary): void {
@@ -465,14 +508,16 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       next: () => {
         this.saving.set(false);
         this.completeActiveDraft();
-        this._originalFormSnapshot = JSON.stringify(this.form);
+        this._originalFormSnapshot = this.createSnapshot();
         const message = this.editingId ? 'Contact updated.' : 'Contact created.';
         this.raiseToast('success', message);
         this.loadRecentDrafts();
+        this.finalizeLeaveAfterSave(true);
       },
       error: () => {
         this.saving.set(false);
         this.raiseToast('error', this.editingId ? 'Unable to update contact.' : 'Unable to create contact.');
+        this.finalizeLeaveAfterSave(false);
       }
     });
   }
@@ -538,6 +583,7 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         this.activeDraftId.set(draft.id);
         this.draftModeActive.set(true);
         this.draftStatusMessage.set(`Draft loaded from ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
+        this._originalFormSnapshot = this.createSnapshot();
         this.draftLibraryVisible.set(false);
       },
       error: () => this.raiseToast('error', 'Unable to open draft.')
@@ -561,6 +607,34 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     this.formDraftService.complete(activeDraftId).subscribe({ next: () => {}, error: () => {} });
     this.activeDraftId.set(null);
     this.draftModeActive.set(false);
+  }
+
+  private createSnapshot(): string {
+    return JSON.stringify({ form: this.form, formTags: this.formTags });
+  }
+
+  private resolvePendingLeave(value: boolean): void {
+    const resolver = this.pendingLeaveResolver;
+    this.pendingLeaveResolver = null;
+    this.pendingLeaveDecision = null;
+    this.leaveAfterSave = false;
+    this.leaveAfterDraftSave = false;
+    this.leavePromptVisible.set(false);
+    resolver?.(value);
+  }
+
+  private finalizeLeaveAfterSave(success: boolean): void {
+    if (!this.leaveAfterSave) {
+      return;
+    }
+    this.resolvePendingLeave(success);
+  }
+
+  private finalizeLeaveAfterDraftSave(success: boolean): void {
+    if (!this.leaveAfterDraftSave) {
+      return;
+    }
+    this.resolvePendingLeave(success);
   }
 
   private hasDraftFormChanges(): boolean {
@@ -619,7 +693,7 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     this.formTags = contact.tags ? [...contact.tags] : [];
     this.loadDetailData();
     this.contactCreatedAt.set(contact.createdAt ?? null);
-    this._originalFormSnapshot = JSON.stringify(this.form);
+        this._originalFormSnapshot = this.createSnapshot();
   }
 
   private createEmptyForm(): SaveContactRequest {
