@@ -2343,12 +2343,17 @@
 
     .cadence-input--readonly {
       min-height: 3rem;
-      display: flex;
-      align-items: center;
+      display: block;
       line-height: 1.45;
       color: #334155;
       background: rgba(248, 250, 252, 0.92);
       border-style: solid;
+      white-space: normal;
+      word-break: break-word;
+
+      strong {
+        font-weight: 700;
+      }
     }
 
     .cadence-input:focus {

@@ -16,13 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "output" / "pdf" / "anastasiia-zaher-lead-cycle.pdf"
 RESULTS_TEMPLATE = ROOT / "output" / "uat" / "leo-martin-lead-cycle-results.json"
 
-DOCUMENT_VERSION = "1.3"
+DOCUMENT_VERSION = "1.4"
 USER_NAME = "Anastasiia Zaher"
 ROLE_NAME = "Sales Rep"
 VERSION_UPDATE_SUMMARY = (
-    "Derived from version 1.2. This version keeps the Anastasiia Zaher dataset and retained status set, and "
-    "now aligns the guide to the current lead UI by documenting the dedicated Create/Update action, the "
-    "separate Save Draft split-button, page-load draft retrieval dialogs, and the current status and conversion flow."
+    "Derived from version 1.3. This version keeps the Anastasiia Zaher dataset and retained status set, and "
+    "now aligns the guide to the latest lead page where Next Lead Action is planning-only and Log activity is the "
+    "only activity write path from the lead form."
 )
 
 TENANT_KEY = "default"
@@ -314,19 +314,22 @@ def build_story():
         Paragraph("5. Draft retrieval and save controls", styles["Section"]),
         base.table(base.draft_inventory(), [1.85 * inch, 2.55 * inch, 1.65 * inch, 4.45 * inch], styles),
         Spacer(1, 0.12 * inch),
-        Paragraph("6. Qualification and outcome field inventory", styles["Section"]),
+        Paragraph("6. Next Lead Action and activity timeline", styles["Section"]),
+        base.table(base.next_action_inventory(), [1.85 * inch, 2.55 * inch, 1.65 * inch, 4.45 * inch], styles),
+        Spacer(1, 0.12 * inch),
+        Paragraph("7. Qualification and outcome field inventory", styles["Section"]),
         base.table(base.qualification_inventory(), [1.95 * inch, 2.7 * inch, 1.5 * inch, 4.35 * inch], styles),
         Spacer(1, 0.12 * inch),
-        Paragraph("7. Activity form field inventory", styles["Section"]),
+        Paragraph("8. Activity form field inventory", styles["Section"]),
         base.table(base.activity_inventory(), [1.9 * inch, 2.5 * inch, 1.45 * inch, 4.65 * inch], styles),
         Spacer(1, 0.12 * inch),
-        Paragraph("8. Convert Lead field inventory", styles["Section"]),
+        Paragraph("9. Convert Lead field inventory", styles["Section"]),
         base.table(base.convert_inventory(), [1.95 * inch, 2.7 * inch, 1.55 * inch, 4.3 * inch], styles),
         Spacer(1, 0.12 * inch),
-        Paragraph("9. Lead lifecycle logic enforced by the current UI and code", styles["Section"]),
+        Paragraph("10. Lead lifecycle logic enforced by the current UI and code", styles["Section"]),
         base.table(base.status_logic_rows(), [1.9 * inch, 8.6 * inch], styles),
         Spacer(1, 0.12 * inch),
-        Paragraph("10. Manual execution scenarios", styles["Section"]),
+        Paragraph("11. Manual execution scenarios", styles["Section"]),
     ]
 
     for index, scenario in enumerate(scenarios, start=1):
@@ -366,7 +369,7 @@ def build_story():
 
     story.extend([
         PageBreak(),
-        Paragraph("11. UAT execution summary", styles["Section"]),
+        Paragraph("12. UAT execution summary", styles["Section"]),
         Paragraph(
             base.bullets([
                 f"Document version: {DOCUMENT_VERSION}",
@@ -378,7 +381,7 @@ def build_story():
             ]),
             styles["Body"],
         ),
-        Paragraph("12. Scenario execution matrix", styles["Section"]),
+        Paragraph("13. Scenario execution matrix", styles["Section"]),
     ])
 
     matrix = [["Scenario", "Expected Band", "Lifecycle Target", "Expected Result", "Actual Result", "Pass/Fail"]]
@@ -395,7 +398,7 @@ def build_story():
 
     story.extend([
         Spacer(1, 0.14 * inch),
-        Paragraph("13. Defect and remediation summary", styles["Section"]),
+        Paragraph("14. Defect and remediation summary", styles["Section"]),
         base.table(
             [
                 ["Issue", "Root cause", "Fix applied", "Retest result"],
@@ -407,7 +410,7 @@ def build_story():
             styles,
         ),
         Spacer(1, 0.14 * inch),
-        Paragraph("14. Test execution report", styles["Section"]),
+        Paragraph("15. Test execution report", styles["Section"]),
         base.table(
             [
                 ["Test execution reported by", "______________________________"],
