@@ -16,13 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "output" / "pdf" / "anastasiia-zaher-lead-cycle.pdf"
 RESULTS_TEMPLATE = ROOT / "output" / "uat" / "leo-martin-lead-cycle-results.json"
 
-DOCUMENT_VERSION = "1.2"
+DOCUMENT_VERSION = "1.3"
 USER_NAME = "Anastasiia Zaher"
 ROLE_NAME = "Sales Rep"
 VERSION_UPDATE_SUMMARY = (
-    "Derived from version 1.1. This version retains the Anastasiia Zaher dataset, keeps the manual guide "
-    "and UAT structure in one file, and adds a retained lead-status visibility set so the pipeline board "
-    "shows one realistic lead in each business status after execution."
+    "Derived from version 1.2. This version keeps the Anastasiia Zaher dataset and retained status set, and "
+    "now aligns the guide to the current lead UI by documenting the dedicated Create/Update action, the "
+    "separate Save Draft split-button, page-load draft retrieval dialogs, and the current status and conversion flow."
 )
 
 TENANT_KEY = "default"
@@ -292,7 +292,7 @@ def build_story():
                 f"User name: {USER_NAME}",
                 f"Role: {ROLE_NAME}",
                 f"Tenant key: {TENANT_KEY}",
-                "Use Leads, Add Lead, Log activity, the status stepper, and Convert Lead exactly as named in the UI.",
+                "Use Leads, Add Lead, Create Lead / Update Lead, Save Draft, Log activity, the status stepper, and Convert Lead exactly as named in the UI.",
                 "Record the actual execution outcome in the result sections at the end of this document.",
             ]),
             styles["Body"],
@@ -308,50 +308,65 @@ def build_story():
             [1.1 * inch, 1.6 * inch, 2.3 * inch, 5.05 * inch],
             styles,
         ),
-        Paragraph("4. Standard creation flow", styles["Section"]),
-        Paragraph(
-            base.numbers([
-                f"Sign in as {USER_NAME}, {ROLE_NAME}.",
-                "Open the Leads workspace.",
-                "Start a new lead record.",
-                "On the Overview tab, enter Lead basics and Contact details exactly as shown for the scenario.",
-                f"If Assignment is visible, keep Assignment as Manual and set Owner to {USER_NAME}.",
-                "Save the record to create the lead.",
-            ]),
-            styles["Body"],
-        ),
-        Paragraph("5. Manual execution scenarios", styles["Section"]),
+        Paragraph("4. Exact lead form field inventory", styles["Section"]),
+        base.table(base.lead_form_inventory(), [1.8 * inch, 2.55 * inch, 1.45 * inch, 4.7 * inch], styles),
+        Spacer(1, 0.12 * inch),
+        Paragraph("5. Draft retrieval and save controls", styles["Section"]),
+        base.table(base.draft_inventory(), [1.85 * inch, 2.55 * inch, 1.65 * inch, 4.45 * inch], styles),
+        Spacer(1, 0.12 * inch),
+        Paragraph("6. Qualification and outcome field inventory", styles["Section"]),
+        base.table(base.qualification_inventory(), [1.95 * inch, 2.7 * inch, 1.5 * inch, 4.35 * inch], styles),
+        Spacer(1, 0.12 * inch),
+        Paragraph("7. Activity form field inventory", styles["Section"]),
+        base.table(base.activity_inventory(), [1.9 * inch, 2.5 * inch, 1.45 * inch, 4.65 * inch], styles),
+        Spacer(1, 0.12 * inch),
+        Paragraph("8. Convert Lead field inventory", styles["Section"]),
+        base.table(base.convert_inventory(), [1.95 * inch, 2.7 * inch, 1.55 * inch, 4.3 * inch], styles),
+        Spacer(1, 0.12 * inch),
+        Paragraph("9. Lead lifecycle logic enforced by the current UI and code", styles["Section"]),
+        base.table(base.status_logic_rows(), [1.9 * inch, 8.6 * inch], styles),
+        Spacer(1, 0.12 * inch),
+        Paragraph("10. Manual execution scenarios", styles["Section"]),
     ]
 
     for index, scenario in enumerate(scenarios, start=1):
         result_entry = result_map.get(scenario["title"], {})
         scenario_explanation = result_entry.get("businessIntent", scenario["objective"])
+        lead_rows = base.scenario_lead_rows(scenario, USER_NAME)
+        qualification_rows = base.scenario_qualification_rows(scenario)
+        activity_rows = base.scenario_activity_rows(scenario, USER_NAME)
+        conversion_rows = base.scenario_conversion_rows(scenario)
         story.extend([
             Paragraph(f"Scenario {index}: {scenario['title']}", styles["SubSection"]),
             Paragraph(f"<b>Objective:</b> {scenario['objective']}", styles["Body"]),
             Paragraph(f"<b>Scenario explanation:</b> {scenario_explanation}", styles["Body"]),
-            Paragraph("<b>Execution steps:</b><br/>" + base.numbers(scenario["steps"]), styles["Body"]),
-            Paragraph("<b>Lead fields:</b>", styles["Body"]),
-            base.table([["Field", "Value"], *scenario["lead"]], [2.2 * inch, 7.55 * inch], styles),
+            Paragraph("<b>Execution steps:</b><br/>" + base.numbers(base.scenario_execution_steps(scenario, USER_NAME)), styles["Body"]),
+            Paragraph("<b>Lead form values:</b>", styles["Body"]),
+            base.table([["Field", "Value to enter or confirm"], *lead_rows], [3.5 * inch, 6.25 * inch], styles),
         ])
 
-        for section_name, heading in (
-            ("activity", "Activity values"),
-            ("qualification", "Qualification values"),
-            ("conversion", "Conversion values"),
-            ("closure", "Closure dialog values"),
-        ):
-            if section_name in scenario:
-                story.extend([
-                    Spacer(1, 0.06 * inch),
-                    Paragraph(f"<b>{heading}:</b>", styles["Body"]),
-                    base.table([["Field", "Value"], *scenario[section_name]], [2.2 * inch, 7.55 * inch], styles),
-                ])
+        if activity_rows:
+            story.extend([
+                Spacer(1, 0.06 * inch),
+                Paragraph("<b>Activity form values:</b>", styles["Body"]),
+                base.table([["Field", "Value to enter or confirm"], *activity_rows], [3.5 * inch, 6.25 * inch], styles),
+            ])
+        story.extend([
+            Spacer(1, 0.06 * inch),
+            Paragraph("<b>Qualification and disposition values:</b>", styles["Body"]),
+            base.table([["Field", "Value to enter or confirm"], *qualification_rows], [3.5 * inch, 6.25 * inch], styles),
+        ])
+        if conversion_rows:
+            story.extend([
+                Spacer(1, 0.06 * inch),
+                Paragraph("<b>Convert Lead values:</b>", styles["Body"]),
+                base.table([["Field", "Value to enter or confirm"], *conversion_rows], [3.5 * inch, 6.25 * inch], styles),
+            ])
         story.append(Spacer(1, 0.14 * inch))
 
     story.extend([
         PageBreak(),
-        Paragraph("6. UAT execution summary", styles["Section"]),
+        Paragraph("11. UAT execution summary", styles["Section"]),
         Paragraph(
             base.bullets([
                 f"Document version: {DOCUMENT_VERSION}",
@@ -363,7 +378,7 @@ def build_story():
             ]),
             styles["Body"],
         ),
-        Paragraph("7. Scenario execution matrix", styles["Section"]),
+        Paragraph("12. Scenario execution matrix", styles["Section"]),
     ])
 
     matrix = [["Scenario", "Expected Band", "Lifecycle Target", "Expected Result", "Actual Result", "Pass/Fail"]]
@@ -380,7 +395,7 @@ def build_story():
 
     story.extend([
         Spacer(1, 0.14 * inch),
-        Paragraph("8. Defect and remediation summary", styles["Section"]),
+        Paragraph("13. Defect and remediation summary", styles["Section"]),
         base.table(
             [
                 ["Issue", "Root cause", "Fix applied", "Retest result"],
@@ -392,7 +407,7 @@ def build_story():
             styles,
         ),
         Spacer(1, 0.14 * inch),
-        Paragraph("9. Test execution report", styles["Section"]),
+        Paragraph("14. Test execution report", styles["Section"]),
         base.table(
             [
                 ["Test execution reported by", "______________________________"],
