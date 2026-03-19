@@ -16,13 +16,13 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "output" / "pdf" / "anastasiia-zaher-lead-cycle.pdf"
 RESULTS_TEMPLATE = ROOT / "output" / "uat" / "leo-martin-lead-cycle-results.json"
 
-DOCUMENT_VERSION = "1.1"
+DOCUMENT_VERSION = "1.2"
 USER_NAME = "Anastasiia Zaher"
 ROLE_NAME = "Sales Rep"
 VERSION_UPDATE_SUMMARY = (
-    "Derived from version 1.0. This version is tailored for Anastasiia Zaher, replaces the lead dataset "
-    "with a new realistic set of companies and contacts, preserves the latest qualification-scoring and "
-    "lifecycle coverage scope, and converts the result section into a fresh execution template."
+    "Derived from version 1.1. This version retains the Anastasiia Zaher dataset, keeps the manual guide "
+    "and UAT structure in one file, and adds a retained lead-status visibility set so the pipeline board "
+    "shows one realistic lead in each business status after execution."
 )
 
 TENANT_KEY = "default"
@@ -145,6 +145,16 @@ SCENARIO_IDENTITIES = [
         "job_title": "Operations Manager",
         "source": "Industry Event",
     },
+]
+
+RETAINED_STATUS_SET = [
+    ("New", "Sofia Bennett", "Meridian Lane Advisory", "Keep one baseline lead visible in the initial intake state."),
+    ("Contacted", "Tarek Faris", "Westport Industrial Realty", "Confirm the pipeline can visibly retain a lead after first-touch progression."),
+    ("Nurture", "Nadia Petrenko", "Alderstone Holdings", "Confirm recycle and follow-up scenarios remain visible in the pipeline."),
+    ("Qualified", "Victor Almeida", "Granite Wharf Properties", "Keep one validated mid-funnel lead visible for qualification review."),
+    ("Converted", "Isabelle Laurent", "Sterling Harbor Capital", "Keep one successfully converted lead visible in the final closed-won lead state."),
+    ("Lost", "Diego Romero", "Parkline Commercial Group", "Keep one closed-lost lead visible with a recorded outcome reason."),
+    ("Disqualified", "Mei Chen", "Harbour Gate Management", "Keep one closed-disqualified lead visible with a recorded disqualification reason."),
 ]
 
 
@@ -270,6 +280,12 @@ def build_story():
             "coverage model but uses a different realistic dataset so the run can be performed independently and recorded as a separate test cycle.",
             styles["Body"],
         ),
+        Paragraph(
+            "The test pack also includes a retained status-visibility set. This is separate from lifecycle path coverage: "
+            "it intentionally leaves one realistic lead in each business lead status so testers can validate that the "
+            "pipeline board visibly renders every stage at the end of execution.",
+            styles["Body"],
+        ),
         Paragraph("2. Role and environment", styles["Section"]),
         Paragraph(
             base.bullets([
@@ -281,7 +297,18 @@ def build_story():
             ]),
             styles["Body"],
         ),
-        Paragraph("3. Standard creation flow", styles["Section"]),
+        Paragraph("3. Retained lead status coverage", styles["Section"]),
+        Paragraph(
+            "Use the retained dataset below to verify that the lead pipeline displays every business status as a visible stage snapshot, "
+            "not only as historical movement during execution.",
+            styles["Body"],
+        ),
+        base.table(
+            [["Lead status", "Retained lead", "Company", "Purpose"] , *RETAINED_STATUS_SET],
+            [1.1 * inch, 1.6 * inch, 2.3 * inch, 5.05 * inch],
+            styles,
+        ),
+        Paragraph("4. Standard creation flow", styles["Section"]),
         Paragraph(
             base.numbers([
                 f"Sign in as {USER_NAME}, {ROLE_NAME}.",
@@ -293,7 +320,7 @@ def build_story():
             ]),
             styles["Body"],
         ),
-        Paragraph("4. Manual execution scenarios", styles["Section"]),
+        Paragraph("5. Manual execution scenarios", styles["Section"]),
     ]
 
     for index, scenario in enumerate(scenarios, start=1):
@@ -324,7 +351,7 @@ def build_story():
 
     story.extend([
         PageBreak(),
-        Paragraph("5. UAT execution summary", styles["Section"]),
+        Paragraph("6. UAT execution summary", styles["Section"]),
         Paragraph(
             base.bullets([
                 f"Document version: {DOCUMENT_VERSION}",
@@ -336,7 +363,7 @@ def build_story():
             ]),
             styles["Body"],
         ),
-        Paragraph("6. Scenario execution matrix", styles["Section"]),
+        Paragraph("7. Scenario execution matrix", styles["Section"]),
     ])
 
     matrix = [["Scenario", "Expected Band", "Lifecycle Target", "Expected Result", "Actual Result", "Pass/Fail"]]
@@ -353,7 +380,7 @@ def build_story():
 
     story.extend([
         Spacer(1, 0.14 * inch),
-        Paragraph("7. Defect and remediation summary", styles["Section"]),
+        Paragraph("8. Defect and remediation summary", styles["Section"]),
         base.table(
             [
                 ["Issue", "Root cause", "Fix applied", "Retest result"],
@@ -365,7 +392,7 @@ def build_story():
             styles,
         ),
         Spacer(1, 0.14 * inch),
-        Paragraph("8. Test execution report", styles["Section"]),
+        Paragraph("9. Test execution report", styles["Section"]),
         base.table(
             [
                 ["Test execution reported by", "______________________________"],
