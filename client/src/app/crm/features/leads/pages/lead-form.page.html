@@ -1870,90 +1870,48 @@
             (valueChange)="onAccordionValueChange('activity', $event)"
             *ngIf="isEditMode()"
           >
-            <p-accordion-panel value="activity-main">
+              <p-accordion-panel value="activity-main">
               <p-accordion-header>
                 <h2 class="section-title section-title--accordion">
                   <i class="pi pi-bullseye"></i>
-                  Follow-Up Plan
+                  Next Lead Action
                 </h2>
               </p-accordion-header>
               <p-accordion-content>
                 <section class="form-section cadence-section form-section--accordion-body">
                   <p class="hint-text compact" *ngIf="followUpHint()">{{ followUpHint() }}</p>
                   <div class="cadence-grid">
-              <div class="form-field">
-                <label for="lead-cadenceChannel">Channel</label>
-                <p-select
-                  id="lead-cadenceChannel"
-                  [options]="cadenceChannelOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  name="cadenceChannel"
-                  [(ngModel)]="cadenceChannel"
-                  placeholder="Select channel"
-                  appendTo="body"
-                  styleClass="w-full cadence-input"
-                ></p-select>
-              </div>
-              <div class="form-field">
-                <label for="lead-cadenceNextStep">Next step due date</label>
-                <p-datepicker
-                  id="lead-cadenceNextStep"
-                  name="cadenceNextStepLocal"
-                  [(ngModel)]="cadenceNextStepLocal"
-                  [showTime]="true"
-                  hourFormat="12"
-                  appendTo="body"
-                  styleClass="w-full cadence-input"
-                  [disabled]="cadenceSubmitting()"
-                ></p-datepicker>
-              </div>
-              <div class="form-field full-row">
-                <label for="lead-outcome">Outcome</label>
-                <p-inputgroup>
-                  <p-inputgroup-addon class="icon-addon icon-addon--success">
-                    <i class="pi pi-check-circle"></i>
-                  </p-inputgroup-addon>
-                  <input
-                    pInputText
-                    id="lead-outcome"
-                    class="cadence-input"
-                    name="cadenceOutcome"
-                    [(ngModel)]="cadenceOutcome"
-                    placeholder="Connected, voicemail, no response, meeting booked..."
-                  />
-                </p-inputgroup>
-              </div>
+                    <div class="form-field">
+                      <label>Recommended channel</label>
+                      <div class="cadence-input cadence-input--readonly">{{ nextLeadActionChannel() }}</div>
+                    </div>
+                    <div class="form-field">
+                      <label>{{ nextLeadActionDueLabel() }}</label>
+                      <div class="cadence-input cadence-input--readonly">
+                        {{ nextLeadActionDueDate() ? (nextLeadActionDueDate() | date:'MM/dd/yyyy hh:mm a') : 'No date scheduled' }}
+                      </div>
+                    </div>
+                    <div class="form-field full-row">
+                      <label>Planning note</label>
+                      <div class="cadence-input cadence-input--readonly">
+                        Lead follow-up planning is shown here for visibility. Use <strong>Log activity</strong> to record the actual outreach and keep the activity timeline as the source of truth.
+                      </div>
+                    </div>
                   </div>
                   <div class="cadence-actions">
-              <button
-                type="button"
-                class="action-btn action-btn--add"
-                (click)="logCadenceTouch()"
-                [disabled]="cadenceSubmitting() || !cadenceOutcome.trim()"
-              >
-                <span class="action-btn__icon"><i class="pi pi-check"></i></span>
-                <span>Log cadence touch</span>
-              </button>
+                    <button
+                      type="button"
+                      class="action-btn action-btn--add"
+                      (click)="logActivity()"
+                    >
+                      <span class="action-btn__icon"><i class="pi pi-calendar-plus"></i></span>
+                      <span>Log activity</span>
+                    </button>
                   </div>
-                  <div class="cadence-history" *ngIf="cadenceTouches().length; else noCadenceTouches">
-              <div class="cadence-item" *ngFor="let touch of cadenceTouches()">
-                <div class="cadence-item__meta">
-                  <strong>{{ touch.channel }}</strong>
-                  <span>{{ touch.completedAtUtc | date:'medium' }}</span>
-                </div>
-                <div class="cadence-item__outcome">{{ touch.outcome }}</div>
-                <div class="cadence-item__next" *ngIf="touch.nextStepDueAtUtc">
-                  Next step due {{ touch.nextStepDueAtUtc | date:'mediumDate' }}
-                </div>
-              </div>
+                  <div class="history-empty">
+                    {{ lastLeadActivitySummary() }}
+                    <span class="history-empty__subtle">Activities recorded from the Activities module appear below in Recent Lead Activities.</span>
                   </div>
-                  <ng-template #noCadenceTouches>
-                    <div class="history-empty">
-                      No cadence touches logged yet.
-                      <span class="history-empty__subtle">Activities logged in the Activities module appear below in Recent Lead Activities.</span>
-                    </div>
-                  </ng-template>
 
                   <div class="lead-activity-timeline">
                     <div class="lead-activity-timeline__header">

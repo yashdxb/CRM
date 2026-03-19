@@ -31,8 +31,6 @@ import { map, Observable } from 'rxjs';
 import {
   Lead,
   LeadAssignmentStrategy,
-  LeadCadenceChannel,
-  LeadCadenceTouch,
   LeadConversionReadiness,
   LeadDuplicateCheckCandidate,
   LeadDuplicateCheckResponse,
@@ -120,11 +118,6 @@ interface OptionItem {
   icon: string;
   tone: 'unknown' | 'assumed' | 'verified' | 'invalid' | 'neutral';
 }
-interface CadenceChannelOption {
-  label: string;
-  value: LeadCadenceChannel;
-}
-
 interface PhoneTypeOption {
   label: string;
   value: string;
@@ -376,7 +369,6 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected attachmentUploading = signal(false);
   protected attachmentDeletingIds = signal<string[]>([]);
   protected attachmentUploadError = signal<string | null>(null);
-  protected cadenceTouches = signal<LeadCadenceTouch[]>([]);
   protected recentLeadActivities = signal<Activity[]>([]);
   protected recentLeadActivitiesLoading = signal(false);
   protected leadEmails = signal<EmailListItem[]>([]);
@@ -388,11 +380,6 @@ export class LeadFormPage implements OnInit, OnDestroy {
   protected transferredActivityCount = signal<number>(0);
   protected transferredLastActivity = signal<Activity | null>(null);
   protected transferredActivityEntityType = signal<'Opportunity' | 'Account' | null>(null);
-  protected cadenceChannel: LeadCadenceChannel = 'Call';
-  protected cadenceChannelOptions: CadenceChannelOption[] = [];
-  protected cadenceOutcome = '';
-  protected cadenceNextStepLocal: Date | null = null;
-  protected cadenceSubmitting = signal(false);
   protected phoneTypeOptions: PhoneTypeOption[] = [];
   protected phoneCountryOptions: Array<{ label: string; value: string; dialCode: string; flag: string; name: string }> = [];
   protected phoneCountryIso = '';
@@ -443,12 +430,10 @@ export class LeadFormPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.editingId = this.route.snapshot.paramMap.get('id');
     this.loadRecentDrafts();
-    this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
     this.activeTab.set(this.getDefaultTab());
     this.restoreAccordionState();
     const lead = history.state?.lead as Lead | undefined;
     this.loadOwners();
-    this.loadCadenceChannels();
     this.loadEvidenceSources();
     this.loadLeadDispositionPolicy();
     this.loadPhoneTypes();
@@ -465,7 +450,6 @@ export class LeadFormPage implements OnInit, OnDestroy {
         next: (data) => {
           this.prefillFromLead(data);
           this.loadStatusHistory(this.editingId!);
-          this.loadCadenceTouches(this.editingId!);
           this.loadRecentLeadActivities(this.editingId!);
           this.loadSupportingDocuments(this.editingId!);
           this.loadLeadEmails(this.editingId!);
@@ -691,7 +675,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
   }
 
   protected activityTabBadge(): string | null {
-    const due = this.cadenceNextStepLocal;
+    const due = this.nextLeadActionDueDate();
     if (!due) return null;
     const now = new Date();
     if (due.getTime() < now.getTime()) {
@@ -1618,6 +1602,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
         this.draftStatusMessage.set(`Draft loaded from ${this.formatDraftTimestamp(draft.updatedAtUtc)}.`);
         this.draftLibraryVisible.set(false);
         this.updateQualificationFeedback();
+        this.updateFollowUpGuidance();
         this.captureFormSnapshot();
       },
       error: () => this.raiseToast('error', 'Unable to open draft.')
@@ -1807,6 +1792,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.normalizeEvidence();
     this.updateQualificationFeedback(true);
     this.updateEpistemicSummary(true);
+    this.updateFollowUpGuidance();
     // Capture form snapshot after fully populating form for uncommitted changes detection
     this.captureFormSnapshot();
   }
@@ -1815,13 +1801,6 @@ export class LeadFormPage implements OnInit, OnDestroy {
     this.leadData.getStatusHistory(leadId).subscribe({
       next: (history) => this.statusHistory.set(history),
       error: () => this.statusHistory.set([])
-    });
-  }
-
-  private loadCadenceTouches(leadId: string) {
-    this.leadData.getCadenceTouches(leadId).subscribe({
-      next: (touches) => this.cadenceTouches.set(touches),
-      error: () => this.cadenceTouches.set([])
     });
   }
 
@@ -1977,58 +1956,69 @@ export class LeadFormPage implements OnInit, OnDestroy {
       next: (lead) => {
         this.prefillFromLead(lead);
         this.loadStatusHistory(leadId);
-        this.loadCadenceTouches(leadId);
         this.loadRecentLeadActivities(leadId);
         this.loadSupportingDocuments(leadId);
       }
     });
   }
 
-  protected logCadenceTouch() {
-    if (!this.editingId || this.cadenceSubmitting()) {
-      return;
-    }
-
-    const outcome = this.cadenceOutcome.trim();
-    if (!outcome) {
-      this.raiseToast('error', 'Cadence outcome is required.');
-      return;
-    }
-
-    const dueIso = this.localToUtcIso(this.cadenceNextStepLocal);
-    if (!dueIso) {
-      this.raiseToast('error', 'Next step due date is required.');
-      return;
-    }
-
-    this.cadenceSubmitting.set(true);
-    this.leadData
-      .logCadenceTouch(this.editingId, {
-        channel: this.cadenceChannel,
-        outcome,
-        nextStepDueAtUtc: dueIso
-      })
-      .subscribe({
-        next: () => {
-          this.cadenceSubmitting.set(false);
-          this.cadenceOutcome = '';
-          if (!this.firstTouchedAtUtc()) {
-            this.firstTouchedAtUtc.set(new Date().toISOString());
-          }
-          this.cadenceNextStepLocal = this.defaultCadenceDueLocal();
-          this.loadCadenceTouches(this.editingId!);
-          this.loadRecentLeadActivities(this.editingId!);
-          this.raiseToast('success', 'Cadence touch logged and next step scheduled.');
-        },
-        error: () => {
-          this.cadenceSubmitting.set(false);
-          this.raiseToast('error', 'Unable to log cadence touch.');
-        }
-      });
-  }
-
   protected isFirstTouchPending(): boolean {
     return !!this.firstTouchDueAtUtc() && !this.firstTouchedAtUtc();
+  }
+
+  protected nextLeadActionDueDate(): Date | null {
+    if (this.form.status === 'Nurture' && this.form.nurtureFollowUpAtUtc instanceof Date) {
+      return this.form.nurtureFollowUpAtUtc;
+    }
+
+    const firstTouchDue = this.firstTouchDueAtUtc();
+    if (firstTouchDue && !this.firstTouchedAtUtc()) {
+      return new Date(firstTouchDue);
+    }
+
+    return null;
+  }
+
+  protected nextLeadActionDueLabel(): string {
+    if (this.form.status === 'Nurture' && this.form.nurtureFollowUpAtUtc) {
+      return 'Nurture follow-up date';
+    }
+
+    if (this.isFirstTouchPending()) {
+      return 'First touch due';
+    }
+
+    return 'No scheduled lead follow-up';
+  }
+
+  protected nextLeadActionChannel(): string {
+    const readiness = this.form.readinessToSpend?.toLowerCase() ?? '';
+    const timeline = this.form.buyingTimeline?.toLowerCase() ?? '';
+
+    if (this.form.status === 'Nurture' || readiness === 'not planning to spend') {
+      return 'Email';
+    }
+
+    if (this.isFirstTouchPending() || timeline.includes('confirmed')) {
+      return 'Call';
+    }
+
+    return 'Use the related activity type';
+  }
+
+  protected lastLeadActivitySummary(): string {
+    const latest = this.recentLeadActivities()[0];
+    if (!latest) {
+      return 'No activity has been recorded yet. Use Log activity to create the first real follow-up record.';
+    }
+
+    const owner = latest.ownerName?.trim();
+    const dateLabel = this.activityTimelineDateLabel(latest);
+    const at = dateLabel ? new Date(dateLabel).toLocaleString() : null;
+    const parts: string[] = [latest.type];
+    if (owner) parts.push(owner);
+    if (at) parts.push(at);
+    return parts.join(' • ');
   }
 
   protected activityTypeIcon(type: Activity['type']): string {
@@ -2165,27 +2155,6 @@ export class LeadFormPage implements OnInit, OnDestroy {
       value: user.id,
       email: user.email?.trim().toLowerCase()
     }));
-  }
-
-  private loadCadenceChannels() {
-    this.leadData.getCadenceChannels().subscribe({
-      next: (items) => {
-        const options = items
-          .filter((item) => item.isActive)
-          .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
-          .map((item) => ({ label: item.name, value: item.name }));
-        this.cadenceChannelOptions = options;
-        if (!options.some((opt) => opt.value === this.cadenceChannel)) {
-          const fallback = items.find((item) => item.isDefault)?.name ?? options[0]?.value;
-          if (fallback) {
-            this.cadenceChannel = fallback;
-          }
-        }
-      },
-      error: () => {
-        this.cadenceChannelOptions = [];
-      }
-    });
   }
 
   private loadEvidenceSources() {
@@ -3317,7 +3286,7 @@ export class LeadFormPage implements OnInit, OnDestroy {
 
   protected onQualificationFactorChange(): void {
     this.normalizeEvidence();
-    this.applyFollowUpDefaults();
+    this.updateFollowUpGuidance();
     this.refreshScoreBreakdown();
     if (this.form.autoScore) {
       this.form.score = this.computeAutoScore();
@@ -3803,30 +3772,17 @@ export class LeadFormPage implements OnInit, OnDestroy {
     return 'Low';
   }
 
-  private applyFollowUpDefaults(): void {
+  private updateFollowUpGuidance(): void {
     const readiness = this.form.readinessToSpend?.toLowerCase() ?? '';
     const timeline = this.form.buyingTimeline?.toLowerCase() ?? '';
     let hint: string | null = null;
 
     if (readiness === 'not planning to spend') {
-      if (!this.cadenceOutcome.trim()) {
-        this.cadenceOutcome = 'Nurture reminder';
-      }
-      const due = new Date();
-      due.setDate(due.getDate() + 14);
-      if (!this.cadenceNextStepLocal || this.cadenceNextStepLocal.getTime() > due.getTime()) {
-        this.cadenceNextStepLocal = due;
-      }
-      hint = 'Readiness is “Not planning to spend.” Defaulting follow-up to nurture reminder.';
+      hint = 'Readiness is “Not planning to spend.” Move the lead to Nurture when appropriate and record the real outreach from Log activity.';
     }
 
     if (timeline.includes('target date verbally confirmed')) {
-      const due = new Date();
-      due.setDate(due.getDate() + 1);
-      if (!this.cadenceNextStepLocal || this.cadenceNextStepLocal.getTime() > due.getTime()) {
-        this.cadenceNextStepLocal = due;
-      }
-      hint = 'Timeline has a confirmed target date. Schedule the next step within SLA.';
+      hint = 'Timeline has a confirmed target date. Record the next customer touch through Log activity so the timeline stays accurate.';
     }
 
     this.followUpHint.set(hint);
