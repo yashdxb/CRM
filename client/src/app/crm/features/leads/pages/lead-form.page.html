@@ -318,6 +318,32 @@
             <!-- Hero Status Ribbon (visual stepper beside title) -->
             <div class="status-ribbon" *ngIf="showStatusStepper()">
             <div class="status-ribbon__inner">
+              <div class="status-ribbon__meta-strip">
+                <div class="status-ribbon__score">
+                  <div class="status-ribbon__score-knob">
+                    <p-knob
+                      [ngModel]="leadHeaderScoreValue()"
+                      [readonly]="true"
+                      [valueTemplate]="'{value}%'"
+                      [size]="92"
+                      [strokeWidth]="9"
+                      [showValue]="true"
+                      [min]="0"
+                      [max]="100"
+                      [valueColor]="leadHeaderScoreColor()"
+                      valueColor="var(--lead-header-score-color)"
+                      rangeColor="rgba(148, 163, 184, 0.18)"
+                      textColor="#1e293b"
+                      styleClass="status-ribbon__score-knob-control"
+                    ></p-knob>
+                  </div>
+                </div>
+                <div class="status-ribbon__meta-pills">
+                  <span class="status-ribbon__meta-pill status-ribbon__meta-pill--status">{{ form.status }}</span>
+                  <span class="status-ribbon__meta-pill">{{ leadProgressSummary() }}</span>
+                </div>
+                <span class="status-ribbon__meta-copy">{{ leadHeaderProgressMessage() }}</span>
+              </div>
               <div class="status-ribbon__mobile-toggle">
                 <button type="button" class="status-ribbon__mobile-toggle-btn" (click)="toggleStatusPath()">
                   <i class="pi" [ngClass]="statusPathExpanded() ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
@@ -355,20 +381,40 @@
                     <span>{{ form.score }}</span>
                   </div>
                 </div>
+                <div class="lead-stepper__branch-lane">
+                  <div class="lead-stepper__branch-stem" [attr.data-state]="nurtureBranchState()"></div>
+                  <button
+                    type="button"
+                    class="lead-stepper__branch"
+                    [attr.data-state]="nurtureBranchState()"
+                    [class.lead-stepper__branch--clickable]="nurtureBranchState() === 'available'"
+                    (click)="onNurtureBranchClick()"
+                  >
+                    <span class="lead-stepper__branch-icon">
+                      <i class="pi pi-clock"></i>
+                    </span>
+                    <span class="lead-stepper__branch-copy">
+                      <span class="lead-stepper__branch-label">Nurture</span>
+                      <span class="lead-stepper__branch-meta">Branch for long-tail follow-up</span>
+                    </span>
+                  </button>
+                </div>
                 </div>
               </div>
 
               <div class="lead-status-rail">
-                <div class="lead-status-rail__summary">
-                  <div class="lead-status-rail__current">
-                    <span class="lead-status-rail__eyebrow">Current status</span>
-                    <span class="lead-status-rail__value">{{ form.status }}</span>
-                  </div>
+              <div class="lead-status-rail__summary">
+                <div class="lead-status-rail__current">
+                  <span class="lead-status-rail__eyebrow">Current status</span>
+                  <span class="lead-status-rail__value">{{ form.status }}</span>
+                </div>
                   <p class="lead-status-rail__instruction" *ngIf="currentStatusInstruction() as instruction">{{ instruction }}</p>
-                  <span class="lead-status-rail__hint">Click an available step above to change status</span>
-                  <ul class="lead-status-rail__blockers" *ngIf="progressActionBlockedReasons().length">
+                  <div class="lead-status-rail__blocker-panel" *ngIf="progressActionBlockedReasons().length">
+                  <span class="lead-status-rail__blocker-label">To move forward:</span>
+                  <ul class="lead-status-rail__blockers">
                     <li *ngFor="let blocker of progressActionBlockedReasons()">{{ blocker }}</li>
                   </ul>
+                  </div>
                   <div class="lead-stepper__backward-confirm" *ngIf="backwardConfirmPending()">
                     <i class="pi pi-exclamation-triangle"></i>
                     <span>Move back to <strong>{{ backwardConfirmTarget()?.label }}</strong>?</span>
@@ -390,6 +436,15 @@
                   >
                     <i class="pi" [ngClass]="action.icon"></i>
                     <span>{{ action.label }}</span>
+                  </button>
+                  <button
+                    *ngIf="nurtureBranchAction() as branch"
+                    type="button"
+                    class="lead-status-rail__branch"
+                    (click)="onNurtureBranchClick()"
+                  >
+                    <i class="pi" [ngClass]="branch.icon"></i>
+                    <span>{{ branch.label }}</span>
                   </button>
                   <div class="lead-status-rail__secondary" *ngIf="!canRecycleLead() && !isOutcomeStatus()">
                     <button
@@ -430,7 +485,7 @@
         </div>
       </div>
 
-      <section class="related-summary" *ngIf="isEditMode()">
+      <section class="related-summary" *ngIf="isEditMode()" [class.related-summary--empty]="!hasLinkedRecords()">
         <div class="related-summary-label">Converted to</div>
         <div class="related-summary-links" *ngIf="hasLinkedRecords(); else noLinkedSummary">
           <a *ngIf="linkedAccountLink() as link" [routerLink]="link" class="related-summary-link">
@@ -452,39 +507,6 @@
       </section>
 
       <main class="form-container">
-        <div class="lead-sticky-bar" *ngIf="isEditMode()">
-          <div class="lead-sticky-left">
-            <h3>{{ leadDisplayName() }}</h3>
-            <div class="lead-sticky-meta">
-              <span class="status-chip" [attr.data-status]="form.status">{{ form.status }}</span>
-              <div class="score-stack">
-                <span class="score-primary">{{ overallScorePrimaryLabel() }}</span>
-                <div class="score-subtitles">
-                  <span class="score-subtitle">Lead data quality {{ leadDataQualityScore() }} / 100</span>
-                  <span class="score-subtitle" pTooltip="{{ qualificationStatusHint() }}" tooltipPosition="top">
-                    {{ qualificationSubtitleLabel() }}
-                  </span>
-                </div>
-              </div>
-              <span class="score-source-chip" *ngIf="scoreSourceBadge()">{{ scoreSourceBadge() }}</span>
-            </div>
-          </div>
-          <div class="lead-sticky-right">
-            <div class="sla-strip sla-strip--sticky">
-              <div class="sla-pill" [ngClass]="getSlaTone()">
-                <i class="pi pi-stopwatch"></i>
-                <span class="sla-label">{{ getSlaStatusLabel() }}</span>
-                <span class="sla-time">
-                  {{ firstTouchDueAtUtc() ? (firstTouchDueAtUtc() | date:'medium') : '—' }}
-                </span>
-              </div>
-              <div class="sla-meta" *ngIf="firstTouchedAtUtc()">
-                First touched {{ firstTouchedAtUtc() | date:'medium' }}
-              </div>
-            </div>
-          </div>
-        </div>
-
         <form class="lead-form" (ngSubmit)="onSave()">
           <fieldset class="form-fieldset" [disabled]="isReadOnlyDueToEditing()">
           <p-tabs class="lead-tabs-shell" [value]="activeTab()" (valueChange)="onActiveTabChange($event)">
@@ -554,8 +576,7 @@
                     <input pInputText id="lead-companyName" name="companyName" [(ngModel)]="form.companyName" placeholder="Company" class="w-full" />
                   </p-inputgroup>
                 </div>
-                <!-- Status Dropdown (admin fallback / create mode) -->
-                <div class="form-field" *ngIf="!showStatusStepper()">
+                <div class="form-field form-field--status-fallback">
                   <label>Status</label>
                   <p-select
                     [options]="statusOptionsForView()"
@@ -563,7 +584,8 @@
                     optionValue="value"
                     optionDisabled="disabled"
                     name="status"
-                    [(ngModel)]="form.status"
+                    [ngModel]="form.status"
+                    (ngModelChange)="onStatusSelectionChange($event)"
                     placeholder="Select status"
                     appendTo="body"
                     styleClass="w-full"
@@ -582,10 +604,6 @@
                       <span *ngIf="!option" class="status-placeholder">Select status</span>
                     </ng-template>
                   </p-select>
-                  <div class="status-next-chip" *ngIf="nextRecommendedStatusChip() as next" [attr.data-tone]="next.tone">
-                    <i class="pi pi-sparkles"></i>
-                    <span>{{ next.label }}</span>
-                  </div>
                   <div class="status-note" *ngIf="statusPolicyHint() as hint">
                     <p>{{ hint }}</p>
                     <a class="status-action-link" *ngIf="isActivityDrivenHint()" (click)="goToActivityTab()"><i class="pi pi-plus-circle"></i> Log an activity</a>
@@ -1980,10 +1998,10 @@
                     <button
                       type="button"
                       class="action-btn action-btn--add"
-                      (click)="logActivity()"
+                      (click)="logActivity(form.status === 'Nurture' ? 'reengagement' : 'follow-up')"
                     >
                       <span class="action-btn__icon"><i class="pi pi-calendar-plus"></i></span>
-                      <span>Log activity</span>
+                      <span>{{ nextLeadActionButtonLabel() }}</span>
                     </button>
                   </div>
                   <div class="history-empty">

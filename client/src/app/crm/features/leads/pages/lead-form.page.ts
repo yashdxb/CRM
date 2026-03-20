@@ -67,7 +67,7 @@ import { FormDraftDetail, FormDraftSummary } from '../../../../core/drafts/form-
 import { FormDraftService } from '../../../../core/drafts/form-draft.service';
 
 /** Progression statuses shown in the stepper (left → right) */
-const LEAD_PROGRESSION_STATUSES: readonly LeadStatus[] = ['New', 'Contacted', 'Nurture', 'Qualified'] as const;
+const LEAD_PROGRESSION_STATUSES: readonly LeadStatus[] = ['New', 'Contacted', 'Qualified'] as const;
 /** Outcome statuses shown as exit buttons below the stepper */
 const LEAD_OUTCOME_STATUSES: readonly LeadStatus[] = ['Converted', 'Lost', 'Disqualified'] as const;
 
@@ -95,7 +95,7 @@ interface StatusRecommendationChip {
 }
 
 interface LeadPrimaryStatusAction {
-  kind: 'progress' | 'convert' | 'recycle';
+  kind: 'progress' | 'convert' | 'recycle' | 'logActivity';
   status?: LeadStatus;
   label: string;
   icon: string;
@@ -741,12 +741,17 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return null;
   }
 
-  protected logActivity(): void {
+  protected logActivity(mode: 'follow-up' | 'first-touch' | 'reengagement' = 'follow-up'): void {
     if (!this.editingId) {
       return;
     }
     const fullName = `${this.form.firstName ?? ''} ${this.form.lastName ?? ''}`.trim();
-    const subject = fullName ? `Follow up: ${fullName}` : 'Lead follow-up';
+    const subject =
+      mode === 'reengagement'
+        ? (fullName ? `Re-engagement: ${fullName}` : 'Lead re-engagement')
+        : mode === 'first-touch'
+          ? (fullName ? `First touch: ${fullName}` : 'Lead first touch')
+          : (fullName ? `Follow up: ${fullName}` : 'Lead follow-up');
     this.router.navigate(['/app/activities/new'], {
       queryParams: {
         relatedType: 'Lead',
@@ -792,27 +797,14 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       return this.statusOptions.map((option) => ({ ...option, disabled: false }));
     }
     if (!this.isEditMode()) {
-      return this.statusOptions.filter((option) => option.value === 'New').map((option) => ({ ...option, disabled: false }));
+      return this.statusOptions.map((option) => ({
+        ...option,
+        disabled: option.value !== 'New'
+      }));
     }
-    const isConverted = this.form.status === 'Converted';
-    const hasFirstTouch = !!this.firstTouchedAtUtc();
-    const meetsEvidenceThreshold = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
-    const canShowQualified =
-      this.form.status === 'Qualified' ||
-      (hasFirstTouch && this.countQualificationFactors() >= 3 && !!this.form.qualifiedNotes?.trim() && meetsEvidenceThreshold);
-    return this.statusOptions
-      .filter((option) => {
-        if (option.value === 'Converted' && !isConverted) return false;
-        if (option.value === 'Contacted' && !hasFirstTouch && this.form.status !== 'Contacted') return false;
-        if (option.value === 'Qualified' && !canShowQualified) return false;
-        return true;
-      })
-      .map((option) => ({
+    return this.statusOptions.map((option) => ({
       ...option,
-      disabled:
-        (option.value === 'Converted' && !isConverted) ||
-        (option.value === 'Contacted' && !hasFirstTouch && this.form.status !== 'Contacted') ||
-        (option.value === 'New' && this.form.status === 'Contacted')
+      disabled: this.isStatusSelectionDisabled(option.value)
     }));
   }
 
@@ -832,6 +824,9 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
     if (this.form.status === 'Contacted' && this.firstTouchedAtUtc()) {
       return 'Contacted was set by completed activity.';
+    }
+    if (this.form.status === 'Nurture' && !this.hasRecentReengagementActivity()) {
+      return 'Log a new re-engagement activity before resuming this lead to Contacted or Qualified.';
     }
     return null;
   }
@@ -897,6 +892,34 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       };
     }
 
+    if (this.form.status === 'New' && !this.hasAnyCompletedLeadActivityEvidence()) {
+      return {
+        kind: 'logActivity',
+        label: 'Log first activity',
+        icon: 'pi pi-calendar-plus',
+        disabled: false
+      };
+    }
+
+    if (this.form.status === 'Nurture') {
+      if (!this.hasRecentReengagementActivity()) {
+        return {
+          kind: 'logActivity',
+          label: 'Log re-engagement',
+          icon: 'pi pi-calendar-plus',
+          disabled: false
+        };
+      }
+      const resumeStatus: LeadStatus = this.hasReachedContactedStage() ? 'Contacted' : 'New';
+      return {
+        kind: 'progress',
+        status: resumeStatus,
+        label: resumeStatus === 'Contacted' ? 'Resume to Contacted' : 'Move to New',
+        icon: this.statusIcon(resumeStatus),
+        disabled: false
+      };
+    }
+
     const nextStatus = this.nextProgressionStatus();
     if (!nextStatus) {
       return null;
@@ -923,6 +946,9 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
           this.form.status = action.status;
         }
         return;
+      case 'logActivity':
+        this.logActivity(this.form.status === 'Nurture' ? 'reengagement' : 'first-touch');
+        return;
       case 'convert':
         this.onOutcomeClick('Converted');
         return;
@@ -937,26 +963,12 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   }
 
   protected progressActionBlockedReasons(): string[] {
-    const status = this.nextProgressionStatus();
+    const status = this.nextMainProgressionTarget();
     if (!status) {
       return [];
     }
 
-    const hasFirstTouch = !!this.firstTouchedAtUtc();
-    const qualFactors = this.countQualificationFactors();
-    const hasQualNotes = !!this.form.qualifiedNotes?.trim();
-    const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
-
-    if (this.isStepUnlocked(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence)) {
-      return [];
-    }
-
-    const hint = this.stepUnlockHint(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence);
-    if (!hint) {
-      return [];
-    }
-
-    return hint.replace(/^To unlock:\s*/i, '').split(',').map((item) => item.trim()).filter(Boolean);
+    return this.transitionBlockedReasons(status);
   }
 
   protected secondaryOutcomeActions(): Array<{ status: 'Lost' | 'Disqualified'; label: string; icon: string; disabled: boolean }> {
@@ -983,11 +995,16 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
 
     if (action.kind === 'progress') {
-      const blockers = this.progressActionBlockedReasons();
-      if (blockers.length) {
-        return `Blocked until: ${blockers.join(' · ')}`;
+      if (this.progressActionBlockedReasons().length) {
+        return 'Complete the required evidence below to unlock the next main step.';
       }
-      return `Next step: ${action.label}`;
+      return `Recommended next step: ${action.label}`;
+    }
+
+    if (action.kind === 'logActivity') {
+      return action.label === 'Log re-engagement'
+        ? 'Re-engagement required'
+        : 'Log the first completed activity before moving this lead forward.';
     }
 
     if (action.kind === 'convert') {
@@ -999,6 +1016,52 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
 
     return null;
+  }
+
+  protected nurtureBranchAction(): { label: string; icon: string } | null {
+    if (!this.isEditMode() || this.form.status === 'Converted' || this.canRecycleLead()) {
+      return null;
+    }
+
+    if (this.form.status === 'Nurture') {
+      return null;
+    }
+
+    return {
+      label: 'Move to Nurture',
+      icon: 'pi pi-clock'
+    };
+  }
+
+  protected nurtureBranchState(): StepState {
+    const current = this.form.status as LeadStatus;
+    if (current === 'Nurture') {
+      return 'current';
+    }
+
+    if (current === 'Converted' || current === 'Lost' || current === 'Disqualified') {
+      return 'locked';
+    }
+
+    return 'available';
+  }
+
+  protected onNurtureBranchClick(): void {
+    if (!this.isEditMode() || this.form.status === 'Nurture' || this.nurtureBranchState() === 'locked') {
+      return;
+    }
+
+    if ((this.form.status as LeadStatus) === 'Contacted' && !this.hasAnyCompletedLeadActivityEvidence()) {
+      this.raiseToast('error', 'Log a completed activity before moving a contacted lead into nurture.');
+      this.setActiveTab('activity');
+      return;
+    }
+
+    this.form.status = 'Nurture';
+    if (!this.form.nurtureFollowUpAtUtc) {
+      this.form.nurtureFollowUpAtUtc = this.toDateValue(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString());
+    }
+    this.setActiveTab('qualification');
   }
 
   private nextProgressionStatus(): LeadStatus | null {
@@ -1021,6 +1084,15 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       default:
         return `Move to ${status}`;
     }
+  }
+
+  private nextMainProgressionTarget(): LeadStatus | null {
+    const current = this.form.status as LeadStatus;
+    if (current === 'Nurture') {
+      return this.hasReachedContactedStage() ? 'Contacted' : 'New';
+    }
+
+    return this.nextProgressionStatus();
   }
 
   // ─── Status Stepper ────────────────────────────────────────────
@@ -1060,19 +1132,42 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
         if (isAdmin) {
           state = 'available';
         } else {
-          state = this.isStepUnlocked(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence)
-            ? 'available'
-            : 'locked';
+          state = this.transitionBlockedReasons(status).length === 0 ? 'available' : 'locked';
           if (state === 'locked') {
-            unlockHint = this.stepUnlockHint(status, hasFirstTouch, qualFactors, hasQualNotes, meetsEvidence);
+            unlockHint = this.transitionBlockedReasons(status).join(' ');
           }
         }
       }
 
-      // Special case: if current status is an outcome (Lost/Disqualified/Converted),
-      // mark all progression steps by their natural order
+      // Special case: branch/outcome states that sit outside the main linear path
       if (currentIdx < 0) {
-        if (current === 'Converted') {
+        if (current === 'Nurture') {
+          if (status === 'New') {
+            state = 'completed';
+          } else if (status === 'Contacted') {
+            if (this.hasReachedContactedStage()) {
+              state = 'completed';
+            } else if (isAdmin) {
+              state = 'available';
+            } else {
+              state = this.transitionBlockedReasons(status).length === 0 ? 'available' : 'locked';
+              if (state === 'locked') {
+                unlockHint = this.transitionBlockedReasons(status).join(' ');
+              }
+            }
+          } else if (status === 'Qualified') {
+            if (isAdmin) {
+              state = 'available';
+            } else {
+              state = this.transitionBlockedReasons(status).length === 0 ? 'available' : 'locked';
+              if (state === 'locked') {
+                unlockHint = this.transitionBlockedReasons(status).join(' ');
+              }
+            }
+          } else {
+            state = 'completed';
+          }
+        } else if (current === 'Converted') {
           state = 'completed';
         } else {
           // Lost/Disqualified — show steps as they were before exit
@@ -1157,6 +1252,19 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     }
   }
 
+  private hasReachedContactedStage(): boolean {
+    if (!!this.firstTouchedAtUtc()) {
+      return true;
+    }
+
+    const current = this.form.status as LeadStatus;
+    if (current === 'Contacted' || current === 'Qualified' || current === 'Converted') {
+      return true;
+    }
+
+    return this.statusHistory().some((entry) => entry.status === 'Contacted');
+  }
+
   /** Whether the current status is an outcome (below the stepper) */
   protected isOutcomeStatus(): boolean {
     return !!this.form.status && (LEAD_OUTCOME_STATUSES as readonly string[]).includes(this.form.status);
@@ -1179,6 +1287,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       return;
     }
 
+    const blockedReasons = this.transitionBlockedReasons(step.status);
+    if (blockedReasons.length) {
+      this.raiseToast('error', blockedReasons[0]);
+      this.onLockedStepClick(step);
+      return;
+    }
+
     this.form.status = step.status;
   }
 
@@ -1187,6 +1302,11 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     if (step.status === 'Contacted') {
       this.setActiveTab('activity');
     } else if (step.status === 'Qualified') {
+      const current = this.form.status as LeadStatus;
+      if (current === 'Nurture' && !this.hasRecentReengagementActivity()) {
+        this.setActiveTab('activity');
+        return;
+      }
       this.setActiveTab('qualification');
     }
   }
@@ -1195,7 +1315,13 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected confirmBackward(): void {
     const target = this.backwardConfirmTarget();
     if (target) {
-      this.form.status = target.status;
+      const blockedReasons = this.transitionBlockedReasons(target.status);
+      if (blockedReasons.length) {
+        this.raiseToast('error', blockedReasons[0]);
+        this.onLockedStepClick(target);
+      } else {
+        this.form.status = target.status;
+      }
     }
     this.backwardConfirmPending.set(false);
     this.backwardConfirmTarget.set(null);
@@ -2095,10 +2221,26 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return 'Use the related activity type';
   }
 
+  protected nextLeadActionButtonLabel(): string {
+    if ((this.form.status as LeadStatus) === 'Nurture' && !this.hasRecentReengagementActivity()) {
+      return 'Log re-engagement';
+    }
+
+    if ((this.form.status as LeadStatus) === 'New' && !this.hasAnyCompletedLeadActivityEvidence()) {
+      return 'Log first activity';
+    }
+
+    return 'Log activity';
+  }
+
   protected lastLeadActivitySummary(): string {
     const latest = this.recentLeadActivities()[0];
     if (!latest) {
-      return 'No activity has been recorded yet. Use Log activity to create the first real follow-up record.';
+      if ((this.form.status as LeadStatus) === 'Nurture' && !this.hasRecentReengagementActivity()) {
+        return 'No re-engagement activity has been recorded yet.';
+      }
+
+      return 'No activity has been recorded yet.';
     }
 
     const owner = latest.ownerName?.trim();
@@ -2130,8 +2272,164 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
     return item.completedDateUtc ?? item.dueDateUtc ?? item.createdAtUtc;
   }
 
+  private activityEffectiveDate(item: Activity): Date | null {
+    const raw = item.completedDateUtc ?? item.createdAtUtc ?? item.dueDateUtc;
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private isCompletedActivityEvidence(item: Activity): boolean {
+    return item.status === 'Completed' || !!item.completedDateUtc;
+  }
+
+  private latestStatusChangedAt(status: LeadStatus): Date | null {
+    const matching = this.statusHistory()
+      .filter((entry) => entry.status === status && !!entry.changedAtUtc)
+      .map((entry) => new Date(entry.changedAtUtc.endsWith('Z') ? entry.changedAtUtc : `${entry.changedAtUtc}Z`))
+      .filter((value) => !Number.isNaN(value.getTime()))
+      .sort((a, b) => b.getTime() - a.getTime());
+
+    return matching[0] ?? null;
+  }
+
+  private hasAnyCompletedLeadActivityEvidence(): boolean {
+    return this.recentLeadActivities().some((item) => this.isCompletedActivityEvidence(item));
+  }
+
+  private hasCompletedActivitySince(anchor: Date | null): boolean {
+    return this.recentLeadActivities().some((item) => {
+      if (!this.isCompletedActivityEvidence(item)) {
+        return false;
+      }
+
+      const effective = this.activityEffectiveDate(item);
+      if (!effective) {
+        return false;
+      }
+
+      return !anchor || effective.getTime() >= anchor.getTime();
+    });
+  }
+
+  private hasRecentReengagementActivity(): boolean {
+    const nurtureAnchor = this.latestStatusChangedAt('Nurture');
+    return this.hasCompletedActivitySince(nurtureAnchor);
+  }
+
+  private hasRecentContactProgressActivity(): boolean {
+    const contactedAnchor = this.latestStatusChangedAt('Contacted');
+    return this.hasCompletedActivitySince(contactedAnchor);
+  }
+
   protected openActivityRecord(activityId: string): void {
     void this.router.navigate(['/app/activities', activityId, 'edit']);
+  }
+
+  protected onStatusSelectionChange(nextStatus: LeadStatus): void {
+    if (nextStatus === this.form.status) {
+      return;
+    }
+
+    const blockedReasons = this.transitionBlockedReasons(nextStatus);
+    if (blockedReasons.length) {
+      this.raiseToast('error', blockedReasons[0]);
+      if (nextStatus === 'Contacted') {
+        this.setActiveTab('activity');
+      } else if (nextStatus === 'Qualified') {
+        this.setActiveTab((this.form.status as LeadStatus) === 'Nurture' && !this.hasRecentReengagementActivity() ? 'activity' : 'qualification');
+      }
+      return;
+    }
+
+    if (nextStatus === 'Nurture' && !this.form.nurtureFollowUpAtUtc) {
+      this.form.nurtureFollowUpAtUtc = this.toDateValue(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString());
+    }
+
+    this.form.status = nextStatus;
+  }
+
+  private transitionBlockedReasons(target: LeadStatus): string[] {
+    const current = this.form.status as LeadStatus;
+    const hasFirstTouch = !!this.firstTouchedAtUtc();
+    const qualFactors = this.countQualificationFactors();
+    const hasQualNotes = !!this.form.qualifiedNotes?.trim();
+    const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
+
+    if (target === current) {
+      return [];
+    }
+
+    if (target === 'New') {
+      return [];
+    }
+
+    if (target === 'Nurture') {
+      if (current === 'Contacted' && !this.hasAnyCompletedLeadActivityEvidence()) {
+        return ['Log a completed activity before moving a contacted lead into nurture.'];
+      }
+      return [];
+    }
+
+    if (target === 'Contacted') {
+      if (current === 'Nurture' && !this.hasRecentReengagementActivity()) {
+        return ['Log a recent re-engagement activity before resuming this lead to Contacted.'];
+      }
+      if (!hasFirstTouch && !this.hasAnyCompletedLeadActivityEvidence()) {
+        return ['Log a completed activity before moving this lead to Contacted.'];
+      }
+      return [];
+    }
+
+    if (target === 'Qualified') {
+      const reasons: string[] = [];
+      if (current === 'Nurture') {
+        if (!this.hasRecentReengagementActivity()) {
+          reasons.push('Log a recent re-engagement activity before moving this lead to Qualified.');
+        }
+      } else if (current === 'Contacted') {
+        if (!this.hasRecentContactProgressActivity()) {
+          reasons.push('Log a recent completed activity before moving this lead to Qualified.');
+        }
+      } else if (!hasFirstTouch && !this.hasAnyCompletedLeadActivityEvidence()) {
+        reasons.push('Log a completed activity before moving this lead to Qualified.');
+      }
+
+      if (qualFactors < 3) {
+        reasons.push(`Complete ${3 - qualFactors} more qualification factor${3 - qualFactors > 1 ? 's' : ''}.`);
+      }
+      if (!hasQualNotes) {
+        reasons.push('Add qualification notes.');
+      }
+      if (!meetsEvidence) {
+        reasons.push('Add evidence to meet the coverage threshold.');
+      }
+      return reasons;
+    }
+
+    return [];
+  }
+
+  private isStatusSelectionDisabled(status: LeadStatus): boolean {
+    const current = this.form.status as LeadStatus;
+    const isConverted = current === 'Converted';
+
+    if (status === current) {
+      return false;
+    }
+
+    if (status === 'Converted') {
+      return !isConverted;
+    }
+
+    if (status === 'New' && current === 'Contacted') {
+      return true;
+    }
+
+    return this.transitionBlockedReasons(status).length > 0;
   }
 
   protected hasTransferredActivitySummary(): boolean {
@@ -3318,6 +3616,10 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       return `Stage ${progressionIndex + 1} of ${LEAD_PROGRESSION_STATUSES.length}`;
     }
 
+    if (status === 'Nurture') {
+      return this.hasReachedContactedStage() ? 'Nurture branch after Contacted' : 'Nurture branch from New';
+    }
+
     if ((LEAD_OUTCOME_STATUSES as readonly LeadStatus[]).includes(status)) {
       return 'Outcome recorded';
     }
@@ -3327,23 +3629,29 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
 
   protected leadHeaderProgressMessage(): string {
     const status = this.form.status as LeadStatus;
+    const hasFirstTouch = !!this.firstTouchedAtUtc();
+    const hasQualNotes = !!this.form.qualifiedNotes?.trim();
+    const qualFactors = this.countQualificationFactors();
+    const meetsEvidence = !this.requiresEvidenceBeforeQualified() || this.truthCoveragePercent() >= this.minimumEvidenceCoveragePercent();
     switch (status) {
       case 'New':
-        return 'Status and stage progress are shown separately below the overall lead score.';
+        return hasFirstTouch ? 'First outreach logged' : 'Awaiting first outreach';
       case 'Contacted':
-        return 'Status and stage progress are shown separately below the overall lead score.';
+        return hasFirstTouch && qualFactors >= 3 && hasQualNotes && meetsEvidence
+          ? 'Ready for qualification'
+          : 'Discovery in progress';
       case 'Nurture':
-        return 'Status and stage progress are shown separately below the overall lead score.';
+        return 'In nurture follow-up';
       case 'Qualified':
-        return 'Status and stage progress are shown separately below the overall lead score.';
+        return 'Ready to convert';
       case 'Converted':
-        return 'Status and stage progress are shown separately below the overall lead score.';
+        return 'Converted to a live record';
       case 'Lost':
-        return 'Status and stage progress are shown separately below the overall lead score.';
+        return 'Closed as lost';
       case 'Disqualified':
-        return 'Status and stage progress are shown separately below the overall lead score.';
+        return 'Closed as disqualified';
       default:
-        return 'Status and stage progress are shown separately below the overall lead score.';
+        return 'Lead status summary';
     }
   }
 
