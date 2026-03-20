@@ -36,8 +36,11 @@ Legend:
 4. Leads, Contacts, Deals, Activities preview surfaces
 - Status: DONE
 
-5. Authentication and live API integration
+5. Premium visual system for the mobile shell and preview workspaces
+- Status: DONE
+
+6. Authentication and live API integration
 - Status: NOT STARTED
 
-6. Offline sync and device-native workflows
+7. Offline sync and device-native workflows
 - Status: NOT STARTED

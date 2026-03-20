@@ -23,6 +23,7 @@ Scope:
 - deals
 - activities
 - iOS build reliability for local development
+- premium mobile visual system
 
 ## Stories
 
@@ -72,21 +73,28 @@ Scope:
   - activities screen shows realistic scheduled work
   - cards expose owner, due state, and related record context
 
-### 8. Authentication and session management
+### 8. Premium mobile visual system and glass shell
+- Status: DONE
+- Acceptance criteria:
+  - home and workspace screens use a premium glass/liquid visual direction
+  - tabs, cards, and section blocks use colorful accent families instead of one flat surface
+  - icons and visual grouping improve scan speed across leads, contacts, deals, and activities
+
+### 9. Authentication and session management
 - Status: NOT STARTED
 - Acceptance criteria:
   - user can sign in
   - token/session is stored safely
   - logout and session restore work
 
-### 9. Live API integration for leads, contacts, deals, and activities
+### 10. Live API integration for leads, contacts, deals, and activities
 - Status: NOT STARTED
 - Acceptance criteria:
   - static seed data is replaced with API-backed data
   - loading, empty, and error states exist
   - mobile screens handle real backend payloads
 
-### 10. Activity creation and quick update flow
+### 11. Activity creation and quick update flow
 - Status: NOT STARTED
 - Acceptance criteria:
   - user can create an activity from mobile
