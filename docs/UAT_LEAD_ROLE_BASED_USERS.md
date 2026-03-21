@@ -1,414 +1,610 @@
-# UAT — Lead Workflow Signals and Outcomes (Leo Martin / Robert Lambke)
+# UAT - Leads Role-Based Workflow Pack (Leo Martin / Robert Lambke)
 
-> Purpose: validate the lead engine using realistic role-based scenarios, not only CRUD steps.
-> Environment: local CRM
-> Scope: CRM Leads only
-> Roles under test:
-> - Sales Rep: Leo Martin (`yasser0503@outlook.com`)
-> - Sales Manager: Robert Lambke (`yasser.ahamed@gmail.com`)
+> Status: operational UAT pack, not canonical product policy.
+> Source-of-truth references:
+> - `client/src/app/crm/features/leads/pages/lead-form.page.ts`
+> - `client/src/app/crm/features/leads/pages/leads.page.html`
+> - `server/src/CRM.Enterprise.Infrastructure/Leads/LeadService.cs`
+> - `client/e2e/lead-sales-rep-uat.spec.ts`
+> - `client/e2e/lead-sales-manager-uat.spec.ts`
 
-## 1. UAT Objective
+## 1. Purpose
 
-Validate that the CRM produces the correct signal, trigger, score, and lifecycle outcome for realistic lead situations.
+Replace guess-based lead UAT with a role-based pack that matches the current CRM behavior for:
 
-The UAT is built around:
-- qualification signals
-- conversation signals
-- conversion-readiness output
-- negative-path disposition
-- recycle-to-nurture recovery
+- lead lifecycle progression
+- activity-driven status gates
+- qualification discipline
+- nurture and re-engagement handling
+- conversion readiness and manager-review logic
+- loss, disqualification, and recycle-to-nurture reporting
 
-This document treats `Leads` as an operational decision engine:
+This pack is written for the current product as implemented, not for an earlier generic CRM assumption set.
 
-`Input -> Signal -> Decision -> Trigger -> Outcome`
+## 2. Roles Under Test
 
-## 2. Primary Role Under Test Now
-
-The immediate runnable UAT pack is for:
-- Sales Rep: Leo Martin
-
-Manager validation remains relevant, but the first automation pack focuses on Leo’s execution path only.
-
-## 3. Scenario Matrix
-
-This pack does not attempt every mathematical permutation of CQVS factors. That would be wasteful and hard to maintain.
-
-Instead, it covers the practical core matrix for UAT:
-- positive conversion path
-- high conversation / weak qualification mismatch
-- stale engagement after qualification
-- no-signal / insufficient-evidence state
-- budget-gap despite active buyer engagement
-- poor ICP fit despite conversation activity
-- explicit lost / disqualified / nurture lifecycle outcomes
-
-That gives broad coverage of the operational lead engine without collapsing into synthetic combinatorics.
-
-| Scenario ID | Lead | Company | Main Intent | Expected Signal | Expected Outcome |
-|---|---|---|---|---|---|
-| LEO-01 | Nora Patel | North Shore Capital | Strong engagement + qualified buyer | High conversation, qualified, monitor conversion readiness | Conversion allowed with documented override |
-| LEO-02 | Marcus Chen | Parkline Estates | Strong engagement but missing qualification proof | High conversation, weak qualification | Coaching guidance, not ready to convert |
-| LEO-03 | Alina Dobrev | Meridian Urban Partners | Qualified lead with stale conversation | Low conversation, aging engagement | Risk/stall signal and weak readiness |
-| LEO-04 | Priya Khanna | Cedar Grove Advisors | Wrong-fit / no-budget lead | Disqualification reason captured | Lead moved to Disqualified |
-| LEO-05 | Omar El-Sayed | Brookfield Tenant Advisory | Lost/disqualified lead returned to nurture | Recycle trigger with preserved reason | Lead moved to Nurture with follow-up path |
-| LEO-06 | Sofia Marin | Sterling Harbour Realty | Fully validated buyer-ready lead | High conversation, strong CQVS proof, low assumption count | Readiness = Ready without manager-review warning |
-| LEO-07 | Ethan Ross | Harbor Eight Holdings | New lead with almost no usable signal | Low outbound-only conversation, CQVS mostly unknown | At-risk / insufficient evidence state |
-| LEO-08 | Daniela Rios | Crestlane Property Group | Buyer engaged but budget blocked | Strong conversation, budget remains weakest signal | Manager review recommended; budget gap explicit |
-| LEO-09 | Victor Petrescu | Westline Tenant Partners | Active engagement but poor ICP fit | Mixed conversation with weak fit risk flag | Coach or At Risk with ICP-fit weakness visible |
-| LEO-10 | Samira Haddad | Elm Ridge Advisory | Lead lost to a competitor | Explicit loss reason on end-state lead | Lost status recorded with reporting-safe reason |
-
-## 4. Shared Role Setup
-
-| Role | Full Name | Email | Expected Access |
+| Role | User | Email | Core responsibility in this UAT |
 |---|---|---|---|
-| Sales Rep | Leo Martin | `yasser0503@outlook.com` | Can create, update, qualify, recycle, and convert owned leads. |
-| Sales Manager | Robert Lambke | `yasser.ahamed@gmail.com` | Can review coaching, readiness, and disposition reporting. |
+| Sales Rep | Leo Martin | `leo.martin@crmenterprise.demo` | Executes realistic lead progression, qualification, conversion, closure, and recycle actions. |
+| Sales Manager | Robert Lambke | `yasser.ahamed@gmail.com` | Reviews team lead readiness, coaching signals, filters, Lead Coach drawer, and disposition reporting. |
 
-## 5. Leo Martin UAT — Realistic Scenario Pack
+## 3. Current Lead Model To Validate
 
-### LEO-01 Strong engagement with qualified buyer
-**Goal**
-Validate the positive path from realistic discovery to conversion.
+### 3.1 Business statuses
 
-**Lead data**
-- Lead: `Nora Patel`
-- Company: `North Shore Capital`
-- Email: `nora.patel@northshorecapital.ca`
-- Title: `Operations Director`
-- Source: `Website`
+The lead status set is:
 
-**Realistic activity evidence**
-- Outbound follow-up email summarizing evaluation path
-- Discovery call confirming budget range and finance stakeholder
-- Discovery meeting with `Daniel Shah`, Finance Director
-- Commercial next-step task
+- `New`
+- `Contacted`
+- `Nurture`
+- `Qualified`
+- `Converted`
+- `Lost`
+- `Disqualified`
 
-**Qualification evidence**
-- Budget availability: `Indicative range mentioned`
-- Readiness to spend: `Actively evaluating solutions`
-- Buying timeline: `Rough timeline mentioned`
-- Problem severity: `Recognized operational problem`
-- Economic buyer: `Buyer identified, not engaged`
-- ICP fit: `Strong ICP fit`
+### 3.2 Visual lifecycle model in the current UI
 
-**Expected signals**
-- Conversation score: high
-- Lead status can reach `Qualified`
-- Conversion readiness: `Monitor` or better
-- Primary gap remains visible if some evidence is still assumed
+The lead form treats the lifecycle as:
 
-**Trigger**
-- Rep chooses to convert
+- Main path: `New -> Contacted -> Qualified`
+- Side branch: `Nurture`
+- Outcome states: `Converted`, `Lost`, `Disqualified`
 
-**Expected outcome**
-- Conversion allowed with override reason if score is below threshold
-- Account, Contact, and Opportunity are created
+`Nurture` is intentionally not a forced linear step between `Contacted` and `Qualified`.
 
-### LEO-02 Strong engagement but weak qualification proof
-**Goal**
-Validate that good conversation alone does not make a lead conversion-ready.
+### 3.3 Real status-transition rules currently enforced
 
-**Lead data**
-- Lead: `Marcus Chen`
-- Company: `Parkline Estates`
-- Email: `marcus.chen@parklineestates.ca`
-- Title: `Director of Leasing Operations`
+These are the real rules reflected in the current form logic and backend service:
+
+- `New -> Nurture`
+  - allowed
+  - requires `Nurture follow-up date`
+- `New -> Contacted`
+  - blocked until a completed lead activity exists
+- `Contacted -> Nurture`
+  - allowed only with activity evidence
+  - still requires `Nurture follow-up date`
+- `Nurture -> Contacted`
+  - blocked until a recent re-engagement activity exists
+- `Contacted -> Qualified`
+  - blocked until:
+    - recent completed activity exists
+    - at least 3 qualification factors are completed
+    - qualification notes are entered
+    - evidence threshold is met when the workspace policy requires it
+- `Nurture -> Qualified`
+  - blocked until:
+    - recent re-engagement activity exists
+    - at least 3 qualification factors are completed
+    - qualification notes are entered
+    - evidence threshold is met when the workspace policy requires it
+- `Contacted -> New`
+  - not allowed
+- `Lost`
+  - requires loss reason, competitor, and loss notes
+- `Disqualified`
+  - requires disqualification reason
+- `Recycle to Nurture`
+  - allowed only from `Lost` or `Disqualified`
+
+### 3.4 Activity and SLA behavior to validate
+
+- `Contacted` is activity-driven
+- first-touch SLA appears in the lead header and `Next Lead Action`
+- if status is `Nurture`, the next action area becomes nurture follow-up oriented
+- if status is `Nurture` and there is no recent re-engagement activity, the primary CTA becomes `Log re-engagement`
+
+### 3.5 Readiness model to validate
+
+The product computes `Conversion Readiness` with these bands:
+
+- `Ready`
+- `Monitor`
+- `Coach`
+- `At Risk`
+
+Readiness combines:
+
+- qualification signal
+- conversation signal when available
+- weakest gap
+- assumption count
+- risk flags
+
+Manager-review recommendation is expected when:
+
+- assumptions are still high
+- conversation momentum is weak
+- or readiness score is below the safer threshold
+
+## 4. User Interface Areas Covered
+
+### 4.1 Lead form
+
+Validate these UI areas in the current form:
+
+- header status ribbon with knob, score, stepper, branch, and primary CTA
+- status selector as alternate status control
+- `Overview`
+- `Activity & Follow-up`
+- `Qualifications`
+- `Supporting Documents`
+- `History`
+- `Convert Lead`
+- closure dialogs for `Lost` and `Disqualified`
+
+### 4.2 Lead list and manager workspace
+
+Validate these manager-facing surfaces:
+
+- lead list readiness filters:
+  - `Manager review`
+  - `At risk`
+  - `Ready to convert`
+  - `Coaching queue`
+  - `Weak conversation`
+  - `No signal`
+  - `Engaged but incomplete`
+- `Lead Coach` drawer
+- disposition report API-backed reporting
+
+## 5. Test Data Strategy
+
+The earlier lead UAT drifted because it guessed scenarios from legacy or partial data. This replacement pack uses realistic named leads that match the current automated role-based specs and current rules.
+
+### 5.1 Sales Rep dataset
+
+| Scenario ID | Lead | Company | Why this lead exists |
+|---|---|---|---|
+| LEO-01 | Amelia Foster | Harbourline Advisory | Baseline `New` lead with no evidence. |
+| LEO-02 | Julian Mercer | Silver Birch Realty | Proves `Contacted` is activity-driven and `Qualified` is factor-gated. |
+| LEO-03 | Nadia Petrenko | Alderstone Holdings | Validates `New -> Nurture` with no first touch. |
+| LEO-04 | Omar El-Sayed | Brookfield Tenant Advisory | Validates `Nurture -> Contacted` via re-engagement. |
+| LEO-05 | Grace Holloway | North Point Capital | High-confidence lead that should convert cleanly. |
+| LEO-06 | Lucia Ferrer | Bluehaven Estates | Medium lead that needs override reason before conversion. |
+| LEO-07 | Owen Matthis | Westridge Logistics Park | Low-confidence lead that requires manager approval plus override. |
+| LEO-08 | Farah Rahman | Lakeside Retail Partners | Validates `Disqualified`, `Lost`, and recycle-to-nurture rules. |
+
+### 5.2 Sales Manager dataset
+
+| Scenario ID | Lead | Company | Why this lead exists |
+|---|---|---|---|
+| ROBERT-01 | Alicia Warren | Granite Quay Realty | Strong motion but still `Manager review`. |
+| ROBERT-02 | Ben Holzer | Harborline Asset Group | Minimal evidence, expected `At Risk`. |
+| ROBERT-03 | Carla Mendes | Queen West Residential | Fully validated `Ready` lead. |
+| ROBERT-04 | Darius Cole | Summit Lane Advisory | Disqualified reason reporting. |
+| ROBERT-05 | Elena Petrov | Crescent Bridge Realty | Lost, then recycled to nurture for trend/reporting. |
+
+## 6. Leo Martin UAT Pack
+
+### LEO-01 Baseline unknown lead
+
+**Intent**
+
+Validate the minimum-confidence lead state.
+
+**Seed data**
+
+- Lead: `Amelia Foster`
+- Company: `Harbourline Advisory`
+- Status at save: `New`
+- Activity evidence: none
+- Qualification evidence: none
+
+**User flow**
+
+1. Sign in as Leo Martin.
+2. Open `Leads`.
+3. Create the lead with realistic contact details only.
+4. Save without activities and without qualification factors.
+
+**Expected result**
+
+- lead remains `New`
+- score remains low
+- no contact-based progression is implied
+- readiness should not look strong
+- first-touch action remains pending
+
+### LEO-02 Mid-funnel mixed-signal lead
+
+**Intent**
+
+Validate the actual gate logic for `New -> Contacted -> Qualified`.
+
+**Seed data**
+
+- Lead: `Julian Mercer`
+- Company: `Silver Birch Realty`
 - Source: `Referral`
+- Activity: completed meeting
+- Qualification profile:
+  - budget: indicative range
+  - readiness: actively evaluating
+  - timeline: rough timeline
+  - problem severity: recognized operational problem
+  - economic buyer: identified, not engaged
+  - ICP fit: strong
 
-**Realistic activity evidence**
-- Recent discovery call
-- Recent planning meeting
-- Follow-up email with requested next steps
+**User flow**
 
-**Qualification posture**
-- Minimal or incomplete factor evidence
-- No qualified status transition attempted
+1. Create the lead in `New`.
+2. Attempt to set `Contacted` before any completed activity.
+3. Confirm the system blocks the change.
+4. Log a completed lead activity.
+5. Set the lead to `Contacted`.
+6. Attempt `Qualified` with fewer than 3 factors.
+7. Confirm the system blocks qualification.
+8. Complete at least 3 factors and qualification notes.
+9. Save as `Qualified`.
 
-**Expected signals**
-- Conversation score: high or medium-high
-- Qualification remains weaker than conversation
-- Conversion readiness: `Coach` or `At Risk`
-- Missing evidence should be explicit
+**Expected result**
 
-**Trigger**
-- Rep reviews the qualification summary after conversation activity
+- `Contacted` is blocked until completed activity exists
+- `Qualified` is blocked until factor and note rules are met
+- after valid evidence is present, progression succeeds
+- lead lands in a medium-strength qualified state, not falsely `Ready`
 
-**Expected outcome**
-- System recommends next evidence
-- Lead appears as coachable, not conversion-ready
+### LEO-03 New lead parked in Nurture
 
-### LEO-03 Qualified lead with stale engagement
-**Goal**
-Validate aging/stall detection.
+**Intent**
 
-**Lead data**
-- Lead: `Alina Dobrev`
-- Company: `Meridian Urban Partners`
-- Email: `alina.dobrev@meridianurban.ca`
-- Title: `Investment Operations Manager`
-- Source: `Industry Event`
+Validate that a lead can be intentionally parked without first touch.
 
-**Realistic activity evidence**
-- Discovery meeting logged more than 21 days ago
-- No recent reply signal
-- No recent activity in the last 14 days
+**Seed data**
 
-**Qualification posture**
-- Lead reaches `Qualified`
-- Quality evidence exists, but recency is weak
+- Lead: `Nadia Petrenko`
+- Company: `Alderstone Holdings`
+- Reasoning: still valid, not ready for active progression
 
-**Expected signals**
-- Conversation score: low
-- Reasons include stalled or aging engagement
-- Conversion readiness: low enough to warn the rep
+**User flow**
 
-**Trigger**
-- Rep opens the lead after inactivity
+1. Create the lead in `New`.
+2. Set status to `Nurture`.
+3. Enter a nurture follow-up date.
+4. Save.
 
-**Expected outcome**
-- Stale engagement warning appears
-- Conversion should not look confidently ready
+**Expected result**
 
-### LEO-04 Disqualified lead with explicit reason
-**Goal**
-Validate the negative path and configured reason capture.
+- `New -> Nurture` is allowed
+- nurture follow-up date is required
+- header shows the lead as in nurture follow-up
+- no fake `Contacted` state is inferred
 
-**Lead data**
-- Lead: `Priya Khanna`
-- Company: `Cedar Grove Advisors`
-- Email: `priya.khanna@cedargroveadvisors.ca`
-- Title: `Office Operations Lead`
-- Source: `Inbound Call`
+### LEO-04 Re-engagement from Nurture
 
-**Disposition reason**
-- use a configured disqualification reason from workspace settings
+**Intent**
 
-**Expected signals**
-- Lead cannot remain ambiguous after disqualification
-- Reason must be visible
+Validate that a nurtured lead cannot resume progression without fresh evidence.
 
-**Trigger**
-- Rep sets status to `Disqualified`
+**Seed data**
 
-**Expected outcome**
-- Disqualification succeeds only with reason
-- Disposition reporting should later include the reason
-
-### LEO-05 Recycle to nurture after disposition
-**Goal**
-Validate lifecycle recovery instead of dead-end loss.
-
-**Lead data**
 - Lead: `Omar El-Sayed`
 - Company: `Brookfield Tenant Advisory`
-- Email: `omar.elsayed@brookfieldtenant.ca`
-- Title: `Tenant Strategy Consultant`
-- Source: `Partner Referral`
+- Current status: `Nurture`
 
-**Initial posture**
-- Lead is moved to `Disqualified` or `Lost` with reason
+**User flow**
 
-**Expected signals**
-- Prior disposition remains meaningful
-- recycle is available only from valid end states
+1. Open the nurtured lead.
+2. Attempt to move it to `Contacted`.
+3. Confirm the form blocks progression and points the user to activity.
+4. Use `Log re-engagement`.
+5. Record a recent completed re-engagement activity.
+6. Resume to `Contacted`.
 
-**Trigger**
-- Rep activates `Recycle to nurture`
+**Expected result**
 
-**Expected outcome**
-- Lead moves to `Nurture`
-- follow-up path is created
-- disposition context remains visible
+- `Nurture -> Contacted` is blocked until recent re-engagement exists
+- primary CTA is `Log re-engagement` when evidence is missing
+- after the recent activity is logged, `Contacted` becomes valid
 
-### LEO-06 Fully validated buyer-ready lead
-**Goal**
-Validate the strongest positive CQVS state without relying on a conversion override.
+### LEO-05 Strong verified lead
 
-**Lead data**
-- Lead: `Sofia Marin`
-- Company: `Sterling Harbour Realty`
-- Email: `sofia.marin@sterlingharbourrealty.ca`
-- Title: `Director of Brokerage Operations`
-- Source: `Executive Referral`
+**Intent**
 
-**Activity evidence**
-- recent two-way email activity
-- recent discovery call
-- recent meeting with buyer stakeholder
+Validate the clean conversion happy path.
 
-**CQVS posture**
-- Budget availability: `Budget allocated and approved`
-- Readiness to spend: `Ready to proceed pending final step`
-- Buying timeline: `Decision date confirmed internally`
-- Problem severity: `Critical business impact`
-- Economic buyer: `Buyer engaged in discussion`
-- ICP fit: `Strong ICP fit`
+**Seed data**
 
-**Expected signals**
-- Conversation score: high
-- Conversion readiness: `Ready`
-- Manager review should not be recommended
+- Lead: `Grace Holloway`
+- Company: `North Point Capital`
+- Qualification profile:
+  - budget allocated and approved
+  - ready to proceed pending final step
+  - decision date confirmed
+  - critical business impact
+  - buyer engaged
+  - strong ICP fit
 
-### LEO-07 Minimal-signal / insufficient-evidence lead
-**Goal**
-Validate the system’s ability to report lack of signal instead of inventing confidence.
+**User flow**
 
-**Lead data**
-- Lead: `Ethan Ross`
-- Company: `Harbor Eight Holdings`
-- Email: `ethan.ross@harboreightholdings.ca`
-- Title: `Analyst`
-- Source: `Web Form`
+1. Create the lead.
+2. Add cadence evidence and a completed executive meeting.
+3. Qualify the lead with complete strong evidence and notes.
+4. Convert the lead into account, contact, and opportunity.
 
-**Activity evidence**
-- none beyond initial creation
+**Expected result**
 
-**CQVS posture**
-- mostly default / unknown
+- lead reaches `Qualified`
+- readiness presents as strong
+- manager review is not recommended
+- conversion succeeds without override reason
+- linked records are created and the lead ends in `Converted`
 
-**Expected signals**
-- Conversation score remains low and outbound-only
-- Readiness should be `At Risk` or clearly low-confidence
-- Primary gap should point to budget or qualification evidence
+### LEO-06 Override-threshold lead
 
-### LEO-08 Buyer engaged but budget blocked
-**Goal**
-Validate a mixed-signal case where buyer engagement is real but commercial readiness is weak.
+**Intent**
 
-**Lead data**
-- Lead: `Daniela Rios`
-- Company: `Crestlane Property Group`
-- Email: `daniela.rios@crestlaneproperty.ca`
-- Title: `Regional Operations Lead`
-- Source: `Partner Introduction`
+Validate the medium-strength conversion path that still needs a business override.
 
-**Activity evidence**
-- recent discovery call
-- recent working session with budget holder copied
+**Seed data**
 
-**CQVS posture**
-- Budget availability: `Budget explicitly unavailable`
-- Readiness to spend: `Actively evaluating solutions`
-- Buying timeline: `Target date verbally confirmed`
-- Problem severity: `High business impact`
-- Economic buyer: `Buyer engaged in discussion`
-- ICP fit: `Strong ICP fit`
+- Lead: `Lucia Ferrer`
+- Company: `Bluehaven Estates`
+- Commercial posture: plausible, but evidence still incomplete
 
-**Expected signals**
-- Conversation score: medium-high or high
-- Primary gap: `Budget availability`
-- Manager review should be recommended
+**User flow**
 
-### LEO-09 Active engagement but weak ICP fit
-**Goal**
-Validate that engagement does not hide poor strategic fit.
+1. Create and qualify the lead with medium-strength evidence.
+2. Attempt conversion without override reason.
+3. Confirm conversion is blocked.
+4. Retry with a valid override reason.
 
-**Lead data**
-- Lead: `Victor Petrescu`
-- Company: `Westline Tenant Partners`
-- Email: `victor.petrescu@westlinetenant.ca`
-- Title: `Portfolio Analyst`
-- Source: `Outbound Prospecting`
+**Expected result**
 
-**Activity evidence**
-- discovery call
-- email follow-up
+- conversion is blocked until override reason is provided
+- manager approval is not necessarily required here
+- second attempt succeeds when override reason is present
 
-**CQVS posture**
-- ICP fit: `Clearly out of ICP`
-- other factors may be partially positive
+### LEO-07 Manager-approval conversion
 
-**Expected signals**
-- Readiness remains constrained
-- risk or weakness should surface around ICP fit
+**Intent**
 
-### LEO-10 Lost lead with explicit reason
-**Goal**
-Validate the `Lost` path separately from `Disqualified`.
+Validate the low-confidence conversion path that requires explicit managerial approval.
 
-**Lead data**
-- Lead: `Samira Haddad`
-- Company: `Elm Ridge Advisory`
-- Email: `samira.haddad@elmridgeadvisory.ca`
-- Title: `Transactions Coordinator`
-- Source: `Industry Event`
+**Seed data**
 
-**Disposition**
-- Status: `Lost`
-- Reason: realistic competitive loss
-- Competitor and loss notes recorded
+- Lead: `Owen Matthis`
+- Company: `Westridge Logistics Park`
+- Commercial posture:
+  - no defined budget
+  - no defined timeline
+  - weak buyer engagement
+  - only partial fit
 
-**Expected signals**
-- lost path is explicit
-- loss reason persists on the lead
-- later disposition reporting can group it correctly
+**User flow**
 
-## 6. Signal / Trigger / Outcome Validation Table
+1. Create and qualify the lead with low-confidence evidence.
+2. Attempt conversion with override reason but without manager approval.
+3. Confirm conversion is blocked.
+4. Retry with manager approval plus override reason.
 
-| Area | Trigger | Expected Signal | Expected Outcome |
-|---|---|---|---|
-| Qualification | Rep records factor evidence | Qualification score and confidence update | Lead reflects stronger evidence or missing proof |
-| Conversation | Email/call/meeting activity is linked | Conversation score changes with reasons | Momentum, stall, or bidirectional engagement is visible |
-| Readiness | Qualification + conversation are evaluated together | Ready / Monitor / Coach / At Risk | Rep sees a practical decision layer before conversion |
-| Conversion | Rep clicks convert | Policy decision is enforced | Convert or block with exact explanation |
-| Disposition | Rep marks Lost or Disqualified | Reason becomes part of lead state | Reporting and lifecycle history stay coherent |
-| Recycle | Rep chooses recycle-to-nurture | Lifecycle changes to Nurture | Follow-up path is preserved instead of losing the lead |
-| CQVS mismatch | Rep captures a mixed factor state | Weakest factor becomes explicit | Coaching / manager review points to the correct gap |
-| Minimal-signal state | Lead has little usable interaction evidence | Signal stays low and outbound-only | System avoids false confidence |
+**Expected result**
 
-## 7. Pass Criteria for Leo Martin UAT
+- first conversion attempt fails
+- second attempt succeeds only when manager approval is supplied
+- readiness remains visibly weak even though conversion can be forced through governed approval
 
-The Leo-only UAT passes when:
-- Leo can create multiple realistic leads without admin intervention
-- the CRM differentiates between strong, weak, stale, and disposed lead states
-- conversation scoring is driven by real interaction evidence
-- qualification and readiness do not collapse into the same output
-- at least one lead converts successfully through the governed path
-- at least one lead reaches `Ready`
-- at least one lead remains `At Risk` because of missing evidence
-- at least one lead shows strong conversation but weak CQVS proof
-- at least one lead shows buyer engagement but budget weakness
-- at least one lead shows weak ICP fit despite some engagement
-- at least one lead is disqualified with a real reason
-- at least one lead is lost with a real reason
-- at least one disposed lead is recycled to nurture
+### LEO-08 Closure and recycle
 
-## 8. Robert Lambke Manager UAT
+**Intent**
 
-### Manager objective
-Validate that a Sales Manager can interpret and act on the lead engine output across the team, not only within one lead record.
+Validate closure enforcement and recoverability.
 
-### Manager scenarios
+**Seed data**
 
-| Scenario ID | Lead | Company | Manager focus | Expected output |
-|---|---|---|---|---|
-| ROBERT-01 | Alicia Warren | Granite Quay Realty | Strong motion but weak commercial proof | `Manager review` queue includes the lead and the coach drawer explains the primary gap |
-| ROBERT-02 | Ben Holzer | Harborline Asset Group | Minimal interaction evidence | `At Risk` filter shows the lead with weak signal and low readiness |
-| ROBERT-03 | Carla Mendes | Queen West Residential | Fully validated buyer-ready lead | `Ready to convert` filter shows the lead without manager-review warning |
-| ROBERT-04 | Darius Cole | Summit Lane Advisory | Disqualified lead with explicit reason | Disposition reporting includes the disqualification reason |
-| ROBERT-05 | Elena Petrov | Crescent Bridge Realty | Lost then recycled lead | Disposition reporting captures loss reason and recycle-to-nurture trend |
+- Lead: `Farah Rahman`
+- Company: `Lakeside Retail Partners`
 
-### Expected manager validations
-- `Manager review` filter returns leads where strong activity exists but conversion should still be reviewed
-- `At Risk` filter returns low-signal leads
-- `Ready to convert` filter isolates genuinely ready leads
-- Lead Coach drawer shows:
-  - conversion readiness
-  - weakest factor
-  - CQVS summary
-  - conversation reasons
-  - disposition context when applicable
-- Disposition reporting API shows:
-  - disqualified totals
+**User flow**
+
+1. Attempt `Recycle to Nurture` from `New`.
+2. Confirm recycle is blocked.
+3. Attempt `Disqualified` without reason.
+4. Confirm closure is blocked.
+5. Disqualify with a valid reason.
+6. Recycle to `Nurture`.
+7. Attempt `Lost` without competitor and notes.
+8. Confirm closure is blocked.
+9. Mark `Lost` with reason, competitor, and notes.
+10. Recycle again to `Nurture`.
+
+**Expected result**
+
+- recycle works only from `Lost` or `Disqualified`
+- `Disqualified` always requires reason
+- `Lost` always requires reason, competitor, and notes
+- recycled lead lands in `Nurture` with a follow-up date
+
+## 7. Robert Lambke UAT Pack
+
+### ROBERT-01 Manager review queue
+
+**Intent**
+
+Validate that the manager can see strong motion that still needs review.
+
+**Seed data**
+
+- Lead: `Alicia Warren`
+- Company: `Granite Quay Realty`
+- Pattern:
+  - strong activity
+  - high business impact
+  - good fit
+  - budget still assumed
+  - buyer not yet engaged
+
+**User flow**
+
+1. Sign in as Robert Lambke.
+2. Open the lead list.
+3. Use the `Manager review` filter.
+4. Open Alicia Warren in the `Lead Coach` drawer.
+
+**Expected result**
+
+- Alicia appears in `Manager review`
+- coach drawer shows `Conversion Readiness`
+- manager-review warning is visible
+- weakest gap points to the right commercial weakness, not generic text
+
+### ROBERT-02 At-risk lead
+
+**Intent**
+
+Validate that weak or low-evidence leads appear in the manager risk queue.
+
+**Seed data**
+
+- Lead: `Ben Holzer`
+- Company: `Harborline Asset Group`
+- Pattern: new lead, little or no interaction evidence
+
+**User flow**
+
+1. Apply the `At risk` filter.
+2. Search for `Ben Holzer`.
+3. Open the coach drawer.
+
+**Expected result**
+
+- Ben appears in the filtered list
+- readiness is `At Risk`
+- coach drawer explains why the lead is weak instead of over-scoring it
+
+### ROBERT-03 Ready-to-convert lead
+
+**Intent**
+
+Validate that the list isolates truly ready leads and does not recommend review when not needed.
+
+**Seed data**
+
+- Lead: `Carla Mendes`
+- Company: `Queen West Residential`
+- Pattern:
+  - approved budget
+  - committed timeline
+  - critical business impact
+  - executive sponsor and buyer engaged
+  - strong fit
+
+**User flow**
+
+1. Apply `Ready to convert`.
+2. Search for `Carla Mendes`.
+3. Open the coach drawer.
+
+**Expected result**
+
+- Carla appears in the ready filter
+- readiness displays `Ready`
+- manager-review warning is absent
+- CQVS summary and readiness reasons align with the strong evidence profile
+
+### ROBERT-04 Disposition reporting
+
+**Intent**
+
+Validate that closed lead outcomes are aggregated in reporting.
+
+**Seed data**
+
+- Lead: `Darius Cole`
+- Company: `Summit Lane Advisory`
+- Status: `Disqualified`
+- Required reason recorded
+
+**User flow**
+
+1. Request or open disposition reporting.
+2. Inspect disqualification reason distribution.
+
+**Expected result**
+
+- disqualification totals include the test lead
+- the recorded disqualification reason is included in rollups
+
+### ROBERT-05 Lost and recycled trend
+
+**Intent**
+
+Validate that loss and recovery appear in reporting, not only in the individual lead.
+
+**Seed data**
+
+- Lead: `Elena Petrov`
+- Company: `Crescent Bridge Realty`
+- Path:
+  - marked `Lost`
+  - then recycled to `Nurture`
+
+**User flow**
+
+1. Inspect disposition totals and trend.
+2. Confirm nurture totals and recycled trend.
+3. Confirm loss reason distribution includes the recorded loss reason.
+
+**Expected result**
+
+- nurture totals include recycled leads
+- recycle trend increments
+- loss reason remains reportable after recycle
+
+## 8. Expected UI Guidance and Operator Cues
+
+These are the current cues that the tester should verify as part of the UAT:
+
+- `Log first activity` when a new lead cannot yet become `Contacted`
+- `Log re-engagement` when a nurtured lead cannot yet resume
+- `First touch due` when first-touch SLA is pending
+- `Nurture follow-up date` when lead is in nurture
+- readiness summary and primary gap in `Qualifications`
+- manager-review cue in `Lead Coach`
+
+## 9. Pass Criteria
+
+The role-based lead UAT passes only if all of the following are true:
+
+- status progression follows the actual enforced rules
+- no UI path can bypass activity-driven `Contacted`
+- `Qualified` always requires factor coverage and notes
+- nurture requires follow-up date
+- recycle-to-nurture only works from valid end states
+- medium and low conversion paths enforce override and approval rules correctly
+- manager filters return the correct lead archetypes
+- `Lead Coach` explains readiness, weakest gap, CQVS summary, and review need correctly
+- disposition reporting includes:
+  - disqualification totals
   - nurture totals
-  - top disqualification reasons
-  - top loss reasons
+  - loss reasons
+  - disqualification reasons
   - recycle trend
 
-### Pass criteria for Robert Lambke UAT
-- Robert can sign in as Sales Manager
-- Robert can see and use the manager-focused readiness filters
-- Robert can open the coach drawer from the lead list
-- the manager-review scenario explicitly recommends review before conversion
-- the ready scenario does not show the manager-review warning
-- disposition reporting contains the expected disqualification / loss / recycle signals
+## 10. Fail Conditions
+
+This pack fails if any of the following occur:
+
+- `Contacted` is reachable without completed activity evidence
+- a nurtured lead can resume without re-engagement evidence
+- a qualified lead can be saved without notes or without the minimum factor count
+- `Lost` or `Disqualified` can be saved without required outcome details
+- recycle is allowed from an invalid status
+- manager-review and ready-to-convert filters return the wrong leads
+- the coach drawer contradicts the lead’s real readiness state
+- reporting drops loss or recycle meaning after status changes
+
+## 11. Final Verdict On This Replacement Pack
+
+This UAT is intentionally narrower and more realistic than the old guessed pack.
+
+It is built around:
+
+- the actual lead lifecycle model
+- current UI labels and screens
+- current backend enforcement
+- current readiness logic
+- current Leo and Robert test personas already used by the system
+
+That makes it suitable as the new source document for the role-based Leads UAT PDF.

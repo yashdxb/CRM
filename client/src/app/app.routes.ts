@@ -17,6 +17,11 @@ export const routes: Routes = [
     loadComponent: () => import('./public/landing/landing.page').then((m) => m.LandingPage)
   },
   {
+    path: 'platform',
+    loadComponent: () =>
+      import('./public/product-capabilities/product-capabilities.page').then((m) => m.ProductCapabilitiesPage)
+  },
+  {
     path: 'login',
     loadComponent: () => import('./public/auth/login.page').then((m) => m.LoginPage)
   },

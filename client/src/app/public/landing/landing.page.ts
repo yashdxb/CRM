@@ -2,7 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, ChangeDetectorRef, Component, D
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { AbstractControl, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Router } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
@@ -100,6 +100,7 @@ type HeroPreviewSlide = PipelinePreviewSlide | LeadPreviewSlide | DealPreviewSli
   standalone: true,
   imports: [
     CommonModule,
+    RouterModule,
     ButtonModule,
     ReactiveFormsModule,
     DialogModule,

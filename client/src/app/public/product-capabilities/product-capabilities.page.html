@@ -1,0 +1,149 @@
+<main class="capability-page">
+  <div class="capability-page__bg" aria-hidden="true">
+    <span class="capability-page__orb capability-page__orb--one"></span>
+    <span class="capability-page__orb capability-page__orb--two"></span>
+    <span class="capability-page__mesh"></span>
+  </div>
+
+  <header class="capability-topbar">
+    <div class="capability-shell capability-topbar__inner">
+      <a class="capability-topbar__brand" routerLink="/landing">
+        <img src="/assets/branding/logo-v2-light.png" alt="North Edge System" />
+      </a>
+      <nav class="capability-topbar__nav">
+        <a href="#capabilities">Platform</a>
+        <a href="#proof">Why North Edge</a>
+        <a href="#demo">Demo Flow</a>
+      </nav>
+      <div class="capability-topbar__actions">
+        <a class="capability-btn capability-btn--ghost" routerLink="/landing">Back to Landing</a>
+        <a class="capability-btn capability-btn--primary" routerLink="/landing" fragment="hero">Book a Demo</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="capability-hero capability-shell">
+    <div class="capability-hero__copy">
+      <span class="capability-hero__eyebrow">Customer-Facing Platform Overview</span>
+      <h1>
+        A CRM built for
+        <span>execution, governance, and revenue confidence</span>
+      </h1>
+      <p class="capability-hero__lede">
+        North Edge CRM brings lead execution, deal governance, marketing impact, reporting, and operational control into one platform designed for teams that need defensible decisions, not just more activity logs.
+      </p>
+
+      <div class="capability-hero__cta">
+        <a class="capability-btn capability-btn--primary" routerLink="/landing" fragment="hero">Book a Demo</a>
+        <a class="capability-btn capability-btn--ghost" href="#capabilities">Explore Capabilities</a>
+      </div>
+
+      <div class="capability-hero__proof">
+        <article *ngFor="let stat of heroStats" [class]="'capability-stat capability-stat--' + stat.tone">
+          <strong>{{ stat.value }}</strong>
+          <span>{{ stat.label }}</span>
+        </article>
+      </div>
+    </div>
+
+    <div class="capability-hero__visual">
+      <div class="hero-panel hero-panel--main">
+        <span class="hero-panel__label">North Edge CRM</span>
+        <h2>Revenue operating model</h2>
+        <p>Sales, marketing, support, and management teams work from one coordinated system instead of fragmented tools and disconnected decisions.</p>
+      </div>
+      <div class="hero-panel hero-panel--stack">
+        <article>
+          <span>Lead quality</span>
+          <strong>Evidence-aware qualification</strong>
+        </article>
+        <article>
+          <span>Deal control</span>
+          <strong>Approval and proposal workflow</strong>
+        </article>
+        <article>
+          <span>Management layer</span>
+          <strong>Dashboard health, reporting, and policy controls</strong>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="capabilities" class="capability-grid-section capability-shell">
+    <div class="section-head">
+      <span class="section-head__eyebrow">What Customers Actually Get</span>
+      <h2>Platform capabilities already present in the product</h2>
+      <p>
+        This view translates the implemented product surface into customer-facing language while staying grounded in the real system already built.
+      </p>
+    </div>
+
+    <div class="capability-grid">
+      <article *ngFor="let capability of capabilities" [class]="'capability-card capability-card--' + capability.tone">
+        <span class="capability-card__eyebrow">{{ capability.eyebrow }}</span>
+        <h3>{{ capability.title }}</h3>
+        <p>{{ capability.summary }}</p>
+        <ul>
+          <li *ngFor="let bullet of capability.bullets">{{ bullet }}</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section id="proof" class="proof-section capability-shell">
+    <div class="section-head section-head--compact">
+      <span class="section-head__eyebrow">Why North Edge Feels Different</span>
+      <h2>Built for teams that need business confidence, not just database completeness</h2>
+    </div>
+
+    <div class="proof-strip">
+      <article *ngFor="let proof of proofStrips">
+        <h3>{{ proof.title }}</h3>
+        <p>{{ proof.copy }}</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="message-section capability-shell">
+    <div class="message-panel">
+      <span class="message-panel__eyebrow">Positioning Summary</span>
+      <h2>North Edge CRM is strongest where CRM, governance, and operational decision-making meet.</h2>
+      <p>
+        This is not just a pipeline tracker. The implemented product already supports lead qualification, deal control, reporting, campaign attribution, support operations, and enterprise settings in one operating model.
+      </p>
+    </div>
+  </section>
+
+  <section id="demo" class="demo-section capability-shell">
+    <div class="section-head section-head--compact">
+      <span class="section-head__eyebrow">How To Demo It</span>
+      <h2>A simple storyline for customer conversations</h2>
+    </div>
+
+    <div class="demo-timeline">
+      <article *ngFor="let moment of demoMoments">
+        <span class="demo-timeline__step">{{ moment.step }}</span>
+        <div class="demo-timeline__body">
+          <h3>{{ moment.title }}</h3>
+          <p>{{ moment.copy }}</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="closing-section capability-shell">
+    <div class="closing-panel">
+      <div>
+        <span class="closing-panel__eyebrow">Customer-Facing Message</span>
+        <h2>One platform for teams that need clarity before they act.</h2>
+        <p>
+          If your team needs disciplined lead qualification, governed deal movement, real reporting, and shared operational context across the customer lifecycle, North Edge CRM already has the right foundation in place.
+        </p>
+      </div>
+      <div class="closing-panel__actions">
+        <a class="capability-btn capability-btn--primary" routerLink="/landing" fragment="hero">Book a Demo</a>
+        <a class="capability-btn capability-btn--ghost" routerLink="/login">Sign In</a>
+      </div>
+    </div>
+  </section>
+</main>

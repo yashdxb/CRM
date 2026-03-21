@@ -15,6 +15,7 @@
         <img src="/assets/branding/logo-v2-light.png" alt="North Edge System" class="topbar__logo" />
       </a>
       <ul class="topbar__nav" [class.topbar__nav--open]="mobileMenuOpen">
+        <li><a routerLink="/platform">Platform</a></li>
         <li><a (click)="scrollTo('features')">Features</a></li>
         <li><a (click)="scrollTo('how-it-works')">How It Works</a></li>
         <li><a (click)="scrollTo('pricing')">Pricing</a></li>
@@ -64,6 +65,9 @@
         <button type="button" class="hero-btn hero-btn--primary" (click)="onWatchDemo()">
           <i class="pi pi-calendar"></i> Book a Demo
         </button>
+        <a class="hero-btn hero-btn--secondary" routerLink="/platform">
+          Explore Platform <i class="pi pi-arrow-right"></i>
+        </a>
         <button type="button" class="hero-btn hero-btn--ghost" (click)="onSignIn()">
           Sign In <i class="pi pi-arrow-right"></i>
         </button>
