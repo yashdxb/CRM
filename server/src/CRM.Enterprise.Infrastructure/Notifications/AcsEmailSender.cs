@@ -20,11 +20,17 @@ public class AcsEmailSender : IEmailSender
         }
     }
 
-    public async Task SendAsync(string toEmail, string subject, string htmlBody, string? textBody = null, CancellationToken cancellationToken = default)
+    public virtual async Task SendAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        string? textBody = null,
+        WorkspaceEmailDeliveryCategory? category = null,
+        CancellationToken cancellationToken = default)
     {
         if (!_options.Enabled || _client is null || !_options.IsValid() || string.IsNullOrWhiteSpace(toEmail))
         {
-            return;
+            throw new InvalidOperationException("ACS email delivery is disabled or not configured.");
         }
 
         // Build the email payload once for consistent formatting across templates.

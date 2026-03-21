@@ -476,7 +476,13 @@ public sealed class NotificationAlertWorker : BackgroundService
             return;
         }
 
-        await emailSender.SendAsync(toEmail, subject, htmlBody, htmlBody, cancellationToken);
+        await emailSender.SendAsync(
+            toEmail,
+            subject,
+            htmlBody,
+            htmlBody,
+            WorkspaceEmailDeliveryCategory.Notifications,
+            cancellationToken);
     }
 
     private async Task PublishNotificationAlertAsync(

@@ -44,7 +44,13 @@ public class NotificationsController : ControllerBase
             ? "Test email sent from CRM Enterprise."
             : request.TextBody;
 
-        await _emailSender.SendAsync(request.ToEmail.Trim(), subject, htmlBody, textBody, cancellationToken);
+        await _emailSender.SendAsync(
+            request.ToEmail.Trim(),
+            subject,
+            htmlBody,
+            textBody,
+            WorkspaceEmailDeliveryCategory.Notifications,
+            cancellationToken);
         return Accepted();
     }
 }

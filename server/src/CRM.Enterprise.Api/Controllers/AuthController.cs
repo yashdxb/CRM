@@ -230,7 +230,13 @@ public class AuthController : ControllerBase
         {
             try
             {
-                await _emailSender.SendAsync(result.Email, subject, htmlBody, textBody, cancellationToken);
+                await _emailSender.SendAsync(
+                    result.Email,
+                    subject,
+                    htmlBody,
+                    textBody,
+                    WorkspaceEmailDeliveryCategory.Security,
+                    cancellationToken);
             }
             catch
             {
@@ -415,7 +421,13 @@ public class AuthController : ControllerBase
 
         try
         {
-            await _emailSender.SendAsync(DemoRequestEmail, subject, htmlBody, textBodyBuilder.ToString(), cancellationToken);
+            await _emailSender.SendAsync(
+                DemoRequestEmail,
+                subject,
+                htmlBody,
+                textBodyBuilder.ToString(),
+                WorkspaceEmailDeliveryCategory.Security,
+                cancellationToken);
             return NoContent();
         }
         catch (Exception ex)

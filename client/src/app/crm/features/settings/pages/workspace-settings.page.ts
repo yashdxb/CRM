@@ -123,18 +123,35 @@ export class WorkspaceSettingsPage {
     featureHelpDeskEmailIntake: [false],
     featureHelpDeskRealtime: [false],
     featureEmailDelivery: [false],
-    featureEmailDeliveryInvites: [true],
-    featureEmailDeliverySecurity: [true],
-    featureEmailDeliveryApprovals: [true],
-    featureEmailDeliveryProposals: [true],
-    featureEmailDeliveryMarketing: [true],
-    featureEmailDeliveryNotifications: [true],
-    featureEmailDeliveryMailbox: [true],
-    featureEmailDeliveryStatusNotifications: [true],
+    featureEmailDeliveryInvites: [false],
+    featureEmailDeliverySecurity: [false],
+    featureEmailDeliveryApprovals: [false],
+    featureEmailDeliveryProposals: [false],
+    featureEmailDeliveryMarketing: [false],
+    featureEmailDeliveryNotifications: [false],
+    featureEmailDeliveryMailbox: [false],
+    featureEmailDeliveryStatusNotifications: [false],
     reportDesignerRequiredPermission: ['Permissions.Administration.Manage']
   });
 
   constructor() {
+    this.settingsForm.get('featureEmailDelivery')?.valueChanges.subscribe((enabled) => {
+      if (enabled) {
+        return;
+      }
+
+      this.settingsForm.patchValue({
+        featureEmailDeliveryInvites: false,
+        featureEmailDeliverySecurity: false,
+        featureEmailDeliveryApprovals: false,
+        featureEmailDeliveryProposals: false,
+        featureEmailDeliveryMarketing: false,
+        featureEmailDeliveryNotifications: false,
+        featureEmailDeliveryMailbox: false,
+        featureEmailDeliveryStatusNotifications: false
+      }, { emitEvent: false });
+    });
+
     this.timeZoneService.getTimeZones().subscribe((options) => {
       this.timeZoneOptions = options;
     });
@@ -267,14 +284,14 @@ export class WorkspaceSettingsPage {
       featureHelpDeskEmailIntake: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.emailIntake'),
       featureHelpDeskRealtime: this.resolveFeatureFlag(settings.featureFlags, 'helpdesk.realtime'),
       featureEmailDelivery: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery'),
-      featureEmailDeliveryInvites: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.invites', true),
-      featureEmailDeliverySecurity: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.security', true),
-      featureEmailDeliveryApprovals: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.approvals', true),
-      featureEmailDeliveryProposals: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.proposals', true),
-      featureEmailDeliveryMarketing: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.marketing', true),
-      featureEmailDeliveryNotifications: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.notifications', true),
-      featureEmailDeliveryMailbox: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.mailbox', true),
-      featureEmailDeliveryStatusNotifications: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.statusNotifications', true),
+      featureEmailDeliveryInvites: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.invites'),
+      featureEmailDeliverySecurity: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.security'),
+      featureEmailDeliveryApprovals: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.approvals'),
+      featureEmailDeliveryProposals: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.proposals'),
+      featureEmailDeliveryMarketing: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.marketing'),
+      featureEmailDeliveryNotifications: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.notifications'),
+      featureEmailDeliveryMailbox: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.mailbox'),
+      featureEmailDeliveryStatusNotifications: this.resolveFeatureFlag(settings.featureFlags, 'communications.emailDelivery.statusNotifications'),
       reportDesignerRequiredPermission: settings.reportDesignerRequiredPermission || 'Permissions.Administration.Manage'
     });
     this.activeVerticalPresetConfiguration.set(settings.verticalPresetConfiguration ?? null);

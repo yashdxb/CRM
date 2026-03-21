@@ -2,6 +2,8 @@ using System.Text.Json;
 using Azure.Messaging.ServiceBus;
 using CRM.Enterprise.Infrastructure;
 using CRM.Enterprise.Application.Common;
+using CRM.Enterprise.Application.Notifications;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,6 +14,7 @@ public class EmailQueueWorker : BackgroundService
 {
     private readonly ServiceBusProcessor? _processor;
     private readonly AcsEmailSender _sender;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<EmailQueueWorker> _logger;
     private readonly ICrmRealtimePublisher _realtimePublisher;
 
@@ -19,10 +22,12 @@ public class EmailQueueWorker : BackgroundService
         ServiceBusClientProvider clientProvider,
         IOptions<AcsEmailOptions> options,
         AcsEmailSender sender,
+        IServiceScopeFactory scopeFactory,
         ILogger<EmailQueueWorker> logger,
         ICrmRealtimePublisher realtimePublisher)
     {
         _sender = sender;
+        _scopeFactory = scopeFactory;
         _logger = logger;
         _realtimePublisher = realtimePublisher;
 
@@ -74,9 +79,8 @@ public class EmailQueueWorker : BackgroundService
                 return;
             }
 
-            // Send the email from the background worker to avoid blocking API requests.
-            await _sender.SendAsync(payload.ToEmail, payload.Subject, payload.HtmlBody, payload.TextBody, args.CancellationToken);
-            await PublishDeliveryStatusAsync(payload, "sent", null, args.CancellationToken);
+            var result = await ProcessPayloadAsync(payload, args.CancellationToken);
+            await PublishDeliveryStatusAsync(payload, result.Status, result.Error, args.CancellationToken);
             await args.CompleteMessageAsync(args.Message, args.CancellationToken);
         }
         catch (Exception ex)
@@ -113,6 +117,33 @@ public class EmailQueueWorker : BackgroundService
         }
 
         await base.StopAsync(cancellationToken);
+    }
+
+    internal async Task<EmailQueueProcessResult> ProcessPayloadAsync(EmailQueueMessage payload, CancellationToken cancellationToken)
+    {
+        if (payload.TenantId.HasValue && payload.TenantId.Value != Guid.Empty && payload.Category.HasValue)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var policy = scope.ServiceProvider.GetRequiredService<IWorkspaceEmailDeliveryPolicy>();
+            var allowed = await policy.IsEnabledAsync(payload.TenantId.Value, payload.Category.Value, cancellationToken);
+            if (!allowed)
+            {
+                _logger.LogInformation(
+                    "Queued email delivery suppressed for tenant {TenantId} category {Category}.",
+                    payload.TenantId.Value,
+                    payload.Category.Value);
+                return new EmailQueueProcessResult("suppressed", "Email delivery is disabled in workspace settings.");
+            }
+        }
+
+        await _sender.SendAsync(
+            payload.ToEmail,
+            payload.Subject,
+            payload.HtmlBody,
+            payload.TextBody,
+            payload.Category,
+            cancellationToken);
+        return new EmailQueueProcessResult("sent", null);
     }
 
     private async Task PublishDeliveryStatusAsync(
@@ -152,3 +183,5 @@ public class EmailQueueWorker : BackgroundService
         }
     }
 }
+
+internal sealed record EmailQueueProcessResult(string Status, string? Error);

@@ -220,6 +220,9 @@ public class OpportunityApprovalLockDeleteTests
 
         public Task ProjectLinkedDecisionProgressionAsync(Guid decisionRequestId, int actedStepOrder, bool approved, string? notes, ActorContext actor, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
+
+        public Task ResumeAfterDelayAsync(Guid opportunityId, Guid approvalChainId, string executionPlanJson, int resumeFromSequence, Guid? requestedByUserId, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
     }
 
     private sealed class FakeActivityService : IActivityService

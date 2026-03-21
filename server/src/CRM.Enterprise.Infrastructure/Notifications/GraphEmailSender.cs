@@ -21,17 +21,23 @@ public class GraphEmailSender : IEmailSender
         _httpClient = httpClient;
     }
 
-    public async Task SendAsync(string toEmail, string subject, string htmlBody, string? textBody = null, CancellationToken cancellationToken = default)
+    public async Task SendAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        string? textBody = null,
+        WorkspaceEmailDeliveryCategory? category = null,
+        CancellationToken cancellationToken = default)
     {
         if (!_options.IsValid() || string.IsNullOrWhiteSpace(toEmail))
         {
-            return;
+            throw new InvalidOperationException("Graph email delivery is disabled or not configured.");
         }
 
         var token = await GetAccessTokenAsync(cancellationToken);
         if (string.IsNullOrWhiteSpace(token))
         {
-            return;
+            throw new InvalidOperationException("Unable to acquire Microsoft Graph access token for email delivery.");
         }
 
         var payload = new

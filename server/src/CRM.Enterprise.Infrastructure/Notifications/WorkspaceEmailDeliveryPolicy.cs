@@ -51,7 +51,7 @@ public sealed class WorkspaceEmailDeliveryPolicy : IWorkspaceEmailDeliveryPolicy
         }
 
         var masterEnabled = ResolveFlag(flags, WorkspaceEmailDeliveryFlags.Master, defaultValue: false);
-        var categoryEnabled = ResolveFlag(flags, WorkspaceEmailDeliveryFlags.ForCategory(category), defaultValue: true);
+        var categoryEnabled = ResolveFlag(flags, WorkspaceEmailDeliveryFlags.ForCategory(category), defaultValue: false);
         return masterEnabled && categoryEnabled;
     }
 
@@ -64,7 +64,7 @@ public sealed class WorkspaceEmailDeliveryPolicy : IWorkspaceEmailDeliveryPolicy
 
         var flags = await ResolveFlagsAsync(tenantId, cancellationToken);
         return flags is not null
-            && ResolveFlag(flags, WorkspaceEmailDeliveryFlags.StatusNotifications, defaultValue: true);
+            && ResolveFlag(flags, WorkspaceEmailDeliveryFlags.StatusNotifications, defaultValue: false);
     }
 
     private async Task<Guid> ResolveCurrentTenantIdAsync(CancellationToken cancellationToken)

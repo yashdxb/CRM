@@ -215,7 +215,8 @@ public sealed class EmailService : IEmailService
                         request.ToEmail, 
                         subject, 
                         trackedHtmlBody, 
-                        textBody, 
+                        textBody,
+                        WorkspaceEmailDeliveryCategory.Mailbox,
                         cancellationToken);
 
                     emailLog.Status = EmailStatus.Sent;

@@ -167,6 +167,7 @@ public class OpportunityApprovalServiceTests
             queue,
             new FakeRealtimePublisher(),
             new FakeEmailSender(),
+            new StubWorkspaceEmailDeliveryPolicy(),
             NullLogger<OpportunityApprovalService>.Instance);
     }
 
@@ -280,6 +281,24 @@ public class OpportunityApprovalServiceTests
 
     private sealed class FakeEmailSender : IEmailSender
     {
-        public Task SendAsync(string toEmail, string subject, string htmlBody, string? textBody = null, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task SendAsync(
+            string toEmail,
+            string subject,
+            string htmlBody,
+            string? textBody = null,
+            WorkspaceEmailDeliveryCategory? category = null,
+            CancellationToken cancellationToken = default) => Task.CompletedTask;
+    }
+
+    private sealed class StubWorkspaceEmailDeliveryPolicy : IWorkspaceEmailDeliveryPolicy
+    {
+        public Task<bool> IsEnabledAsync(WorkspaceEmailDeliveryCategory category, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        public Task<bool> IsEnabledAsync(Guid tenantId, WorkspaceEmailDeliveryCategory category, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
+
+        public Task<bool> IsStatusNotificationsEnabledAsync(Guid tenantId, CancellationToken cancellationToken = default)
+            => Task.FromResult(true);
     }
 }

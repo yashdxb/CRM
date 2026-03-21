@@ -70,6 +70,11 @@ public sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 
     private sealed class NoOpDatabaseInitializer : IDatabaseInitializer
     {
+        public Task MigrateOnlyAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
         public Task InitializeAsync(CancellationToken cancellationToken = default)
         {
             return Task.CompletedTask;

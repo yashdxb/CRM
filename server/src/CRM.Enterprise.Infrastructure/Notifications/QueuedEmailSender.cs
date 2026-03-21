@@ -15,7 +15,13 @@ public class QueuedEmailSender : IEmailSender
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task SendAsync(string toEmail, string subject, string htmlBody, string? textBody = null, CancellationToken cancellationToken = default)
+    public async Task SendAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        string? textBody = null,
+        WorkspaceEmailDeliveryCategory? category = null,
+        CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(toEmail))
         {
@@ -26,7 +32,7 @@ public class QueuedEmailSender : IEmailSender
         var context = _httpContextAccessor.HttpContext;
         var tenantId = TryResolveTenantId(context);
         var userId = TryResolveUserId(context);
-        var payload = new EmailQueueMessage(toEmail, subject, htmlBody, textBody, tenantId, userId);
+        var payload = new EmailQueueMessage(toEmail, subject, htmlBody, textBody, tenantId, userId, category);
         await _queue.EnqueueAsync(payload, cancellationToken);
     }
 

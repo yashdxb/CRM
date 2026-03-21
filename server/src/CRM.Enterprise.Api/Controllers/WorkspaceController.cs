@@ -389,14 +389,14 @@ public class WorkspaceController : ControllerBase
         }
 
         defaults[WorkspaceEmailDeliveryFlags.Master] = false;
-        defaults[WorkspaceEmailDeliveryFlags.Invites] = true;
-        defaults[WorkspaceEmailDeliveryFlags.Security] = true;
-        defaults[WorkspaceEmailDeliveryFlags.Approvals] = true;
-        defaults[WorkspaceEmailDeliveryFlags.Proposals] = true;
-        defaults[WorkspaceEmailDeliveryFlags.Marketing] = true;
-        defaults[WorkspaceEmailDeliveryFlags.Notifications] = true;
-        defaults[WorkspaceEmailDeliveryFlags.Mailbox] = true;
-        defaults[WorkspaceEmailDeliveryFlags.StatusNotifications] = true;
+        defaults[WorkspaceEmailDeliveryFlags.Invites] = false;
+        defaults[WorkspaceEmailDeliveryFlags.Security] = false;
+        defaults[WorkspaceEmailDeliveryFlags.Approvals] = false;
+        defaults[WorkspaceEmailDeliveryFlags.Proposals] = false;
+        defaults[WorkspaceEmailDeliveryFlags.Marketing] = false;
+        defaults[WorkspaceEmailDeliveryFlags.Notifications] = false;
+        defaults[WorkspaceEmailDeliveryFlags.Mailbox] = false;
+        defaults[WorkspaceEmailDeliveryFlags.StatusNotifications] = false;
 
         if (string.IsNullOrWhiteSpace(tenant.FeatureFlagsJson))
         {
@@ -413,7 +413,10 @@ public class WorkspaceController : ControllerBase
 
             foreach (var (key, value) in defaults)
             {
-                parsed[key] = value;
+                if (!parsed.ContainsKey(key))
+                {
+                    parsed[key] = value;
+                }
             }
 
             return NormalizeFeatureFlags(parsed);

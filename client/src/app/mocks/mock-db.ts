@@ -162,14 +162,14 @@ let mockWorkspaceSettings: WorkspaceSettings = {
   },
   featureFlags: {
     'communications.emailDelivery': false,
-    'communications.emailDelivery.invites': true,
-    'communications.emailDelivery.security': true,
-    'communications.emailDelivery.approvals': true,
-    'communications.emailDelivery.proposals': true,
-    'communications.emailDelivery.marketing': true,
-    'communications.emailDelivery.notifications': true,
-    'communications.emailDelivery.mailbox': true,
-    'communications.emailDelivery.statusNotifications': true
+    'communications.emailDelivery.invites': false,
+    'communications.emailDelivery.security': false,
+    'communications.emailDelivery.approvals': false,
+    'communications.emailDelivery.proposals': false,
+    'communications.emailDelivery.marketing': false,
+    'communications.emailDelivery.notifications': false,
+    'communications.emailDelivery.mailbox': false,
+    'communications.emailDelivery.statusNotifications': false
   }
 };
 

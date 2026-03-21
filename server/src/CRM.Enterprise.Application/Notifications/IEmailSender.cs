@@ -2,5 +2,11 @@ namespace CRM.Enterprise.Application.Notifications;
 
 public interface IEmailSender
 {
-    Task SendAsync(string toEmail, string subject, string htmlBody, string? textBody = null, CancellationToken cancellationToken = default);
+    Task SendAsync(
+        string toEmail,
+        string subject,
+        string htmlBody,
+        string? textBody = null,
+        WorkspaceEmailDeliveryCategory? category = null,
+        CancellationToken cancellationToken = default);
 }

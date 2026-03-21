@@ -386,7 +386,13 @@ public sealed class OpportunityQuoteService : IOpportunityQuoteService
             throw new InvalidOperationException("Proposal emails are disabled in workspace settings.");
         }
 
-        await _emailSender.SendAsync(recipientEmail, subject, htmlBody, textBody, cancellationToken);
+        await _emailSender.SendAsync(
+            recipientEmail,
+            subject,
+            htmlBody,
+            textBody,
+            WorkspaceEmailDeliveryCategory.Proposals,
+            cancellationToken);
 
         var now = DateTime.UtcNow;
         quote.Opportunity.ProposalStatus = "Sent";

@@ -268,7 +268,13 @@ public sealed class EmailCampaignService : IEmailCampaignService
                 var htmlWithUnsubscribe = entity.HtmlBody + UnsubscribeFooter
                     .Replace("{{unsubscribeUrl}}", $"/public/unsubscribe?email={Uri.EscapeDataString(recipient.Email)}&tenant={entity.TenantId}");
 
-                await _emailSender.SendAsync(recipient.Email, entity.Subject, htmlWithUnsubscribe, entity.TextBody, cancellationToken);
+                await _emailSender.SendAsync(
+                    recipient.Email,
+                    entity.Subject,
+                    htmlWithUnsubscribe,
+                    entity.TextBody,
+                    WorkspaceEmailDeliveryCategory.Marketing,
+                    cancellationToken);
 
                 recipient.Status = CampaignEmailRecipientStatus.Sent;
                 recipient.SentAtUtc = DateTime.UtcNow;

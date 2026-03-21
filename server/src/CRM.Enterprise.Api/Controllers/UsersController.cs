@@ -1158,7 +1158,13 @@ public class UsersController : ControllerBase
 
         try
         {
-            await _emailSender.SendAsync(user.Email, subject, htmlBody, textBody, cancellationToken);
+            await _emailSender.SendAsync(
+                user.Email,
+                subject,
+                htmlBody,
+                textBody,
+                WorkspaceEmailDeliveryCategory.Invites,
+                cancellationToken);
             return true;
         }
         catch (Exception ex)

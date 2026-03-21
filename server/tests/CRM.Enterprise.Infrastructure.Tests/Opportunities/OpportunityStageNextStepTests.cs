@@ -175,6 +175,11 @@ public class OpportunityStageNextStepTests
         {
             return Task.CompletedTask;
         }
+
+        public Task ResumeAfterDelayAsync(Guid opportunityId, Guid approvalChainId, string executionPlanJson, int resumeFromSequence, Guid? requestedByUserId, CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeActivityService : IActivityService

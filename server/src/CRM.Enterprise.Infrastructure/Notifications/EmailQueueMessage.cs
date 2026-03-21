@@ -1,3 +1,5 @@
+using CRM.Enterprise.Application.Notifications;
+
 namespace CRM.Enterprise.Infrastructure.Notifications;
 
 public record EmailQueueMessage(
@@ -6,4 +8,5 @@ public record EmailQueueMessage(
     string HtmlBody,
     string? TextBody,
     Guid? TenantId = null,
-    Guid? RequestedByUserId = null);
+    Guid? RequestedByUserId = null,
+    WorkspaceEmailDeliveryCategory? Category = null);

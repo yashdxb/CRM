@@ -1305,7 +1305,12 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
                 return;
             }
 
-            await _emailSender.SendAsync(toEmail.Trim(), subject, htmlBody, cancellationToken: cancellationToken);
+            await _emailSender.SendAsync(
+                toEmail.Trim(),
+                subject,
+                htmlBody,
+                category: WorkspaceEmailDeliveryCategory.Approvals,
+                cancellationToken: cancellationToken);
         }
         catch (Exception ex)
         {

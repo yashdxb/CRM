@@ -293,7 +293,13 @@ public sealed class DecisionSlaEscalationWorker : BackgroundService
 
                     if (await emailDeliveryPolicy.IsEnabledAsync(decision.TenantId, WorkspaceEmailDeliveryCategory.Approvals, cancellationToken))
                     {
-                        await emailSender.SendAsync(recipient.Email, subject, htmlBody, textBody, cancellationToken);
+                        await emailSender.SendAsync(
+                            recipient.Email,
+                            subject,
+                            htmlBody,
+                            textBody,
+                            WorkspaceEmailDeliveryCategory.Approvals,
+                            cancellationToken);
                     }
                 }
             }

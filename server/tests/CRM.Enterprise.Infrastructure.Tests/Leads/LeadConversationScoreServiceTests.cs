@@ -4,6 +4,8 @@ using CRM.Enterprise.Domain.Enums;
 using CRM.Enterprise.Infrastructure.Leads;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace CRM.Enterprise.Infrastructure.Tests.Leads;
@@ -17,7 +19,7 @@ public class LeadConversationScoreServiceTests
         var lead = SeedLead(dbContext, tenantId, "quiet@example.com");
         await dbContext.SaveChangesAsync();
 
-        var service = new LeadConversationScoreService(dbContext);
+        var service = CreateService(dbContext);
         var snapshot = await service.CalculateAsync(lead);
 
         Assert.False(snapshot.SignalAvailable);
@@ -45,7 +47,7 @@ public class LeadConversationScoreServiceTests
         });
         await dbContext.SaveChangesAsync();
 
-        var service = new LeadConversationScoreService(dbContext);
+        var service = CreateService(dbContext);
         var snapshot = await service.CalculateAsync(lead);
 
         Assert.True(snapshot.SignalAvailable);
@@ -92,7 +94,7 @@ public class LeadConversationScoreServiceTests
             });
         await dbContext.SaveChangesAsync();
 
-        var service = new LeadConversationScoreService(dbContext);
+        var service = CreateService(dbContext);
         var snapshot = await service.CalculateAsync(lead);
 
         Assert.True(snapshot.SignalAvailable);
@@ -121,7 +123,7 @@ public class LeadConversationScoreServiceTests
         });
         await dbContext.SaveChangesAsync();
 
-        var service = new LeadConversationScoreService(dbContext);
+        var service = CreateService(dbContext);
         var snapshot = await service.CalculateAsync(lead);
 
         Assert.True(snapshot.SignalAvailable);
@@ -136,6 +138,16 @@ public class LeadConversationScoreServiceTests
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         return new CrmDbContext(options, tenantProvider);
+    }
+
+    private static LeadConversationScoreService CreateService(CrmDbContext dbContext)
+    {
+        return new LeadConversationScoreService(
+            dbContext,
+            new FakeHttpClientFactory(),
+            Options.Create(new AzureOpenAiOptions()),
+            Options.Create(new OpenAiOptions()),
+            NullLogger<LeadConversationScoreService>.Instance);
     }
 
     private static Lead SeedLead(CrmDbContext dbContext, Guid tenantId, string email)
@@ -169,5 +181,10 @@ public class LeadConversationScoreServiceTests
             TenantId = tenantId;
             TenantKey = tenantKey;
         }
+    }
+
+    private sealed class FakeHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new();
     }
 }
