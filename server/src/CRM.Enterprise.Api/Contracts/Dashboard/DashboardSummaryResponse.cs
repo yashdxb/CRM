@@ -38,6 +38,7 @@ public record DashboardSummaryResponse(
     decimal AvgTruthCoverage,
     decimal AvgTimeToTruthDays,
     int RiskRegisterCount,
+    IEnumerable<RiskIntelligenceItem> RiskIntelligence,
     IEnumerable<RiskFlagSummaryItem> TopRiskFlags,
     decimal ConfidenceWeightedPipelineValue,
     decimal CostOfNotKnowingValue,
@@ -88,6 +89,15 @@ public record DashboardOpportunityItem(
     DateTime? LastActivityAtUtc);
 
 public record RiskFlagSummaryItem(string Label, int Count);
+
+public record RiskIntelligenceItem(
+    string Key,
+    string Label,
+    int Count,
+    string Severity,
+    string Impact,
+    string RecommendedAction,
+    string Route);
 
 public record CostOfNotKnowingDealItem(
     Guid OpportunityId,

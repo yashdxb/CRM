@@ -13,7 +13,7 @@ import { Subject, startWith, switchMap } from 'rxjs';
 import { debounceTime, filter } from 'rxjs/operators';
 
 import { DashboardDataService } from '../services/dashboard-data.service';
-import { AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal } from '../models/dashboard.model';
+import { AssistantInsights, AssistantInsightsAction, DashboardSummary, ManagerPipelineHealth, ManagerReviewDeal, RiskIntelligenceItem } from '../models/dashboard.model';
 import { Customer } from '../../customers/models/customer.model';
 import { Activity } from '../../activities/models/activity.model';
 import { OpportunityDataService } from '../../opportunities/services/opportunity-data.service';
@@ -126,6 +126,7 @@ export class DashboardPage implements OnInit {
     avgTruthCoverage: 0,
     avgTimeToTruthDays: 0,
     riskRegisterCount: 0,
+    riskIntelligence: [],
     topRiskFlags: [],
     confidenceWeightedPipelineValue: 0,
     costOfNotKnowingValue: 0,
@@ -243,13 +244,70 @@ export class DashboardPage implements OnInit {
   protected readonly secondaryKpis = computed(() => {
     const data = this.summary();
     if (!data) return [];
+    const openOpportunities = Math.max(data.openOpportunities, 1);
+    const visibleActivities = Math.max(data.upcomingActivities + data.overdueActivities, 1);
+    const leadPopulation = Math.max(data.leads + data.prospects, 1);
     const items = [
-      { id: 'accounts', label: 'Accounts', value: data.totalCustomers, trend: 0, percentage: 100, icon: 'pi-building', color: 'cyan' },
-      { id: 'open-opps', label: 'Open Opps', value: data.openOpportunities, trend: 0, percentage: 100, icon: 'pi-briefcase', color: 'purple' },
-      { id: 'at-risk', label: 'At-risk deals', value: data.atRiskOpportunities, trend: 0, percentage: 100, icon: 'pi-exclamation-triangle', color: 'danger' },
-      { id: 'no-next-step', label: 'No next step', value: data.opportunitiesWithoutNextStep, trend: 0, percentage: 100, icon: 'pi-calendar-times', color: 'warning' },
-      { id: 'tasks-due', label: 'Tasks Due', value: data.tasksDueToday, trend: 0, percentage: 100, icon: 'pi-calendar', color: 'success' },
-      { id: 'next-7-days', label: 'Next 7 Days', value: data.upcomingActivities, trend: 0, percentage: 100, icon: 'pi-clock', color: 'orange' }
+      {
+        id: 'raw-pipeline',
+        label: 'Raw pipeline',
+        value: data.pipelineValueTotal,
+        format: 'currency',
+        sub: 'Unweighted open pipeline',
+        percentage: data.pipelineValueTotal > 0 ? 100 : 0,
+        icon: 'pi-dollar',
+        color: 'cyan'
+      },
+      {
+        id: 'at-risk',
+        label: 'At-risk deals',
+        value: data.atRiskOpportunities,
+        format: 'number',
+        sub: 'Need recovery attention',
+        percentage: Math.round((data.atRiskOpportunities / openOpportunities) * 100),
+        icon: 'pi-exclamation-triangle',
+        color: 'danger'
+      },
+      {
+        id: 'no-next-step',
+        label: 'No next step',
+        value: data.opportunitiesWithoutNextStep,
+        format: 'number',
+        sub: 'Execution gap in pipeline',
+        percentage: Math.round((data.opportunitiesWithoutNextStep / openOpportunities) * 100),
+        icon: 'pi-calendar-times',
+        color: 'warning'
+      },
+      {
+        id: 'tasks-due',
+        label: 'Tasks due today',
+        value: data.tasksDueToday,
+        format: 'number',
+        sub: 'Immediate focus list',
+        percentage: Math.round((data.tasksDueToday / visibleActivities) * 100),
+        icon: 'pi-calendar',
+        color: 'success'
+      },
+      {
+        id: 'overdue-activities',
+        label: 'Overdue activities',
+        value: data.overdueActivities,
+        format: 'number',
+        sub: 'Broken commitments to recover',
+        percentage: Math.round((data.overdueActivities / visibleActivities) * 100),
+        icon: 'pi-history',
+        color: 'orange'
+      },
+      {
+        id: 'new-leads',
+        label: 'Newly assigned leads',
+        value: data.newlyAssignedLeads?.length ?? 0,
+        format: 'number',
+        sub: 'Fresh follow-up queue',
+        percentage: Math.round(((data.newlyAssignedLeads?.length ?? 0) / leadPopulation) * 100),
+        icon: 'pi-user-plus',
+        color: 'purple'
+      }
     ];
     const order = this.kpiOrder().length ? this.kpiOrder() : this.defaultKpiOrder;
     const lookup = new Map(items.map(item => [item.id, item]));
@@ -269,6 +327,22 @@ export class DashboardPage implements OnInit {
   });
 
   protected readonly topRiskFlags = computed(() => this.summary()?.topRiskFlags ?? []);
+  protected readonly riskIntelligenceItems = computed(() => this.summary()?.riskIntelligence?.slice(0, 5) ?? []);
+  protected readonly riskIntelligenceSummary = computed(() => {
+    const buckets = new Map<string, number>();
+    for (const item of this.summary()?.riskIntelligence ?? []) {
+      const severity = this.riskIntelligenceSeverityClass(item.severity);
+      buckets.set(severity, (buckets.get(severity) ?? 0) + item.count);
+    }
+
+    return ['critical', 'high', 'medium', 'info']
+      .filter((severity) => (buckets.get(severity) ?? 0) > 0)
+      .map((severity) => ({
+        severity,
+        label: this.riskIntelligenceSeverityLabel(severity),
+        count: buckets.get(severity) ?? 0
+      }));
+  });
   protected readonly topCostBreakdown = computed(() =>
     (this.summary()?.costOfNotKnowingBreakdown ?? []).slice(0, 5)
   );
@@ -278,26 +352,46 @@ export class DashboardPage implements OnInit {
     if (!data) return [];
     return [
       {
-        key: 'next-step',
-        label: 'Schedule next steps for open deals',
-        count: data.opportunitiesWithoutNextStep
+        key: 'recovery',
+        eyebrow: 'Now',
+        title: 'Stabilize exposed revenue',
+        count: data.atRiskOpportunities,
+        countLabel: 'deals at risk',
+        detail: `${data.atRiskOpportunities} open deals are already showing signal decay, weak buying engagement, or stalled execution.`,
+        objective: 'Recover forecast confidence before slippage becomes a quarter-end surprise.',
+        tone: 'danger'
       },
       {
-        key: 'at-risk',
-        label: 'Recover at-risk opportunities',
-        count: data.atRiskOpportunities
+        key: 'discipline',
+        eyebrow: 'Next',
+        title: 'Rebuild deal momentum',
+        count: data.opportunitiesWithoutNextStep,
+        countLabel: 'execution gaps',
+        detail: `${data.opportunitiesWithoutNextStep} active opportunities are missing a committed next step.`,
+        objective: 'Restore inspection quality and keep managers looking at movement, not guesswork.',
+        tone: 'warning'
       },
       {
-        key: 'overdue',
-        label: 'Clear overdue activities',
-        count: data.overdueActivities
+        key: 'workday',
+        eyebrow: 'Today',
+        title: 'Convert the seller workday into buyer movement',
+        count: data.tasksDueToday,
+        countLabel: 'tasks due',
+        detail: `${data.tasksDueToday} tasks are due today and ${data.overdueActivities} prior commitments are already overdue.`,
+        objective: 'Turn planned activity into same-day customer progress instead of growing carryover.',
+        tone: 'info'
       },
       {
-        key: 'new-leads',
-        label: 'Work newly assigned leads',
-        count: data.newlyAssignedLeads?.length ?? 0
+        key: 'coverage',
+        eyebrow: 'Protect',
+        title: 'Protect fresh pipeline coverage',
+        count: data.newlyAssignedLeads?.length ?? 0,
+        countLabel: 'new leads',
+        detail: `${data.newlyAssignedLeads?.length ?? 0} recently assigned leads are still inside the response window.`,
+        objective: 'Preserve speed-to-lead and qualification quality before interest cools.',
+        tone: 'success'
       }
-    ];
+    ].filter((item) => item.count > 0);
   });
 
   protected confidenceLabel(value: number): string {
@@ -312,6 +406,52 @@ export class DashboardPage implements OnInit {
     if (value >= 0.5) return 'info';
     if (value >= 0.2) return 'warning';
     return 'danger';
+  }
+
+  protected riskIntelligenceSeverityClass(severity: string | null | undefined): string {
+    switch ((severity ?? '').trim().toLowerCase()) {
+      case 'critical':
+        return 'critical';
+      case 'high':
+        return 'high';
+      case 'medium':
+        return 'medium';
+      default:
+        return 'info';
+    }
+  }
+
+  protected riskIntelligenceSeverityLabel(severity: string | null | undefined): string {
+    const normalized = (severity ?? '').trim().toLowerCase();
+    if (normalized === 'critical') return 'Critical';
+    if (normalized === 'high') return 'High';
+    if (normalized === 'medium') return 'Medium';
+    return 'Info';
+  }
+
+  protected openRiskIntelligence(item: RiskIntelligenceItem): void {
+    const route = (item.route ?? '').trim().toLowerCase();
+    if (route === 'leads') {
+      this.router.navigate(['/app/leads']);
+      return;
+    }
+    if (route === 'opportunities') {
+      this.router.navigate(['/app/opportunities']);
+      return;
+    }
+    if (route === 'dashboard-at-risk') {
+      this.priorityFilter.set('at-risk');
+      return;
+    }
+    if (route === 'dashboard-no-next-step') {
+      this.priorityFilter.set('no-next-step');
+      return;
+    }
+    if (route === 'dashboard-new-leads') {
+      this.priorityFilter.set('new-leads');
+      return;
+    }
+    this.router.navigate(['/app/dashboard']);
   }
 
   protected weightedPipelineDelta(): number {
@@ -604,7 +744,7 @@ export class DashboardPage implements OnInit {
     growth: 'md'
   };
 
-  private readonly defaultKpiOrder = ['accounts', 'open-opps', 'at-risk', 'no-next-step', 'tasks-due', 'next-7-days'];
+  private readonly defaultKpiOrder = ['raw-pipeline', 'at-risk', 'no-next-step', 'tasks-due', 'overdue-activities', 'new-leads'];
   private readonly kpiOrderStorageKey = 'crm.dashboard.kpi.order';
   protected readonly kpiOrder = signal<string[]>([]);
 
@@ -1660,7 +1800,13 @@ export class DashboardPage implements OnInit {
       if (!stored) return [...this.defaultKpiOrder];
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
-        return parsed;
+        const allowed = new Set(this.defaultKpiOrder);
+        const filtered = parsed.filter((item): item is string => allowed.has(item));
+        const missing = this.defaultKpiOrder.filter(item => !filtered.includes(item));
+        const resolved = [...filtered, ...missing];
+        if (resolved.length) {
+          return resolved;
+        }
       }
     } catch {
       // Ignore invalid local storage values.

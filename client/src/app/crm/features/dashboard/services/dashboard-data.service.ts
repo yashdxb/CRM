@@ -66,6 +66,7 @@ export class DashboardDataService {
       avgTruthCoverage: 0,
       avgTimeToTruthDays: 0,
       riskRegisterCount: 0,
+      riskIntelligence: [],
       topRiskFlags: [],
       confidenceWeightedPipelineValue: 0,
       costOfNotKnowingValue: 0,

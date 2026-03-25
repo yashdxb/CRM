@@ -1374,7 +1374,9 @@ public sealed class OpportunityApprovalService : IOpportunityApprovalService
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
         var approvalSteps = normalized.Steps
             .Where(step =>
-                (string.IsNullOrWhiteSpace(step.Purpose) || string.Equals(step.Purpose, purpose, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrWhiteSpace(step.Purpose)
+                 || string.Equals(step.Purpose, purpose, StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(step.Purpose, "Deal Approval", StringComparison.OrdinalIgnoreCase)) &&
                 (!step.AmountThreshold.HasValue || amount >= step.AmountThreshold.Value))
             .OrderBy(step => step.Order)
             .ToDictionary(step => step.NodeId ?? $"approval-step-{step.Order}", step => step, StringComparer.OrdinalIgnoreCase);

@@ -838,6 +838,35 @@ export function buildDashboardSummary(): DashboardSummary {
     avgTruthCoverage: 0.48,
     avgTimeToTruthDays: 18.5,
     riskRegisterCount: 12,
+    riskIntelligence: [
+      {
+        key: 'buying-timeline-needs-validation',
+        label: 'Buying timeline needs validation',
+        count: 5,
+        severity: 'critical',
+        impact: 'Forecast risk',
+        recommendedAction: 'Confirm timeline',
+        route: 'dashboard-no-next-step'
+      },
+      {
+        key: 'economic-buyer-not-engaged',
+        label: 'Economic buyer not engaged',
+        count: 4,
+        severity: 'high',
+        impact: 'Deal stall risk',
+        recommendedAction: 'Identify decision maker',
+        route: 'dashboard-new-leads'
+      },
+      {
+        key: 'budget-needs-validation',
+        label: 'Budget needs validation',
+        count: 3,
+        severity: 'medium',
+        impact: 'Qualification gap',
+        recommendedAction: 'Confirm budget',
+        route: 'dashboard-new-leads'
+      }
+    ],
     topRiskFlags: [
       { label: 'Buying timeline needs validation', count: 5 },
       { label: 'Economic buyer not engaged', count: 4 },

@@ -37,6 +37,7 @@ public record DashboardSummaryDto(
     decimal AvgTruthCoverage,
     decimal AvgTimeToTruthDays,
     int RiskRegisterCount,
+    IReadOnlyList<RiskIntelligenceItemDto> RiskIntelligence,
     IReadOnlyList<RiskFlagSummaryDto> TopRiskFlags,
     decimal ConfidenceWeightedPipelineValue,
     decimal CostOfNotKnowingValue,
@@ -108,6 +109,15 @@ public record DashboardOpportunityDto(
     DateTime? LastActivityAtUtc);
 
 public record RiskFlagSummaryDto(string Label, int Count);
+
+public record RiskIntelligenceItemDto(
+    string Key,
+    string Label,
+    int Count,
+    string Severity,
+    string Impact,
+    string RecommendedAction,
+    string Route);
 
 public record CostOfNotKnowingDealDto(
     Guid OpportunityId,

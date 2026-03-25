@@ -884,18 +884,13 @@ public sealed class OpportunityService : IOpportunityService
         opp.IsWon = request.IsWon;
         opp.UpdatedAtUtc = DateTime.UtcNow;
 
-        if (previousStageId != nextStageId)
+        var stageChanged = previousStageId != nextStageId;
+        if (stageChanged)
         {
             AddStageHistory(opp, nextStageId, "Stage updated", actor);
             await _auditEvents.TrackAsync(
                 CreateAuditEntry(opp.Id, "StageChanged", "Stage", previousStageName, nextStageName, actor),
                 cancellationToken);
-            await _mediator.Publish(new OpportunityStageChangedEvent(
-                opp.Id,
-                previousStageName,
-                nextStageName,
-                actor.UserId == Guid.Empty ? null : actor.UserId,
-                DateTime.UtcNow), cancellationToken);
         }
 
         if (previousOwnerId != opp.OwnerId)
@@ -996,6 +991,15 @@ public sealed class OpportunityService : IOpportunityService
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        if (stageChanged)
+        {
+            await TryPublishStageChangedEventAsync(
+                opp.Id,
+                previousStageName,
+                nextStageName,
+                actor,
+                cancellationToken);
+        }
         await _campaignAttributionService.RecomputeForOpportunityAsync(opp.Id, cancellationToken);
         return OpportunityOperationResult<bool>.Ok(true);
     }
@@ -1130,42 +1134,97 @@ public sealed class OpportunityService : IOpportunityService
                         actor),
                     cancellationToken);
             }
-            await _mediator.Publish(new OpportunityStageChangedEvent(
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            await TryPublishStageChangedEventAsync(
                 opp.Id,
                 previousStageName,
                 nextStageName,
-                actor.UserId == Guid.Empty ? null : actor.UserId,
-                DateTime.UtcNow), cancellationToken);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            await _realtimePublisher.PublishTenantEventAsync(
-                opp.TenantId,
-                "opportunity.stage.changed",
-                new
-                {
-                    opportunityId = opp.Id,
-                    opportunityName = opp.Name,
-                    previousStage = previousStageName,
-                    nextStage = nextStageName,
-                    amount = opp.Amount,
-                    forecastCategory = opp.ForecastCategory,
-                    changedAtUtc = DateTime.UtcNow
-                },
+                actor,
                 cancellationToken);
-            await _realtimePublisher.PublishTenantEventAsync(
+            await TryPublishStageRealtimeAsync(
                 opp.TenantId,
-                "dashboard.metrics.delta",
-                new
-                {
-                    source = "opportunity-stage",
-                    opportunityId = opp.Id,
-                    nextStage = nextStageName,
-                    forecastCategory = opp.ForecastCategory,
-                    amount = opp.Amount
-                },
+                opp.Id,
+                opp.Name,
+                previousStageName,
+                nextStageName,
+                opp.Amount,
+                opp.ForecastCategory,
                 cancellationToken);
         }
 
         return OpportunityOperationResult<bool>.Ok(true);
+    }
+
+    private async Task TryPublishStageChangedEventAsync(
+        Guid opportunityId,
+        string? previousStageName,
+        string? nextStageName,
+        ActorContext actor,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _mediator.Publish(new OpportunityStageChangedEvent(
+                opportunityId,
+                previousStageName,
+                nextStageName,
+                actor.UserId == Guid.Empty ? null : actor.UserId,
+                DateTime.UtcNow), cancellationToken);
+        }
+        catch
+        {
+            // Stage persistence is authoritative; auxiliary event fan-out must not fail the transition.
+        }
+    }
+
+    private async Task TryPublishStageRealtimeAsync(
+        Guid tenantId,
+        Guid opportunityId,
+        string opportunityName,
+        string? previousStageName,
+        string? nextStageName,
+        decimal amount,
+        string? forecastCategory,
+        CancellationToken cancellationToken)
+    {
+        if (tenantId == Guid.Empty)
+        {
+            return;
+        }
+
+        try
+        {
+            await _realtimePublisher.PublishTenantEventAsync(
+                tenantId,
+                "opportunity.stage.changed",
+                new
+                {
+                    opportunityId,
+                    opportunityName,
+                    previousStage = previousStageName,
+                    nextStage = nextStageName,
+                    amount,
+                    forecastCategory,
+                    changedAtUtc = DateTime.UtcNow
+                },
+                cancellationToken);
+            await _realtimePublisher.PublishTenantEventAsync(
+                tenantId,
+                "dashboard.metrics.delta",
+                new
+                {
+                    source = "opportunity-stage",
+                    opportunityId,
+                    nextStage = nextStageName,
+                    forecastCategory,
+                    amount
+                },
+                cancellationToken);
+        }
+        catch
+        {
+            // Realtime fan-out is best-effort and must not roll back a persisted stage change.
+        }
     }
 
     public async Task<OpportunityOperationResult<Guid>> CoachAsync(Guid id, OpportunityCoachingRequest request, ActorContext actor, CancellationToken cancellationToken = default)

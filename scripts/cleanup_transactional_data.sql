@@ -43,10 +43,10 @@ BEGIN TRY
     PRINT 'Deleted OpportunityQuotes';
     DELETE FROM crm.OpportunityStageHistories;
     PRINT 'Deleted OpportunityStageHistories';
-    DELETE FROM crm.OpportunityApprovalChains;
-    PRINT 'Deleted OpportunityApprovalChains';
     DELETE FROM crm.OpportunityApprovals;
     PRINT 'Deleted OpportunityApprovals';
+    DELETE FROM crm.OpportunityApprovalChains;
+    PRINT 'Deleted OpportunityApprovalChains';
     IF OBJECT_ID('crm.PendingWorkflowDelays', 'U') IS NOT NULL
     BEGIN
         DELETE FROM crm.PendingWorkflowDelays;

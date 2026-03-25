@@ -1015,6 +1015,14 @@ public class DashboardReadService : IDashboardReadService
             .ToList();
 
         var riskRegisterCount = allRiskFlags.Count;
+        var riskIntelligence = allRiskFlags
+            .GroupBy(flag => flag, StringComparer.OrdinalIgnoreCase)
+            .Select(group => BuildRiskIntelligenceItem(group.Key, group.Count()))
+            .OrderByDescending(item => item.Count)
+            .ThenByDescending(item => GetRiskSeverityRank(item.Severity))
+            .ThenBy(item => item.Label)
+            .Take(5)
+            .ToList();
         var topRiskFlags = allRiskFlags
             .GroupBy(flag => flag, StringComparer.OrdinalIgnoreCase)
             .Select(group => new RiskFlagSummaryDto(group.Key, group.Count()))
@@ -1099,6 +1107,7 @@ public class DashboardReadService : IDashboardReadService
             Math.Round(avgTruthCoverage, 2),
             avgTimeToTruthDays,
             riskRegisterCount,
+            riskIntelligence,
             topRiskFlags,
             Math.Round(confidenceWeightedPipelineValue, 2),
             Math.Round(costOfNotKnowingValue, 2),
@@ -1520,6 +1529,256 @@ public class DashboardReadService : IDashboardReadService
         decimal Confidence,
         decimal TruthCoverage,
         IReadOnlyList<string> RiskFlags);
+
+    private static int GetRiskSeverityRank(string severity)
+    {
+        return (severity ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "critical" => 4,
+            "high" => 3,
+            "medium" => 2,
+            _ => 1
+        };
+    }
+
+    private static RiskIntelligenceItemDto BuildRiskIntelligenceItem(string label, int count)
+    {
+        var normalized = (label ?? string.Empty).Trim();
+        var topic = DetectRiskTopic(normalized);
+        var severity = ResolveRiskSeverity(normalized, topic);
+        var impact = ResolveRiskImpact(topic, normalized);
+        var action = ResolveRiskAction(topic, normalized);
+        var route = ResolveRiskRoute(topic, normalized);
+        var itemLabel = ToRiskDisplayLabel(topic, normalized);
+        var key = BuildRiskIntelligenceKey(topic, normalized);
+
+        return new RiskIntelligenceItemDto(key, itemLabel, count, severity, impact, action, route);
+    }
+
+    private static string DetectRiskTopic(string label)
+    {
+        var normalized = (label ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Contains("timeline"))
+        {
+            return "timeline";
+        }
+
+        if (normalized.Contains("economic buyer") || normalized.Contains("decision maker") || normalized.Contains("sponsor"))
+        {
+            return "economic-buyer";
+        }
+
+        if (normalized.Contains("budget"))
+        {
+            return "budget";
+        }
+
+        if (normalized.Contains("readiness") || normalized.Contains("spend") || normalized.Contains("initiative"))
+        {
+            return "readiness";
+        }
+
+        if (normalized.Contains("problem severity") || normalized.Contains("pain") || normalized.Contains("urgency"))
+        {
+            return "problem";
+        }
+
+        if (normalized.Contains("icp fit") || normalized.Contains("icp"))
+        {
+            return "icp-fit";
+        }
+
+        if (normalized.Contains("checklist"))
+        {
+            return "execution";
+        }
+
+        return "general";
+    }
+
+    private static string ResolveRiskSeverity(string label, string topic)
+    {
+        var normalized = (label ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Contains("checklist blocked"))
+        {
+            return "high";
+        }
+
+        if (normalized.Contains("no ")
+            || normalized.Contains("not engaged")
+            || normalized.Contains("weak ")
+            || normalized.Contains("confirmed but no initiative"))
+        {
+            return topic == "timeline" ? "critical" : "high";
+        }
+
+        if (normalized.Contains("needs validation") || normalized.Contains("is stale"))
+        {
+            return topic is "timeline" or "budget" or "economic-buyer" ? "medium" : "info";
+        }
+
+        if (normalized.Contains("unclear"))
+        {
+            return "info";
+        }
+
+        return topic is "timeline" or "economic-buyer" ? "high" : "info";
+    }
+
+    private static string ResolveRiskImpact(string topic, string label)
+    {
+        var normalized = (label ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Contains("is stale"))
+        {
+            return "Confidence decay";
+        }
+
+        if (normalized.Contains("checklist blocked"))
+        {
+            return "Execution risk";
+        }
+
+        return topic switch
+        {
+            "timeline" => "Forecast risk",
+            "economic-buyer" => "Deal stall risk",
+            "budget" => "Qualification gap",
+            "readiness" => "Low conversion probability",
+            "problem" => "Weak urgency",
+            "icp-fit" => "Qualification fit risk",
+            _ => "Qualification signal"
+        };
+    }
+
+    private static string ResolveRiskAction(string topic, string label)
+    {
+        var normalized = (label ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Contains("is stale"))
+        {
+            return "Refresh evidence";
+        }
+
+        if (normalized.Contains("checklist blocked"))
+        {
+            return "Resolve blocker";
+        }
+
+        if (normalized.Contains("needs validation"))
+        {
+            return topic switch
+            {
+                "timeline" => "Confirm timeline",
+                "economic-buyer" => "Confirm sponsor",
+                "budget" => "Confirm budget",
+                "readiness" => "Run discovery",
+                "problem" => "Clarify pain",
+                "icp-fit" => "Validate fit",
+                _ => "Review signal"
+            };
+        }
+
+        return topic switch
+        {
+            "timeline" => "Request timeline",
+            "economic-buyer" => "Identify decision maker",
+            "budget" => "Confirm budget",
+            "readiness" => "Run discovery",
+            "problem" => "Clarify pain",
+            "icp-fit" => "Validate fit",
+            "execution" => "Resolve blocker",
+            _ => "Review signal"
+        };
+    }
+
+    private static string ResolveRiskRoute(string topic, string label)
+    {
+        var normalized = (label ?? string.Empty).Trim().ToLowerInvariant();
+        if (normalized.Contains("checklist blocked"))
+        {
+            return "opportunities";
+        }
+
+        if (topic == "timeline" || normalized.Contains("missing next step"))
+        {
+            return "dashboard-no-next-step";
+        }
+
+        if (topic == "icp-fit")
+        {
+            return "leads";
+        }
+
+        return "dashboard-new-leads";
+    }
+
+    private static string ToRiskDisplayLabel(string topic, string label)
+    {
+        var normalized = (label ?? string.Empty).Trim();
+        if (normalized.EndsWith("needs validation", StringComparison.OrdinalIgnoreCase))
+        {
+            return topic switch
+            {
+                "timeline" => "Buying timeline needs validation",
+                "economic-buyer" => "Economic buyer needs validation",
+                "budget" => "Budget needs validation",
+                "readiness" => "Readiness to spend needs validation",
+                "problem" => "Problem severity needs validation",
+                "icp-fit" => "ICP fit needs validation",
+                _ => normalized
+            };
+        }
+
+        if (normalized.EndsWith("checklist blocked", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{ToTitleCaseLabel(normalized[..^" checklist blocked".Length].Trim())} checklist blocked";
+        }
+
+        if (normalized.EndsWith("is stale", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{ToTitleCaseLabel(normalized[..^" is stale".Length].Trim())} is stale";
+        }
+
+        return ToTitleCaseLabel(normalized);
+    }
+
+    private static string BuildRiskIntelligenceKey(string topic, string label)
+    {
+        var normalized = string.IsNullOrWhiteSpace(label)
+            ? topic
+            : label.Trim().ToLowerInvariant();
+        var key = normalized
+            .Replace(" ", "-")
+            .Replace(",", string.Empty)
+            .Replace("/", "-");
+        return string.IsNullOrWhiteSpace(key) ? topic : key;
+    }
+
+    private static string ToTitleCaseLabel(string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            return string.Empty;
+        }
+
+        var tokens = label
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(token =>
+            {
+                if (string.Equals(token, "ICP", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "ICP";
+                }
+
+                if (token.Length == 1)
+                {
+                    return token.ToUpperInvariant();
+                }
+
+                return char.ToUpperInvariant(token[0]) + token[1..].ToLowerInvariant();
+            });
+
+        return string.Join(' ', tokens);
+    }
 
     private sealed record DashboardEpistemicFactor(
         string Label,
@@ -2213,10 +2472,13 @@ public class DashboardReadService : IDashboardReadService
         var roleRows = await _dbContext.UserRoles
             .AsNoTracking()
             .Where(ur => !ur.IsDeleted && ur.UserId == userId.Value)
-            .Join(_dbContext.Roles.AsNoTracking().Where(r => !r.IsDeleted && r.TenantId == userInfo.TenantId),
+            .Join(
+                _dbContext.Roles
+                    .AsNoTracking()
+                    .Where(r => !r.IsDeleted && (r.TenantId == userInfo.TenantId || r.TenantId == Guid.Empty)),
                 ur => ur.RoleId,
                 r => r.Id,
-                (ur, r) => new { r.Id, r.HierarchyPath, r.VisibilityScope })
+                (ur, r) => new { r.Id, r.HierarchyPath, r.VisibilityScope, r.TenantId })
             .ToListAsync(cancellationToken);
 
         if (roleRows.Count == 0)
@@ -2241,13 +2503,31 @@ public class DashboardReadService : IDashboardReadService
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
+        if (rolePaths.Count == 0)
+        {
+            var tenantUserIds = await _dbContext.Users
+                .AsNoTracking()
+                .Where(u => u.TenantId == userInfo.TenantId && !u.IsDeleted && u.IsActive)
+                .Select(u => u.Id)
+                .ToListAsync(cancellationToken);
+
+            if (!tenantUserIds.Contains(userId.Value))
+            {
+                tenantUserIds.Add(userId.Value);
+            }
+
+            return new VisibilityContext(RoleVisibilityScope.Team, tenantUserIds);
+        }
+
         var descendantRoleIds = new HashSet<Guid>();
         if (rolePaths.Count > 0)
         {
             var tenantRoles = await _dbContext.Roles
                 .AsNoTracking()
-                .Where(r => !r.IsDeleted && r.TenantId == userInfo.TenantId && r.HierarchyPath != null)
-                .Select(r => new { r.Id, r.HierarchyPath })
+                .Where(r => !r.IsDeleted
+                            && (r.TenantId == userInfo.TenantId || r.TenantId == Guid.Empty)
+                            && r.HierarchyPath != null)
+                .Select(r => new { r.Id, r.HierarchyPath, r.TenantId })
                 .ToListAsync(cancellationToken);
 
             foreach (var role in tenantRoles)

@@ -40,6 +40,7 @@ export interface DashboardSummary {
   avgTruthCoverage: number;
   avgTimeToTruthDays: number;
   riskRegisterCount: number;
+  riskIntelligence: RiskIntelligenceItem[];
   topRiskFlags: RiskFlagSummary[];
   confidenceWeightedPipelineValue: number;
   costOfNotKnowingValue: number;
@@ -102,6 +103,16 @@ export interface DashboardOpportunity {
 export interface RiskFlagSummary {
   label: string;
   count: number;
+}
+
+export interface RiskIntelligenceItem {
+  key: string;
+  label: string;
+  count: number;
+  severity: 'info' | 'medium' | 'high' | 'critical' | string;
+  impact: string;
+  recommendedAction: string;
+  route: 'leads' | 'opportunities' | 'dashboard-new-leads' | 'dashboard-at-risk' | 'dashboard-no-next-step' | string;
 }
 
 export interface CostOfNotKnowingDeal {
