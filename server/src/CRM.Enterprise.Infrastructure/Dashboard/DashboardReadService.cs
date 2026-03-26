@@ -3,6 +3,7 @@ using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
+using CRM.Enterprise.Security;
 using CRM.Enterprise.Infrastructure.Caching;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -124,10 +125,19 @@ public class DashboardReadService : IDashboardReadService
             .Select(a => a.LifecycleStage)
             .ToListAsync(cancellationToken);
         var totalCustomers = accountLifecycleRows.Count;
-        var leads = accountLifecycleRows.Count(stage => string.Equals(stage, "Lead", StringComparison.OrdinalIgnoreCase));
         var prospects = accountLifecycleRows.Count(stage => string.Equals(stage, "Prospect", StringComparison.OrdinalIgnoreCase));
         var activeCustomers = accountLifecycleRows.Count(stage =>
             string.IsNullOrWhiteSpace(stage) || string.Equals(stage, "Customer", StringComparison.OrdinalIgnoreCase));
+
+        var leadsQuery = _dbContext.Leads
+            .AsNoTracking()
+            .Where(l => !l.IsDeleted && l.ConvertedOpportunityId == null);
+        if (visibility.UserIds is not null)
+        {
+            leadsQuery = leadsQuery.Where(l => visibility.UserIds.Contains(l.OwnerId));
+        }
+
+        var leads = await leadsQuery.CountAsync(cancellationToken);
 
         var opportunitiesQuery = _dbContext.Opportunities.AsNoTracking().Where(o => !o.IsDeleted && !o.IsClosed);
         if (visibility.UserIds is not null)
@@ -2515,12 +2525,19 @@ public class DashboardReadService : IDashboardReadService
                     .Where(r => !r.IsDeleted && (r.TenantId == userInfo.TenantId || r.TenantId == Guid.Empty)),
                 ur => ur.RoleId,
                 r => r.Id,
-                (ur, r) => new { r.Id, r.HierarchyPath, r.VisibilityScope, r.TenantId })
+                (ur, r) => new { r.Id, r.Name, r.HierarchyPath, r.VisibilityScope, r.TenantId })
             .ToListAsync(cancellationToken);
 
         if (roleRows.Count == 0)
         {
             return new VisibilityContext(RoleVisibilityScope.Self, new[] { userId.Value });
+        }
+
+        if (roleRows.Any(r => string.Equals(r.Name, Permissions.RoleNames.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r.Name, Permissions.RoleNames.Admin, StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(r.Name, Permissions.RoleNames.InternalAdmin, StringComparison.OrdinalIgnoreCase)))
+        {
+            return new VisibilityContext(RoleVisibilityScope.All, null);
         }
 
         var effectiveScope = ResolveVisibilityScope(roleRows.Select(r => r.VisibilityScope));
