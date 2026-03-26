@@ -3,8 +3,10 @@ using CRM.Enterprise.Application.Qualifications;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
+using CRM.Enterprise.Infrastructure.Caching;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Text.Json;
 
@@ -66,18 +68,36 @@ public class DashboardReadService : IDashboardReadService
         DateTime? CompletedDateUtc,
         string Subject);
     private readonly CrmDbContext _dbContext;
+    private readonly IReadModelCache _readModelCache;
+    private readonly RedisCacheOptions _cacheOptions;
     private readonly ITenantProvider _tenantProvider;
     private const int InactivityThresholdDays = 30;
     private const int StuckStageThresholdDays = 21;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public DashboardReadService(CrmDbContext dbContext, ITenantProvider tenantProvider)
+    public DashboardReadService(
+        CrmDbContext dbContext,
+        ITenantProvider tenantProvider,
+        IReadModelCache readModelCache,
+        IOptions<RedisCacheOptions> cacheOptions)
     {
         _dbContext = dbContext;
         _tenantProvider = tenantProvider;
+        _readModelCache = readModelCache;
+        _cacheOptions = cacheOptions.Value;
     }
 
     public async Task<DashboardSummaryDto> GetSummaryAsync(Guid? userId, CancellationToken cancellationToken)
+    {
+        var cacheKey = BuildUserScopedCacheKey("dashboard:summary", userId);
+        return await _readModelCache.GetOrCreateAsync(
+            cacheKey,
+            TimeSpan.FromSeconds(Math.Max(5, _cacheOptions.DashboardSummaryTtlSeconds)),
+            ct => GetSummaryCoreAsync(userId, ct),
+            cancellationToken);
+    }
+
+    private async Task<DashboardSummaryDto> GetSummaryCoreAsync(Guid? userId, CancellationToken cancellationToken)
     {
         var now = DateTime.UtcNow;
         var nextWeek = now.AddDays(7);
@@ -1124,6 +1144,16 @@ public class DashboardReadService : IDashboardReadService
 
     public async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthAsync(Guid? userId, CancellationToken cancellationToken)
     {
+        var cacheKey = BuildUserScopedCacheKey("dashboard:manager-pipeline-health", userId);
+        return await _readModelCache.GetOrCreateAsync(
+            cacheKey,
+            TimeSpan.FromSeconds(Math.Max(5, _cacheOptions.ManagerPipelineHealthTtlSeconds)),
+            ct => GetManagerPipelineHealthCoreAsync(userId, ct),
+            cancellationToken);
+    }
+
+    private async Task<ManagerPipelineHealthDto> GetManagerPipelineHealthCoreAsync(Guid? userId, CancellationToken cancellationToken)
+    {
         var now = DateTime.UtcNow;
         var visibility = await ResolveVisibilityAsync(userId, cancellationToken);
 
@@ -1523,6 +1553,13 @@ public class DashboardReadService : IDashboardReadService
             pipelineByStage,
             pipelineTruthGaps,
             orderedReviewQueue);
+    }
+
+    private string BuildUserScopedCacheKey(string endpoint, Guid? userId)
+    {
+        var tenantId = _tenantProvider.TenantId == Guid.Empty ? "default" : _tenantProvider.TenantId.ToString("N");
+        var userToken = userId.HasValue ? userId.Value.ToString("N") : "anonymous";
+        return $"tenant:{tenantId}:user:{userToken}:{endpoint}";
     }
 
     private sealed record DashboardQualificationInsights(

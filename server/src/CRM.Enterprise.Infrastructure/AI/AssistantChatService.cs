@@ -5,9 +5,11 @@ using CRM.Enterprise.Application.Opportunities;
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Domain.Entities;
 using CRM.Enterprise.Domain.Enums;
+using CRM.Enterprise.Infrastructure.Caching;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.Extensions.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
@@ -25,6 +27,8 @@ public sealed class AssistantChatService : IAssistantChatService
     private readonly AzureSearchKnowledgeClient _knowledgeClient;
     private readonly IAuditEventService _auditEvents;
     private readonly IOpportunityApprovalService _opportunityApprovalService;
+    private readonly IReadModelCache _readModelCache;
+    private readonly RedisCacheOptions _cacheOptions;
     private readonly bool _isDevelopment;
 
     public AssistantChatService(
@@ -34,6 +38,8 @@ public sealed class AssistantChatService : IAssistantChatService
         AzureSearchKnowledgeClient knowledgeClient,
         IAuditEventService auditEvents,
         IOpportunityApprovalService opportunityApprovalService,
+        IReadModelCache readModelCache,
+        IOptions<RedisCacheOptions> cacheOptions,
         IHostEnvironment hostEnvironment)
     {
         _dbContext = dbContext;
@@ -42,6 +48,8 @@ public sealed class AssistantChatService : IAssistantChatService
         _knowledgeClient = knowledgeClient;
         _auditEvents = auditEvents;
         _opportunityApprovalService = opportunityApprovalService;
+        _readModelCache = readModelCache;
+        _cacheOptions = cacheOptions.Value;
         _isDevelopment = hostEnvironment.IsDevelopment();
     }
 
@@ -334,17 +342,25 @@ public sealed class AssistantChatService : IAssistantChatService
 
     public async Task<AssistantInsightsResult> GetInsightsAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var snapshot = await BuildExecutionSnapshotAsync(userId, cancellationToken);
-        var scoringPolicy = await ResolveAssistantScoringPolicyAsync(cancellationToken);
-        var kpis = new List<AssistantInsightsKpi>
-        {
-            new("at-risk-deals", "At-Risk Deals", snapshot.OpenOpportunitiesWithoutRecentActivity, snapshot.OpenOpportunitiesWithoutRecentActivity > 0 ? "danger" : "ok"),
-            new("sla-breaches", "Lead SLA Breaches", snapshot.LeadSlaBreaches, snapshot.LeadSlaBreaches > 0 ? "danger" : "ok"),
-            new("pending-approvals", "Pending Approvals", snapshot.PendingApprovals, snapshot.PendingApprovals > 0 ? "warn" : "ok")
-        };
+        var cacheKey = BuildUserScopedCacheKey("assistant:insights", userId);
+        return await _readModelCache.GetOrCreateAsync(
+            cacheKey,
+            TimeSpan.FromSeconds(Math.Max(5, _cacheOptions.AssistantInsightsTtlSeconds)),
+            async ct =>
+            {
+                var snapshot = await BuildExecutionSnapshotAsync(userId, ct);
+                var scoringPolicy = await ResolveAssistantScoringPolicyAsync(ct);
+                var kpis = new List<AssistantInsightsKpi>
+                {
+                    new("at-risk-deals", "At-Risk Deals", snapshot.OpenOpportunitiesWithoutRecentActivity, snapshot.OpenOpportunitiesWithoutRecentActivity > 0 ? "danger" : "ok"),
+                    new("sla-breaches", "Lead SLA Breaches", snapshot.LeadSlaBreaches, snapshot.LeadSlaBreaches > 0 ? "danger" : "ok"),
+                    new("pending-approvals", "Pending Approvals", snapshot.PendingApprovals, snapshot.PendingApprovals > 0 ? "warn" : "ok")
+                };
 
-        var actions = BuildPriorityActions(snapshot, scoringPolicy);
-        return new AssistantInsightsResult(snapshot.Scope, kpis, actions, DateTime.UtcNow);
+                var actions = BuildPriorityActions(snapshot, scoringPolicy);
+                return new AssistantInsightsResult(snapshot.Scope, kpis, actions, DateTime.UtcNow);
+            },
+            cancellationToken);
     }
 
     public async Task<AssistantActionExecutionResult> ExecuteActionAsync(
@@ -504,6 +520,12 @@ public sealed class AssistantChatService : IAssistantChatService
         {
             return true;
         }
+    }
+
+    private string BuildUserScopedCacheKey(string endpoint, Guid userId)
+    {
+        var tenantId = _tenantProvider.TenantId == Guid.Empty ? "default" : _tenantProvider.TenantId.ToString("N");
+        return $"tenant:{tenantId}:user:{userId:N}:{endpoint}";
     }
 
     private async Task<AssistantExecutionSnapshot> BuildExecutionSnapshotAsync(Guid userId, CancellationToken cancellationToken)

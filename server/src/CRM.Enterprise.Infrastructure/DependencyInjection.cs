@@ -47,6 +47,7 @@ using CRM.Enterprise.Infrastructure.Contacts;
 using CRM.Enterprise.Infrastructure.DirectChat;
 using CRM.Enterprise.Infrastructure.HelpDesk;
 using CRM.Enterprise.Infrastructure.Approvals;
+using CRM.Enterprise.Infrastructure.Caching;
 using CRM.Enterprise.Infrastructure.Properties;
 using CRM.Enterprise.Infrastructure.Emails;
 using CRM.Enterprise.Infrastructure.Drafts;
@@ -78,6 +79,20 @@ public static class DependencyInjection
         services.AddDbContext<CrmDbContext>(options =>
             options.UseSqlServer(connectionString, sql =>
                 sql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(2), null)));
+        var redisOptions = configuration.GetSection(RedisCacheOptions.SectionName).Get<RedisCacheOptions>() ?? new RedisCacheOptions();
+        services.Configure<RedisCacheOptions>(configuration.GetSection(RedisCacheOptions.SectionName));
+        if (redisOptions.Enabled && !string.IsNullOrWhiteSpace(redisOptions.ConnectionString))
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisOptions.ConnectionString;
+                options.InstanceName = redisOptions.InstanceName;
+            });
+        }
+        else
+        {
+            services.AddDistributedMemoryCache();
+        }
         services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
         services.AddScoped<IDatabaseInitializer, DatabaseInitializer>();
         services.AddScoped<ITenantProvider, TenantProvider>();
@@ -85,6 +100,7 @@ public static class DependencyInjection
         services.AddScoped<IIndustryPresetService, IndustryPresetService>();
         services.AddScoped<IDashboardReadService, DashboardReadService>();
         services.AddScoped<IDashboardLayoutService, DashboardLayoutService>();
+        services.AddScoped<IReadModelCache, ReadModelCache>();
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<EntraIdOptions>(configuration.GetSection(EntraIdOptions.SectionName));
         services.Configure<GraphMailOptions>(configuration.GetSection(GraphMailOptions.SectionName));
