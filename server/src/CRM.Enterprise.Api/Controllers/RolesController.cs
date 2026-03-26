@@ -30,6 +30,8 @@ public class RolesController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<RoleResponse>>> GetRoles(CancellationToken cancellationToken)
     {
+        await EnsureRoleHierarchyIntegrityAsync(cancellationToken);
+
         var roles = await _dbContext.Roles
             .AsNoTracking()
             .Where(r => !r.IsDeleted)
@@ -51,6 +53,8 @@ public class RolesController : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<RoleResponse>> GetRole(Guid id, CancellationToken cancellationToken)
     {
+        await EnsureRoleHierarchyIntegrityAsync(cancellationToken);
+
         var role = await FindRoleAsync(id, cancellationToken);
         if (role is null)
         {
@@ -130,6 +134,8 @@ public class RolesController : ControllerBase
     [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<ActionResult<RoleResponse>> CreateRole([FromBody] UpsertRoleRequest request, CancellationToken cancellationToken)
     {
+        await EnsureRoleHierarchyIntegrityAsync(cancellationToken);
+
         var validationError = await ValidateRoleRequestAsync(request, cancellationToken);
         if (validationError is not null)
         {
@@ -185,6 +191,8 @@ public class RolesController : ControllerBase
     [Authorize(Policy = Permissions.Policies.AdministrationManage)]
     public async Task<ActionResult<RoleResponse>> UpdateRole(Guid id, [FromBody] UpsertRoleRequest request, CancellationToken cancellationToken)
     {
+        await EnsureRoleHierarchyIntegrityAsync(cancellationToken);
+
         var validationError = await ValidateRoleRequestAsync(request, cancellationToken);
         if (validationError is not null)
         {
@@ -594,5 +602,81 @@ public class RolesController : ControllerBase
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task EnsureRoleHierarchyIntegrityAsync(CancellationToken cancellationToken)
+    {
+        var roles = await _dbContext.Roles
+            .Where(r => !r.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        if (roles.Count == 0)
+        {
+            return;
+        }
+
+        var roleById = roles.ToDictionary(role => role.Id);
+        var computed = new Dictionary<Guid, (int Level, string Path)>();
+        var visiting = new HashSet<Guid>();
+
+        foreach (var role in roles)
+        {
+            ComputeHierarchy(role, roleById, computed, visiting);
+        }
+
+        var changed = false;
+        foreach (var role in roles)
+        {
+            if (!computed.TryGetValue(role.Id, out var hierarchy))
+            {
+                continue;
+            }
+
+            if (role.HierarchyLevel != hierarchy.Level || !string.Equals(role.HierarchyPath, hierarchy.Path, StringComparison.Ordinal))
+            {
+                role.HierarchyLevel = hierarchy.Level;
+                role.HierarchyPath = hierarchy.Path;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    private static (int Level, string Path) ComputeHierarchy(
+        Role role,
+        IReadOnlyDictionary<Guid, Role> roleById,
+        IDictionary<Guid, (int Level, string Path)> computed,
+        ISet<Guid> visiting)
+    {
+        if (computed.TryGetValue(role.Id, out var existing))
+        {
+            return existing;
+        }
+
+        if (!visiting.Add(role.Id))
+        {
+            var cycleFallback = (1, role.Id.ToString());
+            computed[role.Id] = cycleFallback;
+            return cycleFallback;
+        }
+
+        (int Level, string Path) hierarchy;
+        if (role.ParentRoleId.HasValue && roleById.TryGetValue(role.ParentRoleId.Value, out var parent))
+        {
+            var parentHierarchy = ComputeHierarchy(parent, roleById, computed, visiting);
+            hierarchy = (parentHierarchy.Level + 1, $"{parentHierarchy.Path}/{role.Id}");
+        }
+        else
+        {
+            hierarchy = (1, role.Id.ToString());
+        }
+
+        visiting.Remove(role.Id);
+        computed[role.Id] = hierarchy;
+        return hierarchy;
     }
 }
