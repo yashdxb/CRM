@@ -21,10 +21,12 @@ async function login(page, request) {
     localStorage.setItem('auth_token', token as string);
     localStorage.setItem('tenant_key', 'default');
   }, payload.accessToken);
+
+  return payload.accessToken as string;
 }
 
 test('dashboard assistant action queue execute/review flow', async ({ page, request }) => {
-  await login(page, request);
+  const accessToken = await login(page, request);
 
   let executeCalled = 0;
   let reviewCalled = 0;
@@ -37,9 +39,11 @@ test('dashboard assistant action queue execute/review flow', async ({ page, requ
         scope: 'Self',
         generatedAtUtc: new Date().toISOString(),
         kpis: [
-          { key: 'at-risk-deals', label: 'At-Risk Deals', value: 2, severity: 'danger' },
+          { key: 'stale-deals', label: 'Stale Deals', value: 2, severity: 'danger' },
           { key: 'sla-breaches', label: 'Lead SLA Breaches', value: 1, severity: 'danger' },
-          { key: 'pending-approvals', label: 'Pending Approvals', value: 1, severity: 'warn' }
+          { key: 'pending-approvals', label: 'Pending Approvals', value: 1, severity: 'warn' },
+          { key: 'low-confidence-leads', label: 'Low-Confidence Leads', value: 3, severity: 'warn' },
+          { key: 'overdue-activities', label: 'Overdue Activities', value: 4, severity: 'warn' }
         ],
         actions: [
           {
@@ -83,6 +87,41 @@ test('dashboard assistant action queue execute/review flow', async ({ page, requ
     });
   });
 
+  const summaryResponse = await request.get(`${API_BASE_URL}/api/dashboard/summary`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'X-Tenant-Key': 'default'
+    }
+  });
+  const liveSummary = await summaryResponse.json();
+
+  await page.route('**/api/dashboard/summary*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ...liveSummary,
+        riskRegisterCount: 6,
+        riskIntelligence: [
+          {
+            label: 'No buying timeline',
+            severity: 'critical',
+            count: 2,
+            impact: 'Forecast risk is increasing on active deals.',
+            recommendedAction: 'Request timeline'
+          },
+          {
+            label: 'Budget needs validation',
+            severity: 'medium',
+            count: 3,
+            impact: 'Qualification quality is weakened by missing budget evidence.',
+            recommendedAction: 'Confirm budget'
+          }
+        ]
+      })
+    });
+  });
+
   await page.route('**/api/assistant/actions/execute**', async (route) => {
     executeCalled += 1;
     await route.fulfill({
@@ -117,6 +156,8 @@ test('dashboard assistant action queue execute/review flow', async ({ page, requ
   const section = page.locator('section.ai-orchestration-section');
   await expect(section).toBeVisible();
   await expect(section.locator('.ai-action-row')).toHaveCount(2);
+  await expect(section).toContainText('Stale Deals');
+  await expect(section.locator('.ai-diagnostic-item')).toHaveCount(2);
 
   await section.locator('.ai-cta-btn').filter({ hasText: 'Execute' }).first().click();
   await expect.poll(() => executeCalled).toBe(1);

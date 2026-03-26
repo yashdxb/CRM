@@ -154,7 +154,7 @@
             <i class="pi pi-bolt"></i>
             AI Execution Orchestration
           </h2>
-          <p class="ai-orchestration-subtitle">Priority-driven actions to resolve critical sales risk effectively.</p>
+          <p class="ai-orchestration-subtitle">{{ assistantSubtitle() }}</p>
         </div>
         <div class="ai-orchestration-header-meta">
           <span class="card-badge">{{ assistantInsights().scope }} scope</span>
@@ -205,6 +205,10 @@
                 {{ assistantImpactLabel(action.score) }} · {{ assistantUrgencyLabel(action.priority, action.urgency) }} urgency
               </div>
               <p>{{ action.description }}</p>
+              <div class="ai-risk-rationale" *ngIf="action.reasons.length">
+                <span class="ai-risk-rationale__label">Why now</span>
+                <span class="ai-risk-rationale__text">{{ action.reasons[0] }}</span>
+              </div>
               <div class="ai-task-meta">
                 <span class="meta-chip ai-impact-pill" [ngClass]="assistantRiskClass(action.riskTier)">
                   {{ assistantImpactLabel(action.score) }}
@@ -240,8 +244,47 @@
         </div>
       </div>
       <ng-template #noAiActions>
-        <div class="empty-state-inline">No urgent AI actions right now.</div>
+        <div class="empty-state-inline">
+          <strong *ngIf="assistantExecutionHealthy(); else monitorOnlyState">Execution is healthy right now.</strong>
+          <ng-template #monitorOnlyState>
+            <strong>No urgent AI actions right now.</strong>
+          </ng-template>
+          <span>Risk diagnostics remain visible below when monitoring is still required.</span>
+        </div>
       </ng-template>
+
+      <div class="ai-diagnostics-shell" *ngIf="assistantDiagnosticItems().length">
+        <div class="ai-diagnostics-head">
+          <div>
+            <span class="ai-diagnostics-kicker">Risk Intelligence</span>
+            <h3 class="ai-diagnostics-title">Execution diagnostics behind the queue</h3>
+          </div>
+          <span class="card-badge" *ngIf="assistantMonitorOnlyCount()">{{ assistantMonitorOnlyCount() }} monitor only</span>
+        </div>
+
+        <div class="ai-diagnostics-list">
+          <article class="ai-diagnostic-item" *ngFor="let item of assistantDiagnosticItems()" [ngClass]="riskIntelligenceSeverityClass(item.severity)">
+            <div class="ai-diagnostic-rail">
+              <span class="risk-severity-pill" [ngClass]="riskIntelligenceSeverityClass(item.severity)">
+                <i class="pi pi-exclamation-triangle"></i>
+                {{ riskIntelligenceSeverityLabel(item.severity) }}
+              </span>
+            </div>
+            <div class="ai-diagnostic-main">
+              <div class="ai-diagnostic-heading">
+                <h4>{{ item.label }}</h4>
+                <span class="risk-intelligence-count">{{ item.count }} active signals</span>
+              </div>
+              <p class="ai-diagnostic-impact">{{ item.impact }}</p>
+              <div class="ai-diagnostic-meta">
+                <span class="meta-chip">{{ assistantDiagnosticModeLabel(item) }}</span>
+                <span class="meta-chip" *ngIf="item.linkedActionTitle">Recommended action: {{ item.recommendedAction }}</span>
+                <span class="meta-chip" *ngIf="!item.linkedActionTitle">Recommended action: {{ item.recommendedAction }}</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
 
       <div class="assistant-undo-strip" *ngIf="assistantUndoVisible">
         <span>{{ assistantUndoMessage }}</span>
@@ -464,77 +507,6 @@
             </div>
             <div class="truth-subtext">
               Based on current lead qualification signals.
-            </div>
-          </div>
-        </ng-container>
-
-        <!-- Risk Intelligence -->
-        <ng-container *ngSwitchCase="'risk-register'">
-          <div class="card-header">
-            <div class="risk-intelligence-title-block">
-              <h3 class="card-title">
-                <i class="pi pi-exclamation-triangle"></i>
-                Risk Intelligence
-              </h3>
-              <span class="risk-intelligence-subtitle">Live qualification and execution signals across active revenue work.</span>
-            </div>
-            <div class="card-actions">
-              <span class="card-badge warn">{{ summary().riskRegisterCount }} active signals</span>
-              <ng-container *ngTemplateOutlet="cardControls; context: { $implicit: cardId }"></ng-container>
-            </div>
-          </div>
-          <div class="card-body risk-intelligence-body">
-            <div class="risk-intelligence-panel">
-              <div class="risk-intelligence-overview" *ngIf="riskIntelligenceSummary().length">
-                <div class="risk-intelligence-overview-copy">
-                  <span class="risk-intelligence-kicker">Signal Overview</span>
-                  <p>Prioritized issues surfaced from buying signals, evidence freshness, and execution blockers.</p>
-                </div>
-                <div class="risk-intelligence-summary">
-                  <span
-                    class="risk-summary-pill"
-                    *ngFor="let bucket of riskIntelligenceSummary()"
-                    [ngClass]="bucket.severity"
-                  >
-                    {{ bucket.count }} {{ bucket.label }}
-                  </span>
-                </div>
-              </div>
-
-              <div class="risk-intelligence-list" *ngIf="riskIntelligenceItems().length; else emptyRiskFlags">
-                <article class="risk-intelligence-item" *ngFor="let item of riskIntelligenceItems()" [ngClass]="riskIntelligenceSeverityClass(item.severity)">
-                  <div class="risk-intelligence-rail">
-                    <span class="risk-severity-pill" [ngClass]="riskIntelligenceSeverityClass(item.severity)">
-                      <i class="pi pi-exclamation-triangle"></i>
-                      {{ riskIntelligenceSeverityLabel(item.severity) }}
-                    </span>
-                  </div>
-                  <div class="risk-intelligence-main">
-                    <div class="risk-intelligence-head">
-                      <div class="risk-intelligence-heading">
-                        <h4>{{ item.label }}</h4>
-                        <span class="risk-intelligence-count">{{ item.count }} active signals</span>
-                      </div>
-                    </div>
-                    <div class="risk-intelligence-meta">
-                      <span><strong>Impact:</strong> {{ item.impact }}</span>
-                      <span><strong>Action:</strong> {{ item.recommendedAction }}</span>
-                    </div>
-                  </div>
-                  <div class="risk-intelligence-actions">
-                    <button
-                      pButton
-                      type="button"
-                      class="risk-action-btn"
-                      [ngClass]="riskIntelligenceSeverityClass(item.severity)"
-                      (click)="openRiskIntelligence(item)"
-                    >
-                      <span>{{ item.recommendedAction }}</span>
-                      <i class="pi pi-arrow-right"></i>
-                    </button>
-                  </div>
-                </article>
-              </div>
             </div>
           </div>
         </ng-container>

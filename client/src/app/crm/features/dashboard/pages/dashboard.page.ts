@@ -49,6 +49,16 @@ interface PriorityStreamItem {
   opportunityId?: string;
 }
 
+interface AssistantDiagnosticItem {
+  key: string;
+  label: string;
+  severity: string;
+  count: number;
+  impact: string;
+  recommendedAction: string;
+  linkedActionTitle: string | null;
+}
+
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
@@ -343,6 +353,21 @@ export class DashboardPage implements OnInit {
         count: buckets.get(severity) ?? 0
       }));
   });
+  protected readonly assistantDiagnosticItems = computed<AssistantDiagnosticItem[]>(() => {
+    const actions = this.assistantActions();
+    return (this.summary()?.riskIntelligence ?? []).slice(0, 5).map((item) => ({
+      key: item.label,
+      label: item.label,
+      severity: item.severity,
+      count: item.count,
+      impact: item.impact,
+      recommendedAction: item.recommendedAction,
+      linkedActionTitle: this.resolveRiskDiagnosticAction(item, actions)
+    }));
+  });
+  protected readonly assistantMonitorOnlyCount = computed(() =>
+    this.assistantDiagnosticItems().filter((item) => !item.linkedActionTitle).length
+  );
   protected readonly topCostBreakdown = computed(() =>
     (this.summary()?.costOfNotKnowingBreakdown ?? []).slice(0, 5)
   );
@@ -725,7 +750,6 @@ export class DashboardPage implements OnInit {
     'ai-orchestration': 'lg',
     pipeline: 'lg',
     'truth-metrics': 'md',
-    'risk-register': 'md',
     'execution-guide': 'sm',
     'confidence-forecast': 'sm',
     'forecast-scenarios': 'sm',
@@ -964,7 +988,7 @@ export class DashboardPage implements OnInit {
 
   protected assistantKpiTooltip(key: string | null | undefined, label: string): string {
     const normalizedKey = (key ?? '').trim().toLowerCase();
-    if (normalizedKey === 'at-risk-deals') {
+    if (normalizedKey === 'stale-deals') {
       return 'Open opportunities with stale or missing recent activity. Source: live pipeline + activity signals.';
     }
     if (normalizedKey === 'sla-breaches') {
@@ -973,7 +997,29 @@ export class DashboardPage implements OnInit {
     if (normalizedKey === 'pending-approvals') {
       return 'Open approval decisions awaiting action. Source: approval inbox queue for this scope.';
     }
+    if (normalizedKey === 'low-confidence-leads') {
+      return 'Active leads below the confidence threshold. Source: live qualification confidence and evidence coverage.';
+    }
+    if (normalizedKey === 'overdue-activities') {
+      return 'Open activities already past due. Source: active execution backlog for the selected scope.';
+    }
     return `${label}: live orchestration snapshot metric for the selected scope.`;
+  }
+
+  protected assistantSubtitle(): string {
+    const scope = (this.assistantInsights().scope || '').toLowerCase();
+    if (scope === 'team' || scope === 'all') {
+      return 'Execution blockers ranked for action, with risk diagnostics folded in for team-level recovery and governance.';
+    }
+    return 'Execution blockers ranked for action, with risk diagnostics folded in for daily rep follow-through.';
+  }
+
+  protected assistantExecutionHealthy(): boolean {
+    return this.assistantActions().length === 0 && this.assistantDiagnosticItems().length === 0;
+  }
+
+  protected assistantDiagnosticModeLabel(item: AssistantDiagnosticItem): string {
+    return item.linkedActionTitle ? `Feeds action: ${item.linkedActionTitle}` : 'Monitor only';
   }
 
   protected assistantImpactLabel(score: number | null | undefined): string {
@@ -995,6 +1041,35 @@ export class DashboardPage implements OnInit {
     const impact = this.assistantImpactLabel(score);
     const urgencyLabel = this.assistantUrgencyLabel(priority, urgency).toUpperCase();
     return `${impact}, ${urgencyLabel} URGENCY`;
+  }
+
+  private resolveRiskDiagnosticAction(
+    item: RiskIntelligenceItem,
+    actions: AssistantInsightsAction[]
+  ): string | null {
+    const haystack = [item.label, item.impact, item.recommendedAction].join(' ').toLowerCase();
+
+    if (haystack.includes('budget') || haystack.includes('confidence') || haystack.includes('evidence') || haystack.includes('qualification')) {
+      return actions.find((action) => action.actionType === 'lead_qualification')?.title ?? null;
+    }
+
+    if (haystack.includes('timeline') || haystack.includes('engaged') || haystack.includes('stale') || haystack.includes('next step') || haystack.includes('discovery')) {
+      return actions.find((action) => action.actionType === 'opportunity_recovery')?.title ?? null;
+    }
+
+    if (haystack.includes('approval') || haystack.includes('discount') || haystack.includes('policy')) {
+      return actions.find((action) => action.actionType === 'approval_follow_up')?.title ?? null;
+    }
+
+    if (haystack.includes('sla') || haystack.includes('first-touch')) {
+      return actions.find((action) => action.actionType === 'lead_follow_up')?.title ?? null;
+    }
+
+    if (haystack.includes('overdue') || haystack.includes('backlog') || haystack.includes('activity')) {
+      return actions.find((action) => action.actionType === 'activity_cleanup')?.title ?? null;
+    }
+
+    return null;
   }
 
   protected assistantUrgencyClass(priority: number | null | undefined, urgency?: string | null): string {

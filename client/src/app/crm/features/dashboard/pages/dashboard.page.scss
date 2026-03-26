@@ -1065,6 +1065,121 @@
   border: 1px dashed rgba(137, 154, 192, 0.48);
   color: rgba(61, 76, 108, 0.86);
   font-size: 0.85rem;
+  display: grid;
+  gap: 4px;
+}
+
+.ai-risk-rationale {
+  display: grid;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: rgba(242, 246, 255, 0.8);
+  border: 1px solid rgba(188, 199, 228, 0.62);
+}
+
+.ai-risk-rationale__label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: rgba(66, 84, 126, 0.82);
+  font-weight: 700;
+}
+
+.ai-risk-rationale__text {
+  color: #294064;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.ai-diagnostics-shell {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(244, 247, 255, 0.9), rgba(238, 244, 255, 0.72));
+  border: 1px solid rgba(188, 199, 228, 0.62);
+  display: grid;
+  gap: 12px;
+}
+
+.ai-diagnostics-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-diagnostics-kicker {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.ai-diagnostics-title {
+  margin: 8px 0 0;
+  color: #1d2d4f;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ai-diagnostics-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ai-diagnostic-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(203, 213, 225, 0.78);
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.ai-diagnostic-rail {
+  display: flex;
+  align-items: flex-start;
+}
+
+.ai-diagnostic-main {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-diagnostic-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-diagnostic-heading h4 {
+  margin: 0;
+  color: #10223d;
+  font-size: 0.97rem;
+  font-weight: 700;
+}
+
+.ai-diagnostic-impact {
+  margin: 0;
+  color: rgba(44, 61, 95, 0.88);
+  font-size: 0.86rem;
+}
+
+.ai-diagnostic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .assistant-review-content {
@@ -1108,6 +1223,10 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .ai-diagnostic-item {
+    grid-template-columns: 1fr;
+  }
+
   .ai-action-table-head {
     display: none;
   }
@@ -1144,6 +1263,12 @@
 
   .ai-kpi-grid {
     grid-template-columns: 1fr;
+  }
+
+  .ai-diagnostics-head,
+  .ai-diagnostic-heading {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .ai-action-toolbar {

@@ -350,12 +350,7 @@ public sealed class AssistantChatService : IAssistantChatService
             {
                 var snapshot = await BuildExecutionSnapshotAsync(userId, ct);
                 var scoringPolicy = await ResolveAssistantScoringPolicyAsync(ct);
-                var kpis = new List<AssistantInsightsKpi>
-                {
-                    new("at-risk-deals", "At-Risk Deals", snapshot.OpenOpportunitiesWithoutRecentActivity, snapshot.OpenOpportunitiesWithoutRecentActivity > 0 ? "danger" : "ok"),
-                    new("sla-breaches", "Lead SLA Breaches", snapshot.LeadSlaBreaches, snapshot.LeadSlaBreaches > 0 ? "danger" : "ok"),
-                    new("pending-approvals", "Pending Approvals", snapshot.PendingApprovals, snapshot.PendingApprovals > 0 ? "warn" : "ok")
-                };
+                var kpis = BuildExecutionKpis(snapshot);
 
                 var actions = BuildPriorityActions(snapshot, scoringPolicy);
                 return new AssistantInsightsResult(snapshot.Scope, kpis, actions, DateTime.UtcNow);
@@ -822,6 +817,32 @@ public sealed class AssistantChatService : IAssistantChatService
         return actions
             .OrderByDescending(action => action.Priority)
             .ToList();
+    }
+
+    private static IReadOnlyList<AssistantInsightsKpi> BuildExecutionKpis(AssistantExecutionSnapshot snapshot)
+    {
+        var repFirst = new List<AssistantInsightsKpi>
+        {
+            new("stale-deals", "Stale Deals", snapshot.OpenOpportunitiesWithoutRecentActivity, snapshot.OpenOpportunitiesWithoutRecentActivity > 0 ? "danger" : "ok"),
+            new("sla-breaches", "Lead SLA Breaches", snapshot.LeadSlaBreaches, snapshot.LeadSlaBreaches > 0 ? "danger" : "ok"),
+            new("pending-approvals", "Pending Approvals", snapshot.PendingApprovals, snapshot.PendingApprovals > 0 ? "warn" : "ok"),
+            new("low-confidence-leads", "Low-Confidence Leads", snapshot.LowConfidenceLeads, snapshot.LowConfidenceLeads > 0 ? "warn" : "ok"),
+            new("overdue-activities", "Overdue Activities", snapshot.OverdueActivities, snapshot.OverdueActivities > 0 ? "warn" : "ok")
+        };
+
+        if (snapshot.Scope is RoleVisibilityScope.Team or RoleVisibilityScope.All)
+        {
+            return new List<AssistantInsightsKpi>
+            {
+                repFirst[2],
+                repFirst[0],
+                repFirst[4],
+                repFirst[3],
+                repFirst[1]
+            };
+        }
+
+        return repFirst;
     }
 
     private static string[] BuildEntities(string entityTypeLabel, Guid? primaryEntityId, params string[] names)
