@@ -1,6 +1,6 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TagModule } from 'primeng/tag';
 import { SelectModule } from 'primeng/select';
@@ -8,7 +8,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
 import { TextareaModule } from 'primeng/textarea';
-import { TableModule } from 'primeng/table';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -29,6 +28,19 @@ interface FilterOption {
   value: string;
 }
 
+type ApprovalLaneKey = 'urgent' | 'due-soon' | 'normal';
+type ApprovalViewMode = 'cards' | 'table';
+
+interface ApprovalLane {
+  key: ApprovalLaneKey;
+  title: string;
+  subtitle: string;
+  tone: 'danger' | 'warn' | 'success';
+  icon: string;
+  items: OpportunityApprovalInboxItem[];
+  totalAmount: number;
+}
+
 @Component({
   selector: 'app-opportunity-approvals-page',
   standalone: true,
@@ -41,10 +53,7 @@ interface FilterOption {
     ButtonModule,
     ChipModule,
     TextareaModule,
-    TableModule,
-    BreadcrumbsComponent,
-    DecimalPipe,
-    DatePipe
+    BreadcrumbsComponent
   ],
   templateUrl: './opportunity-approvals.page.html',
   styleUrl: './opportunity-approvals.page.scss'
@@ -62,6 +71,7 @@ export class OpportunityApprovalsPage {
   protected readonly loading = signal(true);
   protected readonly selectedApprovalId = signal<string | null>(null);
   protected readonly searchQuery = signal('');
+  protected readonly viewMode = signal<ApprovalViewMode>('table');
   protected readonly actioningIds = signal(new Set<string>());
   protected readonly draftingIds = signal(new Set<string>());
   protected readonly delegateLoading = signal(false);
@@ -139,31 +149,61 @@ export class OpportunityApprovalsPage {
   });
 
   protected readonly kpis = computed(() => {
-    const items = this.approvals();
+    const items = this.filteredApprovals();
     const pending = items.filter((item) => item.status === 'Pending');
-    const overdue = pending.filter((item) => item.slaStatus === 'overdue').length;
-    const critical = pending.filter(
-      (item) => item.priority === 'critical' || item.riskLevel === 'high'
-    ).length;
-    const avgAge = pending.length
-      ? Math.round((pending.reduce((acc, item) => acc + (item.requestedAgeHours ?? 0), 0) / pending.length) * 10) /
-        10
-      : 0;
+    const urgent = pending.filter((item) => this.laneFor(item) === 'urgent').length;
+    const dueToday = pending.filter((item) => this.isDueToday(item)).length;
+    const dueSoon = pending.filter((item) => this.laneFor(item) === 'due-soon').length;
     const totalAmount = pending.reduce((acc, item) => acc + (item.amount ?? 0), 0);
 
-    return { pending: pending.length, overdue, critical, avgAge, totalAmount };
+    return { pending: pending.length, urgent, dueToday, dueSoon, totalAmount };
+  });
+
+  protected readonly laneGroups = computed<ApprovalLane[]>(() => {
+    const items = this.filteredApprovals();
+    const grouped: Record<ApprovalLaneKey, OpportunityApprovalInboxItem[]> = {
+      urgent: [],
+      'due-soon': [],
+      normal: []
+    };
+
+    for (const item of items) {
+      grouped[this.laneFor(item)].push(item);
+    }
+
+    const buildLane = (
+      key: ApprovalLaneKey,
+      title: string,
+      subtitle: string,
+      tone: 'danger' | 'warn' | 'success',
+      icon: string
+    ): ApprovalLane => ({
+      key,
+      title,
+      subtitle,
+      tone,
+      icon,
+      items: grouped[key],
+      totalAmount: grouped[key].reduce((acc, item) => acc + (item.amount ?? 0), 0)
+    });
+
+    return [
+      buildLane('urgent', 'Urgent', 'Overdue, critical, or high-risk approvals', 'danger', 'pi pi-bolt'),
+      buildLane('due-soon', 'Due Soon', 'Pending reviews approaching SLA or decision pressure', 'warn', 'pi pi-clock'),
+      buildLane('normal', 'Normal', 'On-track approvals still waiting on a decision', 'success', 'pi pi-check-circle')
+    ].filter((lane) => lane.items.length > 0);
   });
 
   protected readonly pageTitle = computed(() => {
-    return 'Pending Action';
+    return 'Pending Action Center';
   });
 
   protected readonly heroDescription = computed(() => {
-    return 'Actionable approvals and exceptions waiting for a decision. Completed items move to Decision History.';
+    return 'Review high-impact deal approvals in one operational queue. Each card surfaces risk, workflow context, and the next decision without forcing a table-first workflow.';
   });
 
   protected readonly queueSubtitle = computed(() => {
-    return 'Open any pending item to review, comment, and decide.';
+    return 'Review, comment, and decide inline. Use Details when you need the full deal form.';
   });
 
   protected readonly emptyListMessage = computed(() => {
@@ -227,6 +267,18 @@ export class OpportunityApprovalsPage {
 
   protected selectDecision(item: OpportunityApprovalInboxItem) {
     this.selectedApprovalId.set(item.id);
+  }
+
+  protected setViewMode(mode: ApprovalViewMode) {
+    this.viewMode.set(mode);
+  }
+
+  protected laneLabel(lane: ApprovalLane): string {
+    return `${lane.items.length} pending`;
+  }
+
+  protected laneValueLabel(lane: ApprovalLane): string {
+    return this.formatCompactCurrency(lane.totalAmount);
   }
 
   protected openOpportunity(item: OpportunityApprovalInboxItem) {
@@ -570,6 +622,101 @@ export class OpportunityApprovalsPage {
     return item.id;
   }
 
+  protected trackByLaneKey(_index: number, lane: ApprovalLane): ApprovalLaneKey {
+    return lane.key;
+  }
+
+  protected isDueToday(item: OpportunityApprovalInboxItem): boolean {
+    if (!item.slaDueAtUtc) {
+      return false;
+    }
+    const due = new Date(item.slaDueAtUtc);
+    const now = new Date();
+    return (
+      due.getFullYear() === now.getFullYear() &&
+      due.getMonth() === now.getMonth() &&
+      due.getDate() === now.getDate()
+    );
+  }
+
+  protected amountLabel(item: OpportunityApprovalInboxItem): string {
+    return this.formatCompactCurrency(item.amount);
+  }
+
+  protected actionSummary(item: OpportunityApprovalInboxItem): string {
+    if (item.businessImpactLabel) {
+      return item.businessImpactLabel;
+    }
+    if (item.policyReason) {
+      return item.policyReason;
+    }
+    return 'Pending approval decision';
+  }
+
+  protected policySummary(item: OpportunityApprovalInboxItem): string {
+    return item.policyReason || 'Policy review in progress';
+  }
+
+  protected compactPolicySummary(item: OpportunityApprovalInboxItem): string {
+    const text = this.policySummary(item);
+    return text.length > 72 ? `${text.slice(0, 69).trimEnd()}...` : text;
+  }
+
+  protected workflowLabel(item: OpportunityApprovalInboxItem): string {
+    return item.workflowName || 'Deal Approval Workflow';
+  }
+
+  protected compactWorkflowLabel(item: OpportunityApprovalInboxItem): string {
+    const label = this.workflowLabel(item);
+    return label.replace(/ workflow$/i, '');
+  }
+
+  protected requesterLabel(item: OpportunityApprovalInboxItem): string {
+    return item.requestedByName || 'Unknown requester';
+  }
+
+  protected tableRowSummary(item: OpportunityApprovalInboxItem): string {
+    return this.compactPolicySummary(item);
+  }
+
+  protected purposeLabel(item: OpportunityApprovalInboxItem): string {
+    return item.purpose || 'Approval';
+  }
+
+  protected priorityLabel(item: OpportunityApprovalInboxItem): string {
+    return (item.priority || 'normal').toUpperCase();
+  }
+
+  protected riskLabel(item: OpportunityApprovalInboxItem): string {
+    return (item.riskLevel || 'low').toUpperCase();
+  }
+
+  protected metaDueLabel(item: OpportunityApprovalInboxItem): string {
+    if (item.slaStatus === 'overdue') {
+      return 'Needs action';
+    }
+    if (this.isDueToday(item)) {
+      return 'Review today';
+    }
+    return 'Queue active';
+  }
+
+  protected dueBadgeLabel(item: OpportunityApprovalInboxItem): string {
+    if (item.status !== 'Pending') {
+      return 'Completed';
+    }
+    if (item.slaStatus === 'overdue') {
+      return 'Overdue';
+    }
+    if (this.isDueToday(item)) {
+      return 'Due today';
+    }
+    if (this.laneFor(item) === 'due-soon') {
+      return 'Due soon';
+    }
+    return 'On track';
+  }
+
   private ensureSelection(): void {
     const list = this.filteredApprovals();
     const current = this.selectedApprovalId();
@@ -638,6 +785,30 @@ export class OpportunityApprovalsPage {
       default:
         return draft.approvalDraftNote;
     }
+  }
+
+  private laneFor(item: OpportunityApprovalInboxItem): ApprovalLaneKey {
+    if (
+      item.slaStatus === 'overdue' ||
+      item.priority === 'critical' ||
+      item.riskLevel === 'high'
+    ) {
+      return 'urgent';
+    }
+
+    if (item.slaStatus === 'at-risk') {
+      return 'due-soon';
+    }
+
+    if (item.slaDueAtUtc) {
+      const due = new Date(item.slaDueAtUtc).getTime();
+      const hours = (due - Date.now()) / 3_600_000;
+      if (hours >= 0 && hours <= 24) {
+        return 'due-soon';
+      }
+    }
+
+    return 'normal';
   }
 
 }
