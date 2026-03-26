@@ -3811,6 +3811,13 @@
   background: #ffffff;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
   transition: transform $transition-fast, box-shadow $transition-fast;
+
+  &.is-filter-active {
+    border-color: rgba($primary, 0.28);
+    box-shadow:
+      0 12px 28px rgba(37, 99, 235, 0.1),
+      0 6px 18px rgba(15, 23, 42, 0.08);
+  }
 }
 
 .priority-item:hover,
@@ -3894,6 +3901,23 @@
   justify-content: center;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
   cursor: pointer;
+  transition: transform $transition-fast, box-shadow $transition-fast, border-color $transition-fast, color $transition-fast, background $transition-fast;
+
+  &:hover,
+  &:focus-visible {
+    border-color: rgba($primary, 0.35);
+    color: $primary;
+    background: rgba($primary, 0.06);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+    outline: none;
+  }
+
+  &.is-filter-active {
+    border-color: rgba($primary, 0.26);
+    color: $primary;
+    background: rgba($primary, 0.06);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.12);
+  }
 }
 
 .priority-complete-btn {
@@ -3905,6 +3929,19 @@
   font-weight: 600;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(62, 155, 53, 0.3);
+  transition: transform $transition-fast, box-shadow $transition-fast, filter $transition-fast;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(62, 155, 53, 0.34);
+    outline: none;
+  }
+
+  &.is-filter-active {
+    filter: saturate(1.08);
+    box-shadow: 0 8px 20px rgba(62, 155, 53, 0.36);
+  }
 }
 
 .timeline-filter {

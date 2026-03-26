@@ -8,6 +8,8 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { ChipModule } from 'primeng/chip';
 import { TextareaModule } from 'primeng/textarea';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { ConfirmationService } from 'primeng/api';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -53,8 +55,10 @@ interface ApprovalLane {
     ButtonModule,
     ChipModule,
     TextareaModule,
+    ConfirmDialogModule,
     BreadcrumbsComponent
   ],
+  providers: [ConfirmationService],
   templateUrl: './opportunity-approvals.page.html',
   styleUrl: './opportunity-approvals.page.scss'
 })
@@ -64,6 +68,7 @@ export class OpportunityApprovalsPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly userAdminData = inject(UserAdminDataService);
   private readonly currentUserId = readUserId();
 
@@ -310,6 +315,25 @@ export class OpportunityApprovalsPage {
       return;
     }
 
+    this.confirmationService.confirm({
+      header: approved ? 'Approve pending action' : 'Reject pending action',
+      message: this.buildDecisionConfirmationMessage(item, approved),
+      icon: approved ? 'pi pi-check-circle' : 'pi pi-times-circle',
+      acceptLabel: approved ? 'Approve now' : 'Reject now',
+      rejectLabel: 'Cancel',
+      rejectButtonStyleClass: 'p-button-text',
+      acceptButtonStyleClass: approved ? 'approve-confirm-btn' : 'reject-confirm-btn',
+      blockScroll: true,
+      dismissableMask: true,
+      accept: () => this.executeDecision(item, approved)
+    });
+  }
+
+  private executeDecision(item: OpportunityApprovalInboxItem, approved: boolean) {
+    if (this.actioningIds().has(item.id)) {
+      return;
+    }
+
     const notes = this.noteInputs[item.id] ?? null;
     const nextActioning = new Set(this.actioningIds());
     nextActioning.add(item.id);
@@ -339,6 +363,25 @@ export class OpportunityApprovalsPage {
     if (this.actioningIds().has(item.id)) {
       return;
     }
+
+    this.confirmationService.confirm({
+      header: 'Request more information',
+      message: this.buildRequestInfoConfirmationMessage(item),
+      icon: 'pi pi-comment',
+      acceptLabel: 'Send request',
+      rejectLabel: 'Cancel',
+      rejectButtonStyleClass: 'p-button-text',
+      acceptButtonStyleClass: 'info-confirm-btn',
+      blockScroll: true,
+      dismissableMask: true,
+      accept: () => this.executeRequestInfo(item)
+    });
+  }
+
+  private executeRequestInfo(item: OpportunityApprovalInboxItem) {
+    if (this.actioningIds().has(item.id)) {
+      return;
+    }
     const notes = this.noteInputs[item.id] ?? null;
     const nextActioning = new Set(this.actioningIds());
     nextActioning.add(item.id);
@@ -359,6 +402,19 @@ export class OpportunityApprovalsPage {
         this.toastService.show('error', message, 3500);
       }
     });
+  }
+
+  private buildDecisionConfirmationMessage(item: OpportunityApprovalInboxItem, approved: boolean): string {
+    const note = (this.noteInputs[item.id] ?? '').trim();
+    const noteSuffix = note ? ` Note: "${note}".` : ' No decision note will be included.';
+    const action = approved ? 'approve' : 'reject';
+    return `You are about to ${action} ${item.opportunityName} for ${this.amountLabel(item)}. ${this.compactWorkflowLabel(item)} · ${this.slaLabel(item)}.${noteSuffix}`;
+  }
+
+  private buildRequestInfoConfirmationMessage(item: OpportunityApprovalInboxItem): string {
+    const note = (this.noteInputs[item.id] ?? '').trim();
+    const noteSuffix = note ? ` Note: "${note}".` : ' No request note will be included.';
+    return `Ask for more information on ${item.opportunityName} before a decision is made. ${this.compactWorkflowLabel(item)} · ${this.slaLabel(item)}.${noteSuffix}`;
   }
 
   protected escalate(item: OpportunityApprovalInboxItem) {

@@ -280,20 +280,20 @@ export class DashboardPage implements OnInit {
       },
       {
         id: 'tasks-due',
-        label: 'Tasks due today',
+        label: 'Workspace tasks due today',
         value: data.tasksDueToday,
         format: 'number',
-        sub: 'Immediate focus list',
+        sub: 'Workspace activity queue',
         percentage: Math.round((data.tasksDueToday / visibleActivities) * 100),
         icon: 'pi-calendar',
         color: 'success'
       },
       {
         id: 'overdue-activities',
-        label: 'Overdue activities',
+        label: 'Workspace overdue activities',
         value: data.overdueActivities,
         format: 'number',
-        sub: 'Broken commitments to recover',
+        sub: 'Workspace recovery queue',
         percentage: Math.round((data.overdueActivities / visibleActivities) * 100),
         icon: 'pi-history',
         color: 'orange'
@@ -573,14 +573,17 @@ export class DashboardPage implements OnInit {
 
     return items.sort((a, b) => b.priorityScore - a.priorityScore);
   });
-  protected readonly prioritySummary = computed(() => ({
-    overdue: this.getTaskSummaryCounts().overdue,
-    today: this.getTaskSummaryCounts().today,
-    decisions: this.pendingDecisionInbox().length,
-    newLeads: this.newlyAssignedLeads().length,
-    atRisk: this.atRiskDeals().length,
-    noNextStep: this.summary()?.opportunitiesWithoutNextStep ?? 0
-  }));
+  protected readonly prioritySummary = computed(() => {
+    const items = this.priorityStreamItems();
+    return {
+      overdue: items.filter((item) => item.dueClass === 'due-overdue').length,
+      today: items.filter((item) => item.dueClass === 'due-today').length,
+      decisions: items.filter((item) => item.type === 'decision').length,
+      newLeads: items.filter((item) => item.type === 'lead').length,
+      atRisk: items.filter((item) => item.type === 'deal').length,
+      noNextStep: items.filter((item) => item.type === 'deal' && item.status?.toLowerCase().includes('missing next step')).length
+    };
+  });
   protected priorityFilter = signal<'all' | 'overdue' | 'today' | 'decisions' | 'new-leads' | 'at-risk' | 'no-next-step'>('all');
   protected readonly filteredPriorityStreamItems = computed(() => {
     const items = this.priorityStreamItems();
@@ -603,6 +606,8 @@ export class DashboardPage implements OnInit {
     }
     return items.filter(item => item.type === 'deal');
   });
+  protected readonly actionQueueTitle = computed(() => 'My Action Queue');
+  protected readonly actionQueueSubtitle = computed(() => 'Assigned to me across tasks, decisions, leads, and deals');
   protected readonly activityBreakdown = computed(() => this.summary()?.activityBreakdown ?? []);
   protected readonly pipelineValue = computed(() => this.summary()?.pipelineValue ?? []);
   protected readonly managerPipelineByStage = computed(() => this.managerHealth().pipelineByStage ?? []);

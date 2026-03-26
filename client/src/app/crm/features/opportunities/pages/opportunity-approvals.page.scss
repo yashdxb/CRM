@@ -879,6 +879,94 @@
   padding: 0.32rem 0.58rem;
 }
 
+:host ::ng-deep .p-confirm-dialog {
+  width: min(92vw, 34rem);
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  box-shadow:
+    0 24px 70px rgba(15, 23, 42, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-header {
+  padding: 1.15rem 1.35rem 0.6rem;
+  background: transparent;
+  border: 0;
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-title {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-content {
+  padding: 0 1.35rem 1rem;
+  background: transparent;
+  color: rgba(30, 41, 59, 0.84);
+  line-height: 1.6;
+}
+
+:host ::ng-deep .p-confirm-dialog .p-confirm-dialog-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  margin-right: 0.9rem;
+  border-radius: 16px;
+  display: inline-grid;
+  place-items: center;
+  color: #2563eb;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.18), rgba(14, 165, 233, 0.12));
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-footer {
+  padding: 0 1.35rem 1.25rem;
+  border: 0;
+  background: transparent;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-footer .p-button {
+  min-width: 120px;
+  min-height: 40px;
+  border-radius: 14px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-footer .p-button.p-confirm-dialog-accept {
+  border: 0;
+  color: #fff;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-footer .p-button.p-confirm-dialog-accept.approve-confirm-btn {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-footer .p-button.p-confirm-dialog-accept.reject-confirm-btn {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-footer .p-button.p-confirm-dialog-accept.info-confirm-btn {
+  background: linear-gradient(135deg, #0f766e, #0ea5a4);
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-footer .p-button.p-confirm-dialog-reject {
+  color: #334155;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+:host ::ng-deep .p-confirm-dialog .p-dialog-footer .p-button:hover {
+  transform: translateY(-1px);
+}
+
 @keyframes shimmer {
   0% {
     background-position: 100% 0;

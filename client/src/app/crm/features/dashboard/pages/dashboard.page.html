@@ -1003,14 +1003,14 @@
           <div class="card-header priority-header">
             <div class="priority-header-left">
               <button class="priority-filter">
-                <span class="priority-filter-label">Tasks:</span>
+                <span class="priority-filter-label">Scope:</span>
                 <span class="priority-filter-value">Assigned to Me</span>
                 <i class="pi pi-chevron-down"></i>
               </button>
             </div>
             <div class="priority-header-center">
-              <h3 class="priority-header-title">My Tasks</h3>
-              <span class="priority-header-subtitle">Priority Stream</span>
+              <h3 class="priority-header-title">{{ actionQueueTitle() }}</h3>
+              <span class="priority-header-subtitle">{{ actionQueueSubtitle() }}</span>
             </div>
             <div class="card-actions">
               <span class="card-badge" *ngIf="priorityStreamItems().length">{{ priorityStreamItems().length }} items</span>
@@ -1036,7 +1036,7 @@
                 (click)="setPriorityFilter('today')"
               >
                 <i class="pi pi-calendar"></i>
-                <span>Due Today</span>
+                <span>Due Today Queue</span>
                 <strong>{{ prioritySummary().today }}</strong>
               </button>
               <button
@@ -1056,7 +1056,7 @@
                 (click)="setPriorityFilter('at-risk')"
               >
                 <i class="pi pi-flag"></i>
-                <span>At-Risk Deals</span>
+                <span>At-Risk Deals Queue</span>
                 <strong>{{ prioritySummary().atRisk }}</strong>
               </button>
               <button
@@ -1066,7 +1066,7 @@
                 (click)="setPriorityFilter('no-next-step')"
               >
                 <i class="pi pi-flag-fill"></i>
-                <span>No Next Step</span>
+                <span>Missing Next Step</span>
                 <strong>{{ prioritySummary().noNextStep }}</strong>
               </button>
             </div>
@@ -1129,7 +1129,7 @@
               </button>
             </div>
             <div class="priority-list" *ngIf="filteredPriorityStreamItems().length; else emptyMyTasks">
-              <div class="priority-item" *ngFor="let item of filteredPriorityStreamItems()">
+              <div class="priority-item" *ngFor="let item of filteredPriorityStreamItems()" [class.is-filter-active]="priorityFilter() !== 'all'">
                 <div class="priority-main">
                   <div class="priority-marker" [class.overdue]="item.type === 'deal' || item.dueClass === 'due-overdue'">
                     <i class="pi" [ngClass]="{
@@ -1153,16 +1153,16 @@
                 </div>
                 <div class="priority-actions">
                   <ng-container *ngIf="item.type !== 'decision'; else decisionAction">
-                    <button type="button" class="priority-icon-btn" aria-label="Call">
+                    <button type="button" class="priority-icon-btn" [class.is-filter-active]="priorityFilter() !== 'all'" aria-label="Call">
                       <i class="pi pi-phone"></i>
                     </button>
-                    <button type="button" class="priority-icon-btn" aria-label="Email">
+                    <button type="button" class="priority-icon-btn" [class.is-filter-active]="priorityFilter() !== 'all'" aria-label="Email">
                       <i class="pi pi-envelope"></i>
                     </button>
-                    <button type="button" class="priority-complete-btn" (click)="onPriorityComplete(item)">Complete</button>
+                    <button type="button" class="priority-complete-btn" [class.is-filter-active]="priorityFilter() !== 'all'" (click)="onPriorityComplete(item)">Complete</button>
                   </ng-container>
                   <ng-template #decisionAction>
-                    <button type="button" class="priority-complete-btn" (click)="onPriorityComplete(item)">Review</button>
+                    <button type="button" class="priority-complete-btn" [class.is-filter-active]="priorityFilter() !== 'all'" (click)="onPriorityComplete(item)">Review</button>
                   </ng-template>
                 </div>
               </div>
