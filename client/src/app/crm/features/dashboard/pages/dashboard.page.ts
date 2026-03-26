@@ -715,10 +715,6 @@ export class DashboardPage implements OnInit {
   private roleDefaultHiddenCharts = new Set<ChartId>();
   protected roleDefaultLevel: number | null = null;
   protected readonly activePackName = signal<string>('H1 Pack');
-  protected readonly canManageLayoutDefaults = computed(() => {
-    const payload = readTokenContext()?.payload ?? null;
-    return tokenHasPermission(payload, PERMISSION_KEYS.administrationManage);
-  });
   // Locked size map so customize layout never inflates card heights.
   private readonly defaultCardSizes: Record<string, 'sm' | 'md' | 'lg'> = {
     'ai-orchestration': 'lg',
@@ -1354,19 +1350,19 @@ export class DashboardPage implements OnInit {
     this.dashboardData.getLayout().subscribe(({ cardOrder, sizes, dimensions, hiddenCards }) => {
       const dashpackOrder = this.getLayoutDefaultOrder();
       const fallbackPackOrder = this.cardCatalog.map((card) => card.id);
-      const normalizedUser = this.applyRoleDefault(
+      const normalizedServer = this.applyRoleDefault(
         this.normalizeLayoutWithHidden(cardOrder, hiddenCards, dashpackOrder),
         dashpackOrder
       );
       const normalized = this.resolveLayoutOrderByPriority(
         dashpackOrder,
-        normalizedUser,
+        normalizedServer,
         fallbackPackOrder
       );
       const serverHasState = (hiddenCards?.length ?? 0) > 0
         || Object.keys(sizes ?? {}).length > 0
         || Object.keys(dimensions ?? {}).length > 0
-        || !this.areArraysEqual(normalizedUser, dashpackOrder);
+        || !this.areArraysEqual(normalizedServer, dashpackOrder);
       if (this.hasLocalLayoutPreference && !serverHasState && this.roleDefaultLayout.length === 0) {
         this.dashboardData.saveLayout(this.buildLayoutPayload()).subscribe();
         return;
@@ -1397,9 +1393,7 @@ export class DashboardPage implements OnInit {
 
   protected getSelectableCards() {
     const byId = new Map(this.cardCatalog.map(card => [card.id, card]));
-    const allowedOrder = this.canManageLayoutDefaults()
-      ? this.cardCatalog.map((card) => card.id)
-      : this.getLayoutDefaultOrder();
+    const allowedOrder = this.getLayoutDefaultOrder();
 
     return allowedOrder
       .map(id => byId.get(id))
@@ -2631,16 +2625,16 @@ export class DashboardPage implements OnInit {
     fallbackPackOrder: string[] | undefined
   ): string[] {
     const fallback = this.normalizeLayout(fallbackPackOrder ?? [], this.cardCatalog.map((card) => card.id));
-    const hasDashpackOrder = (dashpackOrder?.length ?? 0) > 0;
-    const dashpack = hasDashpackOrder ? this.normalizeLayout(dashpackOrder ?? [], fallback) : [];
-    if (hasDashpackOrder && dashpack.length > 0) {
-      return dashpack;
-    }
-
     const hasUserOrder = (userOrder?.length ?? 0) > 0;
     const user = hasUserOrder ? this.normalizeLayout(userOrder ?? [], fallback) : [];
     if (hasUserOrder && user.length > 0) {
       return user;
+    }
+
+    const hasDashpackOrder = (dashpackOrder?.length ?? 0) > 0;
+    const dashpack = hasDashpackOrder ? this.normalizeLayout(dashpackOrder ?? [], fallback) : [];
+    if (hasDashpackOrder && dashpack.length > 0) {
+      return dashpack;
     }
 
     return fallback;
