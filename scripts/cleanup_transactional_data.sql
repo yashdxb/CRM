@@ -1,6 +1,6 @@
 -- ============================================================
--- CRM Enterprise: Delete transactional CRM data only
--- PRESERVE: All lookup/reference/config/identity tables
+-- CRM Enterprise: Delete transactional CRM data plus requested deal lookup rows
+-- PRESERVE: Identity tables and other lookup/reference/config tables
 -- ============================================================
 
 SET NOCOUNT ON;
@@ -159,6 +159,20 @@ BEGIN TRY
 
     DELETE FROM crm.Leads;
     PRINT 'Deleted Leads';
+
+    -- ========================================
+    -- Phase 5: Requested deal lookup cleanup
+    -- ========================================
+    IF OBJECT_ID('dbo.DealSegments', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM dbo.DealSegments;
+        PRINT 'Deleted DealSegments';
+    END;
+    IF OBJECT_ID('dbo.DealTypes', 'U') IS NOT NULL
+    BEGIN
+        DELETE FROM dbo.DealTypes;
+        PRINT 'Deleted DealTypes';
+    END;
 
     COMMIT TRANSACTION;
     PRINT '';
