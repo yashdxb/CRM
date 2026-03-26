@@ -10,6 +10,28 @@ Legend:
 
 ---
 
+## Recent Delivery Updates (2026-03-25)
+
+- Redis-backed read-model caching for CRM dashboard and assistant surfaces
+  Status: DONE
+  Commits: `e7e2dfc`
+  - Delivered:
+    - Redis registration and fail-open cache abstraction in Infrastructure
+    - short-TTL caching for dashboard summary
+    - short-TTL caching for manager pipeline health
+    - short-TTL caching for assistant insights
+    - Azure Managed Redis dev placement validated in `canadacentral`
+  - Evidence:
+    - `server/src/CRM.Enterprise.Infrastructure/DependencyInjection.cs`
+    - `server/src/CRM.Enterprise.Infrastructure/Caching/IReadModelCache.cs`
+    - `server/src/CRM.Enterprise.Infrastructure/Caching/ReadModelCache.cs`
+    - `server/src/CRM.Enterprise.Infrastructure/Caching/RedisCacheOptions.cs`
+    - `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+    - `server/src/CRM.Enterprise.Infrastructure/AI/AssistantChatService.cs`
+    - `docs/REDIS_READ_MODEL_CACHING_RUNBOOK.md`
+
+---
+
 ## Platform & Architecture
 
 1) Clean architecture enforcement (API/Application/Domain/Infrastructure boundaries)
@@ -152,6 +174,21 @@ MoSCoW: TBD
   - Retry policies (SQL): `server/src/CRM.Enterprise.Infrastructure/DependencyInjection.cs`
 - Acceptance criteria:
   - Health endpoint and basic retry policies exist.
+
+12) Redis-backed caching for expensive read models
+MoSCoW: TBD
+- Status: DONE
+- Evidence:
+  - Redis registration + options: `server/src/CRM.Enterprise.Infrastructure/DependencyInjection.cs`
+  - Cache abstraction: `server/src/CRM.Enterprise.Infrastructure/Caching/IReadModelCache.cs`
+  - Dashboard summary + manager health: `server/src/CRM.Enterprise.Infrastructure/Dashboard/DashboardReadService.cs`
+  - Assistant insights: `server/src/CRM.Enterprise.Infrastructure/AI/AssistantChatService.cs`
+  - Runbook: `docs/REDIS_READ_MODEL_CACHING_RUNBOOK.md`
+- Acceptance criteria:
+  - selected read endpoints use short-TTL distributed cache
+  - keys are tenant-scoped and user-scoped
+  - cache failures do not fail the request path
+  - no frontend contract changes required
 
 11) E2E + API test coverage gaps
 MoSCoW: TBD

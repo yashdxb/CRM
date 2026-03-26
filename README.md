@@ -101,6 +101,7 @@ Each feature keeps its own `models`, `services`, and `pages` folders to align wi
 
 - Clean architecture solution split across Domain, Application, Infrastructure, and Api projects.
 - EF Core code-first migrations with environment-specific connection strings (`appsettings.{Environment}.json`).
+- Azure Managed Redis can be enabled for short-TTL caching of selected read-model endpoints.
 - Reporting endpoints (pipeline, lead conversion, activities) will rely on SQL views to keep the OLTP schema normalized while delivering fast queries.
 - Future AI services plug in via background jobs + event publishing so the MVP can launch without AI yet still capture the history those models need.
 
@@ -113,6 +114,28 @@ Each feature keeps its own `models`, `services`, and `pages` folders to align wi
 5. The API hosts Swagger UI at `https://localhost:5001/swagger` (or the port assigned by Kestrel) and exposes a `/health` probe for quick smoke tests.
 
 Tip: Use `./scripts/dev-api.sh` to automatically start the local SQL container and then launch the API.
+
+### Optional local Redis-backed read-model caching
+
+Selected read endpoints can use Redis without changing API contracts:
+- `/api/dashboard/summary`
+- `/api/dashboard/manager/pipeline-health`
+- `/api/assistant/insights`
+
+Enable with environment variables:
+
+```bash
+Cache__Redis__Enabled=true
+Cache__Redis__ConnectionString="<host>:10000,password=<key>,ssl=True,abortConnect=False"
+Cache__Redis__InstanceName="crm-enterprise-dev:"
+Cache__Redis__DashboardSummaryTtlSeconds=30
+Cache__Redis__ManagerPipelineHealthTtlSeconds=30
+Cache__Redis__AssistantInsightsTtlSeconds=30
+```
+
+If Redis is unavailable, the API fails open and serves data directly from SQL/read services.
+
+See `docs/REDIS_READ_MODEL_CACHING_RUNBOOK.md`.
 
 ### Local SQL Server via Docker
 

@@ -29,6 +29,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - .NET: `net10.0`
 - Entity Framework Core: `8.0.7`
 - SQL Server (Azure SQL in production; connection name `SqlServer`)
+- Azure Managed Redis is approved for short-TTL caching of selected read-model endpoints; dev validation uses a single-node instance in `canadacentral`
 - Azure SignalR: `Microsoft.Azure.SignalR 1.32.0`
 - Azure Communication Email: `1.0.2`
 - Azure Service Bus: `7.17.4`
@@ -70,6 +71,9 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Controllers are thin and delegate to Application services or Infrastructure abstractions.
 - EF Core is the only persistence mechanism; no raw SQL unless already present.
 - Tenant filtering is enforced through middleware + EF query filters.
+- Purpose-built REST read models remain the default query shape for dashboard and assistant surfaces.
+- Redis may be used only as a short-TTL cache in front of read models; it does not replace tenant isolation, authorization, or source-of-truth SQL reads.
+- Cache keys for user-facing CRM data must be tenant-scoped and user-scoped unless the endpoint is explicitly global.
 
 ---
 
@@ -218,6 +222,7 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Do not bypass tenant isolation or permission checks.
 - Do not hardcode role names or role-based layouts; use hierarchy levels + configured defaults.
 - Do not introduce inline HTML/CSS in components.
+- Do not add GraphQL as a performance workaround for dashboard/read latency without a separate explicit architectural decision.
 
 ---
 
