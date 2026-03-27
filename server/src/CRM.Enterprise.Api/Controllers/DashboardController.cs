@@ -18,6 +18,7 @@ namespace CRM.Enterprise.Api.Controllers;
 [Route("api/dashboard")]
 public class DashboardController : ControllerBase
 {
+    private const string RoleLevelTemplatePrefix = "role-level-default:";
     private readonly IMediator _mediator;
     private readonly IDashboardLayoutService _layoutService;
     private readonly CrmDbContext _dbContext;
@@ -315,10 +316,14 @@ public class DashboardController : ControllerBase
         var hidden = request.HiddenCards ?? new List<string>();
         var state = new Application.Dashboard.DashboardLayoutState(request.CardOrder, sizes, dimensions, hidden);
         var updated = await _layoutService.UpdateDefaultLayoutAsync(request.RoleLevel, state, cancellationToken);
+        var packName = string.IsNullOrWhiteSpace(request.PackName)
+            ? $"H{request.RoleLevel} Pack"
+            : request.PackName.Trim();
+        await UpsertRoleLevelTemplateAsync(request.RoleLevel, packName, updated, cancellationToken);
         var responseDimensions = updated.Dimensions.ToDictionary(
             item => item.Key,
             item => new DashboardCardDimensionsResponse(item.Value.Width, item.Value.Height));
-        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, request.RoleLevel, $"H{request.RoleLevel} Pack"));
+        return Ok(new DashboardLayoutResponse(updated.CardOrder, updated.Sizes, responseDimensions, updated.HiddenCards, request.RoleLevel, packName));
     }
 
     [HttpPost("layout/reset")]
@@ -489,6 +494,35 @@ public class DashboardController : ControllerBase
         }
 
         return $"H{fallbackRoleLevel} Pack";
+    }
+
+    private async Task UpsertRoleLevelTemplateAsync(
+        int roleLevel,
+        string packName,
+        DashboardLayoutState layout,
+        CancellationToken cancellationToken)
+    {
+        var marker = $"{RoleLevelTemplatePrefix}{roleLevel}";
+        var existingTemplateId = await _dbContext.DashboardTemplates
+            .AsNoTracking()
+            .Where(t => !t.IsDeleted && t.Description != null && t.Description.ToLower() == marker)
+            .Select(t => (Guid?)t.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var templateState = new DashboardTemplateState(
+            existingTemplateId ?? Guid.Empty,
+            packName,
+            marker,
+            false,
+            layout);
+
+        if (existingTemplateId.HasValue)
+        {
+            await _layoutService.UpdateTemplateAsync(existingTemplateId.Value, templateState, cancellationToken);
+            return;
+        }
+
+        await _layoutService.CreateTemplateAsync(templateState, cancellationToken);
     }
 
     private sealed record UserLayoutSourcePayload(

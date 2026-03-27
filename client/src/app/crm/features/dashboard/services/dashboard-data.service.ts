@@ -256,6 +256,7 @@ export class DashboardDataService {
 
   saveDefaultLayout(payload: {
     roleLevel: number;
+    packName?: string | null;
     cardOrder: string[];
     sizes: Record<string, 'sm' | 'md' | 'lg'>;
     dimensions: Record<string, { width: number; height: number }>;

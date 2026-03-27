@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { ActivatedRoute } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
@@ -70,9 +71,15 @@ const LEVEL_TEMPLATE_PREFIX = 'role-level-default:';
   styleUrl: './dashboard-packs.page.scss'
 })
 export class DashboardPacksPage {
+  private readonly route = inject(ActivatedRoute);
   private readonly rolesService = inject(UserAdminDataService);
   private readonly dashboardData = inject(DashboardDataService);
   private readonly toastService = inject(AppToastService);
+  private readonly requestedMode = this.route.snapshot.queryParamMap.get('mode') === 'custom' ? 'custom' : 'role-level';
+  private readonly requestedLevel = (() => {
+    const raw = Number(this.route.snapshot.queryParamMap.get('level'));
+    return Number.isFinite(raw) && raw > 0 ? raw : null;
+  })();
 
   protected readonly canManageDefaults = computed(() => {
     const payload = readTokenContext()?.payload ?? null;
@@ -194,6 +201,7 @@ export class DashboardPacksPage {
   });
 
   constructor() {
+    this.mode.set(this.requestedMode);
     this.loadRoles();
     this.loadSecurityLevels();
     this.loadTemplates();
@@ -339,13 +347,14 @@ export class DashboardPacksPage {
 
     this.dashboardData.saveDefaultLayout({
       roleLevel: level,
+      packName,
       cardOrder,
       sizes: {},
       dimensions: {},
       hiddenCards
     }).subscribe({
       next: () => {
-        this.persistRoleLevelPackName(level, packName, cardOrder, hiddenCards);
+        this.refreshTemplates();
         this.savingPack.set(false);
         this.toastService.show('success', `Default H${level} pack saved as "${packName}".`, 3000);
       },
@@ -408,7 +417,10 @@ export class DashboardPacksPage {
         this.loadingRoles.set(false);
 
         if (this.mode() === 'role-level') {
-          const level = this.selectedLevel() ?? this.availableLevels()[0]?.value ?? null;
+          const preferredLevel = this.requestedLevel && this.availableLevels().some((option) => option.value === this.requestedLevel)
+            ? this.requestedLevel
+            : null;
+          const level = this.selectedLevel() ?? preferredLevel ?? this.availableLevels()[0]?.value ?? null;
           this.onLevelChange(level);
         }
       },
@@ -492,34 +504,6 @@ export class DashboardPacksPage {
 
   private isRoleLevelTemplate(template: Pick<PackTemplateOption, 'description'>): boolean {
     return (template.description ?? '').toLowerCase().startsWith(LEVEL_TEMPLATE_PREFIX);
-  }
-
-  private persistRoleLevelPackName(level: number, name: string, cardOrder: string[], hiddenCards: string[]) {
-    const marker = `${LEVEL_TEMPLATE_PREFIX}${level}`;
-    const existing = this.templates().find(template => (template.description ?? '').toLowerCase() === marker);
-
-    const payload = {
-      name,
-      description: marker,
-      cardOrder,
-      sizes: {},
-      dimensions: {},
-      hiddenCards,
-      isDefault: null as boolean | null
-    };
-
-    const request = existing
-      ? this.dashboardData.updateTemplate(existing.id, payload)
-      : this.dashboardData.createTemplate(payload);
-
-    request.subscribe({
-      next: () => {
-        this.refreshTemplates();
-      },
-      error: () => {
-        this.toastService.show('error', 'Role-level pack saved, but name metadata could not be updated.', 3500);
-      }
-    });
   }
 
   private loadDefaultLayout(level: number) {

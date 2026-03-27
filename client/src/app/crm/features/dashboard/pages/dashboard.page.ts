@@ -745,6 +745,8 @@ export class DashboardPage implements OnInit {
   private roleDefaultHiddenCharts = new Set<ChartId>();
   protected roleDefaultLevel: number | null = null;
   protected readonly activePackName = signal<string>('H1 Pack');
+  // Keep legacy cards in persisted layouts/templates if needed, but suppress them from the dashboard UI.
+  private readonly uiSuppressedCardIds = new Set<string>(['risk-register']);
   // Locked size map so customize layout never inflates card heights.
   private readonly defaultCardSizes: Record<string, 'sm' | 'md' | 'lg'> = {
     'ai-orchestration': 'lg',
@@ -2622,16 +2624,17 @@ export class DashboardPage implements OnInit {
 
   private normalizeLayout(order: string[], fallback: string[]): string[] {
     const known = new Set(this.cardCatalog.map((card) => card.id));
+    const suppress = this.uiSuppressedCardIds;
     // When a role-level default pack exists, treat it as the allowlist for this user.
     const allowed = this.roleDefaultLayout.length > 0
-      ? new Set(fallback.filter((id) => known.has(id)))
-      : known;
+      ? new Set(fallback.filter((id) => known.has(id) && !suppress.has(id)))
+      : new Set(Array.from(known).filter((id) => !suppress.has(id)));
 
-    const filtered = order.filter(id => allowed.has(id));
+    const filtered = order.filter(id => allowed.has(id) && !suppress.has(id));
     if (filtered.length) {
       return filtered;
     }
-    return fallback.filter(id => allowed.has(id));
+    return fallback.filter(id => allowed.has(id) && !suppress.has(id));
   }
 
   private normalizeLayoutWithHidden(
@@ -2661,7 +2664,10 @@ export class DashboardPage implements OnInit {
 
   private getOrderedCards(order: string[]) {
     const map = new Map(this.cardCatalog.map(card => [card.id, card]));
-    return order.map(id => map.get(id)).filter(Boolean) as Array<{ id: string; label: string; icon: string }>;
+    return order
+      .filter((id) => !this.uiSuppressedCardIds.has(id))
+      .map(id => map.get(id))
+      .filter(Boolean) as Array<{ id: string; label: string; icon: string }>;
   }
 
   private buildLayoutPayload(orderOverride?: string[]) {
@@ -2691,12 +2697,12 @@ export class DashboardPage implements OnInit {
   private getLayoutDefaultOrder(): string[] {
     const known = new Set(this.cardCatalog.map((card) => card.id));
     if (this.roleDefaultLayout.length > 0) {
-      const sanitized = this.roleDefaultLayout.filter((id) => known.has(id));
+      const sanitized = this.roleDefaultLayout.filter((id) => known.has(id) && !this.uiSuppressedCardIds.has(id));
       if (sanitized.length > 0) {
         return sanitized;
       }
     }
-    return this.cardCatalog.map(card => card.id);
+    return this.cardCatalog.map(card => card.id).filter((id) => !this.uiSuppressedCardIds.has(id));
   }
 
   private resolveLayoutOrderByPriority(
