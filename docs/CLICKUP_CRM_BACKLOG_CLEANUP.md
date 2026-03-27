@@ -16,3 +16,8 @@ Lists:
 - Main side-nav colorful icon parity: create or update UX polish story and mark as DONE once visual QA confirms consistency.
 - Redis read-model caching: create or update a Project Backlog platform story covering Azure Managed Redis placement plus caching of `dashboard summary`, `manager pipeline health`, and `assistant insights`; mark DONE after ClickUp sync with evidence from `docs/REDIS_READ_MODEL_CACHING_RUNBOOK.md`.
 - GraphQL read-only query layer: keep backlog unless a separate architecture decision justifies it; do not close it as equivalent to Redis caching.
+- MCP for CRM integration surface: create or update a Project Backlog architecture story with the documented judgment:
+  - not a current primary investment
+  - phase as `read-only tools` -> `constrained writes` -> `approval-aware agent workflows`
+  - do not start implementation until CRM workflow semantics, role visibility, and audit boundaries are stable
+  - link evidence from `docs/PROJECT_MASTER.md` and `docs/PROJECT_BACKLOG.md`

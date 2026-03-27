@@ -30,6 +30,23 @@ Legend:
     - `server/src/CRM.Enterprise.Infrastructure/AI/AssistantChatService.cs`
     - `docs/REDIS_READ_MODEL_CACHING_RUNBOOK.md`
 
+- MCP adoption judgment for CRM integration surface
+  Status: DONE
+  Date: `2026-03-26`
+  - Decision:
+    - do not make MCP a primary near-term platform investment
+    - keep MCP as a later integration surface after CRM workflows and permissions stabilize
+  - Why:
+    - current priority remains workflow correctness, visibility semantics, approvals UX, and stable service boundaries
+    - MCP would amplify unstable domain behavior instead of fixing it
+  - Approved direction:
+    - phase 1: read-only MCP tools over stable CRM read models
+    - phase 2: constrained write tools with auditability
+    - phase 3: approval-aware agent workflows
+  - Evidence:
+    - `docs/PROJECT_MASTER.md`
+    - `README.md`
+
 ---
 
 ## Platform & Architecture
@@ -189,6 +206,18 @@ MoSCoW: TBD
   - keys are tenant-scoped and user-scoped
   - cache failures do not fail the request path
   - no frontend contract changes required
+
+13) MCP integration surface for CRM
+MoSCoW: SHOULD
+- Status: NOT STARTED
+- Decision note:
+  - recommended later, not now
+  - do not begin implementation until core CRM workflows, role visibility, and approval/audit semantics are stable
+- Acceptance criteria:
+  - phase 1 read-only tools defined for dashboard, search, and decision context
+  - tool contracts are tenant-scoped and role-aware
+  - audit model exists for all future write-capable tools
+  - write tools are approval-aware and bounded to safe CRM actions
 
 11) E2E + API test coverage gaps
 MoSCoW: TBD

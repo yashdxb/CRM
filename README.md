@@ -102,6 +102,7 @@ Each feature keeps its own `models`, `services`, and `pages` folders to align wi
 - Clean architecture solution split across Domain, Application, Infrastructure, and Api projects.
 - EF Core code-first migrations with environment-specific connection strings (`appsettings.{Environment}.json`).
 - Azure Managed Redis can be enabled for short-TTL caching of selected read-model endpoints.
+- MCP is considered a later CRM integration surface, not a near-term primary architecture change. The current recommendation is to stabilize CRM workflows, permissions, and auditability first, then introduce read-only MCP tools before any constrained write tools.
 - Reporting endpoints (pipeline, lead conversion, activities) will rely on SQL views to keep the OLTP schema normalized while delivering fast queries.
 - Future AI services plug in via background jobs + event publishing so the MVP can launch without AI yet still capture the history those models need.
 

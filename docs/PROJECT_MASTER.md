@@ -74,6 +74,34 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - Purpose-built REST read models remain the default query shape for dashboard and assistant surfaces.
 - Redis may be used only as a short-TTL cache in front of read models; it does not replace tenant isolation, authorization, or source-of-truth SQL reads.
 - Cache keys for user-facing CRM data must be tenant-scoped and user-scoped unless the endpoint is explicitly global.
+- MCP is a later-stage integration surface, not a current primary architecture driver.
+- Do not introduce MCP to compensate for unstable CRM workflows, unclear permissions, or incomplete domain semantics.
+- The correct sequencing is:
+  - stabilize core CRM workflows and read/write service seams first
+  - prove role visibility, tenant isolation, approvals, and auditability
+  - then add MCP starting with read-only CRM tools
+- MCP write tools, when introduced, must be constrained, auditable, tenant-aware, and approval-aware by design.
+
+### MCP Integration Judgment (Canonical)
+- Recommendation: `Yes later`, `not now as a primary product investment`.
+- Why not now:
+  - core CRM product semantics are still evolving in dashboard, approvals, visibility, and workflow consistency
+  - MCP would expose those unstable seams to agents without solving the underlying product issues
+- The right time to design MCP is when:
+  - lead, deal, activity, approval, and dashboard workflows are stable
+  - role-based access and hierarchy behavior are proven
+  - agent-safe actions can be bounded cleanly
+  - audit logging is strong enough for externalized tool execution
+- Initial MCP scope should be read-first:
+  - dashboard summary
+  - find/search leads, customers, deals
+  - fetch approval/risk/execution context
+- Later MCP scope can add guided writes:
+  - create follow-up activity
+  - add note
+  - update next step
+  - submit approval comment
+- Do not start with broad unrestricted mutation tools.
 
 ---
 
