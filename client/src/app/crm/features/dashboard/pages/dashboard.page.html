@@ -425,13 +425,13 @@
     <section
       class="dashboard-card-grid"
       cdkDropList
-      [cdkDropListData]="layoutOrder"
+      [cdkDropListData]="renderedLayoutOrder"
       (cdkDropListDropped)="onCardDrop($event)"
       cdkDropListOrientation="mixed"
     >
         <article
           class="glass-card dashboard-card card-resizable"
-          *ngFor="let cardId of layoutOrder"
+          *ngFor="let cardId of renderedLayoutOrder"
           [ngSwitch]="cardId"
           [ngClass]="getCardSizeClass(cardId)"
           [class.full-width-card]="cardId === 'ai-orchestration' || cardId === 'my-tasks'"

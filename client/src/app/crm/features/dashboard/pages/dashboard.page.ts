@@ -735,6 +735,9 @@ export class DashboardPage implements OnInit {
   }
 
   protected layoutOrder: string[] = [];
+  protected get renderedLayoutOrder(): string[] {
+    return this.layoutOrder.filter((id) => !this.uiSuppressedCardIds.has(id));
+  }
   protected layoutDialogOpen = false;
   protected layoutDraft: Array<{ id: string; label: string; icon: string }> = [];
   protected layoutSizes: Record<string, 'sm' | 'md' | 'lg'> = {};
