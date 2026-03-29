@@ -11,5 +11,7 @@ public sealed class ReportingOptions
     public string? ReportServerPassword { get; set; }
     public bool IgnoreInvalidTlsCertificate { get; set; }
 
-    public bool UseReportServer => !string.IsNullOrWhiteSpace(ReportServerUrl);
+    // Embedded mode should win when enabled so local/dev authoring and library flows
+    // do not silently fall back to a configured external Report Server.
+    public bool UseReportServer => !EnableEmbeddedViewer && !string.IsNullOrWhiteSpace(ReportServerUrl);
 }

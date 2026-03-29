@@ -7,12 +7,76 @@
           <span class="title-gradient">Report</span>
           <span class="title-light">Workspace</span>
         </h1>
-        <p class="hero-subtitle">Design, publish, and manage reports through Report Server.</p>
+        <p class="hero-subtitle" *ngIf="isEmbeddedMode()">
+          Build Telerik reports directly inside CRM. Tenant admins and provider-side developers can design, save, and refine reports without Report Server.
+        </p>
+        <p class="hero-subtitle" *ngIf="isReportServerMode()">
+          Manage reports through the external Telerik Report Server workspace.
+        </p>
+        <p class="hero-subtitle" *ngIf="isUnavailableMode()">
+          Reporting workspace configuration is unavailable in this environment.
+        </p>
       </div>
     </div>
   </header>
 
-  <div class="designer-section" *ngIf="reportServerConfig(); let cfg; else reportServerUnavailable">
+  <div class="designer-section" *ngIf="isEmbeddedMode()">
+    <section class="embedded-hero">
+      <div class="embedded-copy">
+        <div class="redirect-icon embedded-icon">
+          <i class="pi pi-palette"></i>
+        </div>
+        <div>
+          <h2>Built-In Telerik Designer</h2>
+          <p>
+            This workspace uses the CRM-hosted Telerik Web Report Designer and local report definition storage. Report Server stays optional for later publishing and centralized governance.
+          </p>
+        </div>
+      </div>
+
+      <div class="embedded-meta">
+        <article class="status-card">
+          <span class="status-label">Mode</span>
+          <strong>Embedded Designer</strong>
+          <p>Runs inside CRM using the API-hosted Telerik designer service.</p>
+        </article>
+        <article class="status-card">
+          <span class="status-label">Storage</span>
+          <strong>API File Storage</strong>
+          <p>Definitions, resources, shared data sources, and settings are stored by the CRM API.</p>
+        </article>
+      </div>
+    </section>
+
+    <div class="designer-loading-shell" *ngIf="loading()">
+      <div class="loading-state">
+        <i class="pi pi-spin pi-spinner"></i>
+        <span>Loading Telerik Report Designer...</span>
+      </div>
+    </div>
+
+    <div class="designer-loading-shell" *ngIf="error(); let errorMessage">
+      <div class="error-state">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>{{ errorMessage }}</span>
+        <button class="btn btn-primary" type="button" (click)="retry()">
+          <i class="pi pi-refresh"></i>
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <iframe
+      #designerFrame
+      class="designer-container"
+      [class.hidden]="loading() || !!error()"
+      [src]="designerFrameUrl()"
+      title="Telerik Report Designer"
+      (load)="onDesignerFrameLoad()">
+    </iframe>
+  </div>
+
+  <div class="designer-section" *ngIf="isReportServerMode() && reportServerConfig(); let cfg">
     <div class="report-server-shell">
       <section class="report-server-hero">
         <div class="report-server-copy">
@@ -27,12 +91,12 @@
 
         <div class="report-server-actions">
           <a class="btn btn-primary" [href]="cfg.designerUrl" target="_blank" rel="noopener">
-            <i class="pi pi-palette"></i>
-            Open Workspace
+            <i class="pi pi-external-link"></i>
+            Open Report Server
           </a>
           <button class="btn btn-secondary" type="button" (click)="openReportServerViewer()">
             <i class="pi pi-folder-open"></i>
-            Open Report Server
+            Open Catalog
           </button>
           <a class="btn btn-secondary" routerLink="/app/reports">
             <i class="pi pi-chart-bar"></i>
@@ -57,13 +121,13 @@
         <article class="status-card">
           <span class="status-label">Catalog</span>
           <strong>{{ reportServerCatalog().length }}</strong>
-          <p>Published reports currently available from the server catalog.</p>
+          <p>Published CRM reports currently available from the server catalog.</p>
         </article>
 
         <article class="status-card">
           <span class="status-label">Categories</span>
           <strong>{{ reportServerCategories().length }}</strong>
-          <p>Report folders/categories returned by the server API.</p>
+          <p>CRM report folders returned by the server API.</p>
         </article>
       </section>
 
@@ -71,10 +135,10 @@
         <article class="workspace-card">
           <div class="workspace-card__header">
             <h3>Quick Start</h3>
-            <span class="workspace-pill">Recommended</span>
+            <span class="workspace-pill">Later Option</span>
           </div>
           <ol class="workspace-steps">
-            <li>Open the Report Server workspace.</li>
+            <li>Open the external Telerik Report Server workspace.</li>
             <li>Create or import a `.trdp` report.</li>
             <li>Save and publish the report to the catalog.</li>
             <li>Return to the Reports page to run it inside CRM.</li>
@@ -133,16 +197,14 @@
     </div>
   </div>
 
-  <ng-template #reportServerUnavailable>
-    <div class="designer-section">
-      <div class="error-state">
-        <i class="pi pi-server"></i>
-        <span>Report Server is not configured for this environment.</span>
-        <a class="btn btn-primary" routerLink="/app/reports">
-          <i class="pi pi-arrow-left"></i>
-          Back to Reports
-        </a>
-      </div>
+  <div class="designer-section" *ngIf="isUnavailableMode()">
+    <div class="error-state">
+      <i class="pi pi-server"></i>
+      <span>Report workspace is not configured for this environment.</span>
+      <a class="btn btn-primary" routerLink="/app/reports">
+        <i class="pi pi-arrow-left"></i>
+        Back to Reports
+      </a>
     </div>
-  </ng-template>
+  </div>
 </section>

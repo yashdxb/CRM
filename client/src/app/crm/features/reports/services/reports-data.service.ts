@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { catchError, of } from 'rxjs';
+import { catchError, of, timeout } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import {
   PipelineByStageReport,
@@ -71,10 +71,13 @@ export class ReportsDataService {
 
   getReportLibrary() {
     const url = `${environment.apiUrl}/api/report-server/library`;
-    return this.http.get<ReportLibraryItem[]>(url).pipe(catchError((err) => {
-      console.error('Failed to load report library', err);
-      return of([] as ReportLibraryItem[]);
-    }));
+    return this.http.get<ReportLibraryItem[]>(url).pipe(
+      timeout(8000),
+      catchError((err) => {
+        console.error('Failed to load report library', err);
+        return of([] as ReportLibraryItem[]);
+      })
+    );
   }
 
   getReportCategories() {

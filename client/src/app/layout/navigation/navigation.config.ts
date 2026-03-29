@@ -10,7 +10,7 @@ export const NAV_LINKS: NavLink[] = [
     permission: PERMISSION_KEYS.reportsView,
     children: [
       { label: 'Report Library', icon: 'pi-eye', path: '/app/reports', permission: PERMISSION_KEYS.reportsView },
-      { label: 'Report Workspace', icon: 'pi-palette', path: '/app/report-designer', permission: PERMISSION_KEYS.administrationManage }
+      { label: 'Report Workspace', icon: 'pi-palette', path: '/app/report-designer', permission: PERMISSION_KEYS.reportsDesign }
     ]
   },
   {

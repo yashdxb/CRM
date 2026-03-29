@@ -12,6 +12,23 @@ Legend:
 
 ## Recent Delivery Updates (2026-03-25)
 
+- Embedded Telerik Report Workspace restored inside CRM
+  Status: DONE
+  Date: `2026-03-29`
+  - Delivered:
+    - restored the built-in Telerik Web Report Designer host in `/app/report-designer`
+    - kept designer asset loading on the CRM/API side instead of requiring Report Server for authoring
+    - moved report workspace route/navigation gating to `Permissions.Reports.Design`
+    - kept Report Server as a later optional publishing/viewing path instead of the current authoring requirement
+  - Evidence:
+    - `client/src/app/crm/features/reports/pages/report-designer.page.ts`
+    - `client/src/app/crm/features/reports/pages/report-designer.page.html`
+    - `client/src/app/crm/features/reports/pages/report-designer.page.scss`
+    - `client/src/app/crm/features/reports/pages/reports.page.ts`
+    - `client/src/app/crm/features/reports/pages/reports.page.html`
+    - `client/src/app/app.routes.ts`
+    - `client/src/app/layout/navigation/navigation.config.ts`
+
 - Redis-backed read-model caching for CRM dashboard and assistant surfaces
   Status: DONE
   Commits: `e7e2dfc`

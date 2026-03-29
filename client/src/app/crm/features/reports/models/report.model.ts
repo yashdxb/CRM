@@ -68,6 +68,7 @@ export interface ReportLibraryFilter {
 
 export interface ReportLibraryItem extends ReportCatalogItem {
   sortOrder: number;
+  embeddedReportSource?: string | null;
   filters: ReportLibraryFilter[];
 }
 

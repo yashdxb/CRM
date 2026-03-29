@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CRM Report Designer Host</title>
+  <style>
+    html, body, #designer {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: #f8fafc;
+      overflow: hidden;
+      font-family: Inter, system-ui, sans-serif;
+    }
+
+    #status {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #475569;
+      background: linear-gradient(180deg, #f8fbff, #eef4ff);
+      z-index: 2;
+    }
+
+    #status.hidden {
+      display: none;
+    }
+
+    .status-card {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      max-width: 520px;
+      padding: 24px 28px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+      text-align: center;
+    }
+
+    .status-card strong {
+      font-size: 18px;
+      color: #0f172a;
+    }
+
+    .status-card p {
+      margin: 0;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div id="status">
+    <div class="status-card">
+      <strong>Loading Telerik Report Designer</strong>
+      <p>Preparing the isolated designer workspace.</p>
+    </div>
+  </div>
+  <div id="designer"></div>
+
+  <script>
+    (function () {
+      const statusEl = document.getElementById('status');
+      const designerEl = document.getElementById('designer');
+      let initialized = false;
+
+      function setStatus(message) {
+        if (!statusEl) return;
+        const text = statusEl.querySelector('p');
+        if (text) {
+          text.textContent = message;
+        }
+      }
+
+      function hideStatus() {
+        if (statusEl) {
+          statusEl.classList.add('hidden');
+        }
+      }
+
+      function loadStylesheet(href) {
+        return new Promise((resolve, reject) => {
+          const existing = document.querySelector(`link[href="${href}"]`);
+          if (existing) {
+            resolve();
+            return;
+          }
+
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = href;
+          link.onload = () => resolve();
+          link.onerror = () => reject(new Error(`Failed to load stylesheet: ${href}`));
+          document.head.appendChild(link);
+        });
+      }
+
+      function loadScript(src) {
+        return new Promise((resolve, reject) => {
+          const existing = document.querySelector(`script[src="${src}"]`);
+          if (existing) {
+            if (existing.dataset.loaded === 'true') {
+              resolve();
+              return;
+            }
+            existing.addEventListener('load', () => resolve(), { once: true });
+            existing.addEventListener('error', () => reject(new Error(`Failed to load script: ${src}`)), { once: true });
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = src;
+          script.async = false;
+          script.onload = () => {
+            script.dataset.loaded = 'true';
+            resolve();
+          };
+          script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+          document.body.appendChild(script);
+        });
+      }
+
+      async function ensureJQueryAndViewerRuntime() {
+        if (window.jQuery && window.$) {
+          return;
+        }
+
+        await loadScript('/scripts.js');
+        if (!window.jQuery) {
+          throw new Error('jQuery failed to initialize for the report designer.');
+        }
+        window.$ = window.jQuery;
+      }
+
+      function resolvePluginMethod() {
+        const plugin = window.jQuery && window.jQuery.fn;
+        if (plugin && typeof plugin.telerik_WebReportDesigner === 'function') {
+          return { name: 'telerik_WebReportDesigner', dataKey: 'telerik_WebReportDesigner' };
+        }
+        if (plugin && typeof plugin.telerikWebReportDesigner === 'function') {
+          return { name: 'telerikWebReportDesigner', dataKey: 'telerikWebReportDesigner' };
+        }
+        throw new Error('Telerik Web Report Designer plugin is not registered on jQuery.');
+      }
+
+      async function boot(payload) {
+        if (initialized) {
+          return;
+        }
+
+        initialized = true;
+        try {
+          setStatus('Loading Telerik runtime assets...');
+          await ensureJQueryAndViewerRuntime();
+          await loadScript('https://kendo.cdn.telerik.com/2022.3.1109/js/kendo.all.min.js');
+          await loadStylesheet(`${payload.assetsUrl}/webReportDesigner-20.0.26.304.min.css`);
+          await loadStylesheet(`${payload.assetsUrl}/webReportDesignerTheme-20.0.26.304.min.css`);
+          await loadStylesheet(`${payload.assetsUrl}/jquery.ui-1.14.1.min.css`);
+          await loadScript(`${payload.assetsUrl}/clipboard.polyfill-2.8.1.min.js`);
+          await loadScript(`${payload.assetsUrl}/jquery.ui-1.14.1.min.js`);
+          await loadScript(`${payload.assetsUrl}/webReportDesigner-20.0.26.304.min.js`);
+
+          if (!window.jQuery) {
+            throw new Error('jQuery failed to initialize for the report designer.');
+          }
+          if (!window.kendo || typeof window.kendo.View !== 'function') {
+            throw new Error('Kendo runtime failed to initialize for the report designer.');
+          }
+
+          setStatus('Starting report designer...');
+          const plugin = resolvePluginMethod();
+          window.jQuery(designerEl)[plugin.name]({
+            serviceUrl: payload.serviceUrl,
+            report: payload.report || '',
+            persistSession: false,
+            authenticationToken: payload.authenticationToken,
+            toolboxArea: { layout: 'list' },
+            propertiesArea: { layout: 'categorized' },
+            skipOnboarding: true
+          }).data(plugin.dataKey);
+
+          hideStatus();
+          window.parent.postMessage({ type: 'crm-report-designer:ready' }, window.location.origin);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          setStatus(message);
+          window.parent.postMessage({ type: 'crm-report-designer:error', message }, window.location.origin);
+        }
+      }
+
+      window.addEventListener('message', (event) => {
+        if (event.origin !== window.location.origin) {
+          return;
+        }
+
+        const data = event.data || {};
+        if (data.type !== 'crm-report-designer:init' || !data.payload) {
+          return;
+        }
+
+        void boot(data.payload);
+      });
+    })();
+  </script>
+</body>
+</html>

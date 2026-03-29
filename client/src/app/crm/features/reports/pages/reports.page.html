@@ -11,7 +11,7 @@
   <section class="glass-card hero-card">
     <div class="hero-content">
       <h1 class="hero-title">Reports</h1>
-      <p class="hero-subtitle">Browse published reports from Report Server and run them inside CRM.</p>
+      <p class="hero-subtitle">Browse published CRM reports and run them inside the application.</p>
       <p class="hero-note">
         Generated:
         {{ report().generatedAtUtc | date: 'medium' }}
@@ -19,8 +19,8 @@
     </div>
     <div class="hero-actions">
       <button pButton type="button" class="crm-button crm-button--secondary" icon="pi pi-refresh" label="Refresh" (click)="refresh()" [loading]="loading()"></button>
-      <a pButton type="button" class="crm-button crm-button--secondary" [href]="reportServerConfig()?.designerUrl" target="_blank" *ngIf="reportServerEnabled() && reportServerConfig()?.designerUrl && canOpenReportDesigner()">
-        <i class="pi pi-external-link"></i>
+      <a pButton type="button" class="crm-button crm-button--secondary" routerLink="/app/report-designer" *ngIf="canOpenReportDesigner()">
+        <i class="pi pi-palette"></i>
         <span>Open Report Workspace</span>
       </a>
     </div>
@@ -40,13 +40,13 @@
             <p class="filter-note">Choose filter values before loading the report.</p>
           </div>
           <button
+            *ngIf="canOpenReportDesigner()"
             pButton
             type="button"
-            class="crm-button crm-button--primary"
-            icon="pi pi-play"
-            label="Run Report"
-            (click)="applySelectedReportFilters()"
-            [disabled]="filterOptionsLoading()">
+            class="crm-button crm-button--secondary"
+            icon="pi pi-pencil"
+            label="Edit in Workspace"
+            (click)="editSelectedReportInWorkspace()">
           </button>
         </div>
         <div class="filter-form-grid">
@@ -75,6 +75,23 @@
               </div>
             </label>
             <ng-template #selectFilter>
+              <label class="filter-field" *ngIf="filter.kind === 'owner'; else singleSelectFilter">
+                <span class="filter-label">{{ filter.label }}</span>
+                <p-multiselect
+                  [options]="getFilterOptions(filter)"
+                  [ngModel]="getMultiFilterValue(filter.parameterName)"
+                  (ngModelChange)="setFilterValue(filter.parameterName, $event)"
+                  optionLabel="label"
+                  optionValue="value"
+                  appendTo="body"
+                  display="chip"
+                  [filter]="true"
+                  [showToggleAll]="true"
+                  [placeholder]="filter.placeholder || 'Select owners'"
+                  [loading]="filterOptionsLoading() && filter.optionSource === 'report-parameter'">
+                </p-multiselect>
+              </label>
+              <ng-template #singleSelectFilter>
               <label class="filter-field">
                 <span class="filter-label">{{ filter.label }}</span>
                 <p-select
@@ -88,8 +105,20 @@
                   [loading]="filterOptionsLoading() && filter.optionSource === 'report-parameter'">
                 </p-select>
               </label>
+              </ng-template>
             </ng-template>
           </ng-container>
+          <div class="filter-actions">
+            <button
+              pButton
+              type="button"
+              class="crm-button crm-button--primary filter-run-button"
+              icon="pi pi-play"
+              [label]="getSelectedReportRunLabel()"
+              (click)="runOrDesignSelectedReport()"
+              [disabled]="filterOptionsLoading()">
+            </button>
+          </div>
         </div>
       </section>
       <div class="embed-shell">
@@ -104,8 +133,9 @@
           [containerStyle]="{ height: '820px', width: '100%' }">
         </tr-viewer>
         <div class="empty-state report-filter-prompt" *ngIf="getFilters().length && !telerikEnabled()">
-          <i class="pi pi-sliders-h"></i>
-          <p>Pick filter values above, then run the report.</p>
+          <i class="pi" [ngClass]="canRunSelectedReport() ? 'pi-sliders-h' : 'pi-palette'"></i>
+          <p *ngIf="canRunSelectedReport()">Pick filter values above, then run the report.</p>
+          <p *ngIf="!canRunSelectedReport()">This library entry is a report template. Open Report Workspace to design or publish it before running it here.</p>
         </div>
       </div>
     </section>

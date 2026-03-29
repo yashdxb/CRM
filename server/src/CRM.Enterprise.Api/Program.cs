@@ -55,6 +55,7 @@ builder.Services.AddControllers()
     });
 
 builder.Services.AddScoped<TenantConnectionStringHandler>();
+builder.Services.AddSingleton<EmbeddedReportWorkspaceService>();
 
 builder.Services.TryAddSingleton<IReportServiceConfiguration>(sp =>
 {

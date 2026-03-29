@@ -12,6 +12,7 @@ public interface IReportServerClient
 public interface IReportLibraryService
 {
     Task<IReadOnlyList<ReportLibraryItemDto>> GetLibraryAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<ReportParameterOptionDto>> GetParameterOptionsAsync(string reportId, string parameterName, CancellationToken ct = default);
 }
 
 public sealed record ReportServerTokenResult(string AccessToken, string TokenType, int ExpiresIn);
@@ -40,6 +41,7 @@ public sealed record ReportLibraryItemDto(
     DateTimeOffset CreatedOn,
     DateTimeOffset ModifiedOn,
     int SortOrder,
+    string? EmbeddedReportSource,
     IReadOnlyList<ReportLibraryFilterDto> Filters);
 
 public sealed record ReportLibraryFilterDto(

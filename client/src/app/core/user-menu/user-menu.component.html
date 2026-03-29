@@ -37,13 +37,17 @@
         <div class="user-menu__divider"></div>
 
         <div class="user-menu__section">
-          <button pButton type="button" class="user-menu__item p-button-text" (click)="navigateTo('/app/profile')">
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="navigateTo('/app/settings')">
             <i class="pi pi-user"></i>
-            <span>My Profile</span>
+            <span>My Account</span>
+          </button>
+          <button pButton type="button" class="user-menu__item p-button-text" (click)="navigateTo('/change-password')">
+            <i class="pi pi-key"></i>
+            <span>Change Password</span>
           </button>
           <button pButton type="button" class="user-menu__item p-button-text" (click)="navigateTo('/app/settings')">
             <i class="pi pi-cog"></i>
-            <span>Settings</span>
+            <span>Workspace Settings</span>
           </button>
         </div>
 
@@ -56,7 +60,7 @@
             <span class="user-menu__badge">{{ themeService.isDarkMode() ? 'On' : 'Off' }}</span>
           </button>
           <button pButton type="button" class="user-menu__item p-button-text" (click)="openKeyboardShortcuts()">
-            <i class="pi pi-key"></i>
+            <i class="pi pi-keyboard"></i>
             <span>Keyboard Shortcuts</span>
             <kbd>?</kbd>
           </button>

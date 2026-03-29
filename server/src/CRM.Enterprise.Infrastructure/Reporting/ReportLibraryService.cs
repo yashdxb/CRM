@@ -9,6 +9,11 @@ namespace CRM.Enterprise.Infrastructure.Reporting;
 public sealed class ReportLibraryService : IReportLibraryService
 {
     private const string CrmCategoryName = "CRM";
+    private const string PipelineByStageEmbeddedReportSource = "CRM.Enterprise.Api.Reporting.PipelineByStageTelerikReport, CRM.Enterprise.Api";
+    private const string GenericEmbeddedReportSource = "CRM.Enterprise.Api.Reporting.EmbeddedLibraryTelerikReport, CRM.Enterprise.Api";
+    private static readonly string StartOfCurrentYear = DateOnly.FromDateTime(new DateTime(DateTime.UtcNow.Year, 1, 1)).ToString("yyyy-MM-dd");
+    private static readonly string Today = DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd");
+    private static readonly string EndOfCurrentYear = DateOnly.FromDateTime(new DateTime(DateTime.UtcNow.Year, 12, 31)).ToString("yyyy-MM-dd");
 
     private static readonly IReadOnlyList<ReportTemplateDefinition> Templates =
     [
@@ -17,7 +22,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             "Open pipeline grouped by sales stage.",
             10,
             [
-                DateRangeFilter("DateFrom", "DateTo", "Date range"),
+                DateRangeFilter("DateFrom", "DateTo", "Date range", defaultTo: EndOfCurrentYear),
                 OwnerFilter(),
                 StageFilter()
             ]),
@@ -28,7 +33,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             [
                 OwnerFilter(),
                 StageFilter(),
-                DateRangeFilter("DateFrom", "DateTo", "Date range")
+                DateRangeFilter("DateFrom", "DateTo", "Date range", defaultTo: EndOfCurrentYear)
             ]),
         new(
             "Pending Deal Approval",
@@ -63,7 +68,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             60,
             [
                 OwnerFilter(),
-                DateRangeFilter("DateFrom", "DateTo", "Expected close date"),
+                DateRangeFilter("DateFrom", "DateTo", "Expected close date", defaultTo: EndOfCurrentYear),
                 StageFilter()
             ]),
         new(
@@ -71,7 +76,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             "Visual pipeline mix by stage using value, deal count, and share of open pipeline.",
             65,
             [
-                DateRangeFilter("DateFrom", "DateTo", "Date range"),
+                DateRangeFilter("DateFrom", "DateTo", "Date range", defaultTo: EndOfCurrentYear),
                 OwnerFilter(),
                 StageFilter()
             ]),
@@ -108,7 +113,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             [
                 OwnerFilter(),
                 StageFilter(),
-                DateRangeFilter("DateFrom", "DateTo", "Period")
+                DateRangeFilter("DateFrom", "DateTo", "Period", defaultTo: EndOfCurrentYear)
             ]),
         new(
             "Forecast Distribution",
@@ -116,7 +121,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             212,
             [
                 OwnerFilter(),
-                DateRangeFilter("DateFrom", "DateTo", "Expected close date"),
+                DateRangeFilter("DateFrom", "DateTo", "Expected close date", defaultTo: EndOfCurrentYear),
                 StageFilter()
             ]),
         new(
@@ -124,7 +129,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             "Projected and weighted revenue forecast grouped by period.",
             70,
             [
-                DateRangeFilter("DateFrom", "DateTo", "Forecast period"),
+                DateRangeFilter("DateFrom", "DateTo", "Forecast period", defaultTo: EndOfCurrentYear),
                 OwnerFilter(),
                 StageFilter()
             ]),
@@ -153,7 +158,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             [
                 OwnerFilter(),
                 StageFilter(),
-                DateRangeFilter("DateFrom", "DateTo", "Expected close date")
+                DateRangeFilter("DateFrom", "DateTo", "Expected close date", defaultTo: EndOfCurrentYear)
             ]),
         new(
             "Lead Conversion Funnel",
@@ -241,7 +246,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             [
                 OwnerFilter(),
                 StageFilter(),
-                DateRangeFilter("DateFrom", "DateTo", "Period")
+                DateRangeFilter("DateFrom", "DateTo", "Period", defaultTo: EndOfCurrentYear)
             ])
     ];
 
@@ -319,6 +324,26 @@ public sealed class ReportLibraryService : IReportLibraryService
             .ToList();
     }
 
+    public async Task<IReadOnlyList<ReportParameterOptionDto>> GetParameterOptionsAsync(string reportId, string parameterName, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(parameterName))
+        {
+            return [];
+        }
+
+        if (string.Equals(parameterName, "OwnerUserId", StringComparison.OrdinalIgnoreCase))
+        {
+            return await BuildOwnerOptionsAsync(ct);
+        }
+
+        if (string.Equals(parameterName, "LeadSource", StringComparison.OrdinalIgnoreCase))
+        {
+            return await BuildLeadSourceOptionsAsync(ct);
+        }
+
+        return [];
+    }
+
     private static ReportLibraryItemDto BuildItem(
         ReportTemplateDefinition template,
         string id, string name, string description,
@@ -334,6 +359,7 @@ public sealed class ReportLibraryService : IReportLibraryService
             categoryId, categoryName, extension,
             createdOn, modifiedOn,
             template.SortOrder,
+            ResolveEmbeddedReportSource(template.Name),
             template.Filters.Select(filter => filter switch
             {
                 { Kind: "stage" } => filter with { Options = stageOptions },
@@ -343,6 +369,11 @@ public sealed class ReportLibraryService : IReportLibraryService
                 _ => filter
             }).ToList());
     }
+
+    private static string? ResolveEmbeddedReportSource(string templateName)
+        => string.Equals(templateName, "Pipeline by Stage", StringComparison.OrdinalIgnoreCase)
+            ? PipelineByStageEmbeddedReportSource
+            : GenericEmbeddedReportSource;
 
     private async Task<IReadOnlyList<ReportParameterOptionDto>> BuildStageOptionsAsync(CancellationToken ct)
     {
@@ -361,6 +392,32 @@ public sealed class ReportLibraryService : IReportLibraryService
             .ToList();
 
         return [new ReportParameterOptionDto(string.Empty, "All stages"), .. options];
+    }
+
+    private async Task<IReadOnlyList<ReportParameterOptionDto>> BuildOwnerOptionsAsync(CancellationToken ct)
+    {
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Where(user => user.TenantId == _tenantProvider.TenantId && !user.IsDeleted)
+            .OrderBy(user => user.FullName)
+            .ThenBy(user => user.Email)
+            .Select(user => new ReportParameterOptionDto(
+                user.Id.ToString(),
+                string.IsNullOrWhiteSpace(user.FullName) ? user.Email : user.FullName))
+            .ToListAsync(ct);
+    }
+
+    private async Task<IReadOnlyList<ReportParameterOptionDto>> BuildLeadSourceOptionsAsync(CancellationToken ct)
+    {
+        var sources = await _dbContext.Leads
+            .AsNoTracking()
+            .Where(lead => lead.TenantId == _tenantProvider.TenantId && !lead.IsDeleted && !string.IsNullOrWhiteSpace(lead.Source))
+            .Select(lead => lead.Source!.Trim())
+            .Distinct()
+            .OrderBy(source => source)
+            .ToListAsync(ct);
+
+        return [new ReportParameterOptionDto(string.Empty, "All sources"), .. sources.Select(source => new ReportParameterOptionDto(source, source))];
     }
 
     private static IReadOnlyList<ReportParameterOptionDto> BuildPipelineOptions()
@@ -417,7 +474,12 @@ public sealed class ReportLibraryService : IReportLibraryService
             null,
             []);
 
-    private static ReportLibraryFilterDto DateRangeFilter(string fromParameter, string toParameter, string label)
+    private static ReportLibraryFilterDto DateRangeFilter(
+        string fromParameter,
+        string toParameter,
+        string label,
+        string? defaultFrom = null,
+        string? defaultTo = null)
         => new(
             "dateRange",
             label,
@@ -427,8 +489,8 @@ public sealed class ReportLibraryService : IReportLibraryService
             toParameter,
             null,
             null,
-            DateOnly.FromDateTime(new DateTime(DateTime.UtcNow.Year, 1, 1)).ToString("yyyy-MM-dd"),
-            DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd"),
+            defaultFrom ?? StartOfCurrentYear,
+            defaultTo ?? Today,
             []);
 
     private static ReportLibraryFilterDto ReportParameterFilter(

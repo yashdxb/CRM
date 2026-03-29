@@ -35,6 +35,7 @@ public sealed record ReportLibraryItemResponse(
     DateTimeOffset CreatedOn,
     DateTimeOffset ModifiedOn,
     int SortOrder,
+    string? EmbeddedReportSource,
     IReadOnlyList<ReportLibraryFilterResponse> Filters);
 
 public sealed record ReportLibraryFilterResponse(

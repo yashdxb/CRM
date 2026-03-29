@@ -192,7 +192,6 @@
   .report-filter-header {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
     gap: 1rem;
     margin-bottom: 1rem;
   }
@@ -205,8 +204,9 @@
 
   .filter-form-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 340px));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 1rem;
+    align-items: end;
   }
 
   .filter-field {
@@ -216,6 +216,17 @@
 
   .filter-field--date-range {
     grid-column: span 2;
+  }
+
+  .filter-actions {
+    display: flex;
+    align-items: end;
+    justify-content: flex-start;
+  }
+
+  .filter-run-button {
+    min-width: 160px;
+    height: 42px;
   }
 
   .filter-date-range {
@@ -303,6 +314,14 @@
 
     .filter-date-range {
       grid-template-columns: 1fr;
+    }
+
+    .filter-actions {
+      justify-content: stretch;
+    }
+
+    .filter-run-button {
+      width: 100%;
     }
   }
 }

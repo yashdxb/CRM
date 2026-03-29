@@ -680,7 +680,9 @@ Notes:
 - The current nginx host binding is `reports.northedgesystem.com`.
 - Frontend report cards open Report Server reports by category-qualified path (`CategoryName/ReportName`).
 - If Report Server mode is enabled, `/api/reports/embed-config` should return provider `report-server` and service URL `/api/report-server/proxy/api/reports`.
-- Report viewing is available through CRM report permissions, but Report Designer / direct Report Server access should remain admin-only (`Permissions.Administration.Manage`).
+- Report viewing is available through CRM report permissions.
+- The in-app `Report Workspace` currently uses the built-in Telerik Web Report Designer for report authoring, even if Report Server is configured for viewing/publishing later.
+- Built-in report designer access should use `Permissions.Reports.Design` or the workspace-configured `ReportDesignerRequiredPermission`, not a hardcoded admin-only check.
 - When designing reports inside Report Server, do not use the repo's local `127.0.0.1` SQL string. Use the real CRM Azure SQL endpoint reachable from the Report Server VM.
 
 ### Operational Notes

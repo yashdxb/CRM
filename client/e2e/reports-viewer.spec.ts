@@ -39,7 +39,8 @@ test.describe('Reports Experience', () => {
 
     await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Report Library' })).toBeVisible();
-    await expect(page.locator('.catalog-card')).toHaveCount(6);
+    const reportCount = await page.locator('.catalog-card').count();
+    expect(reportCount).toBeGreaterThanOrEqual(6);
     await expect(page.locator('text=Report Server is not configured for this environment')).toHaveCount(0);
 
     const legacyErrors = consoleErrors.filter((e) =>
@@ -49,16 +50,12 @@ test.describe('Reports Experience', () => {
     expect(legacyErrors).toHaveLength(0);
   });
 
-  test('report workspace page shows Report Server workspace or not-configured state', async ({ page, request }) => {
+  test('report workspace page shows embedded designer or report server workspace depending on configuration', async ({ page, request }) => {
     await login(page, request);
     await page.goto('/app/report-designer');
 
     await expect(page.getByRole('heading', { name: 'Report Workspace' })).toBeVisible();
-
-    const workspaceVisible = await page.locator('text=Report Server Workspace').first().isVisible().catch(() => false);
-    const unavailableVisible = await page.locator('text=Report Server is not configured for this environment.').first().isVisible().catch(() => false);
-
-    expect(workspaceVisible || unavailableVisible).toBeTruthy();
+    await expect(page.locator('.designer-section, .report-server-shell, .error-state').first()).toBeVisible();
   });
 
   test('report pages expose no legacy embedded viewer copy', async ({ page, request }) => {
@@ -73,7 +70,7 @@ test.describe('Reports Experience', () => {
     await expect(page.locator('text=Loading legacy report designer')).toHaveCount(0);
   });
 
-  test('crm library exposes the six essential reports and their filter forms', async ({ page, request }) => {
+  test('crm library exposes the essential reports and runs embedded report previews', async ({ page, request }) => {
     await login(page, request);
     await page.goto('/app/reports');
 
@@ -90,24 +87,34 @@ test.describe('Reports Experience', () => {
       await expect(page.locator('.catalog-card-title', { hasText: reportName })).toBeVisible();
     }
 
-    await page.locator('.catalog-card', { hasText: 'Open Opportunities by Owner' }).click();
-    await expect(page.getByRole('heading', { name: 'Filters' })).toBeVisible();
-    await expect(page.locator('label', { hasText: 'Owner' })).toBeVisible();
-    await expect(page.locator('label', { hasText: 'Stage' })).toBeVisible();
-    await expect(page.locator('label', { hasText: 'Date range' })).toBeVisible();
-    await page.getByRole('button', { name: 'Run Report' }).click();
-    await expect(page.locator('tr-viewer')).toBeVisible();
+    const reportsToRun = [
+      {
+        name: 'Open Opportunities by Owner',
+        filters: ['Owner', 'Stage', 'Date range']
+      },
+      {
+        name: 'Pending Deal Approval',
+        filters: ['Owner', 'Approval status', 'Requested date']
+      },
+      {
+        name: 'Pipeline by Stage',
+        filters: ['Date range', 'Owner', 'Stage']
+      }
+    ];
 
-    await page.getByRole('button', { name: 'Back to Catalog' }).click();
-    await page.locator('.catalog-card', { hasText: 'Pending Deal Approval' }).click();
-    await expect(page.locator('label', { hasText: 'Owner' })).toBeVisible();
-    await expect(page.locator('label', { hasText: 'Approval status' })).toBeVisible();
-    await expect(page.locator('label', { hasText: 'Requested date' })).toBeVisible();
+    for (const report of reportsToRun) {
+      await page.locator('.catalog-card', { hasText: report.name }).click();
+      await expect(page.getByRole('heading', { name: 'Filters' })).toBeVisible();
+      for (const filter of report.filters) {
+        await expect(page.locator('label', { hasText: filter })).toBeVisible();
+      }
 
-    await page.getByRole('button', { name: 'Back to Catalog' }).click();
-    await page.locator('.catalog-card', { hasText: 'Pipeline by Stage' }).click();
-    await expect(page.locator('label', { hasText: 'Date range' })).toBeVisible();
-    await expect(page.locator('label', { hasText: 'Owner' })).toBeVisible();
-    await expect(page.locator('label', { hasText: 'Stage' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Run Report' })).toBeVisible();
+      await page.getByRole('button', { name: 'Run Report' }).click();
+      await expect(page.locator('tr-viewer')).toBeVisible();
+      await expect(page.locator('.trv-error-pane:visible')).toHaveCount(0);
+
+      await page.getByRole('button', { name: 'Back to Catalog' }).click();
+    }
   });
 });

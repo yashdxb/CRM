@@ -1,6 +1,7 @@
 using CRM.Enterprise.Application.Tenants;
 using CRM.Enterprise.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace CRM.Enterprise.Api.Middleware;
 
@@ -69,6 +70,18 @@ public class TenantResolutionMiddleware
         if (string.IsNullOrWhiteSpace(tenantKey))
         {
             tenantKey = context.Request.Query["tenantKey"].FirstOrDefault();
+        }
+        if (string.IsNullOrWhiteSpace(tenantKey))
+        {
+            var authenticatedTenant = await ResolveTenantForAuthenticatedUserAsync(context, dbContext);
+            if (authenticatedTenant is not null)
+            {
+                tenantProvider.SetTenant(authenticatedTenant.Id, authenticatedTenant.Key);
+                context.Items["TenantId"] = authenticatedTenant.Id;
+                context.Items["TenantKey"] = authenticatedTenant.Key;
+                await _next(context);
+                return;
+            }
         }
         if (string.IsNullOrWhiteSpace(tenantKey))
         {
@@ -153,5 +166,52 @@ public class TenantResolutionMiddleware
         }
 
         return null;
+    }
+
+    private static async Task<CRM.Enterprise.Domain.Entities.Tenant?> ResolveTenantForAuthenticatedUserAsync(HttpContext context, CrmDbContext dbContext)
+    {
+        if (context.User?.Identity?.IsAuthenticated != true)
+        {
+            return null;
+        }
+
+        var userIdClaim =
+            context.User.FindFirstValue(ClaimTypes.NameIdentifier) ??
+            context.User.FindFirstValue("sub");
+        var emailClaim =
+            context.User.FindFirstValue(ClaimTypes.Email) ??
+            context.User.FindFirstValue("email");
+
+        Guid? tenantId = null;
+
+        if (Guid.TryParse(userIdClaim, out var userId))
+        {
+            tenantId = await dbContext.Users
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(u => u.Id == userId && !u.IsDeleted)
+                .Select(u => (Guid?)u.TenantId)
+                .FirstOrDefaultAsync();
+        }
+
+        if (!tenantId.HasValue && !string.IsNullOrWhiteSpace(emailClaim))
+        {
+            var normalizedEmail = emailClaim.Trim().ToLowerInvariant();
+            tenantId = await dbContext.Users
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(u => !u.IsDeleted && ((u.EmailNormalized ?? u.Email.ToLower()) == normalizedEmail))
+                .Select(u => (Guid?)u.TenantId)
+                .FirstOrDefaultAsync();
+        }
+
+        if (!tenantId.HasValue || tenantId == Guid.Empty)
+        {
+            return null;
+        }
+
+        return await dbContext.Tenants
+            .AsNoTracking()
+            .FirstOrDefaultAsync(t => t.Id == tenantId.Value);
     }
 }

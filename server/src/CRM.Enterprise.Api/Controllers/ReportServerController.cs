@@ -1,4 +1,5 @@
 using CRM.Enterprise.Api.Contracts.Reports;
+using CRM.Enterprise.Api.Reporting;
 using CRM.Enterprise.Application.Reporting;
 using CRM.Enterprise.Infrastructure.Reporting;
 using CRM.Enterprise.Security;
@@ -15,15 +16,18 @@ public class ReportServerController : ControllerBase
 {
     private readonly IReportServerClient _client;
     private readonly IReportLibraryService _libraryService;
+    private readonly EmbeddedReportWorkspaceService _embeddedWorkspaceService;
     private readonly ReportingOptions _options;
 
     public ReportServerController(
         IReportServerClient client,
         IReportLibraryService libraryService,
+        EmbeddedReportWorkspaceService embeddedWorkspaceService,
         IOptions<ReportingOptions> options)
     {
         _client = client;
         _libraryService = libraryService;
+        _embeddedWorkspaceService = embeddedWorkspaceService;
         _options = options.Value;
     }
 
@@ -89,6 +93,11 @@ public class ReportServerController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<ReportLibraryItemResponse>>> GetLibrary(CancellationToken ct)
     {
         var items = await _libraryService.GetLibraryAsync(ct);
+        if (!_options.UseReportServer)
+        {
+            items = _embeddedWorkspaceService.EnsureWorkspaceReports(items);
+        }
+
         return Ok(items.Select(item => new ReportLibraryItemResponse(
             item.Id,
             item.Name,
@@ -99,6 +108,7 @@ public class ReportServerController : ControllerBase
             item.CreatedOn,
             item.ModifiedOn,
             item.SortOrder,
+            item.EmbeddedReportSource,
             item.Filters.Select(filter => new ReportLibraryFilterResponse(
                 filter.Key,
                 filter.Label,
@@ -134,7 +144,10 @@ public class ReportServerController : ControllerBase
         CancellationToken ct)
     {
         if (!_client.IsConfigured)
-            return Ok(Array.Empty<ReportParameterOptionResponse>());
+        {
+            var embeddedOptions = await _libraryService.GetParameterOptionsAsync(reportId, parameterName, ct);
+            return Ok(embeddedOptions.Select(o => new ReportParameterOptionResponse(o.Value, o.Label)).ToList());
+        }
 
         var options = await _client.GetParameterOptionsAsync(reportId, parameterName, ct);
         return Ok(options.Select(o => new ReportParameterOptionResponse(o.Value, o.Label)).ToList());

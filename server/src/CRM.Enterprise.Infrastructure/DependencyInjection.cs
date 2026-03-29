@@ -107,7 +107,10 @@ public static class DependencyInjection
         services.Configure<AcsEmailOptions>(configuration.GetSection(AcsEmailOptions.SectionName));
         services.Configure<ApprovalQueueOptions>(configuration.GetSection(ApprovalQueueOptions.SectionName));
         services.Configure<ReportingOptions>(configuration.GetSection(ReportingOptions.SectionName));
-        services.AddHttpClient<ReportServerClient>()
+        services.AddHttpClient<ReportServerClient>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(6);
+            })
             .ConfigurePrimaryHttpMessageHandler(sp => CreateReportServerHttpHandler(sp));
         services.AddHttpClient("ReportServerProxy")
             .ConfigurePrimaryHttpMessageHandler(sp => CreateReportServerHttpHandler(sp));

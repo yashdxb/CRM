@@ -47,6 +47,16 @@ public sealed class PipelineByStageTelerikReport : Report
           AND o.IsDeleted  = 0
           AND s.IsDeleted  = 0
           AND o.IsClosed   = 0
+          AND (
+                @OwnerUserId = '' OR EXISTS (
+                    SELECT 1
+                    FROM STRING_SPLIT(@OwnerUserId, ',') ownerIds
+                    WHERE LTRIM(RTRIM(ownerIds.value)) = CAST(o.OwnerId AS nvarchar(36))
+                )
+              )
+          AND (@Stage = '' OR s.Name = @Stage)
+          AND (@DateFrom = '' OR CAST(o.ExpectedCloseDate AS date) >= CAST(@DateFrom AS date))
+          AND (@DateTo = '' OR CAST(o.ExpectedCloseDate AS date) <= CAST(@DateTo AS date))
         GROUP BY s.Name, s.[Order]
         ORDER BY s.[Order]
         """;
@@ -65,10 +75,48 @@ public sealed class PipelineByStageTelerikReport : Report
             Name = "TenantId",
             Type = ReportParameterType.String,
             Visible = false,
-            AllowBlank = false,
+            AllowBlank = true,
+            AllowNull = true,
+            Value = string.Empty,
             Text = "Tenant ID"
         };
         ReportParameters.Add(tenantParam);
+
+        ReportParameters.Add(new ReportParameter
+        {
+            Name = "OwnerUserId",
+            Type = ReportParameterType.String,
+            Visible = false,
+            AllowBlank = true,
+            Text = "Owner User Ids"
+        });
+
+        ReportParameters.Add(new ReportParameter
+        {
+            Name = "Stage",
+            Type = ReportParameterType.String,
+            Visible = false,
+            AllowBlank = true,
+            Text = "Stage"
+        });
+
+        ReportParameters.Add(new ReportParameter
+        {
+            Name = "DateFrom",
+            Type = ReportParameterType.String,
+            Visible = false,
+            AllowBlank = true,
+            Text = "Date From"
+        });
+
+        ReportParameters.Add(new ReportParameter
+        {
+            Name = "DateTo",
+            Type = ReportParameterType.String,
+            Visible = false,
+            AllowBlank = true,
+            Text = "Date To"
+        });
 
         // SQL data source — resolve from app configuration directly so nested Telerik items
         // do not depend on resolver-time placeholder patching.
@@ -80,6 +128,10 @@ public sealed class PipelineByStageTelerikReport : Report
             ProviderName = "System.Data.SqlClient"
         };
         sqlDs.Parameters.Add(new SqlDataSourceParameter("@TenantId", System.Data.DbType.String, "=Parameters.TenantId.Value"));
+        sqlDs.Parameters.Add(new SqlDataSourceParameter("@OwnerUserId", System.Data.DbType.String, "=Parameters.OwnerUserId.Value"));
+        sqlDs.Parameters.Add(new SqlDataSourceParameter("@Stage", System.Data.DbType.String, "=Parameters.Stage.Value"));
+        sqlDs.Parameters.Add(new SqlDataSourceParameter("@DateFrom", System.Data.DbType.String, "=Parameters.DateFrom.Value"));
+        sqlDs.Parameters.Add(new SqlDataSourceParameter("@DateTo", System.Data.DbType.String, "=Parameters.DateTo.Value"));
         // Keep the report itself unbound. The graph and table bind directly to the shared
         // SQL data source; otherwise the detail section repeats once per returned row.
 

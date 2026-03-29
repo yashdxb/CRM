@@ -1,10 +1,12 @@
 import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterLink } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { SelectModule } from 'primeng/select';
 import { TelerikReportingModule, TelerikReportViewerComponent } from '@progress/telerik-angular-report-viewer';
 import { BreadcrumbsComponent } from '../../../../core/breadcrumbs';
@@ -24,14 +26,16 @@ import { environment } from '../../../../../environments/environment';
 @Component({
   selector: 'app-reports-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonModule, DatePickerModule, SelectModule, BreadcrumbsComponent, TelerikReportingModule],
+  imports: [CommonModule, FormsModule, RouterLink, ButtonModule, DatePickerModule, MultiSelectModule, SelectModule, BreadcrumbsComponent, TelerikReportingModule],
   templateUrl: './reports.page.html',
   styleUrl: './reports.page.scss'
 })
 export class ReportsPage implements AfterViewInit {
+  private static readonly GENERIC_EMBEDDED_REPORT_SOURCE = 'CRM.Enterprise.Api.Reporting.EmbeddedLibraryTelerikReport, CRM.Enterprise.Api';
   private readonly data = inject(ReportsDataService);
   private readonly toast = inject(AppToastService);
   private readonly host = inject(ElementRef<HTMLElement>);
+  private readonly router = inject(Router);
   private readonly apiBaseUrl = environment.apiUrl.replace(/\/+$/, '');
 
   @ViewChild('telerikViewer') private telerikViewer?: TelerikReportViewerComponent;
@@ -53,24 +57,17 @@ export class ReportsPage implements AfterViewInit {
   protected readonly reportCatalog = signal<ReportLibraryItem[]>([]);
   protected readonly catalogLoading = signal(false);
   protected readonly selectedReport = signal<ReportLibraryItem | null>(null);
-  protected readonly reportServerToken = signal('');
   protected readonly viewerReady = signal(false);
   protected readonly canOpenReportDesigner = signal(
-    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.administrationManage)
+    tokenHasPermission(readTokenContext()?.payload ?? null, PERMISSION_KEYS.reportsDesign)
   );
-  protected readonly filterValues = signal<Record<string, string>>({});
+  protected readonly filterValues = signal<Record<string, string | string[]>>({});
   protected readonly dateFilterValues = signal<Record<string, Date | null>>({});
   protected readonly dynamicFilterOptions = signal<Record<string, ReportParameterOption[]>>({});
   protected readonly filterOptionsLoading = signal(false);
 
   protected get telerikAuthToken(): string {
-    const serviceUrl = this.telerikServiceUrl();
     const appToken = readTokenContext()?.token ?? '';
-
-    if (this.reportServerEnabled() && serviceUrl && !serviceUrl.startsWith(this.apiBaseUrl)) {
-      return this.reportServerToken();
-    }
-
     return appToken;
   }
 
@@ -144,9 +141,19 @@ export class ReportsPage implements AfterViewInit {
 
     this.viewerReady.set(false);
     this.telerikServiceUrl.set(this.resolveServiceUrl(config.reportServiceUrl));
-    const reportPath = selected.categoryName
-      ? `${selected.categoryName}/${selected.name}`
-      : selected.name;
+    const isEmbeddedMode = !config.reportServerUrl;
+    const reportPath = isEmbeddedMode
+      ? (selected.embeddedReportSource ?? '')
+      : (selected.categoryName
+          ? `${selected.categoryName}/${selected.name}`
+          : selected.name);
+
+    if (!reportPath) {
+      this.telerikEnabled.set(false);
+      this.telerikReportSource.set(null);
+      this.toast.show('error', 'This report is available as a template only right now. Open Report Workspace to design or publish it first.');
+      return;
+    }
 
     const reportSource: Record<string, unknown> = { report: reportPath };
     const parameters: Record<string, string> = {};
@@ -155,21 +162,47 @@ export class ReportsPage implements AfterViewInit {
     for (const filter of selected.filters) {
       if (filter.kind === 'dateRange') {
         if (filter.parameterName) {
-          parameters[filter.parameterName] = values[filter.parameterName] ?? '';
+          const fromValue = values[filter.parameterName];
+          parameters[filter.parameterName] = typeof fromValue === 'string' ? fromValue : '';
         }
         if (filter.parameterNameTo) {
-          parameters[filter.parameterNameTo] = values[filter.parameterNameTo] ?? '';
+          const toValue = values[filter.parameterNameTo];
+          parameters[filter.parameterNameTo] = typeof toValue === 'string' ? toValue : '';
         }
         continue;
       }
 
       if (filter.parameterName) {
-        parameters[filter.parameterName] = values[filter.parameterName] ?? '';
+        const value = values[filter.parameterName];
+        if (Array.isArray(value)) {
+          const normalized = value.filter((item) => typeof item === 'string' && item.trim().length > 0);
+          const allOptions = this.getFilterOptions(filter)
+            .map((option) => option.value)
+            .filter((option) => typeof option === 'string' && option.trim().length > 0);
+          const isAllSelected = normalized.length > 0 && allOptions.length > 0 && normalized.length === allOptions.length;
+          parameters[filter.parameterName] = isAllSelected ? '' : normalized.join(',');
+        } else {
+          parameters[filter.parameterName] = value ?? '';
+        }
       }
     }
 
     if (Object.keys(parameters).length > 0) {
       reportSource['parameters'] = parameters;
+    }
+
+    if (selected.embeddedReportSource === ReportsPage.GENERIC_EMBEDDED_REPORT_SOURCE) {
+      const headers = this.getEmbeddedHeaders(selected.id);
+      reportSource['parameters'] = {
+        ...(reportSource['parameters'] as Record<string, string> | undefined ?? {}),
+        ReportKey: selected.id,
+        ReportTitle: selected.name,
+        ReportDescription: selected.description,
+        Header1: headers[0],
+        Header2: headers[1],
+        Header3: headers[2],
+        Header4: headers[3]
+      };
     }
 
     this.telerikReportSource.set(reportSource);
@@ -185,17 +218,27 @@ export class ReportsPage implements AfterViewInit {
       return '';
     }
 
-    return this.filterValues()[parameterName] ?? '';
+    const value = this.filterValues()[parameterName];
+    return typeof value === 'string' ? value : '';
   }
 
-  protected setFilterValue(parameterName: string | null | undefined, value: string | null | undefined) {
+  protected getMultiFilterValue(parameterName?: string | null): string[] {
+    if (!parameterName) {
+      return [];
+    }
+
+    const value = this.filterValues()[parameterName];
+    return Array.isArray(value) ? value : [];
+  }
+
+  protected setFilterValue(parameterName: string | null | undefined, value: string | string[] | null | undefined) {
     if (!parameterName) {
       return;
     }
 
     this.filterValues.update((current) => ({
       ...current,
-      [parameterName]: value ?? ''
+      [parameterName]: Array.isArray(value) ? value : (value ?? '')
     }));
   }
 
@@ -237,8 +280,52 @@ export class ReportsPage implements AfterViewInit {
     return filter.key;
   }
 
+  protected canRunSelectedReport(): boolean {
+    const selected = this.selectedReport();
+    const config = this.reportServerConfig();
+    if (!selected || !config) {
+      return false;
+    }
+
+    return config.reportServerUrl
+      ? true
+      : !!selected.embeddedReportSource;
+  }
+
+  protected getSelectedReportRunLabel(): string {
+    return this.canRunSelectedReport() ? 'Run Report' : 'Open in Workspace';
+  }
+
+  protected runOrDesignSelectedReport(): void {
+    if (this.canRunSelectedReport()) {
+      this.applySelectedReportFilters();
+      return;
+    }
+
+    window.open('/app/report-designer', '_self');
+  }
+
+  protected editSelectedReportInWorkspace(): void {
+    const selected = this.selectedReport();
+    if (!selected) {
+      return;
+    }
+
+    const reportPath = selected.embeddedReportSource?.trim();
+    if (!reportPath) {
+      this.toast.show('error', 'This report does not have an editable designer definition yet.');
+      return;
+    }
+
+    void this.router.navigate(['/app/report-designer'], {
+      queryParams: {
+        report: reportPath
+      }
+    });
+  }
+
   private initializeFilterValues(report: ReportLibraryItem) {
-    const nextValues: Record<string, string> = {};
+    const nextValues: Record<string, string | string[]> = {};
     const nextDateValues: Record<string, Date | null> = {};
 
     for (const filter of report.filters) {
@@ -257,7 +344,9 @@ export class ReportsPage implements AfterViewInit {
       }
 
       if (filter.parameterName) {
-        nextValues[filter.parameterName] = filter.defaultValue ?? '';
+        nextValues[filter.parameterName] = filter.kind === 'owner'
+          ? []
+          : (filter.defaultValue ?? '');
       }
     }
 
@@ -326,19 +415,12 @@ export class ReportsPage implements AfterViewInit {
         this.reportServerConfig.set(config);
         this.reportServerEnabled.set(config.enabled);
         if (config.enabled) {
-          if (config.reportServerUrl) {
-            this.loadReportServerToken();
-          }
+          // Keep the viewer on the CRM API origin through the proxy/embedded service path.
+          // Do not fetch a separate Report Server token on page load unless we later reintroduce
+          // a direct external viewer integration.
           this.loadLibrary();
         }
       }
-    });
-  }
-
-  private loadReportServerToken() {
-    this.data.getReportServerToken().subscribe({
-      next: (token) => this.reportServerToken.set(token.accessToken),
-      error: () => this.toast.show('error', 'Failed to get Report Server token.')
     });
   }
 
@@ -351,7 +433,9 @@ export class ReportsPage implements AfterViewInit {
         this.catalogLoading.set(false);
       },
       error: () => {
+        this.reportCatalog.set([]);
         this.catalogLoading.set(false);
+        this.toast.show('error', 'Report library is unavailable right now. Check report connectivity or publish reports later.');
       }
     });
   }
@@ -399,6 +483,7 @@ export class ReportsPage implements AfterViewInit {
   private normalizeReportLibraryItem(item: ReportLibraryItem): ReportLibraryItem {
     return {
       ...item,
+      embeddedReportSource: item.embeddedReportSource ?? null,
       filters: item.filters.map((filter) => ({
         ...filter,
         options: this.normalizeOptions(filter.options ?? [])
@@ -423,5 +508,61 @@ export class ReportsPage implements AfterViewInit {
     }
 
     return normalized;
+  }
+
+  private getEmbeddedHeaders(reportId: string): [string, string, string, string] {
+    switch (reportId) {
+      case 'open-opportunities-by-owner':
+        return ['Owner', 'Stage', 'Open Deals', 'Pipeline'];
+      case 'pending-deal-approval':
+        return ['Deal', 'Workflow', 'Status', 'Due'];
+      case 'lead-conversion-summary':
+        return ['Lead Source', 'Created', 'Qualified', 'Converted'];
+      case 'sales-activities-by-owner':
+        return ['Owner', 'Activities', 'Completed', 'Overdue'];
+      case 'forecast-summary':
+      case 'forecast-distribution':
+      case 'revenue-forecast':
+        return ['Forecast Bucket', 'Deals', 'Open Value', 'Weighted'];
+      case 'pipeline-stage-mix':
+        return ['Stage', 'Deals', 'Value', 'Share'];
+      case 'revenue-and-conversion-trend':
+        return ['Period', 'Revenue', 'Leads', 'Converted'];
+      case 'win-loss-analysis':
+        return ['Outcome', 'Deals', 'Value', 'Avg Deal'];
+      case 'sales-cycle-duration':
+        return ['Stage', 'Deals', 'Avg Age', 'Avg Value'];
+      case 'top-deals':
+        return ['Deal', 'Account', 'Stage', 'Amount'];
+      case 'lead-conversion-funnel':
+        return ['Funnel Step', 'Count', '', ''];
+      case 'lead-source-performance':
+        return ['Source', 'Leads', 'Converted', 'Conv Rate'];
+      case 'lead-aging':
+        return ['Age Bucket', 'Lead Count', '', ''];
+      case 'lead-score-distribution':
+        return ['Score Band', 'Leads', 'Avg Score', 'Avg Confidence'];
+      case 'lead-quality-vs-conversation-signal':
+        return ['Lead', 'Owner', 'Qualification', 'Conversation'];
+      case 'cqvs-readiness-heatmap':
+        return ['Factor', 'Captured', 'Verified', 'Missing'];
+      case 'manager-pipeline-health':
+      case 'pipeline-health-scorecard':
+        return ['Stage', 'Open Deals', 'Stale', 'Weighted'];
+      case 'activity-summary':
+        return ['Activity Type', 'Count', 'Open', 'Completed'];
+      case 'team-performance':
+        return ['Owner', 'Open Deals', 'Pipeline', 'Completed Acts'];
+      case 'customer-growth':
+        return ['Period', 'New Customers', 'Revenue', 'Industry'];
+      case 'customer-revenue-concentration':
+        return ['Customer', 'Annual Revenue', 'Open Opps', 'Pipeline'];
+      case 'campaign-roi':
+        return ['Campaign', 'Members', 'Actual', 'Planned'];
+      case 'email-engagement':
+        return ['Template / Subject', 'Sent', 'Opened', 'Clicked'];
+      default:
+        return ['Column 1', 'Column 2', 'Column 3', 'Column 4'];
+    }
   }
 }

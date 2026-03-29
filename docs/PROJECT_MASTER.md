@@ -784,13 +784,13 @@ These workflows define how non‑rep roles operate in the same CRM, with clear o
   - `reportserver-admin-username`
   - `reportserver-admin-password`
 - CRM application integration rules:
-  - when `Reporting__ReportServerUrl` is set, the application must use Report Server mode instead of the embedded Telerik REST service
+  - report viewing may use Report Server mode when `Reporting__ReportServerUrl` is set, but the in-app `Report Workspace` should currently prefer the built-in Telerik Web Report Designer for tenant/provider report authoring
   - the frontend viewer/service URL must stay on the CRM API origin via `/api/report-server/proxy/api/reports`
   - do not point browser code directly to the external Report Server `/api/reports` endpoint
   - `reports.northedgesystem.com` now uses a trusted Let's Encrypt certificate, so `Reporting__IgnoreInvalidTlsCertificate` should stay `false`
   - published Report Server items should be opened as `CategoryName/ReportName`, not just bare report name, to avoid parameter/load failures
   - NSG must allow inbound `443` from the CRM API App Service outbound IP set, or the proxy path will fail in Azure even if local development works
-  - Report Designer access is admin-only by default and should remain gated by `Permissions.Administration.Manage` unless there is an explicit workspace-level decision to widen it
+  - built-in report designer access should be gated by the dedicated `Permissions.Reports.Design` permission, with workspace override support via `ReportDesignerRequiredPermission`
 
 ---
 
