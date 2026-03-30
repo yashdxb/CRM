@@ -786,14 +786,20 @@ MoSCoW: Could
 
 14) Email integration (send + sync + templates)
 MoSCoW: Could
-- Status: NOT STARTED
+- Status: PARTIAL
 - Evidence:
-  - UI note: Not implemented yet — no email send/sync or template UI in codebase.
-  - API note: No email integration endpoints found.
+  - UI note: `My Mailbox` routes and UI exist under `client/src/app/crm/features/emails/**`.
+  - API note: mailbox endpoints exist in `server/src/CRM.Enterprise.Api/Controllers/MailboxController.cs`.
+  - OAuth mailbox connection endpoints exist in `server/src/CRM.Enterprise.Api/Controllers/EmailConnectionsController.cs`.
+  - Template CRUD UI/API exist under `client/src/app/crm/features/emails/pages/email-templates.page.*` and `/api/emails/templates`.
 - Acceptance criteria:
   - Email templates CRUD.
   - Send email from CRM and log to timeline.
   - Inbox sync for replies.
+- Remaining delivery work:
+  - finish production hardening across Microsoft 365 and Gmail
+  - normalize frontend away from mixed mock/proxy/local-cache paths
+  - confirm end-to-end CRM timeline linkage and inbox reply sync behavior
 
 15) CSV import/export
 MoSCoW: Should

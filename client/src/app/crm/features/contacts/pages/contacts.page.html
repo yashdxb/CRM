@@ -339,7 +339,7 @@
                 <td class="contact-cell">
                   <div class="contact-cell__main">
                     <div class="name__title">{{ row.name }}</div>
-                    <small *ngIf="row.email"><a class="contact-link" href="mailto:{{ row.email }}" (click)="$event.stopPropagation()"><i class="pi pi-envelope"></i> {{ row.email }}</a></small>
+                    <small *ngIf="row.email"><a class="contact-link" href="" (click)="composeToContact(row, $event)"><i class="pi pi-envelope"></i> {{ row.email }}</a></small>
                     <small *ngIf="!row.email" class="text-muted">No email</small>
                   </div>
                   <div class="contact-cell__meta">

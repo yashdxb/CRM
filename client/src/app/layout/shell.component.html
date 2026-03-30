@@ -52,6 +52,18 @@
 
         <app-assistant-panel />
 
+        <app-email-compose-dialog
+          [visible]="mailCompose.visible()"
+          [defaultToEmail]="mailCompose.context()?.toEmail ?? ''"
+          [defaultToName]="mailCompose.context()?.toName ?? ''"
+          [defaultSubject]="mailCompose.context()?.subject ?? ''"
+          [defaultRelatedEntityType]="mailCompose.context()?.relatedEntityType"
+          [defaultRelatedEntityId]="mailCompose.context()?.relatedEntityId"
+          [showRelatedEntity]="mailCompose.context()?.showRelatedEntity ?? true"
+          (visibleChange)="!$event ? mailCompose.close() : null"
+          (sent)="mailCompose.close()"
+        />
+
         <footer class="app-footer">
           <div class="footer-left">
             <span class="footer-brand">CRM Enterprise</span>

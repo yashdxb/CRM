@@ -1,277 +1,468 @@
-<div class="workflow-page page-container">
-  <app-breadcrumbs></app-breadcrumbs>
-
-  <header class="workflow-header">
-    <div>
-      <h1 class="hero-title">{{ workflowTitle() }}</h1>
-      <p>{{ workflowDescription() }}</p>
-      <small *ngIf="updatedAtUtc()">Last updated: {{ updatedAtUtc() }}</small>
+<div class="workflow-mock-page" [formGroup]="form">
+  <header class="page-header">
+    <div class="page-header__crumbs">
+      <app-breadcrumbs></app-breadcrumbs>
     </div>
-    <div class="header-actions">
-      <button pButton type="button" class="btn btn-ghost" (click)="load()" [disabled]="loading()">Reload</button>
-      <button pButton type="button" class="btn btn-ghost" (click)="fitView()" [disabled]="loading()">Fit View</button>
-      <button pButton type="button" class="btn btn-ghost" (click)="autoArrange()" [disabled]="loading()">Auto Arrange</button>
-      <button pButton type="button" class="btn btn-secondary" (click)="validate()" [disabled]="validating()">Validate</button>
-      <button pButton type="button" class="btn btn-secondary" (click)="simulate()" [disabled]="loading()">Simulate</button>
-      <button pButton type="button" class="btn btn-ghost" (click)="saveDraft()" [disabled]="saving()">Save Draft</button>
-      <button pButton type="button" class="btn btn-ghost" (click)="revertDraft()" [disabled]="saving() || !publishedAtUtc()">Revert Draft</button>
-      <button pButton type="button" class="btn btn-ghost" (click)="unpublish()" [disabled]="saving() || workflow().scope.status !== 'published'">Unpublish</button>
-      <button pButton type="button" class="btn btn-primary" (click)="publish()" [disabled]="saving()">Publish</button>
+
+    <div class="page-header__main">
+      <div class="page-header__content">
+        <div class="page-header__eyebrow">
+          <span class="eyebrow-label">Automation Admin</span>
+          <p-tag [severity]="statusSeverity()" [value]="workflowStatus()"></p-tag>
+        </div>
+        <h1>Approval Workflow Builder</h1>
+        <p>
+          Simplified admin view for approval workflows. Show the process name, requester, trigger condition, approval
+          path, and active state first. Everything else is secondary.
+        </p>
+      </div>
+
+      <div class="page-header__actions">
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          label="Advanced Builder"
+          icon="pi pi-table"
+          routerLink="/app/workflows/designer/advanced"
+        ></button>
+        <button
+          pButton
+          type="button"
+          severity="secondary"
+          [outlined]="true"
+          label="Legacy Canvas"
+          icon="pi pi-history"
+          routerLink="/app/workflows/designer/legacy"
+        ></button>
+        <button pButton type="button" severity="secondary" [outlined]="true" label="Cancel" icon="pi pi-times" (click)="cancelChanges()"></button>
+        <button pButton type="button" severity="secondary" label="Save Draft" icon="pi pi-save" (click)="saveDraft()"></button>
+        <button pButton type="button" label="Publish" icon="pi pi-send" [disabled]="!canPublish()" (click)="publish()"></button>
+      </div>
     </div>
   </header>
 
-  <section class="workflow-confidence-strip" *ngIf="!loading()">
-    <article class="confidence-step">
-      <span class="confidence-step__index">1</span>
-      <div>
-        <strong>Set scope</strong>
-        <p>Choose the trigger, stage, and pipeline first so the automation has a clear operating boundary.</p>
-      </div>
-    </article>
-    <article class="confidence-step">
-      <span class="confidence-step__index">2</span>
-      <div>
-        <strong>Build the path</strong>
-        <p>Add approval and action nodes, then click nodes in the canvas to focus the exact behavior you want to configure.</p>
-      </div>
-    </article>
-    <article class="confidence-step confidence-step--accent">
-      <span class="confidence-step__index">3</span>
-      <div>
-        <strong>Validate before publish</strong>
-        <p>Use validation as the release gate. Branch labels and node rules should be clean before a workflow goes live.</p>
-      </div>
-    </article>
-  </section>
-
-  <section class="scope-panel" *ngIf="!loading()">
-    <div class="panel-heading">
-      <div>
-        <h2 class="section-title">Workflow Scope</h2>
-        <p>Define where this automation is allowed to run and what business event should trigger it.</p>
-      </div>
-      <div class="scope-state-pill">
-        <span>{{ workflow().scope.status | titlecase }}</span>
-        <strong>v{{ workflow().scope.version }}</strong>
-      </div>
-    </div>
-    <div class="template-bar">
-      <label>
-        <span>Template</span>
-        <p-select
-          appendTo="body"
-          [options]="templateOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="selectedTemplate()"
-          (ngModelChange)="applyTemplate($event)"
-          styleClass="w-full"
-        ></p-select>
-      </label>
-    </div>
-    <div class="scope-grid">
-      <label>
-        <span>Name</span>
-        <input type="text" [value]="workflow().scope.name" (input)="patchScope('name', $any($event.target).value)" />
-      </label>
-      <label>
-        <span>Purpose</span>
-        <input type="text" [value]="workflow().scope.purpose" (input)="patchScope('purpose', $any($event.target).value)" />
-      </label>
-      <label>
-        <span>Module</span>
-        <p-select
-          appendTo="body"
-          [options]="moduleOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="workflow().scope.module"
-          (ngModelChange)="patchScope('module', $event)"
-          styleClass="w-full"
-        ></p-select>
-      </label>
-      <label>
-        <span>Pipeline</span>
-        <p-select
-          appendTo="body"
-          [options]="pipelineOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="workflow().scope.pipeline"
-          (ngModelChange)="patchScope('pipeline', $event)"
-          styleClass="w-full"
-        ></p-select>
-      </label>
-      <label>
-        <span>Stage</span>
-        <p-select
-          appendTo="body"
-          [options]="stageOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="workflow().scope.stage"
-          (ngModelChange)="patchScope('stage', $event)"
-          styleClass="w-full"
-        ></p-select>
-      </label>
-      <label>
-        <span>Trigger</span>
-        <p-select
-          appendTo="body"
-          [options]="triggerOptions()"
-          optionLabel="label"
-          optionValue="value"
-          [ngModel]="workflow().scope.trigger"
-          (ngModelChange)="patchScope('trigger', $event)"
-          styleClass="w-full"
-        ></p-select>
-      </label>
-    </div>
-    <div class="scope-meta">
-      <span>Status: <strong>{{ workflow().scope.status }}</strong></span>
-      <span>Version: <strong>v{{ workflow().scope.version }}</strong></span>
-      <span *ngIf="publishedAtUtc()">Published: <strong>{{ publishedAtUtc() }}</strong></span>
-      <span *ngIf="publishedBy()">Published by: <strong>{{ publishedBy() }}</strong></span>
-      <span *ngIf="lastValidationAtUtc()">Last validation: {{ lastValidationAtUtc() }}</span>
-    </div>
-  </section>
-
-  <section class="validation-panel" *ngIf="lastValidationErrors().length > 0">
-    <h3>Validation Issues</h3>
-    <ul>
-      <li *ngFor="let error of lastValidationErrors()">{{ error }}</li>
-    </ul>
-  </section>
-
-  <section class="node-summary" *ngIf="!loading()">
-    <span>Approvals: {{ nodeCountByType('approval') }}</span>
-    <span>Conditions: {{ nodeCountByType('condition') }}</span>
-    <span>Notifications: {{ nodeCountByType('notification') }}</span>
-    <span>Emails: {{ nodeCountByType('email') }}</span>
-    <span>Activities: {{ nodeCountByType('activity') }}</span>
-  </section>
-
-  <div class="workflow-layout" *ngIf="!loading()">
-    <app-node-palette
-      (addApprovalStep)="addApprovalStep()"
-      (addNode)="addNodeByType($event)"
-    ></app-node-palette>
-
-    <section class="canvas-shell">
-      <div class="canvas-shell__header">
+  <p-card styleClass="registry-card">
+    <ng-template pTemplate="header">
+      <div class="card-header">
         <div>
-          <h3>Execution canvas</h3>
-          <p>Build the real path. Click a node to edit it. Labeled branches stay visible on the canvas.</p>
+          <span class="card-kicker">Workflow Registry</span>
+          <h2>Workflows should feel like managed records first, not diagrams first.</h2>
         </div>
-        <div class="canvas-shell__meta">
-          <span>{{ workflow().nodes.length }} nodes</span>
-          <span>{{ workflow().connections.length }} connections</span>
+        <div class="card-header__meta">
+          <span class="save-note">Last saved {{ lastSavedLabel() }}</span>
         </div>
       </div>
-      <app-workflow-canvas
-        [workflow]="workflow()"
-        [selectedNodeId]="selectedNodeId()"
-        (workflowChange)="onCanvasChange($event)"
-        (selectionChange)="selectNode($event)"
-      ></app-workflow-canvas>
+    </ng-template>
+
+    <p-message
+      *ngIf="metadataLoading()"
+      severity="info"
+      text="Loading live modules, triggers, approver sources, and workflow metadata."
+    ></p-message>
+
+    <p-table
+      [value]="registryRows()"
+      dataKey="id"
+      styleClass="workflow-table workflow-table--registry p-datatable-sm"
+      [rowHover]="true"
+      [tableStyle]="{ 'min-width': '100%' }"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th>Workflow</th>
+          <th>Process / Function</th>
+          <th>Requester</th>
+          <th>Entry Condition</th>
+          <th>Final Approver</th>
+          <th>Trigger</th>
+          <th>Active</th>
+          <th>Version</th>
+          <th>SLA</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+        <tr [class.is-selected]="selectedWorkflowId() === row.id" (click)="selectWorkflow(row)">
+          <td>
+            <div class="primary-cell">
+              <strong>{{ row.name }}</strong>
+              <span>{{ row.moduleLabel }} approval workflow</span>
+            </div>
+          </td>
+          <td>{{ row.processName }}</td>
+          <td>{{ row.requesterLabel }}</td>
+          <td>{{ row.conditionSummary }}</td>
+          <td>{{ row.finalApprover }}</td>
+          <td>{{ row.trigger }}</td>
+          <td><p-tag [severity]="statusTagSeverity(row.status)" [value]="row.status === 'Active' ? 'Yes' : 'No'"></p-tag></td>
+          <td>{{ row.version }}</td>
+          <td>{{ row.slaSummary }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <div class="builder-layout">
+    <section class="builder-main">
+      <p-card styleClass="builder-card">
+        <ng-template pTemplate="header">
+          <div class="card-header">
+            <div>
+              <span class="card-kicker">Workflow Essentials</span>
+              <h2>Start with the business facts: process, requester, trigger, and active state.</h2>
+            </div>
+            <div class="card-header__meta">
+              <p-tag [severity]="form.controls.isActive.value ? 'success' : 'info'" [value]="form.controls.isActive.value ? 'Enabled' : 'Disabled'"></p-tag>
+            </div>
+          </div>
+        </ng-template>
+
+        <div class="detail-grid">
+          <div class="field">
+            <label for="workflow-name">Workflow Name</label>
+            <input id="workflow-name" pInputText type="text" formControlName="name" />
+          </div>
+
+          <div class="field">
+            <label for="workflow-process">Process / Function Name</label>
+            <input id="workflow-process" pInputText type="text" formControlName="processName" />
+          </div>
+
+          <div class="field">
+            <label for="workflow-requester">Requester</label>
+            <input id="workflow-requester" pInputText type="text" formControlName="requesterLabel" />
+          </div>
+
+          <div class="field">
+            <label for="workflow-module">Module</label>
+            <p-select
+              id="workflow-module"
+              appendTo="body"
+              [options]="moduleOptions()"
+              optionLabel="label"
+              optionValue="value"
+              formControlName="module"
+              placeholder="Select module"
+            ></p-select>
+          </div>
+
+          <div class="field">
+            <label for="workflow-trigger">Trigger</label>
+            <p-select
+              id="workflow-trigger"
+              appendTo="body"
+              [options]="triggerOptions()"
+              optionLabel="label"
+              optionValue="value"
+              formControlName="triggerType"
+              placeholder="Select trigger"
+            ></p-select>
+          </div>
+
+          <div class="field field--compact">
+            <label for="workflow-version">Version</label>
+            <input id="workflow-version" pInputText type="text" formControlName="version" />
+          </div>
+
+          <div class="field field--toggle">
+            <label for="workflow-active">Active</label>
+            <div class="toggle-shell">
+              <p-toggleswitch inputId="workflow-active" formControlName="isActive"></p-toggleswitch>
+              <span>{{ form.controls.isActive.value ? 'Enabled' : 'Disabled' }}</span>
+            </div>
+          </div>
+
+          <div class="field field--full">
+            <label for="workflow-description">Description</label>
+            <textarea id="workflow-description" pTextarea rows="3" formControlName="description"></textarea>
+          </div>
+        </div>
+      </p-card>
+
+      <p-card styleClass="builder-card">
+        <ng-template pTemplate="header">
+          <div class="card-header">
+            <div>
+              <span class="card-kicker">Entry Condition</span>
+              <h2>{{ conditionSummary() }}</h2>
+            </div>
+            <div class="card-header__actions">
+              <button pButton type="button" severity="secondary" size="small" icon="pi pi-plus" label="Add Condition" (click)="showMockAction('Add condition')"></button>
+              <button pButton type="button" severity="secondary" [outlined]="true" size="small" icon="pi pi-layer-group" label="Add Group" (click)="showMockAction('Add group')"></button>
+            </div>
+          </div>
+        </ng-template>
+
+        <p-table
+          [value]="conditionRows()"
+          styleClass="workflow-table p-datatable-sm"
+          [tableStyle]="{ 'min-width': '100%' }"
+          [rowHover]="true"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Order</th>
+              <th>Group</th>
+              <th>Logic</th>
+              <th>Field</th>
+              <th>Operator</th>
+              <th>Value</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr>
+              <td>{{ row.order }}</td>
+              <td>
+                <div class="primary-cell">
+                  <strong>{{ row.groupLabel }}</strong>
+                  <span>Condition set</span>
+                </div>
+              </td>
+              <td><p-chip [label]="row.groupLogic"></p-chip></td>
+              <td>{{ row.field }}</td>
+              <td>{{ row.operator }}</td>
+              <td>{{ row.value }}</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-card>
+
+      <p-card styleClass="builder-card">
+        <ng-template pTemplate="header">
+          <div class="card-header">
+            <div>
+              <span class="card-kicker">Approval Path</span>
+              <h2>Who approves, in what order, and what happens if they do not respond.</h2>
+            </div>
+            <div class="card-header__actions">
+              <button pButton type="button" severity="secondary" size="small" icon="pi pi-plus" label="Add Step" (click)="showMockAction('Add step')"></button>
+              <button pButton type="button" severity="secondary" [outlined]="true" size="small" icon="pi pi-sitemap" label="Add Parallel Group" (click)="showMockAction('Add parallel group')"></button>
+            </div>
+          </div>
+        </ng-template>
+
+        <p-table
+          [value]="approvalRows()"
+          [tableStyle]="{ 'min-width': '100%' }"
+          styleClass="workflow-table workflow-table--steps p-datatable-sm"
+          [rowHover]="true"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Path</th>
+              <th>Step / Group</th>
+              <th>Type</th>
+              <th>Approver</th>
+              <th>SLA</th>
+              <th>Completion</th>
+              <th>Escalation</th>
+              <th>Actions</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr [class.parallel-group-row]="row.rowKind === 'parallel-group'" [class.parallel-approver-row]="row.rowKind === 'parallel-approver'">
+              <td class="path-cell">{{ row.path }}</td>
+              <td>
+                <div class="primary-cell">
+                  <strong>{{ row.title }}</strong>
+                  <span>{{ row.approverType }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="type-stack">
+                  <p-tag [severity]="row.typeSeverity" [value]="row.typeLabel"></p-tag>
+                  <p-chip [label]="row.requirementLabel"></p-chip>
+                </div>
+              </td>
+              <td>
+                <div class="primary-cell">
+                  <strong>{{ row.approverSelector }}</strong>
+                  <span *ngIf="row.rowKind === 'parallel-group'">Completion gate</span>
+                  <span *ngIf="row.rowKind !== 'parallel-group'">Assigned approver</span>
+                </div>
+              </td>
+              <td>{{ row.slaHours }}</td>
+              <td>{{ row.completion }}</td>
+              <td>{{ row.escalation }}</td>
+              <td>
+                <div class="row-actions">
+                  <button pButton type="button" text="true" icon="pi pi-pencil" (click)="showMockAction('Edit row')"></button>
+                  <button pButton type="button" text="true" icon="pi pi-copy" (click)="showMockAction('Duplicate row')"></button>
+                  <button pButton type="button" text="true" icon="pi pi-trash" (click)="showMockAction('Delete row')"></button>
+                </div>
+              </td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-card>
+
+      <p-card styleClass="builder-card">
+        <ng-template pTemplate="header">
+          <div class="card-header">
+            <div>
+              <span class="card-kicker">Outcomes</span>
+              <h2>Define what the system does after approve, reject, or timeout.</h2>
+            </div>
+          </div>
+        </ng-template>
+
+        <p-table
+          [value]="outcomeRows()"
+          styleClass="workflow-table p-datatable-sm"
+          [tableStyle]="{ 'min-width': '100%' }"
+          [rowHover]="true"
+        >
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Event</th>
+              <th>Action</th>
+              <th>Configuration</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-row>
+            <tr>
+              <td><p-tag severity="info" [value]="row.event"></p-tag></td>
+              <td>{{ row.action }}</td>
+              <td>{{ row.config }}</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-card>
     </section>
 
-    <app-workflow-properties-panel
-      [steps]="workflow().steps"
-      [nodes]="workflow().nodes"
-      [connections]="workflow().connections"
-      [selectedNodeId]="selectedNodeId()"
-      [nodeSelectionOptions]="nodeSelectionOptions()"
-      [roleOptions]="roleOptions()"
-      [securityLevelOptions]="securityLevelOptions()"
-      (selectionChange)="selectNode($event)"
-      (removeStep)="removeStep($event)"
-      (patchStep)="patchStep($event)"
-      (patchNode)="patchNode($event)"
-      (patchNodeConfig)="patchNodeConfig($event.nodeId, $event.patch)"
-      (patchConnection)="patchConnection($event.index, $event.patch)"
-      (removeNode)="removeNode($event)"
-    ></app-workflow-properties-panel>
+    <aside class="builder-sidebar">
+      <p-card styleClass="sidebar-card">
+        <ng-template pTemplate="header">
+          <div class="sidebar-header">
+            <span class="card-kicker">Workflow Summary</span>
+            <h3>Key facts</h3>
+          </div>
+        </ng-template>
+
+        <div class="summary-grid">
+          <div class="summary-stat">
+            <span class="summary-stat__label">Process</span>
+            <strong>{{ currentDefinition().processName }}</strong>
+          </div>
+          <div class="summary-stat">
+            <span class="summary-stat__label">Requester</span>
+            <strong>{{ currentDefinition().requesterLabel }}</strong>
+          </div>
+          <div class="summary-stat">
+            <span class="summary-stat__label">Module</span>
+            <strong>{{ moduleLabel() }}</strong>
+          </div>
+          <div class="summary-stat">
+            <span class="summary-stat__label">Trigger</span>
+            <strong>{{ summary().trigger }}</strong>
+          </div>
+          <div class="summary-stat">
+            <span class="summary-stat__label">Total Steps</span>
+            <strong>{{ summary().totalSteps }}</strong>
+          </div>
+          <div class="summary-stat">
+            <span class="summary-stat__label">Parallel Groups</span>
+            <strong>{{ summary().parallelGroups }}</strong>
+          </div>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-stat__label">Condition</span>
+          <p>{{ conditionSummary() }}</p>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-stat__label">Estimated Path</span>
+          <p>{{ summary().estimatedApprovalPath }}</p>
+        </div>
+
+        <div class="summary-block">
+          <span class="summary-stat__label">SLA Summary</span>
+          <p>{{ summary().slaSummary }}</p>
+        </div>
+      </p-card>
+
+      <p-card styleClass="sidebar-card">
+        <ng-template pTemplate="header">
+          <div class="sidebar-header">
+            <span class="card-kicker">Live Logic Preview</span>
+            <h3>Plain-language explanation</h3>
+          </div>
+        </ng-template>
+
+        <div class="logic-preview">
+          {{ logicPreview() }}
+        </div>
+      </p-card>
+
+      <p-card styleClass="sidebar-card">
+        <ng-template pTemplate="header">
+          <div class="sidebar-header">
+            <span class="card-kicker">Validation</span>
+            <h3>Readiness checks</h3>
+          </div>
+        </ng-template>
+
+        <p-message
+          [severity]="validationSeverity()"
+          [text]="
+            validationSeverity() === 'success'
+              ? 'Workflow is ready to publish.'
+              : validationSeverity() === 'warn'
+                ? 'Workflow is publishable with warnings.'
+                : 'Workflow has blocking validation issues.'
+          "
+        ></p-message>
+
+        <div class="validation-list">
+          <div class="validation-item" *ngFor="let item of validationItems()">
+            <p-tag
+              [severity]="item.severity === 'error' ? 'danger' : item.severity === 'warn' ? 'warn' : 'success'"
+              [value]="item.severity === 'error' ? 'Error' : item.severity === 'warn' ? 'Warning' : 'OK'"
+            ></p-tag>
+            <div>
+              <strong>{{ item.title }}</strong>
+              <p>{{ item.detail }}</p>
+            </div>
+          </div>
+        </div>
+      </p-card>
+
+      <p-card styleClass="sidebar-card" formGroupName="testScenario">
+        <ng-template pTemplate="header">
+          <div class="sidebar-header">
+            <span class="card-kicker">Test Scenario</span>
+            <h3>Would this workflow trigger?</h3>
+          </div>
+        </ng-template>
+
+        <div class="scenario-grid">
+          <div class="field">
+            <label for="scenario-discount">Discount %</label>
+            <p-inputNumber inputId="scenario-discount" formControlName="discountPercent" [min]="0" [max]="100"></p-inputNumber>
+          </div>
+          <div class="field">
+            <label for="scenario-value">Deal Value</label>
+            <p-inputNumber inputId="scenario-value" formControlName="dealValue" mode="decimal" [min]="0"></p-inputNumber>
+          </div>
+          <div class="field">
+            <label for="scenario-region">Region</label>
+            <input id="scenario-region" pInputText type="text" formControlName="region" />
+          </div>
+          <div class="field">
+            <label for="scenario-type">Deal Type</label>
+            <input id="scenario-type" pInputText type="text" formControlName="dealType" />
+          </div>
+        </div>
+
+        <p-divider></p-divider>
+
+        <div class="scenario-result">
+          <p-tag [severity]="scenarioResult().matches ? 'success' : 'warn'" [value]="scenarioResult().matches ? 'Would trigger' : 'Would not trigger'"></p-tag>
+          <p>{{ scenarioResult().detail }}</p>
+        </div>
+      </p-card>
+    </aside>
   </div>
-
-  <p-dialog
-    header="Workflow Simulation"
-    [(visible)]="showSimulation"
-    [modal]="true"
-    [closable]="true"
-    [style]="{ width: '560px', maxHeight: '80vh' }"
-    appendTo="body"
-  >
-    <div class="simulation-trace">
-      <p class="simulation-trace__intro">Dry-run trace of the current workflow from start to end. No actions are executed.</p>
-      <ol class="simulation-trace__list">
-        <li *ngFor="let step of simulationTrace()" class="simulation-trace__step" [attr.data-type]="step.nodeType">
-          <span class="simulation-trace__badge">{{ step.nodeType }}</span>
-          <strong>{{ step.label }}</strong>
-          <p>{{ step.description }}</p>
-        </li>
-      </ol>
-      <p *ngIf="simulationTrace().length === 0" class="simulation-trace__empty">No nodes found in this workflow.</p>
-    </div>
-    <ng-template pTemplate="footer">
-      <button pButton type="button" class="btn btn-ghost" (click)="showSimulation.set(false)">Close</button>
-    </ng-template>
-  </p-dialog>
-
-  <p-dialog
-    header="Publish Readiness Summary"
-    [(visible)]="showPublishSummary"
-    [modal]="true"
-    [closable]="true"
-    [style]="{ width: '520px' }"
-    appendTo="body"
-  >
-    <ng-container *ngIf="publishReadiness() as r">
-      <div class="publish-summary">
-        <div class="publish-summary__scope">
-          <h4>Scope</h4>
-          <div class="publish-summary__grid">
-            <span class="publish-summary__label">Name</span>
-            <span>{{ r.scopeName }}</span>
-            <span class="publish-summary__label">Stage</span>
-            <span>{{ r.scopeStage }}</span>
-            <span class="publish-summary__label">Trigger</span>
-            <span>{{ r.scopeTrigger }}</span>
-            <span class="publish-summary__label">Pipeline</span>
-            <span>{{ r.scopePipeline }}</span>
-            <span class="publish-summary__label">Version</span>
-            <span>v{{ r.version }} ({{ r.status }})</span>
-          </div>
-        </div>
-
-        <div class="publish-summary__counts">
-          <h4>Node Summary</h4>
-          <div class="publish-summary__chips">
-            <span class="publish-summary__chip" *ngFor="let entry of r.nodeCounts | keyvalue">
-              {{ entry.key }}: {{ entry.value }}
-            </span>
-          </div>
-          <p class="publish-summary__meta">
-            {{ r.totalNodes }} nodes · {{ r.totalConnections }} connections · {{ r.totalSteps }} approval steps
-          </p>
-        </div>
-
-        <div class="publish-summary__warnings" *ngIf="r.warnings.length > 0">
-          <h4><i class="pi pi-exclamation-triangle"></i> Warnings</h4>
-          <ul>
-            <li *ngFor="let w of r.warnings">{{ w }}</li>
-          </ul>
-        </div>
-
-        <div class="publish-summary__ok" *ngIf="r.warnings.length === 0">
-          <i class="pi pi-check-circle"></i>
-          <span>No issues detected. Ready to publish.</span>
-        </div>
-      </div>
-    </ng-container>
-    <ng-template pTemplate="footer">
-      <button pButton type="button" class="btn btn-ghost" (click)="showPublishSummary.set(false)">Cancel</button>
-      <button pButton type="button" class="btn btn-primary" (click)="confirmPublish()" [disabled]="saving()">Publish</button>
-    </ng-template>
-  </p-dialog>
 </div>

@@ -98,6 +98,7 @@ public record MailboxSearchResponse(
 public record MailMessageSummaryDto(
     Guid Id,
     Guid ConnectionId,
+    string? ConversationId,
     string FromEmail,
     string? FromName,
     string Subject,

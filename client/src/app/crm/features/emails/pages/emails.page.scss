@@ -979,6 +979,15 @@
     color: $gray-600;
     font-style: italic;
   }
+
+  &.email-body--plain {
+    white-space: pre-wrap;
+    font-family: $font-family-sans;
+  }
+
+  &.email-body--empty {
+    color: $gray-500;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

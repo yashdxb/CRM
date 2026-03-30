@@ -65,6 +65,7 @@ import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { EmailListItem } from '../../emails/models/email.model';
 import { FormDraftDetail, FormDraftSummary } from '../../../../core/drafts/form-draft.model';
 import { FormDraftService } from '../../../../core/drafts/form-draft.service';
+import { MailComposeService } from '../../../../core/email/mail-compose.service';
 
 /** Progression statuses shown in the stepper (left → right) */
 const LEAD_PROGRESSION_STATUSES: readonly LeadStatus[] = ['New', 'Contacted', 'Qualified'] as const;
@@ -413,6 +414,7 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   private readonly activityData = inject(ActivityDataService);
   private readonly authService = inject(AuthService);
   private readonly formDraftService = inject(FormDraftService);
+  private readonly mailCompose = inject(MailComposeService);
   private readonly route = inject(ActivatedRoute);
   protected readonly router = inject(Router);
   private readonly crmEvents = inject(CrmEventsService);
@@ -482,6 +484,22 @@ export class LeadFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       this.crmEvents.setRecordEditingState('lead', this.editingId, false);
       this.crmEvents.leaveRecordPresence('lead', this.editingId);
     }
+  }
+
+  protected composeToCurrentLead(event?: Event): void {
+    event?.preventDefault();
+    if (!this.isEditMode() || !this.form.email || !this.editingId) {
+      return;
+    }
+
+    const displayName = `${this.form.firstName ?? ''} ${this.form.lastName ?? ''}`.trim();
+
+    this.mailCompose.open({
+      toEmail: this.form.email,
+      toName: displayName || undefined,
+      relatedEntityType: 'Lead',
+      relatedEntityId: this.editingId
+    });
   }
 
   @HostListener('input')

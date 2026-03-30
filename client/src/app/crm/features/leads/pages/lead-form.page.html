@@ -696,6 +696,9 @@
                       class="w-full"
                     />
                   </p-inputgroup>
+                  <a *ngIf="isEditMode() && form.email" class="field-link" href="" (click)="composeToCurrentLead($event)">
+                    <i class="pi pi-external-link"></i> Send email
+                  </a>
                   <p class="field-error" *ngIf="emailError()">{{ emailError() }}</p>
                 </div>
                 <div class="form-field">

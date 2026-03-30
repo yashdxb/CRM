@@ -35,6 +35,7 @@ import { readTokenContext, tokenHasPermission } from '../../../../core/auth/toke
 import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
+import { MailComposeService } from '../../../../core/email/mail-compose.service';
 
 interface LifecycleOption {
   label: string;
@@ -161,6 +162,7 @@ export class ContactsPage {
   private activeImportJobId: string | null = null;
   private readonly crmEventsService = inject(CrmEventsService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly mailCompose = inject(MailComposeService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly activityData = inject(ActivityDataService);
 
@@ -246,6 +248,21 @@ export class ContactsPage {
 
   protected onCreate() {
     this.router.navigate(['/app/contacts/new']);
+  }
+
+  protected composeToContact(row: Contact, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!row.email) {
+      return;
+    }
+
+    this.mailCompose.open({
+      toEmail: row.email,
+      toName: row.name,
+      relatedEntityType: 'Contact',
+      relatedEntityId: row.id
+    });
   }
 
   protected openImport() {

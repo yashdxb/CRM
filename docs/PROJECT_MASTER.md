@@ -1095,7 +1095,18 @@ Legend:
 - Status: NOT STARTED
 
 8) Email integration (send + sync + templates)
-- Status: NOT STARTED
+- Status: PARTIAL
+- Current reality:
+  - OAuth mailbox connections for Microsoft 365 and Gmail exist.
+  - My Mailbox UI exists with Inbox, Starred, Sent, Drafts, Archive, Spam, Trash, and Templates.
+  - Email templates CRUD exists.
+  - Mailbox send, draft, sync, message actions, attachments, and CRM email linking exist.
+  - Current implementation now defaults to the local synced mailbox cache (`UserMailMessages`) for inbox reads, while provider APIs remain the source of truth and explicit refresh/sync target.
+- Remaining gaps:
+  - remove/contain remaining mock-path behavior in mailbox frontend services
+  - complete production hardening and end-to-end verification across providers/environments
+  - clarify product boundaries between `/api/mailbox` and `/api/emails`
+  - calendar sync remains separate and not started
 
 9) CSV import/export
 - Status: DONE
@@ -1258,7 +1269,7 @@ Legend:
 ---
 
 ## 19) Resolved Conflicts (Applied)
-- Competitive gap vs current reality: email integration is **transactional only** today; full email sync/templates remain a gap.
+- Competitive gap vs current reality: previous “transactional only” email note was stale. Current repo contains OAuth mailbox connections, mailbox UI, sync/proxy APIs, template CRUD, and CRM email linking; remaining work is hardening and normalization, not greenfield implementation.
 - Evidence paths updated to `client/src/app/crm/features/...` to match current structure.
 - Foundry agent 500s in Azure dev fixed by wiring `FoundryAgentOptions` into DI and setting App Service config (`FoundryAgent__*`).
 

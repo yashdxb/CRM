@@ -28,6 +28,7 @@ import { PERMISSION_KEYS } from '../../../../core/auth/permission.constants';
 import { AppToastService } from '../../../../core/app-toast.service';
 import { CrmEventsService } from '../../../../core/realtime/crm-events.service';
 import { computeLeadScore, LeadDataWeight, LeadScoreInputs, LeadScoreResult } from './lead-scoring.util';
+import { MailComposeService } from '../../../../core/email/mail-compose.service';
 
 interface StatusOption {
   label: string;
@@ -95,6 +96,7 @@ export class LeadsPage {
   protected viewMode: 'table' | 'kanban' = 'table';
   private readonly toastService = inject(AppToastService);
   private readonly crmEventsService = inject(CrmEventsService);
+  private readonly mailCompose = inject(MailComposeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly currentUserId = readUserId();
   private readonly joinedLeadPresenceIds = new Set<string>();
@@ -232,6 +234,21 @@ export class LeadsPage {
 
   protected leadOpportunityLink(lead: Lead): string[] | null {
     return lead.convertedOpportunityId ? ['/app/deals', lead.convertedOpportunityId, 'edit'] : null;
+  }
+
+  protected composeToLead(lead: Lead, event?: Event): void {
+    event?.preventDefault();
+    event?.stopPropagation();
+    if (!lead.email) {
+      return;
+    }
+
+    this.mailCompose.open({
+      toEmail: lead.email,
+      toName: lead.name,
+      relatedEntityType: 'Lead',
+      relatedEntityId: lead.id
+    });
   }
   protected readonly ownerOptionsForAssign = signal<{ label: string; value: string }[]>([]);
   protected readonly dispositionReport = signal<LeadDispositionReport | null>(null);

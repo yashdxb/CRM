@@ -211,7 +211,7 @@
                   </p-inputgroup-addon>
                   <input pInputText id="contact-email" name="email" [(ngModel)]="form.email" type="email" placeholder="name@company.com" />
                 </p-inputgroup>
-                <a *ngIf="isEditMode() && form.email" class="field-link" [href]="'mailto:' + form.email"><i class="pi pi-external-link"></i> Send email</a>
+                <a *ngIf="isEditMode() && form.email" class="field-link" href="" (click)="composeToCurrentContact($event)"><i class="pi pi-external-link"></i> Send email</a>
               </div>
               <div class="form-field">
                 <label for="contact-jobTitle">Job title</label>

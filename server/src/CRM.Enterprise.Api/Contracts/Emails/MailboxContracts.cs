@@ -18,6 +18,7 @@ public record MailboxMessagesResponse(
 public record MailboxMessageItem(
     Guid Id,
     Guid ConnectionId,
+    string? ConversationId,
     string Folder,
     string Subject,
     string? BodyPreview,
@@ -25,6 +26,7 @@ public record MailboxMessageItem(
     string? FromName,
     IEnumerable<string> ToRecipients,
     DateTime ReceivedAtUtc,
+    DateTime? SentAtUtc,
     bool IsRead,
     bool IsStarred,
     bool HasAttachments,
@@ -38,21 +40,33 @@ public record MailboxMessageDetail(
     Guid Id,
     Guid ConnectionId,
     string ExternalId,
+    string? ConversationId,
     string Folder,
     string Subject,
     string? BodyPreview,
     string? BodyHtml,
+    string? BodyText,
     string FromEmail,
     string? FromName,
     IEnumerable<string> ToRecipients,
     IEnumerable<string>? CcRecipients,
     IEnumerable<string>? BccRecipients,
     DateTime ReceivedAtUtc,
+    DateTime? SentAtUtc,
     bool IsRead,
     bool IsStarred,
+    bool IsDraft,
     bool HasAttachments,
+    IEnumerable<MailboxAttachmentItem>? Attachments,
     string Importance,
     DateTime SyncedAtUtc
+);
+
+public record MailboxAttachmentItem(
+    string Id,
+    string Name,
+    long Size,
+    string ContentType
 );
 
 /// <summary>

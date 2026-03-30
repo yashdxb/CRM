@@ -38,6 +38,7 @@ import { readUserId } from '../../../../core/auth/token.utils';
 import { HasUnsavedChanges } from '../../../../core/guards/unsaved-changes.guard';
 import { FormDraftDetail, FormDraftSummary } from '../../../../core/drafts/form-draft.model';
 import { FormDraftService } from '../../../../core/drafts/form-draft.service';
+import { MailComposeService } from '../../../../core/email/mail-compose.service';
 
 interface Option<T = string> {
   label: string;
@@ -187,6 +188,7 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
   protected readonly router = inject(Router);
   private readonly crmEvents = inject(CrmEventsService);
   private readonly formDraftService = inject(FormDraftService);
+  private readonly mailCompose = inject(MailComposeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly currentUserId = readUserId();
 
@@ -250,6 +252,21 @@ export class ContactFormPage implements OnInit, OnDestroy, HasUnsavedChanges {
       this.crmEvents.setRecordEditingState('contact', this.editingId, false);
       this.crmEvents.leaveRecordPresence('contact', this.editingId);
     }
+  }
+
+  protected composeToCurrentContact(event?: Event): void {
+    event?.preventDefault();
+    if (!this.isEditMode() || !this.form.email || !this.editingId) {
+      return;
+    }
+
+    const displayName = [this.form.firstName, this.form.lastName].filter(Boolean).join(' ').trim();
+    this.mailCompose.open({
+      toEmail: this.form.email,
+      toName: displayName || undefined,
+      relatedEntityType: 'Contact',
+      relatedEntityId: this.editingId
+    });
   }
 
   @HostListener('input')

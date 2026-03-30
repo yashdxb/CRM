@@ -886,9 +886,23 @@ export const routes: Routes = [
           {
             path: 'designer',
             canActivate: [roleGuard],
-            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Workflow Designer' },
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Workflow Builder' },
             loadComponent: () =>
               import('./crm/features/workflows/pages/workflow-designer.page').then((m) => m.WorkflowDesignerPage)
+          },
+          {
+            path: 'designer/advanced',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Advanced Workflow Builder' },
+            loadComponent: () =>
+              import('./crm/features/workflows/pages/workflow-designer-advanced.page').then((m) => m.WorkflowDesignerAdvancedPage)
+          },
+          {
+            path: 'designer/legacy',
+            canActivate: [roleGuard],
+            data: { permission: PERMISSION_KEYS.administrationManage, breadcrumb: 'Legacy Workflow Designer' },
+            loadComponent: () =>
+              import('./crm/features/workflows/pages/workflow-designer-legacy.page').then((m) => m.WorkflowDesignerLegacyPage)
           },
           {
             path: 'executions',

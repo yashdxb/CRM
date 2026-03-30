@@ -1,0 +1,277 @@
+<div class="workflow-page page-container">
+  <app-breadcrumbs></app-breadcrumbs>
+
+  <header class="workflow-header">
+    <div>
+      <h1 class="hero-title">{{ workflowTitle() }}</h1>
+      <p>{{ workflowDescription() }}</p>
+      <small *ngIf="updatedAtUtc()">Last updated: {{ updatedAtUtc() }}</small>
+    </div>
+    <div class="header-actions">
+      <button pButton type="button" class="btn btn-ghost" (click)="load()" [disabled]="loading()">Reload</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="fitView()" [disabled]="loading()">Fit View</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="autoArrange()" [disabled]="loading()">Auto Arrange</button>
+      <button pButton type="button" class="btn btn-secondary" (click)="validate()" [disabled]="validating()">Validate</button>
+      <button pButton type="button" class="btn btn-secondary" (click)="simulate()" [disabled]="loading()">Simulate</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="saveDraft()" [disabled]="saving()">Save Draft</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="revertDraft()" [disabled]="saving() || !publishedAtUtc()">Revert Draft</button>
+      <button pButton type="button" class="btn btn-ghost" (click)="unpublish()" [disabled]="saving() || workflow().scope.status !== 'published'">Unpublish</button>
+      <button pButton type="button" class="btn btn-primary" (click)="publish()" [disabled]="saving()">Publish</button>
+    </div>
+  </header>
+
+  <section class="workflow-confidence-strip" *ngIf="!loading()">
+    <article class="confidence-step">
+      <span class="confidence-step__index">1</span>
+      <div>
+        <strong>Set scope</strong>
+        <p>Choose the trigger, stage, and pipeline first so the automation has a clear operating boundary.</p>
+      </div>
+    </article>
+    <article class="confidence-step">
+      <span class="confidence-step__index">2</span>
+      <div>
+        <strong>Build the path</strong>
+        <p>Add approval and action nodes, then click nodes in the canvas to focus the exact behavior you want to configure.</p>
+      </div>
+    </article>
+    <article class="confidence-step confidence-step--accent">
+      <span class="confidence-step__index">3</span>
+      <div>
+        <strong>Validate before publish</strong>
+        <p>Use validation as the release gate. Branch labels and node rules should be clean before a workflow goes live.</p>
+      </div>
+    </article>
+  </section>
+
+  <section class="scope-panel" *ngIf="!loading()">
+    <div class="panel-heading">
+      <div>
+        <h2 class="section-title">Workflow Scope</h2>
+        <p>Define where this automation is allowed to run and what business event should trigger it.</p>
+      </div>
+      <div class="scope-state-pill">
+        <span>{{ workflow().scope.status | titlecase }}</span>
+        <strong>v{{ workflow().scope.version }}</strong>
+      </div>
+    </div>
+    <div class="template-bar">
+      <label>
+        <span>Template</span>
+        <p-select
+          appendTo="body"
+          [options]="templateOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedTemplate()"
+          (ngModelChange)="applyTemplate($event)"
+          styleClass="w-full"
+        ></p-select>
+      </label>
+    </div>
+    <div class="scope-grid">
+      <label>
+        <span>Name</span>
+        <input type="text" [value]="workflow().scope.name" (input)="patchScope('name', $any($event.target).value)" />
+      </label>
+      <label>
+        <span>Purpose</span>
+        <input type="text" [value]="workflow().scope.purpose" (input)="patchScope('purpose', $any($event.target).value)" />
+      </label>
+      <label>
+        <span>Module</span>
+        <p-select
+          appendTo="body"
+          [options]="moduleOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="workflow().scope.module"
+          (ngModelChange)="patchScope('module', $event)"
+          styleClass="w-full"
+        ></p-select>
+      </label>
+      <label>
+        <span>Pipeline</span>
+        <p-select
+          appendTo="body"
+          [options]="pipelineOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="workflow().scope.pipeline"
+          (ngModelChange)="patchScope('pipeline', $event)"
+          styleClass="w-full"
+        ></p-select>
+      </label>
+      <label>
+        <span>Stage</span>
+        <p-select
+          appendTo="body"
+          [options]="stageOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="workflow().scope.stage"
+          (ngModelChange)="patchScope('stage', $event)"
+          styleClass="w-full"
+        ></p-select>
+      </label>
+      <label>
+        <span>Trigger</span>
+        <p-select
+          appendTo="body"
+          [options]="triggerOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="workflow().scope.trigger"
+          (ngModelChange)="patchScope('trigger', $event)"
+          styleClass="w-full"
+        ></p-select>
+      </label>
+    </div>
+    <div class="scope-meta">
+      <span>Status: <strong>{{ workflow().scope.status }}</strong></span>
+      <span>Version: <strong>v{{ workflow().scope.version }}</strong></span>
+      <span *ngIf="publishedAtUtc()">Published: <strong>{{ publishedAtUtc() }}</strong></span>
+      <span *ngIf="publishedBy()">Published by: <strong>{{ publishedBy() }}</strong></span>
+      <span *ngIf="lastValidationAtUtc()">Last validation: {{ lastValidationAtUtc() }}</span>
+    </div>
+  </section>
+
+  <section class="validation-panel" *ngIf="lastValidationErrors().length > 0">
+    <h3>Validation Issues</h3>
+    <ul>
+      <li *ngFor="let error of lastValidationErrors()">{{ error }}</li>
+    </ul>
+  </section>
+
+  <section class="node-summary" *ngIf="!loading()">
+    <span>Approvals: {{ nodeCountByType('approval') }}</span>
+    <span>Conditions: {{ nodeCountByType('condition') }}</span>
+    <span>Notifications: {{ nodeCountByType('notification') }}</span>
+    <span>Emails: {{ nodeCountByType('email') }}</span>
+    <span>Activities: {{ nodeCountByType('activity') }}</span>
+  </section>
+
+  <div class="workflow-layout" *ngIf="!loading()">
+    <app-node-palette
+      (addApprovalStep)="addApprovalStep()"
+      (addNode)="addNodeByType($event)"
+    ></app-node-palette>
+
+    <section class="canvas-shell">
+      <div class="canvas-shell__header">
+        <div>
+          <h3>Execution canvas</h3>
+          <p>Build the real path. Click a node to edit it. Labeled branches stay visible on the canvas.</p>
+        </div>
+        <div class="canvas-shell__meta">
+          <span>{{ workflow().nodes.length }} nodes</span>
+          <span>{{ workflow().connections.length }} connections</span>
+        </div>
+      </div>
+      <app-workflow-canvas
+        [workflow]="workflow()"
+        [selectedNodeId]="selectedNodeId()"
+        (workflowChange)="onCanvasChange($event)"
+        (selectionChange)="selectNode($event)"
+      ></app-workflow-canvas>
+    </section>
+
+    <app-workflow-properties-panel
+      [steps]="workflow().steps"
+      [nodes]="workflow().nodes"
+      [connections]="workflow().connections"
+      [selectedNodeId]="selectedNodeId()"
+      [nodeSelectionOptions]="nodeSelectionOptions()"
+      [roleOptions]="roleOptions()"
+      [securityLevelOptions]="securityLevelOptions()"
+      (selectionChange)="selectNode($event)"
+      (removeStep)="removeStep($event)"
+      (patchStep)="patchStep($event)"
+      (patchNode)="patchNode($event)"
+      (patchNodeConfig)="patchNodeConfig($event.nodeId, $event.patch)"
+      (patchConnection)="patchConnection($event.index, $event.patch)"
+      (removeNode)="removeNode($event)"
+    ></app-workflow-properties-panel>
+  </div>
+
+  <p-dialog
+    header="Workflow Simulation"
+    [(visible)]="showSimulation"
+    [modal]="true"
+    [closable]="true"
+    [style]="{ width: '560px', maxHeight: '80vh' }"
+    appendTo="body"
+  >
+    <div class="simulation-trace">
+      <p class="simulation-trace__intro">Dry-run trace of the current workflow from start to end. No actions are executed.</p>
+      <ol class="simulation-trace__list">
+        <li *ngFor="let step of simulationTrace()" class="simulation-trace__step" [attr.data-type]="step.nodeType">
+          <span class="simulation-trace__badge">{{ step.nodeType }}</span>
+          <strong>{{ step.label }}</strong>
+          <p>{{ step.description }}</p>
+        </li>
+      </ol>
+      <p *ngIf="simulationTrace().length === 0" class="simulation-trace__empty">No nodes found in this workflow.</p>
+    </div>
+    <ng-template pTemplate="footer">
+      <button pButton type="button" class="btn btn-ghost" (click)="showSimulation.set(false)">Close</button>
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog
+    header="Publish Readiness Summary"
+    [(visible)]="showPublishSummary"
+    [modal]="true"
+    [closable]="true"
+    [style]="{ width: '520px' }"
+    appendTo="body"
+  >
+    <ng-container *ngIf="publishReadiness() as r">
+      <div class="publish-summary">
+        <div class="publish-summary__scope">
+          <h4>Scope</h4>
+          <div class="publish-summary__grid">
+            <span class="publish-summary__label">Name</span>
+            <span>{{ r.scopeName }}</span>
+            <span class="publish-summary__label">Stage</span>
+            <span>{{ r.scopeStage }}</span>
+            <span class="publish-summary__label">Trigger</span>
+            <span>{{ r.scopeTrigger }}</span>
+            <span class="publish-summary__label">Pipeline</span>
+            <span>{{ r.scopePipeline }}</span>
+            <span class="publish-summary__label">Version</span>
+            <span>v{{ r.version }} ({{ r.status }})</span>
+          </div>
+        </div>
+
+        <div class="publish-summary__counts">
+          <h4>Node Summary</h4>
+          <div class="publish-summary__chips">
+            <span class="publish-summary__chip" *ngFor="let entry of r.nodeCounts | keyvalue">
+              {{ entry.key }}: {{ entry.value }}
+            </span>
+          </div>
+          <p class="publish-summary__meta">
+            {{ r.totalNodes }} nodes · {{ r.totalConnections }} connections · {{ r.totalSteps }} approval steps
+          </p>
+        </div>
+
+        <div class="publish-summary__warnings" *ngIf="r.warnings.length > 0">
+          <h4><i class="pi pi-exclamation-triangle"></i> Warnings</h4>
+          <ul>
+            <li *ngFor="let w of r.warnings">{{ w }}</li>
+          </ul>
+        </div>
+
+        <div class="publish-summary__ok" *ngIf="r.warnings.length === 0">
+          <i class="pi pi-check-circle"></i>
+          <span>No issues detected. Ready to publish.</span>
+        </div>
+      </div>
+    </ng-container>
+    <ng-template pTemplate="footer">
+      <button pButton type="button" class="btn btn-ghost" (click)="showPublishSummary.set(false)">Cancel</button>
+      <button pButton type="button" class="btn btn-primary" (click)="confirmPublish()" [disabled]="saving()">Publish</button>
+    </ng-template>
+  </p-dialog>
+</div>

@@ -528,7 +528,7 @@
                   </td>
                   <td class="td-contact">
                     <div class="contact-cell">
-                      <a class="contact-link" *ngIf="lead.email" [href]="'mailto:' + lead.email">
+                      <a class="contact-link" *ngIf="lead.email" href="" (click)="composeToLead(lead, $event)">
                         <i class="pi pi-envelope"></i>
                         {{ lead.email }}
                       </a>

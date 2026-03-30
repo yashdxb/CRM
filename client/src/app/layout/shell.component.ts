@@ -26,6 +26,8 @@ import { NotificationService } from '../core/notifications';
 import { firstValueFrom } from 'rxjs';
 import { AttachmentDataService, AttachmentItem } from '../shared/services/attachment-data.service';
 import { environment } from '../../environments/environment';
+import { EmailComposeDialogComponent } from '../crm/features/emails/components/email-compose-dialog.component';
+import { MailComposeService } from '../core/email/mail-compose.service';
 
 interface PresencePerson {
   userId: string;
@@ -98,7 +100,8 @@ const QUICK_EMOJIS = ['😀', '😂', '😍', '👍', '🔥', '🎉', '👏', '�
     QuickAddModalComponent,
     ProgressSpinnerModule,
     TooltipModule,
-    MultiSelectModule
+    MultiSelectModule,
+    EmailComposeDialogComponent
   ],
   templateUrl: "./shell.component.html",
   styleUrl: './shell.component.scss'
@@ -115,6 +118,7 @@ export class ShellComponent {
   private readonly notificationService = inject(NotificationService);
   private readonly attachmentDataService = inject(AttachmentDataService);
   private readonly router = inject(Router);
+  protected readonly mailCompose = inject(MailComposeService);
   protected readonly currentUserId = readUserId();
 
   protected readonly onlineUsers = toSignal(this.presenceService.onlineUsers$, { initialValue: new Set<string>() });

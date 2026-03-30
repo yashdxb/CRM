@@ -284,7 +284,13 @@
             </div>
           }
 
-          <div class="email-body" [innerHTML]="selectedEmail()?.htmlBody"></div>
+          @if (selectedEmail()?.htmlBody) {
+            <div class="email-body" [innerHTML]="selectedEmail()?.htmlBody"></div>
+          } @else if (selectedEmail()?.textBody) {
+            <div class="email-body email-body--plain">{{ selectedEmail()?.textBody }}</div>
+          } @else {
+            <div class="email-body email-body--empty">No email body available yet. Try refresh if this message was just synced.</div>
+          }
         </div>
       }
     </section>

@@ -35,7 +35,7 @@ async function login(page, request) {
 
 test('workflow designer shows draggable palette item and supports drop add', async ({ page, request }) => {
   await login(page, request);
-  await page.goto('/app/workflows/designer');
+  await page.goto('/app/workflows/designer/legacy');
 
   await expectWorkflowHeading(page);
   await expect(page.getByText('Template', { exact: true })).toBeVisible();
@@ -88,7 +88,7 @@ test('workflow designer shows draggable palette item and supports drop add', asy
 
 test('workflow designer applies template and uses controlled scope options', async ({ page, request }) => {
   await login(page, request);
-  await page.goto('/app/workflows/designer');
+  await page.goto('/app/workflows/designer/legacy');
 
   const templateSelect = page.locator('.template-bar .p-select');
   await templateSelect.click();
@@ -119,7 +119,7 @@ test('workflow designer applies template and uses controlled scope options', asy
 
 test('workflow publish validation rejects invalid controlled stage values', async ({ page, request }) => {
   const accessToken = await login(page, request);
-  await page.goto('/app/workflows/designer');
+  await page.goto('/app/workflows/designer/legacy');
 
   await expectWorkflowHeading(page);
 
