@@ -28,6 +28,24 @@ Legend:
     - `client/src/app/crm/features/reports/pages/reports.page.html`
     - `client/src/app/app.routes.ts`
     - `client/src/app/layout/navigation/navigation.config.ts`
+    - `docs/TELERIK_EMBEDDED_REPORTING_RUNBOOK.md`
+
+- Embedded Telerik report library/workspace flow completed and documented
+  Status: DONE
+  Date: `2026-03-29`
+  - Delivered:
+    - bridged curated report library items into editable file-backed `.trdp` reports
+    - patched editable report packages with live environment SQL connection string and tenant id
+    - added `Edit in Workspace` flow from report library into `/app/report-designer`
+    - fixed Azure embedded designer asset loading by replacing bad `/scripts.js` dependency with a stable app asset
+    - documented the end-to-end implementation and operator flow
+  - Evidence:
+    - `server/src/CRM.Enterprise.Api/Reporting/EmbeddedReportWorkspaceService.cs`
+    - `server/src/CRM.Enterprise.Api/Reporting/TenantReportResolver.cs`
+    - `server/src/CRM.Enterprise.Api/Controllers/ReportServerController.cs`
+    - `client/src/assets/report-designer-host.html`
+    - `client/src/assets/vendor/jquery.min.js`
+    - `docs/TELERIK_EMBEDDED_REPORTING_RUNBOOK.md`
 
 - Redis-backed read-model caching for CRM dashboard and assistant surfaces
   Status: DONE

@@ -82,6 +82,17 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
   - then add MCP starting with read-only CRM tools
 - MCP write tools, when introduced, must be constrained, auditable, tenant-aware, and approval-aware by design.
 
+### Embedded Telerik Reporting (Canonical)
+- Current reporting authoring mode is the built-in Telerik Web Report Designer hosted inside CRM.
+- `Report Library` is the in-app run surface for curated CRM reports.
+- `Report Workspace` is the in-app design surface for editing/designing those reports.
+- Telerik `Report Server` is optional later for centralized publishing/governance; it is not required for the current authoring flow.
+- Editable report definitions are file-backed `.trdp` runtime artifacts generated and patched by the API per environment.
+- Those packaged report files are allowed to contain the active environment SQL connection string because they are runtime-generated, not portable source-of-truth artifacts.
+- Local generated `.trdp` files must not be treated as deployable environment-agnostic assets.
+- The detailed implementation and operator runbook lives in:
+  - `docs/TELERIK_EMBEDDED_REPORTING_RUNBOOK.md`
+
 ### MCP Integration Judgment (Canonical)
 - Recommendation: `Yes later`, `not now as a primary product investment`.
 - Why not now:

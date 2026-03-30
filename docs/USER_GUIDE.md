@@ -609,6 +609,12 @@ Daily flow:
 
 Use this when you need Telerik Report Server running and reachable for CRM report viewing.
 
+Important:
+- the current CRM report authoring path is the built-in embedded Telerik designer inside CRM
+- Report Server remains optional later for centralized publishing/governance
+- the detailed implementation and operations guide for the embedded path is:
+  - `docs/TELERIK_EMBEDDED_REPORTING_RUNBOOK.md`
+
 ### Current Dev Deployment (as implemented)
 - Azure resource group: `rg-crm-report-dev-eus2`
 - VM: `vmrptlinux01` (Linux)
