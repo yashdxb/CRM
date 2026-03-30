@@ -8,10 +8,13 @@ import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { EditorModule } from 'primeng/editor';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { finalize, switchMap } from 'rxjs';
 
 import { EmailDataService } from '../services/email-data.service';
 import { ComposeMode, EmailRelationType, EmailTemplateListItem, MailboxEmail, SendEmailRequest } from '../models/email.model';
 import { AppToastService } from '../../../../core/app-toast.service';
+import { MailboxService } from '../services/mailbox.service';
+import { EmailConnectionService } from '../../settings/services/email-connection.service';
 
 interface RelatedEntityOption {
   label: string;
@@ -641,6 +644,8 @@ interface RelatedEntityOption {
 })
 export class EmailComposeDialogComponent implements OnInit, OnChanges {
   private readonly emailService = inject(EmailDataService);
+  private readonly mailboxService = inject(MailboxService);
+  private readonly emailConnectionService = inject(EmailConnectionService);
   private readonly toast = inject(AppToastService);
 
   @Input() visible = false;
@@ -772,16 +777,43 @@ export class EmailComposeDialogComponent implements OnInit, OnChanges {
       relatedEntityId: formValue.relatedEntityId ?? undefined
     };
 
-    this.emailService.send(request).subscribe({
-      next: () => {
+    this.emailConnectionService.getConnections().pipe(
+      switchMap((response) => {
+        const primaryConnection = response.items.find((item) => item.isActive && item.isPrimary)
+          ?? response.items.find((item) => item.isActive);
+
+        if (!primaryConnection) {
+          throw new Error('Connect an active mailbox account before sending email.');
+        }
+
+        const parseAddressList = (value?: string) =>
+          (value ?? '')
+            .split(',')
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+
+        return this.mailboxService.sendEmail(primaryConnection.id, {
+          to: [request.toEmail],
+          cc: parseAddressList(request.ccEmails),
+          bcc: parseAddressList(request.bccEmails),
+          subject: request.subject ?? '',
+          htmlBody: request.htmlBody ?? ''
+        });
+      }),
+      finalize(() => this.sending.set(false))
+    ).subscribe({
+      next: (response) => {
+        if (!response.success) {
+          this.toast.show('error', response.error ?? 'Failed to send email');
+          return;
+        }
+
         this.toast.show('success', 'Email sent successfully');
-        this.sending.set(false);
         this.sent.emit();
         this.close();
       },
       error: (err) => {
-        this.toast.show('error', err?.error?.message ?? 'Failed to send email');
-        this.sending.set(false);
+        this.toast.show('error', err?.error?.message ?? err?.message ?? 'Failed to send email');
       }
     });
   }

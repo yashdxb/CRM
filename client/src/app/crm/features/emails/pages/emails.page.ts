@@ -166,6 +166,7 @@ export class EmailsPage implements OnInit, OnDestroy {
         this.mailbox.selectFolder(folder);
       }
     });
+    this.mailbox.loadStats();
     this.mailbox.loadEmails();
 
     // Load saved layout preferences
@@ -318,6 +319,7 @@ export class EmailsPage implements OnInit, OnDestroy {
     this.showComposeDialog = false;
     this.replyToEmail = null;
     this.mailbox.loadEmails();
+    this.mailbox.loadStats();
     this.toastService.show('success', 'Email sent successfully');
   }
 

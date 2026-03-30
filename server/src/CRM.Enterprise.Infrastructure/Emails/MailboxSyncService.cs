@@ -338,6 +338,7 @@ public sealed class MailboxSyncService : IMailboxSyncService
             .Select(m => new MailMessageSummaryDto(
                 m.Id,
                 m.ConnectionId,
+                EF.Property<string?>(m, nameof(UserMailMessage.ConversationId)),
                 EF.Property<string?>(m, nameof(UserMailMessage.FromEmail)) ?? string.Empty,
                 EF.Property<string?>(m, nameof(UserMailMessage.FromName)),
                 EF.Property<string?>(m, nameof(UserMailMessage.Subject)) ?? string.Empty,
@@ -358,7 +359,7 @@ public sealed class MailboxSyncService : IMailboxSyncService
     public async Task<MailMessageDto?> GetMessageAsync(Guid messageId, CancellationToken cancellationToken = default)
     {
         var message = await _dbContext.UserMailMessages
-            .AsNoTracking()
+            .Include(m => m.Connection)
             .FirstOrDefaultAsync(m => m.Id == messageId && !m.IsDeleted, cancellationToken);
 
         if (message is null)
@@ -432,12 +433,11 @@ public sealed class MailboxSyncService : IMailboxSyncService
         if (message?.Connection is null)
             return false;
 
-        // Update locally
+        if (!await UpdateReadStatusOnProviderAsync(message, isRead, cancellationToken))
+            return false;
+
         message.IsRead = isRead;
         await _dbContext.SaveChangesAsync(cancellationToken);
-
-        // Update on provider (fire and forget)
-        _ = UpdateReadStatusOnProviderAsync(message, isRead);
 
         return true;
     }
@@ -451,11 +451,11 @@ public sealed class MailboxSyncService : IMailboxSyncService
         if (message?.Connection is null)
             return false;
 
+        if (!await UpdateStarredOnProviderAsync(message, isStarred, cancellationToken))
+            return false;
+
         message.IsStarred = isStarred;
         await _dbContext.SaveChangesAsync(cancellationToken);
-
-        // Update on provider (fire and forget)
-        _ = UpdateStarredOnProviderAsync(message, isStarred);
 
         return true;
     }
@@ -469,11 +469,11 @@ public sealed class MailboxSyncService : IMailboxSyncService
         if (message?.Connection is null)
             return false;
 
+        if (!await MoveMessageOnProviderAsync(message, folder, cancellationToken))
+            return false;
+
         message.Folder = folder;
         await _dbContext.SaveChangesAsync(cancellationToken);
-
-        // Move on provider (fire and forget)
-        _ = MoveMessageOnProviderAsync(message, folder);
 
         return true;
     }
@@ -487,11 +487,11 @@ public sealed class MailboxSyncService : IMailboxSyncService
         if (message?.Connection is null)
             return false;
 
+        if (!await DeleteMessageOnProviderAsync(message, cancellationToken))
+            return false;
+
         message.IsDeleted = true;
         await _dbContext.SaveChangesAsync(cancellationToken);
-
-        // Delete on provider (fire and forget)
-        _ = DeleteMessageOnProviderAsync(message);
 
         return true;
     }
@@ -963,13 +963,14 @@ public sealed class MailboxSyncService : IMailboxSyncService
         );
     }
 
-    // Fire-and-forget provider update methods
-    private async Task UpdateReadStatusOnProviderAsync(UserMailMessage message, bool isRead)
+    private async Task<bool> UpdateReadStatusOnProviderAsync(UserMailMessage message, bool isRead, CancellationToken cancellationToken)
     {
         try
         {
-            var token = await _connectionService.GetAccessTokenAsync(message.ConnectionId, CancellationToken.None);
-            if (token is null) return;
+            if (IsLocalOnlyMessage(message)) return true;
+
+            var token = await _connectionService.GetAccessTokenAsync(message.ConnectionId, cancellationToken);
+            if (token is null) return false;
 
             using var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -978,7 +979,8 @@ public sealed class MailboxSyncService : IMailboxSyncService
             {
                 var url = $"https://graph.microsoft.com/v1.0/me/messages/{message.ExternalId}";
                 var content = new StringContent(JsonSerializer.Serialize(new { isRead }), System.Text.Encoding.UTF8, "application/json");
-                await client.PatchAsync(url, content);
+                var response = await client.PatchAsync(url, content, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
             else
             {
@@ -987,21 +989,26 @@ public sealed class MailboxSyncService : IMailboxSyncService
                 object body = isRead 
                     ? new { removeLabelIds = new[] { "UNREAD" } }
                     : new { addLabelIds = new[] { "UNREAD" } };
-                await client.PostAsJsonAsync(url, body);
+                var response = await client.PostAsJsonAsync(url, body, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to update read status on provider for message {MessageId}", message.Id);
+            return false;
         }
     }
 
-    private async Task UpdateStarredOnProviderAsync(UserMailMessage message, bool isStarred)
+    private async Task<bool> UpdateStarredOnProviderAsync(UserMailMessage message, bool isStarred, CancellationToken cancellationToken)
     {
         try
         {
-            var token = await _connectionService.GetAccessTokenAsync(message.ConnectionId, CancellationToken.None);
-            if (token is null) return;
+            if (IsLocalOnlyMessage(message)) return true;
+
+            var token = await _connectionService.GetAccessTokenAsync(message.ConnectionId, cancellationToken);
+            if (token is null) return false;
 
             using var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -1014,7 +1021,8 @@ public sealed class MailboxSyncService : IMailboxSyncService
                     JsonSerializer.Serialize(new { flag = new { flagStatus } }), 
                     System.Text.Encoding.UTF8, 
                     "application/json");
-                await client.PatchAsync(url, content);
+                var response = await client.PatchAsync(url, content, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
             else
             {
@@ -1022,21 +1030,26 @@ public sealed class MailboxSyncService : IMailboxSyncService
                 object body = isStarred
                     ? new { addLabelIds = new[] { "STARRED" } }
                     : new { removeLabelIds = new[] { "STARRED" } };
-                await client.PostAsJsonAsync(url, body);
+                var response = await client.PostAsJsonAsync(url, body, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to update starred status on provider for message {MessageId}", message.Id);
+            return false;
         }
     }
 
-    private async Task MoveMessageOnProviderAsync(UserMailMessage message, MailFolder folder)
+    private async Task<bool> MoveMessageOnProviderAsync(UserMailMessage message, MailFolder folder, CancellationToken cancellationToken)
     {
         try
         {
-            var token = await _connectionService.GetAccessTokenAsync(message.ConnectionId, CancellationToken.None);
-            if (token is null) return;
+            if (IsLocalOnlyMessage(message)) return true;
+
+            var token = await _connectionService.GetAccessTokenAsync(message.ConnectionId, cancellationToken);
+            if (token is null) return false;
 
             using var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -1053,7 +1066,8 @@ public sealed class MailboxSyncService : IMailboxSyncService
                 };
 
                 var url = $"https://graph.microsoft.com/v1.0/me/messages/{message.ExternalId}/move";
-                await client.PostAsJsonAsync(url, new { destinationId });
+                var response = await client.PostAsJsonAsync(url, new { destinationId }, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
             else
             {
@@ -1066,21 +1080,26 @@ public sealed class MailboxSyncService : IMailboxSyncService
                 };
 
                 var url = $"https://gmail.googleapis.com/gmail/v1/users/me/messages/{message.ExternalId}/modify";
-                await client.PostAsJsonAsync(url, new { addLabelIds = addLabels });
+                var response = await client.PostAsJsonAsync(url, new { addLabelIds = addLabels }, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to move message on provider for message {MessageId}", message.Id);
+            return false;
         }
     }
 
-    private async Task DeleteMessageOnProviderAsync(UserMailMessage message)
+    private async Task<bool> DeleteMessageOnProviderAsync(UserMailMessage message, CancellationToken cancellationToken)
     {
         try
         {
-            var token = await _connectionService.GetAccessTokenAsync(message.ConnectionId, CancellationToken.None);
-            if (token is null) return;
+            if (IsLocalOnlyMessage(message)) return true;
+
+            var token = await _connectionService.GetAccessTokenAsync(message.ConnectionId, cancellationToken);
+            if (token is null) return false;
 
             using var client = _httpClientFactory.CreateClient();
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -1088,18 +1107,28 @@ public sealed class MailboxSyncService : IMailboxSyncService
             if (message.Connection!.Provider == EmailProvider.Microsoft365)
             {
                 var url = $"https://graph.microsoft.com/v1.0/me/messages/{message.ExternalId}";
-                await client.DeleteAsync(url);
+                var response = await client.DeleteAsync(url, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
             else
             {
                 var url = $"https://gmail.googleapis.com/gmail/v1/users/me/messages/{message.ExternalId}/trash";
-                await client.PostAsync(url, null);
+                var response = await client.PostAsync(url, null, cancellationToken);
+                response.EnsureSuccessStatusCode();
             }
+            return true;
         }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to delete message on provider for message {MessageId}", message.Id);
+            return false;
         }
+    }
+
+    private static bool IsLocalOnlyMessage(UserMailMessage message)
+    {
+        return message.ExternalId.StartsWith("draft-", StringComparison.OrdinalIgnoreCase)
+            || message.ExternalId.StartsWith("sent-", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<MailMessageDto?> SendViaMicrosoftAsync(

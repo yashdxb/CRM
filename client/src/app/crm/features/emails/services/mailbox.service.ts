@@ -1,6 +1,6 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, of, delay, map } from 'rxjs';
+import { Observable, of, delay, map, forkJoin } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import {
   MailboxFolder,
@@ -67,6 +67,63 @@ interface ProxyStatsResponse {
   archiveTotal: number;
   trashTotal: number;
   spamTotal: number;
+}
+
+interface MailboxMessageItemResponse {
+  id: string;
+  connectionId: string;
+  conversationId?: string | null;
+  folder: string;
+  subject: string;
+  bodyPreview?: string | null;
+  fromEmail: string;
+  fromName?: string | null;
+  toRecipients: string[];
+  receivedAtUtc: string;
+  sentAtUtc?: string | null;
+  isRead: boolean;
+  isStarred: boolean;
+  hasAttachments: boolean;
+  importance: string;
+}
+
+interface MailboxMessageDetailResponse extends MailboxMessageItemResponse {
+  externalId: string;
+  bodyHtml?: string | null;
+  bodyText?: string | null;
+  ccRecipients?: string[] | null;
+  bccRecipients?: string[] | null;
+  isDraft: boolean;
+  attachments?: ProxyAttachment[] | null;
+  syncedAtUtc?: string | null;
+}
+
+interface MailboxSearchApiResponse {
+  items: MailboxMessageItemResponse[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+interface MailboxSyncResponse {
+  syncedConnections: number;
+  totalNewMessages: number;
+  totalUpdatedMessages: number;
+}
+
+interface SendMailboxEmailApiRequest {
+  connectionId: string;
+  to: string[];
+  subject: string;
+  htmlBody: string;
+  cc?: string[] | null;
+  bcc?: string[] | null;
+}
+
+interface SendMailboxEmailApiResponse {
+  success: boolean;
+  messageId?: string | null;
+  error?: string | null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -223,14 +280,9 @@ export class MailboxService {
   readonly selectedEmailId = signal<string | null>(null);
   readonly folders = signal<MailboxFolder[]>(MOCK_FOLDERS);
   readonly emails = signal<MailboxEmail[]>([]);
+  readonly selectedEmail = signal<MailboxEmail | null>(null);
   readonly loading = signal(false);
-  
-  // Computed
-  readonly selectedEmail = computed(() => {
-    const id = this.selectedEmailId();
-    return this.emails().find(e => e.id === id) || null;
-  });
-  
+
   readonly unreadCount = computed(() => {
     return this.emails().filter(e => !e.isRead).length;
   });
@@ -254,12 +306,13 @@ export class MailboxService {
     if (this.useMockData) {
       return of(MOCK_FOLDERS).pipe(delay(200));
     }
-    return this.http.get<MailboxFolder[]>(`${this.baseUrl}/api/mailbox/folders`);
+    return of(this.folders());
   }
   
   selectFolder(folderType: MailboxFolderType): void {
     this.currentFolder.set(folderType);
     this.selectedEmailId.set(null);
+    this.selectedEmail.set(null);
     this.loadEmails(folderType);
   }
 
@@ -276,11 +329,20 @@ export class MailboxService {
   refreshFromProvider(folderType?: MailboxFolderType): void {
     const folder = folderType || this.currentFolder();
     this.loading.set(true);
-    this.fetchEmails(folder);
-    // Also refresh stats/folder counts
-    if (!this.useMockData) {
-      this.loadStats();
+    if (this.useMockData) {
+      this.fetchEmails(folder);
+      return;
     }
+
+    this.http.post<MailboxSyncResponse>(`${this.baseUrl}/api/mailbox/sync`, {}).subscribe({
+      next: () => {
+        this.fetchEmails(folder);
+        this.loadStats();
+      },
+      error: () => {
+        this.loading.set(false);
+      }
+    });
   }
 
   private fetchEmails(folder: MailboxFolderType): void {
@@ -298,7 +360,7 @@ export class MailboxService {
   /** Load proxy stats and update folder counts */
   loadStats(): void {
     if (this.useMockData) return;
-    this.http.get<ProxyStatsResponse>(`${this.baseUrl}/api/mailbox/proxy/stats`).subscribe({
+    this.http.get<ProxyStatsResponse>(`${this.baseUrl}/api/mailbox/stats`).subscribe({
       next: (stats) => {
         this.folders.update(folders => folders.map(f => {
           switch (f.type) {
@@ -365,9 +427,9 @@ export class MailboxService {
     if (request.page) params = params.set('page', String(request.page));
     if (request.pageSize) params = params.set('pageSize', String(request.pageSize));
     
-    return this.http.get<ProxySearchResponse>(`${this.baseUrl}/api/mailbox/proxy/messages`, { params }).pipe(
+    return this.http.get<MailboxSearchApiResponse>(`${this.baseUrl}/api/mailbox/messages`, { params }).pipe(
       map((response) => {
-        const items = (response.items ?? []).map((item) => this.mapProxyItemToMailboxEmail(item));
+        const items = (response.items ?? []).map((item) => this.mapMailboxItemToMailboxEmail(item));
         return {
           items,
           total: response.total,
@@ -388,18 +450,25 @@ export class MailboxService {
       return of(null);
     }
     // id is composite: "connectionId/externalId"
-    const { connectionId, externalId } = this.parseCompositeId(id);
-    return this.http.get<ProxyMessageDetail>(
-      `${this.baseUrl}/api/mailbox/proxy/messages/${encodeURIComponent(connectionId)}/${encodeURIComponent(externalId)}`
+    return this.http.get<MailboxMessageDetailResponse>(
+      `${this.baseUrl}/api/mailbox/messages/${encodeURIComponent(id)}`
     ).pipe(
-      map((item) => this.mapProxyDetailToMailboxEmail(item))
+      map((item) => this.mapMailboxDetailToMailboxEmail(item))
     );
   }
   
   selectEmail(id: string): void {
     this.selectedEmailId.set(id);
-    // Auto-mark as read
+    const summary = this.emails().find(e => e.id === id) ?? null;
+    this.selectedEmail.set(summary);
     this.markAsRead(id, true);
+    this.getEmail(id).subscribe({
+      next: (email) => {
+        if (this.selectedEmailId() === id && email) {
+          this.selectedEmail.set(email);
+        }
+      }
+    });
   }
   
   markAsRead(id: string, isRead: boolean): void {
@@ -412,12 +481,12 @@ export class MailboxService {
       return;
     }
     
-    const { connectionId, externalId } = this.parseCompositeId(id);
     this.http.patch(
-      `${this.baseUrl}/api/mailbox/proxy/messages/${encodeURIComponent(connectionId)}/${encodeURIComponent(externalId)}`,
+      `${this.baseUrl}/api/mailbox/messages/${encodeURIComponent(id)}`,
       { isRead }
     ).subscribe(() => {
       this.emails.update(emails => emails.map(e => e.id === id ? { ...e, isRead } : e));
+      this.selectedEmail.update(email => email?.id === id ? { ...email, isRead } : email);
       this.updateFolderCounts();
     });
   }
@@ -432,12 +501,12 @@ export class MailboxService {
     
     const email = this.emails().find(e => e.id === id);
     if (email) {
-      const { connectionId, externalId } = this.parseCompositeId(id);
       this.http.patch(
-        `${this.baseUrl}/api/mailbox/proxy/messages/${encodeURIComponent(connectionId)}/${encodeURIComponent(externalId)}`,
+        `${this.baseUrl}/api/mailbox/messages/${encodeURIComponent(id)}`,
         { isStarred: !email.isStarred }
       ).subscribe(() => {
         this.emails.update(emails => emails.map(e => e.id === id ? { ...e, isStarred: !e.isStarred } : e));
+        this.selectedEmail.update(selected => selected?.id === id ? { ...selected, isStarred: !email.isStarred } : selected);
       });
     }
   }
@@ -451,17 +520,25 @@ export class MailboxService {
       return;
     }
     
-    // Move each email via proxy PATCH
-    ids.forEach(id => {
-      const { connectionId, externalId } = this.parseCompositeId(id);
-      this.http.patch(
-        `${this.baseUrl}/api/mailbox/proxy/messages/${encodeURIComponent(connectionId)}/${encodeURIComponent(externalId)}`,
-        { moveToFolder: targetFolder }
-      ).subscribe();
+    forkJoin(
+      ids.map((id) =>
+        this.http.patch(
+          `${this.baseUrl}/api/mailbox/messages/${encodeURIComponent(id)}`,
+          { moveToFolder: targetFolder }
+        )
+      )
+    ).subscribe({
+      next: () => {
+        this.emails.update(emails => emails.filter(e => !ids.includes(e.id)));
+        this.selectedEmail.update(email => email && ids.includes(email.id) ? null : email);
+        this.updateFolderCounts();
+        this.loadStats();
+      },
+      error: () => {
+        this.loadEmails();
+        this.loadStats();
+      }
     });
-    // Optimistic update — remove from current view
-    this.emails.update(emails => emails.filter(e => !ids.includes(e.id)));
-    this.updateFolderCounts();
   }
   
   deleteEmail(id: string): void {
@@ -474,6 +551,43 @@ export class MailboxService {
   
   markAsSpam(id: string): void {
     this.moveToFolder([id], 'spam');
+  }
+
+  sendEmail(
+    connectionId: string,
+    payload: {
+      to: string[];
+      subject: string;
+      htmlBody: string;
+      cc?: string[];
+      bcc?: string[];
+    }
+  ): Observable<SendMailboxEmailApiResponse> {
+    if (this.useMockData) {
+      return of({
+        success: true,
+        messageId: crypto.randomUUID()
+      }).pipe(delay(200));
+    }
+
+    const request: SendMailboxEmailApiRequest = {
+      connectionId,
+      to: payload.to,
+      subject: payload.subject,
+      htmlBody: payload.htmlBody,
+      cc: payload.cc?.length ? payload.cc : null,
+      bcc: payload.bcc?.length ? payload.bcc : null
+    };
+
+    return this.http.post<SendMailboxEmailApiResponse>(`${this.baseUrl}/api/mailbox/send`, request).pipe(
+      map((response) => {
+        this.loadStats();
+        if (this.currentFolder() === 'sent') {
+          this.loadEmails('sent');
+        }
+        return response;
+      })
+    );
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -507,11 +621,11 @@ export class MailboxService {
     }
 
     // No dedicated thread endpoint — fetch all messages by conversationId
-    return this.http.get<ProxySearchResponse>(`${this.baseUrl}/api/mailbox/proxy/messages`, {
+    return this.http.get<MailboxSearchApiResponse>(`${this.baseUrl}/api/mailbox/messages`, {
       params: { search: conversationId, pageSize: '50' }
     }).pipe(
       map(res => {
-        const emails: MailboxEmail[] = res.items.map(m => this.mapProxyItemToMailboxEmail(m))
+        const emails: MailboxEmail[] = res.items.map(m => this.mapMailboxItemToMailboxEmail(m))
           .filter(e => e.conversationId === conversationId)
           .sort((a, b) => new Date(a.receivedAtUtc).getTime() - new Date(b.receivedAtUtc).getTime());
         if (emails.length === 0) return null;
@@ -548,7 +662,7 @@ export class MailboxService {
   }
   
   getAttachmentUrl(email: MailboxEmail, attachmentId: string): string {
-    return `${this.baseUrl}/api/mailbox/proxy/messages/${email.connectionId}/${encodeURIComponent(email.externalId)}/attachments/${encodeURIComponent(attachmentId)}`;
+    return `${this.baseUrl}/api/mailbox/messages/${encodeURIComponent(email.id)}/attachments/${encodeURIComponent(attachmentId)}`;
   }
 
   formatFileSize(bytes: number): string {
@@ -614,24 +728,12 @@ export class MailboxService {
     return (emails ?? []).map((email) => ({ email }));
   }
 
-  /** Build composite id: "connectionId/externalId" */
-  private buildCompositeId(connectionId: string, externalId: string): string {
-    return `${connectionId}/${externalId}`;
-  }
-
-  /** Parse composite id back to parts */
-  private parseCompositeId(id: string): { connectionId: string; externalId: string } {
-    const slashIdx = id.indexOf('/');
-    if (slashIdx === -1) return { connectionId: '', externalId: id };
-    return { connectionId: id.substring(0, slashIdx), externalId: id.substring(slashIdx + 1) };
-  }
-
-  private mapProxyItemToMailboxEmail(item: ProxyMessageItem): MailboxEmail {
+  private mapMailboxItemToMailboxEmail(item: MailboxMessageItemResponse): MailboxEmail {
     const folderType = this.mapFolderToType(item.folder);
     return {
-      id: this.buildCompositeId(item.connectionId, item.externalId),
+      id: item.id,
       connectionId: item.connectionId,
-      externalId: item.externalId,
+      externalId: item.id,
       conversationId: item.conversationId ?? undefined,
       folderId: folderType,
       folderType,
@@ -646,24 +748,27 @@ export class MailboxService {
       textBody: item.bodyPreview ?? '',
       isRead: item.isRead,
       isStarred: item.isStarred,
-      isDraft: item.isDraft,
+      isDraft: folderType === 'drafts',
       priority: this.mapImportanceToPriority(item.importance),
       hasAttachments: item.hasAttachments,
       attachments: [],
-      receivedAtUtc: item.receivedAtUtc
+      receivedAtUtc: item.receivedAtUtc,
+      sentAtUtc: item.sentAtUtc ?? undefined
     };
   }
 
-  private mapProxyDetailToMailboxEmail(item: ProxyMessageDetail): MailboxEmail {
-    const base = this.mapProxyItemToMailboxEmail(item);
+  private mapMailboxDetailToMailboxEmail(item: MailboxMessageDetailResponse): MailboxEmail {
+    const base = this.mapMailboxItemToMailboxEmail(item);
     return {
       ...base,
+      externalId: item.externalId,
+      conversationId: item.conversationId ?? undefined,
       htmlBody: item.bodyHtml ?? '',
       textBody: item.bodyText ?? base.textBody,
       to: this.mapRecipients(item.toRecipients),
       cc: this.mapRecipients(item.ccRecipients),
       bcc: this.mapRecipients(item.bccRecipients),
-      sentAtUtc: item.sentAtUtc ?? undefined,
+      isDraft: item.isDraft,
       attachments: (item.attachments ?? []).map(a => ({
         id: a.id,
         name: a.name,
