@@ -131,7 +131,7 @@
           return;
         }
 
-        await loadScript('/scripts.js');
+        await loadScript('/assets/vendor/jquery.min.js');
         if (!window.jQuery) {
           throw new Error('jQuery failed to initialize for the report designer.');
         }
