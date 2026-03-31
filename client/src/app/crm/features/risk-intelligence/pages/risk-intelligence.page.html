@@ -1,0 +1,229 @@
+<div class="page-container">
+  <div class="page-content risk-page">
+    <app-breadcrumbs></app-breadcrumbs>
+
+    <section class="hero-card">
+      <div class="hero-copy">
+        <span class="hero-eyebrow">Operational Guidance</span>
+        <h1 class="hero-title">Risk Intelligence</h1>
+        <p class="hero-subtitle">
+          Explainable early warning across deals, approvals, leads, and pipeline hygiene so the team knows what to act on next.
+        </p>
+      </div>
+      <div class="hero-actions">
+        <button pButton type="button" class="crm-secondary-btn" icon="pi pi-refresh" label="Refresh" (click)="loadWorkspace()"></button>
+      </div>
+    </section>
+
+    <section class="summary-grid" data-testid="risk-summary-grid">
+      <article *ngFor="let card of summaryCards()" class="summary-card" [ngClass]="'summary-card--' + card.tone">
+        <div class="summary-card__icon">
+          <i [class]="card.icon"></i>
+        </div>
+        <div>
+          <div class="summary-card__label">{{ card.label }}</div>
+          <div class="summary-card__value">
+            <ng-container *ngIf="!loading(); else loadingValue">{{ card.value }}</ng-container>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="workspace-grid">
+      <p-card class="workspace-panel workspace-panel--main">
+        <ng-template pTemplate="header">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Priority Risks</h2>
+              <p class="panel-copy">Ranked guidance across current CRM operational signals with evidence and direct drill-through.</p>
+            </div>
+            <div class="panel-meta">
+              <span>Generated {{ workspace().generatedAtUtc | date: 'MMM d, y, h:mm a' }}</span>
+            </div>
+          </div>
+        </ng-template>
+
+        <ng-container *ngIf="!loading(); else tableLoading">
+          <div *ngIf="workspace().priorityRisks.length; else emptyState" data-testid="risk-priority-table">
+            <p-table [value]="workspace().priorityRisks" dataKey="id" styleClass="risk-table">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th>Risk</th>
+                  <th>Record</th>
+                  <th>Owner</th>
+                  <th>Urgency</th>
+                  <th>Why This Is Risky</th>
+                  <th>Recommended Action</th>
+                  <th class="text-right">Open</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-item>
+                <tr
+                  (click)="selectRisk(item)"
+                  [class.is-selected]="selectedRiskId() === item.id"
+                  [attr.data-testid]="'risk-row-' + item.id">
+                  <td>
+                    <div class="risk-cell">
+                      <span class="risk-type">{{ item.riskType }}</span>
+                      <span class="risk-module">{{ item.affectedModule }}</span>
+                      <span [class]="scoreClass(item.score)">{{ item.score }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="record-cell">
+                      <strong>{{ item.entityLabel }}</strong>
+                      <span>{{ item.entityType || item.affectedModule }}</span>
+                    </div>
+                  </td>
+                  <td>{{ item.owner }}</td>
+                  <td>
+                    <p-tag [value]="urgencyLabel(item.urgency)" [severity]="urgencySeverity(item.urgency)"></p-tag>
+                  </td>
+                  <td>
+                    <div class="reason-cell">
+                      <p>{{ item.reasonSummary }}</p>
+                      <div class="evidence-list">
+                        <p-chip *ngFor="let evidence of item.evidence" [label]="evidence"></p-chip>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="action-cell">
+                      <span>{{ item.recommendedAction }}</span>
+                      <small>{{ item.sourceSurface }}</small>
+                    </div>
+                  </td>
+                  <td class="text-right">
+                    <button
+                      pButton
+                      type="button"
+                      class="crm-secondary-btn action-open-btn"
+                      icon="pi pi-arrow-up-right"
+                      label="Open"
+                      (click)="$event.stopPropagation(); openRisk(item)"></button>
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          </div>
+        </ng-container>
+      </p-card>
+
+      <div class="workspace-rail">
+        <p-card class="workspace-panel detail-panel">
+          <ng-template pTemplate="header">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Selected Risk</h2>
+                <p class="panel-copy">Immediate explanation and the next best action.</p>
+              </div>
+            </div>
+          </ng-template>
+
+          <ng-container *ngIf="selectedRisk() as selected; else noSelection">
+            <div class="detail-topline">
+              <p-tag [value]="urgencyLabel(selected.urgency)" [severity]="urgencySeverity(selected.urgency)"></p-tag>
+              <span [class]="scoreClass(selected.score)">{{ selected.score }}</span>
+            </div>
+
+            <h3 class="detail-title">{{ selected.entityLabel }}</h3>
+            <div class="detail-meta">
+              <span>{{ selected.riskType }}</span>
+              <span>{{ selected.affectedModule }}</span>
+              <span>{{ selected.owner }}</span>
+            </div>
+
+            <div class="detail-section">
+              <h4>Why This Is Risky</h4>
+              <p>{{ selected.reasonSummary }}</p>
+              <div class="evidence-list">
+                <p-chip *ngFor="let evidence of selected.evidence" [label]="evidence"></p-chip>
+              </div>
+            </div>
+
+            <div class="detail-section">
+              <h4>Recommended Action</h4>
+              <p>{{ selected.recommendedAction }}</p>
+            </div>
+
+            <div class="detail-section">
+              <h4>Source Surface</h4>
+              <p>{{ selected.sourceSurface }}</p>
+            </div>
+
+            <button
+              pButton
+              type="button"
+              class="crm-primary-btn detail-open-btn"
+              icon="pi pi-arrow-right"
+              label="Open source record"
+              data-testid="risk-open-selected"
+              (click)="openRisk(selected)"></button>
+          </ng-container>
+        </p-card>
+
+        <p-card class="workspace-panel watchlist-panel">
+          <ng-template pTemplate="header">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Watchlist & Trends</h2>
+                <p class="panel-copy">Shared risk patterns that should stay visible even when there is no single record to open.</p>
+              </div>
+            </div>
+          </ng-template>
+
+          <ng-container *ngIf="!loading(); else watchlistLoading">
+            <div class="watchlist-stack" data-testid="risk-watchlist">
+              <button
+                *ngFor="let item of workspace().watchlist"
+                type="button"
+                class="watchlist-item"
+                (click)="openRisk(item)">
+                <div class="watchlist-item__head">
+                  <strong>{{ item.label }}</strong>
+                  <div class="watchlist-item__meta">
+                    <p-tag [value]="item.severity" [severity]="watchlistSeverity(item.severity)"></p-tag>
+                    <span class="watchlist-item__count">{{ item.count }}</span>
+                  </div>
+                </div>
+                <p>{{ item.context }}</p>
+              </button>
+            </div>
+          </ng-container>
+        </p-card>
+      </div>
+    </section>
+  </div>
+</div>
+
+<ng-template #loadingValue>
+  <p-skeleton width="4rem" height="1.6rem"></p-skeleton>
+</ng-template>
+
+<ng-template #tableLoading>
+  <div class="table-loading">
+    <p-skeleton *ngFor="let _ of [1,2,3,4]" height="4rem" styleClass="table-loading__row"></p-skeleton>
+  </div>
+</ng-template>
+
+<ng-template #watchlistLoading>
+  <div class="watchlist-loading">
+    <p-skeleton *ngFor="let _ of [1,2,3]" height="5rem"></p-skeleton>
+  </div>
+</ng-template>
+
+<ng-template #emptyState>
+  <div class="empty-state" data-testid="risk-empty-state">
+    <i class="pi pi-shield"></i>
+    <h3>No active risks right now</h3>
+    <p>The current thresholds and CRM signals did not produce any open guidance items.</p>
+  </div>
+</ng-template>
+
+<ng-template #noSelection>
+  <div class="empty-state">
+    <i class="pi pi-search"></i>
+    <h3>Select a risk</h3>
+    <p>Pick a row from the priority table to inspect its evidence and recommended action.</p>
+  </div>
+</ng-template>

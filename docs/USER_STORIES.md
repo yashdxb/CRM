@@ -295,6 +295,16 @@
   - `86e041wwm` | `done` | Dashboard packs and modules | tags: -
   - `86e041wwh` | `done` | Dashboard summary with KPI cards | tags: -
 
+### Risk Intelligence (ClickUp: pending sync)
+- Status: `done`
+- Tags: built, core, pending-clickup-sync
+- Stories:
+  - `pending-sync` | `done` | Top-level Risk Intelligence navigation and route | tags: module:risk-intelligence, now
+  - `pending-sync` | `done` | Unified risk read model API using dashboard, assistant, and decision signals | tags: module:risk-intelligence, now
+  - `pending-sync` | `done` | Guidance workspace UI with priority risks, watchlist, evidence, and recommended actions | tags: module:risk-intelligence, now
+  - `pending-sync` | `done` | Drill-through links back to leads, deals, and Decision Inbox | tags: module:risk-intelligence, now
+  - `pending-sync` | `done` | Product decision documented as guidance workspace and PIMI-RMP growth path | tags: module:risk-intelligence, now
+
 ### Deal Approvals & Decision Inbox (`86e041wz3`)
 - Status: `done`
 - Tags: built, core

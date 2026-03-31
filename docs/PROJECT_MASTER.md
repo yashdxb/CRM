@@ -93,6 +93,28 @@ Single source of truth for the CRM Enterprise codebase. This document consolidat
 - The detailed implementation and operator runbook lives in:
   - `docs/TELERIK_EMBEDDED_REPORTING_RUNBOOK.md`
 
+### Risk Intelligence Workspace (Canonical)
+- `Risk Intelligence` is restored as a top-level CRM workspace.
+- Its v1 role is **guidance + early warning**, not a separate duplicate risk-management product.
+- The workspace must aggregate existing CRM signals into one operational read model:
+  - dashboard risk flags / scoring output
+  - manager pipeline health
+  - assistant insights
+  - Decision Inbox approval/SLA pressure
+- The workspace should answer four questions immediately:
+  - what is at risk
+  - why it is risky
+  - who owns it
+  - what should happen next
+- v1 remains read-model driven. It must not introduce a new write-heavy risk register domain unless the existing CRM signals prove insufficient.
+- Risk remains embedded in the source modules too:
+  - dashboard retains KPI/risk summaries
+  - Decision Inbox remains the execution surface for approval action
+  - reports remain the analytics surface
+- Future evolution path:
+  - the workspace is the operational seed for broader `PIMI - RMP` capability
+  - v1 does not attempt full governance/compliance risk register behavior
+
 ### MCP Integration Judgment (Canonical)
 - Recommendation: `Yes later`, `not now as a primary product investment`.
 - Why not now:

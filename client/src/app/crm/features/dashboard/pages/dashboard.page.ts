@@ -455,28 +455,9 @@ export class DashboardPage implements OnInit {
   }
 
   protected openRiskIntelligence(item: RiskIntelligenceItem): void {
-    const route = (item.route ?? '').trim().toLowerCase();
-    if (route === 'leads') {
-      this.router.navigate(['/app/leads']);
-      return;
-    }
-    if (route === 'opportunities') {
-      this.router.navigate(['/app/opportunities']);
-      return;
-    }
-    if (route === 'dashboard-at-risk') {
-      this.priorityFilter.set('at-risk');
-      return;
-    }
-    if (route === 'dashboard-no-next-step') {
-      this.priorityFilter.set('no-next-step');
-      return;
-    }
-    if (route === 'dashboard-new-leads') {
-      this.priorityFilter.set('new-leads');
-      return;
-    }
-    this.router.navigate(['/app/dashboard']);
+    this.router.navigate(['/app/risk-intelligence'], {
+      queryParams: { source: item.key }
+    });
   }
 
   protected weightedPipelineDelta(): number {

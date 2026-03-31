@@ -64,6 +64,13 @@ export const routes: Routes = [
           import('./crm/features/dashboard/pages/dashboard.page').then((m) => m.DashboardPage)
       },
       {
+        path: 'risk-intelligence',
+        canActivate: [roleGuard],
+        data: { permission: PERMISSION_KEYS.dashboardView, breadcrumb: 'Risk Intelligence', icon: 'pi-shield' },
+        loadComponent: () =>
+          import('./crm/features/risk-intelligence/pages/risk-intelligence.page').then((m) => m.RiskIntelligencePage)
+      },
+      {
         path: 'reports',
         canActivate: [roleGuard],
         data: { permission: PERMISSION_KEYS.reportsView, breadcrumb: 'Reports', icon: 'pi-chart-pie' },

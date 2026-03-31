@@ -31,6 +31,7 @@ using CRM.Enterprise.Application.DirectChat;
 using CRM.Enterprise.Application.HelpDesk;
 using CRM.Enterprise.Application.Workflows;
 using CRM.Enterprise.Application.Properties;
+using CRM.Enterprise.Application.RiskIntelligence;
 using CRM.Enterprise.Application.DocuSign;
 using CRM.Enterprise.Infrastructure.DocuSign;
 using CRM.Enterprise.Infrastructure.Persistence;
@@ -49,6 +50,7 @@ using CRM.Enterprise.Infrastructure.HelpDesk;
 using CRM.Enterprise.Infrastructure.Approvals;
 using CRM.Enterprise.Infrastructure.Caching;
 using CRM.Enterprise.Infrastructure.Properties;
+using CRM.Enterprise.Infrastructure.RiskIntelligence;
 using CRM.Enterprise.Infrastructure.Emails;
 using CRM.Enterprise.Infrastructure.Drafts;
 using CRM.Enterprise.Application.Lookups;
@@ -222,6 +224,7 @@ public static class DependencyInjection
             }
         });
         services.AddScoped<IAssistantChatService, AssistantChatService>();
+        services.AddScoped<IRiskIntelligenceReadService, RiskIntelligenceReadService>();
         services.AddScoped<ILeadService, LeadService>();
         services.AddScoped<IFormDraftService, FormDraftService>();
         services.AddScoped<ILeadImportService, LeadImportService>();

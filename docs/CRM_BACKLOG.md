@@ -468,6 +468,25 @@ MoSCoW: Must
   - Risk Register card lists top risk flags and total count.
   - Confidence Forecast card shows confidence-weighted pipeline vs raw pipeline.
 
+10b) Risk Intelligence guidance workspace
+MoSCoW: Must
+- Status: DONE
+- Evidence:
+  - API workspace controller: `server/src/CRM.Enterprise.Api/Controllers/RiskIntelligenceController.cs`
+  - Aggregated read-model service: `server/src/CRM.Enterprise.Infrastructure/RiskIntelligence/RiskIntelligenceReadService.cs`
+  - Application contract: `server/src/CRM.Enterprise.Application/RiskIntelligence/RiskIntelligenceWorkspaceDto.cs`
+  - Workspace UI: `client/src/app/crm/features/risk-intelligence/pages/risk-intelligence.page.html`
+  - Navigation/route: `client/src/app/layout/navigation/navigation.config.ts`, `client/src/app/app.routes.ts`
+- Acceptance criteria:
+  - `Risk Intelligence` is available as a top-level CRM workspace.
+  - The page unifies existing risk signals from dashboard summary, manager pipeline health, assistant insights, and Decision Inbox into one compact guidance surface.
+  - Each surfaced risk explains why it was flagged and shows a recommended next action.
+  - Each surfaced risk links back to the correct source module or record where action should occur.
+  - The implementation remains read-model driven and does not introduce a standalone write-heavy risk register domain.
+- Product direction:
+  - This workspace is the current operational guidance surface.
+  - It is also the intended growth path toward future `PIMI - RMP` expansion.
+
 11) Hierarchy-level dashboard packs (H1/H2/H3...) + reset
 MoSCoW: Should
 - Status: DONE
